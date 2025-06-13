@@ -31,9 +31,6 @@ export async function getCoaches(): Promise<Coach[]> {
       }
     })
 
-    console.log(`🔍 Found ${coachProfiles.length} active coach profiles`)
-    console.log(`📋 Coach user IDs:`, coachProfiles.map(p => p.userId))
-
     // Fetch user data separately - match by clerkId since userId stores Clerk ID
     const clerkIds = coachProfiles.map(profile => profile.userId)
     const users = await prisma.user.findMany({
@@ -50,16 +47,12 @@ export async function getCoaches(): Promise<Coach[]> {
       }
     })
 
-    console.log(`👥 Found ${users.length} matching users`)
-    console.log(`📋 User data:`, users.map(u => ({ clerkId: u.clerkId, name: `${u.firstName} ${u.lastName}` })))
-
     // Create a map for quick lookup using clerkId
     const userMap = new Map(users.map(user => [user.clerkId, user]))
 
     // Transform the data to match the expected Coach interface
     const coaches: Coach[] = coachProfiles.map(profile => {
       const user = userMap.get(profile.userId)
-      console.log(`🔄 Processing profile ${profile.id}, userId: ${profile.userId}, found user:`, user ? `${user.firstName} ${user.lastName}` : 'NOT FOUND')
       
       return {
         id: profile.id,
@@ -79,7 +72,6 @@ export async function getCoaches(): Promise<Coach[]> {
       }
     })
 
-    console.log(`✅ Returning ${coaches.length} coaches with names:`, coaches.map(c => `${c.firstName} ${c.lastName}`))
     return coaches
   } catch (error) {
     console.error('Error fetching coaches:', error)
