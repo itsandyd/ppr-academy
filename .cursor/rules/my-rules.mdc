@@ -1,0 +1,54 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Migration Plan: Replit → Next.js App Router (with Server Actions)
+
+## ✅ Stack
+- Next.js (App Router with server components)
+- Prisma + Planetscale
+- Tailwind CSS
+- shadcn/ui
+- TypeScript
+- Server Actions (preferred over API routes)
+
+## 📦 Package Instructions
+
+### Uninstall (if present)
+- react-query
+- axios
+- moment
+- styled-components
+- any unused packages
+
+### Install
+- next, react, react-dom
+- tailwindcss, postcss, autoprefixer
+- prisma, @prisma/client
+- shadcn/ui
+- zod, lucide-react, @radix-ui/react-icons
+- dotenv, eslint, prettier, typescript
+
+---
+
+## 🔁 Replace Client-Side Data Fetching
+
+- Remove all React Query usage.
+- Move data logic into **server actions** inside `/app/actions/` or colocated `actions.ts` files.
+
+Example:
+```ts
+// app/actions/createUser.ts
+'use server'
+
+import { prisma } from '@/lib/prisma'
+import { z } from 'zod'
+
+const schema = z.object({ name: z.string().min(1) })
+
+export async function createUser(data: unknown) {
+  const parsed = schema.safeParse(data)
+  if (!parsed.success) throw new Error('Invalid input')
+  return await prisma.user.create({ data: parsed.data })
+}
