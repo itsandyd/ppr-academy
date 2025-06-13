@@ -26,6 +26,34 @@ CRON_SECRET=your_secure_random_string_for_cron_auth
 NEXT_PUBLIC_APP_URL=https://your-domain.com
 ```
 
+## Environment Variables
+
+Add these to your `.env.local` file:
+
+```env
+# Discord Configuration
+DISCORD_CLIENT_ID=your_client_id
+DISCORD_CLIENT_SECRET=your_client_secret
+DISCORD_BOT_TOKEN=your_bot_token
+DISCORD_GUILD_ID=your_server_id
+
+# App URL (adjust for your environment)
+# For local development:
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# For production:
+# NEXT_PUBLIC_APP_URL=https://your-domain.com
+```
+
+**Local Development Setup:**
+1. Use `http://localhost:3000` for `NEXT_PUBLIC_APP_URL`
+2. Make sure your Discord app has `http://localhost:3000/api/auth/discord/callback` as a redirect URI
+3. Ensure your local dev server runs on port 3000 (default for Next.js)
+
+**Production Setup:**
+1. Use your actual domain for `NEXT_PUBLIC_APP_URL`
+2. Make sure your Discord app has your production callback URL as a redirect URI
+
 ## 🤖 Discord Bot Setup
 
 ### 1. Create Discord Application
@@ -50,7 +78,15 @@ NEXT_PUBLIC_APP_URL=https://your-domain.com
 
 1. Go to "OAuth2" → "URL Generator"
 2. Select scopes: `identify`, `guilds.join`
-3. Add redirect URI: `https://your-domain.com/api/auth/discord/callback`
+3. Add redirect URIs:
+   - **For local development**: `http://localhost:3000/api/auth/discord/callback`
+   - **For production**: `https://your-domain.com/api/auth/discord/callback`
+
+**Important Notes:**
+- You can add multiple redirect URIs in your Discord application
+- Make sure to use `http://` (not `https://`) for localhost
+- The port number (3000) should match your local development server
+- Both URIs can be active simultaneously
 
 ### 4. Invite Bot to Server
 

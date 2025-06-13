@@ -29,10 +29,20 @@ import {
   Archive,
   Trash2,
   Tag,
-  X
+  X,
+  Settings,
+  MessageSquare,
+  CheckCircle,
+  AlertCircle,
+  ExternalLink,
+  User,
+  GraduationCap,
+  Video,
+  UserCheck
 } from "lucide-react";
 import { StudentDashboard } from "@/components/dashboard/student-dashboard";
 import { CreatorDashboard } from "@/components/dashboard/creator-dashboard";
+import UnifiedDashboard from "@/components/dashboard/unified-dashboard";
 
 export default async function Dashboard() {
   const { userId: clerkId } = await auth();
@@ -78,31 +88,16 @@ export default async function Dashboard() {
     completedCourses: enrollments.filter((e: any) => e.progress === 100).length,
   };
 
-  // Determine user role - for now, we'll use a simple logic
-  // If user has created courses, they're a creator
-  // Otherwise, they're a student
-  // In the future, you could add a role field to the User model
-  const userRole: 'student' | 'creator' | 'coach' = courses.length > 0 ? 'creator' : 'student';
-
   return (
     <div className="min-h-screen bg-slate-50 pt-16">
-      {/* Render role-specific dashboard */}
-      {userRole === 'student' ? (
-        <StudentDashboard 
-          user={user} 
-          enrollments={enrollments} 
-          dashboardStats={dashboardStats}
-          featuredCourses={featuredCourses}
-          popularCourses={popularCourses}
-        />
-      ) : (
-        <CreatorDashboard 
-          user={user} 
-          userCourses={courses} 
-          coachingSessions={[]} 
-          dashboardStats={dashboardStats} 
-        />
-      )}
+      <UnifiedDashboard 
+        user={user}
+        enrollments={enrollments}
+        userCourses={courses}
+        dashboardStats={dashboardStats}
+        featuredCourses={featuredCourses}
+        popularCourses={popularCourses}
+      />
     </div>
   );
 } 
