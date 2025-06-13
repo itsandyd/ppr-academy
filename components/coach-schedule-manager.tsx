@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Plus,
@@ -23,7 +24,7 @@ interface TimeSlot {
 }
 
 export default function CoachScheduleManager() {
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date());
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [newSlot, setNewSlot] = useState<TimeSlot>({ startTime: '', endTime: '' });
   const [isLoading, setIsLoading] = useState(false);
@@ -98,7 +99,14 @@ export default function CoachScheduleManager() {
   };
 
   const saveAvailability = async () => {
-    if (!selectedDate) return;
+    if (!selectedDate) {
+      toast({
+        title: "No Date Selected",
+        description: "Please select a date first.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setIsSaving(true);
     try {
@@ -159,7 +167,7 @@ export default function CoachScheduleManager() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6">
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -176,10 +184,11 @@ export default function CoachScheduleManager() {
             <div>
               <Label className="text-base font-medium mb-3 block">Select Date</Label>
               <div className="border rounded-lg p-3">
-                <Input
-                  type="date"
-                  value={selectedDate.toISOString().split('T')[0]}
-                  onChange={(e) => setSelectedDate(new Date(e.target.value))}
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={setSelectedDate}
+                  disabled={(date) => date < new Date()}
                   className="w-full"
                 />
               </div>
@@ -189,7 +198,7 @@ export default function CoachScheduleManager() {
             <div className="space-y-4">
               <div>
                 <Label className="text-base font-medium mb-3 block">
-                  Availability for {selectedDate?.toLocaleDateString()}
+                  Availability for {selectedDate?.toLocaleDateString() || 'No date selected'}
                 </Label>
                 
                 {/* Quick Add Buttons */}
