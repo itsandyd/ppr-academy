@@ -97,21 +97,106 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
     }
   }
 
+  // Reconstruct module structure from chapters
+  const reconstructModules = (chapters: any[]) => {
+    const modules: any[] = [];
+    let currentModule: any = null;
+    let currentLesson: any = null;
+
+    chapters.forEach((chapter, index) => {
+      if (chapter.title.startsWith('📚')) {
+        // Module header
+        if (currentModule && currentModule.lessons.length > 0) {
+          modules.push(currentModule);
+        }
+        currentModule = {
+          id: modules.length + 1,
+          title: chapter.title.replace('📚 ', ''),
+          description: chapter.description || '',
+          lessons: []
+        };
+        currentLesson = null;
+      } else if (chapter.title.startsWith('🎯')) {
+        // Lesson introduction
+        if (currentLesson && currentLesson.chapters.length > 0) {
+          currentModule?.lessons.push(currentLesson);
+        }
+        currentLesson = {
+          id: currentModule ? currentModule.lessons.length + 1 : 1,
+          title: chapter.title.replace('🎯 ', '').split(': ')[1] || chapter.title.replace('🎯 ', ''),
+          description: chapter.description || '',
+          chapters: []
+        };
+      } else {
+        // Content chapter
+        if (currentLesson) {
+          currentLesson.chapters.push(chapter);
+        } else {
+          // Fallback: create a lesson if none exists
+          if (!currentModule) {
+            currentModule = {
+              id: 1,
+              title: 'Course Content',
+              description: 'Course chapters',
+              lessons: []
+            };
+          }
+          if (!currentLesson) {
+            currentLesson = {
+              id: 1,
+              title: 'Course Lessons',
+              description: 'Course content',
+              chapters: []
+            };
+            currentModule.lessons.push(currentLesson);
+          }
+          currentLesson.chapters.push(chapter);
+        }
+      }
+    });
+
+    // Add the last lesson and module
+    if (currentLesson && currentLesson.chapters.length > 0) {
+      currentModule?.lessons.push(currentLesson);
+    }
+    if (currentModule) {
+      modules.push(currentModule);
+    }
+
+    // Fallback for courses without proper module structure
+    if (modules.length === 0) {
+      modules.push({
+        id: 1,
+        title: "Course Content",
+        description: "All course chapters",
+        lessons: [{
+          id: 1,
+          title: "Course Lessons",
+          description: "Complete course content",
+          chapters: chapters
+        }]
+      });
+    }
+
+    return modules;
+  };
+
+  const courseModules = reconstructModules(chapters);
+  
+  // Debug: Log the reconstructed module structure
+  console.log(`📚 Course modules reconstructed:`, courseModules.length);
+  courseModules.forEach((module, index) => {
+    console.log(`  Module ${index + 1}: "${module.title}" with ${module.lessons.length} lessons`);
+    module.lessons.forEach((lesson: any, lessonIndex: number) => {
+      console.log(`    Lesson ${lessonIndex + 1}: "${lesson.title}" with ${lesson.chapters.length} chapters`);
+    });
+  });
+
   const courseWithChapters = {
     ...course,
     courseChapters: chapters,
     rating: { rating: 4.5, count: course.enrollments.length },
-    modules: [{
-      id: 1,
-      title: "Course Content",
-      description: "All course chapters",
-      lessons: [{
-        id: 1,
-        title: "Course Lessons",
-        description: "Complete course content",
-        chapters: chapters
-      }]
-    }]
+    modules: courseModules
   };
 
   return (

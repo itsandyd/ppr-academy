@@ -329,15 +329,57 @@ export async function generateAICourse(courseData: {
     const createdChapters = [];
     let position = 1;
 
+    console.log(`📚 Processing ${generatedCourse.modules.length} modules for course creation`);
+    
     for (const moduleData of generatedCourse.modules) {
+      console.log(`📂 Processing module: "${moduleData.title}" with ${moduleData.lessons.length} lessons`);
+      
+      // Create a module header chapter
+      const moduleHeader = await prisma.courseChapter.create({
+        data: {
+          id: `ch_${Date.now()}_${position}`,
+          title: `📚 ${moduleData.title}`,
+          description: `# ${moduleData.title}\n\n${moduleData.description}\n\n---\n\nThis module contains ${moduleData.lessons.length} lessons covering essential aspects of ${courseData.topic}. Each lesson is designed to build upon the previous one, providing you with comprehensive knowledge and practical skills.`,
+          videoUrl: null,
+          position: position,
+          isPublished: false,
+          isFree: position === 1, // Make first module header free
+          courseId: course.id,
+          updatedAt: new Date(),
+        },
+      });
+      createdChapters.push(moduleHeader);
+      position++;
+      
       for (const lessonData of moduleData.lessons) {
+        console.log(`  📝 Processing lesson: "${lessonData.title}" with ${lessonData.chapters.length} chapters`);
+        
+        // Create a lesson introduction chapter
+        const lessonIntro = await prisma.courseChapter.create({
+          data: {
+            id: `ch_${Date.now()}_${position}`,
+            title: `🎯 ${moduleData.title}: ${lessonData.title}`,
+            description: `## ${lessonData.title}\n\n${lessonData.description}\n\n---\n\nIn this lesson, you'll learn:\n\n${lessonData.chapters.map((ch: any, idx: number) => `${idx + 1}. ${ch.title}`).join('\n')}\n\nThis lesson is part of **${moduleData.title}** and will take approximately ${lessonData.chapters.length * 15} minutes to complete.`,
+            videoUrl: null,
+            position: position,
+            isPublished: false,
+            isFree: false,
+            courseId: course.id,
+            updatedAt: new Date(),
+          },
+        });
+        createdChapters.push(lessonIntro);
+        position++;
+        
         for (const chapterData of lessonData.chapters) {
+          console.log(`    📖 Creating chapter: "${chapterData.title}"`);
+          
           const chapter = await prisma.courseChapter.create({
             data: {
               id: `ch_${Date.now()}_${position}`,
-              title: `${moduleData.title}: ${lessonData.title} - ${chapterData.title}`,
-              description: chapterData.content, // Store full AI-generated content
-              videoUrl: null, // To be added later
+              title: `${chapterData.title}`,
+              description: chapterData.content || `## ${chapterData.title}\n\nContent for this chapter is being prepared. This section will cover important aspects of ${courseData.topic} as it relates to ${chapterData.title}.\n\n### What You'll Learn\n\n- Key concepts and techniques\n- Practical applications\n- Industry best practices\n- Hands-on examples\n\nThis chapter is part of **${lessonData.title}** in the **${moduleData.title}** module.`,
+              videoUrl: null,
               position: position,
               isPublished: false,
               isFree: false,
@@ -351,9 +393,13 @@ export async function generateAICourse(courseData: {
       }
     }
 
-    console.log(`✅ Created course: "${course.title}" with slug: "${course.slug}" and ${createdChapters.length} chapters`);
-    console.log(`📝 First chapter: ${createdChapters[0]?.title || 'No chapters'}`);
-    console.log(`📝 Content preview: ${createdChapters[0]?.description?.substring(0, 100) || 'No content'}...`);
+    console.log(`✅ Created course: "${course.title}" with slug: "${course.slug}"`);
+    console.log(`📊 Course structure: ${generatedCourse.modules.length} modules, ${generatedCourse.modules.reduce((acc: number, m: any) => acc + m.lessons.length, 0)} lessons, ${createdChapters.length} total chapters`);
+    console.log(`📝 Chapter breakdown:`);
+    console.log(`  - Module headers: ${generatedCourse.modules.length}`);
+    console.log(`  - Lesson intros: ${generatedCourse.modules.reduce((acc: number, m: any) => acc + m.lessons.length, 0)}`);
+    console.log(`  - Content chapters: ${generatedCourse.modules.reduce((acc: number, m: any) => acc + m.lessons.reduce((lacc: number, l: any) => lacc + l.chapters.length, 0), 0)}`);
+    console.log(`📝 First few chapters: ${createdChapters.slice(0, 3).map(ch => ch.title).join(', ')}`);
     
     revalidatePath("/admin");
     revalidatePath("/courses");

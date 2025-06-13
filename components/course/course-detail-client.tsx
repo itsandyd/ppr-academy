@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +30,16 @@ import {
 } from "lucide-react";
 import { enrollInCourse, submitCourseReview, markChapterComplete, updateChapter } from "@/app/actions/course-actions";
 import { useRouter } from "next/navigation";
+import dynamic from 'next/dynamic';
+import remarkGfm from 'remark-gfm';
+import rehypeHighlight from 'rehype-highlight';
+import 'highlight.js/styles/github.css';
+
+// Dynamically import ReactMarkdown to avoid SSR issues
+const ReactMarkdown = dynamic(() => import('react-markdown'), {
+  ssr: false,
+  loading: () => <div className="animate-pulse bg-slate-200 h-4 rounded"></div>
+});
 
 interface User {
   id: string;
@@ -75,6 +85,7 @@ export function CourseDetailClient({
   const [reviewComment, setReviewComment] = useState("");
   const [isEnrolling, setIsEnrolling] = useState(false);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   
   // Edit dialog state
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -88,6 +99,27 @@ export function CourseDetailClient({
   });
   const [isSaving, setIsSaving] = useState(false);
   const [expandedChapters, setExpandedChapters] = useState<{ [key: string]: boolean }>({});
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const MarkdownRenderer = ({ content }: { content: string }) => {
+    if (!isMounted) {
+      return <div className="text-slate-700 whitespace-pre-wrap">{content}</div>;
+    }
+
+    return (
+      <div className="prose prose-slate max-w-none text-sm">
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          rehypePlugins={[rehypeHighlight]}
+        >
+          {content}
+        </ReactMarkdown>
+      </div>
+    );
+  };
 
   const handleEnroll = async () => {
     if (!isAuthenticated) {
@@ -330,7 +362,9 @@ export function CourseDetailClient({
                               Module {moduleIndex + 1}: {module.title}
                             </h3>
                             {module.description && (
-                              <p className="text-sm text-slate-600">{module.description}</p>
+                              <div className="text-sm text-slate-600 mt-1">
+                                <MarkdownRenderer content={module.description} />
+                              </div>
                             )}
                           </div>
                         </div>
@@ -347,7 +381,9 @@ export function CourseDetailClient({
                                 {lesson.title}
                               </h4>
                               {lesson.description && (
-                                <p className="text-sm text-slate-600 mb-3">{lesson.description}</p>
+                                <div className="text-sm text-slate-600 mb-3">
+                                  <MarkdownRenderer content={lesson.description} />
+                                </div>
                               )}
                               
                               {lesson.chapters && lesson.chapters.length > 0 && (
@@ -393,22 +429,22 @@ export function CourseDetailClient({
                                       </div>
                                       {chapter.description && (
                                         <div className="p-4 bg-white border-t border-slate-200">
-                                          <div className="text-slate-700 whitespace-pre-wrap leading-relaxed">
+                                          <div className="text-slate-700 leading-relaxed">
                                             {(() => {
                                               const isLongContent = chapter.description.length > 300;
                                               const isExpanded = expandedChapters[chapter.id];
                                               const shouldTruncate = isLongContent && !isExpanded;
+                                              const content = shouldTruncate 
+                                                ? `${chapter.description.substring(0, 300)}...` 
+                                                : chapter.description;
                                               
                                               return (
                                                 <>
-                                                  {shouldTruncate 
-                                                    ? `${chapter.description.substring(0, 300)}...` 
-                                                    : chapter.description
-                                                  }
+                                                  <MarkdownRenderer content={content} />
                                                   {isLongContent && (
                                                     <button
                                                       onClick={() => toggleChapterContent(chapter.id)}
-                                                      className="block mt-2 text-primary hover:text-primary/80 text-sm font-medium transition-colors"
+                                                      className="block mt-3 text-primary hover:text-primary/80 text-sm font-medium transition-colors"
                                                     >
                                                       {isExpanded ? 'Show Less' : 'Show More'}
                                                     </button>

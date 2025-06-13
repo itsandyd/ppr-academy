@@ -345,7 +345,7 @@ export async function generateAICourse(request: CourseGenerationRequest): Promis
     console.log('Tavily search unavailable, proceeding with AI knowledge base');
   }
   
-  // Step 2: Generate course structure using OpenAI
+  // Step 2: Generate course structure using OpenAI Structured Output
   const researchContext = searchResults.length > 0 
     ? searchResults.map(r => `- ${r.title}: ${r.content}`).join('\n')
     : `Using comprehensive music production knowledge base for ${topic} at ${skillLevel} level`;
@@ -362,64 +362,9 @@ export async function generateAICourse(request: CourseGenerationRequest): Promis
     ? `\n\nCustom Course Description:\n${description}`
     : '';
 
-  const courseStructurePrompt = `
-    You are an expert music production educator creating a comprehensive professional course EXCLUSIVELY about "${topic}" at ${skillLevel} level.
-
-    CRITICAL TOPIC FOCUS RULES:
-    - This course is ONLY about "${topic}" - do not include any other music production topics
-    - Every module, lesson, and chapter must be directly related to "${topic}"
-    - If the topic is about a specific tool (like Arpeggiator), focus ONLY on that tool throughout the entire course
-    - Do not mix in content about other effects, plugins, or techniques unless directly related to "${topic}"
-
-    Research findings:
-    ${researchContext}
-    ${descriptionSection}
-    ${objectivesSection}
-    ${contextSection}
-
-    Create exactly ${targetModules} modules with ${targetLessonsPerModule} lessons each. Each lesson should have 3 chapters.
-    All modules, lessons, and chapters must be focused on "${topic}" and nothing else.
-
-    IMPORTANT: Generate ONLY the structure with titles and descriptions. Chapter content will be generated separately.
-
-    Generate complete JSON structure with ALL required fields:
-
-    {
-      "course": {
-        "title": "Mastering ${topic}: Complete ${skillLevel} Guide",
-        "description": "Comprehensive ${skillLevel}-level course focused exclusively on ${topic}",
-        "category": "${category}",
-        "skillLevel": "${skillLevel}",
-        "estimatedDuration": 12
-      },
-      "modules": [
-        {
-          "title": "Module title (must be about ${topic})",
-          "description": "Module description (must be about ${topic})",
-          "orderIndex": 0,
-          "lessons": [
-            {
-              "title": "Lesson title (must be about ${topic})",
-              "description": "Lesson description (must be about ${topic})", 
-              "orderIndex": 0,
-              "chapters": [
-                {
-                  "title": "Chapter title (must be about ${topic})",
-                  "content": "PLACEHOLDER_CONTENT",
-                  "duration": 12,
-                  "orderIndex": 0
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    }
-  `;
-
-      try {
-    // Step 1: Generate course structure
-    console.log('Generating course structure...');
+  try {
+    // Step 1: Generate course structure using OpenAI Structured Output
+    console.log('Generating course structure with structured output...');
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
@@ -429,12 +374,109 @@ export async function generateAICourse(request: CourseGenerationRequest): Promis
         },
         {
           role: "user",
-          content: courseStructurePrompt
+          content: `Create a comprehensive professional course EXCLUSIVELY about "${topic}" at ${skillLevel} level.
+
+CRITICAL REQUIREMENTS:
+- Generate exactly ${targetModules} modules
+- Each module must have exactly ${targetLessonsPerModule} lessons  
+- Each lesson must have exactly 3 chapters
+- All content must focus only on "${topic}"
+- Each chapter content should be 300-500 words focusing on "${topic}"
+- Content should be clear and educational
+- Include practical examples related to "${topic}"
+
+STRUCTURE REQUIRED:
+- Module 1: ${topic} Foundations (${targetLessonsPerModule} lessons × 3 chapters each)
+- Module 2: ${topic} Intermediate (${targetLessonsPerModule} lessons × 3 chapters each)
+- Module 3: ${topic} Advanced (${targetLessonsPerModule} lessons × 3 chapters each)
+- Module 4: ${topic} Mastery (${targetLessonsPerModule} lessons × 3 chapters each)
+
+TOTAL REQUIRED: ${targetModules} modules, ${targetModules * targetLessonsPerModule} lessons, ${targetModules * targetLessonsPerModule * 3} chapters
+
+Research context: ${researchContext}
+${descriptionSection}
+${objectivesSection}
+${contextSection}
+
+Create a well-structured course that progresses from basics to advanced topics, all focused on "${topic}".
+Generate educational content for each chapter about "${topic}".
+
+YOU MUST GENERATE EXACTLY ${targetModules} MODULES WITH ${targetLessonsPerModule} LESSONS EACH.`
         }
       ],
       temperature: 0.7,
-      max_tokens: 8000, // Reduced since we're only generating structure
-      response_format: { type: "json_object" }
+      max_tokens: 8000,
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "course_structure",
+          schema: {
+            type: "object",
+            properties: {
+              course: {
+                type: "object",
+                properties: {
+                  title: { type: "string" },
+                  description: { type: "string" },
+                  category: { type: "string" },
+                  skillLevel: { type: "string", enum: ["beginner", "intermediate", "advanced"] },
+                  estimatedDuration: { type: "number" }
+                },
+                required: ["title", "description", "category", "skillLevel", "estimatedDuration"],
+                additionalProperties: false
+              },
+              modules: {
+                type: "array",
+                minItems: targetModules,
+                maxItems: targetModules,
+                items: {
+                  type: "object",
+                  properties: {
+                    title: { type: "string" },
+                    description: { type: "string" },
+                    orderIndex: { type: "number" },
+                    lessons: {
+                      type: "array",
+                      minItems: targetLessonsPerModule,
+                      maxItems: targetLessonsPerModule,
+                      items: {
+                        type: "object",
+                        properties: {
+                          title: { type: "string" },
+                          description: { type: "string" },
+                          orderIndex: { type: "number" },
+                          chapters: {
+                            type: "array",
+                            minItems: 3,
+                            maxItems: 3,
+                            items: {
+                              type: "object",
+                              properties: {
+                                title: { type: "string" },
+                                content: { type: "string" },
+                                duration: { type: "number" },
+                                orderIndex: { type: "number" }
+                              },
+                              required: ["title", "content", "duration", "orderIndex"],
+                              additionalProperties: false
+                            }
+                          }
+                        },
+                        required: ["title", "description", "orderIndex", "chapters"],
+                        additionalProperties: false
+                      }
+                    }
+                  },
+                  required: ["title", "description", "orderIndex", "lessons"],
+                  additionalProperties: false
+                }
+              }
+            },
+            required: ["course", "modules"],
+            additionalProperties: false
+          }
+        }
+      }
     });
 
     const generatedContent = completion.choices[0].message.content;
@@ -442,73 +484,71 @@ export async function generateAICourse(request: CourseGenerationRequest): Promis
       throw new Error('No content generated from OpenAI');
     }
 
-    // Parse and validate structure
+    // Parse the structured output (should be valid JSON)
     const rawData = JSON.parse(generatedContent);
+    
+    // Debug: Log what was actually generated
+    console.log(`🔍 Generated structure preview:`);
+    console.log(`  - Modules: ${rawData.modules?.length || 0}`);
+    if (rawData.modules && rawData.modules.length > 0) {
+      rawData.modules.forEach((module: any, index: number) => {
+        console.log(`    Module ${index + 1}: "${module.title}" - ${module.lessons?.length || 0} lessons`);
+        if (module.lessons && module.lessons.length > 0) {
+          module.lessons.forEach((lesson: any, lessonIndex: number) => {
+            console.log(`      Lesson ${lessonIndex + 1}: "${lesson.title}" - ${lesson.chapters?.length || 0} chapters`);
+          });
+        }
+      });
+    }
+    
+    // Validate with our Zod schemas for extra safety
     const courseData = CourseStructureSchema.parse(rawData);
 
-    // Step 2: Generate detailed content for each chapter
-    console.log('Generating detailed chapter content...');
-    const enhancedModules = await Promise.all(
-      courseData.modules.map(async (module: any, moduleIndex: number) => {
-        const enhancedLessons = await Promise.all(
-          module.lessons.map(async (lesson: any, lessonIndex: number) => {
-            const enhancedChapters = [];
-            
-            // Generate chapters sequentially with small delays to avoid rate limits
-            for (let chapterIndex = 0; chapterIndex < lesson.chapters.length; chapterIndex++) {
-              const chapter = lesson.chapters[chapterIndex];
-              console.log(`Generating content for: ${module.title} > ${lesson.title} > ${chapter.title}`);
-              
-              try {
-                const detailedContent = await generateDetailedChapterContent(
-                  topic,
-                  chapter.title,
-                  skillLevel,
-                  module.title,
-                  lesson.title
-                );
-                
-                enhancedChapters.push({
-                  ...chapter,
-                  content: detailedContent.content
-                });
-                
-                // Small delay to avoid rate limiting (except for last chapter)
-                if (chapterIndex < lesson.chapters.length - 1) {
-                  await new Promise(resolve => setTimeout(resolve, 1000));
-                }
-              } catch (error) {
-                console.error(`Error generating content for chapter ${chapter.title}:`, error);
-                // Topic-specific fallback content
-                enhancedChapters.push({
-                  ...chapter,
-                  content: `Welcome to "${chapter.title}" - your guide to mastering ${topic}. This chapter focuses exclusively on ${topic} techniques and applications for ${skillLevel} level students. We'll explore specific aspects of ${topic} that are essential for your music production workflow. Content is being refined to ensure comprehensive coverage of ${topic} and will be updated soon with detailed, hands-on instruction for ${topic}.`
-                });
-              }
-            }
-            
-            return {
-              ...lesson,
-              chapters: enhancedChapters
-            };
-          })
-        );
-        
-        return {
-          ...module,
-          lessons: enhancedLessons
-        };
-      })
-    );
+    // Validate structure requirements
+    console.log(`🔍 Validating course structure...`);
+    console.log(`  - Expected: ${targetModules} modules, ${targetModules * targetLessonsPerModule} lessons, ${targetModules * targetLessonsPerModule * 3} chapters`);
+    console.log(`  - Generated: ${courseData.modules.length} modules`);
+    
+    if (courseData.modules.length !== targetModules) {
+      throw new Error(`Invalid structure: Expected ${targetModules} modules, but AI generated ${courseData.modules.length} modules`);
+    }
+    
+    const totalLessons = courseData.modules.reduce((acc: number, m: any) => acc + m.lessons.length, 0);
+    const expectedLessons = targetModules * targetLessonsPerModule;
+    
+    if (totalLessons !== expectedLessons) {
+      console.log(`❌ Structure mismatch detected. Attempting retry with simplified approach...`);
+      
+      // Log details about what was generated
+      console.log(`Debug: Expected ${expectedLessons} lessons but got ${totalLessons}`);
+      courseData.modules.forEach((module: any, index: number) => {
+        console.log(`  Module ${index + 1}: ${module.lessons.length} lessons`);
+      });
+      
+      throw new Error(`Invalid structure: Expected ${expectedLessons} lessons total, but AI generated ${totalLessons} lessons. The AI generated ${courseData.modules.length} modules with ${courseData.modules.map((m: any) => m.lessons.length).join(', ')} lessons respectively. Each module should have exactly ${targetLessonsPerModule} lessons.`);
+    }
+    
+    const totalChapters = courseData.modules.reduce((acc: number, m: any) => 
+      acc + m.lessons.reduce((lacc: number, l: any) => lacc + l.chapters.length, 0), 0);
+    const expectedChapters = targetModules * targetLessonsPerModule * 3;
+    
+    if (totalChapters !== expectedChapters) {
+      throw new Error(`Invalid structure: Expected ${expectedChapters} chapters total, but AI generated ${totalChapters} chapters`);
+    }
+    
+    console.log(`✅ Course structure validated successfully!`);
+    console.log(`  - ${courseData.modules.length} modules`);
+    console.log(`  - ${totalLessons} lessons`);
+    console.log(`  - ${totalChapters} chapters`);
 
-    // Search for images
+    // Search for images for the course thumbnail
     const topicImages = await searchTopicImages(topic, skillLevel);
     const courseThumbnail = topicImages[0] || 'https://images.unsplash.com/photo-1571330735066-03aaa9429d89?w=800&h=500&fit=crop';
 
-    // Return structured data with enhanced content
+    // Return structured data with complete content
     const finalCourseData = {
       ...courseData,
-      modules: enhancedModules
+      modules: courseData.modules
     };
 
     return {
