@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,12 +25,16 @@ import {
   Video,
   Clock,
   Star,
-  Loader2
+  Loader2,
+  MessageSquare,
+  BarChart3,
+  Calendar
 } from "lucide-react";
 import CourseCard from "@/components/course-card";
 import { createCoachApplication, getUserCoachProfile, updateCoachApplication } from "@/app/actions/coaching-actions";
 import type { User, CourseWithDetails } from "@/lib/types";
 import { generateSlug } from "@/lib/utils";
+import CoachScheduleManager from "@/components/coach-schedule-manager";
 
 interface CreatorDashboardProps {
   user: User;
@@ -55,6 +59,7 @@ export function CreatorDashboard({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const [existingProfile, setExistingProfile] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState("courses");
   
   const [coachingForm, setCoachingForm] = useState({
     category: "",
@@ -66,6 +71,22 @@ export function CreatorDashboard({
     availableDays: "",
     availableHours: "",
   });
+
+  // Load coach profile on component mount
+  useEffect(() => {
+    const loadInitialProfile = async () => {
+      try {
+        const result = await getUserCoachProfile();
+        if (result.success && result.profile) {
+          setExistingProfile(result.profile);
+        }
+      } catch (error) {
+        console.error("Error loading initial coach profile:", error);
+      }
+    };
+
+    loadInitialProfile();
+  }, []);
 
   const totalRevenue = userCourses.reduce((sum, course) => {
     const revenue = (course.price || 0) * (course._count?.enrollments || 0);
@@ -269,11 +290,14 @@ export function CreatorDashboard({
       </div>
 
       {/* Main Content Tabs */}
-      <Tabs defaultValue="courses" className="space-y-8">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
         <TabsList>
           <TabsTrigger value="courses">My Courses</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="coaching">Coaching</TabsTrigger>
+          {existingProfile?.isActive && (
+            <TabsTrigger value="schedule">Schedule</TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="courses" className="space-y-8">
@@ -394,20 +418,92 @@ export function CreatorDashboard({
             </Button>
           </div>
 
-          <Card>
-            <CardContent className="p-12 text-center">
-              <Users className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-2">No coaching sessions yet</h3>
-              <p className="text-slate-600 mb-6">
-                Offer 1-on-1 coaching to help students directly
-              </p>
-              <Button variant="outline" onClick={handleOpenCoachingDialog}>
-                <Video className="w-4 h-4 mr-2" />
-                Set Up Coaching Profile
-              </Button>
-            </CardContent>
-          </Card>
+          {existingProfile?.isActive ? (
+            <div className="space-y-6">
+              {/* Active Coach Status */}
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-semibold text-dark mb-1">✅ Active Coach</h3>
+                      <p className="text-sm text-slate-600">
+                        Your coaching profile is live! Students can now book sessions with you.
+                      </p>
+                    </div>
+                    <Button variant="outline" onClick={handleOpenCoachingDialog}>
+                      Edit Profile
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Quick Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <div className="text-2xl font-bold text-primary">0</div>
+                    <p className="text-sm text-slate-600">Total Sessions</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <div className="text-2xl font-bold text-green-600">${existingProfile.basePrice}</div>
+                    <p className="text-sm text-slate-600">Hourly Rate</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4 text-center">
+                    <div className="text-2xl font-bold text-blue-600">4.5</div>
+                    <p className="text-sm text-slate-600">Average Rating</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Call to Action for Schedule */}
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <MessageSquare className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Ready to Accept Bookings?</h3>
+                  <p className="text-slate-600 mb-4">
+                    Set your availability so students can book sessions with you.
+                  </p>
+                  <Button onClick={() => setActiveTab("schedule")}>
+                    <Calendar className="w-4 h-4 mr-2" />
+                    Manage Schedule
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <Users className="w-16 h-16 text-slate-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold mb-2">No coaching sessions yet</h3>
+                <p className="text-slate-600 mb-6">
+                  Offer 1-on-1 coaching to help students directly
+                </p>
+                <Button variant="outline" onClick={handleOpenCoachingDialog}>
+                  <Video className="w-4 h-4 mr-2" />
+                  Set Up Coaching Profile
+                </Button>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
+
+        {/* Schedule Tab - Only for Active Coaches */}
+        {existingProfile?.isActive && (
+          <TabsContent value="schedule" className="space-y-6">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-dark mb-2">Manage Your Schedule</h2>
+              <p className="text-slate-600">
+                Set your availability for different days. Students will only be able to book sessions during your available hours.
+              </p>
+            </div>
+            
+            <CoachScheduleManager />
+          </TabsContent>
+        )}
       </Tabs>
 
       {/* Coaching Setup Dialog */}

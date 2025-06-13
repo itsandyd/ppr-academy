@@ -8,6 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Users,
   Star,
@@ -20,9 +24,16 @@ import {
   ArrowRight,
   Filter,
   DollarSign,
-  BookOpen
+  BookOpen,
+  Loader2,
+  CalendarDays
 } from "lucide-react";
 import type { Coach } from "@/app/actions/coaching-actions";
+import { 
+  createCoachingSession,
+  getCoachAvailability,
+  initializeDiscordAuth
+} from "@/app/actions/coaching-actions";
 
 interface CoachingClientProps {
   coaches: Coach[];
@@ -32,6 +43,22 @@ interface CoachingClientProps {
 export default function CoachingClient({ coaches, isAuthenticated }: CoachingClientProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSpecialty, setSelectedSpecialty] = useState("all");
+  const [isBookingDialogOpen, setIsBookingDialogOpen] = useState(false);
+  const [selectedCoach, setSelectedCoach] = useState<Coach | null>(null);
+  const [isBookingSession, setIsBookingSession] = useState(false);
+  const [availableSlots, setAvailableSlots] = useState<any[]>([]);
+  const [isLoadingSlots, setIsLoadingSlots] = useState(false);
+  const [requiresDiscordAuth, setRequiresDiscordAuth] = useState(false);
+  const { toast } = useToast();
+
+  // Booking form state
+  const [bookingForm, setBookingForm] = useState({
+    date: '',
+    time: '',
+    duration: 60,
+    notes: '',
+    sessionType: 'video'
+  });
 
   const specialties = [
     { value: "all", label: "All Specialties" },
@@ -49,6 +76,18 @@ export default function CoachingClient({ coaches, isAuthenticated }: CoachingCli
     { value: "fl-studio", label: "FL Studio" }
   ];
 
+  const durationOptions = [
+    { value: 30, label: "30 minutes" },
+    { value: 60, label: "1 hour" },
+    { value: 90, label: "1.5 hours" },
+    { value: 120, label: "2 hours" }
+  ];
+
+  const timeSlots = [
+    "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", 
+    "15:00", "16:00", "17:00", "18:00", "19:00", "20:00"
+  ];
+
   const filteredCoaches = coaches.filter((coach) => {
     const matchesSearch = searchQuery === "" || 
       coach.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -60,6 +99,167 @@ export default function CoachingClient({ coaches, isAuthenticated }: CoachingCli
     
     return matchesSearch && matchesSpecialty;
   });
+
+  const handleBookSession = async (coach: Coach) => {
+    if (!isAuthenticated) {
+      window.location.href = '/sign-in';
+      return;
+    }
+    
+    setSelectedCoach(coach);
+    setIsBookingDialogOpen(true);
+    setRequiresDiscordAuth(false);
+    
+    // Reset form
+    setBookingForm({
+      date: '',
+      time: '',
+      duration: 60,
+      notes: '',
+      sessionType: 'video'
+    });
+    
+    setAvailableSlots([]);
+  };
+
+  const fetchAvailableSlots = async (date: string) => {
+    if (!selectedCoach || !date) return;
+    
+    setIsLoadingSlots(true);
+    try {
+      const result = await getCoachAvailability(selectedCoach.userId, new Date(date));
+      if (result.success) {
+        setAvailableSlots(result.availability || []);
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to load available time slots",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching availability:', error);
+    } finally {
+      setIsLoadingSlots(false);
+    }
+  };
+
+  const handleDateChange = (date: string) => {
+    setBookingForm(prev => ({ ...prev, date, time: '' }));
+    fetchAvailableSlots(date);
+  };
+
+  const handleDiscordAuth = async () => {
+    try {
+      const result = await initializeDiscordAuth();
+      if (result.success && result.authUrl) {
+        window.location.href = result.authUrl;
+      }
+    } catch (error) {
+      console.error('Discord auth error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to initialize Discord authentication",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getAvailableTimeSlots = () => {
+    if (!bookingForm.date || availableSlots.length === 0) return [];
+    
+    // Generate time slots based on coach availability
+    const timeSlots: string[] = [];
+    
+    availableSlots.forEach(slot => {
+      const startTime = slot.startTime;
+      const endTime = slot.endTime;
+      
+      // Convert times to minutes for easier calculation
+      const startMinutes = timeToMinutes(startTime);
+      const endMinutes = timeToMinutes(endTime);
+      
+      // Generate slots based on session duration
+      for (let time = startMinutes; time + bookingForm.duration <= endMinutes; time += 30) {
+        const timeString = minutesToTime(time);
+        timeSlots.push(timeString);
+      }
+    });
+    
+    return timeSlots.sort();
+  };
+
+  const timeToMinutes = (time: string): number => {
+    const [hours, minutes] = time.split(':').map(Number);
+    return hours * 60 + minutes;
+  };
+
+  const minutesToTime = (minutes: number): string => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+  };
+
+  const calculateTotalCost = () => {
+    if (!selectedCoach) return 0;
+    return (selectedCoach.hourlyRate * bookingForm.duration) / 60;
+  };
+
+  const handleSubmitBooking = async () => {
+    if (!selectedCoach || !bookingForm.date || !bookingForm.time) {
+      toast({
+        title: "Missing Information",
+        description: "Please select a date and time for your session.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsBookingSession(true);
+    
+    try {
+      const result = await createCoachingSession({
+        coachId: selectedCoach.userId,
+        scheduledDate: new Date(bookingForm.date),
+        startTime: bookingForm.time,
+        duration: bookingForm.duration,
+        notes: bookingForm.notes,
+        sessionType: bookingForm.sessionType
+      });
+      
+      if (result.success) {
+        toast({
+          title: "Session Booked Successfully!",
+          description: `Your ${bookingForm.duration}-minute session with ${selectedCoach.firstName} ${selectedCoach.lastName} has been scheduled for ${bookingForm.date} at ${bookingForm.time}.`,
+        });
+        
+        setIsBookingDialogOpen(false);
+        setSelectedCoach(null);
+      } else if (result.requiresDiscordAuth) {
+        setRequiresDiscordAuth(true);
+        toast({
+          title: "Discord Authentication Required",
+          description: "Please link your Discord account to book coaching sessions.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Booking Failed",
+          description: result.error || "Failed to book session",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Booking error:', error);
+      toast({
+        title: "Booking Failed",
+        description: "Something went wrong while booking your session. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsBookingSession(false);
+    }
+  };
 
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (
@@ -217,15 +417,7 @@ export default function CoachingClient({ coaches, isAuthenticated }: CoachingCli
                         className="flex-1" 
                         size="sm"
                         disabled={!isAuthenticated}
-                        onClick={() => {
-                          if (!isAuthenticated) {
-                            // Redirect to sign-in or show auth modal
-                            window.location.href = '/sign-in';
-                          } else {
-                            // TODO: Implement booking modal or redirect to booking page
-                            console.log('Book session with coach:', coach.id);
-                          }
-                        }}
+                        onClick={() => handleBookSession(coach)}
                       >
                         <Video className="w-4 h-4 mr-2" />
                         Book Session
@@ -253,6 +445,204 @@ export default function CoachingClient({ coaches, isAuthenticated }: CoachingCli
           )}
         </div>
       </div>
+
+      {/* Enhanced Booking Dialog */}
+      <Dialog open={isBookingDialogOpen} onOpenChange={setIsBookingDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarDays className="w-5 h-5 text-primary" />
+              Book Session with {selectedCoach?.firstName} {selectedCoach?.lastName}
+            </DialogTitle>
+            <DialogDescription>
+              Schedule your music production coaching session. You'll receive a confirmation email with meeting details.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            {/* Discord Authentication Warning */}
+            {requiresDiscordAuth && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex items-start space-x-3">
+                  <MessageSquare className="w-5 h-5 text-red-600 mt-0.5" />
+                  <div className="flex-1">
+                    <h4 className="font-medium text-red-900 mb-1">Discord Authentication Required</h4>
+                    <p className="text-sm text-red-800 mb-3">
+                      To book coaching sessions, you need to link your Discord account. This allows us to create private channels and give you access to your coaching sessions.
+                    </p>
+                    <Button
+                      size="sm"
+                      onClick={handleDiscordAuth}
+                      className="bg-[#5865F2] hover:bg-[#4752C4] text-white"
+                    >
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      Connect Discord
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Coach Summary */}
+            <div className="bg-slate-50 p-4 rounded-lg">
+              <div className="flex items-center space-x-3">
+                <Avatar className="w-12 h-12">
+                  <AvatarImage src={selectedCoach?.imageUrl} alt={selectedCoach?.firstName} />
+                  <AvatarFallback className="bg-primary text-white text-sm">
+                    {selectedCoach?.firstName?.[0]}{selectedCoach?.lastName?.[0]}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <h4 className="font-medium text-dark">
+                    {selectedCoach?.firstName} {selectedCoach?.lastName}
+                  </h4>
+                  <div className="flex items-center text-sm text-slate-600">
+                    <DollarSign className="w-3 h-3 mr-1" />
+                    ${selectedCoach?.hourlyRate}/hour
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Date Selection */}
+            <div>
+              <Label htmlFor="session-date">Session Date</Label>
+              <Input
+                id="session-date"
+                type="date"
+                value={bookingForm.date}
+                onChange={(e) => handleDateChange(e.target.value)}
+                min={new Date().toISOString().split('T')[0]}
+                className="mt-1"
+              />
+            </div>
+
+            {/* Time Selection - Only show available slots */}
+            <div>
+              <Label htmlFor="session-time">Available Time Slots</Label>
+              {isLoadingSlots ? (
+                <div className="mt-1 p-3 border rounded-md flex items-center justify-center">
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Loading available slots...
+                </div>
+              ) : (
+                <Select 
+                  value={bookingForm.time} 
+                  onValueChange={(value) => setBookingForm(prev => ({ ...prev, time: value }))}
+                  disabled={!bookingForm.date || getAvailableTimeSlots().length === 0}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder={
+                      !bookingForm.date 
+                        ? "Select a date first" 
+                        : getAvailableTimeSlots().length === 0
+                        ? "No available slots"
+                        : "Select time slot"
+                    } />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getAvailableTimeSlots().map((time) => (
+                      <SelectItem key={time} value={time}>
+                        {time}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {bookingForm.date && getAvailableTimeSlots().length === 0 && !isLoadingSlots && (
+                <p className="text-sm text-slate-500 mt-1">
+                  No available slots for this date. Please select a different date.
+                </p>
+              )}
+            </div>
+
+            {/* Duration Selection */}
+            <div>
+              <Label htmlFor="session-duration">Session Duration</Label>
+              <Select 
+                value={bookingForm.duration.toString()} 
+                onValueChange={(value) => {
+                  setBookingForm(prev => ({ ...prev, duration: parseInt(value), time: '' }));
+                  if (bookingForm.date) {
+                    fetchAvailableSlots(bookingForm.date);
+                  }
+                }}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {durationOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value.toString()}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Session Notes */}
+            <div>
+              <Label htmlFor="session-notes">Session Notes (Optional)</Label>
+              <Textarea
+                id="session-notes"
+                placeholder="What would you like to focus on in this session? Any specific tracks or techniques you'd like to work on?"
+                value={bookingForm.notes}
+                onChange={(e) => setBookingForm(prev => ({ ...prev, notes: e.target.value }))}
+                className="mt-1 min-h-[80px]"
+                rows={3}
+              />
+            </div>
+
+            {/* Cost Summary */}
+            <div className="bg-primary/5 p-4 rounded-lg border border-primary/20">
+              <div className="flex items-center justify-between text-sm mb-2">
+                <span>Duration:</span>
+                <span>{bookingForm.duration} minutes</span>
+              </div>
+              <div className="flex items-center justify-between text-sm mb-2">
+                <span>Rate:</span>
+                <span>${selectedCoach?.hourlyRate}/hour</span>
+              </div>
+              <div className="border-t border-primary/20 pt-2">
+                <div className="flex items-center justify-between font-semibold">
+                  <span>Total Cost:</span>
+                  <span className="text-primary">${calculateTotalCost().toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsBookingDialogOpen(false)}
+                className="flex-1"
+                disabled={isBookingSession}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSubmitBooking}
+                className="flex-1"
+                disabled={isBookingSession || !bookingForm.date || !bookingForm.time || requiresDiscordAuth}
+              >
+                {isBookingSession ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Booking...
+                  </>
+                ) : (
+                  <>
+                    <Calendar className="w-4 h-4 mr-2" />
+                    Book Session
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 } 
