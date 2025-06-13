@@ -93,23 +93,184 @@ export async function toggleFeatureCourse(courseId: string, featured: boolean) {
   }
 }
 
-export async function approveCoach(userId: string) {
+export async function approveCoach(profileId: string) {
   await checkAdminAuth();
   
   try {
-    // Update user role to instructor
+    // Get the coach profile to find the user
+    const coachProfile = await prisma.coachProfile.findUnique({
+      where: { id: profileId },
+      select: { userId: true, title: true }
+    });
+
+    if (!coachProfile) {
+      return { success: false, error: "Coach profile not found" };
+    }
+
+    console.log(`🔍 Approving coach profile: ${profileId} for user: ${coachProfile.userId}`);
+
+    // Check if the user exists
+    const user = await prisma.user.findUnique({
+      where: { id: coachProfile.userId },
+      select: { id: true, firstName: true, lastName: true, email: true }
+    });
+
+    if (!user) {
+      console.error(`❌ User not found: ${coachProfile.userId} for coach profile: ${profileId}`);
+      return { success: false, error: `User not found. The coach application may be corrupted.` };
+    }
+
+    console.log(`👤 Found user: ${user.firstName} ${user.lastName} (${user.email})`);
+
+    // Activate the coach profile
+    await prisma.coachProfile.update({
+      where: { id: profileId },
+      data: { 
+        isActive: true,
+        updatedAt: new Date(),
+      },
+    });
+
+    // Update user role to instructor/coach
     await prisma.user.update({
-      where: { id: userId },
+      where: { id: coachProfile.userId },
       data: { 
         role: "AGENCY_ADMIN", // Using AGENCY_ADMIN as instructor role
       },
     });
     
+    console.log(`✅ Approved coach profile: ${profileId} for ${user.firstName} ${user.lastName}`);
+    
     revalidatePath("/admin");
+    revalidatePath("/coaching");
     return { success: true };
   } catch (error) {
     console.error("Error approving coach:", error);
-    return { success: false, error: "Failed to approve coach" };
+    return { success: false, error: `Failed to approve coach: ${error instanceof Error ? error.message : 'Unknown error'}` };
+  }
+}
+
+export async function rejectCoach(profileId: string) {
+  await checkAdminAuth();
+  
+  try {
+    // Delete the coach profile (rejection)
+    await prisma.coachProfile.delete({
+      where: { id: profileId },
+    });
+    
+    console.log(`❌ Rejected coach profile: ${profileId}`);
+    
+    revalidatePath("/admin");
+    return { success: true };
+  } catch (error) {
+    console.error("Error rejecting coach:", error);
+    return { success: false, error: "Failed to reject coach" };
+  }
+}
+
+export async function debugCoachProfiles() {
+  await checkAdminAuth();
+  
+  try {
+    // Get all coach profiles
+    const coachProfiles = await prisma.coachProfile.findMany({
+      select: { 
+        id: true, 
+        userId: true, 
+        title: true, 
+        isActive: true,
+        createdAt: true 
+      }
+    });
+
+    console.log(`🔍 Found ${coachProfiles.length} coach profiles:`);
+    
+    const results = [];
+    
+    for (const profile of coachProfiles) {
+      // Check if user exists
+      const user = await prisma.user.findUnique({
+        where: { id: profile.userId },
+        select: { id: true, firstName: true, lastName: true, email: true }
+      });
+
+      const status = user ? 'Valid' : 'Orphaned (User Missing)';
+      
+      console.log(`Profile ${profile.id}: ${status}`);
+      console.log(`  - User ID: ${profile.userId}`);
+      console.log(`  - Title: ${profile.title}`);
+      console.log(`  - Active: ${profile.isActive}`);
+      
+      if (user) {
+        console.log(`  - User: ${user.firstName} ${user.lastName} (${user.email})`);
+      }
+      
+      results.push({
+        profileId: profile.id,
+        userId: profile.userId,
+        title: profile.title,
+        isActive: profile.isActive,
+        userExists: !!user,
+        user: user ? `${user.firstName} ${user.lastName} (${user.email})` : null
+      });
+    }
+
+    return { success: true, profiles: results };
+  } catch (error) {
+    console.error("Error debugging coach profiles:", error);
+    return { success: false, error: "Failed to debug coach profiles" };
+  }
+}
+
+export async function cleanupOrphanedCoachProfiles() {
+  await checkAdminAuth();
+  
+  try {
+    // Get all coach profiles
+    const coachProfiles = await prisma.coachProfile.findMany({
+      select: { id: true, userId: true }
+    });
+
+    const orphanedProfiles = [];
+    
+    for (const profile of coachProfiles) {
+      // Check if user exists
+      const user = await prisma.user.findUnique({
+        where: { id: profile.userId },
+        select: { id: true }
+      });
+
+      if (!user) {
+        orphanedProfiles.push(profile.id);
+      }
+    }
+
+    if (orphanedProfiles.length > 0) {
+      // Delete orphaned profiles
+      await prisma.coachProfile.deleteMany({
+        where: { 
+          id: { in: orphanedProfiles }
+        }
+      });
+
+      console.log(`🧹 Cleaned up ${orphanedProfiles.length} orphaned coach profiles`);
+      
+      revalidatePath("/admin");
+      return { 
+        success: true, 
+        message: `Cleaned up ${orphanedProfiles.length} orphaned coach profiles`,
+        deletedProfiles: orphanedProfiles
+      };
+    } else {
+      return { 
+        success: true, 
+        message: "No orphaned coach profiles found"
+      };
+    }
+  } catch (error) {
+    console.error("Error cleaning up orphaned coach profiles:", error);
+    return { success: false, error: "Failed to cleanup orphaned profiles" };
   }
 }
 

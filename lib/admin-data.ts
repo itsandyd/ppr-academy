@@ -141,14 +141,31 @@ export async function getRecentReviews() {
 
 export async function getCoachApplications() {
   try {
-    // Find users who have created courses but aren't marked as coaches
-    // In this schema, we consider users with courses as potential coaches
-    const potentialCoaches = await prisma.user.findMany({
+    // Find inactive coach profiles (pending approval)
+    const coachProfiles = await prisma.coachProfile.findMany({
       where: {
-        courses: {
-          some: {},
-        },
-        // You might want to add a coach status field
+        isActive: false, // Pending approval
+      },
+      select: {
+        id: true,
+        userId: true,
+        title: true,
+        description: true,
+        category: true,
+        basePrice: true,
+        location: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    // Get user data for each coach profile
+    const userIds = coachProfiles.map(profile => profile.userId);
+    const users = await prisma.user.findMany({
+      where: {
+        id: {
+          in: userIds
+        }
       },
       select: {
         id: true,
@@ -156,18 +173,30 @@ export async function getCoachApplications() {
         firstName: true,
         lastName: true,
         imageUrl: true,
-        createdAt: true,
-        _count: {
-          select: {
-            courses: true,
-          },
-        },
-      },
-      orderBy: { createdAt: "desc" },
-      take: 10,
+      }
     });
 
-    return potentialCoaches;
+    // Combine coach profile data with user data
+    const coachApplications = coachProfiles.map(profile => {
+      const user = users.find(u => u.id === profile.userId);
+      return {
+        id: profile.id, // Use profile ID for approval
+        userId: profile.userId,
+        email: user?.email || '',
+        firstName: user?.firstName || 'Unknown',
+        lastName: user?.lastName || 'Coach',
+        imageUrl: user?.imageUrl || '',
+        title: profile.title,
+        description: profile.description,
+        category: profile.category,
+        basePrice: profile.basePrice,
+        location: profile.location,
+        createdAt: profile.createdAt,
+      };
+    });
+
+    console.log(`👥 Found ${coachApplications.length} pending coach applications`);
+    return coachApplications;
   } catch (error) {
     console.error("Error fetching coach applications:", error);
     return [];

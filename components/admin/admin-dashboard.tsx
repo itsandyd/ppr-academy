@@ -40,6 +40,9 @@ import {
   rejectCourse, 
   toggleFeatureCourse,
   approveCoach,
+  rejectCoach,
+  debugCoachProfiles,
+  cleanupOrphanedCoachProfiles,
   generateAICourse,
   searchImages,
   enhancedImageSearch,
@@ -161,6 +164,85 @@ export default function AdminDashboard({
       toast({
         title: "Error",
         description: result.error || "Failed to approve course",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleApproveCoach = async (profileId: string) => {
+    const result = await approveCoach(profileId);
+    
+    if (result.success) {
+      toast({
+        title: "Coach Approved",
+        description: "Coach has been approved and is now active.",
+      });
+      // Refresh the page to update the list
+      window.location.reload();
+    } else {
+      toast({
+        title: "Error",
+        description: result.error || "Failed to approve coach",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRejectCoach = async (profileId: string) => {
+    const result = await rejectCoach(profileId);
+    
+    if (result.success) {
+      toast({
+        title: "Coach Rejected",
+        description: "Coach application has been rejected.",
+      });
+      // Refresh the page to update the list
+      window.location.reload();
+    } else {
+      toast({
+        title: "Error",
+        description: result.error || "Failed to reject coach",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDebugCoachProfiles = async () => {
+    setIsLoading(true);
+    const result = await debugCoachProfiles();
+    setIsLoading(false);
+    
+    if (result.success) {
+      console.log("Coach profiles debug results:", result.profiles);
+      toast({
+        title: "Debug Complete",
+        description: `Found ${result.profiles?.length || 0} coach profiles. Check console for details.`,
+      });
+    } else {
+      toast({
+        title: "Debug Failed",
+        description: result.error || "Failed to debug coach profiles",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCleanupOrphanedProfiles = async () => {
+    setIsLoading(true);
+    const result = await cleanupOrphanedCoachProfiles();
+    setIsLoading(false);
+    
+    if (result.success) {
+      toast({
+        title: "Cleanup Complete",
+        description: result.message || "Cleanup completed successfully",
+      });
+      // Refresh the page to update the list
+      window.location.reload();
+    } else {
+      toast({
+        title: "Cleanup Failed",
+        description: result.error || "Failed to cleanup orphaned profiles",
         variant: "destructive",
       });
     }
@@ -1467,41 +1549,112 @@ export default function AdminDashboard({
           <TabsContent value="coaching" className="space-y-6 pt-8">
             <Card>
               <CardHeader>
-                <CardTitle>Coach Applications</CardTitle>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <CardTitle>Coach Applications</CardTitle>
+                    <p className="text-slate-600">
+                      Review and approve coach applications. {coachApplications?.length || 0} pending applications.
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleDebugCoachProfiles}
+                      disabled={isLoading}
+                      className="text-xs"
+                    >
+                      {isLoading ? (
+                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                      ) : (
+                        <Search className="w-3 h-3 mr-1" />
+                      )}
+                      Debug
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCleanupOrphanedProfiles}
+                      disabled={isLoading}
+                      className="text-xs border-orange-200 text-orange-600 hover:bg-orange-50"
+                    >
+                      {isLoading ? (
+                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                      ) : (
+                        <Activity className="w-3 h-3 mr-1" />
+                      )}
+                      Cleanup
+                    </Button>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 {coachApplications && coachApplications.length > 0 ? (
                   <div className="space-y-4">
                     {coachApplications.map((application: any) => (
-                      <div key={application.id} className="flex items-center justify-between p-4 border border-slate-200 rounded-lg">
-                        <div className="flex items-center space-x-4">
-                          <Avatar>
-                            <AvatarImage src={application.imageUrl} />
-                            <AvatarFallback>
-                              {application.firstName?.[0]}{application.lastName?.[0]}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <h4 className="font-medium text-dark">
-                              {application.firstName} {application.lastName}
-                            </h4>
-                            <p className="text-sm text-slate-600">{application.email}</p>
+                      <div key={application.id} className="p-6 border border-slate-200 rounded-lg">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-start space-x-4 flex-1">
+                            <Avatar className="w-12 h-12">
+                              <AvatarImage src={application.imageUrl} />
+                              <AvatarFallback>
+                                {application.firstName?.[0]}{application.lastName?.[0]}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-2">
+                                <h4 className="font-semibold text-dark">
+                                  {application.firstName} {application.lastName}
+                                </h4>
+                                <Badge variant="outline" className="text-xs">
+                                  {application.category}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-slate-600 mb-2">{application.email}</p>
+                              <h5 className="font-medium text-sm text-dark mb-1">{application.title}</h5>
+                              <p className="text-sm text-slate-600 line-clamp-2 mb-3">{application.description}</p>
+                              <div className="flex items-center gap-4 text-xs text-slate-500">
+                                <span>${application.basePrice}/hour</span>
+                                {application.location && (
+                                  <>
+                                    <span>•</span>
+                                    <span>{application.location}</span>
+                                  </>
+                                )}
+                                <span>•</span>
+                                <span>Applied {new Date(application.createdAt).toLocaleDateString()}</span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="flex gap-2 ml-4">
+                            <Button
+                              size="sm"
+                              onClick={() => handleApproveCoach(application.id)}
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              <UserCheck className="w-4 h-4 mr-1" />
+                              Approve
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleRejectCoach(application.id)}
+                              className="border-red-200 text-red-600 hover:bg-red-50"
+                            >
+                              <X className="w-4 h-4 mr-1" />
+                              Reject
+                            </Button>
                           </div>
                         </div>
-                        
-                        <Button
-                          size="sm"
-                          onClick={() => approveCoach(application.id)}
-                        >
-                          <UserCheck className="w-4 h-4 mr-1" />
-                          Approve
-                        </Button>
                       </div>
                     ))}
                   </div>
                 ) : (
                   <div className="text-center py-8 text-slate-500">
-                    No pending coach applications
+                    <Users className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+                    <h3 className="font-medium text-slate-700 mb-1">No pending applications</h3>
+                    <p className="text-sm">All coach applications have been reviewed.</p>
                   </div>
                 )}
               </CardContent>

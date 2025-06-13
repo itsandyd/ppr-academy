@@ -1,8 +1,17 @@
+"use client";
+
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { 
   BookOpen, 
@@ -12,9 +21,14 @@ import {
   Eye,
   Edit,
   DollarSign,
-  BarChart
+  BarChart,
+  Video,
+  Clock,
+  Star,
+  Loader2
 } from "lucide-react";
 import CourseCard from "@/components/course-card";
+import { createCoachApplication, getUserCoachProfile, updateCoachApplication } from "@/app/actions/coaching-actions";
 import type { User, CourseWithDetails } from "@/lib/types";
 import { generateSlug } from "@/lib/utils";
 
@@ -36,10 +50,148 @@ export function CreatorDashboard({
   coachingSessions,
   dashboardStats 
 }: CreatorDashboardProps) {
+  const { toast } = useToast();
+  const [isCoachingDialogOpen, setIsCoachingDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  const [existingProfile, setExistingProfile] = useState<any>(null);
+  
+  const [coachingForm, setCoachingForm] = useState({
+    category: "",
+    title: "",
+    description: "",
+    basePrice: "",
+    location: "",
+    timezone: "",
+    availableDays: "",
+    availableHours: "",
+  });
+
   const totalRevenue = userCourses.reduce((sum, course) => {
     const revenue = (course.price || 0) * (course._count?.enrollments || 0);
     return sum + revenue;
   }, 0);
+
+  const categories = [
+    "Hip-Hop Production",
+    "Electronic Music", 
+    "Mixing & Mastering",
+    "Sound Design",
+    "Music Theory",
+    "Pop Production",
+    "Rock Production",
+    "DAWs",
+    "Trap Production",
+    "House Music",
+    "Techno Production",
+    "Vocal Production",
+  ];
+
+  const timezones = [
+    "UTC-12:00", "UTC-11:00", "UTC-10:00", "UTC-09:00", "UTC-08:00",
+    "UTC-07:00", "UTC-06:00", "UTC-05:00", "UTC-04:00", "UTC-03:00",
+    "UTC-02:00", "UTC-01:00", "UTC+00:00", "UTC+01:00", "UTC+02:00",
+    "UTC+03:00", "UTC+04:00", "UTC+05:00", "UTC+06:00", "UTC+07:00",
+    "UTC+08:00", "UTC+09:00", "UTC+10:00", "UTC+11:00", "UTC+12:00"
+  ];
+
+  const handleInputChange = (field: string, value: string) => {
+    setCoachingForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleOpenCoachingDialog = async () => {
+    setIsLoadingProfile(true);
+    setIsCoachingDialogOpen(true);
+    
+    try {
+      const result = await getUserCoachProfile();
+      
+      if (result.success && result.profile) {
+        setExistingProfile(result.profile);
+        // Pre-fill form with existing data
+        setCoachingForm({
+          category: result.profile.category || "",
+          title: result.profile.title || "",
+          description: result.profile.description || "",
+          basePrice: result.profile.basePrice?.toString() || "",
+          location: result.profile.location || "",
+          timezone: result.profile.timezone || "",
+          availableDays: result.profile.availableDays || "",
+          availableHours: result.profile.availableHours || "",
+        });
+      } else {
+        setExistingProfile(null);
+        // Reset form for new application
+        setCoachingForm({
+          category: "",
+          title: "",
+          description: "",
+          basePrice: "",
+          location: "",
+          timezone: "",
+          availableDays: "",
+          availableHours: "",
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching coach profile:", error);
+    } finally {
+      setIsLoadingProfile(false);
+    }
+  };
+
+  const handleSubmitCoaching = async () => {
+    if (!coachingForm.category || !coachingForm.title || !coachingForm.description || !coachingForm.basePrice) {
+      toast({
+        title: "Missing Required Fields",
+        description: "Please fill in specialty, title, description, and hourly rate.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const applicationData = {
+        ...coachingForm,
+        basePrice: Number(coachingForm.basePrice)
+      };
+
+      let result;
+      if (existingProfile) {
+        // Update existing profile
+        result = await updateCoachApplication(applicationData);
+      } else {
+        // Create new profile
+        result = await createCoachApplication(applicationData);
+      }
+
+      if (result.success) {
+        toast({
+          title: existingProfile ? "Profile Updated!" : "Application Submitted!",
+          description: existingProfile 
+            ? "Your coaching profile has been updated."
+            : "We'll review your application and get back to you soon.",
+        });
+        setIsCoachingDialogOpen(false);
+      } else {
+        toast({
+          title: existingProfile ? "Update Failed" : "Application Failed",
+          description: result.error || "Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: existingProfile ? "Update Failed" : "Application Failed", 
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -236,12 +388,10 @@ export function CreatorDashboard({
         <TabsContent value="coaching" className="space-y-8">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold">Coaching Sessions</h2>
-            <Link href="/coaching/setup">
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                Set Up Coaching
-              </Button>
-            </Link>
+            <Button onClick={handleOpenCoachingDialog}>
+              <Plus className="w-4 h-4 mr-2" />
+              Set Up Coaching
+            </Button>
           </div>
 
           <Card>
@@ -251,15 +401,220 @@ export function CreatorDashboard({
               <p className="text-slate-600 mb-6">
                 Offer 1-on-1 coaching to help students directly
               </p>
-              <Link href="/coaching/setup">
-                <Button variant="outline">
-                  Learn About Coaching
-                </Button>
-              </Link>
+              <Button variant="outline" onClick={handleOpenCoachingDialog}>
+                <Video className="w-4 h-4 mr-2" />
+                Set Up Coaching Profile
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Coaching Setup Dialog */}
+      <Dialog open={isCoachingDialogOpen} onOpenChange={setIsCoachingDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Video className="w-5 h-5 text-primary" />
+              {existingProfile ? "Update Your Coaching Profile" : "Set Up Your Coaching Profile"}
+            </DialogTitle>
+            <DialogDescription>
+              {existingProfile 
+                ? "Update your coaching profile information and availability."
+                : "Create your coaching profile to start offering 1-on-1 sessions to students."
+              }
+            </DialogDescription>
+          </DialogHeader>
+          
+          {isLoadingProfile ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin mr-2" />
+              <span>Loading your profile...</span>
+            </div>
+          ) : (
+            <>
+              {/* Status Banner */}
+              {existingProfile && (
+                <div className={`p-4 rounded-lg border ${
+                  existingProfile.isActive 
+                    ? 'bg-green-50 border-green-200' 
+                    : 'bg-yellow-50 border-yellow-200'
+                }`}>
+                  <div className="flex items-start space-x-2">
+                    {existingProfile.isActive ? (
+                      <span className="w-2 h-2 bg-green-500 rounded-full mt-2"></span>
+                    ) : (
+                      <Clock className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                    )}
+                    <div className={`text-sm ${
+                      existingProfile.isActive ? 'text-green-800' : 'text-yellow-800'
+                    }`}>
+                      <p className="font-medium mb-1">
+                        {existingProfile.isActive ? 'Profile Active' : 'Pending Review'}
+                      </p>
+                      <p className="text-sm">
+                        {existingProfile.isActive 
+                          ? 'Your coaching profile is live and students can book sessions with you.'
+                          : 'Your application is being reviewed by our team. You can update your information anytime.'
+                        }
+                      </p>
+                      <p className="text-xs mt-1 opacity-75">
+                        Applied on {new Date(existingProfile.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-6 py-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="specialty">Specialty *</Label>
+                <Select value={coachingForm.category} onValueChange={(value) => handleInputChange("category", value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select your specialty" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category} value={category}>
+                        {category}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="basePrice">Hourly Rate (USD) *</Label>
+                <Input
+                  id="basePrice"
+                  type="number"
+                  min="1"
+                  placeholder="50"
+                  value={coachingForm.basePrice}
+                  onChange={(e) => handleInputChange("basePrice", e.target.value)}
+                />
+                <p className="text-xs text-slate-500 mt-1">Recommended: $25-150/hour</p>
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="title">Professional Title *</Label>
+              <Input
+                id="title"
+                placeholder="e.g., Professional Music Producer & Mix Engineer"
+                value={coachingForm.title}
+                onChange={(e) => handleInputChange("title", e.target.value)}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="description">About You & Your Teaching Style *</Label>
+              <Textarea
+                id="description"
+                placeholder="Tell students about your experience and how you approach coaching..."
+                rows={4}
+                value={coachingForm.description}
+                onChange={(e) => handleInputChange("description", e.target.value)}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="location">Location</Label>
+                <Input
+                  id="location"
+                  placeholder="e.g., Los Angeles, CA or Remote"
+                  value={coachingForm.location}
+                  onChange={(e) => handleInputChange("location", e.target.value)}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="timezone">Timezone</Label>
+                <Select value={coachingForm.timezone} onValueChange={(value) => handleInputChange("timezone", value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select timezone" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {timezones.map((tz) => (
+                      <SelectItem key={tz} value={tz}>
+                        {tz}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="availableDays">Available Days</Label>
+                <Input
+                  id="availableDays"
+                  placeholder="e.g., Monday-Friday"
+                  value={coachingForm.availableDays}
+                  onChange={(e) => handleInputChange("availableDays", e.target.value)}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="availableHours">Available Hours</Label>
+                <Input
+                  id="availableHours"
+                  placeholder="e.g., 9 AM - 6 PM EST"
+                  value={coachingForm.availableHours}
+                  onChange={(e) => handleInputChange("availableHours", e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+              <div className="flex items-start space-x-2">
+                <Star className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div className="text-sm text-blue-800">
+                  <p className="font-medium mb-1">What happens next?</p>
+                  <ul className="space-y-1 text-sm">
+                    <li>• Your application will be reviewed by our team</li>
+                    <li>• We'll verify your experience and credentials</li>
+                    <li>• Once approved, you'll appear in our coaches directory</li>
+                    <li>• Students can book sessions directly with you</li>
+                  </ul>
+                </div>
+              </div>
+              </div>
+            </div>
+            
+            <div className="flex gap-3 pt-4 border-t">
+              <Button
+                variant="outline"
+                onClick={() => setIsCoachingDialogOpen(false)}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSubmitCoaching}
+                disabled={isSubmitting}
+                className="flex-1"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    {existingProfile ? "Updating..." : "Submitting..."}
+                  </>
+                ) : (
+                  <>
+                    <Video className="w-4 h-4 mr-2" />
+                    {existingProfile ? "Update Profile" : "Submit Application"}
+                  </>
+                )}
+              </Button>
+            </div>
+          </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 } 
