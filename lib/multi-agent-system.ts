@@ -1,13 +1,5 @@
 import OpenAI from 'openai';
-import { z } from 'zod';
-import * as cheerio from 'cheerio';
-import { scrapeContent } from './content-scraper';
-import { 
-  OrchestratorAgent as MultiAgentOrchestrator, 
-  AgentContext as MultiAgentContext 
-} from './multi-agent-system';
-
-// Multi-Agent System for Course Generation - removed duplicate interfaces
+import { searchTavily, searchTopicImages } from './ai-course-generator';
 
 // Initialize OpenAI
 const openai = new OpenAI({
@@ -15,14 +7,14 @@ const openai = new OpenAI({
 });
 
 // Base Agent Interface
-interface Agent {
+export interface Agent {
   name: string;
   role: string;
   execute(context: AgentContext): Promise<AgentResult>;
 }
 
 // Context passed between agents
-interface AgentContext {
+export interface AgentContext {
   topic: string;
   skillLevel: 'beginner' | 'intermediate' | 'advanced';
   category: string;
@@ -42,7 +34,7 @@ interface AgentContext {
 }
 
 // Result from agent execution
-interface AgentResult {
+export interface AgentResult {
   success: boolean;
   data?: any;
   error?: string;
@@ -98,7 +90,7 @@ const getSystemPrompt = (agentType: string) => {
 };
 
 // Research Agent - Gathers comprehensive topic information
-class ResearchAgent implements Agent {
+export class ResearchAgent implements Agent {
   name = "Research Agent";
   role = "Information Gathering & Topic Analysis";
 
@@ -123,14 +115,12 @@ class ResearchAgent implements Agent {
         try {
           const results = await searchTavily(query);
           researchData.push(...results);
-          // Rate limiting
           await new Promise(resolve => setTimeout(resolve, 500));
         } catch (error) {
           console.log(`⚠️ Search failed for: ${query}`);
         }
       }
 
-      // Analyze and synthesize research data
       const analysis = await this.analyzeResearchData(researchData, context);
 
       return {
@@ -187,14 +177,13 @@ Focus exclusively on "${context.topic}" - do not include unrelated topics.`
   }
 
   private async extractKeyTopics(analysis: string, topic: string): Promise<string[]> {
-    // Simple extraction - could be enhanced with NLP
     const topics = analysis.match(/\d+\.\s+([^\n]+)/g) || [];
     return topics.map(t => t.replace(/\d+\.\s+/, '').trim()).slice(0, 10);
   }
 }
 
 // Structure Agent - Creates course architecture
-class StructureAgent implements Agent {
+export class StructureAgent implements Agent {
   name = "Structure Agent";
   role = "Curriculum Design & Course Architecture";
 
@@ -202,7 +191,7 @@ class StructureAgent implements Agent {
     console.log(`🏗️ ${this.name}: Designing course structure for "${context.topic}"`);
     
     try {
-      const researchContext = (context.researchData as any)?.analysis || `Creating course structure for ${context.topic}`;
+      const researchContext = context.researchData?.analysis || `Creating course structure for ${context.topic}`;
       
       const completion = await openai.chat.completions.create({
         model: "gpt-4o",
@@ -305,7 +294,6 @@ Create a logical, engaging course structure that builds skills progressively.`
 
       const structure = JSON.parse(completion.choices[0].message.content || '{}');
       
-      // Validate structure
       const validation = await this.validateStructure(structure, context);
       
       if (!validation.isValid) {
@@ -352,74 +340,20 @@ Create a logical, engaging course structure that builds skills progressively.`
 }
 
 // Content Agent - Generates detailed educational content
-class ContentAgent implements Agent {
+export class ContentAgent implements Agent {
   name = "Content Agent";
   role = "Educational Content Generation";
 
   async execute(context: AgentContext): Promise<AgentResult> {
-    console.log(`✍️ ${this.name}: Generating content for "${context.topic}"`);
+    console.log(`✍️ ${this.name}: Content generation handled by orchestrator in parallel`);
     
-    try {
-      if (!context.courseStructure) {
-        throw new Error('Course structure required for content generation');
-      }
-
-      const enhancedStructure = await this.generateDetailedContent(context);
-
-      return {
-        success: true,
-        data: enhancedStructure,
-        context: { generatedContent: enhancedStructure }
-      };
-
-    } catch (error: any) {
-      return {
-        success: false,
-        error: `Content generation failed: ${error.message}`
-      };
-    }
-  }
-
-  private async generateDetailedContent(context: AgentContext): Promise<any> {
-    const structure = { ...context.courseStructure };
-    const totalChapters = this.countTotalChapters(structure);
-    let processedChapters = 0;
-
-    console.log(`📝 Generating detailed content for ${totalChapters} chapters...`);
-
-    // Process each module, lesson, and chapter
-    for (const module of structure.modules) {
-      for (const lesson of module.lessons) {
-        for (const chapter of lesson.chapters) {
-          try {
-            console.log(`📝 Processing: ${module.title} > ${lesson.title} > ${chapter.title} (${++processedChapters}/${totalChapters})`);
-            
-            const detailedContent = await this.generateChapterContent(
-              context.topic,
-              chapter.title,
-              context.skillLevel,
-              module.title,
-              lesson.title,
-              context
-            );
-
-            // Replace placeholder content with detailed content
-            chapter.content = detailedContent.content;
-            chapter.wordCount = detailedContent.wordCount;
-            chapter.keyTopics = detailedContent.keyTopics;
-
-            // Rate limiting to avoid API overload
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-          } catch (error) {
-            console.error(`❌ Failed to generate content for chapter: ${chapter.title}`, error);
-            // Keep existing content as fallback
-          }
-        }
-      }
-    }
-
-    return structure;
+    // This agent is now primarily used for its generateChapterContent method
+    // by the orchestrator's parallel content generation
+    return {
+      success: true,
+      data: null,
+      context: {}
+    };
   }
 
   private async generateChapterContent(
@@ -428,9 +362,26 @@ class ContentAgent implements Agent {
     skillLevel: string,
     moduleTitle: string,
     lessonTitle: string,
-    context: AgentContext
+    context: AgentContext,
+    contentTracker?: any
   ): Promise<{content: string, wordCount: number, keyTopics: string[]}> {
     
+    // Build context about previously covered content
+    const avoidanceContext = contentTracker ? `
+
+AVOID REPEATING THESE ALREADY COVERED CONCEPTS:
+${Array.from(contentTracker.coveredConcepts).slice(-10).join(', ')}
+
+PREVIOUS CHAPTERS COVERED:
+${contentTracker.previousChapters.slice(-3).join('\n')}
+
+PROGRESSION CONTEXT:
+- This is chapter ${(contentTracker.moduleProgress[moduleTitle] || 0) + 1} in "${moduleTitle}"
+- Build upon previous concepts without repeating them
+- Focus on NEW aspects of "${topic}" not yet covered
+- Each chapter should introduce UNIQUE techniques or applications
+` : '';
+
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
@@ -456,10 +407,15 @@ CRITICAL REQUIREMENTS:
 - Provide practical examples related to "${topic}"
 - Structure with clear sections and learning points
 - Make content immediately actionable for students
+- DO NOT repeat concepts already covered in previous chapters
+- Focus on UNIQUE aspects of "${chapterTitle}" within "${topic}"
+- Build progressively on previous knowledge without redundancy
+
+${avoidanceContext}
 
 Research Context: ${context.researchData?.analysis || 'Focus on practical application and professional techniques'}
 
-Generate comprehensive content about "${topic}" that educates students on this specific aspect.`
+Generate UNIQUE, NON-REPETITIVE content about "${topic}" that specifically addresses "${chapterTitle}" without duplicating previous material.`
         }
       ],
       temperature: 0.8,
@@ -484,7 +440,6 @@ Generate comprehensive content about "${topic}" that educates students on this s
   }
 
   private async extractKeyTopics(content: string, mainTopic: string): Promise<string[]> {
-    // Extract key learning points from content
     const lines = content.split('\n').filter(line => 
       line.includes(mainTopic) || 
       line.match(/\d+\./) || 
@@ -496,7 +451,7 @@ Generate comprehensive content about "${topic}" that educates students on this s
 }
 
 // Image Agent - Curates visual content
-class ImageAgent implements Agent {
+export class ImageAgent implements Agent {
   name = "Image Agent";
   role = "Visual Content Curation";
 
@@ -541,7 +496,6 @@ class ImageAgent implements Agent {
       }
     }
 
-    // Remove duplicates and validate
     const uniqueImages = [...new Set(allImages)].filter(url => this.isValidImageUrl(url));
     
     return uniqueImages.length > 0 ? uniqueImages.slice(0, 10) : this.getFallbackImages(context.topic, context.skillLevel);
@@ -569,7 +523,7 @@ class ImageAgent implements Agent {
 }
 
 // Quality Agent - Validates and optimizes content
-class QualityAgent implements Agent {
+export class QualityAgent implements Agent {
   name = "Quality Agent";
   role = "Content Quality Assurance";
 
@@ -613,17 +567,15 @@ class QualityAgent implements Agent {
   }
 
   private async checkTopicFocus(context: AgentContext): Promise<{score: number, details: string}> {
-    // Analyze if content stays focused on the main topic
     const structure = context.generatedContent || context.courseStructure;
     if (!structure) return { score: 0, details: 'No content to analyze' };
 
-    // Sample some chapter content for analysis
     const sampleContent = this.extractSampleContent(structure);
     const topicMentions = (sampleContent.match(new RegExp(context.topic, 'gi')) || []).length;
     const totalWords = sampleContent.split(' ').length;
     
     const focusRatio = totalWords > 0 ? (topicMentions / totalWords) * 100 : 0;
-    const score = Math.min(focusRatio * 20, 100); // Scale appropriately
+    const score = Math.min(focusRatio * 20, 100);
 
     return {
       score,
@@ -650,7 +602,7 @@ class QualityAgent implements Agent {
     }
 
     const averageWordsPerChapter = chapterCount > 0 ? totalWords / chapterCount : 0;
-    const score = Math.min((averageWordsPerChapter / 800) * 100, 100); // Target 800+ words per chapter
+    const score = Math.min((averageWordsPerChapter / 800) * 100, 100);
 
     return {
       score,
@@ -674,7 +626,7 @@ class QualityAgent implements Agent {
 
   private async checkLearningObjectives(context: AgentContext): Promise<{score: number, details: string}> {
     const hasObjectives = (context.learningObjectives?.length || 0) > 0;
-    const score = hasObjectives ? 100 : 60; // Partial credit if no custom objectives
+    const score = hasObjectives ? 100 : 60;
 
     return {
       score,
@@ -683,10 +635,8 @@ class QualityAgent implements Agent {
   }
 
   private async checkTechnicalAccuracy(context: AgentContext): Promise<{score: number, details: string}> {
-    // This would ideally use more sophisticated analysis
-    // For now, we'll do basic checks
     const hasResearch = !!context.researchData;
-    const score = hasResearch ? 85 : 70; // Higher score if research was conducted
+    const score = hasResearch ? 85 : 70;
 
     return {
       score,
@@ -737,7 +687,7 @@ class QualityAgent implements Agent {
 }
 
 // Orchestrator Agent - Coordinates all agents
-class OrchestratorAgent implements Agent {
+export class OrchestratorAgent implements Agent {
   name = "Orchestrator Agent";
   role = "Multi-Agent Coordination";
 
@@ -750,51 +700,96 @@ class OrchestratorAgent implements Agent {
   ];
 
   async execute(context: AgentContext): Promise<AgentResult> {
-    console.log(`🎼 ${this.name}: Starting multi-agent course generation for "${context.topic}"`);
+    console.log(`🎼 ${this.name}: Starting optimized multi-agent course generation for "${context.topic}"`);
     
     const executionLog = [];
     let currentContext = { ...context };
 
     try {
-      // Execute agents in sequence
-      for (const agent of this.agents) {
-        console.log(`\n🤖 Executing ${agent.name}...`);
-        const startTime = Date.now();
-        
-        const result = await agent.execute(currentContext);
-        const executionTime = Date.now() - startTime;
-        
-        executionLog.push({
-          agent: agent.name,
-          success: result.success,
-          executionTime,
-          error: result.error
-        });
+      // Phase 1: Run Research and Image agents in parallel (independent operations)
+      console.log(`\n🚀 Phase 1: Parallel Research & Image Search`);
+      const phase1Start = Date.now();
+      
+      const [researchResult, imageResult] = await Promise.all([
+        this.agents[0].execute(currentContext), // Research Agent
+        this.agents[3].execute(currentContext)  // Image Agent
+      ]);
 
-        if (!result.success) {
-          console.log(`❌ ${agent.name} failed: ${result.error}`);
-          // Continue with other agents unless it's a critical failure
-          if (agent.name === 'Structure Agent') {
-            throw new Error(`Critical failure in ${agent.name}: ${result.error}`);
-          }
-        } else {
-          console.log(`✅ ${agent.name} completed in ${executionTime}ms`);
-          // Merge context updates
-          if (result.context) {
-            currentContext = { ...currentContext, ...result.context };
-          }
-        }
+      const phase1Time = Date.now() - phase1Start;
+      console.log(`✅ Phase 1 completed in ${phase1Time}ms`);
+
+      // Update context with research data
+      if (researchResult.success && researchResult.context) {
+        currentContext = { ...currentContext, ...researchResult.context };
+      }
+      if (imageResult.success && imageResult.context) {
+        currentContext = { ...currentContext, ...imageResult.context };
       }
 
-      // Compile final course data
+      executionLog.push(
+        { agent: 'Research Agent', success: researchResult.success, executionTime: phase1Time, error: researchResult.error },
+        { agent: 'Image Agent', success: imageResult.success, executionTime: phase1Time, error: imageResult.error }
+      );
+
+      // Phase 2: Structure generation (depends on research)
+      console.log(`\n🏗️ Phase 2: Course Structure Generation`);
+      const structureStart = Date.now();
+      
+      const structureResult = await this.agents[1].execute(currentContext); // Structure Agent
+      const structureTime = Date.now() - structureStart;
+      
+      executionLog.push({
+        agent: 'Structure Agent',
+        success: structureResult.success,
+        executionTime: structureTime,
+        error: structureResult.error
+      });
+
+      if (!structureResult.success) {
+        throw new Error(`Critical failure in Structure Agent: ${structureResult.error}`);
+      }
+
+      if (structureResult.context) {
+        currentContext = { ...currentContext, ...structureResult.context };
+      }
+      console.log(`✅ Phase 2 completed in ${structureTime}ms`);
+
+      // Phase 3: Parallel Content Generation & Quality Assessment
+      console.log(`\n⚡ Phase 3: Parallel Content Generation & Quality Assessment`);
+      const phase3Start = Date.now();
+      
+      const [contentResult, qualityResult] = await Promise.all([
+        this.generateContentInParallel(currentContext), // Parallel content generation
+        this.agents[4].execute(currentContext)           // Quality Agent (can run on structure)
+      ]);
+
+      const phase3Time = Date.now() - phase3Start;
+      console.log(`✅ Phase 3 completed in ${phase3Time}ms`);
+
+      if (contentResult.success && contentResult.context) {
+        currentContext = { ...currentContext, ...contentResult.context };
+      }
+      if (qualityResult.success && qualityResult.context) {
+        currentContext = { ...currentContext, ...qualityResult.context };
+      }
+
+      executionLog.push(
+        { agent: 'Content Agent (Parallel)', success: contentResult.success, executionTime: phase3Time, error: contentResult.error },
+        { agent: 'Quality Agent', success: qualityResult.success, executionTime: phase3Time, error: qualityResult.error }
+      );
+
       const finalCourse = await this.compileFinalCourse(currentContext);
+
+      const totalTime = Date.now() - phase1Start;
+      console.log(`🎉 Total generation time: ${totalTime}ms`);
 
       return {
         success: true,
         data: {
           course: finalCourse,
           executionLog,
-          qualityScore: currentContext.qualityScore
+          qualityScore: currentContext.qualityScore,
+          totalTime
         },
         context: currentContext
       };
@@ -809,14 +804,122 @@ class OrchestratorAgent implements Agent {
     }
   }
 
+  // New method for parallel content generation
+  private async generateContentInParallel(context: AgentContext): Promise<AgentResult> {
+    try {
+      if (!context.courseStructure) {
+        throw new Error('Course structure required for content generation');
+      }
+
+      const structure = { ...context.courseStructure };
+      const allChapters = this.collectAllChapters(structure);
+      const totalChapters = allChapters.length;
+      
+      console.log(`📝 Generating content for ${totalChapters} chapters in parallel batches...`);
+
+      // Content tracker for avoiding repetition
+      const contentTracker = {
+        coveredConcepts: new Set<string>(),
+        previousChapters: [] as string[],
+        moduleProgress: {} as Record<string, number>
+      };
+
+      // Initialize module progress
+      structure.modules.forEach((module: any) => {
+        contentTracker.moduleProgress[module.title] = 0;
+      });
+
+      // Create a content agent instance for content generation
+      const contentAgent = new ContentAgent();
+
+      // Process chapters in parallel batches of 4
+      const batchSize = 4;
+      const batches = [];
+      
+      for (let i = 0; i < allChapters.length; i += batchSize) {
+        batches.push(allChapters.slice(i, i + batchSize));
+      }
+
+      for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+        const batch = batches[batchIndex];
+        console.log(`📦 Processing batch ${batchIndex + 1}/${batches.length} (${batch.length} chapters)`);
+
+        // Generate content for all chapters in this batch in parallel
+        const batchPromises = batch.map(async (chapterInfo: any) => {
+          try {
+            const detailedContent = await (contentAgent as any).generateChapterContent(
+              context.topic,
+              chapterInfo.chapter.title,
+              context.skillLevel,
+              chapterInfo.moduleTitle,
+              chapterInfo.lessonTitle,
+              context,
+              contentTracker
+            );
+
+            chapterInfo.chapter.content = detailedContent.content;
+            chapterInfo.chapter.wordCount = detailedContent.wordCount;
+            chapterInfo.chapter.keyTopics = detailedContent.keyTopics;
+
+            // Update tracker (sequential to avoid race conditions)
+            detailedContent.keyTopics.forEach((topic: string) => contentTracker.coveredConcepts.add(topic));
+            contentTracker.previousChapters.push(`${chapterInfo.chapter.title}: ${detailedContent.content.substring(0, 200)}...`);
+            contentTracker.moduleProgress[chapterInfo.moduleTitle]++;
+
+            return { success: true, chapterTitle: chapterInfo.chapter.title };
+          } catch (error) {
+            console.error(`❌ Failed to generate content for chapter: ${chapterInfo.chapter.title}`, error);
+            return { success: false, chapterTitle: chapterInfo.chapter.title, error };
+          }
+        });
+
+        // Wait for this batch to complete before starting the next
+        await Promise.all(batchPromises);
+        
+        // Small delay between batches to avoid rate limiting
+        if (batchIndex < batches.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+
+      return {
+        success: true,
+        data: structure,
+        context: { generatedContent: structure }
+      };
+
+    } catch (error: any) {
+      return {
+        success: false,
+        error: `Parallel content generation failed: ${error.message}`
+      };
+    }
+  }
+
+  // Helper method to collect all chapters with their context
+  private collectAllChapters(structure: any): any[] {
+    const allChapters = [];
+    
+    for (const module of structure.modules) {
+      for (const lesson of module.lessons) {
+        for (const chapter of lesson.chapters) {
+          allChapters.push({
+            chapter,
+            moduleTitle: module.title,
+            lessonTitle: lesson.title
+          });
+        }
+      }
+    }
+    
+    return allChapters;
+  }
+
   private async compileFinalCourse(context: AgentContext): Promise<any> {
     const structure = context.generatedContent || context.courseStructure;
     const images = context.images || [];
     
-    // Add course thumbnail
     const courseThumbnail = images[0] || 'https://images.unsplash.com/photo-1571330735066-03aaa9429d89?w=800&h=500&fit=crop';
-
-    // Calculate statistics
     const stats = this.calculateCourseStats(structure);
 
     return {
@@ -832,7 +935,7 @@ class OrchestratorAgent implements Agent {
       lessons: structure.modules.flatMap((m: any) => m.lessons),
       chapters: structure.modules.flatMap((m: any) => m.lessons.flatMap((l: any) => l.chapters)),
       stats,
-      images: images.slice(1) // Additional images for course content
+      images: images.slice(1)
     };
   }
 
@@ -848,518 +951,4 @@ class OrchestratorAgent implements Agent {
       chapters: chapterCount
     };
   }
-}
-
-// Keep existing functions for backward compatibility
-export async function searchTavily(query: string, includeImages = false, searchType = 'web'): Promise<any[]> {
-  if (!process.env.TAVILY_API_KEY) {
-    console.log('⚠️ Tavily API key not available. Please add TAVILY_API_KEY to your .env file');
-    return [];
-  }
-
-  try {
-    const searchOptions: any = {
-      query: query,
-      search_depth: 'basic',
-      include_domains: [],
-      exclude_domains: ['pinterest.com', 'facebook.com', 'instagram.com'],
-      max_results: searchType === 'images' ? 10 : 5,
-      include_answer: !includeImages,
-      include_raw_content: false,
-      include_images: includeImages
-    };
-
-    if (searchType === 'images') {
-      searchOptions.include_images = true;
-      searchOptions.max_results = 15;
-      searchOptions.include_domains = [
-        'unsplash.com',
-        'youtube.com',
-        'ableton.com',
-        'native-instruments.com',
-        'loopmasters.com',
-        'splice.com'
-      ];
-    }
-
-    console.log(`🔍 Tavily ${searchType} search: "${query}"`);
-
-    const response = await fetch('https://api.tavily.com/search', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.TAVILY_API_KEY}`
-      },
-      body: JSON.stringify(searchOptions)
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`❌ Tavily API error (${response.status}): ${errorText}`);
-      return [];
-    }
-
-    const data = await response.json();
-    console.log(`✅ Tavily found ${data.results?.length || 0} results for "${query}"`);
-    return data.results || [];
-  } catch (error) {
-    console.error('❌ Tavily search error:', error);
-    return [];
-  }
-}
-
-export async function searchTopicImages(topic: string, skillLevel: string): Promise<string[]> {
-  console.log(`🖼️ Searching for course images: ${topic} (${skillLevel})`);
-  
-  const imageUrls: string[] = [];
-  
-  try {
-    const imageQueries = [
-      `${topic} music production tutorial interface screenshot`,
-      `${topic} ${skillLevel} music production guide`,
-      `${topic} DAW plugin interface tutorial`,
-      `music production ${topic} workflow setup`
-    ];
-
-    for (const query of imageQueries) {
-      const results = await searchTavily(query, true, 'images');
-      
-      for (const result of results) {
-        if (result.image_url && isValidImageUrl(result.image_url)) {
-          imageUrls.push(result.image_url);
-        }
-        if (result.images && Array.isArray(result.images)) {
-          for (const img of result.images) {
-            if (typeof img === 'string' && isValidImageUrl(img)) {
-              imageUrls.push(img);
-            } else if (img.url && isValidImageUrl(img.url)) {
-              imageUrls.push(img.url);
-            }
-          }
-        }
-      }
-      
-      if (imageUrls.length >= 8) break;
-      await new Promise(resolve => setTimeout(resolve, 500));
-    }
-
-    const uniqueUrls = [...new Set(imageUrls)].filter(url => 
-      isValidImageUrl(url) && !url.includes('placeholder')
-    );
-
-    if (uniqueUrls.length > 0) {
-      console.log(`✅ Found ${uniqueUrls.length} images via Tavily for: ${topic}`);
-      return uniqueUrls.slice(0, 6);
-    }
-
-  } catch (error) {
-    console.error('❌ Error searching for topic images via Tavily:', error);
-  }
-  
-  console.log(`🔄 Using fallback curated images for: ${topic}`);
-  return getEducationalMusicImages(topic, skillLevel);
-}
-
-function isValidImageUrl(url: string): boolean {
-  if (!url || typeof url !== 'string') return false;
-  
-  const validExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
-  const validDomains = [
-    'unsplash.com',
-    'images.unsplash.com',
-    'img.youtube.com',
-    'cdn.shopify.com',
-    'amazonaws.com',
-    'cloudinary.com',
-    'imgur.com'
-  ];
-  
-  try {
-    const urlObj = new URL(url);
-    
-    const isValidDomain = validDomains.some(domain => 
-      urlObj.hostname.includes(domain)
-    );
-    
-    const hasValidExtension = validExtensions.some(ext => 
-      urlObj.pathname.toLowerCase().includes(ext)
-    ) || urlObj.hostname.includes('youtube.com');
-    
-    return isValidDomain && hasValidExtension;
-  } catch {
-    return false;
-  }
-}
-
-function getEducationalMusicImages(topic: string, skillLevel: string): string[] {
-  const topicLower = topic.toLowerCase();
-  
-  const imageCollections = {
-    default: [
-      'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&h=500&fit=crop',
-      'https://images.unsplash.com/photo-1571330735066-03aaa9429d89?w=800&h=500&fit=crop',
-      'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=800&h=500&fit=crop'
-    ],
-    synthesizer: [
-      'https://images.unsplash.com/photo-1563330232-57114bb5e5cb?w=800&h=500&fit=crop',
-      'https://images.unsplash.com/photo-1614680889342-77b0b4e3cda0?w=800&h=500&fit=crop',
-      'https://images.unsplash.com/photo-1567184406952-9f6ba54cb614?w=800&h=500&fit=crop'
-    ],
-    mixing: [
-      'https://images.unsplash.com/photo-1519683384663-a3d56c3c3d8b?w=800&h=500&fit=crop',
-      'https://images.unsplash.com/photo-1598653222000-6b7b7a552625?w=800&h=500&fit=crop',
-      'https://images.unsplash.com/photo-1519892300165-cb5542fb47c7?w=800&h=500&fit=crop'
-    ],
-    production: [
-      'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800&h=500&fit=crop',
-      'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&h=500&fit=crop',
-      'https://images.unsplash.com/photo-1571330735066-03aaa9429d89?w=800&h=500&fit=crop'
-    ]
-  };
-  
-  if (topicLower.includes('synth') || topicLower.includes('oscillator') || topicLower.includes('analog')) {
-    return imageCollections.synthesizer;
-  }
-  
-  if (topicLower.includes('mixing') || topicLower.includes('mastering') || topicLower.includes('eq')) {
-    return imageCollections.mixing;
-  }
-  
-  if (topicLower.includes('production') || topicLower.includes('beat') || topicLower.includes('track')) {
-    return imageCollections.production;
-  }
-  
-  return imageCollections.default;
-}
-
-// Validation schemas (keep existing)
-const ChapterSchema = z.object({
-  title: z.string(),
-  content: z.string(),
-  duration: z.number(),
-  orderIndex: z.number()
-});
-
-const LessonSchema = z.object({
-  title: z.string(),
-  description: z.string(),
-  orderIndex: z.number(),
-  chapters: z.array(ChapterSchema)
-});
-
-const ModuleSchema = z.object({
-  title: z.string(),
-  description: z.string(),
-  orderIndex: z.number(),
-  lessons: z.array(LessonSchema)
-});
-
-const CourseSchema = z.object({
-  title: z.string(),
-  description: z.string(),
-  category: z.string(),
-  skillLevel: z.enum(['beginner', 'intermediate', 'advanced']),
-  estimatedDuration: z.number()
-});
-
-const CourseStructureSchema = z.object({
-  course: CourseSchema,
-  modules: z.array(ModuleSchema)
-});
-
-// Keep existing interfaces for backward compatibility
-interface CourseGenerationRequest {
-  topic: string;
-  skillLevel: 'beginner' | 'intermediate' | 'advanced';
-  category: string;
-  instructorId: string;
-  price: number;
-  description?: string;
-  learningObjectives?: string[];
-  targetModules?: number;
-  targetLessonsPerModule?: number;
-  additionalContext?: string;
-}
-
-interface GeneratedCourse {
-  course: any;
-  modules: any[];
-  lessons: any[];
-  chapters: any[];
-  stats: {
-    modules: number;
-    lessons: number;
-    chapters: number;
-  };
-}
-
-// Updated generateAICourse function using multi-agent system
-export async function generateAICourse(request: CourseGenerationRequest): Promise<GeneratedCourse> {
-  console.log(`🚀 Starting multi-agent course generation for: "${request.topic}"`);
-  
-  const orchestrator = new MultiAgentOrchestrator();
-  
-  const context: MultiAgentContext = {
-    topic: request.topic,
-    skillLevel: request.skillLevel,
-    category: request.category,
-    instructorId: request.instructorId,
-    price: request.price,
-    description: request.description,
-    learningObjectives: request.learningObjectives || [],
-    targetModules: request.targetModules || 4,
-    targetLessonsPerModule: request.targetLessonsPerModule || 3,
-    additionalContext: request.additionalContext
-  };
-
-  const result = await orchestrator.execute(context);
-  
-  if (!result.success) {
-    throw new Error(result.error || 'Multi-agent course generation failed');
-  }
-
-  const courseData = result.data.course;
-  
-  console.log(`✅ Multi-agent course generation completed!`);
-  console.log(`📊 Quality Score: ${result.data.qualityScore?.toFixed(1) || 'N/A'}/100`);
-  console.log(`📈 Generated: ${courseData.stats.modules} modules, ${courseData.stats.lessons} lessons, ${courseData.stats.chapters} chapters`);
-  
-  // Log execution summary
-  if (result.data.executionLog) {
-    console.log(`\n📋 Agent Execution Summary:`);
-    result.data.executionLog.forEach((log: any) => {
-      const status = log.success ? '✅' : '❌';
-      console.log(`  ${status} ${log.agent}: ${log.executionTime}ms ${log.error ? `(${log.error})` : ''}`);
-    });
-  }
-
-  return courseData;
-}
-
-// Legacy function for single-pass generation (kept for backward compatibility)
-export async function generateAICourseLegacy(request: CourseGenerationRequest): Promise<GeneratedCourse> {
-  const { 
-    topic, 
-    skillLevel, 
-    category, 
-    instructorId, 
-    price,
-    description,
-    learningObjectives = [],
-    targetModules = 4,
-    targetLessonsPerModule = 3,
-    additionalContext
-  } = request;
-
-  console.log(`📚 Legacy course generation for: ${topic}`);
-  
-  // Step 1: Research the topic
-  let searchQuery = `${topic} music production tutorial guide ${skillLevel} level`;
-  if (additionalContext) {
-    searchQuery += ` ${additionalContext}`;
-  }
-  
-  let searchResults = [];
-  try {
-    searchResults = await searchTavily(searchQuery);
-  } catch (error) {
-    console.log('Tavily search unavailable, proceeding with AI knowledge base');
-  }
-  
-  // Step 2: Generate course structure
-  const researchContext = searchResults.length > 0 
-    ? searchResults.map(r => `- ${r.title}: ${r.content}`).join('\n')
-    : `Using comprehensive music production knowledge base for ${topic} at ${skillLevel} level`;
-  
-  const objectivesSection = learningObjectives.length > 0 
-    ? `\n\nLearning Objectives to Cover:\n${learningObjectives.map(obj => `- ${obj}`).join('\n')}`
-    : '';
-  
-  const contextSection = additionalContext 
-    ? `\n\nAdditional Context and Requirements:\n${additionalContext}`
-    : '';
-  
-  const descriptionSection = description 
-    ? `\n\nCustom Course Description:\n${description}`
-    : '';
-
-  try {
-    console.log('Generating course structure...');
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: systemPrompt()
-        },
-        {
-          role: "user",
-          content: `Create a comprehensive professional course EXCLUSIVELY about "${topic}" at ${skillLevel} level.
-
-CRITICAL REQUIREMENTS:
-- Generate exactly ${targetModules} modules
-- Each module must have exactly ${targetLessonsPerModule} lessons  
-- Each lesson must have exactly 3 chapters
-- All content must focus only on "${topic}"
-- Each chapter content should be 300-500 words focusing on "${topic}"
-- Content should be clear and educational
-- Include practical examples related to "${topic}"
-
-Research context: ${researchContext}
-${descriptionSection}
-${objectivesSection}
-${contextSection}
-
-Create a well-structured course that progresses from basics to advanced topics, all focused on "${topic}".`
-        }
-      ],
-      temperature: 0.7,
-      max_tokens: 8000,
-      response_format: {
-        type: "json_schema",
-        json_schema: {
-          name: "course_structure",
-          schema: {
-            type: "object",
-            properties: {
-              course: {
-                type: "object",
-                properties: {
-                  title: { type: "string" },
-                  description: { type: "string" },
-                  category: { type: "string" },
-                  skillLevel: { type: "string", enum: ["beginner", "intermediate", "advanced"] },
-                  estimatedDuration: { type: "number" }
-                },
-                required: ["title", "description", "category", "skillLevel", "estimatedDuration"]
-              },
-              modules: {
-                type: "array",
-                minItems: targetModules,
-                maxItems: targetModules,
-                items: {
-                  type: "object",
-                  properties: {
-                    title: { type: "string" },
-                    description: { type: "string" },
-                    orderIndex: { type: "number" },
-                    lessons: {
-                      type: "array",
-                      minItems: targetLessonsPerModule,
-                      maxItems: targetLessonsPerModule,
-                      items: {
-                        type: "object",
-                        properties: {
-                          title: { type: "string" },
-                          description: { type: "string" },
-                          orderIndex: { type: "number" },
-                          chapters: {
-                            type: "array",
-                            minItems: 3,
-                            maxItems: 3,
-                            items: {
-                              type: "object",
-                              properties: {
-                                title: { type: "string" },
-                                content: { type: "string" },
-                                duration: { type: "number" },
-                                orderIndex: { type: "number" }
-                              },
-                              required: ["title", "content", "duration", "orderIndex"]
-                            }
-                          }
-                        },
-                        required: ["title", "description", "orderIndex", "chapters"]
-                      }
-                    }
-                  },
-                  required: ["title", "description", "orderIndex", "lessons"]
-                }
-              }
-            },
-            required: ["course", "modules"]
-          }
-        }
-      }
-    });
-
-    const generatedContent = completion.choices[0].message.content;
-    if (!generatedContent) {
-      throw new Error('No content generated from OpenAI');
-    }
-
-    const rawData = JSON.parse(generatedContent);
-    const courseData = CourseStructureSchema.parse(rawData);
-
-    // Validate structure requirements
-    if (courseData.modules.length !== targetModules) {
-      throw new Error(`Invalid structure: Expected ${targetModules} modules, but AI generated ${courseData.modules.length} modules`);
-    }
-    
-    const totalLessons = courseData.modules.reduce((acc: number, m: any) => acc + m.lessons.length, 0);
-    const expectedLessons = targetModules * targetLessonsPerModule;
-    
-    if (totalLessons !== expectedLessons) {
-      throw new Error(`Invalid structure: Expected ${expectedLessons} lessons total, but AI generated ${totalLessons} lessons`);
-    }
-
-    // Get course images
-    const topicImages = await searchTopicImages(topic, skillLevel);
-    const courseThumbnail = topicImages[0] || 'https://images.unsplash.com/photo-1571330735066-03aaa9429d89?w=800&h=500&fit=crop';
-
-    const finalCourseData = {
-      ...courseData,
-      modules: courseData.modules
-    };
-
-    return {
-      course: {
-        ...finalCourseData.course,
-        price,
-        thumbnail: courseThumbnail,
-        instructorId,
-        isPublished: false
-      },
-      modules: finalCourseData.modules,
-      lessons: finalCourseData.modules.flatMap((m: any) => m.lessons),
-      chapters: finalCourseData.modules.flatMap((m: any) => m.lessons.flatMap((l: any) => l.chapters)),
-      stats: {
-        modules: finalCourseData.modules.length,
-        lessons: finalCourseData.modules.reduce((acc: number, m: any) => acc + m.lessons.length, 0),
-        chapters: finalCourseData.modules.reduce((acc: number, m: any) => 
-          acc + m.lessons.reduce((lacc: number, l: any) => lacc + l.chapters.length, 0), 0)
-      }
-    };
-
-  } catch (error: any) {
-    console.error('Error generating course:', error);
-    throw new Error(`Failed to generate course: ${error.message}`);
-  }
-}
-
-// Keep existing system prompt function
-const systemPrompt = () => {
-  const now = new Date().toISOString();
-  return `You are a world-renowned music production educator and curriculum designer. Today is ${now}. Follow these instructions when creating courses:
-
-CRITICAL: STAY STRICTLY ON THE SPECIFIED TOPIC - Never mix content from other topics or tools
-- Every single chapter must be 100% focused on the exact topic requested
-- If the topic is "Arpeggiator in Ableton", DO NOT mention overdrive, compression, EQ, or any other unrelated topics
-- Use ONLY the specific tool/technique mentioned in the topic throughout the entire course
-- Each chapter title, content, and examples must be directly related to the main topic
-
-Content Requirements:
-- You are creating professional masterclass-level content suitable for video production
-- Each chapter must contain 800-1500 words of comprehensive, video-script-ready content
-- Use conversational tone as if teaching directly to a student in a video
-- Include specific technical details, parameter values, and step-by-step instructions
-- Provide real-world examples and industry best practices specific to the topic
-- Structure content for easy conversion to video scripts with clear segments
-- Be highly organized with consistent formatting
-- Anticipate student needs and provide proactive guidance
-- Treat students as motivated learners seeking professional-level knowledge
-- Accuracy is critical - provide detailed, actionable information about the SPECIFIC topic only
-- Include advanced techniques alongside fundamentals for the SPECIFIC topic
-- Consider modern production methods and industry standards for the SPECIFIC topic
-- Use detailed explanations with specific examples related ONLY to the topic`;
-}; 
+} 

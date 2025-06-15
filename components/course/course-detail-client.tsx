@@ -340,136 +340,219 @@ export function CourseDetailClient({
         <TabsContent value="content" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Course Curriculum</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5" />
+                Course Curriculum
+              </CardTitle>
+              <p className="text-slate-600">
+                {course?.modules?.length || 0} modules • {course?.modules?.reduce((total: number, module: any) => total + (module.lessons?.length || 0), 0) || 0} lessons • {course?.chapters?.length || 0} chapters
+              </p>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
               {course?.modules && course.modules.length > 0 ? (
-                <div className="space-y-4">
+                <div className="divide-y divide-slate-200">
                   {course.modules.map((module: any, moduleIndex: number) => (
-                    <div key={module.id} className="border border-slate-200 rounded-lg">
+                    <div key={module.id} className="group">
+                      {/* Module Header */}
                       <button
                         onClick={() => toggleModule(module.id)}
-                        className="w-full flex items-center justify-between p-4 text-left hover:bg-slate-50 transition-colors"
+                        className="w-full flex items-center justify-between p-6 text-left hover:bg-slate-50 transition-colors"
                       >
-                        <div className="flex items-center space-x-3">
-                          {expandedModules[module.id] ? (
-                            <ChevronDown className="w-5 h-5 text-slate-400" />
-                          ) : (
-                            <ChevronRight className="w-5 h-5 text-slate-400" />
-                          )}
-                          <div>
-                            <h3 className="font-semibold text-slate-900">
-                              Module {moduleIndex + 1}: {module.title}
+                        <div className="flex items-start space-x-4 flex-1">
+                          <div className="flex-shrink-0 mt-1">
+                            {expandedModules[module.id] ? (
+                              <ChevronDown className="w-5 h-5 text-slate-500" />
+                            ) : (
+                              <ChevronRight className="w-5 h-5 text-slate-500" />
+                            )}
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-3 mb-2">
+                              <Badge variant="outline" className="text-xs font-medium">
+                                Module {moduleIndex + 1}
+                              </Badge>
+                              <div className="w-2 h-2 rounded-full bg-primary"></div>
+                            </div>
+                            
+                            <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                              {module.title}
                             </h3>
+                            
                             {module.description && (
-                              <div className="text-sm text-slate-600 mt-1">
+                              <div className="text-sm text-slate-600 prose prose-sm max-w-none">
                                 <MarkdownRenderer content={module.description} />
                               </div>
                             )}
                           </div>
                         </div>
-                        <div className="text-sm text-slate-500">
-                          {module.lessons?.[0]?.chapters?.length || 0} chapters
+                        
+                        <div className="flex items-center gap-4 text-sm text-slate-500 ml-4">
+                          <div className="text-right">
+                            <div className="font-medium">{module.lessons?.length || 0}</div>
+                            <div className="text-xs">lessons</div>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-medium">
+                              {module.lessons?.reduce((total: number, lesson: any) => total + (lesson.chapters?.length || 0), 0) || 0}
+                            </div>
+                            <div className="text-xs">chapters</div>
+                          </div>
                         </div>
                       </button>
                       
+                      {/* Module Content */}
                       {expandedModules[module.id] && module.lessons && (
-                        <div className="border-t border-slate-200">
-                          {module.lessons.map((lesson: any, lessonIndex: number) => (
-                            <div key={lesson.id} className="p-4 border-b border-slate-100 last:border-b-0">
-                              <h4 className="font-medium text-slate-900 mb-2">
-                                {lesson.title}
-                              </h4>
-                              {lesson.description && (
-                                <div className="text-sm text-slate-600 mb-3">
-                                  <MarkdownRenderer content={lesson.description} />
+                        <div className="border-t border-slate-100 bg-slate-50/50">
+                          <div className="p-6 space-y-6">
+                            {module.lessons.map((lesson: any, lessonIndex: number) => (
+                              <div key={lesson.id} className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+                                {/* Lesson Header */}
+                                <div className="p-4 bg-gradient-to-r from-slate-50 to-white border-b border-slate-200">
+                                  <div className="flex items-center gap-3 mb-2">
+                                    <Badge variant="secondary" className="text-xs">
+                                      Lesson {lessonIndex + 1}
+                                    </Badge>
+                                    <Clock className="w-4 h-4 text-slate-400" />
+                                    <span className="text-xs text-slate-500">
+                                      ~{(lesson.chapters?.length || 0) * 15} min
+                                    </span>
+                                  </div>
+                                  
+                                  <h4 className="font-semibold text-slate-900 mb-2">
+                                    {lesson.title}
+                                  </h4>
+                                  
+                                  {lesson.description && (
+                                    <div className="text-sm text-slate-600 prose prose-sm max-w-none">
+                                      <MarkdownRenderer content={lesson.description} />
+                                    </div>
+                                  )}
                                 </div>
-                              )}
-                              
-                              {lesson.chapters && lesson.chapters.length > 0 && (
-                                <div className="ml-4 space-y-3">
-                                  {lesson.chapters.map((chapter: Chapter, chapterIndex: number) => (
-                                    <div
-                                      key={chapter.id}
-                                      className="border border-slate-200 rounded-lg overflow-hidden"
-                                    >
-                                      <div className="flex items-center justify-between p-3 bg-slate-50">
-                                        <div className="flex items-center space-x-3">
-                                          {chapter.videoUrl ? (
-                                            <PlayCircle className="w-4 h-4 text-primary" />
-                                          ) : (
-                                            <FileText className="w-4 h-4 text-secondary" />
-                                          )}
-                                          <span className="text-sm font-medium">
-                                            {chapterIndex + 1}. {chapter.title}
-                                          </span>
-                                        </div>
-                                        <div className="flex items-center space-x-2">
-                                          {user?.admin && (
-                                            <Button
-                                              size="sm"
-                                              variant="outline"
-                                              className="text-xs"
-                                              onClick={() => handleEditChapter(chapter)}
-                                            >
-                                              <Settings className="w-3 h-3 mr-1" />
-                                              Edit
-                                            </Button>
-                                          )}
-                                          {isEnrolled && (
-                                            <Button
-                                              size="sm"
-                                              variant="outline"
-                                              onClick={() => handleMarkComplete(chapter.id)}
-                                            >
-                                              <CheckCircle className="w-3 h-3" />
-                                            </Button>
-                                          )}
-                                        </div>
-                                      </div>
-                                      {chapter.description && (
-                                        <div className="p-4 bg-white border-t border-slate-200">
-                                          <div className="text-slate-700 leading-relaxed">
-                                            {(() => {
-                                              const isLongContent = chapter.description.length > 300;
-                                              const isExpanded = expandedChapters[chapter.id];
-                                              const shouldTruncate = isLongContent && !isExpanded;
-                                              const content = shouldTruncate 
-                                                ? `${chapter.description.substring(0, 300)}...` 
-                                                : chapter.description;
-                                              
-                                              return (
-                                                <>
-                                                  <MarkdownRenderer content={content} />
-                                                  {isLongContent && (
-                                                    <button
-                                                      onClick={() => toggleChapterContent(chapter.id)}
-                                                      className="block mt-3 text-primary hover:text-primary/80 text-sm font-medium transition-colors"
-                                                    >
-                                                      {isExpanded ? 'Show Less' : 'Show More'}
-                                                    </button>
-                                                  )}
-                                                </>
-                                              );
-                                            })()}
+                                
+                                {/* Lesson Chapters */}
+                                {lesson.chapters && lesson.chapters.length > 0 && (
+                                  <div className="divide-y divide-slate-100">
+                                    {lesson.chapters.map((chapter: Chapter, chapterIndex: number) => (
+                                      <div key={chapter.id} className="group hover:bg-slate-50/50 transition-colors">
+                                        {/* Chapter Header */}
+                                        <div className="flex items-center justify-between p-4">
+                                          <div className="flex items-center space-x-3 flex-1">
+                                            <div className="flex-shrink-0">
+                                              {chapter.videoUrl ? (
+                                                <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                                                  <PlayCircle className="w-4 h-4 text-primary" />
+                                                </div>
+                                              ) : (
+                                                <div className="w-8 h-8 bg-secondary/10 rounded-full flex items-center justify-center">
+                                                  <FileText className="w-4 h-4 text-secondary" />
+                                                </div>
+                                              )}
+                                            </div>
+                                            
+                                            <div className="flex-1 min-w-0">
+                                              <div className="flex items-center gap-2 mb-1">
+                                                <span className="text-sm font-medium text-slate-900">
+                                                  {chapterIndex + 1}. {chapter.title}
+                                                </span>
+                                                {chapter.isFree && (
+                                                  <Badge variant="outline" className="text-xs text-green-600 border-green-200">
+                                                    Free
+                                                  </Badge>
+                                                )}
+                                              </div>
+                                              <div className="text-xs text-slate-500">
+                                                {chapter.videoUrl ? 'Video lesson' : 'Reading material'} • ~15 min
+                                              </div>
+                                            </div>
+                                          </div>
+                                          
+                                          <div className="flex items-center space-x-2">
+                                            {user?.admin && (
+                                              <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                                                onClick={() => handleEditChapter(chapter)}
+                                              >
+                                                <Settings className="w-3 h-3 mr-1" />
+                                                Edit
+                                              </Button>
+                                            )}
+                                            {isEnrolled && (
+                                              <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="text-xs"
+                                                onClick={() => handleMarkComplete(chapter.id)}
+                                              >
+                                                <CheckCircle className="w-3 h-3" />
+                                              </Button>
+                                            )}
                                           </div>
                                         </div>
-                                      )}
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          ))}
+                                        
+                                        {/* Chapter Content */}
+                                        {chapter.description && (
+                                          <div className="px-4 pb-4">
+                                            <div className="ml-11 bg-white rounded-lg border border-slate-200 p-4">
+                                              <div className="text-slate-700 leading-relaxed">
+                                                {(() => {
+                                                  const isLongContent = chapter.description.length > 300;
+                                                  const isExpanded = expandedChapters[chapter.id];
+                                                  const shouldTruncate = isLongContent && !isExpanded;
+                                                  const content = shouldTruncate 
+                                                    ? `${chapter.description.substring(0, 300)}...` 
+                                                    : chapter.description;
+                                                  
+                                                  return (
+                                                    <>
+                                                      <div className="prose prose-sm max-w-none text-slate-700">
+                                                        <MarkdownRenderer content={content} />
+                                                      </div>
+                                                      {isLongContent && (
+                                                        <button
+                                                          onClick={() => toggleChapterContent(chapter.id)}
+                                                          className="inline-flex items-center gap-1 mt-3 text-primary hover:text-primary/80 text-sm font-medium transition-colors"
+                                                        >
+                                                          {isExpanded ? (
+                                                            <>
+                                                              <ChevronDown className="w-3 h-3" />
+                                                              Show Less
+                                                            </>
+                                                          ) : (
+                                                            <>
+                                                              <ChevronRight className="w-3 h-3" />
+                                                              Show More
+                                                            </>
+                                                          )}
+                                                        </button>
+                                                      )}
+                                                    </>
+                                                  );
+                                                })()}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-center text-slate-500 py-8">
-                  Course content is being prepared. Check back soon!
-                </p>
+                <div className="p-12 text-center">
+                  <FileText className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-slate-600 mb-2">Course content is being prepared</h3>
+                  <p className="text-slate-500">Check back soon for comprehensive learning materials!</p>
+                </div>
               )}
             </CardContent>
           </Card>
