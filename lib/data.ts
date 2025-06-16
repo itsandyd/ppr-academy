@@ -10,10 +10,28 @@ export async function getUserFromClerk(clerkId: string) {
     });
 
     if (!user) {
-      // If user doesn't exist, you might want to create it
-      // This would typically happen after sign-up
-      // For now, we'll return null
-      return null;
+      // If user doesn't exist, create it using Clerk data
+      // This is a fallback for when webhooks aren't working
+      try {
+        const { clerkClient } = await import('@clerk/nextjs/server');
+        const client = await clerkClient();
+        const clerkUser = await client.users.getUser(clerkId);
+        
+        user = await prisma.user.create({
+          data: {
+            clerkId,
+            email: clerkUser.primaryEmailAddress?.emailAddress || '',
+            firstName: clerkUser.firstName,
+            lastName: clerkUser.lastName,
+            imageUrl: clerkUser.imageUrl,
+          },
+        });
+        
+        console.log(`✅ Created user from Clerk data: ${user.email}`);
+      } catch (createError) {
+        console.error("Error creating user from Clerk data:", createError);
+        return null;
+      }
     }
 
     return user;
