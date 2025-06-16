@@ -3,7 +3,7 @@ import { Course, User, Enrollment } from "@prisma/client";
 export type { User };
 
 export type CourseWithDetails = Course & {
-  instructor: User;
+  instructor: User | null;
   _count?: {
     enrollments: number;
   };
@@ -11,6 +11,6 @@ export type CourseWithDetails = Course & {
 
 export type EnrollmentWithCourse = Enrollment & {
   course: Course & {
-    instructor: User;
+    instructor: User | null;
   };
 }; 

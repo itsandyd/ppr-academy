@@ -17,19 +17,58 @@ export async function getUserFromClerk(clerkId: string) {
         const client = await clerkClient();
         const clerkUser = await client.users.getUser(clerkId);
         
-        user = await prisma.user.create({
-          data: {
+        const email = clerkUser.primaryEmailAddress?.emailAddress || `${clerkId}@unknown.com`;
+        
+        // Use upsert to handle potential race conditions and duplicate emails
+        user = await prisma.user.upsert({
+          where: { clerkId },
+          update: {
+            email,
+            firstName: clerkUser.firstName,
+            lastName: clerkUser.lastName,
+            imageUrl: clerkUser.imageUrl,
+          },
+          create: {
             clerkId,
-            email: clerkUser.primaryEmailAddress?.emailAddress || '',
+            email,
             firstName: clerkUser.firstName,
             lastName: clerkUser.lastName,
             imageUrl: clerkUser.imageUrl,
           },
         });
         
-        console.log(`✅ Created user from Clerk data: ${user.email}`);
+        console.log(`✅ Created/updated user from Clerk data: ${user.email}`);
       } catch (createError) {
         console.error("Error creating user from Clerk data:", createError);
+        
+        // If it's still a unique constraint error, try to find an existing user by email
+        if (createError instanceof Error && createError.message.includes('Unique constraint')) {
+          try {
+            const { clerkClient } = await import('@clerk/nextjs/server');
+            const client = await clerkClient();
+            const clerkUser = await client.users.getUser(clerkId);
+            const email = clerkUser.primaryEmailAddress?.emailAddress;
+            
+            if (email) {
+              // Try to find user by email and update their clerkId
+              const existingUser = await prisma.user.findUnique({
+                where: { email }
+              });
+              
+              if (existingUser && !existingUser.clerkId) {
+                user = await prisma.user.update({
+                  where: { id: existingUser.id },
+                  data: { clerkId }
+                });
+                console.log(`✅ Updated existing user with clerkId: ${user.email}`);
+                return user;
+              }
+            }
+          } catch (findError) {
+            console.error("Error finding existing user:", findError);
+          }
+        }
+        
         return null;
       }
     }
