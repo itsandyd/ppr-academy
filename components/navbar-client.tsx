@@ -399,13 +399,28 @@ const MobileAuthSection = ({
 // Main Component
 // ============================================================================
 
+
+
 export default function NavbarClient({ isAdmin }: NavbarClientProps) {
   // State
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   
   // Hooks
   const pathname = usePathname();
-  const { user, isSignedIn } = useUser();
+  
+  // Safe Clerk hook usage
+  let user = null;
+  let isSignedIn = false;
+  
+  try {
+    const clerkData = useUser();
+    user = clerkData.user;
+    isSignedIn = clerkData.isSignedIn || false;
+  } catch (error) {
+    // Clerk not available during build - use defaults
+    user = null;
+    isSignedIn = false;
+  }
   
   // Derived values (with safe defaults)
   const userIsSignedIn = isSignedIn ?? false;
