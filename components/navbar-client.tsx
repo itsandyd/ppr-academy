@@ -257,9 +257,18 @@ const DesktopNavigation = ({
   </div>
 );
 
-const AuthButtons = ({ isSignedIn }: { isSignedIn: boolean }) => (
+const AuthButtons = ({ isSignedIn, hasClerk }: { isSignedIn: boolean; hasClerk: boolean }) => (
   <div className={STYLES.desktopAuth}>
-    {isSignedIn ? (
+    {!hasClerk ? (
+      <div className="flex items-center space-x-4">
+        <Button variant="outline" size="sm">
+          Sign In
+        </Button>
+        <Button size="sm">
+          Get Started
+        </Button>
+      </div>
+    ) : isSignedIn ? (
       <UserButton 
         afterSignOutUrl="/"
         appearance={{
@@ -351,13 +360,24 @@ const MobileNavigation = ({
 
 const MobileAuthSection = ({ 
   isSignedIn, 
-  user 
+  user,
+  hasClerk
 }: { 
   isSignedIn: boolean; 
   user: any;
+  hasClerk: boolean;
 }) => (
   <div className={STYLES.mobileAuth}>
-    {isSignedIn ? (
+    {!hasClerk ? (
+      <div className="space-y-2 px-3">
+        <Button variant="outline" className="w-full">
+          Sign In
+        </Button>
+        <Button className="w-full">
+          Get Started
+        </Button>
+      </div>
+    ) : isSignedIn ? (
       <div className="flex items-center justify-between px-3 py-2">
         <div className="flex items-center gap-3">
           <div className="text-sm">
@@ -411,15 +431,18 @@ export default function NavbarClient({ isAdmin }: NavbarClientProps) {
   // Safe Clerk hook usage
   let user = null;
   let isSignedIn = false;
+  const hasClerk = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
   
-  try {
-    const clerkData = useUser();
-    user = clerkData.user;
-    isSignedIn = clerkData.isSignedIn || false;
-  } catch (error) {
-    // Clerk not available during build - use defaults
-    user = null;
-    isSignedIn = false;
+  if (hasClerk) {
+    try {
+      const clerkData = useUser();
+      user = clerkData.user;
+      isSignedIn = clerkData.isSignedIn || false;
+    } catch (error) {
+      // Clerk not available during build - use defaults
+      user = null;
+      isSignedIn = false;
+    }
   }
   
   // Derived values (with safe defaults)
@@ -442,7 +465,7 @@ export default function NavbarClient({ isAdmin }: NavbarClientProps) {
           />
 
           {/* Desktop Auth */}
-          <AuthButtons isSignedIn={userIsSignedIn} />
+          <AuthButtons isSignedIn={userIsSignedIn} hasClerk={hasClerk} />
 
           {/* Mobile Menu Toggle */}
           <MobileMenuToggle 
@@ -464,6 +487,7 @@ export default function NavbarClient({ isAdmin }: NavbarClientProps) {
           <MobileAuthSection 
             isSignedIn={userIsSignedIn} 
             user={user}
+            hasClerk={hasClerk}
           />
         </div>
       )}
