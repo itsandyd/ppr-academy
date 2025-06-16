@@ -1362,4 +1362,251 @@ Content Requirements:
 - Include advanced techniques alongside fundamentals for the SPECIFIC topic
 - Consider modern production methods and industry standards for the SPECIFIC topic
 - Use detailed explanations with specific examples related ONLY to the topic`;
-}; 
+};
+
+// Fast course generation for initial creation (outline mode)
+export async function generateAICourseFast(request: CourseGenerationRequest): Promise<GeneratedCourse> {
+  console.log(`🚀 Starting FAST AI course generation for: ${request.topic}`);
+  
+  try {
+    // Quick research phase
+    const researchQueries = [
+      `${request.topic} music production tutorial ${request.skillLevel}`,
+      `${request.topic} techniques guide professional music production`
+    ];
+
+    let researchData = [];
+    for (const query of researchQueries) {
+      try {
+        const results = await searchTavily(query);
+        researchData.push(...results.slice(0, 3)); // Limit results
+        await new Promise(resolve => setTimeout(resolve, 200)); // Short delay
+      } catch (error) {
+        console.log(`⚠️ Fast research query failed: ${query}`);
+      }
+    }
+
+    // Generate course structure
+    const structureResult = await generateCourseStructure(request, researchData);
+    if (!structureResult.success) {
+      throw new Error(structureResult.error);
+    }
+
+    // Generate OUTLINE content only (fast)
+    const courseWithOutlines = await generateCourseOutlines(structureResult.data, request);
+    
+    // Quick image search (minimal)
+    let courseThumbnail = 'https://images.unsplash.com/photo-1571330735066-03aaa9429d89?w=800&h=500&fit=crop';
+    try {
+      const quickImages = await searchTopicImages(`${request.topic} music production`, request.skillLevel);
+      if (quickImages.length > 0) {
+        courseThumbnail = quickImages[0];
+      }
+    } catch (error) {
+      console.log('⚠️ Quick image search failed, using fallback');
+    }
+
+    // Calculate stats
+    const stats = calculateCourseStats(courseWithOutlines);
+    
+    const courseData = {
+      title: courseWithOutlines.course.title,
+      slug: generateSlug(courseWithOutlines.course.title),
+      description: courseWithOutlines.course.description,
+      price: request.price,
+      thumbnail: courseThumbnail,
+      category: request.category,
+      skillLevel: request.skillLevel,
+      estimatedDuration: courseWithOutlines.course.estimatedDuration,
+      instructorId: request.instructorId,
+      isPublished: false
+    };
+
+    console.log(`✅ Fast course generation completed for: ${request.topic}`);
+    
+    return {
+      course: courseData,
+      modules: courseWithOutlines.modules,
+      lessons: courseWithOutlines.modules.flatMap((m: any) => m.lessons),
+      chapters: courseWithOutlines.modules.flatMap((m: any) => 
+        m.lessons.flatMap((l: any) => l.chapters)
+      ),
+      stats
+    };
+
+  } catch (error: any) {
+    console.error('Fast course generation failed:', error);
+    throw new Error(`Fast course generation failed: ${error.message}`);
+  }
+}
+
+// Generate course structure with basic validation
+async function generateCourseStructure(request: CourseGenerationRequest, researchData: any[]) {
+  const researchSummary = researchData.slice(0, 5).map(item => 
+    `${item.title}: ${item.content?.substring(0, 200)}...`
+  ).join('\n');
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: `You are a curriculum design expert for music production education. Create logical, progressive course structures.`
+        },
+        {
+          role: "user",
+          content: `Create a course structure for "${request.topic}" at ${request.skillLevel} level.
+
+Research Context:
+${researchSummary}
+
+Requirements:
+- Generate exactly ${request.targetModules || 4} modules
+- Each module must have exactly ${request.targetLessonsPerModule || 3} lessons  
+- Each lesson must have exactly 3 chapters
+- Focus on "${request.topic}"
+- Progressive difficulty
+
+${request.description ? `Description: ${request.description}` : ''}
+${request.learningObjectives?.length ? `Objectives: ${request.learningObjectives.join(', ')}` : ''}`
+        }
+      ],
+      temperature: 0.7,
+      max_tokens: 3000,
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "course_structure",
+          schema: {
+            type: "object",
+            properties: {
+              course: {
+                type: "object",
+                properties: {
+                  title: { type: "string" },
+                  description: { type: "string" },
+                  category: { type: "string" },
+                  skillLevel: { type: "string", enum: ["beginner", "intermediate", "advanced"] },
+                  estimatedDuration: { type: "number" }
+                },
+                required: ["title", "description", "category", "skillLevel", "estimatedDuration"]
+              },
+              modules: {
+                type: "array",
+                minItems: request.targetModules || 4,
+                maxItems: request.targetModules || 4,
+                items: {
+                  type: "object", 
+                  properties: {
+                    title: { type: "string" },
+                    description: { type: "string" },
+                    orderIndex: { type: "number" },
+                    lessons: {
+                      type: "array",
+                      minItems: request.targetLessonsPerModule || 3,
+                      maxItems: request.targetLessonsPerModule || 3,
+                      items: {
+                        type: "object",
+                        properties: {
+                          title: { type: "string" },
+                          description: { type: "string" },
+                          orderIndex: { type: "number" },
+                          chapters: {
+                            type: "array",
+                            minItems: 3,
+                            maxItems: 3,
+                            items: {
+                              type: "object",
+                              properties: {
+                                title: { type: "string" },
+                                content: { type: "string" },
+                                duration: { type: "number" },
+                                orderIndex: { type: "number" }
+                              },
+                              required: ["title", "content", "duration", "orderIndex"]
+                            }
+                          }
+                        },
+                        required: ["title", "description", "orderIndex", "chapters"]
+                      }
+                    }
+                  },
+                  required: ["title", "description", "orderIndex", "lessons"]
+                }
+              }
+            },
+            required: ["course", "modules"]
+          }
+        }
+      }
+    });
+
+    const structure = JSON.parse(completion.choices[0].message.content || '{}');
+    return { success: true, data: structure };
+
+  } catch (error: any) {
+    return { success: false, error: `Structure generation failed: ${error.message}` };
+  }
+}
+
+// Generate outline content for all chapters (fast, short summaries)
+async function generateCourseOutlines(structure: any, request: CourseGenerationRequest) {
+  console.log('📝 Generating course outlines...');
+  
+  // Process all chapters but generate SHORT outline content only
+  for (const module of structure.modules) {
+    for (const lesson of module.lessons) {
+      for (const chapter of lesson.chapters) {
+        // Replace detailed content with outline
+        chapter.content = `# ${chapter.title}
+
+## Overview
+This chapter covers ${chapter.title.toLowerCase()} in the context of ${request.topic}. 
+
+## Learning Objectives
+- Understand key concepts of ${chapter.title.toLowerCase()}
+- Apply techniques specific to ${request.topic}
+- Practice hands-on implementation
+
+## Key Topics
+- Introduction and fundamentals
+- Practical application techniques
+- Industry best practices
+- Common challenges and solutions
+
+## Next Steps
+Complete the exercises and move to the next chapter to continue your ${request.topic} journey.
+
+*Note: Detailed content will be generated when you access this chapter.*`;
+
+        // Set outline flag for later expansion
+        chapter.isOutline = true;
+        chapter.wordCount = chapter.content.split(' ').length;
+      }
+    }
+  }
+
+  return structure;
+}
+
+// Helper function to calculate course statistics
+function calculateCourseStats(structure: any) {
+  const moduleCount = structure.modules?.length || 0;
+  const lessonCount = structure.modules?.reduce((acc: number, m: any) => 
+    acc + (m.lessons?.length || 0), 0) || 0;
+  const chapterCount = structure.modules?.reduce((acc: number, m: any) => 
+    acc + (m.lessons?.reduce((lacc: number, l: any) => 
+      lacc + (l.chapters?.length || 0), 0) || 0), 0) || 0;
+
+  return {
+    modules: moduleCount,
+    lessons: lessonCount,
+    chapters: chapterCount
+  };
+}
+
+// Helper function to generate a slug from a title
+function generateSlug(title: string): string {
+  return title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').substring(0, 50);
+} 

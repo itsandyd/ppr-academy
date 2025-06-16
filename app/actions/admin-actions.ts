@@ -4,7 +4,7 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getUserFromClerk } from "@/lib/data";
-import { generateAICourse as generateAICourseLib, searchTopicImages } from "@/lib/ai-course-generator";
+import { generateAICourseFast as generateAICourseLib, searchTopicImages } from "@/lib/ai-course-generator";
 import { scrapeContent, generateEmbeddings } from "@/lib/content-scraper";
 import { generateSlug, generateUniqueSlug } from "@/lib/utils";
 
@@ -813,4 +813,6 @@ export async function bulkUpdateCourses(courseIds: string[], action: 'publish' |
     console.error(`Error performing bulk ${action}:`, error);
     return { success: false, error: `Failed to ${action} courses` };
   }
-} 
+}
+
+ 
