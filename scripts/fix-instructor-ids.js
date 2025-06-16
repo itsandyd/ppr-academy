@@ -6,21 +6,10 @@ async function fixInstructorIds() {
   console.log('🔧 Fixing instructor IDs...');
   
   try {
-    // Update all courses to set instructorId = userId where instructorId is null
-    const result = await prisma.course.updateMany({
-      where: {
-        instructorId: null,
-      },
-      data: {
-        instructorId: prisma.raw('userId'),
-      },
-    });
-
-    console.log(`✅ Updated ${result.count} courses`);
+    // Use raw SQL to update courses
+    const result = await prisma.$executeRaw`UPDATE Course SET instructorId = userId WHERE instructorId IS NULL`;
     
-    // Alternative approach using raw SQL if the above doesn't work
-    await prisma.$executeRaw`UPDATE Course SET instructorId = userId WHERE instructorId IS NULL`;
-    
+    console.log(`✅ Updated courses with raw SQL`);
     console.log('✅ All courses now have instructorId set');
     
     // Verify the fix
