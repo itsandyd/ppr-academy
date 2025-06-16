@@ -43,7 +43,7 @@ import {
   rejectCoach,
   debugCoachProfiles,
   cleanupOrphanedCoachProfiles,
-  generateAICourse,
+
   searchImages,
   enhancedImageSearch,
   searchCourseImages,
@@ -276,13 +276,21 @@ export default function AdminDashboard({
     }
 
     setIsGeneratingCourse(true);
-    const result = await generateAICourse({
-      ...aiCourseForm,
-      learningObjectives: aiCourseForm.learningObjectives.filter(obj => obj.trim() !== '')
-    });
-    setIsGeneratingCourse(false);
+    try {
+      const response = await fetch('/api/admin/generate-course', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...aiCourseForm,
+          learningObjectives: aiCourseForm.learningObjectives.filter(obj => obj.trim() !== '')
+        }),
+      });
 
-    if (result.success) {
+      const result = await response.json();
+      
+      if (result.success) {
       const coursePath = result.course?.slug ? `/courses/${result.course.slug}` : '/courses';
       toast({
         title: "Course Generated Successfully",
@@ -301,12 +309,21 @@ export default function AdminDashboard({
         targetLessonsPerModule: 3,
         additionalContext: ''
       });
-    } else {
+      } else {
+        toast({
+          title: "Failed to Generate Course",
+          description: result.error || "An error occurred while generating the course",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
       toast({
         title: "Failed to Generate Course",
-        description: result.error || "An error occurred while generating the course",
+        description: error.message || "Network error occurred while generating the course",
         variant: "destructive",
       });
+    } finally {
+      setIsGeneratingCourse(false);
     }
   };
 

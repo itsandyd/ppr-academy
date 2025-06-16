@@ -8,9 +8,6 @@ import { generateAICourse as generateAICourseLib, searchTopicImages } from "@/li
 import { scrapeContent, generateEmbeddings } from "@/lib/content-scraper";
 import { generateSlug, generateUniqueSlug } from "@/lib/utils";
 
-// Configure max duration for AI course generation
-export const maxDuration = 300;
-
 async function checkAdminAuth() {
   const { userId: clerkId } = await auth();
   if (!clerkId) throw new Error("Unauthorized");
