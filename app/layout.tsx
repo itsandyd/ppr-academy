@@ -18,18 +18,32 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return (
-    <ClerkProvider>
-      <html lang="en">
-        <body className={`${inter.className} antialiased`}>
-          <NavbarWrapper />
-          <main className="min-h-screen">
-            {children}
-          </main>
-          <Footer />
-          <Toaster />
-        </body>
-      </html>
-    </ClerkProvider>
+  // Check if Clerk keys are available (for build-time safety)
+  const hasClerkKeys = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && 
+                       process.env.CLERK_SECRET_KEY;
+
+  const content = (
+    <html lang="en">
+      <body className={`${inter.className} antialiased`}>
+        <NavbarWrapper />
+        <main className="min-h-screen">
+          {children}
+        </main>
+        <Footer />
+        <Toaster />
+      </body>
+    </html>
   );
+
+  // Only wrap with ClerkProvider if keys are available
+  if (hasClerkKeys) {
+    return (
+      <ClerkProvider>
+        {content}
+      </ClerkProvider>
+    );
+  }
+
+  // Fallback for build time or when Clerk keys are missing
+  return content;
 }
