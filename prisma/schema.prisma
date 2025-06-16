@@ -40,7 +40,7 @@ model User {
 model Course {
   id               String   @id @default(cuid())
   userId           String
-  instructorId     String
+  instructorId     String?
   title            String   @db.Text
   slug             String?  @unique
   description      String?  @db.Text
@@ -50,7 +50,7 @@ model Course {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   courseCategoryId String?
-  instructor       User             @relation("InstructorCourses", fields: [instructorId], references: [id])
+  instructor       User?            @relation("InstructorCourses", fields: [instructorId], references: [id])
   enrollments      Enrollment[]
   chapters         CourseChapter[]
   category         CourseCategory?  @relation(fields: [courseCategoryId], references: [id])
