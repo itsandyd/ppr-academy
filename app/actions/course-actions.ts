@@ -48,8 +48,16 @@ export async function createCourse(courseData: CourseData) {
       return { success: false, error: "User not found" };
     }
 
+    // Generate a unique slug for the course
+    const baseSlug = generateSlug(courseData.title);
+    const existingCourses = await prisma.course.findMany({
+      where: { slug: { not: null } },
+      select: { slug: true }
+    });
+    const existingSlugs = existingCourses.map(c => c.slug).filter(Boolean) as string[];
+    const uniqueSlug = generateUniqueSlug(baseSlug, existingSlugs);
+
     // Create the course
-    // Note: Slug functionality will be added after migration
     // Note: The form collects 'category' and 'skillLevel' but these fields
     // don't exist in the current Prisma schema. You would need to either:
     // 1. Add these fields to the Course model in schema.prisma
@@ -58,6 +66,7 @@ export async function createCourse(courseData: CourseData) {
     const course = await prisma.course.create({
       data: {
         title: courseData.title,
+        slug: uniqueSlug,
         description: courseData.description,
         price: courseData.price,
         imageUrl: courseData.thumbnail || null,
@@ -76,8 +85,9 @@ export async function createCourse(courseData: CourseData) {
 
     revalidatePath("/courses");
     revalidatePath("/dashboard");
+    revalidatePath(`/courses/${course.slug}`);
 
-    return { success: true, courseId: course.id };
+    return { success: true, courseId: course.id, slug: course.slug };
   } catch (error) {
     console.error("Error creating course:", error);
     return { 
@@ -396,5 +406,77 @@ export async function updateChapter(chapterId: string, updateData: ChapterUpdate
   } catch (error) {
     console.error("Error updating chapter:", error);
     return { success: false, error: error instanceof Error ? error.message : "Failed to update chapter" };
+  }
+}
+
+export async function populateCourseSlugs() {
+  try {
+    const { userId: clerkId } = await auth();
+    
+    if (!clerkId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const user = await getUserFromClerk(clerkId);
+    
+    if (!user?.admin) {
+      return { success: false, error: "Admin access required" };
+    }
+
+    // Find courses without slugs
+    const coursesWithoutSlugs = await prisma.course.findMany({
+      where: {
+        OR: [
+          { slug: null },
+          { slug: "" }
+        ]
+      },
+      select: {
+        id: true,
+        title: true,
+        slug: true
+      }
+    });
+
+    if (coursesWithoutSlugs.length === 0) {
+      return { success: true, message: "All courses already have slugs", updated: 0 };
+    }
+
+    // Get all existing slugs to avoid duplicates
+    const existingCourses = await prisma.course.findMany({
+      where: { slug: { not: null } },
+      select: { slug: true }
+    });
+    const existingSlugs = existingCourses.map(c => c.slug).filter(Boolean) as string[];
+
+    // Update courses without slugs
+    let updatedCount = 0;
+    for (const course of coursesWithoutSlugs) {
+      const baseSlug = generateSlug(course.title);
+      const uniqueSlug = generateUniqueSlug(baseSlug, [...existingSlugs]);
+      
+      await prisma.course.update({
+        where: { id: course.id },
+        data: { slug: uniqueSlug }
+      });
+      
+      existingSlugs.push(uniqueSlug); // Add to list to avoid future duplicates
+      updatedCount++;
+    }
+
+    revalidatePath("/courses");
+    revalidatePath("/admin");
+
+    return { 
+      success: true, 
+      message: `Successfully populated slugs for ${updatedCount} courses`,
+      updated: updatedCount 
+    };
+  } catch (error) {
+    console.error("Error populating course slugs:", error);
+    return { 
+      success: false, 
+      error: "Failed to populate course slugs. Please try again." 
+    };
   }
 } 

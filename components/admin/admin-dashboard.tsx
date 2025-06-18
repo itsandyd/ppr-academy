@@ -54,6 +54,7 @@ import {
   scrapeContentFromUrl,
   generateContentEmbeddings
 } from "@/app/actions/admin-actions";
+import { populateCourseSlugs } from "@/app/actions/course-actions";
 import type { User } from "@/lib/types";
 
 interface AdminDashboardProps {
@@ -131,6 +132,9 @@ export default function AdminDashboard({
   const [courseToDelete, setCourseToDelete] = useState<any>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeletingCourse, setIsDeletingCourse] = useState(false);
+
+  // Populate slugs state
+  const [isPopulatingSlugs, setIsPopulatingSlugs] = useState(false);
 
   const handleUpdateUserRole = async (userId: string, role: string) => {
     setIsLoading(true);
@@ -517,6 +521,35 @@ export default function AdminDashboard({
     setIsDeleteDialogOpen(true);
   };
 
+  const handlePopulateCourseSlugs = async () => {
+    setIsPopulatingSlugs(true);
+    
+    try {
+      const result = await populateCourseSlugs();
+      
+      if (result.success) {
+        toast({
+          title: "Slugs Populated",
+          description: result.message,
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to populate course slugs",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to populate course slugs",
+        variant: "destructive",
+      });
+    } finally {
+      setIsPopulatingSlugs(false);
+    }
+  };
+
   const filteredUsers = allUsers.filter((user: any) => {
     const matchesSearch = !searchQuery || 
       user.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -537,6 +570,15 @@ export default function AdminDashboard({
               <p className="text-slate-200 mt-2 text-sm sm:text-base">Manage users, courses, and platform settings</p>
             </div>
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+              <Button 
+                variant="secondary" 
+                className="bg-slate-700 border-slate-600 text-white hover:bg-slate-600 hover:border-slate-500 text-xs sm:text-sm"
+                onClick={handlePopulateCourseSlugs}
+                disabled={isPopulatingSlugs}
+              >
+                <BookOpen className="w-4 h-4 mr-1 sm:mr-2" />
+                {isPopulatingSlugs ? "Populating..." : "Populate Slugs"}
+              </Button>
               <Button 
                 variant="secondary" 
                 className="bg-slate-700 border-slate-600 text-white hover:bg-slate-600 hover:border-slate-500 text-xs sm:text-sm"

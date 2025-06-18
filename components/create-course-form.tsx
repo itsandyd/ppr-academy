@@ -225,9 +225,12 @@ export default function CreateCourseForm() {
         title: "Course Created!",
         description: "Your course has been created successfully.",
       });
-      // Generate slug from title for now (until migration is run)
-      const slug = title.toLowerCase().trim().replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '');
-      router.push(`/courses/${slug}`);
+      // Use the slug returned from the server
+      if (result.slug) {
+        router.push(`/courses/${result.slug}`);
+      } else {
+        router.push(`/courses`);
+      }
     } else {
       toast({
         title: "Error",

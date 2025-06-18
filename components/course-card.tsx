@@ -18,8 +18,8 @@ export default function CourseCard({ course }: CourseCardProps) {
     "Unknown Instructor" : 
     "Unknown Instructor";
 
-  // Generate slug from title (temporary until migration adds slug field)
-  const courseSlug = generateSlug(course.title);
+  // Use the actual slug from database, fallback to generated slug if not available
+  const courseSlug = course.slug || generateSlug(course.title);
 
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300 h-full flex flex-col">
