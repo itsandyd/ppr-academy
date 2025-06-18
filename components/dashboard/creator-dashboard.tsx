@@ -361,13 +361,13 @@ export function CreatorDashboard({
                     </div>
                     
                     <div className="flex gap-2">
-                      <Link href={`/courses/${generateSlug(course.title)}`} className="flex-1">
+                      <Link href={`/courses/${course.slug || generateSlug(course.title)}`} className="flex-1">
                         <Button variant="outline" size="sm" className="w-full">
                           <Eye className="w-4 h-4 mr-1" />
                           View
                         </Button>
                       </Link>
-                      <Link href={`/edit-course/${course.id}`} className="flex-1">
+                      <Link href={`/courses/${course.slug || generateSlug(course.title)}`} className="flex-1">
                         <Button size="sm" className="w-full">
                           <Edit className="w-4 h-4 mr-1" />
                           Edit

@@ -122,7 +122,7 @@ export async function updateCourse(courseId: string, courseData: Partial<CourseD
     }
 
     // Update the course
-    await prisma.course.update({
+    const updatedCourse = await prisma.course.update({
       where: { id: courseId },
       data: {
         title: courseData.title,
@@ -131,10 +131,13 @@ export async function updateCourse(courseId: string, courseData: Partial<CourseD
         imageUrl: courseData.thumbnail,
         isPublished: courseData.isPublished,
       },
+      select: { slug: true }
     });
 
     revalidatePath("/courses");
-    revalidatePath(`/courses/${courseId}`);
+    if (updatedCourse.slug) {
+      revalidatePath(`/courses/${updatedCourse.slug}`);
+    }
     revalidatePath("/dashboard");
 
     return { success: true };
@@ -214,13 +217,16 @@ export async function publishCourse(courseId: string) {
     }
 
     // Publish the course
-    await prisma.course.update({
+    const publishedCourse = await prisma.course.update({
       where: { id: courseId },
       data: { isPublished: true },
+      select: { slug: true }
     });
 
     revalidatePath("/courses");
-    revalidatePath(`/courses/${courseId}`);
+    if (publishedCourse.slug) {
+      revalidatePath(`/courses/${publishedCourse.slug}`);
+    }
     revalidatePath("/dashboard");
 
     return { success: true };
@@ -270,7 +276,15 @@ export async function enrollInCourse(courseId: string) {
       }
     });
 
-    revalidatePath(`/courses/${courseId}`);
+    // Get course slug for revalidation
+    const course = await prisma.course.findUnique({
+      where: { id: courseId },
+      select: { slug: true }
+    });
+    
+    if (course?.slug) {
+      revalidatePath(`/courses/${course.slug}`);
+    }
     return { success: true };
   } catch (error) {
     console.error("Error enrolling in course:", error);
@@ -301,7 +315,15 @@ export async function submitCourseReview(courseId: string, rating: number, comme
     // For now, we'll just return success
     console.log(`Review submitted: ${rating}/5 - ${comment} for course ${courseId} by user ${user.id}`);
 
-    revalidatePath(`/courses/${courseId}`);
+    // Get course slug for revalidation
+    const course = await prisma.course.findUnique({
+      where: { id: courseId },
+      select: { slug: true }
+    });
+    
+    if (course?.slug) {
+      revalidatePath(`/courses/${course.slug}`);
+    }
     return { success: true };
   } catch (error) {
     console.error("Error submitting review:", error);
@@ -341,7 +363,15 @@ export async function markChapterComplete(chapterId: string) {
     // For now, we'll just simulate success
     console.log(`Chapter ${chapterId} marked complete by user ${user.id}`);
 
-    revalidatePath(`/courses/${chapter.courseId}`);
+    // Get course slug for revalidation
+    const course = await prisma.course.findUnique({
+      where: { id: chapter.courseId },
+      select: { slug: true }
+    });
+    
+    if (course?.slug) {
+      revalidatePath(`/courses/${course.slug}`);
+    }
     return { success: true };
   } catch (error) {
     console.error("Error marking chapter complete:", error);
