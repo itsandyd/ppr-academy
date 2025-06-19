@@ -345,22 +345,22 @@ export function CourseDetailClient({
                 Course Curriculum
               </CardTitle>
               <p className="text-slate-600">
-                {course?.modules?.length || 0} modules • {course?.modules?.reduce((total: number, module: any) => total + (module.lessons?.length || 0), 0) || 0} lessons • {course?.chapters?.length || 0} chapters
+                {course?.modules?.length || 0} modules • {course?.modules?.reduce((total: number, module: any) => total + (module.lessons?.length || 0), 0) || 0} lessons • {course?.courseChapters?.length || 0} chapters
               </p>
             </CardHeader>
             <CardContent className="p-0">
               {course?.modules && course.modules.length > 0 ? (
                 <div className="divide-y divide-slate-200">
                   {course.modules.map((module: any, moduleIndex: number) => (
-                    <div key={module.id} className="group">
+                    <div key={module.id || `module-${moduleIndex}`} className="group">
                       {/* Module Header */}
                       <button
-                        onClick={() => toggleModule(module.id)}
+                        onClick={() => toggleModule(module.id || moduleIndex)}
                         className="w-full flex items-center justify-between p-6 text-left hover:bg-slate-50 transition-colors"
                       >
                         <div className="flex items-start space-x-4 flex-1">
                           <div className="flex-shrink-0 mt-1">
-                            {expandedModules[module.id] ? (
+                            {expandedModules[module.id || moduleIndex] ? (
                               <ChevronDown className="w-5 h-5 text-slate-500" />
                             ) : (
                               <ChevronRight className="w-5 h-5 text-slate-500" />
@@ -402,11 +402,11 @@ export function CourseDetailClient({
                       </button>
                       
                       {/* Module Content */}
-                      {expandedModules[module.id] && module.lessons && (
+                      {expandedModules[module.id || moduleIndex] && module.lessons && (
                         <div className="border-t border-slate-100 bg-slate-50/50">
                           <div className="p-6 space-y-6">
                             {module.lessons.map((lesson: any, lessonIndex: number) => (
-                              <div key={lesson.id} className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+                              <div key={lesson.id || `lesson-${moduleIndex}-${lessonIndex}`} className="bg-white rounded-lg border border-slate-200 overflow-hidden">
                                 {/* Lesson Header */}
                                 <div className="p-4 bg-gradient-to-r from-slate-50 to-white border-b border-slate-200">
                                   <div className="flex items-center gap-3 mb-2">

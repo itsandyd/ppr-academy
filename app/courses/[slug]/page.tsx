@@ -6,11 +6,15 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getUserFromClerk } from "@/lib/data";
 import { prisma } from "@/lib/prisma";
 import { CourseDetailClient } from "@/components/course/course-detail-client";
+import { CourseEditHeader } from "@/components/course/course-edit-header";
+import { CourseContentEditor } from "@/components/course/course-content-editor";
 import { 
   Clock, 
   Star,
   PlayCircle,
-  CheckCircle
+  CheckCircle,
+  Edit,
+  Settings
 } from "lucide-react";
 
 export default async function CourseDetailPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -27,7 +31,30 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
     include: {
       instructor: true,
       enrollments: true,
+      modules: {
+        orderBy: { position: 'asc' },
+        include: {
+          lessons: {
+            orderBy: { position: 'asc' },
+            include: {
+              chapters: {
+                orderBy: { position: 'asc' },
+                select: {
+                  id: true,
+                  title: true,
+                  description: true,
+                  videoUrl: true,
+                  position: true,
+                  isPublished: true,
+                  isFree: true,
+                }
+              }
+            }
+          }
+        }
+      },
       chapters: {
+        where: { lessonId: null }, // Get chapters not assigned to lessons (legacy/direct course chapters)
         orderBy: { position: 'asc' },
         select: {
           id: true,
@@ -45,9 +72,17 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
   
   // Debug logging
   if (course) {
-    console.log(`✅ Found course: "${course.title}" (ID: ${course.id}) with ${course.chapters.length} chapters`);
-    console.log(`📝 First chapter: ${course.chapters[0]?.title || 'No chapters'}`);
-    console.log(`📝 Description preview: ${course.chapters[0]?.description?.substring(0, 100) || 'No content'}...`);
+    console.log(`✅ Found course: "${course.title}" (ID: ${course.id})`);
+    console.log(`📚 Course has ${course.modules.length} modules`);
+    console.log(`📖 Course has ${course.chapters.length} legacy chapters`);
+    
+    const totalLessons = course.modules.reduce((total, module) => total + module.lessons.length, 0);
+    const totalChapters = course.modules.reduce((total, module) => 
+      total + module.lessons.reduce((lessonTotal, lesson) => lessonTotal + lesson.chapters.length, 0), 0
+    ) + course.chapters.length;
+    
+    console.log(`🎯 Total lessons: ${totalLessons}`);
+    console.log(`📝 Total chapters: ${totalChapters}`);
   } else {
     console.log(`❌ No course found with slug: ${courseSlug}`);
     
@@ -76,9 +111,6 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
     notFound();
   }
 
-  // Use chapters from the relation (already fetched and ordered)
-  const chapters = course.chapters;
-
   // Get current user if authenticated
   let user = null;
   let enrollment = null;
@@ -97,8 +129,17 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
     }
   }
 
-  // Reconstruct module structure from chapters
-  const reconstructModules = (chapters: any[]) => {
+  // Handle migration from emoji-based system to proper relational structure
+  const handleLegacyChapters = () => {
+    if (course.modules.length === 0 && course.chapters.length > 0) {
+      // Course still uses emoji-based system, reconstruct for backward compatibility
+      return reconstructModulesFromChapters(course.chapters);
+    }
+    return course.modules;
+  };
+
+  // Legacy reconstruction function for backward compatibility
+  const reconstructModulesFromChapters = (chapters: any[]) => {
     const modules: any[] = [];
     let currentModule: any = null;
     let currentLesson: any = null;
@@ -111,6 +152,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
         }
         currentModule = {
           id: modules.length + 1,
+          chapterId: chapter.id, // Store the actual chapter ID for editing
           title: chapter.title.replace('📚 ', ''),
           description: chapter.description || '',
           lessons: []
@@ -118,12 +160,14 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
         currentLesson = null;
       } else if (chapter.title.startsWith('🎯')) {
         // Lesson introduction
-        if (currentLesson && currentLesson.chapters.length > 0) {
-          currentModule?.lessons.push(currentLesson);
+        if (currentLesson && currentModule) {
+          currentModule.lessons.push(currentLesson);
         }
+        const lessonTitle = chapter.title.replace('🎯 ', '').split(': ')[1] || chapter.title.replace('🎯 ', '');
         currentLesson = {
           id: currentModule ? currentModule.lessons.length + 1 : 1,
-          title: chapter.title.replace('🎯 ', '').split(': ')[1] || chapter.title.replace('🎯 ', ''),
+          chapterId: chapter.id, // Store the actual chapter ID for editing
+          title: lessonTitle,
           description: chapter.description || '',
           chapters: []
         };
@@ -136,6 +180,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
           if (!currentModule) {
             currentModule = {
               id: 1,
+              chapterId: null,
               title: 'Course Content',
               description: 'Course chapters',
               lessons: []
@@ -144,6 +189,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
           if (!currentLesson) {
             currentLesson = {
               id: 1,
+              chapterId: null,
               title: 'Course Lessons',
               description: 'Course content',
               chapters: []
@@ -156,8 +202,8 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
     });
 
     // Add the last lesson and module
-    if (currentLesson && currentLesson.chapters.length > 0) {
-      currentModule?.lessons.push(currentLesson);
+    if (currentLesson && currentModule) {
+      currentModule.lessons.push(currentLesson);
     }
     if (currentModule) {
       modules.push(currentModule);
@@ -167,10 +213,12 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
     if (modules.length === 0) {
       modules.push({
         id: 1,
+        chapterId: null,
         title: "Course Content",
         description: "All course chapters",
         lessons: [{
           id: 1,
+          chapterId: null,
           title: "Course Lessons",
           description: "Complete course content",
           chapters: chapters
@@ -181,20 +229,21 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
     return modules;
   };
 
-  const courseModules = reconstructModules(chapters);
+  // Get modules (either from new structure or legacy reconstruction)
+  const courseModules = handleLegacyChapters();
   
-  // Debug: Log the reconstructed module structure
-  console.log(`📚 Course modules reconstructed:`, courseModules.length);
-  courseModules.forEach((module, index) => {
-    console.log(`  Module ${index + 1}: "${module.title}" with ${module.lessons.length} lessons`);
-    module.lessons.forEach((lesson: any, lessonIndex: number) => {
-      console.log(`    Lesson ${lessonIndex + 1}: "${lesson.title}" with ${lesson.chapters.length} chapters`);
-    });
-  });
+  // Create a flattened chapters array for backward compatibility
+  const allChapters = course.modules.length > 0 
+    ? course.modules.flatMap(module => 
+        module.lessons.flatMap(lesson => lesson.chapters)
+      ).concat(course.chapters)
+    : course.chapters;
+  
+  console.log(`📚 Course structure: ${courseModules.length} modules, ${allChapters.length} total chapters`);
 
   const courseWithChapters = {
     ...course,
-    courseChapters: chapters,
+    courseChapters: allChapters,
     rating: { rating: 4.5, count: course.enrollments.length },
     modules: courseModules
   };
@@ -205,12 +254,18 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2">
-              <div className="flex items-center space-x-2 mb-4">
-                <Badge variant="secondary">Music Production</Badge>
-                <Badge variant="outline" className="border-white/30 text-white">
-                  {course.isPublished ? 'Published' : 'Draft'}
-                </Badge>
-              </div>
+              <CourseEditHeader 
+                course={{
+                  id: course.id,
+                  title: course.title,
+                  description: course.description,
+                  price: course.price,
+                  isPublished: course.isPublished,
+                  slug: course.slug
+                }}
+                user={user}
+                isOwner={user?.id === course.instructorId}
+              />
               
               <h1 className="text-4xl font-bold mb-4 text-white">{course.title}</h1>
               <p className="text-xl mb-6 text-slate-200">{course.description}</p>
@@ -235,7 +290,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
                 
                 <div className="flex items-center space-x-2">
                   <Clock className="w-5 h-5" />
-                  <span>{chapters.length} chapters</span>
+                  <span>{allChapters.length} chapters</span>
                 </div>
               </div>
             </div>
@@ -274,7 +329,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
                       <CheckCircle className="w-4 h-4 text-green-500" />
                     </div>
                     <div className="flex items-center justify-between">
-                      <span>{chapters.length} chapters</span>
+                      <span>{allChapters.length} chapters</span>
                       <CheckCircle className="w-4 h-4 text-green-500" />
                     </div>
                   </div>
@@ -286,6 +341,14 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <CourseContentEditor
+          courseId={course.id}
+          modules={courseModules}
+          chapters={allChapters}
+          user={user}
+          isOwner={user?.id === course.instructorId}
+        />
+        
         <CourseDetailClient 
           courseId={course.id}
           isAuthenticated={!!user}
