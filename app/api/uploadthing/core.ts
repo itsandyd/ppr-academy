@@ -19,6 +19,22 @@ export const ourFileRouter = {
       // !!! Whatever is returned here is sent to the clientside `onClientUploadComplete` callback
       return { uploadedBy: metadata.userId, url: file.url };
     }),
+
+  // Image uploader for course content
+  imageUploader: f({ image: { maxFileSize: "4MB" } })
+    .middleware(async () => {
+      const { userId } = await auth();
+      if (!userId) throw new Error("Unauthorized");
+      return { userId };
+    })
+    .onUploadComplete(async ({ metadata, file }) => {
+      // This code RUNS ON YOUR SERVER after upload
+      console.log("Image upload complete for userId:", metadata.userId);
+      console.log("Image file URL:", file.url);
+
+      // !!! Whatever is returned here is sent to the clientside `onClientUploadComplete` callback
+      return { uploadedBy: metadata.userId, url: file.url };
+    }),
 } satisfies FileRouter;
 
 export type OurFileRouter = typeof ourFileRouter; 

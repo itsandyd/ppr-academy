@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Play, 
@@ -27,9 +28,10 @@ import {
   X,
   Volume2,
   Save,
-  Pause
+  Pause,
+  Loader2
 } from "lucide-react";
-import { enrollInCourse, submitCourseReview, markChapterComplete, updateChapter } from "@/app/actions/course-actions";
+import { enrollInCourse, submitCourseReview, markChapterComplete, updateChapter, generateChapterAudio, getElevenLabsVoices } from "@/app/actions/course-actions";
 import { useRouter } from "next/navigation";
 import dynamic from 'next/dynamic';
 import remarkGfm from 'remark-gfm';
@@ -105,9 +107,39 @@ export function CourseDetailClient({
   });
   const [isSaving, setIsSaving] = useState(false);
   const [expandedChapters, setExpandedChapters] = useState<{ [key: string]: boolean }>({});
+  
+  // TTS state
+  const [generatingAudio, setGeneratingAudio] = useState<string | null>(null);
+  const [availableVoices, setAvailableVoices] = useState<any[]>([]);
+  const [selectedVoice, setSelectedVoice] = useState("9BWtsMINqrJLrRacOk9x"); // Default to Aria voice
 
   useEffect(() => {
     setIsMounted(true);
+  }, []);
+
+  // Load available voices on mount
+  useEffect(() => {
+    const loadVoices = async () => {
+      try {
+        console.log('🔊 Loading ElevenLabs voices...');
+        const result = await getElevenLabsVoices();
+        console.log('🔊 Voice loading result:', result);
+        
+        if (result.success && result.voices) {
+          console.log(`🔊 Loaded ${result.voices.length} voices successfully`);
+          setAvailableVoices(result.voices);
+        } else {
+          console.warn('🔊 Failed to load voices:', result.error);
+          // Keep the default voice available
+          setAvailableVoices([]);
+        }
+      } catch (error) {
+        console.error('🔊 Error loading voices:', error);
+        // Keep the default voice available
+        setAvailableVoices([]);
+      }
+    };
+    loadVoices();
   }, []);
 
   // Audio player functions
@@ -253,21 +285,94 @@ export function CourseDetailClient({
     };
   }, [audioRefs]);
 
-  const MarkdownRenderer = ({ content }: { content: string }) => {
+  // Generate audio function
+  const generateAudio = async (chapterId: string, text: string) => {
+    if (!text.trim()) {
+      toast({
+        title: "No Content",
+        description: "Please add some content before generating audio.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setGeneratingAudio(chapterId);
+    
+    try {
+      const result = await generateChapterAudio(chapterId, { text, voiceId: selectedVoice });
+      
+      if (result.success) {
+        toast({
+          title: "Audio Generated",
+          description: result.message || "Audio has been generated successfully!",
+        });
+        
+        // Refresh the page to show the new audio
+        router.refresh();
+      } else {
+        toast({
+          title: "Generation Failed",
+          description: result.error || "Failed to generate audio. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Audio generation error:', error);
+      toast({
+        title: "Generation Failed",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setGeneratingAudio(null);
+    }
+  };
+
+  const ContentRenderer = ({ content }: { content: string }) => {
     if (!isMounted) {
       return <div className="text-slate-700 whitespace-pre-wrap">{content}</div>;
     }
 
-    return (
-      <div className="prose prose-slate max-w-none text-sm">
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
-          rehypePlugins={[rehypeHighlight]}
-        >
-          {content}
-        </ReactMarkdown>
-      </div>
-    );
+    if (!content || content.trim() === '') {
+      return <div className="text-slate-500 italic">No content available</div>;
+    }
+
+    // Check if content is HTML (contains HTML tags like <p>, <h1>, <strong>, etc.)
+    const isHTML = /<[^>]*>/g.test(content);
+
+    if (isHTML) {
+      // Render HTML content from rich text editor
+      return (
+        <div 
+          className="course-content text-sm"
+          dangerouslySetInnerHTML={{ __html: content }}
+        />
+      );
+    } else {
+      // Check if content contains markdown formatting
+      const hasMarkdown = /[#*`\[\]_~]/.test(content);
+      
+      if (hasMarkdown) {
+        // Render as markdown for backward compatibility
+        return (
+          <div className="course-content text-sm">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              rehypePlugins={[rehypeHighlight]}
+            >
+              {content}
+            </ReactMarkdown>
+          </div>
+        );
+      } else {
+        // Plain text - render with basic formatting
+        return (
+          <div className="course-content text-sm whitespace-pre-wrap">
+            {content}
+          </div>
+        );
+      }
+    }
   };
 
   const handleEnroll = async () => {
@@ -530,7 +635,7 @@ export function CourseDetailClient({
                             
                             {module.description && (
                               <div className="text-sm text-slate-600 prose prose-sm max-w-none">
-                                <MarkdownRenderer content={module.description} />
+                                <ContentRenderer content={module.description} />
                               </div>
                             )}
                           </div>
@@ -574,7 +679,7 @@ export function CourseDetailClient({
                                   
                                   {lesson.description && (
                                     <div className="text-sm text-slate-600 prose prose-sm max-w-none">
-                                      <MarkdownRenderer content={lesson.description} />
+                                      <ContentRenderer content={lesson.description} />
                                     </div>
                                   )}
                                 </div>
@@ -675,7 +780,7 @@ export function CourseDetailClient({
                                                   return (
                                                     <>
                                                       <div className="prose prose-sm max-w-none text-slate-700">
-                                                        <MarkdownRenderer content={content} />
+                                                        <ContentRenderer content={content} />
                                                       </div>
                                                       {isLongContent && (
                                                         <button
@@ -818,11 +923,14 @@ export function CourseDetailClient({
 
       {/* Edit Chapter Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Chapter</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="w-5 h-5" />
+              Edit Chapter Content
+            </DialogTitle>
             <DialogDescription>
-              Update the chapter information and content.
+              Update the chapter information and content. Use the rich text editor to add images, formatting, and rich content.
             </DialogDescription>
           </DialogHeader>
           
@@ -849,17 +957,97 @@ export function CourseDetailClient({
 
             <div className="space-y-2">
               <Label htmlFor="description">Chapter Content</Label>
-              <Textarea
-                id="description"
-                value={editForm.description}
-                onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
+              <RichTextEditor
+                content={editForm.description || ''}
+                onChange={(content) => setEditForm(prev => ({ ...prev, description: content }))}
                 placeholder="Enter the chapter content, lesson text, and learning material..."
-                rows={12}
                 className="min-h-[300px]"
               />
               <p className="text-sm text-slate-500">
-                This content will be displayed to students when they access this chapter.
+                This content will be displayed to students when they access this chapter. You can add images, formatting, and rich content using the toolbar above.
               </p>
+            </div>
+
+            {/* Audio Generation Section */}
+            <div className="space-y-3 border-t pt-4">
+              <div className="flex items-center gap-2">
+                <Volume2 className="w-4 h-4" />
+                <Label className="text-sm font-medium">Audio Generation</Label>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="voice-select">Voice</Label>
+                                 <select
+                   id="voice-select"
+                   value={selectedVoice}
+                   onChange={(e) => setSelectedVoice(e.target.value)}
+                   className="w-full p-2 border rounded-md"
+                 >
+                   {availableVoices && availableVoices.length > 0 ? (
+                     availableVoices.map((voice) => (
+                       <option key={voice.voiceId} value={voice.voiceId}>
+                         {voice.name}
+                       </option>
+                     ))
+                   ) : (
+                     <>
+                       <option value="9BWtsMINqrJLrRacOk9x">Aria (Default)</option>
+                       <option value="" disabled>Loading more voices...</option>
+                     </>
+                   )}
+                 </select>
+              </div>
+
+              {/* Text length indicator */}
+              <div className="text-xs text-slate-500">
+                Text length: {editForm.description?.length || 0} / 5000 characters
+                {editForm.description && editForm.description.length > 5000 && (
+                  <span className="text-red-500 ml-2">(Text will be chunked for processing)</span>
+                )}
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => selectedChapter && generateAudio(selectedChapter.id, editForm.description || selectedChapter.description || '')}
+                  disabled={generatingAudio === selectedChapter?.id || !editForm.description}
+                >
+                  {generatingAudio === selectedChapter?.id ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Volume2 className="w-4 h-4 mr-2" />
+                      Generate Audio
+                    </>
+                  )}
+                </Button>
+
+                {selectedChapter?.audioUrl && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => selectedChapter && playAudio(selectedChapter.id, selectedChapter.audioUrl!)}
+                  >
+                    {audioPlaying === selectedChapter?.id ? (
+                      <>
+                        <Pause className="w-4 h-4 mr-2" />
+                        Pause
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-4 h-4 mr-2" />
+                        Play Audio
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
             </div>
 
             <div className="flex items-center space-x-4">

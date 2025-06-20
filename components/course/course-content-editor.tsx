@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Edit, 
@@ -111,12 +112,11 @@ function SortableModuleItem({
 
             <div className="space-y-2">
               <Label htmlFor={`module-description-${module.id}`}>Module Description</Label>
-              <Textarea
-                id={`module-description-${module.id}`}
-                value={editModuleForm.description}
-                onChange={(e) => setEditModuleForm((prev: any) => ({ ...prev, description: e.target.value }))}
+              <RichTextEditor
+                content={editModuleForm.description || ''}
+                onChange={(content) => setEditModuleForm((prev: any) => ({ ...prev, description: content }))}
                 placeholder="Enter module description"
-                rows={3}
+                className="min-h-[120px]"
               />
             </div>
 
@@ -261,12 +261,11 @@ function SortableLessonItem({
 
             <div className="space-y-2">
               <Label htmlFor={`lesson-description-${lesson.id}`}>Lesson Description</Label>
-              <Textarea
-                id={`lesson-description-${lesson.id}`}
-                value={editLessonForm.description}
-                onChange={(e) => setEditLessonForm((prev: any) => ({ ...prev, description: e.target.value }))}
+              <RichTextEditor
+                content={editLessonForm.description || ''}
+                onChange={(content) => setEditLessonForm((prev: any) => ({ ...prev, description: content }))}
                 placeholder="Enter lesson description"
-                rows={3}
+                className="min-h-[120px]"
               />
             </div>
 
@@ -426,12 +425,10 @@ function SortableChapterItem({
 
               <div className="space-y-2">
                 <Label htmlFor={`description-${chapter.id}`}>Chapter Content</Label>
-                <Textarea
-                  id={`description-${chapter.id}`}
-                  value={editForm.description}
-                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, description: e.target.value }))}
+                <RichTextEditor
+                  content={editForm.description || ''}
+                  onChange={(content) => setEditForm((prev: any) => ({ ...prev, description: content }))}
                   placeholder="Enter the chapter content..."
-                  rows={6}
                 />
               </div>
 
@@ -1729,12 +1726,11 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
 
                             <div className="space-y-2">
                               <Label htmlFor={`new-lesson-description-${module.id}`}>Lesson Description</Label>
-                              <Textarea
-                                id={`new-lesson-description-${module.id}`}
-                                value={newLessonForm.description}
-                                onChange={(e) => setNewLessonForm(prev => ({ ...prev, description: e.target.value }))}
+                              <RichTextEditor
+                                content={newLessonForm.description || ''}
+                                onChange={(content) => setNewLessonForm(prev => ({ ...prev, description: content }))}
                                 placeholder="Enter lesson description"
-                                rows={3}
+                                className="min-h-[120px]"
                               />
                             </div>
 
@@ -1813,12 +1809,11 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
 
                                       <div className="space-y-2">
                                         <Label htmlFor="new-description">Description</Label>
-                                        <Textarea
-                                          id="new-description"
-                                          value={newChapterForm.description}
-                                          onChange={(e) => setNewChapterForm(prev => ({ ...prev, description: e.target.value }))}
+                                        <RichTextEditor
+                                          content={newChapterForm.description || ''}
+                                          onChange={(content) => setNewChapterForm(prev => ({ ...prev, description: content }))}
                                           placeholder="Enter chapter description"
-                                          rows={3}
+                                          className="min-h-[120px]"
                                         />
                                       </div>
 
