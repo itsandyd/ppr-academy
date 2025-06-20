@@ -26,7 +26,8 @@ import {
   Settings,
   X,
   Volume2,
-  Save
+  Save,
+  Pause
 } from "lucide-react";
 import { enrollInCourse, submitCourseReview, markChapterComplete, updateChapter } from "@/app/actions/course-actions";
 import { useRouter } from "next/navigation";
@@ -54,6 +55,7 @@ interface Chapter {
   title: string;
   description?: string;
   videoUrl?: string;
+  audioUrl?: string;
   position: number;
   isPublished: boolean;
   isFree: boolean;
@@ -87,6 +89,10 @@ export function CourseDetailClient({
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   
+  // Audio playback state
+  const [audioPlaying, setAudioPlaying] = useState<string | null>(null);
+  const [audioRefs, setAudioRefs] = useState<{ [key: string]: HTMLAudioElement | null }>({});
+  
   // Edit dialog state
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedChapter, setSelectedChapter] = useState<Chapter | null>(null);
@@ -103,6 +109,149 @@ export function CourseDetailClient({
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  // Audio player functions
+  const playAudio = (chapterId: string, audioUrl: string) => {
+    console.log(`🎵 ===== AUDIO PLAYBACK DEBUG =====`);
+    console.log(`🎵 Function called with:`);
+    console.log(`   - chapterId: ${chapterId}`);
+    console.log(`   - audioUrl: ${audioUrl}`);
+    console.log(`   - audioUrl type: ${typeof audioUrl}`);
+    console.log(`   - audioUrl length: ${audioUrl?.length}`);
+    console.log(`   - current URL: ${window.location.href}`);
+    console.log(`   - current pathname: ${window.location.pathname}`);
+    
+    if (!audioUrl) {
+      console.error('❌ No audio URL provided');
+      toast({
+        title: "Audio Error",
+        description: "No audio URL available",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (audioPlaying === chapterId) {
+      console.log(`🛑 Stopping current audio for chapter ${chapterId}`);
+      // Stop current audio
+      if (audioRefs[chapterId]) {
+        audioRefs[chapterId]?.pause();
+        audioRefs[chapterId]!.currentTime = 0;
+      }
+      setAudioPlaying(null);
+      return;
+    }
+
+    // Stop any other playing audio
+    Object.keys(audioRefs).forEach(id => {
+      if (audioRefs[id]) {
+        audioRefs[id]?.pause();
+        audioRefs[id]!.currentTime = 0;
+      }
+    });
+    setAudioPlaying(null);
+
+    // Check if audioUrl is a legacy reference (not a playable URL)
+    if (audioUrl && audioUrl.startsWith('generated_')) {
+      console.warn('⚠️ Legacy audio reference detected:', audioUrl);
+      toast({
+        title: "Audio Not Available",
+        description: "Please regenerate the audio to enable playback.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    console.log('🎵 Creating Audio object...');
+    
+    // Play new audio
+    const audio = new Audio(audioUrl);
+    
+    audio.onloadstart = () => {
+      console.log('🔄 Audio loading started');
+    };
+    
+    audio.oncanplay = () => {
+      console.log('✅ Audio can play');
+    };
+    
+    audio.oncanplaythrough = () => {
+      console.log('✅ Audio can play through');
+    };
+    
+    audio.onended = () => {
+      console.log('🏁 Audio ended');
+      setAudioPlaying(null);
+    };
+    
+    audio.onerror = (e) => {
+      console.error('❌ Audio error event:', e);
+      console.error('❌ Audio error details:', audio.error);
+      console.error('❌ Audio error code:', audio.error?.code);
+      console.error('❌ Audio error message:', audio.error?.message);
+      
+      let errorMessage = 'Unknown error';
+      if (audio.error) {
+        switch (audio.error.code) {
+          case 1:
+            errorMessage = 'Audio aborted';
+            break;
+          case 2:
+            errorMessage = 'Network error';
+            break;
+          case 3:
+            errorMessage = 'Audio decoding failed';
+            break;
+          case 4:
+            errorMessage = 'Audio not supported';
+            break;
+          default:
+            errorMessage = audio.error.message || 'Unknown error';
+        }
+      }
+      
+      toast({
+        title: "Audio Error",
+        description: `Failed to play audio: ${errorMessage}`,
+        variant: "destructive",
+      });
+      setAudioPlaying(null);
+    };
+    
+    setAudioRefs(prev => ({ ...prev, [chapterId]: audio }));
+    
+    console.log('🎵 Attempting to play audio...');
+    
+    // Try to play the audio
+    audio.play().then(() => {
+      console.log('✅ Audio play started successfully');
+      setAudioPlaying(chapterId);
+    }).catch((error) => {
+      console.error('❌ Audio play failed:', error);
+      console.error('❌ Error name:', error.name);
+      console.error('❌ Error message:', error.message);
+      
+      toast({
+        title: "Audio Playback Failed",
+        description: `Unable to play audio: ${error.message}`,
+        variant: "destructive",
+      });
+      setAudioPlaying(null);
+    });
+    
+    console.log(`🎵 ===== END AUDIO PLAYBACK DEBUG =====`);
+  };
+
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(audioRefs).forEach(audio => {
+        if (audio) {
+          audio.pause();
+        }
+      });
+    };
+  }, [audioRefs]);
 
   const MarkdownRenderer = ({ content }: { content: string }) => {
     if (!isMounted) {
@@ -477,6 +626,24 @@ export function CourseDetailClient({
                                               >
                                                 <Settings className="w-3 h-3 mr-1" />
                                                 Edit
+                                              </Button>
+                                            )}
+                                            {chapter.audioUrl && (
+                                              <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="text-xs"
+                                                onClick={(e) => {
+                                                  e.preventDefault();
+                                                  e.stopPropagation();
+                                                  playAudio(chapter.id, chapter.audioUrl!);
+                                                }}
+                                              >
+                                                {audioPlaying === chapter.id ? (
+                                                  <Pause className="w-3 h-3" />
+                                                ) : (
+                                                  <Volume2 className="w-3 h-3" />
+                                                )}
                                               </Button>
                                             )}
                                             {isEnrolled && (

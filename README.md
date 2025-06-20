@@ -18,6 +18,8 @@ A modern full-stack Next.js application for music production education, built wi
 - 🎯 Featured and popular course sections
 - 📊 User dashboard with statistics
 - 🔐 Secure authentication with Clerk
+- **Course Management**: Create, edit, and manage courses with modules, lessons, and chapters
+- **Text-to-Speech**: Generate audio narration for course chapters using 11 Labs API
 
 ## Getting Started
 
@@ -64,6 +66,9 @@ DATABASE_URL="mysql://username:password@host.planetscale.com/database-name?sslac
 
 # Application
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
+
+# 11 Labs Text-to-Speech (Optional)
+ELEVEN_LABS_API_KEY="your_eleven_labs_api_key"
 ```
 
 4. Push the database schema:
@@ -187,6 +192,9 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000
 # AI Course Generator (optional - for admin AI course generation)
 OPENAI_API_KEY=sk_your_openai_api_key_here
 TAVILY_API_KEY=tvly_your_tavily_api_key_here
+
+# 11 Labs Text-to-Speech (Optional)
+ELEVEN_LABS_API_KEY="your_eleven_labs_api_key"
 ```
 
 ### Setting up Planetscale
@@ -293,3 +301,35 @@ The admin dashboard includes a powerful content scraper for research and course 
 3. Choose whether to fix transcription errors (YouTube only)
 4. Click "Scrape Content" to extract and process
 5. View extracted content, metadata, and text chunks
+
+### 11 Labs Integration
+
+To enable text-to-speech functionality for course chapters:
+
+1. Sign up for an account at [11 Labs](https://elevenlabs.io/)
+2. Get your API key from the dashboard
+3. Add `ELEVEN_LABS_API_KEY` to your environment variables
+4. The system will automatically load available voices and allow you to generate audio from chapter content
+
+**Note**: Audio files are currently stored as base64 strings in the database. For production use, consider uploading to a cloud storage service like AWS S3.
+
+## Course Structure
+
+Courses are organized in a hierarchical structure:
+- **Courses** contain multiple modules
+- **Modules** contain multiple lessons  
+- **Lessons** contain multiple chapters
+- **Chapters** contain the actual content (text, video, audio)
+
+## Audio Generation
+
+When editing a chapter:
+1. Enter your chapter content in the description field
+2. Select a voice from the dropdown (loaded from 11 Labs)
+3. Click "Generate Audio" to create audio narration
+4. Use the play/pause button to preview the generated audio
+5. Students can listen to the audio when viewing the course
+
+## Deployment
+
+The application is recommended to be deployed on Vercel for optimal performance and scalability.

@@ -5,6 +5,99 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getUserFromClerk } from "@/lib/data";
 import { generateSlug, generateUniqueSlug } from "@/lib/utils";
+import { UTApi } from "uploadthing/server";
+import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
+
+// Function to strip markdown formatting for text-to-speech
+function stripMarkdownForTTS(text: string): string {
+  return text
+    // Remove headers (# ## ### etc.)
+    .replace(/^#{1,6}\s+/gm, '')
+    // Remove bold/italic (**text** or *text*)
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    // Remove code blocks (```code```)
+    .replace(/```[\s\S]*?```/g, '')
+    // Remove inline code (`code`)
+    .replace(/`([^`]+)`/g, '$1')
+    // Remove links [text](url)
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    // Remove images ![alt](url)
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, '$1')
+    // Remove horizontal rules (--- or ***)
+    .replace(/^[-*]{3,}$/gm, '')
+    // Remove blockquotes (> text)
+    .replace(/^>\s+/gm, '')
+    // Remove list markers (- or * or 1.)
+    .replace(/^[\s]*[-*+]\s+/gm, '')
+    .replace(/^[\s]*\d+\.\s+/gm, '')
+    // Remove extra whitespace and normalize line breaks
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/^\s+|\s+$/g, '')
+    // Replace remaining newlines with spaces for better TTS flow
+    .replace(/\n/g, ' ')
+    // Clean up multiple spaces
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+// Function to split text into intelligent chunks
+function splitTextIntoChunks(text: string, maxChunkLength: number): string[] {
+  if (text.length <= maxChunkLength) {
+    return [text];
+  }
+
+  const chunks: string[] = [];
+  let currentPosition = 0;
+
+  while (currentPosition < text.length) {
+    let chunkEnd = currentPosition + maxChunkLength;
+    
+    // If this would be the last chunk, just take the rest
+    if (chunkEnd >= text.length) {
+      chunks.push(text.substring(currentPosition));
+      break;
+    }
+
+    // Find the best place to break the chunk
+    const chunkText = text.substring(currentPosition, chunkEnd);
+    
+    // Try to break at sentence boundaries first
+    const sentenceBreaks = ['.', '!', '?'];
+    let bestBreak = -1;
+    
+    for (let i = chunkText.length - 1; i >= maxChunkLength * 0.7; i--) {
+      if (sentenceBreaks.includes(chunkText[i])) {
+        bestBreak = i + 1; // Include the punctuation
+        break;
+      }
+    }
+    
+    // If no good sentence break, try paragraph breaks
+    if (bestBreak === -1) {
+      const paragraphBreak = chunkText.lastIndexOf('\n\n');
+      if (paragraphBreak > maxChunkLength * 0.5) {
+        bestBreak = paragraphBreak + 2;
+      }
+    }
+    
+    // If no good breaks, use word boundary
+    if (bestBreak === -1) {
+      const wordBreak = chunkText.lastIndexOf(' ');
+      bestBreak = wordBreak > 0 ? wordBreak : chunkText.length;
+    }
+    
+    chunks.push(text.substring(currentPosition, currentPosition + bestBreak).trim());
+    currentPosition += bestBreak;
+  }
+
+  return chunks.filter(chunk => chunk.length > 0);
+}
+
+// Initialize ElevenLabs client
+const elevenlabs = new ElevenLabsClient({
+  apiKey: process.env.ELEVEN_LABS_API_KEY,
+});
 
 interface CourseData {
   title: string;
@@ -31,6 +124,16 @@ interface CourseData {
       }[];
     }[];
   }[];
+}
+
+// Initialize UploadThing API
+const utapi = new UTApi({
+  token: process.env.UPLOADTHING_TOKEN,
+});
+
+// Global audio cache type declaration
+declare global {
+  var audioCache: Map<string, ArrayBuffer> | undefined;
 }
 
 export async function createCourse(courseData: CourseData) {
@@ -1418,4 +1521,453 @@ export async function updateCourseLesson(lessonId: string, data: { title: string
   revalidatePath("/courses");
   revalidatePath("/dashboard");
   return { success: true };
+}
+
+// Add 11 Labs text-to-speech functionality
+interface GenerateAudioData {
+  text: string;
+  voiceId?: string;
+}
+
+export async function generateChapterAudio(chapterId: string, audioData: GenerateAudioData) {
+  try {
+    const user = await checkAuth();
+    
+    // Get the chapter to check ownership
+    const chapter = await prisma.courseChapter.findUnique({
+      where: { id: chapterId },
+      include: { course: { select: { instructorId: true, slug: true } } }
+    });
+
+    if (!chapter) {
+      return { success: false, error: "Chapter not found" };
+    }
+
+    // Check if user is admin or course owner
+    if (!user.admin && chapter.course.instructorId !== user.id) {
+      return { success: false, error: "Unauthorized to generate audio for this chapter" };
+    }
+
+    // Check if 11 Labs API key is configured
+    const elevenLabsApiKey = process.env.ELEVEN_LABS_API_KEY;
+    if (!elevenLabsApiKey) {
+      console.error("❌ 11 Labs API key not configured");
+      return { success: false, error: "11 Labs API key not configured" };
+    }
+    
+    console.log(`🔑 11 Labs API key configured: ${elevenLabsApiKey ? 'Yes' : 'No'}`);
+    console.log(`🔑 API key length: ${elevenLabsApiKey?.length || 0}`);
+    console.log(`🔑 API key starts with: ${elevenLabsApiKey?.substring(0, 10)}...`);
+
+    // Default voice ID (you can make this configurable)
+    const voiceId = audioData.voiceId || "9BWtsMINqrJLrRacOk9x"; // Aria voice
+
+    // Validate voice ID by checking if it exists
+    console.log(`🔍 Validating voice ID: ${voiceId}`);
+    try {
+      const voices = await elevenlabs.voices.getAll();
+      const validVoice = voices.voices?.find(v => v.voiceId === voiceId);
+      if (!validVoice) {
+        console.error(`❌ Invalid voice ID: ${voiceId}`);
+        console.log(`📋 Available voices:`, voices.voices?.slice(0, 5).map(v => `${v.name} (${v.voiceId})`));
+        return { success: false, error: `Invalid voice ID: ${voiceId}. Please select a valid voice.` };
+      }
+      console.log(`✅ Voice validated: ${validVoice.name} (${voiceId})`);
+    } catch (voiceError) {
+      console.error(`⚠️ Could not validate voice ID:`, voiceError);
+      // Continue anyway, let the main API call handle the error
+    }
+
+    // Strip markdown formatting for better TTS
+    const cleanedText = stripMarkdownForTTS(audioData.text);
+    console.log(`📝 Original text length: ${audioData.text.length} characters`);
+    console.log(`🧹 Cleaned text length: ${cleanedText.length} characters`);
+    console.log(`🧹 Cleaned text preview: ${cleanedText.substring(0, 200)}...`);
+
+    // Split long text into chunks for complete audio coverage
+    const maxChunkLength = 3000; // Smaller chunks for better processing
+    const textChunks = splitTextIntoChunks(cleanedText, maxChunkLength);
+    
+    console.log(`📚 Split text into ${textChunks.length} chunks`);
+    textChunks.forEach((chunk, index) => {
+      console.log(`📄 Chunk ${index + 1}: ${chunk.length} characters`);
+    });
+
+    // Generate audio for each chunk and combine them
+    console.log(`🎵 Generating audio for ${textChunks.length} chunks...`);
+    const audioBuffers: ArrayBuffer[] = [];
+    
+    for (let i = 0; i < textChunks.length; i++) {
+      const chunk = textChunks[i];
+      console.log(`🎬 Processing chunk ${i + 1}/${textChunks.length} (${chunk.length} characters)`);
+      console.log(`🎬 Chunk preview: ${chunk.substring(0, 100)}...`);
+      
+      try {
+        const audioStream = await elevenlabs.textToSpeech.convert(voiceId, {
+          text: chunk,
+          modelId: "eleven_multilingual_v2",
+          voiceSettings: {
+            stability: 0.5,
+            similarityBoost: 0.5
+          }
+        });
+        
+        console.log(`✅ Chunk ${i + 1} audio generation successful`);
+        
+        // Convert stream to buffer
+        const streamChunks: Uint8Array[] = [];
+        const reader = audioStream.getReader();
+        
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            streamChunks.push(value);
+          }
+        } finally {
+          reader.releaseLock();
+        }
+        
+        // Convert Uint8Array chunks to ArrayBuffer
+        const totalLength = streamChunks.reduce((acc, chunk) => acc + chunk.length, 0);
+        const chunkAudioBuffer = new ArrayBuffer(totalLength);
+        const audioView = new Uint8Array(chunkAudioBuffer);
+        let offset = 0;
+        for (const streamChunk of streamChunks) {
+          audioView.set(streamChunk, offset);
+          offset += streamChunk.length;
+        }
+        
+        audioBuffers.push(chunkAudioBuffer);
+        console.log(`✅ Chunk ${i + 1} processed: ${chunkAudioBuffer.byteLength} bytes`);
+        
+        // Add a small delay between requests to avoid rate limiting
+        if (i < textChunks.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        
+      } catch (elevenLabsError: any) {
+        console.error(`❌ ElevenLabs API error for chunk ${i + 1}:`, elevenLabsError);
+        
+        let errorMessage = `Failed to generate audio for chunk ${i + 1}`;
+        if (elevenLabsError.statusCode === 400) {
+          errorMessage = "Invalid request to ElevenLabs API. Check voice ID and parameters.";
+        } else if (elevenLabsError.statusCode === 401) {
+          errorMessage = "Invalid ElevenLabs API key.";
+        } else if (elevenLabsError.statusCode === 429) {
+          errorMessage = "ElevenLabs API rate limit exceeded. Try again later.";
+        }
+        
+        return { success: false, error: errorMessage };
+      }
+    }
+    
+    // Combine all audio buffers into one
+    console.log(`🔗 Combining ${audioBuffers.length} audio chunks...`);
+    const totalAudioLength = audioBuffers.reduce((acc, buffer) => acc + buffer.byteLength, 0);
+    const combinedAudioBuffer = new ArrayBuffer(totalAudioLength);
+    const combinedView = new Uint8Array(combinedAudioBuffer);
+    
+    let combinedOffset = 0;
+    for (const buffer of audioBuffers) {
+      combinedView.set(new Uint8Array(buffer), combinedOffset);
+      combinedOffset += buffer.byteLength;
+    }
+    
+    const audioBuffer = combinedAudioBuffer;
+    console.log(`🎉 Combined audio generated, total size: ${audioBuffer.byteLength} bytes`);
+    
+    try {
+      // Check if UploadThing is configured
+      if (process.env.UPLOADTHING_TOKEN) {
+        console.log(`📁 Uploading audio to UploadThing...`);
+        
+        // Create a File from the ArrayBuffer
+        const audioBlob = new Blob([audioBuffer], { type: 'audio/mpeg' });
+        const audioFile = new File([audioBlob], `audio_${chapterId}_${Date.now()}.mp3`, {
+          type: 'audio/mpeg'
+        });
+
+        // Upload to UploadThing using the modern SDK
+        const uploadResponse = await utapi.uploadFiles(audioFile);
+
+        if (uploadResponse.data) {
+          const audioUrl = uploadResponse.data.url;
+          console.log(`✅ Audio uploaded to UploadThing: ${audioUrl}`);
+
+          // Update the chapter with the UploadThing URL
+          await prisma.courseChapter.update({
+            where: { id: chapterId },
+            data: {
+              audioUrl: audioUrl,
+              updatedAt: new Date()
+            }
+          });
+
+          console.log(`✅ Audio URL stored successfully in database`);
+
+          // Revalidate pages
+          if (chapter.course.slug) {
+            revalidatePath(`/courses/${chapter.course.slug}`);
+          }
+          revalidatePath("/courses");
+          revalidatePath("/dashboard");
+
+          return { 
+            success: true, 
+            audioUrl: audioUrl,
+            message: `Audio generated from ${textChunks.length} chunks and uploaded successfully. Total length: ${Math.round(audioBuffer.byteLength / 1024)}KB`
+          };
+        } else {
+          throw new Error('UploadThing upload failed - no data returned');
+        }
+      } else {
+        console.log(`⚠️ UploadThing not configured, using fallback storage`);
+        throw new Error('UploadThing not configured');
+      }
+    } catch (uploadError) {
+      console.error("❌ UploadThing upload error:", uploadError);
+      
+      // Fallback: use in-memory cache
+      const audioFileName = `audio_${chapterId}_${Date.now()}.mp3`;
+      const audioUrl = `/audio/${audioFileName}`;
+      
+      try {
+        // Store in memory as fallback
+        global.audioCache = global.audioCache || new Map();
+        global.audioCache.set(audioFileName, audioBuffer);
+
+        await prisma.courseChapter.update({
+          where: { id: chapterId },
+          data: {
+            audioUrl: audioUrl,
+            updatedAt: new Date()
+          }
+        });
+
+        console.log(`⚠️ Fallback: Audio stored in memory cache`);
+
+        // Revalidate pages
+        if (chapter.course.slug) {
+          revalidatePath(`/courses/${chapter.course.slug}`);
+        }
+        revalidatePath("/courses");
+        revalidatePath("/dashboard");
+
+        return { 
+          success: true, 
+          audioUrl: audioUrl,
+          message: `Audio generated from ${textChunks.length} chunks using fallback storage. Total length: ${Math.round(audioBuffer.byteLength / 1024)}KB`
+        };
+      } catch (dbError) {
+        console.error("❌ Database fallback error:", dbError);
+        return { 
+          success: false, 
+          error: "Failed to store audio. Please try again." 
+        };
+      }
+    }
+  } catch (error) {
+    console.error("Error generating audio:", error);
+    return { 
+      success: false, 
+      error: "Failed to generate audio. Please try again." 
+    };
+  }
+}
+
+// Get available voices from 11 Labs
+export async function getElevenLabsVoices() {
+  try {
+    const elevenLabsApiKey = process.env.ELEVEN_LABS_API_KEY;
+    if (!elevenLabsApiKey) {
+      return { success: false, error: "11 Labs API key not configured" };
+    }
+
+    const voices = await elevenlabs.voices.getAll();
+    return { success: true, voices: voices.voices };
+  } catch (error) {
+    console.error("Error fetching voices:", error);
+    return { success: false, error: "Failed to fetch voices" };
+  }
+}
+
+export async function clearNonPlayableAudio() {
+  try {
+    const user = await checkAuth();
+    
+    if (!user.admin) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    // Find chapters with non-playable audio URLs (reference strings)
+    const chaptersWithReferences = await prisma.courseChapter.findMany({
+      where: {
+        AND: [
+          { audioUrl: { not: null } },
+          { audioUrl: { not: { startsWith: 'data:' } } }
+        ]
+      },
+      select: {
+        id: true,
+        title: true,
+        audioUrl: true
+      }
+    });
+
+    console.log(`Found ${chaptersWithReferences.length} chapters with non-playable audio URLs`);
+
+    // Clear the audio URLs
+    const updatePromises = chaptersWithReferences.map(chapter => 
+      prisma.courseChapter.update({
+        where: { id: chapter.id },
+        data: { audioUrl: null }
+      })
+    );
+
+    await Promise.all(updatePromises);
+
+    return { 
+      success: true, 
+      message: `Cleared ${chaptersWithReferences.length} non-playable audio URLs` 
+    };
+  } catch (error) {
+    console.error("Error clearing non-playable audio:", error);
+    return { 
+      success: false, 
+      error: "Failed to clear non-playable audio URLs" 
+    };
+  }
+}
+
+export async function testAudioUrl(chapterId: string) {
+  try {
+    const user = await checkAuth();
+    
+    if (!user.admin) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const chapter = await prisma.courseChapter.findUnique({
+      where: { id: chapterId },
+      select: {
+        id: true,
+        title: true,
+        audioUrl: true
+      }
+    });
+
+    if (!chapter) {
+      return { success: false, error: "Chapter not found" };
+    }
+
+    console.log(`🔍 Testing audio URL for chapter: ${chapter.title}`);
+    console.log(`📊 Audio URL info:`);
+    console.log(`   - Has audioUrl: ${!!chapter.audioUrl}`);
+    console.log(`   - Audio URL type: ${typeof chapter.audioUrl}`);
+    console.log(`   - Audio URL length: ${chapter.audioUrl?.length || 0}`);
+    
+    if (chapter.audioUrl) {
+      console.log(`   - Audio URL starts with: ${chapter.audioUrl.substring(0, 50)}...`);
+      console.log(`   - Audio URL ends with: ...${chapter.audioUrl.substring(chapter.audioUrl.length - 20)}`);
+      console.log(`   - Is data URL: ${chapter.audioUrl.startsWith('data:')}`);
+      console.log(`   - Has base64: ${chapter.audioUrl.includes('base64,')}`);
+    }
+
+    return { 
+      success: true, 
+      chapter: chapter,
+      audioUrlInfo: {
+        hasAudio: !!chapter.audioUrl,
+        type: typeof chapter.audioUrl,
+        length: chapter.audioUrl?.length || 0,
+        isDataUrl: chapter.audioUrl?.startsWith('data:') || false,
+        hasBase64: chapter.audioUrl?.includes('base64,') || false
+      }
+    };
+  } catch (error) {
+    console.error("Error testing audio URL:", error);
+    return { 
+      success: false, 
+      error: "Failed to test audio URL" 
+    };
+  }
+}
+
+// Test 11 Labs API key
+export async function testElevenLabsApiKey() {
+  try {
+    const elevenLabsApiKey = process.env.ELEVEN_LABS_API_KEY;
+    
+    console.log(`🔑 Testing 11 Labs API key...`);
+    console.log(`🔑 API key exists: ${!!elevenLabsApiKey}`);
+    console.log(`🔑 API key length: ${elevenLabsApiKey?.length || 0}`);
+    
+    if (!elevenLabsApiKey) {
+      return { success: false, error: "11 Labs API key not configured" };
+    }
+
+    // Test the API key by fetching voices using SDK
+    const voices = await elevenlabs.voices.getAll();
+    console.log(`✅ API key test successful, found ${voices.voices?.length || 0} voices`);
+    
+    return { 
+      success: true, 
+      message: `API key working, found ${voices.voices?.length || 0} voices`,
+      voices: voices.voices 
+    };
+  } catch (error) {
+    console.error("❌ API key test error:", error);
+    return { 
+      success: false, 
+      error: "Failed to test API key" 
+    };
+  }
+}
+
+export async function cleanupLegacyAudioReferences() {
+  try {
+    const user = await checkAuth();
+    
+    if (!user.admin) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    // Find chapters with legacy audio references
+    const chaptersWithLegacyAudio = await prisma.courseChapter.findMany({
+      where: {
+        audioUrl: {
+          startsWith: 'generated_'
+        }
+      },
+      select: {
+        id: true,
+        title: true,
+        audioUrl: true
+      }
+    });
+
+    console.log(`Found ${chaptersWithLegacyAudio.length} chapters with legacy audio references`);
+
+    // Clear the legacy audio URLs
+    const updatePromises = chaptersWithLegacyAudio.map(chapter => 
+      prisma.courseChapter.update({
+        where: { id: chapter.id },
+        data: { audioUrl: null }
+      })
+    );
+
+    await Promise.all(updatePromises);
+
+    return { 
+      success: true, 
+      message: `Cleaned up ${chaptersWithLegacyAudio.length} legacy audio references. Please regenerate audio.` 
+    };
+  } catch (error) {
+    console.error("Error cleaning up legacy audio:", error);
+    return { 
+      success: false, 
+      error: "Failed to clean up legacy audio references" 
+    };
+  }
 } 

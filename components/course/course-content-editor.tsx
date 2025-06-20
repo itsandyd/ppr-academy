@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,9 +24,13 @@ import {
   FileText,
   Video,
   Eye,
-  EyeOff
+  EyeOff,
+  Volume2,
+  Play,
+  Pause,
+  Loader2
 } from "lucide-react";
-import { updateChapter, createChapter, deleteChapter, createModule, createLesson, updateModule, updateLesson, reorderChapters, reorderModules, reorderLessons, deleteModule, deleteLesson, deleteOrphanedChapters, updateCourseModule, updateCourseLesson } from "@/app/actions/course-actions";
+import { updateChapter, createChapter, deleteChapter, createModule, createLesson, updateModule, updateLesson, reorderChapters, reorderModules, reorderLessons, deleteModule, deleteLesson, deleteOrphanedChapters, updateCourseModule, updateCourseLesson, generateChapterAudio, getElevenLabsVoices } from "@/app/actions/course-actions";
 import {
   DndContext,
   closestCenter,
@@ -348,7 +352,14 @@ function SortableChapterItem({
   saveChapter, 
   cancelEdit, 
   handleDeleteChapter, 
-  isLoading 
+  isLoading,
+  generatingAudio,
+  audioPlaying,
+  playAudio,
+  generateAudio,
+  availableVoices,
+  selectedVoice,
+  setSelectedVoice
 }: {
   chapter: Chapter;
   editingChapter: Chapter | null;
@@ -359,6 +370,13 @@ function SortableChapterItem({
   cancelEdit: () => void;
   handleDeleteChapter: (chapterId: string) => void;
   isLoading: boolean;
+  generatingAudio: string | null;
+  audioPlaying: string | null;
+  playAudio: (chapterId: string, audioUrl: string) => void;
+  generateAudio: (chapterId: string, text: string) => void;
+  availableVoices: any[];
+  selectedVoice: string;
+  setSelectedVoice: (voiceId: string) => void;
 }) {
   const {
     attributes,
@@ -372,143 +390,223 @@ function SortableChapterItem({
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
   };
 
-  if (editingChapter?.id === chapter.id) {
-    return (
-      <div ref={setNodeRef} style={style}>
-        <Card className="border-orange-200 bg-orange-50 mb-2">
-          <CardContent className="p-4 space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor={`title-${chapter.id}`}>Chapter Title</Label>
-              <Input
-                id={`title-${chapter.id}`}
-                value={editForm.title}
-                onChange={(e) => setEditForm((prev: any) => ({ ...prev, title: e.target.value }))}
-                placeholder="Enter chapter title"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor={`description-${chapter.id}`}>Description</Label>
-              <Textarea
-                id={`description-${chapter.id}`}
-                value={editForm.description}
-                onChange={(e) => setEditForm((prev: any) => ({ ...prev, description: e.target.value }))}
-                placeholder="Enter chapter description"
-                rows={3}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor={`video-${chapter.id}`}>Video URL</Label>
-              <Input
-                id={`video-${chapter.id}`}
-                value={editForm.videoUrl}
-                onChange={(e) => setEditForm((prev: any) => ({ ...prev, videoUrl: e.target.value }))}
-                placeholder="Enter video URL"
-              />
-            </div>
-
-            <div className="flex items-center space-x-4">
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={editForm.isPublished}
-                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, isPublished: e.target.checked }))}
-                  className="rounded"
-                />
-                <span className="text-sm">Published</span>
-              </label>
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={editForm.isFree}
-                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, isFree: e.target.checked }))}
-                  className="rounded"
-                />
-                <span className="text-sm">Free Preview</span>
-              </label>
-            </div>
-
-            <div className="flex justify-end space-x-2">
-              <Button variant="outline" onClick={cancelEdit} size="sm">
-                <X className="w-4 h-4 mr-1" />
-                Cancel
-              </Button>
-              <Button onClick={saveChapter} disabled={isLoading} size="sm">
-                <Save className="w-4 h-4 mr-1" />
-                {isLoading ? "Saving..." : "Save Chapter"}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const isEditing = editingChapter?.id === chapter.id;
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center justify-between p-3 bg-white border rounded-lg hover:bg-slate-50 transition-colors group mb-2"
+      className={`group relative ${isDragging ? 'opacity-50' : ''}`}
     >
-      <div className="flex items-center gap-3 flex-1">
-        <div
-          {...attributes}
-          {...listeners}
-          className="cursor-grab active:cursor-grabbing"
-        >
-          <GripVertical className="w-4 h-4 text-slate-400" />
-        </div>
-        
-        <div className="flex items-center gap-2">
-          {chapter.videoUrl ? (
-            <Video className="w-4 h-4 text-blue-500" />
-          ) : (
-            <FileText className="w-4 h-4 text-slate-400" />
-          )}
-          <span className="font-medium">{chapter.title}</span>
-        </div>
-        
-        <div className="flex items-center gap-1">
-          {chapter.isPublished ? (
-            <Badge variant="default" className="bg-green-100 text-green-800">
-              <Eye className="w-3 h-3 mr-1" />
-              Published
-            </Badge>
-          ) : (
-            <Badge variant="secondary">
-              <EyeOff className="w-3 h-3 mr-1" />
-              Draft
-            </Badge>
-          )}
-          {chapter.isFree && (
-            <Badge variant="outline" className="text-blue-600">
-              Free
-            </Badge>
-          )}
-        </div>
-      </div>
+      <Card className={`mb-2 ${isEditing ? 'ring-2 ring-blue-500' : ''}`}>
+        <CardContent className="p-4">
+          {isEditing ? (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor={`title-${chapter.id}`}>Chapter Title</Label>
+                <Input
+                  id={`title-${chapter.id}`}
+                  value={editForm.title}
+                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, title: e.target.value }))}
+                  placeholder="Enter chapter title"
+                />
+              </div>
 
-      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => startEditingChapter(chapter)}
-        >
-          <Edit className="w-4 h-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => handleDeleteChapter(chapter.id)}
-          className="text-red-600 hover:text-red-800"
-        >
-          <Trash2 className="w-4 h-4" />
-        </Button>
-      </div>
+              <div className="space-y-2">
+                <Label htmlFor={`video-${chapter.id}`}>Video URL (Optional)</Label>
+                <Input
+                  id={`video-${chapter.id}`}
+                  value={editForm.videoUrl}
+                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, videoUrl: e.target.value }))}
+                  placeholder="https://youtube.com/watch?v=..."
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor={`description-${chapter.id}`}>Chapter Content</Label>
+                <Textarea
+                  id={`description-${chapter.id}`}
+                  value={editForm.description}
+                  onChange={(e) => setEditForm((prev: any) => ({ ...prev, description: e.target.value }))}
+                  placeholder="Enter the chapter content..."
+                  rows={6}
+                />
+              </div>
+
+              {/* Audio Generation Section */}
+              <div className="space-y-3 border-t pt-4">
+                <div className="flex items-center gap-2">
+                  <Volume2 className="w-4 h-4" />
+                  <Label className="text-sm font-medium">Audio Generation</Label>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor={`voice-${chapter.id}`}>Voice</Label>
+                  <select
+                    id={`voice-${chapter.id}`}
+                    value={selectedVoice}
+                    onChange={(e) => setSelectedVoice(e.target.value)}
+                    className="w-full p-2 border rounded-md"
+                  >
+                    {availableVoices.map((voice) => (
+                      <option key={voice.voiceId} value={voice.voiceId}>
+                        {voice.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Text length indicator */}
+                <div className="text-xs text-slate-500">
+                  Text length: {editForm.description?.length || 0} / 5000 characters
+                  {editForm.description && editForm.description.length > 5000 && (
+                    <span className="text-red-500 ml-2">(Text will be truncated)</span>
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => generateAudio(chapter.id, editForm.description || chapter.description || '')}
+                    disabled={generatingAudio === chapter.id || !editForm.description}
+                  >
+                    {generatingAudio === chapter.id ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Volume2 className="w-4 h-4 mr-2" />
+                        Generate Audio
+                      </>
+                    )}
+                  </Button>
+
+                  {chapter.audioUrl && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => playAudio(chapter.id, chapter.audioUrl!)}
+                    >
+                      {audioPlaying === chapter.id ? (
+                        <>
+                          <Pause className="w-4 h-4 mr-2" />
+                          Pause
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-4 h-4 mr-2" />
+                          Play Audio
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-4">
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={editForm.isPublished}
+                    onChange={(e) => setEditForm((prev: any) => ({ ...prev, isPublished: e.target.checked }))}
+                    className="rounded"
+                  />
+                  <span className="text-sm">Published</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={editForm.isFree}
+                    onChange={(e) => setEditForm((prev: any) => ({ ...prev, isFree: e.target.checked }))}
+                    className="rounded"
+                  />
+                  <span className="text-sm">Free Preview</span>
+                </label>
+              </div>
+
+              <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={cancelEdit} size="sm">
+                  <X className="w-4 h-4 mr-1" />
+                  Cancel
+                </Button>
+                <Button onClick={saveChapter} disabled={isLoading} size="sm">
+                  <Save className="w-4 h-4 mr-1" />
+                  {isLoading ? "Saving..." : "Save"}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-start justify-between">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-2">
+                  <FileText className="w-4 h-4 text-slate-500" />
+                  <h4 className="font-medium text-slate-900 truncate">{chapter.title}</h4>
+                  {chapter.isFree && (
+                    <Badge variant="secondary" className="text-xs">Free</Badge>
+                  )}
+                  {!chapter.isPublished && (
+                    <Badge variant="outline" className="text-xs">Draft</Badge>
+                  )}
+                </div>
+                
+                {chapter.description && (
+                  <div className="text-sm text-slate-600 mb-2 line-clamp-2">
+                    {chapter.description}
+                  </div>
+                )}
+
+                <div className="flex items-center gap-4 text-xs text-slate-500">
+                  {chapter.videoUrl && (
+                    <div className="flex items-center gap-1">
+                      <Video className="w-3 h-3" />
+                      <span>Video</span>
+                    </div>
+                  )}
+                  {chapter.audioUrl && (
+                    <div className="flex items-center gap-1">
+                      <Volume2 className="w-3 h-3" />
+                      <span>Audio</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 ml-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => startEditingChapter(chapter)}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <Edit className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleDeleteChapter(chapter.id)}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity text-red-600 hover:text-red-700"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+                <div
+                  {...attributes}
+                  {...listeners}
+                  className="cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <GripVertical className="w-4 h-4 text-slate-400" />
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -518,6 +616,7 @@ interface Chapter {
   title: string;
   description: string | null;
   videoUrl: string | null;
+  audioUrl: string | null;
   position: number;
   isPublished: boolean;
   isFree: boolean;
@@ -581,6 +680,14 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
   const [addingChapterToLesson, setAddingChapterToLesson] = useState<string | null>(null);
   const [isAddingModule, setIsAddingModule] = useState(false);
   const [isAddingLesson, setIsAddingLesson] = useState<number | null>(null);
+  
+  // Audio generation state
+  const [generatingAudio, setGeneratingAudio] = useState<string | null>(null);
+  const [audioPlaying, setAudioPlaying] = useState<string | null>(null);
+  const [audioRefs, setAudioRefs] = useState<{ [key: string]: HTMLAudioElement | null }>({});
+  const [availableVoices, setAvailableVoices] = useState<any[]>([]);
+  const [selectedVoice, setSelectedVoice] = useState<string>("9BWtsMINqrJLrRacOk9x"); // Aria voice
+  
   const [newChapterForm, setNewChapterForm] = useState({
     title: "",
     description: "",
@@ -615,6 +722,109 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
 
   // Only show editor to course owner or admin
   const canEdit = user && (isOwner || user.admin);
+
+  // Load available voices on component mount
+  useEffect(() => {
+    const loadVoices = async () => {
+      const result = await getElevenLabsVoices();
+      if (result.success && result.voices) {
+        setAvailableVoices(result.voices);
+      }
+    };
+    loadVoices();
+  }, []);
+
+  // Audio player functions
+  const playAudio = (chapterId: string, audioUrl: string) => {
+    if (audioPlaying === chapterId) {
+      // Stop current audio
+      if (audioRefs[chapterId]) {
+        audioRefs[chapterId]?.pause();
+        audioRefs[chapterId]!.currentTime = 0;
+      }
+      setAudioPlaying(null);
+    } else {
+      // Stop any other playing audio
+      Object.keys(audioRefs).forEach(id => {
+        if (audioRefs[id]) {
+          audioRefs[id]?.pause();
+          audioRefs[id]!.currentTime = 0;
+        }
+      });
+      setAudioPlaying(null);
+
+      // Play new audio
+      const audio = new Audio(audioUrl);
+      audio.onended = () => setAudioPlaying(null);
+      audio.onerror = () => {
+        toast({
+          title: "Audio Error",
+          description: "Failed to play audio",
+          variant: "destructive",
+        });
+        setAudioPlaying(null);
+      };
+      
+      setAudioRefs(prev => ({ ...prev, [chapterId]: audio }));
+      audio.play();
+      setAudioPlaying(chapterId);
+    }
+  };
+
+  const generateAudio = async (chapterId: string, text: string) => {
+    console.log(`🎵 Starting audio generation for chapter ${chapterId}`);
+    console.log(`📝 Text to generate:`, text);
+    console.log(`🎤 Selected voice:`, selectedVoice);
+    
+    setGeneratingAudio(chapterId);
+    try {
+      console.log(`🔄 Calling generateChapterAudio server action...`);
+      
+      const result = await generateChapterAudio(chapterId, {
+        text: text,
+        voiceId: selectedVoice
+      });
+
+      console.log(`📊 Audio generation result:`, result);
+
+      if (result.success) {
+        console.log(`✅ Audio generated successfully`);
+        toast({
+          title: "Audio Generated",
+          description: result.message || "Audio has been generated successfully. Note: This is a reference - implement cloud storage for production.",
+        });
+        router.refresh();
+      } else {
+        console.error(`❌ Audio generation failed:`, result.error);
+        toast({
+          title: "Generation Failed",
+          description: result.error || "Failed to generate audio",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error(`💥 Audio generation error:`, error);
+      toast({
+        title: "Generation Failed",
+        description: "Failed to generate audio. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      console.log(`🏁 Audio generation completed`);
+      setGeneratingAudio(null);
+    }
+  };
+
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      Object.values(audioRefs).forEach(audio => {
+        if (audio) {
+          audio.pause();
+        }
+      });
+    };
+  }, [audioRefs]);
 
   const toggleModule = (moduleId: number) => {
     const newExpanded = new Set(expandedModules);
@@ -1686,6 +1896,13 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
                                         cancelEdit={cancelEdit}
                                         handleDeleteChapter={handleDeleteChapter}
                                         isLoading={isLoading}
+                                        generatingAudio={generatingAudio}
+                                        audioPlaying={audioPlaying}
+                                        playAudio={playAudio}
+                                        generateAudio={generateAudio}
+                                        availableVoices={availableVoices}
+                                        selectedVoice={selectedVoice}
+                                        setSelectedVoice={setSelectedVoice}
                                       />
                                     ))}
                                   </SortableContext>

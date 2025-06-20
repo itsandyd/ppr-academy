@@ -437,14 +437,14 @@ model CourseCategory {
 }
 
 model CourseModule {
-  id          String        @id @default(cuid())
+  id          String         @id @default(cuid())
   title       String
-  description String?       @db.Text
+  description String?        @db.Text
   position    Int
   courseId    String
-  createdAt   DateTime      @default(now())
+  createdAt   DateTime       @default(now())
   updatedAt   DateTime
-  course      Course        @relation(fields: [courseId], references: [id])
+  course      Course         @relation(fields: [courseId], references: [id])
   lessons     CourseLesson[]
 
   @@index([courseId])
@@ -467,20 +467,20 @@ model CourseLesson {
 }
 
 model CourseChapter {
-  id          String       @id @default(cuid())
+  id          String        @id @default(cuid())
   title       String
-  description String?      @db.Text
-  videoUrl    String?      @db.Text
-  audioUrl    String?      @db.Text
+  description String?       @db.Text
+  videoUrl    String?       @db.Text
   position    Int
-  isPublished Boolean      @default(false)
-  isFree      Boolean      @default(false)
-  lessonId    String?      // Optional - chapters can exist without lessons
-  courseId    String       // Keep for backward compatibility and direct course chapters
-  createdAt   DateTime     @default(now())
+  isPublished Boolean       @default(false)
+  isFree      Boolean       @default(false)
+  courseId    String
+  createdAt   DateTime      @default(now())
   updatedAt   DateTime
+  audioUrl    String?       @db.Text
+  lessonId    String?
   lesson      CourseLesson? @relation(fields: [lessonId], references: [id])
-  course      Course       @relation(fields: [courseId], references: [id])
+  course      Course        @relation(fields: [courseId], references: [id])
 
   @@index([courseId])
   @@index([lessonId])

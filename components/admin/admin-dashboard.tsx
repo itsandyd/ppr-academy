@@ -32,7 +32,10 @@ import {
   MessageCircle,
   BarChart3,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  DollarSign,
+  Volume2,
+  FileText
 } from "lucide-react";
 import { 
   updateUserRole, 
@@ -54,7 +57,7 @@ import {
   scrapeContentFromUrl,
   generateContentEmbeddings
 } from "@/app/actions/admin-actions";
-import { populateCourseSlugs } from "@/app/actions/course-actions";
+import { populateCourseSlugs, clearNonPlayableAudio, testAudioUrl, testElevenLabsApiKey, cleanupLegacyAudioReferences } from "@/app/actions/course-actions";
 import type { User } from "@/lib/types";
 
 interface AdminDashboardProps {
@@ -135,6 +138,10 @@ export default function AdminDashboard({
 
   // Populate slugs state
   const [isPopulatingSlugs, setIsPopulatingSlugs] = useState(false);
+  const [isClearingAudio, setIsClearingAudio] = useState(false);
+  const [isTestingAudio, setIsTestingAudio] = useState(false);
+  const [isTestingApiKey, setIsTestingApiKey] = useState(false);
+  const [isCleaningLegacyAudio, setIsCleaningLegacyAudio] = useState(false);
 
   const handleUpdateUserRole = async (userId: string, role: string) => {
     setIsLoading(true);
@@ -521,16 +528,14 @@ export default function AdminDashboard({
     setIsDeleteDialogOpen(true);
   };
 
-  const handlePopulateCourseSlugs = async () => {
+  const handlePopulateSlugs = async () => {
     setIsPopulatingSlugs(true);
-    
     try {
       const result = await populateCourseSlugs();
-      
       if (result.success) {
         toast({
-          title: "Slugs Populated",
-          description: result.message,
+          title: "Success",
+          description: result.message || "Course slugs populated successfully!",
         });
       } else {
         toast({
@@ -547,6 +552,120 @@ export default function AdminDashboard({
       });
     } finally {
       setIsPopulatingSlugs(false);
+    }
+  };
+
+  const handleClearNonPlayableAudio = async () => {
+    setIsClearingAudio(true);
+    try {
+      const result = await clearNonPlayableAudio();
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: result.message || "Non-playable audio URLs cleared successfully!",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to clear non-playable audio URLs",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to clear non-playable audio URLs",
+        variant: "destructive",
+      });
+    } finally {
+      setIsClearingAudio(false);
+    }
+  };
+
+  const handleTestAudioUrl = async () => {
+    setIsTestingAudio(true);
+    try {
+      // Test with a sample chapter ID - you can modify this
+      const result = await testAudioUrl("sample-chapter-id");
+      if (result.success) {
+        console.log("Audio URL test result:", result);
+        toast({
+          title: "Audio Test Complete",
+          description: "Check console for detailed audio URL information",
+        });
+      } else {
+        toast({
+          title: "Test Failed",
+          description: result.error || "Failed to test audio URL",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Test Error",
+        description: "Failed to test audio URL",
+        variant: "destructive",
+      });
+    } finally {
+      setIsTestingAudio(false);
+    }
+  };
+
+  const handleTestApiKey = async () => {
+    setIsTestingApiKey(true);
+    
+    try {
+      const result = await testElevenLabsApiKey();
+      
+      if (result.success) {
+        toast({
+          title: "API Key Test Successful",
+          description: result.message,
+        });
+      } else {
+        toast({
+          title: "API Key Test Failed",
+          description: result.error,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to test API key",
+        variant: "destructive",
+      });
+    } finally {
+      setIsTestingApiKey(false);
+    }
+  };
+
+  const handleCleanupLegacyAudio = async () => {
+    setIsCleaningLegacyAudio(true);
+    
+    try {
+      const result = await cleanupLegacyAudioReferences();
+      
+      if (result.success) {
+        toast({
+          title: "Legacy Audio Cleaned",
+          description: result.message,
+        });
+      } else {
+        toast({
+          title: "Cleanup Failed",
+          description: result.error,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to clean up legacy audio",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCleaningLegacyAudio(false);
     }
   };
 
@@ -573,7 +692,7 @@ export default function AdminDashboard({
               <Button 
                 variant="secondary" 
                 className="bg-slate-700 border-slate-600 text-white hover:bg-slate-600 hover:border-slate-500 text-xs sm:text-sm"
-                onClick={handlePopulateCourseSlugs}
+                onClick={handlePopulateSlugs}
                 disabled={isPopulatingSlugs}
               >
                 <BookOpen className="w-4 h-4 mr-1 sm:mr-2" />
@@ -587,6 +706,42 @@ export default function AdminDashboard({
               >
                 <Activity className="w-4 h-4 mr-1 sm:mr-2" />
                 {isLoading ? "Reindexing..." : "Reindex Content"}
+              </Button>
+              <Button 
+                variant="secondary" 
+                className="bg-slate-700 border-slate-600 text-white hover:bg-slate-600 hover:border-slate-500 text-xs sm:text-sm"
+                onClick={handleClearNonPlayableAudio}
+                disabled={isClearingAudio}
+              >
+                <Volume2 className="w-4 h-4 mr-1 sm:mr-2" />
+                {isClearingAudio ? "Clearing..." : "Clear Non-Playable Audio"}
+              </Button>
+              <Button 
+                variant="secondary" 
+                className="bg-slate-700 border-slate-600 text-white hover:bg-slate-600 hover:border-slate-500 text-xs sm:text-sm"
+                onClick={handleTestAudioUrl}
+                disabled={isTestingAudio}
+              >
+                <Volume2 className="w-4 h-4 mr-1 sm:mr-2" />
+                {isTestingAudio ? "Testing..." : "Test Audio URL"}
+              </Button>
+              <Button 
+                variant="secondary" 
+                className="bg-slate-700 border-slate-600 text-white hover:bg-slate-600 hover:border-slate-500 text-xs sm:text-sm"
+                onClick={handleTestApiKey}
+                disabled={isTestingApiKey}
+              >
+                <Volume2 className="w-4 h-4 mr-1 sm:mr-2" />
+                {isTestingApiKey ? "Testing..." : "Test 11 Labs API Key"}
+              </Button>
+              <Button 
+                variant="secondary" 
+                className="bg-red-700 border-red-600 text-white hover:bg-red-600 hover:border-red-500 text-xs sm:text-sm"
+                onClick={handleCleanupLegacyAudio}
+                disabled={isCleaningLegacyAudio}
+              >
+                <Trash2 className="w-4 h-4 mr-1 sm:mr-2" />
+                {isCleaningLegacyAudio ? "Cleaning..." : "Cleanup Legacy Audio"}
               </Button>
               <Button className="bg-white text-slate-900 hover:bg-slate-100 text-xs sm:text-sm">
                 <Settings className="w-4 h-4 mr-1 sm:mr-2" />
