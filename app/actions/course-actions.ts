@@ -1253,31 +1253,48 @@ export async function deleteModule(moduleChapterId: string) {
     const moduleTitle = moduleChapter.title.replace('📚 ', '');
     const chaptersToDelete: string[] = [];
     let foundModule = false;
-    let nextModuleIndex = -1;
+    let moduleIndex = -1;
 
-    // Find the start and end of this module's content
+    // First, find the module chapter
     for (let i = 0; i < allChapters.length; i++) {
       const chapter = allChapters[i];
       
       if (chapter.id === moduleChapterId) {
         foundModule = true;
+        moduleIndex = i;
         chaptersToDelete.push(chapter.id);
-        continue;
-      }
-      
-      if (foundModule) {
-        // If we hit another module, stop
-        if (chapter.title.startsWith('📚')) {
-          nextModuleIndex = i;
-          break;
-        }
-        // Add lessons and content chapters
-        chaptersToDelete.push(chapter.id);
+        console.log(`📚 Found module "${moduleTitle}" at index ${i} (ID: ${chapter.id})`);
+        break;
       }
     }
 
+    if (!foundModule) {
+      console.error(`❌ Module not found in course chapters. ModuleChapterId: ${moduleChapterId}`);
+      console.error(`All chapters:`, allChapters.map(ch => ({ id: ch.id, title: ch.title })));
+      return { success: false, error: "Module not found in course structure" };
+    }
+
+    // Now find all lessons and content that belong to this module
+    for (let i = moduleIndex + 1; i < allChapters.length; i++) {
+      const chapter = allChapters[i];
+      
+      // If we hit another module, stop
+      if (chapter.title.startsWith('📚')) {
+        console.log(`📚 Stopped at next module: ${chapter.title}`);
+        break;
+      }
+      
+      // Add lessons and content chapters
+      chaptersToDelete.push(chapter.id);
+      console.log(`➕ Adding chapter to delete: ${chapter.title} (ID: ${chapter.id})`);
+    }
+
+    console.log(`🗑️ Preparing to delete ${chaptersToDelete.length} chapters for module "${moduleTitle}"`);
+    
+    // Even if it's just the module header with no content, we should still be able to delete it
     if (chaptersToDelete.length === 0) {
-      return { success: false, error: "No chapters found for this module" };
+      console.error(`❌ No chapters to delete - this shouldn't happen as we found the module`);
+      return { success: false, error: "No chapters found to delete" };
     }
 
     // Delete all chapters belonging to this module
@@ -1289,7 +1306,7 @@ export async function deleteModule(moduleChapterId: string) {
       }
     });
 
-    console.log(`Deleted module "${moduleTitle}" and ${chaptersToDelete.length} associated chapters`);
+    console.log(`Deleted module "${moduleTitle}" and ${chaptersToDelete.length} associated chapters:`, chaptersToDelete);
 
     // Revalidate pages
     if (moduleChapter.course.slug) {
@@ -1477,6 +1494,81 @@ export async function deleteOrphanedChapters(courseId: string) {
     return { 
       success: false, 
       error: "Failed to delete orphaned chapters. Please try again." 
+    };
+  }
+}
+
+export async function deleteFallbackModule(courseId: string, moduleTitle: string) {
+  try {
+    const user = await checkAuth();
+    
+    // Check if user owns this course
+    const course = await prisma.course.findUnique({
+      where: { id: courseId },
+      select: { instructorId: true, slug: true }
+    });
+
+    if (!course) {
+      return { success: false, error: "Course not found" };
+    }
+
+    if (!user.admin && course.instructorId !== user.id) {
+      return { success: false, error: "Unauthorized to delete chapters in this course" };
+    }
+
+    // For fallback modules (generated from chapters without proper module structure),
+    // we need to delete all chapters that don't belong to any proper module/lesson structure
+    const orphanedChapters = await prisma.courseChapter.findMany({
+      where: { 
+        courseId: courseId,
+        NOT: {
+          OR: [
+            { title: { startsWith: '📚' } },
+            { title: { startsWith: '🎯' } }
+          ]
+        }
+      }
+    });
+
+    if (orphanedChapters.length === 0) {
+      // If there are no orphaned chapters, this might be an empty fallback module
+      // In this case, we consider it successfully "deleted" since there's nothing to delete
+      console.log(`No actual chapters to delete for fallback module "${moduleTitle}"`);
+      
+      // Revalidate pages to refresh the view
+      if (course.slug) {
+        revalidatePath(`/courses/${course.slug}`);
+      }
+      revalidatePath("/courses");
+      revalidatePath("/dashboard");
+      
+      return { success: true, deletedCount: 0, message: "Fallback module removed from view" };
+    }
+
+    // Delete all orphaned chapters
+    await prisma.courseChapter.deleteMany({
+      where: {
+        id: {
+          in: orphanedChapters.map(chapter => chapter.id)
+        }
+      }
+    });
+
+    console.log(`Deleted fallback module "${moduleTitle}" with ${orphanedChapters.length} orphaned chapters`);
+
+    // Revalidate pages
+    if (course.slug) {
+      revalidatePath(`/courses/${course.slug}`);
+    }
+    revalidatePath("/courses");
+    revalidatePath("/dashboard");
+
+    return { success: true, deletedCount: orphanedChapters.length };
+  } catch (error) {
+    console.error("Error deleting fallback module:", error);
+    return { 
+      success: false, 
+      error: "Failed to delete module. Please try again." 
     };
   }
 }
@@ -1968,6 +2060,278 @@ export async function cleanupLegacyAudioReferences() {
     return { 
       success: false, 
       error: "Failed to clean up legacy audio references" 
+    };
+  }
+}
+
+export async function debugModuleStructure(courseId: string) {
+  try {
+    const user = await checkAuth();
+    
+    // Get all chapters in the course
+    const allChapters = await prisma.courseChapter.findMany({
+      where: { courseId: courseId },
+      orderBy: { position: 'asc' },
+      select: {
+        id: true,
+        title: true,
+        position: true,
+        description: true,
+        lessonId: true
+      }
+    });
+
+    console.log(`🔍 DEBUG: Course ${courseId} has ${allChapters.length} chapters:`);
+    allChapters.forEach((chapter, index) => {
+      console.log(`  ${index + 1}. [${chapter.position}] ${chapter.title} (ID: ${chapter.id}) ${chapter.lessonId ? `[Lesson: ${chapter.lessonId}]` : '[No Lesson]'}`);
+    });
+
+    // Find module chapters specifically
+    const moduleChapters = allChapters.filter(ch => ch.title.startsWith('📚'));
+    console.log(`🔍 DEBUG: Found ${moduleChapters.length} legacy module chapters:`);
+    moduleChapters.forEach(module => {
+      console.log(`  📚 ${module.title} (ID: ${module.id})`);
+    });
+
+    // Get real CourseModule records
+    const realModules = await prisma.courseModule.findMany({
+      where: { courseId: courseId },
+      orderBy: { position: 'asc' },
+      include: {
+        lessons: {
+          orderBy: { position: 'asc' },
+          include: {
+            chapters: {
+              orderBy: { position: 'asc' }
+            }
+          }
+        }
+      }
+    });
+
+    console.log(`🔍 DEBUG: Found ${realModules.length} real CourseModule records:`);
+    realModules.forEach((module, index) => {
+      console.log(`  📦 Module ${index + 1}: "${module.title}" (ID: ${module.id})`);
+      console.log(`     - ${module.lessons.length} lessons`);
+      module.lessons.forEach((lesson, lessonIndex) => {
+        console.log(`       🎯 Lesson ${lessonIndex + 1}: "${lesson.title}" (ID: ${lesson.id})`);
+        console.log(`          - ${lesson.chapters.length} chapters`);
+      });
+    });
+
+    return { 
+      success: true, 
+      chapters: allChapters, 
+      modules: moduleChapters,
+      realModules: realModules,
+      moduleType: realModules.length > 0 ? 'real' : 'legacy'
+    };
+  } catch (error) {
+    console.error("Error debugging module structure:", error);
+    return { 
+      success: false, 
+      error: "Failed to debug module structure." 
+    };
+  }
+}
+
+export async function deleteRealCourseModule(moduleId: string) {
+  try {
+    const user = await checkAuth();
+    
+    // Get the CourseModule with all its relations
+    const courseModule = await prisma.courseModule.findUnique({
+      where: { id: moduleId },
+      include: { 
+        course: { 
+          select: { instructorId: true, slug: true } 
+        },
+        lessons: {
+          include: {
+            chapters: true
+          }
+        }
+      }
+    });
+
+    if (!courseModule) {
+      return { success: false, error: "Module not found" };
+    }
+
+    // Check if user is admin or course owner
+    if (!user.admin && courseModule.course.instructorId !== user.id) {
+      return { success: false, error: "Unauthorized to delete this module" };
+    }
+
+    console.log(`🗑️ Deleting CourseModule "${courseModule.title}" (ID: ${moduleId})`);
+    
+    let totalChapters = 0;
+    let totalLessons = courseModule.lessons.length;
+    
+    // Count total chapters
+    courseModule.lessons.forEach(lesson => {
+      totalChapters += lesson.chapters.length;
+    });
+    
+    console.log(`   - Module has ${totalLessons} lessons and ${totalChapters} chapters`);
+
+    // Delete all chapters first (due to foreign key constraints)
+    for (const lesson of courseModule.lessons) {
+      if (lesson.chapters.length > 0) {
+        await prisma.courseChapter.deleteMany({
+          where: { lessonId: lesson.id }
+        });
+        console.log(`   ✅ Deleted ${lesson.chapters.length} chapters from lesson "${lesson.title}"`);
+      }
+    }
+
+    // Delete all lessons
+    if (totalLessons > 0) {
+      await prisma.courseLesson.deleteMany({
+        where: { moduleId: moduleId }
+      });
+      console.log(`   ✅ Deleted ${totalLessons} lessons`);
+    }
+
+    // Finally delete the module
+    await prisma.courseModule.delete({
+      where: { id: moduleId }
+    });
+
+    console.log(`   ✅ Deleted CourseModule "${courseModule.title}"`);
+
+    // Revalidate pages
+    if (courseModule.course.slug) {
+      revalidatePath(`/courses/${courseModule.course.slug}`);
+    }
+    revalidatePath("/courses");
+    revalidatePath("/dashboard");
+
+    return { 
+      success: true, 
+      deletedLessons: totalLessons,
+      deletedChapters: totalChapters 
+    };
+  } catch (error) {
+    console.error("Error deleting CourseModule:", error);
+    return { 
+      success: false, 
+      error: "Failed to delete module. Please try again." 
+    };
+  }
+}
+
+export async function deleteRealCourseLesson(lessonId: string) {
+  try {
+    const user = await checkAuth();
+    
+    // Get the CourseLesson with all its relations
+    const courseLesson = await prisma.courseLesson.findUnique({
+      where: { id: lessonId },
+      include: { 
+        module: {
+          include: {
+            course: { 
+              select: { instructorId: true, slug: true } 
+            }
+          }
+        },
+        chapters: true
+      }
+    });
+
+    if (!courseLesson) {
+      return { success: false, error: "Lesson not found" };
+    }
+
+    // Check if user is admin or course owner
+    if (!user.admin && courseLesson.module.course.instructorId !== user.id) {
+      return { success: false, error: "Unauthorized to delete this lesson" };
+    }
+
+    console.log(`🗑️ Deleting CourseLesson "${courseLesson.title}" (ID: ${lessonId})`);
+    console.log(`   - Lesson has ${courseLesson.chapters.length} chapters`);
+
+    // Delete all chapters first
+    if (courseLesson.chapters.length > 0) {
+      await prisma.courseChapter.deleteMany({
+        where: { lessonId: lessonId }
+      });
+      console.log(`   ✅ Deleted ${courseLesson.chapters.length} chapters`);
+    }
+
+    // Delete the lesson
+    await prisma.courseLesson.delete({
+      where: { id: lessonId }
+    });
+
+    console.log(`   ✅ Deleted CourseLesson "${courseLesson.title}"`);
+
+    // Revalidate pages
+    if (courseLesson.module.course.slug) {
+      revalidatePath(`/courses/${courseLesson.module.course.slug}`);
+    }
+    revalidatePath("/courses");
+    revalidatePath("/dashboard");
+
+    return { 
+      success: true, 
+      deletedChapters: courseLesson.chapters.length 
+    };
+  } catch (error) {
+    console.error("Error deleting CourseLesson:", error);
+    return { 
+      success: false, 
+      error: "Failed to delete lesson. Please try again." 
+    };
+  }
+}
+
+export async function deleteRealCourseChapter(chapterId: string) {
+  try {
+    const user = await checkAuth();
+    
+    // Get the CourseChapter with course relation
+    const courseChapter = await prisma.courseChapter.findUnique({
+      where: { id: chapterId },
+      include: { 
+        course: { 
+          select: { instructorId: true, slug: true } 
+        }
+      }
+    });
+
+    if (!courseChapter) {
+      return { success: false, error: "Chapter not found" };
+    }
+
+    // Check if user is admin or course owner
+    if (!user.admin && courseChapter.course.instructorId !== user.id) {
+      return { success: false, error: "Unauthorized to delete this chapter" };
+    }
+
+    console.log(`🗑️ Deleting CourseChapter "${courseChapter.title}" (ID: ${chapterId})`);
+
+    // Delete the chapter
+    await prisma.courseChapter.delete({
+      where: { id: chapterId }
+    });
+
+    console.log(`   ✅ Deleted CourseChapter "${courseChapter.title}"`);
+
+    // Revalidate pages
+    if (courseChapter.course.slug) {
+      revalidatePath(`/courses/${courseChapter.course.slug}`);
+    }
+    revalidatePath("/courses");
+    revalidatePath("/dashboard");
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting CourseChapter:", error);
+    return { 
+      success: false, 
+      error: "Failed to delete chapter. Please try again." 
     };
   }
 } 

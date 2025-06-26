@@ -142,6 +142,11 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
 
   // Legacy reconstruction function for backward compatibility
   const reconstructModulesFromChapters = (chapters: any[]) => {
+    console.log(`🔍 DEBUGGING: Reconstructing modules from ${chapters.length} chapters:`);
+    chapters.forEach((ch, i) => {
+      console.log(`  ${i + 1}. [${ch.position}] "${ch.title}" (ID: ${ch.id})`);
+    });
+
     const modules: any[] = [];
     let currentModule: any = null;
     let currentLesson: any = null;
@@ -149,6 +154,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
     chapters.forEach((chapter, index) => {
       if (chapter.title.startsWith('📚')) {
         // Module header
+        console.log(`📚 Found module chapter: "${chapter.title}" (ID: ${chapter.id})`);
         if (currentModule && currentModule.lessons.length > 0) {
           modules.push(currentModule);
         }

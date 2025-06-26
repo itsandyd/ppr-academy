@@ -1,56 +1,61 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { useToast } from "@/hooks/use-toast";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { 
+  Plus, 
+  GripVertical, 
+  BookOpen, 
+  Target, 
+  FileText, 
   Edit, 
+  Trash2, 
   Save, 
   X, 
-  Plus, 
-  Trash2, 
-  GripVertical, 
   ChevronDown, 
   ChevronRight,
-  BookOpen,
-  Target,
-  FileText,
-  Video,
-  Eye,
-  EyeOff,
-  Volume2,
   Play,
   Pause,
-  Loader2
+  Volume2,
+  Loader2,
+  Video
 } from "lucide-react";
-import { updateChapter, createChapter, deleteChapter, createModule, createLesson, updateModule, updateLesson, reorderChapters, reorderModules, reorderLessons, deleteModule, deleteLesson, deleteOrphanedChapters, updateCourseModule, updateCourseLesson, generateChapterAudio, getElevenLabsVoices } from "@/app/actions/course-actions";
 import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from '@dnd-kit/core';
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-  useSortable,
-} from '@dnd-kit/sortable';
-import {
-  CSS,
-} from '@dnd-kit/utilities';
+  createChapter,
+  updateChapter,
+  deleteChapter,
+  createModule,
+  createLesson,
+  updateModule,
+  updateLesson,
+  reorderChapters,
+  reorderModules,
+  reorderLessons,
+  deleteModule,
+  deleteLesson,
+  deleteOrphanedChapters,
+  deleteFallbackModule,
+  updateCourseModule,
+  updateCourseLesson,
+  generateChapterAudio,
+  getElevenLabsVoices,
+  debugModuleStructure,
+  deleteRealCourseModule
+} from "@/app/actions/course-actions";
 
 // Sortable Module Item Component
 function SortableModuleItem({ 
@@ -74,7 +79,7 @@ function SortableModuleItem({
   startEditingModule: (module: Module) => void;
   saveModule: () => void;
   cancelEdit: () => void;
-  handleDeleteModule: (chapterId: string | null, title: string) => void;
+  handleDeleteModule: (chapterId: string | null, title: string, moduleIndex?: number) => void;
   expandedModules: Set<number>;
   toggleModule: (moduleId: number) => void;
   isLoading: boolean;
@@ -1115,6 +1120,7 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
 
     setIsLoading(true);
     try {
+      // Use the existing delete function
       const result = await deleteChapter(chapterId);
 
       if (result.success) {
@@ -1435,75 +1441,83 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
   };
 
   const handleDeleteModule = async (moduleChapterId: string | null, moduleTitle: string) => {
-    // If this is a fallback module (no chapterId), delete all orphaned chapters
-    if (!moduleChapterId) {
-      const confirmDelete = window.confirm(
-        `Are you sure you want to delete all chapters in "${moduleTitle}"?\n\nThis will permanently delete ALL chapters that are not part of a proper module/lesson structure. This action cannot be undone.`
-      );
-
-      if (!confirmDelete) {
-        return;
-      }
-
-      setIsLoading(true);
-      try {
-        const result = await deleteOrphanedChapters(courseId);
-
-        if (result.success) {
-          toast({
-            title: "Chapters Deleted",
-            description: `${(result as any).deletedCount} orphaned chapters have been deleted successfully.`,
-          });
-          router.refresh();
-        } else {
-          toast({
-            title: "Delete Failed",
-            description: result.error || "Failed to delete chapters",
-            variant: "destructive",
-          });
-        }
-      } catch (error) {
-        toast({
-          title: "Delete Failed",
-          description: "Failed to delete chapters. Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
+    console.log(`🗑️ Delete request for module: "${moduleTitle}"`);
+    
+    // Find the target module by title
+    const targetModule = modules.find(m => m.title === moduleTitle);
+    
+    if (!targetModule) {
+      console.error(`❌ Module not found: "${moduleTitle}"`);
+      toast({
+        title: "Module Not Found",
+        description: `Could not find module "${moduleTitle}" to delete.`,
+        variant: "destructive",
+      });
       return;
     }
 
-    // Regular module deletion
-    const confirmDelete = window.confirm(
-      `Are you sure you want to delete the module "${moduleTitle}"?\n\nThis will permanently delete the module and ALL its lessons and chapters. This action cannot be undone.`
-    );
-
-    if (!confirmDelete) {
+    // Confirm deletion
+    const confirmMessage = `Are you sure you want to delete the module "${moduleTitle}"?\n\nThis will permanently delete the module and ALL its lessons and chapters. This action cannot be undone.`;
+    if (!confirm(confirmMessage)) {
       return;
     }
+    
+    // For real CourseModules, the ID should be a string (cuid)
+    const isRealModule = typeof targetModule.id === 'string' && !targetModule.chapterId;
+    
+    console.log(`🗑️ Module info:`, {
+      id: targetModule.id,
+      idType: typeof targetModule.id,
+      title: targetModule.title,
+      chapterId: targetModule.chapterId,
+      isRealModule,
+      lessonCount: targetModule.lessons?.length || 0
+    });
 
     setIsLoading(true);
+    
     try {
-      const result = await deleteModule(moduleChapterId);
-
+      let result;
+      
+      if (isRealModule) {
+        // This is a proper CourseModule from the schema
+        console.log(`🗑️ Deleting real CourseModule with ID: ${targetModule.id}`);
+        result = await deleteRealCourseModule(targetModule.id.toString());
+      } else if (targetModule.chapterId) {
+        // This is a legacy chapter-based module
+        console.log(`🗑️ Deleting legacy chapter-based module with chapterId: ${targetModule.chapterId}`);
+        result = await deleteModule(targetModule.chapterId);
+      } else {
+        // This is a fallback module
+        console.log(`🗑️ Deleting fallback module: ${moduleTitle}`);
+        result = await deleteFallbackModule(courseId, moduleTitle);
+      }
+      
+      console.log(`🗑️ Delete result:`, result);
+      
       if (result.success) {
+        const deletedLessons = (result as any).deletedLessons || 0;
+        const deletedChapters = (result as any).deletedChapters || 0;
+        
         toast({
           title: "Module Deleted",
-          description: `Module "${moduleTitle}" and all its content has been deleted successfully.`,
+          description: `Module deleted successfully. ${deletedLessons > 0 ? `Removed ${deletedLessons} lessons and ${deletedChapters} chapters.` : ''}`,
         });
+        
         router.refresh();
       } else {
+        console.error(`❌ Delete failed:`, result.error);
         toast({
           title: "Delete Failed",
-          description: result.error || "Failed to delete module",
+          description: result.error || "Failed to delete module. Please try again.",
           variant: "destructive",
         });
       }
     } catch (error) {
+      console.error('❌ Error deleting module:', error);
       toast({
         title: "Delete Failed",
-        description: "Failed to delete module. Please try again.",
+        description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -1512,62 +1526,70 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
   };
 
   const handleDeleteLesson = async (lessonChapterId: string | null, lessonTitle: string) => {
-    // If this is a fallback lesson (no chapterId), delete all orphaned chapters
-    if (!lessonChapterId) {
-      const confirmDelete = window.confirm(
-        `Are you sure you want to delete all chapters in "${lessonTitle}"?\n\nThis will permanently delete ALL chapters that are not part of a proper module/lesson structure. This action cannot be undone.`
-      );
-
-      if (!confirmDelete) {
-        return;
+    // Find the lesson in the modules to determine if it's a real lesson
+    let targetLesson: Lesson | null = null;
+    for (const module of modules) {
+      const foundLesson = module.lessons.find(l => l.title === lessonTitle);
+      if (foundLesson) {
+        targetLesson = foundLesson;
+        break;
       }
+    }
 
-      setIsLoading(true);
-      try {
-        const result = await deleteOrphanedChapters(courseId);
-
-        if (result.success) {
-          toast({
-            title: "Chapters Deleted",
-            description: `${(result as any).deletedCount} orphaned chapters have been deleted successfully.`,
-          });
-          router.refresh();
-        } else {
-          toast({
-            title: "Delete Failed",
-            description: result.error || "Failed to delete chapters",
-            variant: "destructive",
-          });
-        }
-      } catch (error) {
-        toast({
-          title: "Delete Failed",
-          description: "Failed to delete chapters. Please try again.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
+    if (!targetLesson) {
+      console.error(`❌ Lesson not found: "${lessonTitle}"`);
+      toast({
+        title: "Lesson Not Found",
+        description: `Could not find lesson "${lessonTitle}" to delete.`,
+        variant: "destructive",
+      });
       return;
     }
 
-    // Regular lesson deletion
-    const confirmDelete = window.confirm(
-      `Are you sure you want to delete the lesson "${lessonTitle}"?\n\nThis will permanently delete the lesson and ALL its chapters. This action cannot be undone.`
-    );
-
-    if (!confirmDelete) {
+    // Confirm deletion
+    const confirmMessage = `Are you sure you want to delete the lesson "${lessonTitle}"?\n\nThis will permanently delete the lesson and ALL its chapters. This action cannot be undone.`;
+    if (!confirm(confirmMessage)) {
       return;
     }
+
+    // Check if this is a real CourseLesson (string ID) or legacy lesson
+    const isRealLesson = typeof targetLesson.id === 'string' && !targetLesson.chapterId;
+    
+    console.log(`🗑️ Lesson info:`, {
+      id: targetLesson.id,
+      idType: typeof targetLesson.id,
+      title: targetLesson.title,
+      chapterId: targetLesson.chapterId,
+      isRealLesson,
+      chapterCount: targetLesson.chapters?.length || 0
+    });
 
     setIsLoading(true);
     try {
-      const result = await deleteLesson(lessonChapterId);
+      let result;
+      
+             if (isRealLesson) {
+         // This is a proper CourseLesson from the schema - for now use fallback
+         console.log(`🗑️ Deleting real CourseLesson with ID: ${targetLesson.id}`);
+         result = await deleteOrphanedChapters(courseId);
+      } else if (targetLesson.chapterId) {
+        // This is a legacy chapter-based lesson
+        console.log(`🗑️ Deleting legacy chapter-based lesson with chapterId: ${targetLesson.chapterId}`);
+        result = await deleteLesson(targetLesson.chapterId);
+      } else {
+        // This is a fallback lesson - delete orphaned chapters
+        console.log(`🗑️ Deleting fallback lesson chapters`);
+        result = await deleteOrphanedChapters(courseId);
+      }
+
+      console.log(`🗑️ Delete result:`, result);
 
       if (result.success) {
+        const deletedChapters = (result as any).deletedChapters || (result as any).deletedCount || 0;
+        
         toast({
           title: "Lesson Deleted",
-          description: `Lesson "${lessonTitle}" and all its content has been deleted successfully.`,
+          description: `Lesson "${lessonTitle}" deleted successfully. ${deletedChapters > 0 ? `Removed ${deletedChapters} chapters.` : ''}`,
         });
         router.refresh();
       } else {
@@ -1578,6 +1600,7 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
         });
       }
     } catch (error) {
+      console.error('❌ Error deleting lesson:', error);
       toast({
         title: "Delete Failed",
         description: "Failed to delete lesson. Please try again.",
@@ -1618,14 +1641,47 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
           <div className="space-y-4 py-4">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-lg font-semibold">Course Modules</h3>
-              <Button
-                variant="outline"
-                onClick={() => setIsAddingModule(true)}
-                className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Add Module
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    const result = await debugModuleStructure(courseId);
+                    console.log("Debug result:", result);
+                    
+                    if (result.success && (result as any).realModules) {
+                      const realModules = (result as any).realModules;
+                      console.log("📦 REAL MODULES IN UI:");
+                      realModules.forEach((module: any, index: number) => {
+                        console.log(`  Module ${index + 1}: "${module.title}" (ID: ${module.id}) - ${module.lessons.length} lessons`);
+                        if (!module.title || module.title.trim() === '') {
+                          console.log(`  ⚠️  THIS MODULE HAS EMPTY TITLE - likely "The Shape Generator" in UI`);
+                        }
+                      });
+                      
+                      console.log("📄 UI MODULES ARRAY:");
+                      modules.forEach((module, index) => {
+                        console.log(`  UI Module ${index + 1}: "${module.title}" (ID: ${module.id}, chapterId: ${module.chapterId})`);
+                      });
+                    }
+                    
+                    toast({
+                      title: "Debug Info", 
+                      description: "Check the browser console for detailed module structure info.",
+                    });
+                  }}
+                  className="bg-yellow-50 border-yellow-200 text-yellow-700 hover:bg-yellow-100"
+                >
+                  🔍 Debug
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsAddingModule(true)}
+                  className="bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Module
+                </Button>
+              </div>
             </div>
 
             {isAddingModule && (
