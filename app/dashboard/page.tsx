@@ -140,36 +140,78 @@ export default async function Dashboard() {
   // If user still doesn't exist after automatic creation attempt, show fallback UI
   if (!user) {
     return (
-      <div className="min-h-screen bg-slate-50 pt-16 flex items-center justify-center">
-        <Card className="max-w-lg">
-          <CardContent className="p-8 text-center">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <AlertCircle className="w-8 h-8 text-red-600" />
-            </div>
-            <h2 className="text-2xl font-bold mb-4">Account Setup Issue</h2>
-            <p className="text-slate-600 mb-6">
-              We're having trouble setting up your account. This usually happens due to a temporary connection issue.
-            </p>
-            <div className="space-y-4">
-              <Link href="/dashboard">
-                <Button className="w-full" size="lg">
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Try Again
-                </Button>
-              </Link>
-              <Button variant="outline" className="w-full" asChild>
-                <Link href="/">
-                  Back to Home
+      <>
+        <script 
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.debugUser = async function() {
+                try {
+                  const response = await fetch('/api/debug-user', {
+                    method: 'GET',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                  });
+                  
+                  const debugInfo = await response.json();
+                  console.log('🔍 Debug Info:', debugInfo);
+                  
+                  // Show debug info in an alert for now
+                  const steps = debugInfo.steps?.join('\\n') || 'No steps recorded';
+                  const errors = debugInfo.errors?.join('\\n') || 'No errors recorded';
+                  
+                  alert('Debug Results:\\n\\nSteps:\\n' + steps + '\\n\\nErrors:\\n' + errors);
+                  
+                  // If user was created successfully, reload the page
+                  if (debugInfo.user) {
+                    window.location.reload();
+                  }
+                } catch (error) {
+                  console.error('Debug error:', error);
+                  alert('Debug failed: ' + error.message);
+                }
+              };
+            `
+          }}
+        />
+        <div className="min-h-screen bg-slate-50 pt-16 flex items-center justify-center">
+          <Card className="max-w-lg">
+            <CardContent className="p-8 text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <AlertCircle className="w-8 h-8 text-red-600" />
+              </div>
+              <h2 className="text-2xl font-bold mb-4">Account Setup Issue</h2>
+              <p className="text-slate-600 mb-6">
+                We're having trouble setting up your account. This usually happens due to a temporary connection issue.
+              </p>
+              <div className="space-y-4">
+                <Link href="/dashboard">
+                  <Button className="w-full" size="lg">
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Try Again
+                  </Button>
                 </Link>
-              </Button>
-            </div>
-            <p className="text-sm text-slate-500 mt-4">
-              If this problem persists, please contact support with your user ID: 
-              <code className="bg-slate-100 px-2 py-1 rounded text-xs">{clerkId}</code>
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+                <button 
+                  onClick={() => (window as any).debugUser()} 
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  <Settings className="w-4 h-4" />
+                  Debug Issue
+                </button>
+                <Button variant="outline" className="w-full" asChild>
+                  <Link href="/">
+                    Back to Home
+                  </Link>
+                </Button>
+              </div>
+              <p className="text-sm text-slate-500 mt-4">
+                If this problem persists, please contact support with your user ID: 
+                <code className="bg-slate-100 px-2 py-1 rounded text-xs">{clerkId}</code>
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </>
     );
   }
 
