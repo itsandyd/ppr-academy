@@ -4,78 +4,119 @@ import { auth } from "@clerk/nextjs/server";
 
 // Helper function to get or create user from Clerk
 export async function getUserFromClerk(clerkId: string) {
+  console.log(`🔍 Looking up user with clerkId: ${clerkId}`);
+  
   try {
+    // First, try to find the user in our database
     let user = await prisma.user.findUnique({
       where: { clerkId },
     });
 
-    if (!user) {
-      // If user doesn't exist, create it using Clerk data
-      // This is a fallback for when webhooks aren't working
-      try {
-        const { clerkClient } = await import('@clerk/nextjs/server');
-        const client = await clerkClient();
-        const clerkUser = await client.users.getUser(clerkId);
+    if (user) {
+      console.log(`✅ Found existing user in database: ${user.email}`);
+      return user;
+    }
+
+    console.log(`⚠️ User not found in database, fetching from Clerk...`);
+
+    // If user doesn't exist, fetch from Clerk and create in database
+    try {
+      const { clerkClient } = await import('@clerk/nextjs/server');
+      const client = await clerkClient();
+      
+      console.log(`📡 Fetching user data from Clerk...`);
+      const clerkUser = await client.users.getUser(clerkId);
+      
+      if (!clerkUser) {
+        console.error(`❌ User not found in Clerk: ${clerkId}`);
+        return null;
+      }
+
+      console.log(`📋 Clerk user data:`, {
+        id: clerkUser.id,
+        email: clerkUser.primaryEmailAddress?.emailAddress,
+        firstName: clerkUser.firstName,
+        lastName: clerkUser.lastName,
+        hasImage: !!clerkUser.imageUrl
+      });
+      
+      const email = clerkUser.primaryEmailAddress?.emailAddress;
+      
+      if (!email) {
+        console.error(`❌ No email found for Clerk user: ${clerkId}`);
+        return null;
+      }
+
+      // Create user in database
+      console.log(`🔨 Creating user in database...`);
+      user = await prisma.user.create({
+        data: {
+          clerkId,
+          email,
+          firstName: clerkUser.firstName,
+          lastName: clerkUser.lastName,
+          imageUrl: clerkUser.imageUrl,
+        },
+      });
+      
+      console.log(`✅ Successfully created user: ${user.email} (ID: ${user.id})`);
+      return user;
+
+    } catch (createError: any) {
+      console.error("💥 Error creating user from Clerk data:", createError);
+      
+      // If it's a unique constraint error, the user might already exist by email
+      if (createError?.code === 'P2002' || createError?.message?.includes('Unique constraint')) {
+        console.log(`🔄 Unique constraint error, checking for existing user by email...`);
         
-        const email = clerkUser.primaryEmailAddress?.emailAddress || `${clerkId}@unknown.com`;
-        
-        // Use upsert to handle potential race conditions and duplicate emails
-        user = await prisma.user.upsert({
-          where: { clerkId },
-          update: {
-            email,
-            firstName: clerkUser.firstName,
-            lastName: clerkUser.lastName,
-            imageUrl: clerkUser.imageUrl,
-          },
-          create: {
-            clerkId,
-            email,
-            firstName: clerkUser.firstName,
-            lastName: clerkUser.lastName,
-            imageUrl: clerkUser.imageUrl,
-          },
-        });
-        
-        console.log(`✅ Created/updated user from Clerk data: ${user.email}`);
-      } catch (createError) {
-        console.error("Error creating user from Clerk data:", createError);
-        
-        // If it's still a unique constraint error, try to find an existing user by email
-        if (createError instanceof Error && createError.message.includes('Unique constraint')) {
-          try {
-            const { clerkClient } = await import('@clerk/nextjs/server');
-            const client = await clerkClient();
-            const clerkUser = await client.users.getUser(clerkId);
-            const email = clerkUser.primaryEmailAddress?.emailAddress;
+        try {
+          const { clerkClient } = await import('@clerk/nextjs/server');
+          const client = await clerkClient();
+          const clerkUser = await client.users.getUser(clerkId);
+          const email = clerkUser.primaryEmailAddress?.emailAddress;
+          
+          if (email) {
+            // Try to find user by email and update their clerkId
+            const existingUser = await prisma.user.findUnique({
+              where: { email }
+            });
             
-            if (email) {
-              // Try to find user by email and update their clerkId
-              const existingUser = await prisma.user.findUnique({
-                where: { email }
-              });
-              
-              if (existingUser && !existingUser.clerkId) {
+            if (existingUser) {
+              if (!existingUser.clerkId) {
+                // Update existing user with clerkId
                 user = await prisma.user.update({
                   where: { id: existingUser.id },
-                  data: { clerkId }
+                  data: { 
+                    clerkId,
+                    firstName: clerkUser.firstName,
+                    lastName: clerkUser.lastName,
+                    imageUrl: clerkUser.imageUrl,
+                  }
                 });
                 console.log(`✅ Updated existing user with clerkId: ${user.email}`);
                 return user;
+              } else if (existingUser.clerkId === clerkId) {
+                // User already exists with this clerkId
+                console.log(`✅ Found existing user by email: ${existingUser.email}`);
+                return existingUser;
+              } else {
+                // User exists but with different clerkId - this is a problem
+                console.error(`❌ User exists with different clerkId. Email: ${email}, Existing clerkId: ${existingUser.clerkId}, New clerkId: ${clerkId}`);
+                return null;
               }
             }
-          } catch (findError) {
-            console.error("Error finding existing user:", findError);
           }
+        } catch (findError) {
+          console.error("💥 Error finding existing user by email:", findError);
         }
-        
-        return null;
       }
+      
+      // For any other error, return null
+      return null;
     }
 
-    return user;
   } catch (error) {
-    console.error("Error getting user from Clerk:", error);
+    console.error("💥 Unexpected error in getUserFromClerk:", error);
     return null;
   }
 }
