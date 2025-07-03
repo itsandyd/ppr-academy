@@ -100,9 +100,21 @@ export async function getUserFromClerk(clerkId: string) {
                 console.log(`✅ Found existing user by email: ${existingUser.email}`);
                 return existingUser;
               } else {
-                // User exists but with different clerkId - this is a problem
-                console.error(`❌ User exists with different clerkId. Email: ${email}, Existing clerkId: ${existingUser.clerkId}, New clerkId: ${clerkId}`);
-                return null;
+                // User exists but with different clerkId - update to new clerkId
+                console.log(`🔄 User exists with different clerkId. Email: ${email}, Existing clerkId: ${existingUser.clerkId}, New clerkId: ${clerkId}`);
+                console.log(`🔨 Updating user's clerkId to new value...`);
+                
+                user = await prisma.user.update({
+                  where: { id: existingUser.id },
+                  data: { 
+                    clerkId,
+                    firstName: clerkUser.firstName,
+                    lastName: clerkUser.lastName,
+                    imageUrl: clerkUser.imageUrl,
+                  }
+                });
+                console.log(`✅ Successfully updated user's clerkId: ${user.email}`);
+                return user;
               }
             }
           }
