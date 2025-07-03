@@ -29,10 +29,12 @@ import {
   Volume2,
   Save,
   Pause,
-  Loader2
+  Loader2,
+  BookOpen
 } from "lucide-react";
 import { enrollInCourse, submitCourseReview, markChapterComplete, updateChapter, generateChapterAudio, getElevenLabsVoices } from "@/app/actions/course-actions";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import dynamic from 'next/dynamic';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
@@ -591,243 +593,234 @@ export function CourseDetailClient({
         </TabsList>
 
         {/* Course Content */}
-        <TabsContent value="content" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="w-5 h-5" />
-                Course Curriculum
-              </CardTitle>
-              <p className="text-slate-600">
-                {course?.modules?.length || 0} modules • {course?.modules?.reduce((total: number, module: any) => total + (module.lessons?.length || 0), 0) || 0} lessons • {course?.courseChapters?.length || 0} chapters
-              </p>
-            </CardHeader>
-            <CardContent className="p-0">
-              {course?.modules && course.modules.length > 0 ? (
-                <div className="divide-y divide-slate-200">
-                  {course.modules.map((module: any, moduleIndex: number) => (
-                    <div key={module.id || `module-${moduleIndex}`} className="group">
-                      {/* Module Header */}
-                      <button
-                        onClick={() => toggleModule(module.id || moduleIndex)}
-                        className="w-full flex items-center justify-between p-6 text-left hover:bg-slate-50 transition-colors"
-                      >
-                        <div className="flex items-start space-x-4 flex-1">
-                          <div className="flex-shrink-0 mt-1">
+        <TabsContent value="content" className="space-y-8">
+          {/* Course Overview Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+              <CardContent className="p-6 text-center">
+                <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <BookOpen className="w-6 h-6 text-white" />
+                </div>
+                <div className="text-2xl font-bold text-blue-900 mb-1">
+                  {course?.modules?.length || 0}
+                </div>
+                <div className="text-sm text-blue-700">Modules</div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+              <CardContent className="p-6 text-center">
+                <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Play className="w-6 h-6 text-white" />
+                </div>
+                <div className="text-2xl font-bold text-purple-900 mb-1">
+                  {course?.modules?.reduce((total: number, module: any) => total + (module.lessons?.length || 0), 0) || 0}
+                </div>
+                <div className="text-sm text-purple-700">Lessons</div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200">
+              <CardContent className="p-6 text-center">
+                <div className="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Clock className="w-6 h-6 text-white" />
+                </div>
+                <div className="text-2xl font-bold text-emerald-900 mb-1">
+                  {Math.ceil((course?.courseChapters?.length || 0) * 0.25)}h
+                </div>
+                <div className="text-sm text-emerald-700">Duration</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Course Modules Grid */}
+          <div className="space-y-8">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-slate-900">Course Modules</h2>
+              <Badge variant="outline" className="text-slate-600">
+                {course?.modules?.length || 0} modules available
+              </Badge>
+            </div>
+            
+            {course?.modules && course.modules.length > 0 ? (
+                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                 {course.modules.map((module: any, moduleIndex: number) => (
+                   <Card 
+                     key={module.id || `module-${moduleIndex}`}
+                     className="group cursor-pointer transform hover:-translate-y-1 hover:shadow-xl transition-all duration-300 overflow-hidden border-0 shadow-lg bg-white"
+                     onClick={() => toggleModule(module.id || moduleIndex)}
+                   >
+                    {/* Module Header */}
+                    <div className="relative">
+                      <div className="h-32 bg-gradient-to-br from-slate-600 via-slate-700 to-slate-800 relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-purple-500/20 to-indigo-500/20"></div>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="text-center">
+                            <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-2 border border-white/30">
+                              <BookOpen className="w-6 h-6 text-white" />
+                            </div>
+                            <Badge className="bg-white/20 backdrop-blur-sm text-white border-white/30">
+                              Module {moduleIndex + 1}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="absolute top-4 right-4">
+                          <div className="w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/30">
                             {expandedModules[module.id || moduleIndex] ? (
-                              <ChevronDown className="w-5 h-5 text-slate-500" />
+                              <ChevronDown className="w-4 h-4 text-white" />
                             ) : (
-                              <ChevronRight className="w-5 h-5 text-slate-500" />
-                            )}
-                          </div>
-                          
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-3 mb-2">
-                              <Badge variant="outline" className="text-xs font-medium">
-                                Module {moduleIndex + 1}
-                              </Badge>
-                              <div className="w-2 h-2 rounded-full bg-primary"></div>
-                            </div>
-                            
-                            <h3 className="text-lg font-semibold text-slate-900 mb-2">
-                              {module.title}
-                            </h3>
-                            
-                            {module.description && (
-                              <div className="text-sm text-slate-600 prose prose-sm max-w-none">
-                                <ContentRenderer content={module.description} />
-                              </div>
+                              <ChevronRight className="w-4 h-4 text-white" />
                             )}
                           </div>
                         </div>
-                        
-                        <div className="flex items-center gap-4 text-sm text-slate-500 ml-4">
-                          <div className="text-right">
-                            <div className="font-medium">{module.lessons?.length || 0}</div>
-                            <div className="text-xs">lessons</div>
-                          </div>
-                          <div className="text-right">
-                            <div className="font-medium">
-                              {module.lessons?.reduce((total: number, lesson: any) => total + (lesson.chapters?.length || 0), 0) || 0}
-                            </div>
-                            <div className="text-xs">chapters</div>
-                          </div>
-                        </div>
-                      </button>
-                      
-                      {/* Module Content */}
-                      {expandedModules[module.id || moduleIndex] && module.lessons && (
-                        <div className="border-t border-slate-100 bg-slate-50/50">
-                          <div className="p-6 space-y-6">
-                            {module.lessons.map((lesson: any, lessonIndex: number) => (
-                              <div key={lesson.id || `lesson-${moduleIndex}-${lessonIndex}`} className="bg-white rounded-lg border border-slate-200 overflow-hidden">
-                                {/* Lesson Header */}
-                                <div className="p-4 bg-gradient-to-r from-slate-50 to-white border-b border-slate-200">
-                                  <div className="flex items-center gap-3 mb-2">
-                                    <Badge variant="secondary" className="text-xs">
-                                      Lesson {lessonIndex + 1}
-                                    </Badge>
-                                    <Clock className="w-4 h-4 text-slate-400" />
-                                    <span className="text-xs text-slate-500">
-                                      ~{(lesson.chapters?.length || 0) * 15} min
-                                    </span>
-                                  </div>
-                                  
-                                  <h4 className="font-semibold text-slate-900 mb-2">
-                                    {lesson.title}
-                                  </h4>
-                                  
-                                  {lesson.description && (
-                                    <div className="text-sm text-slate-600 prose prose-sm max-w-none">
-                                      <ContentRenderer content={lesson.description} />
-                                    </div>
-                                  )}
-                                </div>
-                                
-                                {/* Lesson Chapters */}
-                                {lesson.chapters && lesson.chapters.length > 0 && (
-                                  <div className="divide-y divide-slate-100">
-                                    {lesson.chapters.map((chapter: Chapter, chapterIndex: number) => (
-                                      <div key={chapter.id} className="group hover:bg-slate-50/50 transition-colors">
-                                        {/* Chapter Header */}
-                                        <div className="flex items-center justify-between p-4">
-                                          <div className="flex items-center space-x-3 flex-1">
-                                            <div className="flex-shrink-0">
-                                              {chapter.videoUrl ? (
-                                                <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                                                  <PlayCircle className="w-4 h-4 text-primary" />
-                                                </div>
-                                              ) : (
-                                                <div className="w-8 h-8 bg-secondary/10 rounded-full flex items-center justify-center">
-                                                  <FileText className="w-4 h-4 text-secondary" />
-                                                </div>
-                                              )}
-                                            </div>
-                                            
-                                            <div className="flex-1 min-w-0">
-                                              <div className="flex items-center gap-2 mb-1">
-                                                <span className="text-sm font-medium text-slate-900">
-                                                  {chapterIndex + 1}. {chapter.title}
-                                                </span>
-                                                {chapter.isFree && (
-                                                  <Badge variant="outline" className="text-xs text-green-600 border-green-200">
-                                                    Free
-                                                  </Badge>
-                                                )}
-                                              </div>
-                                              <div className="text-xs text-slate-500">
-                                                {chapter.videoUrl ? 'Video lesson' : 'Reading material'} • ~15 min
-                                              </div>
-                                            </div>
-                                          </div>
-                                          
-                                          <div className="flex items-center space-x-2">
-                                            {user?.admin && (
-                                              <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                className="text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                                                onClick={() => handleEditChapter(chapter)}
-                                              >
-                                                <Settings className="w-3 h-3 mr-1" />
-                                                Edit
-                                              </Button>
-                                            )}
-                                            {chapter.audioUrl && (
-                                              <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                className="text-xs"
-                                                onClick={(e) => {
-                                                  e.preventDefault();
-                                                  e.stopPropagation();
-                                                  playAudio(chapter.id, chapter.audioUrl!);
-                                                }}
-                                              >
-                                                {audioPlaying === chapter.id ? (
-                                                  <Pause className="w-3 h-3" />
-                                                ) : (
-                                                  <Volume2 className="w-3 h-3" />
-                                                )}
-                                              </Button>
-                                            )}
-                                            {isEnrolled && (
-                                              <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                className="text-xs"
-                                                onClick={() => handleMarkComplete(chapter.id)}
-                                              >
-                                                <CheckCircle className="w-3 h-3" />
-                                              </Button>
-                                            )}
-                                          </div>
-                                        </div>
-                                        
-                                        {/* Chapter Content */}
-                                        {chapter.description && (
-                                          <div className="px-4 pb-4">
-                                            <div className="ml-11 bg-white rounded-lg border border-slate-200 p-4">
-                                              <div className="text-slate-700 leading-relaxed">
-                                                {(() => {
-                                                  const isLongContent = chapter.description.length > 300;
-                                                  const isExpanded = expandedChapters[chapter.id];
-                                                  const shouldTruncate = isLongContent && !isExpanded;
-                                                  const content = shouldTruncate 
-                                                    ? `${chapter.description.substring(0, 300)}...` 
-                                                    : chapter.description;
-                                                  
-                                                  return (
-                                                    <>
-                                                      <div className="prose prose-sm max-w-none text-slate-700">
-                                                        <ContentRenderer content={content} />
-                                                      </div>
-                                                      {isLongContent && (
-                                                        <button
-                                                          onClick={() => toggleChapterContent(chapter.id)}
-                                                          className="inline-flex items-center gap-1 mt-3 text-primary hover:text-primary/80 text-sm font-medium transition-colors"
-                                                        >
-                                                          {isExpanded ? (
-                                                            <>
-                                                              <ChevronDown className="w-3 h-3" />
-                                                              Show Less
-                                                            </>
-                                                          ) : (
-                                                            <>
-                                                              <ChevronRight className="w-3 h-3" />
-                                                              Show More
-                                                            </>
-                                                          )}
-                                                        </button>
-                                                      )}
-                                                    </>
-                                                  );
-                                                })()}
-                                              </div>
-                                            </div>
-                                          </div>
-                                        )}
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                      </div>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-12 text-center">
-                  <FileText className="w-12 h-12 text-slate-400 mx-auto mb-4" />
+                    
+                    {/* Module Content */}
+                    <CardContent className="p-6">
+                      <h3 className="text-lg font-semibold text-slate-900 mb-3 line-clamp-2 group-hover:text-primary transition-colors">
+                        {module.title}
+                      </h3>
+                      
+                      {module.description && (
+                        <p className="text-sm text-slate-600 mb-4 line-clamp-3">
+                          {module.description.replace(/<[^>]*>/g, '').substring(0, 120)}...
+                        </p>
+                      )}
+                      
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-1 text-slate-500">
+                            <Play className="w-4 h-4" />
+                            <span>{module.lessons?.length || 0} lessons</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-slate-500">
+                            <Clock className="w-4 h-4" />
+                            <span>~{(module.lessons?.reduce((total: number, lesson: any) => total + (lesson.chapters?.length || 0), 0) || 0) * 15}min</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 text-primary">
+                          <span className="text-xs font-medium">View</span>
+                          <ChevronRight className="w-3 h-3" />
+                        </div>
+                      </div>
+                    </CardContent>
+                    
+                    {/* Expanded Module Content */}
+                    {expandedModules[module.id || moduleIndex] && (
+                      <div className="border-t bg-slate-50/50 p-6 space-y-4">
+                        <h4 className="font-medium text-slate-900 mb-4">Lessons in this module:</h4>
+                        <div className="grid grid-cols-1 gap-3">
+                          {module.lessons?.map((lesson: any, lessonIndex: number) => (
+                            <Link 
+                              key={lesson.id || `lesson-${moduleIndex}-${lessonIndex}`}
+                              href={`/courses/${course.slug}/lessons/${lesson.id}`}
+                              className="block"
+                            >
+                              <div className="bg-white rounded-lg p-4 border border-slate-200 hover:border-primary/30 hover:shadow-sm transition-all cursor-pointer group">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                                      <span className="text-xs font-semibold text-primary">
+                                        {lessonIndex + 1}
+                                      </span>
+                                    </div>
+                                    <div>
+                                      <h5 className="font-medium text-slate-900 group-hover:text-primary transition-colors">
+                                        {lesson.title}
+                                      </h5>
+                                      <p className="text-xs text-slate-500">
+                                        {lesson.chapters?.length || 0} chapters • ~{(lesson.chapters?.length || 0) * 15}min
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    {lesson.chapters?.some((chapter: any) => chapter.audioUrl) && (
+                                      <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center">
+                                        <Volume2 className="w-3 h-3 text-green-600" />
+                                      </div>
+                                    )}
+                                    <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                                      <PlayCircle className="w-3 h-3 text-primary" />
+                                    </div>
+                                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-primary transition-colors" />
+                                  </div>
+                                </div>
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card className="border-dashed border-2 border-slate-200">
+                <CardContent className="p-12 text-center">
+                  <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <BookOpen className="w-8 h-8 text-slate-400" />
+                  </div>
                   <h3 className="text-lg font-medium text-slate-600 mb-2">Course content is being prepared</h3>
-                  <p className="text-slate-500">Check back soon for comprehensive learning materials!</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                  <p className="text-slate-500 mb-6">Our expert instructors are crafting comprehensive learning materials for you!</p>
+                  <Badge variant="outline" className="text-slate-500">
+                    Coming Soon
+                  </Badge>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+          
+                     {/* Quick Stats & Lessons Navigation */}
+           {course?.modules && course.modules.length > 0 && (
+             <Card className="bg-gradient-to-r from-primary/5 via-purple-500/5 to-indigo-500/5 border-primary/20">
+               <CardContent className="p-6">
+                 <div className="flex items-center justify-between">
+                   <div>
+                     <h3 className="text-lg font-semibold text-slate-900 mb-2">Ready to start learning?</h3>
+                     <p className="text-slate-600">
+                       This course contains {course.modules.reduce((total: number, module: any) => total + (module.lessons?.reduce((lessonTotal: number, lesson: any) => lessonTotal + (lesson.chapters?.length || 0), 0) || 0), 0)} chapters 
+                       across {course.modules.length} comprehensive modules.
+                     </p>
+                   </div>
+                   <div className="flex items-center gap-3">
+                     <Button asChild variant="outline" className="border-primary/30 text-primary hover:bg-primary/10">
+                       <Link href={`/courses/${course.slug}/lessons`}>
+                         <BookOpen className="w-4 h-4 mr-2" />
+                         View All Lessons
+                       </Link>
+                     </Button>
+                     {isEnrolled ? (
+                       <Button asChild className="bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90">
+                         <Link href={`/courses/${course.slug}/lessons`}>
+                           <PlayCircle className="w-4 h-4 mr-2" />
+                           Continue Learning
+                         </Link>
+                       </Button>
+                     ) : (
+                       <Button 
+                         onClick={handleEnroll}
+                         disabled={isEnrolling}
+                         className="bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90"
+                       >
+                         {isEnrolling ? (
+                           <>
+                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                             Enrolling...
+                           </>
+                         ) : (
+                           <>
+                             <Play className="w-4 h-4 mr-2" />
+                             Start Learning
+                           </>
+                         )}
+                       </Button>
+                     )}
+                   </div>
+                 </div>
+               </CardContent>
+             </Card>
+           )}
         </TabsContent>
 
         {/* Overview */}

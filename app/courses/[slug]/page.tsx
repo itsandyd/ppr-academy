@@ -14,7 +14,11 @@ import {
   PlayCircle,
   CheckCircle,
   Edit,
-  Settings
+  Settings,
+  Users,
+  BookOpen,
+  Award,
+  Globe
 } from "lucide-react";
 
 export default async function CourseDetailPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -257,11 +261,20 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 pt-16">
-      <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50/30">
+      {/* Hero Section with Course Info */}
+      <div className="bg-gradient-to-br from-slate-900 via-purple-900/95 to-indigo-900/90 relative overflow-hidden">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute inset-0" style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='1'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+          }}></div>
+        </div>
+        
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+            {/* Left Column - Course Info */}
+            <div className="lg:col-span-2 space-y-8">
               <CourseEditHeader 
                 course={{
                   id: course.id,
@@ -275,80 +288,186 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
                 isOwner={user?.id === course.instructorId}
               />
               
-              <h1 className="text-4xl font-bold mb-4 text-white">{course.title}</h1>
-              <p className="text-xl mb-6 text-slate-200">{course.description}</p>
+              {/* Course Badge */}
+              <div className="flex items-center gap-3">
+                <Badge className="bg-gradient-to-r from-yellow-400 to-orange-400 text-black font-semibold px-3 py-1">
+                  ⭐ Premium Course
+                </Badge>
+                {course.category && (
+                  <Badge variant="outline" className="border-white/30 text-white/90 bg-white/10 backdrop-blur-sm">
+                    {course.category.name}
+                  </Badge>
+                )}
+              </div>
               
-              <div className="flex items-center space-x-6 text-slate-200">
-                {course.instructor && (
-                  <div className="flex items-center space-x-3">
-                    <Avatar className="w-10 h-10">
+              {/* Course Title */}
+              <div className="space-y-4">
+                <h1 className="text-4xl md:text-5xl font-bold text-white leading-tight">
+                  {course.title}
+                </h1>
+                <p className="text-xl text-slate-200 leading-relaxed max-w-3xl">
+                  {course.description}
+                </p>
+              </div>
+              
+              {/* Course Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <BookOpen className="w-5 h-5 text-yellow-300" />
+                    <span className="text-sm text-white/80">Chapters</span>
+                  </div>
+                  <div className="text-2xl font-bold text-white">{allChapters.length}</div>
+                </div>
+                
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Users className="w-5 h-5 text-blue-300" />
+                    <span className="text-sm text-white/80">Students</span>
+                  </div>
+                  <div className="text-2xl font-bold text-white">{course.enrollments.length}</div>
+                </div>
+                
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Clock className="w-5 h-5 text-green-300" />
+                    <span className="text-sm text-white/80">Duration</span>
+                  </div>
+                  <div className="text-2xl font-bold text-white">{Math.ceil(allChapters.length * 0.25)}h</div>
+                </div>
+                
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Award className="w-5 h-5 text-purple-300" />
+                    <span className="text-sm text-white/80">Level</span>
+                  </div>
+                  <div className="text-lg font-bold text-white">All Levels</div>
+                </div>
+              </div>
+              
+              {/* Instructor Info */}
+              {course.instructor && (
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
+                  <div className="flex items-center space-x-4">
+                    <Avatar className="w-16 h-16 ring-2 ring-white/30">
                       <AvatarImage src={course.instructor.imageUrl || undefined} />
-                      <AvatarFallback className="bg-slate-700 text-white">
+                      <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white text-lg">
                         {course.instructor.firstName?.[0]}{course.instructor.lastName?.[0]}
                       </AvatarFallback>
                     </Avatar>
-                    <div>
-                      <p className="font-medium text-white">
-                        {course.instructor.firstName} {course.instructor.lastName}
-                      </p>
-                      <p className="text-sm text-slate-200">Instructor</p>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="text-xl font-semibold text-white">
+                          {course.instructor.firstName} {course.instructor.lastName}
+                        </h3>
+                        <Badge variant="outline" className="border-yellow-400/50 text-yellow-300 bg-yellow-400/10">
+                          Instructor
+                        </Badge>
+                      </div>
+                      <p className="text-slate-300">Music Production Expert</p>
+                      <div className="flex items-center gap-4 mt-2 text-sm text-slate-300">
+                        <span className="flex items-center gap-1">
+                          <Star className="w-4 h-4 text-yellow-400" />
+                          4.9 rating
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Users className="w-4 h-4" />
+                          {course.enrollments.length} students
+                        </span>
+                      </div>
                     </div>
                   </div>
-                )}
-                
-                <div className="flex items-center space-x-2">
-                  <Clock className="w-5 h-5" />
-                  <span>{allChapters.length} chapters</span>
                 </div>
-              </div>
+              )}
             </div>
 
+            {/* Right Column - Enrollment Card */}
             <div className="lg:col-span-1">
-              <Card className="sticky top-24">
-                <div className="relative">
-                  <img
-                    src={course.imageUrl || "https://images.unsplash.com/photo-1571330735066-03aaa9429d89?w=800&h=500&fit=crop"}
-                    alt={course.title}
-                    className="w-full h-48 object-cover rounded-t-lg"
-                  />
-                  <div className="absolute inset-0 bg-black/20 flex items-center justify-center rounded-t-lg">
-                    <PlayCircle className="w-16 h-16 text-white" />
-                  </div>
-                </div>
-                
-                <CardContent className="p-6">
-                  <div className="text-center mb-6">
-                    <p className="text-3xl font-bold text-primary">
-                      ${course.price ? course.price.toFixed(0) : '0'}
-                    </p>
-                  </div>
-                  
-                  <CourseDetailClient 
-                    courseId={course.id}
-                    isAuthenticated={!!user}
-                    isEnrolled={!!enrollment}
-                    userProgress={enrollment?.progress || 0}
-                    user={user}
-                  />
-                  
-                  <div className="mt-6 space-y-3 text-sm text-slate-600">
-                    <div className="flex items-center justify-between">
-                      <span>Full lifetime access</span>
-                      <CheckCircle className="w-4 h-4 text-green-500" />
+              <div className="sticky top-8">
+                <Card className="overflow-hidden shadow-2xl border-0 bg-white">
+                  {/* Course Preview Image */}
+                  <div className="relative">
+                    <img
+                      src={course.imageUrl || "https://images.unsplash.com/photo-1571330735066-03aaa9429d89?w=800&h=500&fit=crop"}
+                      alt={course.title}
+                      className="w-full h-56 object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-center justify-center">
+                      <div className="bg-white/20 backdrop-blur-sm rounded-full p-4 border border-white/30">
+                        <PlayCircle className="w-12 h-12 text-white" />
+                      </div>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span>{allChapters.length} chapters</span>
-                      <CheckCircle className="w-4 h-4 text-green-500" />
+                    <div className="absolute top-4 right-4">
+                      <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white">
+                        Premium
+                      </Badge>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
+                  
+                  <CardContent className="p-8">
+                    {/* Pricing */}
+                    <div className="text-center mb-8">
+                      <div className="flex items-center justify-center gap-3 mb-2">
+                        <span className="text-4xl font-bold text-slate-900">
+                          ${course.price ? course.price.toFixed(0) : '0'}
+                        </span>
+                        <div className="text-right">
+                          <div className="text-sm text-slate-500 line-through">$199</div>
+                          <Badge variant="destructive" className="text-xs">75% OFF</Badge>
+                        </div>
+                      </div>
+                      <p className="text-sm text-slate-600">One-time payment • Lifetime access</p>
+                    </div>
+                    
+                    {/* Enrollment Component */}
+                    <CourseDetailClient 
+                      courseId={course.id}
+                      isAuthenticated={!!user}
+                      isEnrolled={!!enrollment}
+                      userProgress={enrollment?.progress || 0}
+                      user={user}
+                    />
+                    
+                    {/* Course Features */}
+                    <div className="mt-8 space-y-4">
+                      <h4 className="font-semibold text-slate-900 mb-4">This course includes:</h4>
+                      <div className="space-y-3 text-sm">
+                        <div className="flex items-center gap-3">
+                          <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                          <span className="text-slate-700">{allChapters.length} video lessons</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                          <span className="text-slate-700">Downloadable resources</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                          <span className="text-slate-700">Mobile & desktop access</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                          <span className="text-slate-700">Certificate of completion</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                          <span className="text-slate-700">30-day money-back guarantee</span>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </div>
         </div>
+        
+        {/* Decorative elements */}
+        <div className="absolute top-20 right-20 w-32 h-32 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-full blur-2xl hidden lg:block"></div>
+        <div className="absolute bottom-20 left-20 w-40 h-40 bg-gradient-to-br from-accent/20 to-primary/20 rounded-full blur-xl hidden lg:block"></div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      {/* Course Content Section */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <CourseContentEditor
           courseId={course.id}
           modules={courseModules}

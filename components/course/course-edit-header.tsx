@@ -112,7 +112,7 @@ export function CourseEditHeader({ course, user, isOwner }: CourseEditHeaderProp
         
         {canEdit && (
           <Button
-            variant="outline"
+            variant="default"
             size="sm"
             className="border-white/30 text-white hover:bg-white/10"
             onClick={() => setIsEditDialogOpen(true)}

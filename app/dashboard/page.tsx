@@ -43,6 +43,7 @@ import {
 import { StudentDashboard } from "@/components/dashboard/student-dashboard";
 import { CreatorDashboard } from "@/components/dashboard/creator-dashboard";
 import UnifiedDashboard from "@/components/dashboard/unified-dashboard";
+import DashboardNavbar from "@/components/dashboard-navbar";
 
 export default async function Dashboard() {
   const { userId: clerkId } = await auth();
@@ -88,16 +89,26 @@ export default async function Dashboard() {
     completedCourses: enrollments.filter((e: any) => e.progress === 100).length,
   };
 
+  // Format user data for navbar
+  const navbarUser = {
+    name: user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'User',
+    instructor: courses.length > 0,
+    admin: user.admin || false
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 pt-16">
-      <UnifiedDashboard 
-        user={user}
-        enrollments={enrollments}
-        userCourses={courses}
-        dashboardStats={dashboardStats}
-        featuredCourses={featuredCourses}
-        popularCourses={popularCourses}
-      />
-    </div>
+    <>
+      <DashboardNavbar user={navbarUser} />
+      <div className="min-h-screen bg-slate-50 pt-16">
+        <UnifiedDashboard 
+          user={user}
+          enrollments={enrollments}
+          userCourses={courses}
+          dashboardStats={dashboardStats}
+          featuredCourses={featuredCourses}
+          popularCourses={popularCourses}
+        />
+      </div>
+    </>
   );
 } 
