@@ -7,6 +7,7 @@ import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Link from "next/link";
+import { ModeToggle } from "@/components/mode-toggle";
 
 interface SidebarLayoutProps {
   children: React.ReactNode;
@@ -112,6 +113,14 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
               );
             })}
           </nav>
+
+          {/* Theme Toggle */}
+          <div className="mt-6 px-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-[#51536A]">Theme</span>
+              <ModeToggle />
+            </div>
+          </div>
         </div>
       </aside>
 
