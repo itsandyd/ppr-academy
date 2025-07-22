@@ -27,6 +27,7 @@ import {
   Users,
   Briefcase
 } from "lucide-react";
+import { ModeToggle } from "@/components/mode-toggle";
 
 // ============================================================================
 // Types & Interfaces
@@ -84,30 +85,30 @@ const ADMIN_LINKS: NavLink[] = [
 ];
 
 const STYLES = {
-  nav: "fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200 shadow-sm",
+  nav: "fixed top-0 left-0 right-0 z-50 bg-background border-b border-border shadow-sm",
   container: "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8",
   header: "flex justify-between items-center h-16",
   logo: "flex items-center space-x-3",
-  logoIcon: "bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg p-2",
-  logoText: "text-xl font-bold text-dark hidden sm:block",
+  logoIcon: "bg-gradient-to-br from-primary to-primary/60 rounded-lg p-2",
+  logoText: "text-xl font-bold text-foreground hidden sm:block",
   desktopNav: "hidden md:flex items-center space-x-1",
   desktopAuth: "hidden md:flex items-center space-x-4",
   mobileButton: "md:hidden flex items-center",
-  mobileMenu: "md:hidden bg-white border-b border-slate-200",
+  mobileMenu: "md:hidden bg-background border-b border-border",
   mobileContent: "px-4 pt-2 pb-3 space-y-1",
-  mobileAuth: "pt-4 pb-2 border-t border-slate-200",
+  mobileAuth: "pt-4 pb-2 border-t border-border",
   linkBase: "px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2",
-  linkActive: "bg-slate-100 text-primary",
-  linkInactive: "text-slate-600 hover:text-slate-900 hover:bg-slate-50",
+  linkActive: "bg-accent text-accent-foreground",
+  linkInactive: "text-muted-foreground hover:text-foreground hover:bg-muted",
   mobileLinkBase: "block px-3 py-2 rounded-lg text-base font-medium flex items-center gap-3",
-  menuToggle: "p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100",
-  dropdownTrigger: "px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 text-slate-600 hover:text-slate-900 hover:bg-slate-50",
+  menuToggle: "p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted",
+  dropdownTrigger: "px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 text-muted-foreground hover:text-foreground hover:bg-muted",
   dropdownContent: "w-64",
-  dropdownItem: "flex items-start gap-3 p-3 cursor-pointer transition-colors hover:bg-slate-50",
-  dropdownIcon: "w-4 h-4 mt-0.5 text-slate-500",
+  dropdownItem: "flex items-start gap-3 p-3 cursor-pointer transition-colors hover:bg-muted",
+  dropdownIcon: "w-4 h-4 mt-0.5 text-muted-foreground",
   dropdownText: "flex-1",
-  dropdownLabel: "font-medium text-slate-900",
-  dropdownDesc: "text-xs text-slate-500 mt-0.5",
+  dropdownLabel: "font-medium text-foreground",
+  dropdownDesc: "text-xs text-muted-foreground mt-0.5",
 } as const;
 
 // ============================================================================
@@ -151,7 +152,7 @@ const buildNavStructure = (isSignedIn: boolean, isAdmin: boolean) => {
 const Logo = () => (
   <Link href="/" className={STYLES.logo}>
     <div className={STYLES.logoIcon}>
-      <GraduationCap className="w-6 h-6 text-white" />
+      <GraduationCap className="w-6 h-6 text-primary-foreground" />
     </div>
     <span className={STYLES.logoText}>
       PPR Academy
@@ -259,6 +260,7 @@ const DesktopNavigation = ({
 
 const AuthButtons = ({ isSignedIn, hasClerk }: { isSignedIn: boolean; hasClerk: boolean }) => (
   <div className={STYLES.desktopAuth}>
+    <ModeToggle />
     {!hasClerk ? (
       <div className="flex items-center space-x-4">
         <Button variant="outline" size="sm">
@@ -330,7 +332,7 @@ const MobileNavigation = ({
     {/* Mobile Dropdown Sections */}
     {sections.map((section) => (
       <div key={section.label} className="space-y-1">
-        <div className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wide">
+        <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
           {section.label}
         </div>
         {section.items.map((item) => (
@@ -368,6 +370,9 @@ const MobileAuthSection = ({
   hasClerk: boolean;
 }) => (
   <div className={STYLES.mobileAuth}>
+    <div className="flex justify-center px-3 pb-3">
+      <ModeToggle />
+    </div>
     {!hasClerk ? (
       <div className="space-y-2 px-3">
         <Button variant="outline" className="w-full">
@@ -381,10 +386,10 @@ const MobileAuthSection = ({
       <div className="flex items-center justify-between px-3 py-2">
         <div className="flex items-center gap-3">
           <div className="text-sm">
-            <p className="font-medium text-slate-900">
+            <p className="font-medium text-foreground">
               {user?.firstName || user?.emailAddresses?.[0]?.emailAddress}
             </p>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted-foreground">
               {user?.emailAddresses?.[0]?.emailAddress}
             </p>
           </div>

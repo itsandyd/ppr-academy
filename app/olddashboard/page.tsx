@@ -48,7 +48,7 @@ import UnifiedDashboard from "@/components/dashboard/unified-dashboard";
 import DashboardNavbar from "@/components/dashboard-navbar";
 import { UserSyncFallback, UserErrorFallback } from "@/components/user-sync-fallback";
 
-export default async function Dashboard() {
+export default async function olddashboard() {
   const { userId: clerkId } = await auth();
   
   if (!clerkId) {

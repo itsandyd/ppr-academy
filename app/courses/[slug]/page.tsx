@@ -261,7 +261,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ s
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50/30">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50/30 pt-16">
       {/* Hero Section with Course Info */}
       <div className="bg-gradient-to-br from-slate-900 via-purple-900/95 to-indigo-900/90 relative overflow-hidden">
         {/* Background Pattern */}

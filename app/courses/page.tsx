@@ -4,7 +4,6 @@ import { getCourses, getUserFromClerk, getUserCourses } from "@/lib/data";
 import CourseFilters from "@/components/course-filters";
 import CourseGrid from "@/components/course-grid";  
 import CourseManagement from "@/components/course-management";
-import DashboardNavbar from "@/components/dashboard-navbar";
 import { BookOpen } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
