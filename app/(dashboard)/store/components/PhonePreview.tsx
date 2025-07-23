@@ -34,6 +34,7 @@ interface PhonePreviewProps {
     subtitle?: string;
     imageUrl?: string;
     ctaText?: string;
+    downloadUrl?: string;
   };
   // Digital product specific props
   digitalProduct?: {
@@ -48,15 +49,6 @@ interface PhonePreviewProps {
 function LeadMagnetPreview({ leadMagnet }: { leadMagnet?: PhonePreviewProps['leadMagnet'] }) {
   const [showSuccess, setShowSuccess] = useState(false);
   const [formData, setFormData] = useState({ name: "", email: "" });
-
-  // Auto-cycle between form and success states for demo purposes
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setShowSuccess(current => !current);
-    }, 4000); // Switch every 4 seconds
-
-    return () => clearInterval(interval);
-  }, []);
 
   const handleSubmit = () => {
     if (formData.name && formData.email) {
@@ -90,12 +82,28 @@ function LeadMagnetPreview({ leadMagnet }: { leadMagnet?: PhonePreviewProps['lea
               <p className="font-medium text-sm">
                 {leadMagnet?.title || "Ultimate Marketing Guide"}
               </p>
-              <p className="text-xs text-gray-500">PDF • 2.3 MB</p>
+              <p className="text-xs text-gray-500">
+                {leadMagnet?.downloadUrl ? 'Ready for Download' : 'PDF • 2.3 MB'}
+              </p>
             </div>
           </div>
-          <Button className="w-full mt-3 bg-green-600 hover:bg-green-700 text-white text-sm">
+          <Button 
+            className="w-full mt-3 bg-green-600 hover:bg-green-700 text-white text-sm"
+            onClick={() => {
+              if (leadMagnet?.downloadUrl) {
+                // Create a temporary link and trigger download
+                const link = document.createElement('a');
+                link.href = leadMagnet.downloadUrl;
+                link.download = leadMagnet.title || 'lead-magnet';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+              }
+            }}
+            disabled={!leadMagnet?.downloadUrl}
+          >
             <Download className="w-4 h-4 mr-2" />
-            Download Now
+            {leadMagnet?.downloadUrl ? 'Download Now' : 'File Not Available'}
           </Button>
         </div>
 
@@ -110,10 +118,18 @@ function LeadMagnetPreview({ leadMagnet }: { leadMagnet?: PhonePreviewProps['lea
         </div>
 
         {/* Next Steps */}
-        <div className="pt-2">
+        <div className="pt-2 space-y-2">
           <p className="text-xs text-gray-600 text-center">
             Want more marketing tips? Follow us on social media!
           </p>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setShowSuccess(false)}
+            className="w-full text-xs"
+          >
+            ← Back to Opt-in Form
+          </Button>
         </div>
       </Card>
     );

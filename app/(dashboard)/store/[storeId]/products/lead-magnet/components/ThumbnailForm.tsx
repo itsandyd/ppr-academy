@@ -46,6 +46,8 @@ export function ThumbnailForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const storeId = params.storeId as string;
+  const editProductId = searchParams.get("edit");
+  const isEditMode = !!editProductId;
   
   // Memoize currentStep to prevent infinite re-renders
   const currentStep = useMemo(() => {
@@ -62,6 +64,7 @@ export function ThumbnailForm() {
   
   // Convex mutations
   const createProduct = useMutation(api.digitalProducts.createProduct);
+  const updateProduct = useMutation(api.digitalProducts.updateProduct);
   
   const form = useForm<ThumbnailSchema>({
     resolver: zodResolver(schema),
@@ -145,25 +148,44 @@ export function ThumbnailForm() {
 
     setIsLoading(true);
     try {
-      // Create the lead magnet as a digital product
-      const productId = await createProduct({
-        title: data.title.trim(),
-        description: data.subtitle?.trim() || "",
-        price: 0, // Lead magnets are typically free
-        imageUrl: leadMagnetData.imageUrl || "",
-        storeId: storeId,
-        userId: user.id,
-        buttonLabel: data.button || "Get Free Resource",
-        style: "card", // Lead magnets typically use card style
-      });
+      if (isEditMode && editProductId) {
+        // Update existing product
+        await updateProduct({
+          id: editProductId as any,
+          title: data.title.trim(),
+          description: data.subtitle?.trim() || "",
+          imageUrl: leadMagnetData.imageUrl || "",
+          buttonLabel: data.button || "Get Free Resource",
+        });
 
-      toast({
-        title: "Success",
-        description: "Lead magnet saved successfully!",
-      });
+        toast({
+          title: "Success",
+          description: "Lead magnet updated successfully!",
+        });
+      } else {
+        // Create new lead magnet as a digital product
+        await createProduct({
+          title: data.title.trim(),
+          description: data.subtitle?.trim() || "",
+          price: 0, // Lead magnets are typically free
+          imageUrl: leadMagnetData.imageUrl || "",
+          storeId: storeId,
+          userId: user.id,
+          buttonLabel: data.button || "Get Free Resource",
+          style: "card", // Lead magnets typically use card style
+        });
+
+        toast({
+          title: "Success",
+          description: "Lead magnet created successfully!",
+        });
+      }
 
       // Navigate to the next step (product page)
-      router.push(`/store/${storeId}/products/lead-magnet?step=product`);
+      const nextUrl = isEditMode 
+        ? `/store/${storeId}/products/lead-magnet?step=product&edit=${editProductId}`
+        : `/store/${storeId}/products/lead-magnet?step=product`;
+      router.push(nextUrl);
       
     } catch (error) {
       console.error("Error saving lead magnet:", error);
@@ -229,22 +251,23 @@ export function ThumbnailForm() {
     }
   };
 
+  const editParam = isEditMode ? `&edit=${editProductId}` : '';
   const steps = [
     { 
       label: "Thumbnail", 
-      href: `/store/${storeId}/products/lead-magnet?step=thumbnail`, 
+      href: `/store/${storeId}/products/lead-magnet?step=thumbnail${editParam}`, 
       icon: Image, 
       active: currentStep === "thumbnail" 
     },
     { 
       label: "Product", 
-      href: `/store/${storeId}/products/lead-magnet?step=product`, 
+      href: `/store/${storeId}/products/lead-magnet?step=product${editParam}`, 
       icon: Package, 
       active: currentStep === "product" 
     },
     { 
       label: "Options", 
-      href: `/store/${storeId}/products/lead-magnet?step=options`, 
+      href: `/store/${storeId}/products/lead-magnet?step=options${editParam}`, 
       icon: Sliders, 
       active: currentStep === "options" 
     },

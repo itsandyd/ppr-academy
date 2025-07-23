@@ -3,7 +3,7 @@
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { PhonePreview } from "@/app/(dashboard)/store/components/PhonePreview";
 import { LeadMagnetContext } from "./context";
@@ -24,7 +24,9 @@ interface WizardLayoutProps {
 export default function WizardLayout({ children }: WizardLayoutProps) {
   const { user } = useUser();
   const params = useParams();
+  const searchParams = useSearchParams();
   const storeId = params.storeId as string;
+  const editProductId = searchParams.get("edit");
 
   // Default form fields - memoize to prevent recreation
   const defaultFields = useMemo((): FormField[] => [
@@ -50,6 +52,7 @@ export default function WizardLayout({ children }: WizardLayoutProps) {
     subtitle: "",
     imageUrl: "",
     ctaText: "Get Free Resource",
+    downloadUrl: "",
     formFields: defaultFields
   });
 
@@ -65,8 +68,28 @@ export default function WizardLayout({ children }: WizardLayoutProps) {
     storeId ? { storeId: storeId } : "skip"
   );
 
+  // Fetch specific product if in edit mode
+  const editProduct = useQuery(
+    api.digitalProducts.getProductById,
+    editProductId ? { productId: editProductId as any } : "skip"
+  );
+
   // Load existing lead magnet data on mount
   useEffect(() => {
+    // If in edit mode, load the specific product
+    if (editProductId && editProduct) {
+      setLeadMagnetData({
+        title: editProduct.title || "",
+        subtitle: editProduct.description || "",
+        imageUrl: editProduct.imageUrl || "",
+        ctaText: editProduct.buttonLabel || "Get Free Resource",
+        downloadUrl: editProduct.downloadUrl || "",
+        formFields: defaultFields
+      });
+      return;
+    }
+
+    // Otherwise, load the most recent lead magnet for create mode
     if (existingProducts && existingProducts.length > 0) {
       // Find lead magnets (typically price: 0 and style: "card")
       const leadMagnets = existingProducts.filter(product => 
@@ -82,11 +105,12 @@ export default function WizardLayout({ children }: WizardLayoutProps) {
           subtitle: latestLeadMagnet.description || "",
           imageUrl: latestLeadMagnet.imageUrl || "",
           ctaText: latestLeadMagnet.buttonLabel || "Get Free Resource",
+          downloadUrl: latestLeadMagnet.downloadUrl || "",
           formFields: defaultFields // For now, always use defaults (can be enhanced later to save/load custom fields)
         });
       }
     }
-  }, [existingProducts, defaultFields]);
+  }, [editProductId, editProduct, existingProducts, defaultFields]);
 
   // Memoize the update function to prevent infinite loops
   const updateLeadMagnetData = useCallback((data: Partial<typeof leadMagnetData>) => {

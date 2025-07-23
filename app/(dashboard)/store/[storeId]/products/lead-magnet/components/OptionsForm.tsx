@@ -31,6 +31,8 @@ export function OptionsForm() {
   const params = useParams();
   const searchParams = useSearchParams();
   const storeId = params.storeId as string;
+  const editProductId = searchParams.get("edit");
+  const isEditMode = !!editProductId;
   
   // Memoize currentStep to prevent infinite re-renders
   const currentStep = useMemo(() => {
@@ -50,30 +52,42 @@ export function OptionsForm() {
 
   const onSubmit = (data: OptionsSchema) => {
     console.log("Options submitted:", data);
-    // TODO: Handle form submission
+    
+    if (isEditMode) {
+      // In edit mode, show success and provide option to go back to products
+      alert("Lead magnet updated successfully! Click OK to return to your products.");
+      window.location.href = `/store/${storeId}`;
+    } else {
+      // In create mode, show completion message
+      alert("Lead magnet created successfully! Your lead magnet is now ready to use.");
+      window.location.href = `/store/${storeId}`;
+    }
   };
 
   // Memoize steps array to prevent unnecessary re-renders
-  const steps = useMemo(() => [
-    { 
-      label: "Thumbnail", 
-      href: `/store/${storeId}/products/lead-magnet?step=thumbnail`, 
-      icon: Image, 
-      active: currentStep === "thumbnail" 
-    },
-    { 
-      label: "Product", 
-      href: `/store/${storeId}/products/lead-magnet?step=product`, 
-      icon: Package, 
-      active: currentStep === "product" 
-    },
-    { 
-      label: "Options", 
-      href: `/store/${storeId}/products/lead-magnet?step=options`, 
-      icon: Sliders, 
-      active: currentStep === "options" 
-    },
-  ], [storeId, currentStep]);
+  const steps = useMemo(() => {
+    const editParam = isEditMode ? `&edit=${editProductId}` : '';
+    return [
+      { 
+        label: "Thumbnail", 
+        href: `/store/${storeId}/products/lead-magnet?step=thumbnail${editParam}`, 
+        icon: Image, 
+        active: currentStep === "thumbnail" 
+      },
+      { 
+        label: "Product", 
+        href: `/store/${storeId}/products/lead-magnet?step=product${editParam}`, 
+        icon: Package, 
+        active: currentStep === "product" 
+      },
+      { 
+        label: "Options", 
+        href: `/store/${storeId}/products/lead-magnet?step=options${editParam}`, 
+        icon: Sliders, 
+        active: currentStep === "options" 
+      },
+    ];
+  }, [storeId, currentStep, isEditMode, editProductId]);
 
   return (
     <div className="max-w-lg">

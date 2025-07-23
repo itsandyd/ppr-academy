@@ -15,7 +15,7 @@ import Link from "next/link";
 import { schema, ProductSchema } from "./schema";
 import { useUploadThing } from "@/lib/uploadthing-hooks";
 import { useToast } from "@/hooks/use-toast";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
 // FormSection component
@@ -39,10 +39,16 @@ export function ProductForm() {
   const params = useParams();
   const searchParams = useSearchParams();
   const storeId = params.storeId as string;
+  const editProductId = searchParams.get("edit");
+  const isEditMode = !!editProductId;
   const [isUploading, setIsUploading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [uploadedFileUrl, setUploadedFileUrl] = useState<string>("");
   const [uploadedFileName, setUploadedFileName] = useState<string>("");
   const { toast } = useToast();
+  
+  // Convex mutations
+  const updateProduct = useMutation(api.digitalProducts.updateProduct);
   
   // Memoize currentStep to prevent infinite re-renders
   const currentStep = useMemo(() => {
@@ -81,17 +87,23 @@ export function ProductForm() {
         
         console.log("📁 Loading saved lead magnet:", latestLeadMagnet);
         
-        // Check if it has a resource file URL (stored in imageUrl or a custom field)
-        // For now, we'll assume file resources are stored in a custom way
-        // This will need to be enhanced when we save the actual resource data
-        if (latestLeadMagnet.imageUrl && latestLeadMagnet.imageUrl.includes('utfs.io')) {
-          console.log("📁 Found saved resource file:", latestLeadMagnet.imageUrl);
-          setUploadedFileUrl(latestLeadMagnet.imageUrl);
-          setUploadedFileName(latestLeadMagnet.title || "saved-file");
-          setValue("resourceFile", latestLeadMagnet.imageUrl, { shouldValidate: true, shouldDirty: true });
-          setValue("resourceType", "file");
+        // Load the saved resource data from downloadUrl
+        if (latestLeadMagnet.downloadUrl) {
+          console.log("📁 Found saved resource:", latestLeadMagnet.downloadUrl);
+          
+          // Check if it's a file URL or external URL
+          if (latestLeadMagnet.downloadUrl.includes('utfs.io') || latestLeadMagnet.downloadUrl.includes('uploadthing')) {
+            // It's an uploaded file
+            setUploadedFileUrl(latestLeadMagnet.downloadUrl);
+            setUploadedFileName(latestLeadMagnet.title || "saved-file");
+            setValue("resourceFile", latestLeadMagnet.downloadUrl, { shouldValidate: true, shouldDirty: true });
+            setValue("resourceType", "file");
+          } else {
+            // It's an external URL
+            setValue("resourceUrl", latestLeadMagnet.downloadUrl, { shouldValidate: true, shouldDirty: true });
+            setValue("resourceType", "url");
+          }
         }
-        // TODO: Load URL-based resources when that data structure is defined
       }
     }
   }, [existingProducts, setValue]);
@@ -180,7 +192,7 @@ export function ProductForm() {
     }
   };
 
-  const onSubmit = (data: ProductSchema) => {
+  const onSubmit = async (data: ProductSchema) => {
     console.log("✅ Product submitted:", data);
     
     // Validate that we have either file or URL
@@ -201,21 +213,69 @@ export function ProductForm() {
       });
       return;
     }
-    
-    // TODO: Save the resource data to the lead magnet
-    console.log("📦 Resource data ready:", {
-      type: data.resourceType,
-      file: data.resourceFile,
-      url: data.resourceUrl
-    });
-    
-    toast({
-      title: "Success",
-      description: "Lead magnet resource saved!",
-    });
-    
-    // Navigate to options step
-    window.location.href = `/store/${storeId}/products/lead-magnet?step=options`;
+
+    setIsLoading(true);
+    try {
+      let productToUpdate: any = null;
+      
+      if (isEditMode && editProductId) {
+        // In edit mode, update the specific product being edited
+        productToUpdate = { _id: editProductId as any };
+      } else {
+        // In create mode, find the most recent lead magnet to update
+        if (existingProducts && existingProducts.length > 0) {
+          const leadMagnets = existingProducts.filter((product: any) => 
+            product.price === 0 && product.style === "card"
+          );
+          
+          if (leadMagnets.length > 0) {
+            productToUpdate = leadMagnets.sort((a: any, b: any) => b._creationTime - a._creationTime)[0];
+          }
+        }
+      }
+
+      if (productToUpdate) {
+        // Update the lead magnet with the resource URL
+        const downloadUrl = data.resourceType === "file" ? data.resourceFile : data.resourceUrl;
+        
+        await updateProduct({
+          id: productToUpdate._id,
+          downloadUrl: downloadUrl
+        });
+        
+        console.log("📦 Resource saved to database:", {
+          productId: productToUpdate._id,
+          type: data.resourceType,
+          downloadUrl: downloadUrl
+        });
+        
+        toast({
+          title: "Success",
+          description: "Lead magnet resource saved!",
+        });
+        
+        // Navigate to options step
+        const nextUrl = isEditMode 
+          ? `/store/${storeId}/products/lead-magnet?step=options&edit=${editProductId}`
+          : `/store/${storeId}/products/lead-magnet?step=options`;
+        window.location.href = nextUrl;
+      } else {
+        toast({
+          title: "Error",
+          description: "No lead magnet found. Please complete the thumbnail step first.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error saving resource:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save resource. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Debug form state
@@ -247,26 +307,29 @@ export function ProductForm() {
   }
 
   // Memoize steps array to prevent unnecessary re-renders
-  const steps = useMemo(() => [
-    { 
-      label: "Thumbnail", 
-      href: `/store/${storeId}/products/lead-magnet?step=thumbnail`, 
-      icon: Image, 
-      active: currentStep === "thumbnail" 
-    },
-    { 
-      label: "Product", 
-      href: `/store/${storeId}/products/lead-magnet?step=product`, 
-      icon: Package, 
-      active: currentStep === "product" 
-    },
-    { 
-      label: "Options", 
-      href: `/store/${storeId}/products/lead-magnet?step=options`, 
-      icon: Sliders, 
-      active: currentStep === "options" 
-    },
-  ], [storeId, currentStep]);
+  const steps = useMemo(() => {
+    const editParam = isEditMode ? `&edit=${editProductId}` : '';
+    return [
+      { 
+        label: "Thumbnail", 
+        href: `/store/${storeId}/products/lead-magnet?step=thumbnail${editParam}`, 
+        icon: Image, 
+        active: currentStep === "thumbnail" 
+      },
+      { 
+        label: "Product", 
+        href: `/store/${storeId}/products/lead-magnet?step=product${editParam}`, 
+        icon: Package, 
+        active: currentStep === "product" 
+      },
+      { 
+        label: "Options", 
+        href: `/store/${storeId}/products/lead-magnet?step=options${editParam}`, 
+        icon: Sliders, 
+        active: currentStep === "options" 
+      },
+    ];
+  }, [storeId, currentStep, isEditMode, editProductId]);
 
   return (
     <div className="max-w-lg">
@@ -500,9 +563,16 @@ export function ProductForm() {
           <Button
             type="submit"
             className="bg-[#6356FF] hover:bg-[#5248E6] text-white px-8 py-2 rounded-lg"
-            disabled={!formState.isValid || isUploading}
+            disabled={!formState.isValid || isUploading || isLoading}
           >
-            Save & Continue
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Save & Continue"
+            )}
           </Button>
           
           {/* Manual override when file is uploaded but form validation is stuck

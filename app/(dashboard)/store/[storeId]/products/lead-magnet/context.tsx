@@ -17,6 +17,7 @@ interface LeadMagnetContextType {
     subtitle: string;
     imageUrl: string;
     ctaText: string;
+    downloadUrl: string;
     formFields: FormField[];
   };
   updateLeadMagnetData: (data: Partial<{
@@ -24,6 +25,7 @@ interface LeadMagnetContextType {
     subtitle: string;
     imageUrl: string;
     ctaText: string;
+    downloadUrl: string;
     formFields: FormField[];
   }>) => void;
 }
