@@ -129,7 +129,7 @@ export default function EmailCampaignsPage() {
           <Button 
             onClick={() => router.push(`/store/${storeId}/email-campaigns/create`)}
             className="flex items-center gap-2"
-            disabled={!emailConfig?.isVerified}
+            disabled={!emailConfig?.isConfigured}
           >
             <Plus className="w-4 h-4" />
             Create Campaign
@@ -138,20 +138,17 @@ export default function EmailCampaignsPage() {
       </div>
 
       {/* Email Setup Banner */}
-      {emailConfig !== undefined && !emailConfig?.isVerified && (
+      {emailConfig !== undefined && !emailConfig?.isConfigured && (
         <Card className="border-orange-200 bg-orange-50">
           <CardContent className="p-6">
             <div className="flex items-start gap-4">
               <AlertTriangle className="w-6 h-6 text-orange-600 mt-1" />
               <div className="flex-1">
                 <h3 className="font-semibold text-orange-900 mb-2">
-                  {!emailConfig?.hasApiKey ? "Email Setup Required" : "Email Testing Required"}
+                  Email Setup Required
                 </h3>
                 <p className="text-orange-700 mb-4">
-                  {!emailConfig?.hasApiKey 
-                    ? "Connect your Resend account to start sending professional email campaigns to your customers."
-                    : "Your Resend API key is configured but needs testing. Please verify your setup to start sending campaigns."
-                  }
+                  Configure your email sender settings to start sending professional email campaigns to your customers. The platform manages the email service centrally.
                 </p>
                 <div className="flex items-center gap-3">
                   <Button 
@@ -159,10 +156,10 @@ export default function EmailCampaignsPage() {
                     className="bg-orange-600 hover:bg-orange-700 text-white"
                   >
                     <Settings className="w-4 h-4 mr-2" />
-                    {!emailConfig?.hasApiKey ? "Setup Email" : "Test Configuration"}
+                    Setup Email Settings
                   </Button>
                   <p className="text-sm text-orange-600">
-                    Free tier: 3,000 emails/month with Resend
+                    Centrally managed email service
                   </p>
                 </div>
               </div>
