@@ -33,65 +33,35 @@ export default function CustomersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
 
-  // TODO: Replace with actual API calls once Convex API is regenerated
-  // const customers = useQuery(
-  //   api.customers.getCustomersForStore,
-  //   storeId ? { storeId } : "skip"
-  // );
+  // Use the customers API directly (now that Convex dev server is running)
+  const customersFromDB = useQuery(
+    api.customers.getCustomersForStore,
+    storeId ? { storeId } : "skip"
+  );
   
-  // const customerStats = useQuery(
-  //   api.customers.getCustomerStats,
-  //   user?.id ? { adminUserId: user.id } : "skip"
-  // );
+  const customerStatsFromDB = useQuery(
+    api.customers.getCustomerStats,
+    user?.id ? { adminUserId: user.id } : "skip"
+  );
 
-  // Mock data - will be replaced with real data once API is ready
-  const customers = [
-    {
-      _id: "1",
-      _creationTime: Date.now() - 86400000,
-      name: "John Doe",
-      email: "john@example.com",
-      type: "lead" as const,
-      source: "Free 32 Page EQ Cheat Sheet",
-      lastActivity: Date.now() - 3600000,
-      totalSpent: 0,
-      status: "active" as const,
-    },
-    {
-      _id: "2",
-      _creationTime: Date.now() - 172800000,
-      name: "Jane Smith",
-      email: "jane@example.com",
-      type: "paying" as const,
-      source: "Digital Marketing Course",
-      lastActivity: Date.now() - 86400000,
-      totalSpent: 199.98,
-      status: "active" as const,
-    },
-    {
-      _id: "3",
-      _creationTime: Date.now() - 259200000,
-      name: "Mike Johnson",
-      email: "mike@example.com",
-      type: "subscription" as const,
-      source: "Pro Membership",
-      lastActivity: Date.now() - 21600000,
-      totalSpent: 299.99,
-      status: "active" as const,
-    },
-  ];
+  // Note: Mock data removed since we're now using real Convex API
 
-  const customerStats = {
-    totalCustomers: customers.length,
-    leads: customers.filter(c => c.type === "lead").length,
-    payingCustomers: customers.filter(c => c.type === "paying").length,
-    subscriptionCustomers: customers.filter(c => c.type === "subscription").length,
-    totalRevenue: customers.reduce((sum, c) => sum + (c.totalSpent || 0), 0),
+  // Use real data from database (with fallback during loading)
+  const customers = customersFromDB || [];
+  const customerStats = customerStatsFromDB || {
+    totalCustomers: 0,
+    leads: 0,
+    payingCustomers: 0,
+    subscriptionCustomers: 0,
+    totalRevenue: 0,
     averageOrderValue: 0,
   };
 
+  // Log the data source for debugging
+  console.log("✅ Using real customer data from database");
+
   // Filter customers based on search and active filter
-  const filteredCustomers = customers.filter(customer => {
+  const filteredCustomers = customers.filter((customer: any) => {
     const matchesSearch = customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          customer.source?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -173,6 +143,8 @@ export default function CustomersPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-8 pt-10 pb-24 space-y-6">
+      {/* Data Source Indicator - Removed since we're now using real API */}
+
       {/* Filter chips + Add Contacts button */}
       <div className="flex justify-between">
         <div className="flex flex-wrap gap-2">
@@ -284,7 +256,7 @@ export default function CustomersPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {filteredCustomers.map((customer) => (
+              {filteredCustomers.map((customer: any) => (
                 <Card key={customer._id} className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
@@ -292,7 +264,7 @@ export default function CustomersPage() {
                         <AvatarFallback className="bg-blue-100 text-blue-600">
                           {customer.name
                             .split(" ")
-                            .map((n) => n.charAt(0))
+                            .map((n: string) => n.charAt(0))
                             .join("")
                             .toUpperCase()}
                         </AvatarFallback>
