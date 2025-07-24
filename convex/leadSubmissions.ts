@@ -95,33 +95,57 @@ export const submitLead = mutation({
     }
 
     // Send automated emails (if Resend is configured)
+    console.log("🚀 STARTING EMAIL PROCESS - this should always appear");
+    
     try {
+      console.log("📧 Checking email configuration for product:", {
+        productId: args.productId,
+        productTitle: product?.title,
+        hasDownloadUrl: !!product?.downloadUrl,
+        hasEmailSubject: !!product?.confirmationEmailSubject,
+        hasEmailBody: !!product?.confirmationEmailBody,
+        emailSubject: product?.confirmationEmailSubject,
+        emailBody: product?.confirmationEmailBody?.slice(0, 100) + "..." // First 100 chars
+      });
+
       // Send confirmation email to customer with download link
       if (product?.downloadUrl && product.confirmationEmailSubject && product.confirmationEmailBody) {
-        console.log("📧 Sending lead magnet confirmation email for:", args.email);
+        console.log("📧 ✅ All email requirements met! Sending confirmation email for:", args.email);
         
-        // Use the centralized email action to send confirmation email
-        const emailResult = await ctx.scheduler.runAfter(0, (internal as any).emails.sendLeadMagnetConfirmation, {
-          storeId: args.storeId as any,
-          customerEmail: args.email,
-          customerName: args.name,
-          productName: product.title,
-          downloadUrl: product.downloadUrl,
-          confirmationSubject: product.confirmationEmailSubject,
-          confirmationBody: product.confirmationEmailBody,
-        });
-        
-        console.log("✅ Lead magnet confirmation email scheduled");
+        try {
+          // Use the centralized email action to send confirmation email
+          console.log("🔄 About to schedule email action...");
+          const emailResult = await ctx.scheduler.runAfter(0, (internal as any).emails.sendLeadMagnetConfirmation, {
+            storeId: args.storeId as any,
+            customerEmail: args.email,
+            customerName: args.name,
+            productName: product.title,
+            downloadUrl: product.downloadUrl,
+            confirmationSubject: product.confirmationEmailSubject,
+            confirmationBody: product.confirmationEmailBody,
+          });
+          
+          console.log("✅ Lead magnet confirmation email scheduled successfully:", emailResult);
+        } catch (scheduleError) {
+          console.error("❌ Failed to schedule email:", scheduleError);
+        }
       } else {
-        console.log("ℹ️ No confirmation email configured for this lead magnet");
+        console.log("❌ Cannot send confirmation email - missing requirements:", {
+          hasDownloadUrl: !!product?.downloadUrl,
+          hasEmailSubject: !!product?.confirmationEmailSubject,
+          hasEmailBody: !!product?.confirmationEmailBody,
+          productTitle: product?.title
+        });
       }
 
       // Send admin notification (optional - can be enabled later)
       // console.log("📧 Admin notification can be added here if needed");
     } catch (emailError) {
-      console.warn("⚠️ Email sending failed, but lead was still recorded:", emailError);
+      console.error("⚠️ Email sending failed, but lead was still recorded:", emailError);
       // Don't fail the entire operation if emails fail
     }
+    
+    console.log("🏁 EMAIL PROCESS COMPLETE - this should always appear");
 
     return {
       submissionId,

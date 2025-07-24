@@ -38,8 +38,25 @@ function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData }: { le
 
     if (!leadMagnet?.productId || !storeData?.store?._id || !storeData?.store?.userId) {
       alert("Missing product or store information");
+      console.error("❌ Missing data:", {
+        productId: leadMagnet?.productId,
+        storeId: storeData?.store?._id,
+        adminUserId: storeData?.store?.userId,
+        leadMagnet,
+        storeData
+      });
       return;
     }
+
+    console.log("🚀 Starting lead submission with data:", {
+      name: formData.name.trim(),
+      email: formData.email.trim(),
+      productId: leadMagnet.productId,
+      storeId: storeData.store._id,
+      adminUserId: storeData.store.userId,
+      hasSubmitFunction: !!submitLead,
+      hasAPI: hasLeadSubmissionsAPI
+    });
 
     setIsSubmitting(true);
     try {
@@ -47,6 +64,7 @@ function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData }: { le
 
       if (submitLead && hasLeadSubmissionsAPI) {
         // Use real API if available
+        console.log("📡 Calling submitLead mutation...");
         result = await submitLead({
           name: formData.name.trim(),
           email: formData.email.trim(),
@@ -62,6 +80,7 @@ function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData }: { le
           submissionId: result.submissionId,
           customerCreated: true,
           downloadAvailable: result.hasAccess,
+          result
         });
       } else {
         // Fallback simulation (until API is regenerated)
