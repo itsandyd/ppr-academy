@@ -107,11 +107,30 @@ export default defineSchema({
   // Store & E-commerce
   stores: defineTable({
     name: v.string(),
-    slug: v.optional(v.string()),
+    slug: v.string(),
+    description: v.optional(v.string()),
     userId: v.string(),
+    avatar: v.optional(v.string()),
+    bio: v.optional(v.string()),
+    socialLinks: v.optional(v.object({
+      website: v.optional(v.string()),
+      twitter: v.optional(v.string()),
+      instagram: v.optional(v.string()),
+      linkedin: v.optional(v.string()),
+      youtube: v.optional(v.string()),
+    })),
+    // Email Sender Configuration (API key handled centrally via environment variables)
+    emailConfig: v.optional(v.object({
+      fromEmail: v.string(),
+      fromName: v.optional(v.string()),
+      replyToEmail: v.optional(v.string()),
+      isConfigured: v.optional(v.boolean()),
+      lastTestedAt: v.optional(v.number()),
+      emailsSentThisMonth: v.optional(v.number()),
+    })),
   })
-  .index("by_userId", ["userId"])
-  .index("by_slug", ["slug"]),
+    .index("by_userId", ["userId"])
+    .index("by_slug", ["slug"]),
 
   // Digital Products
   digitalProducts: defineTable({
@@ -282,16 +301,85 @@ export default defineSchema({
     planName: v.string(),
     storeId: v.string(),
     adminUserId: v.string(),
-    status: v.union(v.literal("active"), v.literal("cancelled"), v.literal("paused"), v.literal("expired")),
+    status: v.union(v.literal("active"), v.literal("cancelled"), v.literal("paused")),
     amount: v.number(),
-    currency: v.optional(v.string()),
-    billingInterval: v.union(v.literal("monthly"), v.literal("yearly"), v.literal("weekly")),
+    currency: v.string(),
+    billingInterval: v.union(v.literal("monthly"), v.literal("yearly")),
     nextBillingDate: v.optional(v.number()),
-    subscriptionId: v.optional(v.string()), // Stripe subscription ID
+    subscriptionId: v.optional(v.string()),
     cancelledAt: v.optional(v.number()),
   })
-  .index("by_customerId", ["customerId"])
-  .index("by_storeId", ["storeId"])
-  .index("by_adminUserId", ["adminUserId"])
-  .index("by_status", ["status"]),
+    .index("by_customerId", ["customerId"])
+    .index("by_storeId", ["storeId"])
+    .index("by_adminUserId", ["adminUserId"])
+    .index("by_status", ["status"]),
+
+  // Email Campaign System
+  emailCampaigns: defineTable({
+    name: v.string(),
+    subject: v.string(),
+    content: v.string(), // HTML content
+    storeId: v.string(),
+    adminUserId: v.string(),
+    status: v.union(
+      v.literal("draft"), 
+      v.literal("scheduled"), 
+      v.literal("sending"), 
+      v.literal("sent"), 
+      v.literal("failed")
+    ),
+    scheduledAt: v.optional(v.number()),
+    sentAt: v.optional(v.number()),
+    recipientCount: v.optional(v.number()),
+    deliveredCount: v.optional(v.number()),
+    openedCount: v.optional(v.number()),
+    clickedCount: v.optional(v.number()),
+    fromEmail: v.string(),
+    replyToEmail: v.optional(v.string()),
+    tags: v.optional(v.array(v.string())),
+  })
+    .index("by_storeId", ["storeId"])
+    .index("by_adminUserId", ["adminUserId"])
+    .index("by_status", ["status"]),
+
+  emailCampaignRecipients: defineTable({
+    campaignId: v.id("emailCampaigns"),
+    customerId: v.id("customers"),
+    customerEmail: v.string(),
+    customerName: v.string(),
+    status: v.union(
+      v.literal("queued"),
+      v.literal("sent"), 
+      v.literal("delivered"),
+      v.literal("opened"),
+      v.literal("clicked"),
+      v.literal("bounced"),
+      v.literal("failed")
+    ),
+    sentAt: v.optional(v.number()),
+    deliveredAt: v.optional(v.number()),
+    openedAt: v.optional(v.number()),
+    clickedAt: v.optional(v.number()),
+    errorMessage: v.optional(v.string()),
+    resendMessageId: v.optional(v.string()),
+  })
+    .index("by_campaignId", ["campaignId"])
+    .index("by_customerId", ["customerId"])
+    .index("by_status", ["status"])
+    .index("by_campaignId_and_status", ["campaignId", "status"]),
+
+  emailTemplates: defineTable({
+    name: v.string(),
+    description: v.optional(v.string()),
+    subject: v.string(),
+    content: v.string(), // HTML content
+    storeId: v.string(),
+    adminUserId: v.string(),
+    category: v.optional(v.string()), // newsletter, promotion, announcement, etc.
+    isDefault: v.optional(v.boolean()),
+    thumbnail: v.optional(v.string()), // preview image URL
+  })
+    .index("by_storeId", ["storeId"])
+    .index("by_adminUserId", ["adminUserId"])
+    .index("by_category", ["category"]),
 }); 

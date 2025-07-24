@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Copy, Home, BarChart3, Users, Package, Store, Settings, HelpCircle, User } from "lucide-react";
+import { Copy, Home, BarChart3, Users, Package, Store, Settings, HelpCircle, User, Mail } from "lucide-react";
 import { usePathname, useParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
@@ -43,6 +43,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
     { icon: Home, href: "/home", label: "Home" },
     { icon: BarChart3, href: "/analytics", label: "Analytics" },
     { icon: Users, href: `/store/${storeId}/customers`, label: "Customers" },
+    { icon: Mail, href: `/store/${storeId}/email-campaigns`, label: "Email Campaigns" },
     { icon: Package, href: `/store/${storeId}/products`, label: "Products" },
     { icon: Store, href: "/store", label: "Store" },
   ];

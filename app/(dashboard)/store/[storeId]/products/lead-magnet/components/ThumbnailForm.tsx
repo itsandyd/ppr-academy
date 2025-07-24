@@ -165,20 +165,20 @@ export function ThumbnailForm() {
       } else {
         // Create new lead magnet as a digital product
         await createProduct({
-          title: data.title.trim(),
-          description: data.subtitle?.trim() || "",
-          price: 0, // Lead magnets are typically free
-          imageUrl: leadMagnetData.imageUrl || "",
-          storeId: storeId,
-          userId: user.id,
-          buttonLabel: data.button || "Get Free Resource",
-          style: "card", // Lead magnets typically use card style
-        });
+        title: data.title.trim(),
+        description: data.subtitle?.trim() || "",
+        price: 0, // Lead magnets are typically free
+        imageUrl: leadMagnetData.imageUrl || "",
+        storeId: storeId,
+        userId: user.id,
+        buttonLabel: data.button || "Get Free Resource",
+        style: "card", // Lead magnets typically use card style
+      });
 
-        toast({
-          title: "Success",
+      toast({
+        title: "Success",
           description: "Lead magnet created successfully!",
-        });
+      });
       }
 
       // Navigate to the next step (product page)

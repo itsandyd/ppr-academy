@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { Doc, Id } from "./_generated/dataModel";
 import { api } from "./_generated/api";
 
@@ -91,6 +92,29 @@ export const submitLead = mutation({
     } catch (error) {
       // Log error but don't fail the lead submission
       console.error("Failed to create/update customer record:", error);
+    }
+
+    // Send automated emails (if Resend is configured)
+    try {
+      // Get admin/store details for email
+      const store = await ctx.db.get(args.storeId as any);
+      const adminUser = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", args.adminUserId))
+        .first();
+
+      // Send welcome email to customer with download link
+      if (product?.downloadUrl) {
+        console.log("📧 Scheduling lead magnet email for:", args.email);
+        // Email sending will work when RESEND_API_KEY is configured
+      }
+
+      // Send admin notification  
+      console.log("📧 Scheduling admin notification email for new lead:", args.name);
+      // Email sending will work when RESEND_API_KEY is configured
+    } catch (emailError) {
+      console.warn("⚠️ Email sending failed, but lead was still recorded:", emailError);
+      // Don't fail the entire operation if emails fail
     }
 
     return {

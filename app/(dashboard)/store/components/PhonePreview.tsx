@@ -499,7 +499,7 @@ export function PhonePreview({
               <span className="text-xs text-muted-foreground truncate block">@{store.name.toLowerCase().replace(/\s+/g, '')}</span>
             ) : null}
           </div>
-        </div>
+          </div>
         </div>
         
         {/* Dynamic Content */}

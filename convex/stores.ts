@@ -2,16 +2,37 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
 
+// Reusable store validator for return types
+const storeValidator = v.object({
+  _id: v.id("stores"),
+  _creationTime: v.number(),
+  name: v.string(),
+  slug: v.optional(v.string()),
+  description: v.optional(v.string()),
+  userId: v.string(),
+  avatar: v.optional(v.string()),
+  bio: v.optional(v.string()),
+  socialLinks: v.optional(v.object({
+    website: v.optional(v.string()),
+    twitter: v.optional(v.string()),
+    instagram: v.optional(v.string()),
+    linkedin: v.optional(v.string()),
+    youtube: v.optional(v.string()),
+  })),
+  emailConfig: v.optional(v.object({
+    fromEmail: v.string(),
+    fromName: v.optional(v.string()),
+    replyToEmail: v.optional(v.string()),
+    isConfigured: v.optional(v.boolean()),
+    lastTestedAt: v.optional(v.number()),
+    emailsSentThisMonth: v.optional(v.number()),
+  })),
+});
+
 // Get all stores for a user
 export const getStoresByUser = query({
   args: { userId: v.string() },
-  returns: v.array(v.object({
-    _id: v.id("stores"),
-    _creationTime: v.number(),
-    name: v.string(),
-    slug: v.optional(v.string()),
-    userId: v.string(),
-  })),
+  returns: v.array(storeValidator),
   handler: async (ctx, args) => {
     return await ctx.db
       .query("stores")
@@ -23,16 +44,7 @@ export const getStoresByUser = query({
 // Get store by ID
 export const getStoreById = query({
   args: { storeId: v.id("stores") },
-  returns: v.union(
-    v.object({
-      _id: v.id("stores"),
-      _creationTime: v.number(),
-      name: v.string(),
-      slug: v.optional(v.string()),
-      userId: v.string(),
-    }),
-    v.null()
-  ),
+  returns: v.union(storeValidator, v.null()),
   handler: async (ctx, args) => {
     return await ctx.db.get(args.storeId);
   },
@@ -41,16 +53,7 @@ export const getStoreById = query({
 // Get store by slug
 export const getStoreBySlug = query({
   args: { slug: v.string() },
-  returns: v.union(
-    v.object({
-      _id: v.id("stores"),
-      _creationTime: v.number(),
-      name: v.string(),
-      slug: v.optional(v.string()),
-      userId: v.string(),
-    }),
-    v.null()
-  ),
+  returns: v.union(storeValidator, v.null()),
   handler: async (ctx, args) => {
     return await ctx.db
       .query("stores")
@@ -190,6 +193,147 @@ export const deleteStore = mutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     await ctx.db.delete(args.id);
+    return null;
+  },
+}); 
+
+// Update store email sender configuration
+export const updateEmailConfig = mutation({
+  args: {
+    storeId: v.id("stores"),
+    fromEmail: v.string(),
+    fromName: v.optional(v.string()),
+    replyToEmail: v.optional(v.string()),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    try {
+      const store = await ctx.db.get(args.storeId);
+      if (!store) {
+        return { success: false, message: "Store not found" };
+      }
+
+      // Update the store with email sender config
+      await ctx.db.patch(args.storeId, {
+        emailConfig: {
+          fromEmail: args.fromEmail,
+          fromName: args.fromName,
+          replyToEmail: args.replyToEmail,
+          isConfigured: true,
+          emailsSentThisMonth: store.emailConfig?.emailsSentThisMonth || 0,
+          lastTestedAt: store.emailConfig?.lastTestedAt,
+        },
+      });
+
+      return { success: true, message: "Email configuration saved successfully" };
+    } catch (error) {
+      console.error("Failed to update email config:", error);
+      return { success: false, message: "Failed to save email configuration" };
+    }
+  },
+});
+
+// Get store email configuration
+export const getEmailConfig = query({
+  args: { storeId: v.id("stores") },
+  returns: v.union(v.null(), v.object({
+    fromEmail: v.string(),
+    fromName: v.optional(v.string()),
+    replyToEmail: v.optional(v.string()),
+    isConfigured: v.optional(v.boolean()),
+    lastTestedAt: v.optional(v.number()),
+    emailsSentThisMonth: v.optional(v.number()),
+  })),
+  handler: async (ctx, args) => {
+    const store = await ctx.db.get(args.storeId);
+    if (!store?.emailConfig) {
+      return null;
+    }
+
+    const config = store.emailConfig;
+    return {
+      fromEmail: config.fromEmail,
+      fromName: config.fromName,
+      replyToEmail: config.replyToEmail,
+      isConfigured: config.isConfigured,
+      lastTestedAt: config.lastTestedAt,
+      emailsSentThisMonth: config.emailsSentThisMonth,
+    };
+  },
+});
+
+// Internal function to get store email config for sending emails (no API key needed)
+export const getStoreEmailConfigInternal = query({
+  args: { storeId: v.id("stores") },
+  returns: v.union(v.null(), v.object({
+    fromEmail: v.string(),
+    fromName: v.optional(v.string()),
+    replyToEmail: v.optional(v.string()),
+    isConfigured: v.optional(v.boolean()),
+    lastTestedAt: v.optional(v.number()),
+    emailsSentThisMonth: v.optional(v.number()),
+  })),
+  handler: async (ctx, args) => {
+    const store = await ctx.db.get(args.storeId);
+    return store?.emailConfig || null;
+  },
+});
+
+// Update email usage tracking
+export const updateEmailUsage = mutation({
+  args: {
+    storeId: v.id("stores"),
+    emailsSent: v.number(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const store = await ctx.db.get(args.storeId);
+    if (!store?.emailConfig) return null;
+
+    const currentMonth = new Date().getMonth();
+    const lastTestedMonth = store.emailConfig.lastTestedAt 
+      ? new Date(store.emailConfig.lastTestedAt).getMonth()
+      : -1;
+
+    // Reset counter if it's a new month
+    const emailsSentThisMonth = currentMonth !== lastTestedMonth 
+      ? args.emailsSent 
+      : (store.emailConfig.emailsSentThisMonth || 0) + args.emailsSent;
+
+    await ctx.db.patch(args.storeId, {
+      emailConfig: {
+        ...store.emailConfig,
+        emailsSentThisMonth,
+        lastTestedAt: Date.now(),
+      },
+    });
+
+    return null;
+  },
+});
+
+// Mark email config as configured/tested
+export const markEmailConfigVerified = mutation({
+  args: {
+    storeId: v.id("stores"),
+    isConfigured: v.boolean(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const store = await ctx.db.get(args.storeId);
+    if (!store?.emailConfig) return null;
+
+    await ctx.db.patch(args.storeId, {
+      emailConfig: {
+        ...store.emailConfig,
+        isConfigured: args.isConfigured,
+        lastTestedAt: Date.now(),
+      },
+    });
+
     return null;
   },
 }); 

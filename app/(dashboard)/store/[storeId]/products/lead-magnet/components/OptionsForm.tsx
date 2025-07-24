@@ -68,24 +68,24 @@ export function OptionsForm() {
   const steps = useMemo(() => {
     const editParam = isEditMode ? `&edit=${editProductId}` : '';
     return [
-      { 
-        label: "Thumbnail", 
+    { 
+      label: "Thumbnail", 
         href: `/store/${storeId}/products/lead-magnet?step=thumbnail${editParam}`, 
-        icon: Image, 
-        active: currentStep === "thumbnail" 
-      },
-      { 
-        label: "Product", 
+      icon: Image, 
+      active: currentStep === "thumbnail" 
+    },
+    { 
+      label: "Product", 
         href: `/store/${storeId}/products/lead-magnet?step=product${editParam}`, 
-        icon: Package, 
-        active: currentStep === "product" 
-      },
-      { 
-        label: "Options", 
+      icon: Package, 
+      active: currentStep === "product" 
+    },
+    { 
+      label: "Options", 
         href: `/store/${storeId}/products/lead-magnet?step=options${editParam}`, 
-        icon: Sliders, 
-        active: currentStep === "options" 
-      },
+      icon: Sliders, 
+      active: currentStep === "options" 
+    },
     ];
   }, [storeId, currentStep, isEditMode, editProductId]);
 

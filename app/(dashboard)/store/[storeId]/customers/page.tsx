@@ -7,6 +7,7 @@ import { useUser } from "@clerk/nextjs";
 import { useParams } from "next/navigation";
 import { FilterChip } from './components/FilterChip';
 import { EmptyStateCard } from './components/EmptyStateCard';
+import { AddContactsDialog } from './components/AddContactsDialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -131,9 +132,11 @@ export default function CustomersPage() {
             ))}
           </div>
 
-          <Button variant="outline" className="h-8 px-5 border-[#6356FF] text-[#6356FF] hover:bg-[#F1EEFF]">
-            <Plus className="h-4 w-4 mr-1" /> Add Contacts
-          </Button>
+          <AddContactsDialog>
+            <Button variant="outline" className="h-8 px-5 border-[#6356FF] text-[#6356FF] hover:bg-[#F1EEFF]">
+              <Plus className="h-4 w-4 mr-1" /> Add Contacts
+            </Button>
+          </AddContactsDialog>
         </div>
 
         <EmptyStateCard />
@@ -158,9 +161,11 @@ export default function CustomersPage() {
           ))}
         </div>
 
-        <Button variant="outline" className="h-8 px-5 border-[#6356FF] text-[#6356FF] hover:bg-[#F1EEFF]">
-          <Plus className="h-4 w-4 mr-1" /> Add Contacts
-        </Button>
+        <AddContactsDialog>
+          <Button variant="outline" className="h-8 px-5 border-[#6356FF] text-[#6356FF] hover:bg-[#F1EEFF]">
+            <Plus className="h-4 w-4 mr-1" /> Add Contacts
+          </Button>
+        </AddContactsDialog>
       </div>
 
       {/* Stats Cards */}

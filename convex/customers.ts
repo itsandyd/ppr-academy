@@ -181,7 +181,7 @@ export const createSubscription = mutation({
     adminUserId: v.string(),
     amount: v.number(),
     currency: v.optional(v.string()),
-    billingInterval: v.union(v.literal("monthly"), v.literal("yearly"), v.literal("weekly")),
+    billingInterval: v.union(v.literal("monthly"), v.literal("yearly")),
     subscriptionId: v.optional(v.string()),
   },
   returns: v.id("subscriptions"),

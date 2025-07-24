@@ -358,29 +358,29 @@ function LinkInBioLayout({ products, leadMagnetData, storeData }: { products: an
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
               {product.imageUrl ? (
-                <img 
-                  src={product.imageUrl} 
-                  alt={product.title}
-                  className="w-full h-full object-cover"
-                />
+          <img 
+            src={product.imageUrl} 
+            alt={product.title}
+            className="w-full h-full object-cover"
+          />
               ) : (
                 <Store className="w-6 h-6 text-blue-600" />
               )}
-            </div>
+        </div>
             <div className="flex-1 min-w-0">
               <h3 className="font-semibold text-sm truncate">
-                {product.title}
-              </h3>
+        {product.title}
+      </h3>
               <p className="text-xs text-muted-foreground truncate">
                 {product.description || "Digital Product"}
-              </p>
+        </p>
             </div>
             <div className="flex items-center gap-1 flex-shrink-0">
-              <Badge variant="secondary" className="text-xs">
+        <Badge variant="secondary" className="text-xs">
                 ${product.price}
-              </Badge>
+        </Badge>
               <ExternalLink className="w-4 h-4 text-muted-foreground" />
-            </div>
+      </div>
           </div>
         </Card>
       ))}

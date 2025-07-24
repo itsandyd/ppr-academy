@@ -95,9 +95,9 @@ export function ProductForm() {
           if (latestLeadMagnet.downloadUrl.includes('utfs.io') || latestLeadMagnet.downloadUrl.includes('uploadthing')) {
             // It's an uploaded file
             setUploadedFileUrl(latestLeadMagnet.downloadUrl);
-            setUploadedFileName(latestLeadMagnet.title || "saved-file");
+          setUploadedFileName(latestLeadMagnet.title || "saved-file");
             setValue("resourceFile", latestLeadMagnet.downloadUrl, { shouldValidate: true, shouldDirty: true });
-            setValue("resourceType", "file");
+          setValue("resourceType", "file");
           } else {
             // It's an external URL
             setValue("resourceUrl", latestLeadMagnet.downloadUrl, { shouldValidate: true, shouldDirty: true });
@@ -213,7 +213,7 @@ export function ProductForm() {
       });
       return;
     }
-
+    
     setIsLoading(true);
     try {
       let productToUpdate: any = null;
@@ -245,16 +245,16 @@ export function ProductForm() {
         
         console.log("📦 Resource saved to database:", {
           productId: productToUpdate._id,
-          type: data.resourceType,
+      type: data.resourceType,
           downloadUrl: downloadUrl
-        });
-        
-        toast({
-          title: "Success",
-          description: "Lead magnet resource saved!",
-        });
-        
-        // Navigate to options step
+    });
+    
+    toast({
+      title: "Success",
+      description: "Lead magnet resource saved!",
+    });
+    
+    // Navigate to options step
         const nextUrl = isEditMode 
           ? `/store/${storeId}/products/lead-magnet?step=options&edit=${editProductId}`
           : `/store/${storeId}/products/lead-magnet?step=options`;
@@ -310,24 +310,24 @@ export function ProductForm() {
   const steps = useMemo(() => {
     const editParam = isEditMode ? `&edit=${editProductId}` : '';
     return [
-      { 
-        label: "Thumbnail", 
+    { 
+      label: "Thumbnail", 
         href: `/store/${storeId}/products/lead-magnet?step=thumbnail${editParam}`, 
-        icon: Image, 
-        active: currentStep === "thumbnail" 
-      },
-      { 
-        label: "Product", 
+      icon: Image, 
+      active: currentStep === "thumbnail" 
+    },
+    { 
+      label: "Product", 
         href: `/store/${storeId}/products/lead-magnet?step=product${editParam}`, 
-        icon: Package, 
-        active: currentStep === "product" 
-      },
-      { 
-        label: "Options", 
+      icon: Package, 
+      active: currentStep === "product" 
+    },
+    { 
+      label: "Options", 
         href: `/store/${storeId}/products/lead-magnet?step=options${editParam}`, 
-        icon: Sliders, 
-        active: currentStep === "options" 
-      },
+      icon: Sliders, 
+      active: currentStep === "options" 
+    },
     ];
   }, [storeId, currentStep, isEditMode, editProductId]);
 
