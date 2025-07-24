@@ -193,6 +193,37 @@ export const updateProduct = mutation({
   },
 });
 
+// Update email confirmation settings for a product
+export const updateEmailConfirmation = mutation({
+  args: {
+    productId: v.id("digitalProducts"),
+    confirmationEmailSubject: v.string(),
+    confirmationEmailBody: v.string(),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    try {
+      const product = await ctx.db.get(args.productId);
+      if (!product) {
+        return { success: false, message: "Product not found" };
+      }
+
+      await ctx.db.patch(args.productId, {
+        confirmationEmailSubject: args.confirmationEmailSubject,
+        confirmationEmailBody: args.confirmationEmailBody,
+      });
+
+      return { success: true, message: "Email confirmation settings updated successfully" };
+    } catch (error) {
+      console.error("Failed to update email confirmation settings:", error);
+      return { success: false, message: "Failed to update email confirmation settings" };
+    }
+  },
+});
+
 // Delete digital product
 export const deleteProduct = mutation({
   args: { id: v.id("digitalProducts") },

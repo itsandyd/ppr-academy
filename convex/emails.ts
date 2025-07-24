@@ -119,6 +119,104 @@ export const testStoreEmailConfig = action({
   },
 });
 
+// Send lead magnet confirmation email using centralized Resend
+export const sendLeadMagnetConfirmation = action({
+  args: {
+    storeId: v.id("stores"),
+    customerEmail: v.string(),
+    customerName: v.string(),
+    productName: v.string(),
+    downloadUrl: v.string(),
+    confirmationSubject: v.string(),
+    confirmationBody: v.string(),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    emailId: v.optional(v.string()),
+    error: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    try {
+      const resend = getResendClient();
+      
+      if (!resend) {
+        return {
+          success: false,
+          error: "Email service not configured",
+        };
+      }
+
+      // Get store's email configuration
+      const emailConfig = await ctx.runQuery((internal as any).stores.getStoreEmailConfigInternal, {
+        storeId: args.storeId,
+      });
+
+      if (!emailConfig) {
+        return {
+          success: false,
+          error: "Store email configuration not found",
+        };
+      }
+
+      // Replace personalization tokens in subject
+      let personalizedSubject = args.confirmationSubject
+        .replace(/\{\{\s*customer[_\s]name\s*\}\}/gi, args.customerName)
+        .replace(/\{\{\s*product[_\s]name\s*\}\}/gi, args.productName);
+
+      // Replace personalization tokens in body
+      let personalizedBody = args.confirmationBody
+        .replace(/\{\{\s*customer[_\s]name\s*\}\}/gi, args.customerName)
+        .replace(/\{\{\s*product[_\s]name\s*\}\}/gi, args.productName)
+        .replace(/\{\{\s*download[_\s]link\s*\}\}/gi, `<a href="${args.downloadUrl}" style="color: #6356FF; text-decoration: underline;">Download Your Resource</a>`);
+
+      // Add download button to the email
+      const emailWithDownloadButton = `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          ${personalizedBody}
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${args.downloadUrl}" 
+               style="display: inline-block; background: #6356FF; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+              📥 Download Your Resource
+            </a>
+          </div>
+          
+          <div style="border-top: 1px solid #e5e7eb; margin-top: 30px; padding-top: 20px; font-size: 12px; color: #6b7280; text-align: center;">
+            <p>This email was sent because you opted in to receive this resource. The download link will remain active.</p>
+          </div>
+        </div>
+      `;
+
+      // Send email using centralized Resend
+      const result = await resend.emails.send({
+        from: emailConfig.fromName ? `${emailConfig.fromName} <${emailConfig.fromEmail}>` : emailConfig.fromEmail,
+        to: args.customerEmail,
+        replyTo: emailConfig.replyToEmail || emailConfig.fromEmail,
+        subject: personalizedSubject,
+        html: emailWithDownloadButton,
+      });
+
+      if (result.data?.id) {
+        return {
+          success: true,
+          emailId: result.data.id,
+        };
+      } else {
+        return {
+          success: false,
+          error: "Failed to send confirmation email",
+        };
+      }
+    } catch (error: any) {
+      console.error("Lead magnet confirmation email failed:", error);
+      return {
+        success: false,
+        error: error.message || "Failed to send confirmation email",
+      };
+    }
+  },
+});
+
 // Send campaign email using centralized Resend
 export const sendCampaignEmail = action({
   args: {

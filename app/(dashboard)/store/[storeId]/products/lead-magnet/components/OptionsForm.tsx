@@ -3,7 +3,9 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useParams, useSearchParams } from "next/navigation";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -12,6 +14,7 @@ import Link from "next/link";
 import { z } from "zod";
 import { EmailFlows } from "./EmailFlows";
 import { ConfirmationEmail } from "./ConfirmationEmail";
+import { useToast } from "@/hooks/use-toast";
 
 // Schema for options form
 const optionsSchema = z.object({
@@ -33,6 +36,10 @@ export function OptionsForm() {
   const storeId = params.storeId as string;
   const editProductId = searchParams.get("edit");
   const isEditMode = !!editProductId;
+  const { toast } = useToast();
+  
+  const [isSaving, setIsSaving] = useState(false);
+  const updateEmailConfirmation = useMutation(api.digitalProducts?.updateEmailConfirmation);
   
   // Memoize currentStep to prevent infinite re-renders
   const currentStep = useMemo(() => {
@@ -50,17 +57,63 @@ export function OptionsForm() {
 
   const { control, register, setValue, formState, handleSubmit } = form;
 
-  const onSubmit = (data: OptionsSchema) => {
-    console.log("Options submitted:", data);
+  const onSubmit = async (data: OptionsSchema) => {
+    if (!editProductId && !isEditMode) {
+      // For new products, we need the product to be created first
+      toast({
+        title: "Information",
+        description: "Please complete the thumbnail and product steps first to save email settings.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSaving(true);
     
-    if (isEditMode) {
-      // In edit mode, show success and provide option to go back to products
-      alert("Lead magnet updated successfully! Click OK to return to your products.");
-      window.location.href = `/store/${storeId}`;
-    } else {
-      // In create mode, show completion message
-      alert("Lead magnet created successfully! Your lead magnet is now ready to use.");
-      window.location.href = `/store/${storeId}`;
+    try {
+      const result = await updateEmailConfirmation({
+        productId: editProductId as any,
+        confirmationEmailSubject: data.confirmationSubject,
+        confirmationEmailBody: data.confirmationBody,
+      });
+
+      if (result?.success) {
+        toast({
+          title: "Settings Saved! ✅",
+          description: "Email confirmation settings have been updated successfully.",
+        });
+        
+        if (isEditMode) {
+          // In edit mode, redirect back to products
+          setTimeout(() => {
+            window.location.href = `/store/${storeId}`;
+          }, 1500);
+        } else {
+          // In create mode, show completion message
+          toast({
+            title: "Lead Magnet Complete! 🎉",
+            description: "Your lead magnet is now ready to collect leads and send confirmation emails.",
+          });
+          setTimeout(() => {
+            window.location.href = `/store/${storeId}`;
+          }, 2000);
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: result?.message || "Failed to save email settings",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to save email settings:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save email confirmation settings",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -161,10 +214,11 @@ export function OptionsForm() {
           
           <Button
             type="submit"
-            className="bg-[#6356FF] hover:bg-[#5248E6] text-white h-10 rounded-lg flex items-center gap-2"
+            disabled={isSaving}
+            className="bg-[#6356FF] hover:bg-[#5248E6] text-white h-10 rounded-lg flex items-center gap-2 disabled:opacity-50"
           >
             <Send size={16} />
-            Publish
+            {isSaving ? "Saving..." : "Publish"}
           </Button>
         </div>
       </form>

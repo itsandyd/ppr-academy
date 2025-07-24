@@ -96,22 +96,28 @@ export const submitLead = mutation({
 
     // Send automated emails (if Resend is configured)
     try {
-      // Get admin/store details for email
-      const store = await ctx.db.get(args.storeId as any);
-      const adminUser = await ctx.db
-        .query("users")
-        .withIndex("by_clerkId", (q) => q.eq("clerkId", args.adminUserId))
-        .first();
-
-      // Send welcome email to customer with download link
-      if (product?.downloadUrl) {
-        console.log("📧 Scheduling lead magnet email for:", args.email);
-        // Email sending will work when RESEND_API_KEY is configured
+      // Send confirmation email to customer with download link
+      if (product?.downloadUrl && product.confirmationEmailSubject && product.confirmationEmailBody) {
+        console.log("📧 Sending lead magnet confirmation email for:", args.email);
+        
+        // Use the centralized email action to send confirmation email
+        const emailResult = await ctx.scheduler.runAfter(0, (internal as any).emails.sendLeadMagnetConfirmation, {
+          storeId: args.storeId as any,
+          customerEmail: args.email,
+          customerName: args.name,
+          productName: product.title,
+          downloadUrl: product.downloadUrl,
+          confirmationSubject: product.confirmationEmailSubject,
+          confirmationBody: product.confirmationEmailBody,
+        });
+        
+        console.log("✅ Lead magnet confirmation email scheduled");
+      } else {
+        console.log("ℹ️ No confirmation email configured for this lead magnet");
       }
 
-      // Send admin notification  
-      console.log("📧 Scheduling admin notification email for new lead:", args.name);
-      // Email sending will work when RESEND_API_KEY is configured
+      // Send admin notification (optional - can be enabled later)
+      // console.log("📧 Admin notification can be added here if needed");
     } catch (emailError) {
       console.warn("⚠️ Email sending failed, but lead was still recorded:", emailError);
       // Don't fail the entire operation if emails fail
