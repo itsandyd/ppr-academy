@@ -42,7 +42,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
   const mainNavItems: NavItem[] = [
     { icon: Home, href: "/home", label: "Home" },
     { icon: BarChart3, href: "/analytics", label: "Analytics" },
-    { icon: Users, href: "/audience", label: "Audience" },
+    { icon: Users, href: `/store/${storeId}/customers`, label: "Customers" },
     { icon: Package, href: `/store/${storeId}/products`, label: "Products" },
     { icon: Store, href: "/store", label: "Store" },
   ];

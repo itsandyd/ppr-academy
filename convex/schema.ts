@@ -218,4 +218,80 @@ export default defineSchema({
   .index("by_userId", ["userId"])
   .index("by_chapterId", ["chapterId"])
   .index("by_user_chapter", ["userId", "chapterId"]),
+
+  // Lead Magnet Submissions
+  leadSubmissions: defineTable({
+    name: v.string(),
+    email: v.string(),
+    productId: v.id("digitalProducts"),
+    storeId: v.string(),
+    adminUserId: v.string(), // The admin who owns the lead magnet
+    ipAddress: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+    hasDownloaded: v.optional(v.boolean()),
+    downloadCount: v.optional(v.number()),
+    lastDownloadAt: v.optional(v.number()),
+    source: v.optional(v.string()), // tracking where they came from
+  })
+  .index("by_email", ["email"])
+  .index("by_productId", ["productId"])
+  .index("by_storeId", ["storeId"])
+  .index("by_adminUserId", ["adminUserId"])
+  .index("by_email_and_product", ["email", "productId"]),
+
+  // Customer Management
+  customers: defineTable({
+    name: v.string(),
+    email: v.string(),
+    storeId: v.string(),
+    adminUserId: v.string(),
+    type: v.union(v.literal("lead"), v.literal("paying"), v.literal("subscription")),
+    status: v.union(v.literal("active"), v.literal("inactive")),
+    totalSpent: v.optional(v.number()),
+    lastActivity: v.optional(v.number()),
+    source: v.optional(v.string()),
+    notes: v.optional(v.string()),
+  })
+  .index("by_email", ["email"])
+  .index("by_storeId", ["storeId"])
+  .index("by_adminUserId", ["adminUserId"])
+  .index("by_type", ["type"])
+  .index("by_email_and_store", ["email", "storeId"]),
+
+  // Purchase History
+  purchases: defineTable({
+    customerId: v.id("customers"),
+    productId: v.id("digitalProducts"),
+    storeId: v.string(),
+    adminUserId: v.string(),
+    amount: v.number(),
+    currency: v.optional(v.string()),
+    status: v.union(v.literal("pending"), v.literal("completed"), v.literal("refunded")),
+    paymentMethod: v.optional(v.string()),
+    transactionId: v.optional(v.string()),
+  })
+  .index("by_customerId", ["customerId"])
+  .index("by_productId", ["productId"])
+  .index("by_storeId", ["storeId"])
+  .index("by_adminUserId", ["adminUserId"])
+  .index("by_status", ["status"]),
+
+  // Subscriptions
+  subscriptions: defineTable({
+    customerId: v.id("customers"),
+    planName: v.string(),
+    storeId: v.string(),
+    adminUserId: v.string(),
+    status: v.union(v.literal("active"), v.literal("cancelled"), v.literal("paused"), v.literal("expired")),
+    amount: v.number(),
+    currency: v.optional(v.string()),
+    billingInterval: v.union(v.literal("monthly"), v.literal("yearly"), v.literal("weekly")),
+    nextBillingDate: v.optional(v.number()),
+    subscriptionId: v.optional(v.string()), // Stripe subscription ID
+    cancelledAt: v.optional(v.number()),
+  })
+  .index("by_customerId", ["customerId"])
+  .index("by_storeId", ["storeId"])
+  .index("by_adminUserId", ["adminUserId"])
+  .index("by_status", ["status"]),
 }); 

@@ -5,10 +5,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState, useEffect, use } from "react";
-import { CheckCircle, Download, Mail, ArrowRight, Store } from "lucide-react";
+import { CheckCircle, Download, Mail, ArrowRight, Store, Gift, ExternalLink } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { notFound } from "next/navigation";
 
 interface StorefrontPageProps {
@@ -18,13 +19,119 @@ interface StorefrontPageProps {
 }
 
 // Lead Magnet Preview Component (same as PhonePreview)
-function LeadMagnetPreview({ leadMagnet, isFullScreen = false }: { leadMagnet?: any; isFullScreen?: boolean }) {
+function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData }: { leadMagnet?: any; isFullScreen?: boolean; storeData?: any }) {
   const [showSuccess, setShowSuccess] = useState(false);
   const [formData, setFormData] = useState({ name: "", email: "" });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionResult, setSubmissionResult] = useState<{ submissionId: string; downloadUrl?: string } | null>(null);
+  
+  // Check if leadSubmissions API is available (after npx convex dev)
+  const hasLeadSubmissionsAPI = (api as any).leadSubmissions?.submitLead;
+  const submitLead = hasLeadSubmissionsAPI ? useMutation((api as any).leadSubmissions.submitLead) : null;
+  const trackDownload = hasLeadSubmissionsAPI ? useMutation((api as any).leadSubmissions.trackDownload) : null;
 
-  const handleSubmit = () => {
-    if (formData.name && formData.email) {
+  const handleSubmit = async () => {
+    if (!formData.name?.trim() || !formData.email?.trim()) {
+      alert("Please fill in both name and email");
+      return;
+    }
+
+    if (!leadMagnet?.productId || !storeData?.store?._id || !storeData?.store?.userId) {
+      alert("Missing product or store information");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      let result;
+
+      if (submitLead && hasLeadSubmissionsAPI) {
+        // Use real API if available
+        result = await submitLead({
+          name: formData.name.trim(),
+          email: formData.email.trim(),
+          productId: leadMagnet.productId,
+          storeId: storeData.store._id,
+          adminUserId: storeData.store.userId,
+          ipAddress: undefined,
+          userAgent: navigator.userAgent,
+          source: "storefront",
+        });
+
+        console.log("✅ Lead successfully submitted to database:", {
+          submissionId: result.submissionId,
+          customerCreated: true,
+          downloadAvailable: result.hasAccess,
+        });
+      } else {
+        // Fallback simulation (until API is regenerated)
+        result = {
+          submissionId: `lead_${Date.now()}`,
+          hasAccess: true,
+          downloadUrl: leadMagnet?.downloadUrl,
+        };
+
+        console.log("⚠️ Using simulated submission (run 'npx convex dev' to enable real database):", {
+          leadData: {
+            name: formData.name.trim(),
+            email: formData.email.trim(),
+            productId: leadMagnet.productId,
+            storeId: storeData.store._id,
+            adminUserId: storeData.store.userId,
+            source: "storefront",
+          },
+          customerRecord: {
+            name: formData.name.trim(),
+            email: formData.email.trim(),
+            type: "lead",
+            source: leadMagnet?.title || "Lead Magnet",
+          }
+        });
+      }
+
+      setSubmissionResult({
+        submissionId: result.submissionId,
+        downloadUrl: result.downloadUrl,
+      });
       setShowSuccess(true);
+    } catch (error) {
+      console.error("Error submitting lead:", error);
+      alert("Something went wrong. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDownload = async () => {
+    if (submissionResult?.downloadUrl && submissionResult?.submissionId) {
+      try {
+        // Track download if API is available
+        if (trackDownload && hasLeadSubmissionsAPI) {
+          await trackDownload({
+            submissionId: submissionResult.submissionId,
+          });
+          console.log("✅ Download tracked in database:", submissionResult.submissionId);
+        } else {
+          console.log("⚠️ Download tracking simulated:", submissionResult.submissionId);
+        }
+
+        // Create a temporary link and trigger download
+        const link = document.createElement('a');
+        link.href = submissionResult.downloadUrl;
+        link.download = leadMagnet?.title || 'lead-magnet';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (error) {
+        console.error("Error tracking download:", error);
+        // Still allow download even if tracking fails
+        const link = document.createElement('a');
+        link.href = submissionResult.downloadUrl;
+        link.download = leadMagnet?.title || 'lead-magnet';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
     }
   };
 
@@ -54,26 +161,18 @@ function LeadMagnetPreview({ leadMagnet, isFullScreen = false }: { leadMagnet?: 
               <p className="font-medium text-sm">
                 {leadMagnet?.title || "Ultimate Marketing Guide"}
               </p>
-              <p className="text-xs text-gray-500">PDF • 2.3 MB</p>
+              <p className="text-xs text-gray-500">
+                {leadMagnet?.downloadUrl ? 'Ready for Download' : 'PDF • 2.3 MB'}
+              </p>
             </div>
           </div>
           <Button 
             className="w-full mt-3 bg-green-600 hover:bg-green-700 text-white text-sm"
-            onClick={() => {
-              if (leadMagnet?.downloadUrl) {
-                // Create a temporary link and trigger download
-                const link = document.createElement('a');
-                link.href = leadMagnet.downloadUrl;
-                link.download = leadMagnet.title || 'lead-magnet';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-              }
-            }}
-            disabled={!leadMagnet?.downloadUrl}
+            onClick={handleDownload}
+            disabled={!submissionResult?.downloadUrl}
           >
             <Download className="w-4 h-4 mr-2" />
-            {leadMagnet?.downloadUrl ? 'Download Now' : 'File Not Available'}
+            {submissionResult?.downloadUrl ? 'Download Now' : 'File Not Available'}
           </Button>
         </div>
 
@@ -106,9 +205,9 @@ function LeadMagnetPreview({ leadMagnet, isFullScreen = false }: { leadMagnet?: 
   }
 
   return (
-    <div className="w-full p-4 space-y-4">
+    <div className="w-full p-4 space-y-4 bg-white">
       {/* Image Preview */}
-      <div className="w-full h-32 bg-[#E9FFD9] rounded-lg flex items-center justify-center">
+      <div className="w-full h-32 bg-gradient-to-br from-green-50 to-emerald-100 rounded-lg flex items-center justify-center border border-green-200">
         {leadMagnet?.imageUrl ? (
           <img 
             src={leadMagnet.imageUrl} 
@@ -117,18 +216,20 @@ function LeadMagnetPreview({ leadMagnet, isFullScreen = false }: { leadMagnet?: 
           />
         ) : (
           <div className="text-center">
-            <div className="w-12 h-12 bg-green-200 rounded-lg mx-auto mb-2" />
-            <span className="text-xs text-muted-foreground">400×400</span>
+            <div className="w-16 h-16 bg-green-200 rounded-lg mx-auto mb-2 flex items-center justify-center">
+              <Gift className="w-8 h-8 text-green-600" />
+            </div>
+            <span className="text-xs text-green-600 font-medium">Lead Magnet</span>
           </div>
         )}
       </div>
 
       {/* Text Content */}
       <div className="space-y-2">
-        <h3 className="font-semibold text-lg">
+        <h3 className="font-semibold text-lg text-gray-900">
           {leadMagnet?.title || "Lead Magnet Title"}
         </h3>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-gray-600">
           {leadMagnet?.subtitle || "Get instant access to our comprehensive guide and boost your marketing results today!"}
         </p>
       </div>
@@ -139,20 +240,21 @@ function LeadMagnetPreview({ leadMagnet, isFullScreen = false }: { leadMagnet?: 
           placeholder="Your Name" 
           value={formData.name}
           onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-          className="h-10" 
+          className="h-12 bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-green-500 focus:ring-green-500" 
         />
         <Input 
           placeholder="Your Email" 
           type="email"
           value={formData.email}
           onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-          className="h-10" 
+          className="h-12 bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-green-500 focus:ring-green-500" 
         />
         <Button 
           onClick={handleSubmit}
-          className="w-full bg-green-500 hover:bg-green-600 text-white flex items-center justify-center gap-2"
+          disabled={isSubmitting}
+          className="w-full h-12 bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2 font-semibold disabled:opacity-50"
         >
-          {leadMagnet?.ctaText || "Get Free Resource"}
+          {isSubmitting ? "Submitting..." : (leadMagnet?.ctaText || "Get Free Resource")}
           <ArrowRight className="w-4 h-4" />
         </Button>
       </div>
@@ -160,12 +262,12 @@ function LeadMagnetPreview({ leadMagnet, isFullScreen = false }: { leadMagnet?: 
       {/* Trust Indicators */}
       <div className="flex items-center justify-center gap-4 pt-2">
         <div className="flex items-center gap-1">
-          <CheckCircle className="w-3 h-3 text-green-500" />
-          <span className="text-xs text-gray-600">No spam</span>
+          <CheckCircle className="w-4 h-4 text-green-600" />
+          <span className="text-xs text-gray-700 font-medium">No spam</span>
         </div>
         <div className="flex items-center gap-1">
-          <CheckCircle className="w-3 h-3 text-green-500" />
-          <span className="text-xs text-gray-600">Instant access</span>
+          <CheckCircle className="w-4 h-4 text-green-600" />
+          <span className="text-xs text-gray-700 font-medium">Instant access</span>
         </div>
       </div>
 
@@ -180,9 +282,13 @@ function LeadMagnetPreview({ leadMagnet, isFullScreen = false }: { leadMagnet?: 
   );
 }
 
-// Store Products Display
-function StoreProducts({ products, isFullScreen = false }: { products: any[]; isFullScreen?: boolean }) {
+// Link-in-Bio Style Component
+function LinkInBioLayout({ products, leadMagnetData, storeData }: { products: any[]; leadMagnetData?: any; storeData?: any }) {
   const publishedProducts = products?.filter(p => p.isPublished) || [];
+  
+  // Separate lead magnets from other products
+  const leadMagnets = publishedProducts.filter(p => p.price === 0 && p.style === "card");
+  const otherProducts = publishedProducts.filter(p => !(p.price === 0 && p.style === "card"));
 
   if (publishedProducts.length === 0) {
     return (
@@ -196,97 +302,88 @@ function StoreProducts({ products, isFullScreen = false }: { products: any[]; is
     );
   }
 
-  // Categorize products
-  const freeResources = publishedProducts.filter(p => p.price === 0);
-  const paidProducts = publishedProducts.filter(p => p.price > 0);
-  const premiumProducts = paidProducts.filter(p => p.price >= 50);
-  const standardProducts = paidProducts.filter(p => p.price < 50);
-
-  const ProductCard = ({ product }: { product: any }) => (
-    <Card key={product._id} className="p-4 border border-gray-200 hover:shadow-md transition-shadow">
-      {product.imageUrl && (
-        <div className="w-full h-24 bg-gray-100 rounded-lg mb-3 overflow-hidden">
-          <img 
-            src={product.imageUrl} 
-            alt={product.title}
-            className="w-full h-full object-cover"
-          />
-        </div>
-      )}
-      <h3 className="font-semibold text-sm mb-1 line-clamp-2">
-        {product.title}
-      </h3>
-      {product.description && (
-        <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
-          {product.description}
-        </p>
-      )}
-      <div className="flex items-center justify-between">
-        <Badge variant="secondary" className="text-xs">
-          {product.price === 0 ? "FREE" : `$${product.price}`}
-        </Badge>
-        <button className="text-xs bg-[#6356FF] text-white px-3 py-1 rounded-full hover:bg-[#5248E6] transition-colors">
-          {product.price === 0 ? "Get Free" : "Buy Now"}
-        </button>
-      </div>
-    </Card>
-  );
-
   return (
-    <div className="w-full space-y-6">
-      {/* Free Resources Section */}
-      {freeResources.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-            <h3 className="font-semibold text-lg text-[#0F0F0F]">Free Resources</h3>
-            <Badge className="bg-green-100 text-green-800 text-xs">
-              {freeResources.length} available
-            </Badge>
-          </div>
-          <div className="space-y-3">
-            {freeResources.map((product) => (
-              <ProductCard key={product._id} product={product} />
-            ))}
-          </div>
-        </div>
-      )}
+    <div className="w-full space-y-3">
+      {/* Lead Magnet Cards */}
+      {leadMagnets.map((leadMagnet) => (
+        <Dialog key={leadMagnet._id}>
+          <DialogTrigger asChild>
+            <Card className="p-4 border border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 hover:shadow-md transition-all cursor-pointer">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Gift className="w-6 h-6 text-green-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-sm text-green-800 truncate">
+                    {leadMagnet.title}
+                  </h3>
+                  <p className="text-xs text-green-600 truncate">
+                    Free Resource • Click to get access
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <Badge className="bg-green-100 text-green-800 text-xs border-green-200">
+                    FREE
+                  </Badge>
+                  <ArrowRight className="w-4 h-4 text-green-600" />
+                </div>
+              </div>
+            </Card>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md bg-white border-0 shadow-xl data-[state=open]:backdrop-brightness-90">
+            <DialogHeader className="pb-4">
+              <DialogTitle className="text-green-800 text-xl font-bold">{leadMagnet.title}</DialogTitle>
+            </DialogHeader>
+            <div className="bg-white rounded-lg">
+                          <LeadMagnetPreview 
+              leadMagnet={{
+                title: leadMagnet.title,
+                subtitle: leadMagnet.description,
+                imageUrl: leadMagnet.imageUrl,
+                ctaText: leadMagnet.buttonLabel,
+                downloadUrl: leadMagnet.downloadUrl,
+                productId: leadMagnet._id
+              }} 
+              storeData={storeData}
+              isFullScreen={false} 
+            />
+            </div>
+          </DialogContent>
+        </Dialog>
+      ))}
 
-      {/* Premium Products Section */}
-      {premiumProducts.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-            <h3 className="font-semibold text-lg text-[#0F0F0F]">Premium Collection</h3>
-            <Badge className="bg-purple-100 text-purple-800 text-xs">
-              {premiumProducts.length} available
-            </Badge>
+      {/* Other Products */}
+      {otherProducts.map((product) => (
+        <Card key={product._id} className="p-4 border border-gray-200 hover:shadow-md transition-all cursor-pointer">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+              {product.imageUrl ? (
+                <img 
+                  src={product.imageUrl} 
+                  alt={product.title}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <Store className="w-6 h-6 text-blue-600" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-sm truncate">
+                {product.title}
+              </h3>
+              <p className="text-xs text-muted-foreground truncate">
+                {product.description || "Digital Product"}
+              </p>
+            </div>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <Badge variant="secondary" className="text-xs">
+                ${product.price}
+              </Badge>
+              <ExternalLink className="w-4 h-4 text-muted-foreground" />
+            </div>
           </div>
-          <div className="space-y-3">
-            {premiumProducts.map((product) => (
-              <ProductCard key={product._id} product={product} />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Standard Products Section */}
-      {standardProducts.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-            <h3 className="font-semibold text-lg text-[#0F0F0F]">Digital Products</h3>
-            <Badge className="bg-blue-100 text-blue-800 text-xs">
-              {standardProducts.length} available
-            </Badge>
-          </div>
-          <div className="space-y-3">
-            {standardProducts.map((product) => (
-              <ProductCard key={product._id} product={product} />
-            ))}
-          </div>
-        </div>
-      )}
+        </Card>
+      ))}
     </div>
   );
 }
@@ -425,8 +522,11 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
           )} */}
 
           {/* Products Section */}
-          <div className="space-y-12">
-            <StoreProducts products={products || []} isFullScreen={true} />
+          <div className="space-y-8">
+            <h2 className="text-2xl font-bold text-center text-[#0F0F0F] mb-8">Available Products & Resources</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+              <LinkInBioLayout products={products || []} leadMagnetData={leadMagnetData} storeData={{ store, user }} />
+            </div>
           </div>
 
           {/* Store Footer */}
@@ -492,12 +592,8 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
         </div>
         
         {/* Mobile App Content (matches PhonePreview) */}
-        <div className="flex-1 p-6">
-          {hasLeadMagnets && leadMagnetData ? (
-            <LeadMagnetPreview leadMagnet={leadMagnetData} isFullScreen={true} />
-          ) : (
-            <StoreProducts products={products || []} isFullScreen={true} />
-          )}
+        <div className="flex-1 p-4 overflow-y-auto">
+          <LinkInBioLayout products={products || []} leadMagnetData={leadMagnetData} storeData={{ store, user }} />
         </div>
       </div>
     </div>

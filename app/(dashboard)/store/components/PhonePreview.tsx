@@ -6,10 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { UserResource } from "@clerk/types";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState, useEffect } from "react";
-import { CheckCircle, Download, Mail, ArrowRight } from "lucide-react";
+import { CheckCircle, Download, Mail, ArrowRight, Gift, ExternalLink, Store } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 interface PhonePreviewProps {
   user: UserResource;
@@ -35,6 +36,7 @@ interface PhonePreviewProps {
     imageUrl?: string;
     ctaText?: string;
     downloadUrl?: string;
+    productId?: string;
   };
   // Digital product specific props
   digitalProduct?: {
@@ -45,14 +47,160 @@ interface PhonePreviewProps {
   };
 }
 
+// Link-in-Bio Style Component for Phone Preview
+function LinkInBioLayout({ products, leadMagnetData, storeData }: { products: any[]; leadMagnetData?: any; storeData?: any }) {
+  const publishedProducts = products?.filter(p => p.isPublished) || [];
+  
+  // Separate lead magnets from other products
+  const leadMagnets = publishedProducts.filter(p => p.price === 0 && p.style === "card");
+  const otherProducts = publishedProducts.filter(p => !(p.price === 0 && p.style === "card"));
+
+  if (publishedProducts.length === 0) {
+    return (
+      <div className="w-full text-center p-8">
+        <div className="w-16 h-16 bg-muted rounded-lg mx-auto mb-4 flex items-center justify-center">
+          <Store className="w-8 h-8 text-muted-foreground" />
+        </div>
+        <p className="text-sm text-muted-foreground">No products available yet</p>
+        <p className="text-xs text-muted-foreground mt-1">Check back soon!</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full space-y-3">
+      {/* Lead Magnet Cards */}
+      {leadMagnets.map((leadMagnet) => (
+        <Dialog key={leadMagnet._id}>
+          <DialogTrigger asChild>
+            <Card className="p-4 border border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 hover:shadow-md transition-all cursor-pointer">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Gift className="w-6 h-6 text-green-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-sm text-green-800 truncate">
+                    {leadMagnet.title}
+                  </h3>
+                  <p className="text-xs text-green-600 truncate">
+                    Free Resource • Click to get access
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <Badge className="bg-green-100 text-green-800 text-xs border-green-200">
+                    FREE
+                  </Badge>
+                  <ArrowRight className="w-4 h-4 text-green-600" />
+                </div>
+              </div>
+            </Card>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md bg-white border-0 shadow-xl data-[state=open]:backdrop-brightness-90">
+            <DialogHeader className="pb-4">
+              <DialogTitle className="text-green-800 text-xl font-bold">{leadMagnet.title}</DialogTitle>
+            </DialogHeader>
+            <div className="bg-white rounded-lg">
+                          <LeadMagnetPreview 
+              leadMagnet={{
+                title: leadMagnet.title,
+                subtitle: leadMagnet.description,
+                imageUrl: leadMagnet.imageUrl,
+                ctaText: leadMagnet.buttonLabel,
+                downloadUrl: leadMagnet.downloadUrl,
+                productId: leadMagnet._id
+              }} 
+              storeData={storeData}
+            />
+            </div>
+          </DialogContent>
+        </Dialog>
+      ))}
+
+      {/* Other Products */}
+      {otherProducts.map((product) => (
+        <Card key={product._id} className="p-4 border border-gray-200 hover:shadow-md transition-all cursor-pointer">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+              {product.imageUrl ? (
+                <img 
+                  src={product.imageUrl} 
+                  alt={product.title}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <Store className="w-6 h-6 text-blue-600" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-sm truncate">
+                {product.title}
+              </h3>
+              <p className="text-xs text-muted-foreground truncate">
+                {product.description || "Digital Product"}
+              </p>
+            </div>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <Badge variant="secondary" className="text-xs">
+                ${product.price}
+              </Badge>
+              <ExternalLink className="w-4 h-4 text-muted-foreground" />
+            </div>
+          </div>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
 // Lead Magnet Preview Component with Form and Post-Opt-In States
-function LeadMagnetPreview({ leadMagnet }: { leadMagnet?: PhonePreviewProps['leadMagnet'] }) {
+function LeadMagnetPreview({ leadMagnet, storeData }: { leadMagnet?: PhonePreviewProps['leadMagnet']; storeData?: any }) {
   const [showSuccess, setShowSuccess] = useState(false);
   const [formData, setFormData] = useState({ name: "", email: "" });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionResult, setSubmissionResult] = useState<{ submissionId: string; downloadUrl?: string } | null>(null);
 
-  const handleSubmit = () => {
-    if (formData.name && formData.email) {
+  // TODO: Replace with actual API calls once Convex API is regenerated
+  // const submitLead = useMutation(api.leadSubmissions.submitLead);
+  // const trackDownload = useMutation(api.leadSubmissions.trackDownload);
+
+  const handleSubmit = async () => {
+    if (!formData.name?.trim() || !formData.email?.trim()) {
+      return; // Silent validation for preview
+    }
+
+    setIsSubmitting(true);
+    try {
+      // TODO: Replace with actual submitLead API call
+      const result = {
+        submissionId: `temp_${Date.now()}`,
+        hasAccess: true,
+        downloadUrl: leadMagnet?.downloadUrl,
+      };
+
+      console.log("Lead submitted (preview):", {
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        productId: leadMagnet?.productId,
+      });
+
+      setSubmissionResult(result);
       setShowSuccess(true);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDownload = async () => {
+    if (submissionResult?.downloadUrl) {
+      console.log("Download tracked (preview):", submissionResult.submissionId);
+      
+      // Create a temporary link and trigger download
+      const link = document.createElement('a');
+      link.href = submissionResult.downloadUrl;
+      link.download = leadMagnet?.title || 'lead-magnet';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   };
 
@@ -89,21 +237,11 @@ function LeadMagnetPreview({ leadMagnet }: { leadMagnet?: PhonePreviewProps['lea
           </div>
           <Button 
             className="w-full mt-3 bg-green-600 hover:bg-green-700 text-white text-sm"
-            onClick={() => {
-              if (leadMagnet?.downloadUrl) {
-                // Create a temporary link and trigger download
-                const link = document.createElement('a');
-                link.href = leadMagnet.downloadUrl;
-                link.download = leadMagnet.title || 'lead-magnet';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-              }
-            }}
-            disabled={!leadMagnet?.downloadUrl}
+            onClick={handleDownload}
+            disabled={!submissionResult?.downloadUrl}
           >
             <Download className="w-4 h-4 mr-2" />
-            {leadMagnet?.downloadUrl ? 'Download Now' : 'File Not Available'}
+            {submissionResult?.downloadUrl ? 'Download Now' : 'File Not Available'}
           </Button>
         </div>
 
@@ -136,9 +274,9 @@ function LeadMagnetPreview({ leadMagnet }: { leadMagnet?: PhonePreviewProps['lea
   }
 
   return (
-    <Card className="flex-1 p-4 space-y-4">
+    <Card className="flex-1 p-4 space-y-4 bg-white">
       {/* Image Preview */}
-      <div className="w-full h-32 bg-[#E9FFD9] rounded-lg flex items-center justify-center">
+      <div className="w-full h-32 bg-gradient-to-br from-green-50 to-emerald-100 rounded-lg flex items-center justify-center border border-green-200">
         {leadMagnet?.imageUrl ? (
           <img 
             src={leadMagnet.imageUrl} 
@@ -147,18 +285,20 @@ function LeadMagnetPreview({ leadMagnet }: { leadMagnet?: PhonePreviewProps['lea
           />
         ) : (
           <div className="text-center">
-            <div className="w-12 h-12 bg-green-200 rounded-lg mx-auto mb-2" />
-            <span className="text-xs text-muted-foreground">400×400</span>
+            <div className="w-16 h-16 bg-green-200 rounded-lg mx-auto mb-2 flex items-center justify-center">
+              <Gift className="w-8 h-8 text-green-600" />
+            </div>
+            <span className="text-xs text-green-600 font-medium">Lead Magnet</span>
           </div>
         )}
       </div>
 
       {/* Text Content */}
       <div className="space-y-2">
-        <h3 className="font-semibold text-lg">
+        <h3 className="font-semibold text-lg text-gray-900">
           {leadMagnet?.title || "Lead Magnet Title"}
         </h3>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-gray-600">
           {leadMagnet?.subtitle || "Get instant access to our comprehensive guide and boost your marketing results today!"}
         </p>
       </div>
@@ -169,20 +309,21 @@ function LeadMagnetPreview({ leadMagnet }: { leadMagnet?: PhonePreviewProps['lea
           placeholder="Your Name" 
           value={formData.name}
           onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-          className="h-10" 
+          className="h-12 bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-green-500 focus:ring-green-500" 
         />
         <Input 
           placeholder="Your Email" 
           type="email"
           value={formData.email}
           onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-          className="h-10" 
+          className="h-12 bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-green-500 focus:ring-green-500" 
         />
         <Button 
           onClick={handleSubmit}
-          className="w-full bg-green-500 hover:bg-green-600 text-white flex items-center justify-center gap-2"
+          disabled={isSubmitting}
+          className="w-full h-12 bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2 font-semibold disabled:opacity-50"
         >
-          {leadMagnet?.ctaText || "Get Free Resource"}
+          {isSubmitting ? "Submitting..." : (leadMagnet?.ctaText || "Get Free Resource")}
           <ArrowRight className="w-4 h-4" />
         </Button>
       </div>
@@ -190,12 +331,12 @@ function LeadMagnetPreview({ leadMagnet }: { leadMagnet?: PhonePreviewProps['lea
       {/* Trust Indicators */}
       <div className="flex items-center justify-center gap-4 pt-2">
         <div className="flex items-center gap-1">
-          <CheckCircle className="w-3 h-3 text-green-500" />
-          <span className="text-xs text-gray-600">No spam</span>
+          <CheckCircle className="w-4 h-4 text-green-600" />
+          <span className="text-xs text-gray-700 font-medium">No spam</span>
         </div>
         <div className="flex items-center gap-1">
-          <CheckCircle className="w-3 h-3 text-green-500" />
-          <span className="text-xs text-gray-600">Instant access</span>
+          <CheckCircle className="w-4 h-4 text-green-600" />
+          <span className="text-xs text-gray-700 font-medium">Instant access</span>
         </div>
       </div>
 
@@ -325,48 +466,12 @@ export function PhonePreview({
 
       default: // "store" mode
         return (
-          <div className="flex-1 overflow-y-auto">
-            {publishedProducts.length > 0 ? (
-              <div className="space-y-4">
-                {publishedProducts.map((product) => (
-                  <Card key={product._id} className="p-4 border border-gray-200">
-                    {product.imageUrl && (
-                      <div className="w-full h-24 bg-gray-100 rounded-lg mb-3 overflow-hidden">
-                        <img 
-                          src={product.imageUrl} 
-                          alt={product.title}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    )}
-                    <h3 className="font-semibold text-sm mb-1 line-clamp-2">
-                      {product.title}
-                    </h3>
-                    {product.description && (
-                      <p className="text-xs text-muted-foreground mb-2 line-clamp-2">
-                        {product.description}
-                      </p>
-                    )}
-                    <div className="flex items-center justify-between">
-                      <Badge variant="secondary" className="text-xs">
-                        ${product.price}
-                      </Badge>
-                      <button className="text-xs bg-[#6356FF] text-white px-3 py-1 rounded-full">
-                        Buy Now
-                      </button>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-muted rounded-lg mx-auto mb-4" />
-                  <p className="text-sm">No products yet</p>
-                  <p className="text-xs">Add products to see them here</p>
-                </div>
-              </div>
-            )}
+          <div className="flex-1 p-4 overflow-y-auto">
+            <LinkInBioLayout 
+              products={products || []} 
+              leadMagnetData={leadMagnet}
+              storeData={{ store, user: convexUser }}
+            />
           </div>
         );
     }
@@ -374,9 +479,10 @@ export function PhonePreview({
 
   return (
     <div className="lg:sticky lg:top-24">
-      <Card className="w-[356px] h-[678px] rounded-3xl border-4 border-black/90 bg-white flex flex-col p-6 overflow-hidden">
+      <Card className="w-[356px] h-[678px] rounded-3xl border-4 border-black/90 bg-white flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-6">
+        <div className="bg-white border-b border-gray-100 p-4">
+          <div className="flex items-center gap-3">
           <Avatar className="w-10 h-10">
             <AvatarImage src={avatarUrl} alt={`${displayName}'s profile`} />
             <AvatarFallback className="text-sm font-semibold bg-muted">
@@ -393,6 +499,7 @@ export function PhonePreview({
               <span className="text-xs text-muted-foreground truncate block">@{store.name.toLowerCase().replace(/\s+/g, '')}</span>
             ) : null}
           </div>
+        </div>
         </div>
         
         {/* Dynamic Content */}
