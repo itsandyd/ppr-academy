@@ -39,7 +39,7 @@ export function ConfigSection({ control, register, watch }: ConfigSectionProps) 
   const [bufferAfterEnabled, setBufferAfterEnabled] = useState(false);
 
   return (
-    <Card className="p-6 border border-[#E5E7F5] rounded-xl">
+          <Card className="p-6 border-card-hover rounded-xl">
       <div className="grid grid-cols-2 gap-6">
         {/* Template name */}
         <div className="space-y-2">

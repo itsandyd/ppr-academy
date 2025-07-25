@@ -57,11 +57,11 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
   return (
     <div className="flex min-h-screen">
       {/* Sidebar */}
-      <aside className="w-60 bg-[#F5F6FF] border-r border-[#E3E5EC] flex flex-col">
+      <aside className="w-60 bg-sidebar border-r border-sidebar-border flex flex-col">
         <div className="flex-1 p-4">
           {/* Logo */}
           <div className="mb-8 px-3">
-            <h2 className="text-xl font-bold text-[#0F0F0F]">PausePlayRepeat</h2>
+            <h2 className="text-xl font-bold text-sidebar-foreground">PausePlayRepeat</h2>
           </div>
 
           {/* Main Navigation */}
@@ -76,8 +76,8 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
                     variant="ghost"
                     className={`w-full justify-start h-10 px-3 rounded-full text-sm font-semibold ${
                       isActive 
-                        ? "bg-white text-[#6356FF] shadow-sm" 
-                        : "text-[#51536A] hover:bg-white/50"
+                        ? "bg-sidebar-accent text-sidebar-primary shadow-sm" 
+                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50"
                     }`}
                   >
                     <Icon className="w-5 h-5 mr-3" />
@@ -89,7 +89,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
           </nav>
 
           {/* Divider */}
-          <div className="my-6 border-t border-[#E3E5EC]" />
+          <div className="my-6 border-t border-sidebar-border" />
 
           {/* Bottom Navigation */}
           <nav className="space-y-1 mt-6">
@@ -103,8 +103,8 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
                     variant="ghost"
                     className={`w-full justify-start h-10 px-3 rounded-full text-sm font-semibold ${
                       isActive 
-                        ? "bg-white text-[#6356FF] shadow-sm" 
-                        : "text-[#51536A] hover:bg-white/50"
+                        ? "bg-sidebar-accent text-sidebar-primary shadow-sm" 
+                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50"
                     }`}
                   >
                     <Icon className="w-5 h-5 mr-3" />
@@ -118,7 +118,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
           {/* Theme Toggle */}
           <div className="mt-6 px-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-[#51536A]">Theme</span>
+              <span className="text-sm font-medium text-sidebar-foreground/70">Theme</span>
               <ModeToggle />
             </div>
           </div>
@@ -128,18 +128,18 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
       {/* Main Content */}
       <main className="flex-1 flex flex-col">
         {/* Top Bar */}
-        <header className="h-15 border-b border-[#E3E5EC] px-8 py-4 flex items-center justify-between bg-white">
-          <h1 className="text-lg font-bold text-[#0F0F0F]">Dashboard</h1>
+        <header className="h-15 border-b border-border px-8 py-4 flex items-center justify-between bg-card">
+          <h1 className="text-lg font-bold text-card-foreground">Dashboard</h1>
           <div className="flex items-center space-x-2">
-            <span className="text-sm text-[#6356FF] font-medium">pauseplayrepeat.com/{currentStore?.slug || currentStore?.name || "store"}</span>
+            <span className="text-sm text-primary font-medium">pauseplayrepeat.com/{currentStore?.slug || currentStore?.name || "store"}</span>
             {/* <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-              <Copy className="h-4 w-4 text-[#6356FF]" />
+              <Copy className="h-4 w-4 text-primary" />
             </Button> */}
           </div>
         </header>
 
         {/* Page Content */}
-        <div className="flex-1 p-8 max-w-7xl mx-auto w-full">
+        <div className="flex-1 p-8 max-w-7xl mx-auto w-full bg-background">
           {children}
         </div>
       </main>

@@ -114,7 +114,7 @@ function StoreContent() {
           storeId={currentStore?._id}
         />
         
-        <Button variant="link" className="text-[#6356FF] text-sm mt-4 hover:underline p-0 h-auto">
+                          <Button variant="link" className="text-primary text-sm mt-4 hover:underline p-0 h-auto">
           Add Section
         </Button>
       </div>
@@ -142,7 +142,7 @@ export default function MyStorePage() {
             <h1 className="text-2xl font-bold mb-4">Welcome to PPR Academy Store</h1>
             <p className="text-gray-600 mb-8">Please sign in to access your store dashboard</p>
             <SignInButton mode="modal">
-              <Button size="lg" className="bg-[#6356FF] hover:bg-[#5248E6]">
+              <Button size="lg" className="bg-primary hover:bg-primary/90">
                 Sign In to Continue
               </Button>
             </SignInButton>

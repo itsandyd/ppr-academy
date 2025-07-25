@@ -60,7 +60,7 @@ export default function ConditionNode({ data, id }: NodeProps<ConditionNodeData>
             <Button
               variant="ghost"
               size="sm"
-              className="w-6 h-6 p-0 bg-blue-500 text-white rounded-full hover:bg-blue-600"
+              className="w-6 h-6 p-0 bg-primary text-primary-foreground rounded-full hover:bg-primary/90"
             >
               <Settings className="w-3 h-3" />
             </Button>
@@ -117,7 +117,7 @@ export default function ConditionNode({ data, id }: NodeProps<ConditionNodeData>
         <Button
           variant="ghost"
           size="sm"
-          className="w-6 h-6 p-0 bg-red-500 text-white rounded-full hover:bg-red-600"
+          className="w-6 h-6 p-0 bg-destructive text-destructive-foreground rounded-full hover:bg-destructive/90"
           onClick={handleDelete}
         >
           <X className="w-3 h-3" />
@@ -141,19 +141,19 @@ export default function ConditionNode({ data, id }: NodeProps<ConditionNodeData>
         position={Position.Right}
         id="true"
         style={{ top: '30%' }}
-        className="w-3 h-3 bg-green-500"
+        className="w-3 h-3 bg-primary"
       />
       <Handle
         type="source"
         position={Position.Right}
         id="false"
         style={{ top: '70%' }}
-        className="w-3 h-3 bg-red-500"
+        className="w-3 h-3 bg-secondary"
       />
-      <div className="absolute right-0 top-[25%] text-xs text-green-600 font-medium">
+      <div className="absolute right-0 top-[25%] text-xs text-primary font-medium">
         ✓
       </div>
-      <div className="absolute right-0 top-[65%] text-xs text-red-600 font-medium">
+      <div className="absolute right-0 top-[65%] text-xs text-secondary font-medium">
         ✗
       </div>
     </Card>

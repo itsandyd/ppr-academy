@@ -288,35 +288,37 @@ export default function WorkflowBuilder({
   };
 
   return (
-    <div className="h-screen flex">
+    <div className="h-screen flex w-full">
       {/* Sidebar */}
-      <div className="w-80 bg-background border-r p-4 space-y-6 overflow-y-auto">
+      <div className="w-120 bg-background border-r border-secondary p-3 space-y-3 overflow-y-auto flex-shrink-0">
         {/* Workflow Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Workflow Settings</CardTitle>
+        <Card className="border-card-hover">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Settings</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3">
             <div>
-              <Label htmlFor="name">Workflow Name</Label>
+              <Label htmlFor="name" className="text-sm">Name</Label>
               <Input
                 id="name"
                 value={workflowName}
                 onChange={(e) => setWorkflowName(e.target.value)}
-                placeholder="Enter workflow name..."
+                placeholder="Workflow name..."
+                className="h-8 text-sm"
               />
             </div>
             <div>
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description" className="text-sm">Description</Label>
               <Input
                 id="description"
                 value={workflowDescription}
                 onChange={(e) => setWorkflowDescription(e.target.value)}
-                placeholder="Enter description..."
+                placeholder="Description..."
+                className="h-8 text-sm"
               />
             </div>
             <div className="flex items-center justify-between">
-              <Label htmlFor="active">Active</Label>
+              <Label htmlFor="active" className="text-sm">Active</Label>
               <Switch
                 id="active"
                 checked={isActive}
@@ -326,19 +328,19 @@ export default function WorkflowBuilder({
             <Button 
               onClick={handleSave} 
               disabled={isSaving}
-              className="w-full"
+              className="w-full h-8 text-sm"
             >
-              {isSaving ? "Saving..." : "Save Workflow"}
+              {isSaving ? "Saving..." : "Save"}
             </Button>
           </CardContent>
         </Card>
 
         {/* Node Palette */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Drag & Drop Nodes</CardTitle>
+        <Card className="border-card-hover">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Nodes</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="space-y-1">
             <NodePaletteItem 
               type="trigger" 
               label="🎯 Trigger" 
@@ -369,7 +371,7 @@ export default function WorkflowBuilder({
       </div>
 
       {/* Main Flow Canvas */}
-      <div className="flex-1" ref={reactFlowWrapper}>
+      <div className="flex-1 min-w-0" ref={reactFlowWrapper}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -389,15 +391,12 @@ export default function WorkflowBuilder({
           <Controls />
           <MiniMap />
           <Panel position="top-right">
-            <Card className="p-2">
-              <div className="text-sm text-muted-foreground">
-                Drag nodes from the sidebar to build your workflow
+            <Card className="p-2 border-elegant max-w-xs">
+              <div className="text-xs text-muted-foreground">
+                💡 Drag nodes from sidebar • Hover to edit/delete
               </div>
               <div className="text-xs text-muted-foreground mt-1">
-                💡 Hover over nodes to edit/delete them
-              </div>
-              <div className="text-xs text-muted-foreground">
-                🔧 Blue button = Edit, Red button = Delete
+                🔧 Blue = Edit • Red = Delete
               </div>
             </Card>
           </Panel>
@@ -422,12 +421,12 @@ function NodePaletteItem({ type, label, description }: NodePaletteItemProps) {
 
   return (
     <div
-      className="p-3 border rounded-lg cursor-grab hover:bg-accent/50 transition-colors"
+      className="p-2 border-interactive rounded-md cursor-grab hover:bg-accent/50 transition-colors"
       onDragStart={(event) => onDragStart(event, type)}
       draggable
     >
-      <div className="font-medium text-sm">{label}</div>
-      <div className="text-xs text-muted-foreground">{description}</div>
+      <div className="font-medium text-xs">{label}</div>
+      <div className="text-xs text-muted-foreground leading-tight">{description}</div>
     </div>
   );
 } 

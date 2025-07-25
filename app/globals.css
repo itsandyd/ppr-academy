@@ -19,7 +19,9 @@
   --accent-foreground: oklch(0.25 0.02 284.68);
   --destructive: oklch(0.89 0.15 25.33);
   --destructive-foreground: oklch(0.2 0.03 344.67);
-  --border: oklch(0.9 0.02 260);
+  --border: oklch(0.88 0.02 260);
+  --border-subtle: oklch(0.92 0.01 260);
+  --border-strong: oklch(0.82 0.03 260);
   --input: oklch(0.9 0.02 260);
   --ring: oklch(0.74 0.12 228.32);
   --chart-1: oklch(0.74 0.12 228.32);
@@ -71,7 +73,9 @@
   --accent-foreground: oklch(0.97 0.02 321.35);
   --destructive: oklch(0.65 0.19 24.38);
   --destructive-foreground: oklch(0.2 0.03 344.67);
-  --border: oklch(0.35 0 0);
+  --border: oklch(0.35 0.01 260);
+  --border-subtle: oklch(0.28 0.01 260);
+  --border-strong: oklch(0.42 0.02 260);
   --input: oklch(0.35 0 0);
   --ring: oklch(0.85 0.08 228.32);
   --chart-1: oklch(0.85 0.08 228.32);
@@ -124,6 +128,8 @@
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-chart-1: var(--chart-1);
@@ -278,4 +284,25 @@ body {
 .dark .dialog-content-override {
   background-color: white !important;
   color: black !important;
+}
+
+/* Enhanced Border Utilities */
+.border-elegant {
+  @apply border border-border/60 hover:border-border transition-colors duration-200;
+}
+
+.border-subtle-elegant {
+  @apply border border-border-subtle hover:border-border transition-colors duration-200;
+}
+
+.border-interactive {
+  @apply border border-border hover:border-primary/40 focus-within:border-primary/60 transition-all duration-200;
+}
+
+.border-card-hover {
+  @apply border border-border-subtle hover:border-border-strong hover:shadow-md transition-all duration-300;
+}
+
+.border-premium {
+  @apply border border-border shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-300;
 }

@@ -25,8 +25,8 @@ function Steps({ current }: StepsProps) {
             <div
               className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
                 step.number <= current
-                  ? "bg-[#6356FF] text-white"
-                  : "border-2 border-[#6356FF] text-[#6356FF] bg-white"
+                  ? "bg-primary text-primary-foreground"
+                  : "border-2 border-primary text-primary bg-card"
               }`}
             >
               {step.number <= current ? (
@@ -35,7 +35,7 @@ function Steps({ current }: StepsProps) {
                 step.number
               )}
             </div>
-            <span className="text-xs text-[#51536A] mt-2 text-center">
+            <span className="text-xs text-muted-foreground mt-2 text-center">
               {step.label}
             </span>
           </div>
@@ -51,10 +51,10 @@ function Steps({ current }: StepsProps) {
 function ChallengeCopy() {
   return (
     <div className="max-w-lg">
-      <h2 className="text-3xl font-extrabold text-[#0F0F0F] uppercase mb-6">
+                <h2 className="text-3xl font-extrabold text-foreground uppercase mb-6">
         JOIN THE CHALLENGE ///
       </h2>
-      <p className="text-base text-[#51536A] leading-relaxed mb-6 max-w-prose">
+              <p className="text-base text-muted-foreground leading-relaxed mb-6 max-w-prose">
         Take part in our 30-day creator challenge and build your online business 
         from scratch. Get daily tasks, expert guidance, and join a community of 
         ambitious creators just like you.
@@ -123,7 +123,7 @@ export default function DashboardHome() {
 
   return (
     <section className="flex flex-col gap-8 py-10 md:py-16">
-      <h1 className="text-4xl font-bold text-[#0F0F0F]">
+              <h1 className="text-4xl font-bold text-foreground">
         Welcome {userName}, you're in
         <span className="inline-block ml-2">🎉</span>
       </h1>

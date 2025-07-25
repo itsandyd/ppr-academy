@@ -11,7 +11,7 @@ interface OptionCardProps {
 
 export function OptionCard({ title, subtitle, icon: Icon, tint, onClick }: OptionCardProps) {
   return (
-    <Card className="group min-h-[96px] border border-[#EEF0FA] shadow-[0_6px_14px_rgba(16,24,40,.04)] transition-colors hover:border-[#6356FF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6356FF]/40 cursor-pointer">
+    <Card className="group min-h-[96px] border-premium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 cursor-pointer">
       <button 
         type="button" 
         onClick={onClick}
@@ -21,13 +21,13 @@ export function OptionCard({ title, subtitle, icon: Icon, tint, onClick }: Optio
           className="flex-none w-16 h-16 rounded-xl flex items-center justify-center"
           style={{ backgroundColor: tint }}
         >
-          <Icon size={28} className="text-[#6356FF]" />
+                        <Icon size={28} className="text-primary" />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="text-lg font-semibold text-[#0F0F1C] leading-tight">
-            {title}
-          </h3>
-          <p className="text-sm font-normal text-[#6B6E85] mt-1 leading-relaxed">
+                      <h3 className="text-lg font-semibold text-foreground leading-tight">
+              {title}
+            </h3>
+            <p className="text-sm font-normal text-muted-foreground mt-1 leading-relaxed">
             {subtitle}
           </p>
         </div>

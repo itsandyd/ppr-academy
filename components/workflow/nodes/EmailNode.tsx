@@ -53,14 +53,14 @@ export default function EmailNode({ data, id }: NodeProps<EmailNodeData>) {
 
   return (
     <>
-      <Card className="min-w-[200px] border-blue-200 bg-blue-50 relative group">
+      <Card className="min-w-[200px] border-interactive bg-primary/5 relative group">
         <div className="absolute -top-2 -right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <Dialog open={isEditing} onOpenChange={setIsEditing}>
             <DialogTrigger asChild>
               <Button
                 variant="ghost"
                 size="sm"
-                className="w-6 h-6 p-0 bg-blue-500 text-white rounded-full hover:bg-blue-600"
+                className="w-6 h-6 p-0 bg-primary text-primary-foreground rounded-full hover:bg-primary/90"
               >
                 <Settings className="w-3 h-3" />
               </Button>
@@ -109,32 +109,32 @@ export default function EmailNode({ data, id }: NodeProps<EmailNodeData>) {
           <Button
             variant="ghost"
             size="sm"
-            className="w-6 h-6 p-0 bg-red-500 text-white rounded-full hover:bg-red-600"
+            className="w-6 h-6 p-0 bg-destructive text-destructive-foreground rounded-full hover:bg-destructive/90"
             onClick={handleDelete}
           >
             <X className="w-3 h-3" />
           </Button>
         </div>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm text-blue-800">📧 {data.label}</CardTitle>
+          <CardTitle className="text-sm text-primary">📧 {data.label}</CardTitle>
         </CardHeader>
         <CardContent className="pt-0">
-          <div className="text-xs text-blue-600 mb-2">
+          <div className="text-xs text-primary mb-2">
             Subject: {localData.subject}
           </div>
-          <div className="text-xs text-gray-500">
+          <div className="text-xs text-muted-foreground">
             Body: {localData.body.substring(0, 50)}...
           </div>
         </CardContent>
         <Handle
           type="target"
           position={Position.Left}
-          className="w-3 h-3 bg-blue-500"
+          className="w-3 h-3 bg-primary"
         />
         <Handle
           type="source"
           position={Position.Right}
-          className="w-3 h-3 bg-blue-500"
+          className="w-3 h-3 bg-primary"
         />
       </Card>
     </>

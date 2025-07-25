@@ -27,7 +27,7 @@ export function TextInputs({ register, char }: TextInputsProps) {
         <Input
           {...register("title")}
           placeholder="Enter title"
-          className="h-12 rounded-xl border-[#E5E7F5] px-4"
+          className="h-12 rounded-xl border-interactive px-4"
         />
       </div>
 
@@ -42,7 +42,7 @@ export function TextInputs({ register, char }: TextInputsProps) {
         <Input
           {...register("subtitle")}
           placeholder="Enter subtitle (optional)"
-          className="h-12 rounded-xl border-[#E5E7F5] px-4"
+          className="h-12 rounded-xl border-interactive px-4"
         />
       </div>
 
@@ -57,7 +57,7 @@ export function TextInputs({ register, char }: TextInputsProps) {
         <Input
           {...register("buttonLabel")}
           placeholder="Enter button text"
-          className="h-12 rounded-xl border-[#E5E7F5] px-4"
+          className="h-12 rounded-xl border-interactive px-4"
         />
       </div>
     </div>

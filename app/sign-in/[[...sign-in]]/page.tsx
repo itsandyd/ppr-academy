@@ -11,8 +11,8 @@ export default function SignInPage() {
         <SignIn 
           appearance={{
             elements: {
-              formButtonPrimary: "bg-[#6356FF] hover:bg-[#5248E6]",
-              footerActionLink: "text-[#6356FF] hover:text-[#5248E6]"
+                      formButtonPrimary: "bg-primary hover:bg-primary/90",
+        footerActionLink: "text-primary hover:text-primary/90"
             }
           }}
         />

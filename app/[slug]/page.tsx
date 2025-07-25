@@ -224,7 +224,7 @@ function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData }: { le
   }
 
   return (
-    <div className="w-full p-4 space-y-4 bg-white">
+    <div className="w-full p-4 space-y-4 bg-card">
       {/* Image Preview */}
       <div className="w-full h-32 bg-gradient-to-br from-green-50 to-emerald-100 rounded-lg flex items-center justify-center border border-green-200">
         {leadMagnet?.imageUrl ? (
@@ -245,10 +245,10 @@ function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData }: { le
 
       {/* Text Content */}
       <div className="space-y-2">
-        <h3 className="font-semibold text-lg text-gray-900">
+        <h3 className="font-semibold text-lg text-card-foreground">
           {leadMagnet?.title || "Lead Magnet Title"}
         </h3>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-muted-foreground">
           {leadMagnet?.subtitle || "Get instant access to our comprehensive guide and boost your marketing results today!"}
         </p>
       </div>
@@ -259,14 +259,14 @@ function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData }: { le
           placeholder="Your Name" 
           value={formData.name}
           onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-          className="h-12 bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-green-500 focus:ring-green-500" 
+          className="h-12 bg-card border-border text-foreground placeholder-muted-foreground focus:border-green-500 focus:ring-green-500" 
         />
         <Input 
           placeholder="Your Email" 
           type="email"
           value={formData.email}
           onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-          className="h-12 bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-green-500 focus:ring-green-500" 
+          className="h-12 bg-card border-border text-foreground placeholder-muted-foreground focus:border-green-500 focus:ring-green-500" 
         />
         <Button 
           onClick={handleSubmit}
@@ -282,19 +282,19 @@ function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData }: { le
       <div className="flex items-center justify-center gap-4 pt-2">
         <div className="flex items-center gap-1">
           <CheckCircle className="w-4 h-4 text-green-600" />
-          <span className="text-xs text-gray-700 font-medium">No spam</span>
+          <span className="text-xs text-muted-foreground font-medium">No spam</span>
         </div>
         <div className="flex items-center gap-1">
           <CheckCircle className="w-4 h-4 text-green-600" />
-          <span className="text-xs text-gray-700 font-medium">Instant access</span>
+          <span className="text-xs text-muted-foreground font-medium">Instant access</span>
         </div>
       </div>
 
       {/* Auto-cycle indicator */}
       <div className="flex justify-center pt-1">
         <div className="flex gap-1">
-          <div className={`w-2 h-2 rounded-full ${!showSuccess ? "bg-green-500" : "bg-gray-300"}`} />
-          <div className={`w-2 h-2 rounded-full ${showSuccess ? "bg-green-500" : "bg-gray-300"}`} />
+          <div className={`w-2 h-2 rounded-full ${!showSuccess ? "bg-green-500" : "bg-muted"}`} />
+          <div className={`w-2 h-2 rounded-full ${showSuccess ? "bg-green-500" : "bg-muted"}`} />
         </div>
       </div>
     </div>
@@ -435,20 +435,20 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
   // Loading state
   if (store === undefined || user === undefined || products === undefined) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-4">
-        <Card className="w-full max-w-sm mx-auto h-[600px] rounded-3xl border-4 border-black/90 bg-white flex flex-col p-6">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-sm mx-auto h-[600px] rounded-3xl border-4 border-foreground/90 bg-card flex flex-col p-6">
           <div className="animate-pulse">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
+                          <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-muted rounded-full"></div>
               <div className="flex-1">
-                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
+                <div className="h-3 bg-muted rounded w-1/2"></div>
               </div>
             </div>
             <div className="space-y-3">
-              <div className="h-32 bg-gray-200 rounded-lg"></div>
-              <div className="h-4 bg-gray-200 rounded"></div>
-              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+              <div className="h-32 bg-muted rounded-lg"></div>
+              <div className="h-4 bg-muted rounded"></div>
+              <div className="h-4 bg-muted rounded w-3/4"></div>
             </div>
           </div>
         </Card>
@@ -485,11 +485,11 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
   } : null;
 
     return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background">
       {/* Desktop Layout - Store Landing Page */}
       <div className="hidden lg:block">
         {/* Store Landing Page Header */}
-        <div className="bg-gradient-to-r from-[#6356FF] to-[#5248E6] text-white">
+                        <div className="bg-gradient-to-r from-primary to-primary/90 text-primary-foreground">
           <div className="max-w-6xl mx-auto px-6 py-12">
             <div className="flex items-center gap-6 mb-8">
               <Avatar className="w-16 h-16 border-4 border-white/20">
@@ -545,7 +545,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
 
           {/* Products Section */}
           <div className="space-y-8">
-            <h2 className="text-2xl font-bold text-center text-[#0F0F0F] mb-8">Available Products & Resources</h2>
+                          <h2 className="text-2xl font-bold text-center text-foreground mb-8">Available Products & Resources</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
               {/* Lead Magnet Cards */}
               {products?.filter(p => p.price === 0 && p.style === "card" && p.isPublished).map((leadMagnet) => (
@@ -588,14 +588,14 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
                       </div>
                     </Card>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-md bg-white border-0 shadow-xl data-[state=open]:backdrop-brightness-90">
+                  <DialogContent className="sm:max-w-md bg-card border-0 shadow-xl data-[state=open]:backdrop-brightness-90">
                     <DialogHeader className="pb-4">
                       <DialogTitle className="text-green-800 text-xl font-bold">{leadMagnet.title}</DialogTitle>
                       <DialogDescription className="text-green-600 text-sm">
                         Enter your details below to get instant access to your free resource
                       </DialogDescription>
                     </DialogHeader>
-                    <div className="bg-white rounded-lg">
+                    <div className="bg-card rounded-lg">
                       <LeadMagnetPreview 
                         leadMagnet={{
                           title: leadMagnet.title,
@@ -615,7 +615,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
               
               {/* Other Products */}
               {products?.filter(p => !(p.price === 0 && p.style === "card") && p.isPublished).map((product) => (
-                <Card key={product._id} className="group p-6 border border-gray-200 bg-white hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer">
+                <Card key={product._id} className="group p-6 border-premium bg-card hover:scale-[1.02] transition-all duration-300 cursor-pointer">
                   {/* Image */}
                   <div className="w-full h-48 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
                     {product.imageUrl ? (
@@ -635,20 +635,20 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
                   {/* Content */}
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <Badge variant="secondary" className="text-blue-700 bg-blue-100 border-blue-200 font-semibold">
+                      <Badge variant="secondary" className="text-primary bg-primary/10 border-primary/20 font-semibold">
                         ${product.price}
                       </Badge>
-                      <ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-blue-600 transition-colors duration-200" />
+                      <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors duration-200" />
                     </div>
-                    <h3 className="font-bold text-lg text-gray-900 line-clamp-2">
+                    <h3 className="font-bold text-lg text-card-foreground line-clamp-2">
                       {product.title}
                     </h3>
-                    <p className="text-gray-600 text-sm line-clamp-3 leading-relaxed">
+                    <p className="text-muted-foreground text-sm line-clamp-3 leading-relaxed">
                       {product.description || "High-quality digital product"}
                     </p>
                     <div className="flex items-center justify-between pt-2">
-                      <span className="text-xs text-gray-500 font-medium">Click to purchase</span>
-                      <ArrowRight className="w-4 h-4 text-gray-400 group-hover:translate-x-1 group-hover:text-blue-600 transition-all duration-200" />
+                      <span className="text-xs text-muted-foreground font-medium">Click to purchase</span>
+                      <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:translate-x-1 group-hover:text-primary transition-all duration-200" />
                     </div>
                   </div>
                 </Card>
@@ -657,19 +657,19 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
               {/* Empty State */}
               {(!products || products.filter(p => p.isPublished).length === 0) && (
                 <div className="col-span-full text-center py-16">
-                  <div className="w-20 h-20 bg-gray-100 rounded-2xl mx-auto mb-4 flex items-center justify-center">
-                    <Store className="w-10 h-10 text-gray-400" />
+                  <div className="w-20 h-20 bg-muted rounded-2xl mx-auto mb-4 flex items-center justify-center">
+                    <Store className="w-10 h-10 text-muted-foreground" />
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">No products available yet</h3>
-                  <p className="text-gray-600 text-sm">Check back soon for amazing resources and products!</p>
+                  <h3 className="text-xl font-semibold text-foreground mb-2">No products available yet</h3>
+                  <p className="text-muted-foreground text-sm">Check back soon for amazing resources and products!</p>
                 </div>
               )}
             </div>
           </div>
 
           {/* Store Footer */}
-          <div className="mt-16 pt-12 border-t border-gray-200">
-            <div className="bg-gray-50 rounded-2xl p-8">
+          <div className="mt-16 pt-12 border-t border-border">
+            <div className="bg-muted/30 rounded-2xl p-8">
               <div className="flex items-center gap-4 mb-6">
                 <Avatar className="w-12 h-12">
                   <AvatarImage src={avatarUrl} alt={`${displayName}'s profile`} />
@@ -678,32 +678,32 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <h3 className="font-bold text-xl text-[#0F0F0F]">About {displayName}</h3>
-                  <p className="text-[#51536A]">Creator of {store.name}</p>
+                                <h3 className="font-bold text-xl text-foreground">About {displayName}</h3>
+              <p className="text-muted-foreground">Creator of {store.name}</p>
                 </div>
               </div>
-              <p className="text-[#51536A] leading-relaxed mb-6">
+              <p className="text-muted-foreground leading-relaxed mb-6">
                 Welcome to my digital store! I create high-quality resources and tools to help you succeed in your journey. 
                 Every product is carefully crafted with your success in mind.
               </p>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-[#6356FF] flex items-center justify-center">
-                    <div className="w-3 h-3 bg-white rounded-full"></div>
+                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+                    <div className="w-3 h-3 bg-primary-foreground rounded-full"></div>
                   </div>
-                  <span className="text-sm font-medium">Instant Access</span>
+                  <span className="text-sm font-medium text-foreground">Instant Access</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-[#6356FF] flex items-center justify-center">
-                    <div className="w-3 h-3 bg-white rounded-full"></div>
+                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+                    <div className="w-3 h-3 bg-primary-foreground rounded-full"></div>
                   </div>
-                  <span className="text-sm font-medium">Quality Guaranteed</span>
+                  <span className="text-sm font-medium text-foreground">Quality Guaranteed</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-[#6356FF] flex items-center justify-center">
-                    <div className="w-3 h-3 bg-white rounded-full"></div>
+                  <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+                    <div className="w-3 h-3 bg-primary-foreground rounded-full"></div>
                   </div>
-                  <span className="text-sm font-medium">Secure Payment</span>
+                  <span className="text-sm font-medium text-foreground">Secure Payment</span>
                 </div>
               </div>
             </div>
@@ -712,9 +712,9 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
       </div>
 
       {/* Mobile Layout - Matches PhonePreview.tsx */}
-      <div className="lg:hidden min-h-screen bg-white flex flex-col">
+      <div className="lg:hidden min-h-screen bg-background flex flex-col">
         {/* Mobile App Header (matches PhonePreview) */}
-        <div className="bg-white border-b border-gray-100 p-4 sticky top-0 z-10">
+        <div className="bg-card border-b border-border p-4 sticky top-0 z-10">
           <div className="flex items-center gap-3">
             <Avatar className="w-10 h-10">
               <AvatarImage src={avatarUrl} alt={`${displayName}'s profile`} />

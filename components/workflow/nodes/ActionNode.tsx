@@ -57,7 +57,7 @@ export default function ActionNode({ data, id }: NodeProps<ActionNodeData>) {
             <Button
               variant="ghost"
               size="sm"
-              className="w-6 h-6 p-0 bg-blue-500 text-white rounded-full hover:bg-blue-600"
+              className="w-6 h-6 p-0 bg-primary text-primary-foreground rounded-full hover:bg-primary/90"
             >
               <Settings className="w-3 h-3" />
             </Button>
@@ -101,7 +101,7 @@ export default function ActionNode({ data, id }: NodeProps<ActionNodeData>) {
         <Button
           variant="ghost"
           size="sm"
-          className="w-6 h-6 p-0 bg-red-500 text-white rounded-full hover:bg-red-600"
+          className="w-6 h-6 p-0 bg-destructive text-destructive-foreground rounded-full hover:bg-destructive/90"
           onClick={handleDelete}
         >
           <X className="w-3 h-3" />
