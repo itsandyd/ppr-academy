@@ -211,8 +211,19 @@ export default function WorkflowBuilder({
           name: workflowName,
           description: workflowDescription,
           isActive,
-          nodes,
-          edges,
+          nodes: nodes.map(node => ({
+            id: node.id,
+            type: node.type as "email" | "action" | "trigger" | "delay" | "condition",
+            position: node.position,
+            data: node.data
+          })),
+          edges: edges.map(edge => ({
+            id: edge.id,
+            source: edge.source,
+            target: edge.target,
+            sourceHandle: edge.sourceHandle || undefined,
+            targetHandle: edge.targetHandle || undefined
+          })),
         });
       } else {
         // Create new workflow
@@ -229,8 +240,19 @@ export default function WorkflowBuilder({
           name: workflowName,
           description: workflowDescription,
           isActive,
-          nodes,
-          edges,
+          nodes: nodes.map(node => ({
+            id: node.id,
+            type: node.type as "email" | "action" | "trigger" | "delay" | "condition",
+            position: node.position,
+            data: node.data
+          })),
+          edges: edges.map(edge => ({
+            id: edge.id,
+            source: edge.source,
+            target: edge.target,
+            sourceHandle: edge.sourceHandle || undefined,
+            targetHandle: edge.targetHandle || undefined
+          })),
         });
       }
 

@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query, action } from "./_generated/server";
+import { mutation, query, action, internalMutation, internalQuery, internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { Doc, Id } from "./_generated/dataModel";
 
@@ -259,7 +259,7 @@ export const triggerWorkflow = action({
   handler: async (ctx, args) => {
     try {
       // Get the workflow
-      const workflow = await ctx.runQuery(internal.emailWorkflows.getWorkflow, {
+      const workflow: any = await ctx.runQuery(internal.emailWorkflows.getWorkflow, {
         workflowId: args.workflowId,
       });
 
@@ -271,7 +271,7 @@ export const triggerWorkflow = action({
       }
 
       // Create workflow execution record
-      const executionId = await ctx.runMutation(internal.emailWorkflows.createExecution, {
+      const executionId: Id<"workflowExecutions"> = await ctx.runMutation(internal.emailWorkflows.createExecution, {
         workflowId: args.workflowId,
         storeId: workflow.storeId,
         customerId: args.customerId,
