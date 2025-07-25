@@ -297,4 +297,56 @@ export const linkClerkIdToUser = mutation({
     await ctx.db.patch(user._id, updates);
     return await ctx.db.get(user._id);
   },
+});
+
+// Get user by ID (internal use)
+export const getUserById = query({
+  args: { userId: v.string() },
+  returns: v.union(
+    v.object({
+      _id: v.id("users"),
+      _creationTime: v.number(),
+      name: v.optional(v.string()),
+      email: v.optional(v.string()),
+      emailVerified: v.optional(v.number()),
+      image: v.optional(v.string()),
+      hashedPassword: v.optional(v.string()),
+      agencyId: v.optional(v.string()),
+      role: v.optional(v.union(
+        v.literal("AGENCY_OWNER"),
+        v.literal("AGENCY_ADMIN"), 
+        v.literal("SUBACCOUNT_USER"),
+        v.literal("SUBACCOUNT_GUEST")
+      )),
+      avatarUrl: v.optional(v.string()),
+      userRoleId: v.optional(v.string()),
+      userTypeId: v.optional(v.string()),
+      discordUsername: v.optional(v.string()),
+      discordId: v.optional(v.string()),
+      discordVerified: v.optional(v.boolean()),
+      stripeConnectAccountId: v.optional(v.string()),
+      admin: v.optional(v.boolean()),
+      clerkId: v.optional(v.string()),
+      firstName: v.optional(v.string()),
+      lastName: v.optional(v.string()),
+      imageUrl: v.optional(v.string()),
+      // Profile fields
+      bio: v.optional(v.string()),
+      instagram: v.optional(v.string()),
+      tiktok: v.optional(v.string()),
+      twitter: v.optional(v.string()),
+      youtube: v.optional(v.string()),
+      website: v.optional(v.string()),
+    }),
+    v.null()
+  ),
+  handler: async (ctx, args) => {
+    // Find user by matching the userId (stored as string in stores table)
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.userId))
+      .unique();
+    
+    return user;
+  },
 }); 

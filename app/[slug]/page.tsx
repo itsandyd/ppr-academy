@@ -9,7 +9,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState, useEffect, use } from "react";
 import { CheckCircle, Download, Mail, ArrowRight, Store, Gift, ExternalLink } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { notFound } from "next/navigation";
 
 interface StorefrontPageProps {
@@ -352,6 +352,9 @@ function LinkInBioLayout({ products, leadMagnetData, storeData }: { products: an
           <DialogContent className="sm:max-w-md bg-white border-0 shadow-xl data-[state=open]:backdrop-brightness-90">
             <DialogHeader className="pb-4">
               <DialogTitle className="text-green-800 text-xl font-bold">{leadMagnet.title}</DialogTitle>
+              <DialogDescription className="text-green-600 text-sm">
+                Enter your details below to get instant access to your free resource
+              </DialogDescription>
             </DialogHeader>
             <div className="bg-white rounded-lg">
                           <LeadMagnetPreview 
@@ -543,8 +546,124 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
           {/* Products Section */}
           <div className="space-y-8">
             <h2 className="text-2xl font-bold text-center text-[#0F0F0F] mb-8">Available Products & Resources</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-              <LinkInBioLayout products={products || []} leadMagnetData={leadMagnetData} storeData={{ store, user }} />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+              {/* Lead Magnet Cards */}
+              {products?.filter(p => p.price === 0 && p.style === "card" && p.isPublished).map((leadMagnet) => (
+                <Dialog key={leadMagnet._id}>
+                  <DialogTrigger asChild>
+                    <Card className="group p-6 border border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer">
+                      {/* Image */}
+                      <div className="w-full h-48 bg-gradient-to-br from-green-100 to-emerald-200 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
+                        {leadMagnet.imageUrl ? (
+                          <img 
+                            src={leadMagnet.imageUrl} 
+                            alt={leadMagnet.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        ) : (
+                          <div className="text-center">
+                            <Gift className="w-16 h-16 text-green-600 mx-auto mb-2" />
+                            <span className="text-sm text-green-600 font-medium">Free Resource</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Content */}
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-green-100 text-green-800 text-xs border-green-200 font-semibold">
+                            FREE
+                          </Badge>
+                        </div>
+                        <h3 className="font-bold text-lg text-green-800 line-clamp-2">
+                          {leadMagnet.title}
+                        </h3>
+                        <p className="text-green-600 text-sm line-clamp-3 leading-relaxed">
+                          {leadMagnet.description || "Get instant access to this valuable free resource"}
+                        </p>
+                        <div className="flex items-center justify-between pt-2">
+                          <span className="text-xs text-green-600 font-medium">Click to get access</span>
+                          <ArrowRight className="w-4 h-4 text-green-600 group-hover:translate-x-1 transition-transform duration-200" />
+                        </div>
+                      </div>
+                    </Card>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md bg-white border-0 shadow-xl data-[state=open]:backdrop-brightness-90">
+                    <DialogHeader className="pb-4">
+                      <DialogTitle className="text-green-800 text-xl font-bold">{leadMagnet.title}</DialogTitle>
+                      <DialogDescription className="text-green-600 text-sm">
+                        Enter your details below to get instant access to your free resource
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="bg-white rounded-lg">
+                      <LeadMagnetPreview 
+                        leadMagnet={{
+                          title: leadMagnet.title,
+                          subtitle: leadMagnet.description,
+                          imageUrl: leadMagnet.imageUrl,
+                          ctaText: leadMagnet.buttonLabel,
+                          downloadUrl: leadMagnet.downloadUrl,
+                          productId: leadMagnet._id
+                        }} 
+                        storeData={{ store, user }}
+                        isFullScreen={false} 
+                      />
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              ))}
+              
+              {/* Other Products */}
+              {products?.filter(p => !(p.price === 0 && p.style === "card") && p.isPublished).map((product) => (
+                <Card key={product._id} className="group p-6 border border-gray-200 bg-white hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer">
+                  {/* Image */}
+                  <div className="w-full h-48 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
+                    {product.imageUrl ? (
+                      <img 
+                        src={product.imageUrl} 
+                        alt={product.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="text-center">
+                        <Store className="w-16 h-16 text-blue-600 mx-auto mb-2" />
+                        <span className="text-sm text-blue-600 font-medium">Digital Product</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Content */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Badge variant="secondary" className="text-blue-700 bg-blue-100 border-blue-200 font-semibold">
+                        ${product.price}
+                      </Badge>
+                      <ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-blue-600 transition-colors duration-200" />
+                    </div>
+                    <h3 className="font-bold text-lg text-gray-900 line-clamp-2">
+                      {product.title}
+                    </h3>
+                    <p className="text-gray-600 text-sm line-clamp-3 leading-relaxed">
+                      {product.description || "High-quality digital product"}
+                    </p>
+                    <div className="flex items-center justify-between pt-2">
+                      <span className="text-xs text-gray-500 font-medium">Click to purchase</span>
+                      <ArrowRight className="w-4 h-4 text-gray-400 group-hover:translate-x-1 group-hover:text-blue-600 transition-all duration-200" />
+                    </div>
+                  </div>
+                </Card>
+              ))}
+              
+              {/* Empty State */}
+              {(!products || products.filter(p => p.isPublished).length === 0) && (
+                <div className="col-span-full text-center py-16">
+                  <div className="w-20 h-20 bg-gray-100 rounded-2xl mx-auto mb-4 flex items-center justify-center">
+                    <Store className="w-10 h-10 text-gray-400" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">No products available yet</h3>
+                  <p className="text-gray-600 text-sm">Check back soon for amazing resources and products!</p>
+                </div>
+              )}
             </div>
           </div>
 

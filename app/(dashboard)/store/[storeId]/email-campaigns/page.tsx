@@ -22,7 +22,9 @@ import {
   Copy,
   BarChart3,
   Settings,
-  AlertTriangle
+  AlertTriangle,
+  Zap,
+  PlayCircle
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -30,6 +32,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDistanceToNow } from "date-fns";
 
 export default function EmailCampaignsPage() {
@@ -46,6 +49,12 @@ export default function EmailCampaignsPage() {
     storeId ? { storeId } : "skip"
   ) || [];
 
+  // Fetch automations/workflows
+  const workflows = useQuery(
+    api.emailWorkflows?.getWorkflowsByStore,
+    storeId ? { storeId } : "skip"
+  ) || [];
+
   // Check email configuration status
   const emailConfig = useQuery(
     api.stores?.getEmailConfig,
@@ -54,6 +63,10 @@ export default function EmailCampaignsPage() {
 
   const deleteCampaign = useMutation((api as any).emailCampaigns?.deleteCampaign);
   const sendCampaign = useMutation((api as any).emails?.sendCampaign);
+  
+  // Workflow mutations
+  const deleteWorkflow = useMutation(api.emailWorkflows?.deleteWorkflow);
+  const toggleWorkflowStatus = useMutation(api.emailWorkflows?.toggleWorkflowStatus);
 
   // Filter campaigns based on search and status
   const filteredCampaigns = campaigns.filter((campaign: any) => {
@@ -109,13 +122,35 @@ export default function EmailCampaignsPage() {
     }
   };
 
+  const handleToggleWorkflow = async (workflowId: string, isActive: boolean) => {
+    try {
+      await toggleWorkflowStatus({ workflowId: workflowId as any, isActive: !isActive });
+    } catch (error) {
+      console.error("Failed to toggle workflow:", error);
+      alert("Failed to update workflow status. Please try again.");
+    }
+  };
+
+  const handleDeleteWorkflow = async (workflowId: string) => {
+    if (!confirm("Are you sure you want to delete this automation? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      await deleteWorkflow({ workflowId: workflowId as any });
+    } catch (error) {
+      console.error("Failed to delete workflow:", error);
+      alert("Failed to delete automation. Please try again.");
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-8 pt-10 pb-24 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Email Campaigns</h1>
-          <p className="text-gray-600 mt-2">Create and send marketing emails to your customers</p>
+          <h1 className="text-3xl font-bold text-gray-900">Email Marketing</h1>
+          <p className="text-gray-600 mt-2">Send campaigns and create automated email sequences</p>
         </div>
         <div className="flex items-center gap-3">
           <Button 
@@ -125,14 +160,6 @@ export default function EmailCampaignsPage() {
           >
             <Settings className="w-4 h-4" />
             Email Settings
-          </Button>
-          <Button 
-            onClick={() => router.push(`/store/${storeId}/email-campaigns/create`)}
-            className="flex items-center gap-2"
-            disabled={!emailConfig?.isConfigured}
-          >
-            <Plus className="w-4 h-4" />
-            Create Campaign
           </Button>
         </div>
       </div>
@@ -148,7 +175,7 @@ export default function EmailCampaignsPage() {
                   Email Setup Required
                 </h3>
                 <p className="text-orange-700 mb-4">
-                  Configure your email sender settings to start sending professional email campaigns to your customers. The platform manages the email service centrally.
+                  Configure your email sender settings to start sending professional email campaigns and automations to your customers. The platform manages the email service centrally.
                 </p>
                 <div className="flex items-center gap-3">
                   <Button 
@@ -167,6 +194,36 @@ export default function EmailCampaignsPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Tabs for Campaigns and Automations */}
+      <Tabs defaultValue="campaigns" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="campaigns" className="flex items-center gap-2">
+            <Mail className="w-4 h-4" />
+            Campaigns
+          </TabsTrigger>
+          <TabsTrigger value="automations" className="flex items-center gap-2">
+            <Zap className="w-4 h-4" />
+            Automations
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Campaigns Tab */}
+        <TabsContent value="campaigns" className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">Email Campaigns</h2>
+              <p className="text-gray-600">One-time email sends to your customer list</p>
+            </div>
+            <Button 
+              onClick={() => router.push(`/store/${storeId}/email-campaigns/create`)}
+              className="flex items-center gap-2"
+              disabled={!emailConfig?.isConfigured}
+            >
+              <Plus className="w-4 h-4" />
+              Create Campaign
+            </Button>
+          </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -384,6 +441,191 @@ export default function EmailCampaignsPage() {
           )}
         </CardContent>
       </Card>
+        </TabsContent>
+
+        {/* Automations Tab */}
+        <TabsContent value="automations" className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold">Email Automations</h2>
+              <p className="text-gray-600">Automated email sequences triggered by customer actions</p>
+            </div>
+            <Button 
+              onClick={() => router.push(`/store/${storeId}/automations`)}
+              className="flex items-center gap-2"
+              disabled={!emailConfig?.isConfigured}
+            >
+              <Plus className="w-4 h-4" />
+              Create Automation
+            </Button>
+          </div>
+
+          {/* Automation Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <Zap className="w-6 h-6 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Total Automations</p>
+                    <p className="text-2xl font-bold">{workflows.length}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                    <PlayCircle className="w-6 h-6 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Active Automations</p>
+                    <p className="text-2xl font-bold">{workflows.filter((w: any) => w.isActive).length}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Users className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Total Executions</p>
+                    <p className="text-2xl font-bold">
+                      {workflows.reduce((sum: number, w: any) => sum + (w.totalExecutions || 0), 0)}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                    <BarChart3 className="w-6 h-6 text-orange-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Avg Success Rate</p>
+                    <p className="text-2xl font-bold">95%</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Automations List */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="w-5 h-5" />
+                Automations ({workflows.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {workflows.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-gray-100 rounded-lg mx-auto mb-4 flex items-center justify-center">
+                    <Zap className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <h3 className="text-lg font-semibold mb-2">No automations yet</h3>
+                  <p className="text-gray-600 mb-6">
+                    Create your first email automation to automatically engage customers
+                  </p>
+                  <Button 
+                    onClick={() => router.push(`/store/${storeId}/automations`)}
+                    disabled={!emailConfig?.isConfigured}
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Your First Automation
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {workflows.map((workflow: any) => (
+                    <Card key={workflow._id} className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4 flex-1">
+                          <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                            <Zap className="w-6 h-6 text-purple-600" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-1">
+                              <h3 className="font-semibold text-lg">{workflow.name}</h3>
+                              <Badge className={workflow.isActive ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>
+                                {workflow.isActive ? "Active" : "Inactive"}
+                              </Badge>
+                            </div>
+                            <p className="text-gray-600 mb-2">
+                              Trigger: {workflow.trigger.type.replace('_', ' ')}
+                            </p>
+                            <div className="flex items-center gap-4 text-sm text-gray-500">
+                              <span className="flex items-center gap-1">
+                                <PlayCircle className="w-4 h-4" />
+                                {workflow.totalExecutions || 0} executions
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Calendar className="w-4 h-4" />
+                                Created {formatDistanceToNow(new Date(workflow._creationTime))} ago
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleToggleWorkflow(workflow._id, workflow.isActive)}
+                          >
+                            {workflow.isActive ? "Pause" : "Activate"}
+                          </Button>
+                          
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" size="sm">
+                                <MoreVertical className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem 
+                                onClick={() => router.push(`/store/${storeId}/automations/${workflow._id}`)}
+                              >
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit Workflow
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => router.push(`/store/${storeId}/automations/${workflow._id}/analytics`)}
+                              >
+                                <BarChart3 className="w-4 h-4 mr-2" />
+                                View Analytics
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => handleDeleteWorkflow(workflow._id)}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 } 

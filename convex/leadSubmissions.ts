@@ -89,6 +89,38 @@ export const submitLead = mutation({
       console.log("🔄 Returning user - sending confirmation email again");
       await sendConfirmationEmailHelper(ctx, args, product);
       
+      // Send admin notification for returning user engagement
+      try {
+        console.log("📧 Scheduling admin notification for returning user...");
+        await ctx.scheduler.runAfter(0, (internal as any).emails.sendNewLeadAdminNotification, {
+          storeId: args.storeId as any,
+          customerName: args.name,
+          customerEmail: args.email,
+          productName: product?.title || "Lead Magnet",
+          source: (args.source || "storefront") + " (returning user)",
+        });
+        console.log("✅ Admin notification for returning user scheduled successfully");
+      } catch (adminNotificationError) {
+        console.error("⚠️ Admin notification failed for returning user:", adminNotificationError);
+      }
+
+      // Trigger workflows for returning user activity
+      try {
+        console.log("🔄 Checking for returning user workflows to trigger...");
+        await ctx.scheduler.runAfter(0, (internal as any).emailWorkflows.triggerLeadSignupWorkflows, {
+          storeId: args.storeId,
+          customerEmail: args.email,
+          customerName: args.name,
+          productId: args.productId,
+          productName: product?.title || "Lead Magnet",
+          source: (args.source || "storefront") + " (returning user)",
+          isReturningUser: true,
+        });
+        console.log("✅ Returning user workflow triggers scheduled successfully");
+      } catch (workflowError) {
+        console.error("⚠️ Returning user workflow triggering failed:", workflowError);
+      }
+      
       return {
         submissionId: existingSubmission._id,
         hasAccess: true,
@@ -152,6 +184,37 @@ export const submitLead = mutation({
 
     // Send automated emails (if Resend is configured)
     await sendConfirmationEmailHelper(ctx, args, product);
+
+    // Send admin notification for new lead
+    try {
+      console.log("📧 Scheduling admin notification for new lead...");
+      await ctx.scheduler.runAfter(0, (internal as any).emails.sendNewLeadAdminNotification, {
+        storeId: args.storeId as any,
+        customerName: args.name,
+        customerEmail: args.email,
+        productName: product?.title || "Lead Magnet",
+        source: args.source || "storefront",
+      });
+      console.log("✅ Admin notification scheduled successfully");
+    } catch (adminNotificationError) {
+      console.error("⚠️ Admin notification failed, but lead was still recorded:", adminNotificationError);
+    }
+
+    // Trigger email automation workflows
+    try {
+      console.log("🔄 Checking for automation workflows to trigger...");
+      await ctx.scheduler.runAfter(0, (internal as any).emailWorkflows.triggerLeadSignupWorkflows, {
+        storeId: args.storeId,
+        customerEmail: args.email,
+        customerName: args.name,
+        productId: args.productId,
+        productName: product?.title || "Lead Magnet",
+        source: args.source || "storefront",
+      });
+      console.log("✅ Workflow triggers scheduled successfully");
+    } catch (workflowError) {
+      console.error("⚠️ Workflow triggering failed, but lead was still recorded:", workflowError);
+    }
 
     return {
       submissionId,

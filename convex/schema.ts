@@ -127,12 +127,103 @@ export default defineSchema({
       isConfigured: v.optional(v.boolean()),
       lastTestedAt: v.optional(v.number()),
       emailsSentThisMonth: v.optional(v.number()),
+      // Admin Notification Preferences
+      adminNotifications: v.optional(v.object({
+        enabled: v.optional(v.boolean()),
+        emailOnNewLead: v.optional(v.boolean()),
+        emailOnReturningUser: v.optional(v.boolean()),
+        notificationEmail: v.optional(v.string()), // Override admin email
+        customSubjectPrefix: v.optional(v.string()),
+        includeLeadDetails: v.optional(v.boolean()),
+        sendDigestInsteadOfInstant: v.optional(v.boolean()),
+        digestFrequency: v.optional(v.union(
+          v.literal("hourly"),
+          v.literal("daily"),
+          v.literal("weekly")
+        )),
+      })),
     })),
   })
     .index("by_userId", ["userId"])
     .index("by_slug", ["slug"]),
 
   // Digital Products
+  // Email Automation Workflows
+  emailWorkflows: defineTable({
+    name: v.string(),
+    description: v.optional(v.string()),
+    storeId: v.string(),
+    userId: v.string(),
+    isActive: v.optional(v.boolean()),
+    trigger: v.object({
+      type: v.union(
+        v.literal("lead_signup"),
+        v.literal("product_purchase"),
+        v.literal("time_delay"),
+        v.literal("date_time"),
+        v.literal("customer_action")
+      ),
+      config: v.any(), // Flexible config for different trigger types
+    }),
+    nodes: v.array(v.object({
+      id: v.string(),
+      type: v.union(
+        v.literal("trigger"),
+        v.literal("email"),
+        v.literal("delay"),
+        v.literal("condition"),
+        v.literal("action")
+      ),
+      position: v.object({
+        x: v.number(),
+        y: v.number(),
+      }),
+      data: v.any(), // Node-specific data
+    })),
+    edges: v.array(v.object({
+      id: v.string(),
+      source: v.string(),
+      target: v.string(),
+      sourceHandle: v.optional(v.string()),
+      targetHandle: v.optional(v.string()),
+    })),
+    // Execution tracking
+    totalExecutions: v.optional(v.number()),
+    lastExecuted: v.optional(v.number()),
+    // Performance metrics
+    avgOpenRate: v.optional(v.number()),
+    avgClickRate: v.optional(v.number()),
+  })
+    .index("by_storeId", ["storeId"])
+    .index("by_userId", ["userId"])
+    .index("by_active", ["isActive"]),
+
+  // Workflow Executions (tracking individual workflow runs)
+  workflowExecutions: defineTable({
+    workflowId: v.id("emailWorkflows"),
+    storeId: v.string(),
+    customerId: v.optional(v.string()),
+    customerEmail: v.string(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("running"),
+      v.literal("completed"),
+      v.literal("failed"),
+      v.literal("cancelled")
+    ),
+    currentNodeId: v.optional(v.string()),
+    scheduledFor: v.optional(v.number()), // For delayed executions
+    startedAt: v.optional(v.number()),
+    completedAt: v.optional(v.number()),
+    errorMessage: v.optional(v.string()),
+    // Tracking data through the workflow
+    executionData: v.optional(v.any()),
+  })
+    .index("by_workflowId", ["workflowId"])
+    .index("by_storeId", ["storeId"])
+    .index("by_status", ["status"])
+    .index("by_scheduledFor", ["scheduledFor"]),
+
   digitalProducts: defineTable({
     title: v.string(),
     description: v.optional(v.string()),

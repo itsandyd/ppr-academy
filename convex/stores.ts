@@ -236,6 +236,67 @@ export const updateEmailConfig = mutation({
   },
 });
 
+// Update store admin notification preferences
+export const updateAdminNotificationSettings = mutation({
+  args: {
+    storeId: v.id("stores"),
+    enabled: v.optional(v.boolean()),
+    emailOnNewLead: v.optional(v.boolean()),
+    emailOnReturningUser: v.optional(v.boolean()),
+    notificationEmail: v.optional(v.string()),
+    customSubjectPrefix: v.optional(v.string()),
+    includeLeadDetails: v.optional(v.boolean()),
+    sendDigestInsteadOfInstant: v.optional(v.boolean()),
+    digestFrequency: v.optional(v.union(
+      v.literal("hourly"),
+      v.literal("daily"),
+      v.literal("weekly")
+    )),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    try {
+      const store = await ctx.db.get(args.storeId);
+      if (!store) {
+        return { success: false, message: "Store not found" };
+      }
+
+      const { storeId, ...notificationSettings } = args;
+      
+      // Update the store with admin notification settings, preserving existing config
+      const existingConfig = store.emailConfig;
+      await ctx.db.patch(args.storeId, {
+        emailConfig: {
+          fromEmail: existingConfig?.fromEmail || 'noreply@ppr-academy.com',
+          fromName: existingConfig?.fromName,
+          replyToEmail: existingConfig?.replyToEmail,
+          isConfigured: existingConfig?.isConfigured,
+          lastTestedAt: existingConfig?.lastTestedAt,
+          emailsSentThisMonth: existingConfig?.emailsSentThisMonth,
+          adminNotifications: {
+            ...existingConfig?.adminNotifications,
+            ...notificationSettings,
+          },
+        },
+      });
+
+      return { 
+        success: true, 
+        message: "Admin notification settings updated successfully" 
+      };
+    } catch (error) {
+      console.error("Admin notification settings update error:", error);
+      return { 
+        success: false, 
+        message: "Failed to update admin notification settings" 
+      };
+    }
+  },
+});
+
 // Get store email configuration
 export const getEmailConfig = query({
   args: { storeId: v.id("stores") },
