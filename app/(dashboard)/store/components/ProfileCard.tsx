@@ -10,6 +10,7 @@ import { UserResource } from "@clerk/types";
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 import { toast } from "@/hooks/use-toast";
 
 interface ProfileCardProps {
@@ -89,10 +90,17 @@ export function ProfileCard({ user, store }: ProfileCardProps) {
     try {
       if (store?._id) {
         // Update existing store
+        console.log("Updating store:", {
+          id: store._id,
+          name: storeName.trim(),
+          slug: storeSlug.trim() || undefined,
+          userId: user.id
+        });
         await updateStore({
-          id: store._id as any,
+          id: store._id as Id<"stores">,
           name: storeName.trim(),
           slug: storeSlug.trim() || undefined, // Let backend generate from name if empty
+          userId: user.id, // Add userId for authorization
         });
         toast({
           title: "Success",
@@ -100,6 +108,11 @@ export function ProfileCard({ user, store }: ProfileCardProps) {
         });
       } else {
         // Create new store
+        console.log("Creating store:", {
+          name: storeName.trim(),
+          slug: storeSlug.trim() || undefined,
+          userId: user.id
+        });
         await createStore({
           name: storeName.trim(),
           slug: storeSlug.trim() || undefined, // Let backend generate from name if empty
@@ -115,7 +128,7 @@ export function ProfileCard({ user, store }: ProfileCardProps) {
       console.error("Error saving store:", error);
       toast({
         title: "Error",
-        description: "Failed to save store",
+        description: `Failed to save store: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       });
     } finally {
@@ -137,7 +150,7 @@ export function ProfileCard({ user, store }: ProfileCardProps) {
   };
 
   return (
-    <Card className="rounded-xl shadow-sm bg-white p-6 flex items-center gap-6">
+    <Card className="rounded-xl shadow-sm bg-card p-6 flex items-center gap-6">
       <Avatar className="w-16 h-16">
         <AvatarImage src={avatarUrl} alt={`${displayName}'s profile`} />
         <AvatarFallback className="text-lg font-semibold bg-muted">
@@ -206,7 +219,7 @@ export function ProfileCard({ user, store }: ProfileCardProps) {
                   onClick={handleSaveStore}
                   disabled={isLoading}
                 >
-                  <Check className="w-3 h-3 text-green-600 mr-1" />
+                  <Check className="w-3 h-3 text-primary mr-1" />
                   <span className="text-xs">Save</span>
                 </Button>
                 <Button
@@ -216,7 +229,7 @@ export function ProfileCard({ user, store }: ProfileCardProps) {
                   onClick={handleCancelEdit}
                   disabled={isLoading}
                 >
-                  <X className="w-3 h-3 text-red-600 mr-1" />
+                  <X className="w-3 h-3 text-destructive mr-1" />
                   <span className="text-xs">Cancel</span>
                 </Button>
               </div>

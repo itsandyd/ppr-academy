@@ -115,24 +115,21 @@ export const updateStore = mutation({
     id: v.id("stores"),
     name: v.optional(v.string()),
     slug: v.optional(v.string()),
+    userId: v.string(), // Add userId for authorization
   },
-  returns: v.union(
-    v.object({
-      _id: v.id("stores"),
-      _creationTime: v.number(),
-      name: v.string(),
-      slug: v.optional(v.string()),
-      userId: v.string(),
-    }),
-    v.null()
-  ),
+  returns: v.union(storeValidator, v.null()),
   handler: async (ctx, args) => {
-    const { id, ...updates } = args;
+    const { id, userId, ...updates } = args;
     
     // Get current store
     const currentStore = await ctx.db.get(id);
     if (!currentStore) {
       throw new Error("Store not found");
+    }
+    
+    // Check if the user is the owner of this store
+    if (currentStore.userId !== userId) {
+      throw new Error("Unauthorized: You can only update your own stores");
     }
     
     // Handle slug logic
