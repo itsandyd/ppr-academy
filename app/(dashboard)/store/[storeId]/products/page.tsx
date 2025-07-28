@@ -18,11 +18,11 @@ export default function ChooseProductTypePage() {
     // Map option IDs to their respective creation pages
     const routeMap: Record<string, string> = {
       'emails': `/store/${storeId}/products/lead-magnet`,
-      'digital': `/store/${storeId}/page/digital-download/create`,
-      'coaching': `/store/${storeId}/page/coaching-call/create`,
+      'digital': `/store/${storeId}/products/digital-download/create`,
+      'coaching': `/store/${storeId}/products/coaching-call/create`,
+      'ecourse': `/store/${storeId}/course/create`, // eCourse creation page
       // TODO: Add routes for other product types when pages are created
       'custom': '#', // Custom Product
-      'ecourse': '#', // eCourse  
       'membership': '#', // Recurring Membership
       'webinar': '#', // Webinar
       'community': '#', // Community
@@ -42,10 +42,10 @@ export default function ChooseProductTypePage() {
   return (
     <div className="max-w-[1140px] mx-auto px-8 pt-12 pb-24">
       <div className="mb-8">
-        <h2 className="text-[28px] font-bold leading-tight text-[#0F0F1C]">
+        <h2 className="text-[28px] font-bold leading-tight text-foreground">
           Choose Product Type
         </h2>
-        <p className="mt-1 text-base font-normal text-[#6B6E85]">
+        <p className="mt-1 text-base font-normal text-muted-foreground">
           Pick the format that best fits what you're selling — guides, courses, coaching, or more!
         </p>
       </div>

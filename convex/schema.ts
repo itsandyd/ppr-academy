@@ -51,6 +51,16 @@ export default defineSchema({
     isPublished: v.optional(v.boolean()),
     courseCategoryId: v.optional(v.string()),
     slug: v.optional(v.string()),
+    // Additional fields for course creation form
+    category: v.optional(v.string()),
+    skillLevel: v.optional(v.string()),
+    checkoutHeadline: v.optional(v.string()),
+    checkoutDescription: v.optional(v.string()),
+    paymentDescription: v.optional(v.string()),
+    guaranteeText: v.optional(v.string()),
+    showGuarantee: v.optional(v.boolean()),
+    acceptsPayPal: v.optional(v.boolean()),
+    acceptsStripe: v.optional(v.boolean()),
   })
   .index("by_instructorId", ["instructorId"])
   .index("by_slug", ["slug"])

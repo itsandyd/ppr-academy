@@ -241,33 +241,7 @@ export default function CreateCourseForm() {
   };
 
   return (
-    <>
-      {/* Header */}
-      <div className="bg-gradient-to-r from-primary to-secondary text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold">Create New Course</h1>
-              <p className="text-white/90 mt-2">Share your knowledge with the world</p>
-            </div>
-            <div className="flex space-x-4">
-              <Button variant="outline" className="border-white text-white hover:bg-white/10">
-                Save Draft
-              </Button>
-              <Button 
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-                className="bg-white text-primary hover:bg-slate-100"
-              >
-                {isSubmitting ? "Creating..." : "Create Course"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <form onSubmit={handleSubmit} className="space-y-8">
+    <form id="course-form" onSubmit={handleSubmit} className="space-y-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Course Details */}
             <div className="lg:col-span-2 space-y-6">
@@ -278,7 +252,7 @@ export default function CreateCourseForm() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2">Course Title *</label>
+                    <label className="block text-sm font-medium mb-2 text-foreground">Course Title *</label>
                     <Input
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
@@ -288,7 +262,7 @@ export default function CreateCourseForm() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-2">Course Description *</label>
+                    <label className="block text-sm font-medium mb-2 text-foreground">Course Description *</label>
                     <Textarea
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
@@ -300,7 +274,7 @@ export default function CreateCourseForm() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium mb-2">Category *</label>
+                      <label className="block text-sm font-medium mb-2 text-foreground">Category *</label>
                       <Select value={category} onValueChange={setCategory} required>
                         <SelectTrigger>
                           <SelectValue placeholder="Select category" />
@@ -314,7 +288,7 @@ export default function CreateCourseForm() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium mb-2">Skill Level *</label>
+                      <label className="block text-sm font-medium mb-2 text-foreground">Skill Level *</label>
                       <Select value={skillLevel} onValueChange={setSkillLevel} required>
                         <SelectTrigger>
                           <SelectValue placeholder="Select level" />
@@ -329,7 +303,7 @@ export default function CreateCourseForm() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-2">Price (USD) *</label>
+                    <label className="block text-sm font-medium mb-2 text-foreground">Price (USD) *</label>
                     <Input
                       type="number"
                       step="0.01"
@@ -342,7 +316,7 @@ export default function CreateCourseForm() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-2">Thumbnail URL</label>
+                    <label className="block text-sm font-medium mb-2 text-foreground">Thumbnail URL</label>
                     <Input
                       value={thumbnail}
                       onChange={(e) => setThumbnail(e.target.value)}
@@ -365,15 +339,15 @@ export default function CreateCourseForm() {
                 </CardHeader>
                 <CardContent>
                   {modules.length === 0 ? (
-                    <div className="text-center py-8 text-slate-500">
+                    <div className="text-center py-8 text-muted-foreground">
                       <p>No modules yet. Add your first module to get started.</p>
                     </div>
                   ) : (
                     <div className="space-y-4">
                       {modules.map((module, moduleIndex) => (
-                        <div key={moduleIndex} className="border border-slate-200 rounded-lg">
+                        <div key={moduleIndex} className="border border-border rounded-lg">
                           {/* Module Header */}
-                          <div className="p-4 bg-slate-50 border-b border-slate-200">
+                          <div className="p-4 bg-muted/30 border-b border-border">
                             <div className="flex items-center justify-between">
                               <button
                                 type="button"
@@ -429,13 +403,13 @@ export default function CreateCourseForm() {
                               </div>
 
                               {module.lessons.length === 0 ? (
-                                <p className="text-slate-500 text-center py-4">No lessons yet</p>
+                                <p className="text-muted-foreground text-center py-4">No lessons yet</p>
                               ) : (
                                 <div className="space-y-3">
                                   {module.lessons.map((lesson, lessonIndex) => (
-                                    <div key={lessonIndex} className="border border-slate-200 rounded">
+                                    <div key={lessonIndex} className="border border-border rounded">
                                       {/* Lesson Header */}
-                                      <div className="p-3 bg-slate-25 border-b border-slate-200">
+                                      <div className="p-3 bg-muted/20 border-b border-border">
                                         <div className="flex items-center justify-between">
                                           <button
                                             type="button"
@@ -495,11 +469,11 @@ export default function CreateCourseForm() {
                                           </div>
 
                                           {lesson.chapters.length === 0 ? (
-                                            <p className="text-slate-500 text-center py-2 text-sm">No chapters yet</p>
+                                            <p className="text-muted-foreground text-center py-2 text-sm">No chapters yet</p>
                                           ) : (
                                             <div className="space-y-2">
                                               {lesson.chapters.map((chapter, chapterIndex) => (
-                                                <div key={chapterIndex} className="border border-slate-200 rounded p-3 bg-slate-50">
+                                                <div key={chapterIndex} className="border border-border rounded p-3 bg-muted/20">
                                                   <div className="flex items-center justify-between mb-2">
                                                     <span className="text-sm font-medium">
                                                       Chapter {chapterIndex + 1}
@@ -582,10 +556,10 @@ export default function CreateCourseForm() {
                     )}
                     
                     <div>
-                      <h3 className="font-semibold text-dark line-clamp-2">
+                      <h3 className="font-semibold text-foreground line-clamp-2">
                         {title || "Course Title"}
                       </h3>
-                      <p className="text-sm text-slate-600 mt-1 line-clamp-3">
+                      <p className="text-sm text-muted-foreground mt-1 line-clamp-3">
                         {description || "Course description will appear here..."}
                       </p>
                     </div>
@@ -652,7 +626,7 @@ export default function CreateCourseForm() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    <p className="text-sm text-slate-600">
+                    <p className="text-sm text-muted-foreground">
                       Your course will be created as a draft. You can publish it later from your dashboard.
                     </p>
                     
@@ -672,7 +646,5 @@ export default function CreateCourseForm() {
             </div>
           </div>
         </form>
-      </div>
-    </>
   );
 } 
