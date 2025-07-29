@@ -77,6 +77,7 @@ export function ThumbnailForm() {
     const newData = { ...formData, [field]: value };
     setFormData(newData);
     
+    console.log("🔄 ThumbnailForm updating context with:", { step: "thumbnail", data: newData });
     // Update context with new data
     updateData("thumbnail", newData);
   };

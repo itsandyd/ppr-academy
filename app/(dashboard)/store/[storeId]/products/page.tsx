@@ -3,11 +3,38 @@
 import { options } from "../components/options";
 import { OptionCard } from "../components/OptionCard";
 import { useParams, useRouter } from "next/navigation";
+import { useValidStoreId } from "@/hooks/useStoreId";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { AlertTriangle } from "lucide-react";
 
 export default function ChooseProductTypePage() {
   const params = useParams();
   const router = useRouter();
-  const storeId = params.storeId as string;
+  const storeId = useValidStoreId();
+
+  if (!storeId) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-destructive" />
+              Store Not Found
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4">
+              The store you're trying to access could not be found or is invalid.
+            </p>
+            <Button onClick={() => router.push('/store')} variant="outline">
+              Go Back to Store Selection
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const handleOptionClick = (optionId: string) => {
     if (!storeId) {

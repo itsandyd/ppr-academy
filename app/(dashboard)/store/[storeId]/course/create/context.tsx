@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
+import { useValidStoreId } from "@/hooks/useStoreId";
 
 // Types for course data
 export interface CourseData {
@@ -101,8 +102,20 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
   const router = useRouter();
   const { user } = useUser();
   const { toast } = useToast();
-  const storeId = params.storeId as string;
+  const storeId = useValidStoreId();
   const courseId = searchParams.get("courseId") as Id<"courses"> | undefined;
+
+  // Redirect if storeId is invalid
+  useEffect(() => {
+    if (!storeId) {
+      toast({
+        title: "Invalid Store",
+        description: "The store you're trying to access could not be found.",
+        variant: "destructive",
+      });
+      router.push('/store');
+    }
+  }, [storeId, router, toast]);
 
   // Get user from Convex
   const convexUser = useQuery(
@@ -200,8 +213,15 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
   };
 
   const updateData = (step: string, newData: Partial<CourseData>) => {
+    console.log("📊 Context updateData called:", { step, newData });
     setState(prev => {
       const updatedData = { ...prev.data, ...newData };
+      
+      console.log("📊 Context data updated:", { 
+        previous: prev.data, 
+        new: newData, 
+        merged: updatedData 
+      });
       
       // Only recalculate completion for the current step
       const stepCompletion = {
@@ -218,7 +238,7 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
   };
 
   const saveCourse = async () => {
-    if (state.isSaving || !convexUser?._id) return;
+    if (state.isSaving || !convexUser?._id || !storeId) return;
     
     setState(prev => ({ ...prev, isSaving: true }));
     
@@ -294,10 +314,10 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
   };
 
   const createCourse = async () => {
-    if (!convexUser?._id) {
+    if (!convexUser?._id || !storeId) {
       return {
         success: false,
-        error: "User not found. Please try again.",
+        error: "User not found or invalid store. Please try again.",
       };
     }
 

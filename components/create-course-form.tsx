@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,7 +48,29 @@ interface Chapter {
   orderIndex: number;
 }
 
-export default function CreateCourseForm() {
+interface CourseFormData {
+  title?: string;
+  description?: string;
+  category?: string;
+  skillLevel?: string;
+  thumbnail?: string;
+  price?: string;
+  modules?: Module[];
+}
+
+interface CreateCourseFormProps {
+  initialData?: CourseFormData;
+  onDataChange?: (data: CourseFormData) => void;
+  disableSubmit?: boolean;
+  hideBasicInfo?: boolean;
+}
+
+export default function CreateCourseForm({ 
+  initialData, 
+  onDataChange, 
+  disableSubmit = false,
+  hideBasicInfo = false
+}: CreateCourseFormProps = {}) {
   const router = useRouter();
   const { user } = useUser();
   const { toast } = useToast();
@@ -66,6 +88,41 @@ export default function CreateCourseForm() {
   const [modules, setModules] = useState<Module[]>([]);
   const [expandedModules, setExpandedModules] = useState<{ [key: number]: boolean }>({});
   const [expandedLessons, setExpandedLessons] = useState<{ [key: string]: boolean }>({});
+
+  // Load initial data from props
+  useEffect(() => {
+    if (initialData) {
+      console.log("📥 CreateCourseForm loading initial data:", initialData);
+      
+      if (initialData.title !== undefined) setTitle(initialData.title);
+      if (initialData.description !== undefined) setDescription(initialData.description);
+      if (initialData.category !== undefined) setCategory(initialData.category);
+      if (initialData.skillLevel !== undefined) setSkillLevel(initialData.skillLevel);
+      if (initialData.thumbnail !== undefined) setThumbnail(initialData.thumbnail);
+      if (initialData.price !== undefined) setPrice(initialData.price);
+      if (initialData.modules !== undefined) setModules(initialData.modules);
+    }
+  }, [initialData]);
+
+  // Helper function to get current form data
+  const getCurrentFormData = (): CourseFormData => ({
+    title,
+    description,
+    category,
+    skillLevel,
+    thumbnail,
+    price,
+    modules
+  });
+
+  // Helper function to notify parent of data changes
+  const notifyDataChange = () => {
+    if (onDataChange) {
+      const currentData = getCurrentFormData();
+      console.log("🔄 CreateCourseForm notifying data change:", currentData);
+      onDataChange(currentData);
+    }
+  };
 
   const categories = [
     "Hip-Hop Production",
@@ -105,17 +162,20 @@ export default function CreateCourseForm() {
       lessons: [],
     };
     setModules([...modules, newModule]);
+    setTimeout(notifyDataChange, 0);
   };
 
   const updateModule = (index: number, field: keyof Module, value: any) => {
     const updatedModules = [...modules];
     updatedModules[index] = { ...updatedModules[index], [field]: value };
     setModules(updatedModules);
+    setTimeout(notifyDataChange, 0);
   };
 
   const deleteModule = (index: number) => {
     const updatedModules = modules.filter((_, i) => i !== index);
     setModules(updatedModules);
+    setTimeout(notifyDataChange, 0);
   };
 
   const addLesson = (moduleIndex: number) => {
@@ -129,6 +189,7 @@ export default function CreateCourseForm() {
     const updatedModules = [...modules];
     updatedModules[moduleIndex].lessons.push(newLesson);
     setModules(updatedModules);
+    setTimeout(notifyDataChange, 0);
   };
 
   const updateLesson = (moduleIndex: number, lessonIndex: number, field: keyof Lesson, value: any) => {
@@ -138,12 +199,14 @@ export default function CreateCourseForm() {
       [field]: value,
     };
     setModules(updatedModules);
+    setTimeout(notifyDataChange, 0);
   };
 
   const deleteLesson = (moduleIndex: number, lessonIndex: number) => {
     const updatedModules = [...modules];
     updatedModules[moduleIndex].lessons = updatedModules[moduleIndex].lessons.filter((_, i) => i !== lessonIndex);
     setModules(updatedModules);
+    setTimeout(notifyDataChange, 0);
   };
 
   const addChapter = (moduleIndex: number, lessonIndex: number) => {
@@ -158,6 +221,7 @@ export default function CreateCourseForm() {
     const updatedModules = [...modules];
     updatedModules[moduleIndex].lessons[lessonIndex].chapters.push(newChapter);
     setModules(updatedModules);
+    setTimeout(notifyDataChange, 0);
   };
 
   const updateChapter = (moduleIndex: number, lessonIndex: number, chapterIndex: number, field: keyof Chapter, value: any) => {
@@ -167,6 +231,7 @@ export default function CreateCourseForm() {
       [field]: value,
     };
     setModules(updatedModules);
+    setTimeout(notifyDataChange, 0);
   };
 
   const deleteChapter = (moduleIndex: number, lessonIndex: number, chapterIndex: number) => {
@@ -174,6 +239,7 @@ export default function CreateCourseForm() {
     updatedModules[moduleIndex].lessons[lessonIndex].chapters = 
       updatedModules[moduleIndex].lessons[lessonIndex].chapters.filter((_, i) => i !== chapterIndex);
     setModules(updatedModules);
+    setTimeout(notifyDataChange, 0);
   };
 
   const toggleModule = (index: number) => {
@@ -245,17 +311,21 @@ export default function CreateCourseForm() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Course Details */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Basic Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Course Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
+              {/* Basic Information - Conditionally rendered */}
+              {!hideBasicInfo && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Course Information</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium mb-2 text-foreground">Course Title *</label>
                     <Input
                       value={title}
-                      onChange={(e) => setTitle(e.target.value)}
+                      onChange={(e) => {
+                        setTitle(e.target.value);
+                        setTimeout(notifyDataChange, 0);
+                      }}
                       placeholder="Enter course title"
                       required
                     />
@@ -265,7 +335,10 @@ export default function CreateCourseForm() {
                     <label className="block text-sm font-medium mb-2 text-foreground">Course Description *</label>
                     <Textarea
                       value={description}
-                      onChange={(e) => setDescription(e.target.value)}
+                      onChange={(e) => {
+                        setDescription(e.target.value);
+                        setTimeout(notifyDataChange, 0);
+                      }}
                       placeholder="Describe what students will learn..."
                       rows={4}
                       required
@@ -275,7 +348,10 @@ export default function CreateCourseForm() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium mb-2 text-foreground">Category *</label>
-                      <Select value={category} onValueChange={setCategory} required>
+                      <Select value={category} onValueChange={(value) => {
+                        setCategory(value);
+                        setTimeout(notifyDataChange, 0);
+                      }} required>
                         <SelectTrigger>
                           <SelectValue placeholder="Select category" />
                         </SelectTrigger>
@@ -289,7 +365,10 @@ export default function CreateCourseForm() {
 
                     <div>
                       <label className="block text-sm font-medium mb-2 text-foreground">Skill Level *</label>
-                      <Select value={skillLevel} onValueChange={setSkillLevel} required>
+                      <Select value={skillLevel} onValueChange={(value) => {
+                        setSkillLevel(value);
+                        setTimeout(notifyDataChange, 0);
+                      }} required>
                         <SelectTrigger>
                           <SelectValue placeholder="Select level" />
                         </SelectTrigger>
@@ -309,7 +388,10 @@ export default function CreateCourseForm() {
                       step="0.01"
                       min="0"
                       value={price}
-                      onChange={(e) => setPrice(e.target.value)}
+                      onChange={(e) => {
+                        setPrice(e.target.value);
+                        setTimeout(notifyDataChange, 0);
+                      }}
                       placeholder="0.00"
                       required
                     />
@@ -319,12 +401,16 @@ export default function CreateCourseForm() {
                     <label className="block text-sm font-medium mb-2 text-foreground">Thumbnail URL</label>
                     <Input
                       value={thumbnail}
-                      onChange={(e) => setThumbnail(e.target.value)}
+                      onChange={(e) => {
+                        setThumbnail(e.target.value);
+                        setTimeout(notifyDataChange, 0);
+                      }}
                       placeholder="https://example.com/image.jpg"
                     />
                   </div>
                 </CardContent>
               </Card>
+              )}
 
               {/* Course Modules */}
               <Card>
@@ -634,7 +720,7 @@ export default function CreateCourseForm() {
                       <Button
                         type="submit"
                         className="w-full"
-                        disabled={isSubmitting}
+                        disabled={isSubmitting || disableSubmit}
                       >
                         <Save className="w-4 h-4 mr-2" />
                         {isSubmitting ? "Creating..." : "Create Course"}

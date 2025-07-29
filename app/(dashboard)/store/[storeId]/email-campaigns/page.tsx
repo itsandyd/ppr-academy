@@ -5,6 +5,7 @@ import { useUser } from "@clerk/nextjs";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useValidStoreId } from "@/hooks/useStoreId";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -39,7 +40,7 @@ export default function EmailCampaignsPage() {
   const { user } = useUser();
   const params = useParams();
   const router = useRouter();
-  const storeId = params.storeId as string;
+  const storeId = useValidStoreId();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
@@ -58,7 +59,7 @@ export default function EmailCampaignsPage() {
   // Check email configuration status
   const emailConfig = useQuery(
     api.stores?.getEmailConfig,
-    storeId ? { storeId: storeId as any } : "skip"
+    storeId ? { storeId } : "skip"
   );
 
   const deleteCampaign = useMutation((api as any).emailCampaigns?.deleteCampaign);
@@ -67,6 +68,30 @@ export default function EmailCampaignsPage() {
   // Workflow mutations
   const deleteWorkflow = useMutation(api.emailWorkflows?.deleteWorkflow);
   const toggleWorkflowStatus = useMutation(api.emailWorkflows?.toggleWorkflowStatus);
+
+  // Show error if storeId is invalid
+  if (!storeId) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-destructive" />
+              Store Not Found
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4">
+              The store you're trying to access could not be found or is invalid.
+            </p>
+            <Button onClick={() => router.push('/store')} variant="outline">
+              Go Back to Store Selection
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   // Filter campaigns based on search and status
   const filteredCampaigns = campaigns.filter((campaign: any) => {

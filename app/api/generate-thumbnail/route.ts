@@ -46,40 +46,65 @@ export async function POST(request: NextRequest) {
     const prompt = createThumbnailPrompt(title, description, category);
     console.log("🎯 Generated prompt:", prompt);
 
-    console.log("🤖 Calling OpenAI DALL-E API...");
-    // Generate image with DALL-E 3
+    console.log("🤖 Calling OpenAI GPT-Image API...");
+    // Generate image with gpt-image-1
     const response = await openai.images.generate({
-      model: "dall-e-3",
+      model: "gpt-image-1",
       prompt,
-      size: "1792x1024", // DALL-E 3's closest to 16:9 (1.75:1)
-      quality: "hd",
+      size: "1536x1024",
       n: 1,
+      quality: "hd"
     });
     
-    console.log("📏 Generated image size: 1792x1024 (1.75:1 ratio)");
+    console.log("📏 Generated image size: 1024x1024");
 
     console.log("✅ OpenAI response received:", response);
-    const imageUrl = response.data?.[0]?.url;
-    console.log("🖼️ Image URL:", imageUrl);
     
-    if (!imageUrl) {
+    // Handle both URL and base64 responses
+    const imageData = response.data?.[0];
+    if (!imageData) {
       return NextResponse.json(
-        { error: "Failed to generate image" },
+        { error: "No image data received from OpenAI API" },
         { status: 500 }
       );
     }
 
-    // Download the image from OpenAI
-    console.log("📥 Downloading image from OpenAI...");
-    const imageResponse = await fetch(imageUrl);
-    if (!imageResponse.ok) {
-      throw new Error("Failed to download generated image");
-    }
+    const imageUrl = imageData.url;
+    const imageB64 = imageData.b64_json;
     
-    const imageBuffer = await imageResponse.arrayBuffer();
-    const imageFile = new File([imageBuffer], `thumbnail-${Date.now()}.png`, {
-      type: 'image/png'
-    });
+    console.log("🖼️ Image format:", imageUrl ? "URL" : "Base64");
+
+    let imageFile: File;
+
+    if (imageUrl) {
+      // Download the image from OpenAI URL
+      console.log("📥 Downloading image from OpenAI URL...");
+      const imageResponse = await fetch(imageUrl);
+      if (!imageResponse.ok) {
+        throw new Error("Failed to download generated image");
+      }
+      
+      const imageBuffer = await imageResponse.arrayBuffer();
+      imageFile = new File([imageBuffer], `thumbnail-${Date.now()}.png`, {
+        type: 'image/png'
+      });
+    } else if (imageB64) {
+      // Convert base64 to file
+      console.log("🔄 Converting base64 image to file...");
+      const binaryString = atob(imageB64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      imageFile = new File([bytes], `thumbnail-${Date.now()}.png`, {
+        type: 'image/png'
+      });
+    } else {
+      return NextResponse.json(
+        { error: "No image URL or base64 data received from OpenAI API" },
+        { status: 500 }
+      );
+    }
 
     // Upload to uploadthing for permanent storage
     console.log("☁️ Uploading to storage...");
@@ -96,7 +121,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       imageUrl: permanentUrl, // Use the permanent uploadthing URL
-      originalUrl: imageUrl,
+      originalUrl: imageUrl || "base64_converted",
     });
 
   } catch (error: any) {

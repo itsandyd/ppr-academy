@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useUser } from "@clerk/nextjs";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import { useValidStoreId } from "@/hooks/useStoreId";
 import { FilterChip } from './components/FilterChip';
 import { EmptyStateCard } from './components/EmptyStateCard';
 import { AddContactsDialog } from './components/AddContactsDialog';
@@ -30,9 +31,33 @@ const filters = [
 export default function CustomersPage() {
   const { user } = useUser();
   const params = useParams();
-  const storeId = params.storeId as string;
+  const router = useRouter();
+  const storeId = useValidStoreId();
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
+
+  if (!storeId) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <span className="text-destructive">⚠️</span>
+              Store Not Found
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground mb-4">
+              The store you're trying to access could not be found or is invalid.
+            </p>
+            <Button onClick={() => router.push('/store')} variant="outline">
+              Go Back to Store Selection
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   // Use the customers API directly (now that Convex dev server is running)
   const customersFromDB = useQuery(
