@@ -65,13 +65,13 @@ export function AppSidebar() {
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex flex-col space-y-2 px-2 py-4">
           <h2 className="text-lg font-bold text-sidebar-foreground">PausePlayRepeat</h2>
-          {currentStore && (
+          {/* {currentStore && (
             <div className="flex items-center space-x-2">
               <span className="text-xs text-sidebar-foreground/70 truncate">
                 pauseplayrepeat.com/{currentStore.slug || currentStore.name || "store"}
               </span>
             </div>
-          )}
+          )} */}
         </div>
       </SidebarHeader>
 
