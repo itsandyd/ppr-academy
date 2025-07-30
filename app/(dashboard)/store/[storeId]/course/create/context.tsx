@@ -69,9 +69,8 @@ export interface CourseData {
 }
 
 export interface StepCompletion {
-  thumbnail: boolean;
-  checkout: boolean;
   course: boolean;
+  checkout: boolean;
   options: boolean;
 }
 
@@ -137,9 +136,8 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
   const [state, setState] = useState<CourseCreationState>({
     data: {},
     stepCompletion: {
-      thumbnail: false,
-      checkout: false,
       course: false,
+      checkout: false,
       options: false,
     },
     isLoading: false,
@@ -149,16 +147,18 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
   // Helper function to validate step with specific data
   const validateStepWithData = (step: keyof StepCompletion, data: CourseData): boolean => {
     switch (step) {
-      case "thumbnail":
-        return !!(data.title && data.description && data.category && data.skillLevel);
+      case "course":
+        // Course step now includes both basic info (formerly thumbnail) and modules
+        const hasBasicInfo = !!(data.title && data.description && data.category && data.skillLevel);
+        const hasModules = !!(data.modules && data.modules.length > 0 && 
+                           data.modules.some(module => 
+                             module.lessons.length > 0 && 
+                             module.lessons.some(lesson => lesson.chapters.length > 0)
+                           ));
+        // For now, require only basic info (modules are optional)
+        return hasBasicInfo;
       case "checkout":
         return !!(data.price && data.checkoutHeadline);
-      case "course":
-        return !!(data.modules && data.modules.length > 0 && 
-                 data.modules.some(module => 
-                   module.lessons.length > 0 && 
-                   module.lessons.some(lesson => lesson.chapters.length > 0)
-                 ));
       case "options":
         // Mark as complete if user has set any options field
         return !!(data.enableSharing !== undefined || 
@@ -193,9 +193,8 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
       
       // Calculate step completion based on loaded data
       const stepCompletion = {
-        thumbnail: validateStepWithData("thumbnail", newData),
-        checkout: validateStepWithData("checkout", newData),
         course: validateStepWithData("course", newData),
+        checkout: validateStepWithData("checkout", newData),
         options: validateStepWithData("options", newData),
       };
       

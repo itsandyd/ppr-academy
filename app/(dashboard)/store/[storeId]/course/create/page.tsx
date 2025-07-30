@@ -8,18 +8,19 @@ import { useSearchParams } from "next/navigation";
 
 export default function CreateCoursePage() {
   const searchParams = useSearchParams();
-  const step = searchParams.get("step") || "thumbnail";
+  const step = searchParams.get("step") || "course";
 
   const renderStep = () => {
     switch (step) {
       case "checkout":
         return <CheckoutForm />;
       case "course":
+      case "thumbnail": // Redirect old thumbnail step to course
         return <CourseContentForm />;
       case "options":
         return <OptionsForm />;
       default:
-        return <ThumbnailForm />;
+        return <CourseContentForm />;
     }
   };
 

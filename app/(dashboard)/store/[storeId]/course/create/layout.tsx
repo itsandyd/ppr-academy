@@ -16,9 +16,8 @@ interface CourseCreateLayoutProps {
 }
 
 const steps = [
-  { id: "thumbnail", label: "Thumbnail", icon: Image },
+  { id: "course", label: "Course Creation", icon: BookOpen },
   { id: "checkout", label: "Checkout Page", icon: CreditCard },
-  { id: "course", label: "Course Content", icon: BookOpen },
   { id: "options", label: "Options", icon: Settings },
 ];
 
@@ -28,7 +27,7 @@ function LayoutContent({ children }: CourseCreateLayoutProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const storeId = params.storeId as string;
-  const currentStep = searchParams.get("step") || "thumbnail";
+  const currentStep = searchParams.get("step") || "course";
   
   const { state, canPublish, createCourse, saveCourse, togglePublished } = useCourseCreation();
 
@@ -218,7 +217,7 @@ function LayoutContent({ children }: CourseCreateLayoutProps) {
         </div>
 
         {/* Phone Preview - Show for relevant steps */}
-        {(currentStep === "thumbnail" || currentStep === "checkout") && (
+        {(currentStep === "course" || currentStep === "checkout") && (
           <div className="sticky top-32 hidden lg:block">
             <PhonePreview 
               user={user}
