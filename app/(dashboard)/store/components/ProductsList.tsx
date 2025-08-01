@@ -17,6 +17,7 @@ interface Product {
   imageUrl?: string;
   isPublished?: boolean;
   style?: "button" | "card" | "minimal";
+  slug?: string; // For courses
 }
 
 interface ProductsListProps {
@@ -28,6 +29,11 @@ export function ProductsList({ products, storeId }: ProductsListProps) {
   const { toast } = useToast();
   const deleteProduct = useMutation(api.digitalProducts.deleteProduct);
   const updateProduct = useMutation(api.digitalProducts.updateProduct);
+
+  const isCourse = (product: Product) => {
+    // Courses don't have a style property, digital products do
+    return product.style === undefined;
+  };
 
   const handleDelete = async (productId: string, title: string) => {
     try {
@@ -134,31 +140,48 @@ export function ProductsList({ products, storeId }: ProductsListProps) {
 
                   {/* Actions */}
                   <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => togglePublish(product._id, product.isPublished || false, product.title)}
-                    >
-                      <Eye className="h-3 w-3 mr-1" />
-                      {product.isPublished ? "Unpublish" : "Publish"}
-                    </Button>
-                    
-                    <Button variant="outline" size="sm" asChild>
-                      <Link href={`/store/${storeId}/products/${product._id}`}>
-                        <Edit className="h-3 w-3 mr-1" />
-                        Edit
-                      </Link>
-                    </Button>
-                    
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDelete(product._id, product.title)}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="h-3 w-3 mr-1" />
-                      Delete
-                    </Button>
+                    {isCourse(product) ? (
+                      <>
+                        <Button variant="outline" size="sm" disabled className="opacity-50">
+                          <Eye className="h-3 w-3 mr-1" />
+                          Course
+                        </Button>
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href={`/courses/${product.slug || product._id}`}>
+                            <Edit className="h-3 w-3 mr-1" />
+                            View Course
+                          </Link>
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => togglePublish(product._id, product.isPublished || false, product.title)}
+                        >
+                          <Eye className="h-3 w-3 mr-1" />
+                          {product.isPublished ? "Unpublish" : "Publish"}
+                        </Button>
+                        
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href={`/store/${storeId}/products/${product._id}`}>
+                            <Edit className="h-3 w-3 mr-1" />
+                            Edit
+                          </Link>
+                        </Button>
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDelete(product._id, product.title)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          Delete
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

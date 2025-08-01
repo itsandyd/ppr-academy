@@ -122,16 +122,16 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
     user?.id ? { clerkId: user.id } : "skip"
   );
 
-  // Convex mutations
-  const createCourseMutation = useMutation(api.courses.createCourseWithData);
-  const updateCourseMutation = useMutation(api.courses.updateCourse);
-  const togglePublishedMutation = useMutation(api.courses.togglePublished);
-
   // Get existing course if editing
   const existingCourse = useQuery(
     api.courses.getCourseForEdit,
     courseId && convexUser?._id ? { courseId, userId: convexUser._id } : "skip"
   );
+
+  // Convex mutations
+  const updateCourseWithModulesMutation = useMutation(api.courses.updateCourseWithModules);
+  const createCourseMutation = useMutation(api.courses.createCourseWithData);
+  const togglePublishedMutation = useMutation(api.courses.togglePublished);
 
   const [state, setState] = useState<CourseCreationState>({
     data: {},
@@ -175,6 +175,9 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
   // Load existing course data if editing
   useEffect(() => {
     if (existingCourse && !state.isLoading) {
+      console.log("🔥 Loading existing course data:", existingCourse);
+      console.log("🔥 Existing course modules:", existingCourse.modules);
+      
       const newData = {
         title: existingCourse.title || "",
         description: existingCourse.description || "",
@@ -189,6 +192,7 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
         showGuarantee: existingCourse.showGuarantee ?? true,
         acceptsPayPal: existingCourse.acceptsPayPal ?? true,
         acceptsStripe: existingCourse.acceptsStripe ?? true,
+        modules: existingCourse.modules || [], // Load the modules!
       };
       
       // Calculate step completion based on loaded data
@@ -243,22 +247,26 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
     
     try {
       if (state.courseId) {
-        // Update existing course
-        await updateCourseMutation({
-          id: state.courseId,
-          title: state.data.title,
-          description: state.data.description,
-          imageUrl: state.data.thumbnail,
-          price: state.data.price ? parseFloat(state.data.price) : undefined,
-          category: state.data.category,
-          skillLevel: state.data.skillLevel,
-          checkoutHeadline: state.data.checkoutHeadline,
-          checkoutDescription: state.data.checkoutDescription,
-          paymentDescription: state.data.paymentDescription,
-          guaranteeText: state.data.guaranteeText,
-          showGuarantee: state.data.showGuarantee,
-          acceptsPayPal: state.data.acceptsPayPal,
-          acceptsStripe: state.data.acceptsStripe,
+        // Update existing course with modules
+        console.log("🔥 Saving existing course with modules:", state.data.modules);
+        await updateCourseWithModulesMutation({
+          courseId: state.courseId,
+          courseData: {
+            title: state.data.title,
+            description: state.data.description,
+            imageUrl: state.data.thumbnail,
+            price: state.data.price ? parseFloat(state.data.price) : undefined,
+            category: state.data.category,
+            skillLevel: state.data.skillLevel,
+            checkoutHeadline: state.data.checkoutHeadline,
+            checkoutDescription: state.data.checkoutDescription,
+            paymentDescription: state.data.paymentDescription,
+            guaranteeText: state.data.guaranteeText,
+            showGuarantee: state.data.showGuarantee,
+            acceptsPayPal: state.data.acceptsPayPal,
+            acceptsStripe: state.data.acceptsStripe,
+          },
+          modules: state.data.modules,
         });
       } else {
         // Create new course (unpublished by default)

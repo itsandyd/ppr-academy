@@ -3,6 +3,14 @@ import { mutation, query } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
 import { QueryCtx, MutationCtx } from "./_generated/server";
 
+// Helper function to generate slug
+function generateSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+}
+
 // Get all courses
 export const getCourses = query({
   args: {},
@@ -11,6 +19,7 @@ export const getCourses = query({
     _creationTime: v.number(),
     userId: v.string(),
     instructorId: v.optional(v.string()),
+    storeId: v.optional(v.string()), // ✅ Added missing storeId field
     title: v.string(),
     description: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
@@ -18,6 +27,16 @@ export const getCourses = query({
     isPublished: v.optional(v.boolean()),
     courseCategoryId: v.optional(v.string()),
     slug: v.optional(v.string()),
+    // Additional fields for course creation form
+    category: v.optional(v.string()),
+    skillLevel: v.optional(v.string()),
+    checkoutHeadline: v.optional(v.string()),
+    checkoutDescription: v.optional(v.string()),
+    paymentDescription: v.optional(v.string()),
+    guaranteeText: v.optional(v.string()),
+    showGuarantee: v.optional(v.boolean()),
+    acceptsPayPal: v.optional(v.boolean()),
+    acceptsStripe: v.optional(v.boolean()),
   })),
   handler: async (ctx) => {
     return await ctx.db.query("courses").collect();
@@ -40,6 +59,16 @@ export const getCourseBySlug = query({
       isPublished: v.optional(v.boolean()),
       courseCategoryId: v.optional(v.string()),
       slug: v.optional(v.string()),
+      // Additional fields for course creation form
+      category: v.optional(v.string()),
+      skillLevel: v.optional(v.string()),
+      checkoutHeadline: v.optional(v.string()),
+      checkoutDescription: v.optional(v.string()),
+      paymentDescription: v.optional(v.string()),
+      guaranteeText: v.optional(v.string()),
+      showGuarantee: v.optional(v.boolean()),
+      acceptsPayPal: v.optional(v.boolean()),
+      acceptsStripe: v.optional(v.boolean()),
     }),
     v.null()
   ),
@@ -66,11 +95,56 @@ export const getCoursesByUser = query({
     isPublished: v.optional(v.boolean()),
     courseCategoryId: v.optional(v.string()),
     slug: v.optional(v.string()),
+    // Additional fields for course creation form
+    category: v.optional(v.string()),
+    skillLevel: v.optional(v.string()),
+    checkoutHeadline: v.optional(v.string()),
+    checkoutDescription: v.optional(v.string()),
+    paymentDescription: v.optional(v.string()),
+    guaranteeText: v.optional(v.string()),
+    showGuarantee: v.optional(v.boolean()),
+    acceptsPayPal: v.optional(v.boolean()),
+    acceptsStripe: v.optional(v.boolean()),
   })),
   handler: async (ctx, args) => {
     return await ctx.db
       .query("courses")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .collect();
+  },
+});
+
+// Get courses by store (NEW - for consistency with digital products)
+export const getCoursesByStore = query({
+  args: { storeId: v.string() },
+  returns: v.array(v.object({
+    _id: v.id("courses"),
+    _creationTime: v.number(),
+    userId: v.string(),
+    instructorId: v.optional(v.string()),
+    title: v.string(),
+    description: v.optional(v.string()),
+    imageUrl: v.optional(v.string()),
+    price: v.optional(v.number()),
+    isPublished: v.optional(v.boolean()),
+    courseCategoryId: v.optional(v.string()),
+    slug: v.optional(v.string()),
+    storeId: v.optional(v.string()),
+    // Additional fields for course creation form
+    category: v.optional(v.string()),
+    skillLevel: v.optional(v.string()),
+    checkoutHeadline: v.optional(v.string()),
+    checkoutDescription: v.optional(v.string()),
+    paymentDescription: v.optional(v.string()),
+    guaranteeText: v.optional(v.string()),
+    showGuarantee: v.optional(v.boolean()),
+    acceptsPayPal: v.optional(v.boolean()),
+    acceptsStripe: v.optional(v.boolean()),
+  })),
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("courses")
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .collect();
   },
 });
@@ -90,6 +164,16 @@ export const getCoursesByInstructor = query({
     isPublished: v.optional(v.boolean()),
     courseCategoryId: v.optional(v.string()),
     slug: v.optional(v.string()),
+    // Additional fields for course creation form
+    category: v.optional(v.string()),
+    skillLevel: v.optional(v.string()),
+    checkoutHeadline: v.optional(v.string()),
+    checkoutDescription: v.optional(v.string()),
+    paymentDescription: v.optional(v.string()),
+    guaranteeText: v.optional(v.string()),
+    showGuarantee: v.optional(v.boolean()),
+    acceptsPayPal: v.optional(v.boolean()),
+    acceptsStripe: v.optional(v.boolean()),
   })),
   handler: async (ctx, args) => {
     return await ctx.db
@@ -99,15 +183,7 @@ export const getCoursesByInstructor = query({
   },
 });
 
-// Helper function to generate unique slug
-function generateSlug(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9 -]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .trim();
-}
+// Helper function to generate unique slug (removed duplicate)
 
 async function generateUniqueSlug(ctx: QueryCtx | MutationCtx, baseSlug: string): Promise<string> {
   let slug = baseSlug;
@@ -155,29 +231,13 @@ export const createCourseWithData = mutation({
     storeId: v.string(),
     data: v.object({
       title: v.string(),
-      description: v.string(),
+      description: v.optional(v.string()),
       category: v.optional(v.string()),
       skillLevel: v.optional(v.string()),
       thumbnail: v.optional(v.string()),
       price: v.string(),
       checkoutHeadline: v.string(),
-      modules: v.optional(v.array(v.object({
-        title: v.string(),
-        description: v.string(),
-        orderIndex: v.number(),
-        lessons: v.array(v.object({
-          title: v.string(),
-          description: v.string(),
-          orderIndex: v.number(),
-          chapters: v.array(v.object({
-            title: v.string(),
-            content: v.string(),
-            videoUrl: v.string(),
-            duration: v.number(),
-            orderIndex: v.number(),
-          })),
-        })),
-      }))),
+      modules: v.optional(v.any()), // Simplify for now
     }),
   },
   returns: v.object({
@@ -197,9 +257,10 @@ export const createCourseWithData = mutation({
       const courseId = await ctx.db.insert("courses", {
         userId: args.userId,
         instructorId: args.userId,
+        storeId: args.storeId, // Add storeId for store-specific filtering
         title: data.title,
         slug: uniqueSlug,
-        description: data.description,
+        description: data.description || undefined,
         price: parseFloat(data.price),
         imageUrl: data.thumbnail || undefined,
         isPublished: false, // Always start as unpublished
@@ -209,42 +270,9 @@ export const createCourseWithData = mutation({
         checkoutHeadline: data.checkoutHeadline,
       });
 
-      // Create modules, lessons, and chapters if they exist
-      if (data.modules && data.modules.length > 0) {
-        for (const moduleData of data.modules) {
-          const moduleId = await ctx.db.insert("courseModules", {
-            title: moduleData.title,
-            description: moduleData.description,
-            position: moduleData.orderIndex,
-            courseId,
-          });
-
-          if (moduleData.lessons && moduleData.lessons.length > 0) {
-            for (const lessonData of moduleData.lessons) {
-              const lessonId = await ctx.db.insert("courseLessons", {
-                title: lessonData.title,
-                description: lessonData.description,
-                position: lessonData.orderIndex,
-                moduleId,
-              });
-
-              if (lessonData.chapters && lessonData.chapters.length > 0) {
-                for (const chapterData of lessonData.chapters) {
-                  await ctx.db.insert("courseChapters", {
-                    title: chapterData.title,
-                    description: chapterData.content,
-                    videoUrl: chapterData.videoUrl || undefined,
-                    position: chapterData.orderIndex,
-                    courseId,
-                    lessonId,
-                    isPublished: false,
-                  });
-                }
-              }
-            }
-          }
-        }
-      }
+      // Skip modules creation for now to simplify debugging
+      // TODO: Add module creation back later
+      console.log("Course created successfully:", courseId);
 
       return {
         success: true,
@@ -314,6 +342,127 @@ export const updateCourse = mutation({
   },
 });
 
+// Update course with modules
+export const updateCourseWithModules = mutation({
+  args: {
+    courseId: v.id("courses"),
+    courseData: v.object({
+      title: v.optional(v.string()),
+      description: v.optional(v.string()),
+      imageUrl: v.optional(v.string()),
+      price: v.optional(v.number()),
+      category: v.optional(v.string()),
+      skillLevel: v.optional(v.string()),
+      checkoutHeadline: v.optional(v.string()),
+      checkoutDescription: v.optional(v.string()),
+      paymentDescription: v.optional(v.string()),
+      guaranteeText: v.optional(v.string()),
+      showGuarantee: v.optional(v.boolean()),
+      acceptsPayPal: v.optional(v.boolean()),
+      acceptsStripe: v.optional(v.boolean()),
+    }),
+    modules: v.optional(v.array(v.object({
+      title: v.string(),
+      description: v.string(),
+      orderIndex: v.number(),
+      lessons: v.array(v.object({
+        title: v.string(),
+        description: v.string(),
+        orderIndex: v.number(),
+        chapters: v.array(v.object({
+          title: v.string(),
+          content: v.string(),
+          videoUrl: v.string(),
+          duration: v.number(),
+          orderIndex: v.number(),
+        })),
+      })),
+    }))),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    error: v.optional(v.string()),
+  }),
+  handler: async (ctx, { courseId, courseData, modules }) => {
+    try {
+      // Update the course basic info
+      await ctx.db.patch(courseId, courseData);
+
+      // If modules are provided, update them
+      console.log(`🔥 updateCourseWithModules: Saving ${modules?.length || 0} modules for course ${courseId}`);
+      if (modules && modules.length > 0) {
+        // Delete existing modules and their children
+        const existingModules = await ctx.db
+          .query("courseModules")
+          .withIndex("by_courseId", (q) => q.eq("courseId", courseId))
+          .collect();
+
+        for (const module of existingModules) {
+          // Delete lessons and chapters for this module
+          const lessons = await ctx.db
+            .query("courseLessons")
+            .withIndex("by_moduleId", (q) => q.eq("moduleId", module._id))
+            .collect();
+
+          for (const lesson of lessons) {
+            // Delete chapters for this lesson
+            const chapters = await ctx.db
+              .query("courseChapters")
+              .withIndex("by_lessonId", (q) => q.eq("lessonId", lesson._id))
+              .collect();
+
+            for (const chapter of chapters) {
+              await ctx.db.delete(chapter._id);
+            }
+            await ctx.db.delete(lesson._id);
+          }
+          await ctx.db.delete(module._id);
+        }
+
+        // Create new modules, lessons, and chapters
+        for (const moduleData of modules) {
+          const moduleId = await ctx.db.insert("courseModules", {
+            title: moduleData.title,
+            description: moduleData.description,
+            position: moduleData.orderIndex,
+            courseId,
+          });
+
+          if (moduleData.lessons && moduleData.lessons.length > 0) {
+            for (const lessonData of moduleData.lessons) {
+              const lessonId = await ctx.db.insert("courseLessons", {
+                title: lessonData.title,
+                description: lessonData.description,
+                position: lessonData.orderIndex,
+                moduleId,
+              });
+
+              if (lessonData.chapters && lessonData.chapters.length > 0) {
+                for (const chapterData of lessonData.chapters) {
+                  await ctx.db.insert("courseChapters", {
+                    title: chapterData.title,
+                    description: chapterData.content,
+                    videoUrl: chapterData.videoUrl || undefined,
+                    position: chapterData.orderIndex,
+                    courseId,
+                    lessonId,
+                    isPublished: false,
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error("Error updating course with modules:", error);
+      return { success: false, error: "Failed to update course" };
+    }
+  },
+});
+
 // Toggle course published status
 export const togglePublished = mutation({
   args: {
@@ -353,7 +502,7 @@ export const togglePublished = mutation({
   },
 });
 
-// Get course by ID for editing
+// Get course by ID for editing with complete structure
 export const getCourseForEdit = query({
   args: { 
     courseId: v.id("courses"),
@@ -382,6 +531,24 @@ export const getCourseForEdit = query({
       showGuarantee: v.optional(v.boolean()),
       acceptsPayPal: v.optional(v.boolean()),
       acceptsStripe: v.optional(v.boolean()),
+      // Modules structure for editing
+      modules: v.optional(v.array(v.object({
+        title: v.string(),
+        description: v.string(),
+        orderIndex: v.number(),
+        lessons: v.array(v.object({
+          title: v.string(),
+          description: v.string(),
+          orderIndex: v.number(),
+          chapters: v.array(v.object({
+            title: v.string(),
+            content: v.string(),
+            videoUrl: v.string(),
+            duration: v.number(),
+            orderIndex: v.number(),
+          })),
+        })),
+      }))),
     }),
     v.null()
   ),
@@ -391,7 +558,64 @@ export const getCourseForEdit = query({
     if (!course || course.userId !== args.userId) {
       return null;
     }
+
+    // Load modules for this course
+    const modules = await ctx.db
+      .query("courseModules")
+      .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId))
+      .order("asc")
+      .collect();
+
+    console.log(`🔥 getCourseForEdit: Found ${modules.length} modules for course ${args.courseId}`);
+
+    // Build the complete course structure
+    const courseModules = [];
     
-    return course;
+    for (const module of modules) {
+      // Load lessons for this module
+      const lessons = await ctx.db
+        .query("courseLessons")
+        .withIndex("by_moduleId", (q) => q.eq("moduleId", module._id))
+        .order("asc")
+        .collect();
+
+      const courseLessons = [];
+      
+      for (const lesson of lessons) {
+        // Load chapters for this lesson
+        const chapters = await ctx.db
+          .query("courseChapters")
+          .withIndex("by_lessonId", (q) => q.eq("lessonId", lesson._id))
+          .order("asc")
+          .collect();
+
+        const courseChapters = chapters.map(chapter => ({
+          title: chapter.title,
+          content: chapter.description || "",
+          videoUrl: chapter.videoUrl || "",
+          duration: 0, // Default duration
+          orderIndex: chapter.position,
+        }));
+
+        courseLessons.push({
+          title: lesson.title,
+          description: lesson.description || "",
+          orderIndex: lesson.position,
+          chapters: courseChapters,
+        });
+      }
+
+      courseModules.push({
+        title: module.title,
+        description: module.description || "",
+        orderIndex: module.position,
+        lessons: courseLessons,
+      });
+    }
+    
+    return {
+      ...course,
+      modules: courseModules,
+    };
   },
 }); 

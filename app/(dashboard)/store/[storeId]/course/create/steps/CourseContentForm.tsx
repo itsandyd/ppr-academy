@@ -338,6 +338,9 @@ export function CourseContentForm() {
   const storeId = params.storeId as string;
   
   const { state, updateData, saveCourse } = useCourseCreation();
+  
+  // Debug: Log current state
+  console.log("🔥 CourseContentForm render - current state.data:", state.data);
 
   const handleBack = () => {
     router.push(`/store/${storeId}/course/create?step=checkout`);
@@ -357,13 +360,11 @@ export function CourseContentForm() {
   };
 
   const handleModulesDataChange = (data: any) => {
-    console.log("🔄 CourseContentForm received modules data change:", data);
-    // Only update modules and related fields, preserve basic info
-    const modulesData = {
-      modules: data.modules,
-      price: data.price
-    };
-    updateData("course", modulesData);
+    console.log("🔥 CourseContentForm received modules data change:", data);
+    console.log("🔥 Current context state.data:", state.data);
+    // Pass through ALL data from CreateCourseForm, don't filter it
+    console.log("🔥 Updating context with complete data:", data);
+    updateData("course", data);
   };
 
   const isValid = state.data?.title && state.data?.description && 

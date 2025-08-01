@@ -49,13 +49,17 @@ interface PhonePreviewProps {
 
 // Link-in-Bio Style Component for Phone Preview
 function LinkInBioLayout({ products, leadMagnetData, storeData, onLeadMagnetClick }: { products: any[]; leadMagnetData?: any; storeData?: any; onLeadMagnetClick?: (leadMagnet: any) => void }) {
-  const publishedProducts = products?.filter(p => p.isPublished) || [];
+  const allProducts = products || [];
+  const publishedProducts = allProducts.filter(p => p.isPublished);
+  const draftProducts = allProducts.filter(p => !p.isPublished);
   
-  // Separate lead magnets from other products
+  // Separate lead magnets from other products for both published and draft
   const leadMagnets = publishedProducts.filter(p => p.price === 0 && p.style === "card");
+  const draftLeadMagnets = draftProducts.filter(p => p.price === 0 && p.style === "card");
   const otherProducts = publishedProducts.filter(p => !(p.price === 0 && p.style === "card"));
+  const draftOtherProducts = draftProducts.filter(p => !(p.price === 0 && p.style === "card"));
 
-  if (publishedProducts.length === 0) {
+  if (allProducts.length === 0) {
     return (
       <div className="w-full text-center p-8">
         <div className="w-16 h-16 bg-muted rounded-lg mx-auto mb-4 flex items-center justify-center">
@@ -63,6 +67,18 @@ function LinkInBioLayout({ products, leadMagnetData, storeData, onLeadMagnetClic
         </div>
         <p className="text-sm text-muted-foreground">No products available yet</p>
         <p className="text-xs text-muted-foreground mt-1">Check back soon!</p>
+      </div>
+    );
+  }
+
+  if (publishedProducts.length === 0 && draftProducts.length > 0) {
+    return (
+      <div className="w-full text-center p-8">
+        <div className="w-16 h-16 bg-amber-100 rounded-lg mx-auto mb-4 flex items-center justify-center">
+          <Store className="w-8 h-8 text-amber-600" />
+        </div>
+        <p className="text-sm text-muted-foreground">You have draft content</p>
+        <p className="text-xs text-muted-foreground mt-1">Publish your products to make them visible to visitors</p>
       </div>
     );
   }
@@ -130,6 +146,79 @@ function LinkInBioLayout({ products, leadMagnetData, storeData, onLeadMagnetClic
           </div>
         </Card>
       ))}
+
+      {/* Draft Products Section */}
+      {(draftLeadMagnets.length > 0 || draftOtherProducts.length > 0) && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 px-2">
+            <div className="h-px bg-border flex-1" />
+            <Badge variant="secondary" className="text-xs">Draft Content</Badge>
+            <div className="h-px bg-border flex-1" />
+          </div>
+          
+          {/* Draft Lead Magnet Cards */}
+          {draftLeadMagnets.map((leadMagnet) => (
+            <Card 
+              key={leadMagnet._id}
+              className="p-4 border border-dashed border-amber-200 bg-amber-50/50 opacity-75 hover:shadow-md transition-all cursor-pointer"
+              onClick={() => onLeadMagnetClick?.(leadMagnet)}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Gift className="w-6 h-6 text-amber-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-sm text-amber-800 truncate">
+                    {leadMagnet.title}
+                  </h3>
+                  <p className="text-xs text-amber-600 truncate">
+                    Free Resource • Draft
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <Badge className="bg-amber-100 text-amber-800 text-xs border-amber-200">
+                    DRAFT
+                  </Badge>
+                  <ArrowRight className="w-4 h-4 text-amber-600" />
+                </div>
+              </div>
+            </Card>
+          ))}
+
+          {/* Draft Other Products */}
+          {draftOtherProducts.map((product) => (
+            <Card key={product._id} className="p-4 border border-dashed border-gray-200 bg-gray-50/50 opacity-75 hover:shadow-md transition-all cursor-pointer">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  {product.imageUrl ? (
+                    <img 
+                      src={product.imageUrl} 
+                      alt={product.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <Store className="w-6 h-6 text-gray-600" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-sm truncate">
+                    {product.title}
+                  </h3>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {product.description || "Digital Product"} • Draft
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <Badge variant="outline" className="text-xs border-dashed">
+                    ${product.price}
+                  </Badge>
+                  <ExternalLink className="w-4 h-4 text-muted-foreground" />
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -389,8 +478,6 @@ export function PhonePreview({
 
   // Use saved avatar or fallback to Clerk image
   const avatarUrl = convexUser?.imageUrl || user.imageUrl || "";
-
-  const publishedProducts = products?.filter(p => p.isPublished) || [];
 
   const handleLeadMagnetClick = (leadMagnet: any) => {
     setSelectedLeadMagnet(leadMagnet);

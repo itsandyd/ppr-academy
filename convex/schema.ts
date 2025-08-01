@@ -44,6 +44,7 @@ export default defineSchema({
   courses: defineTable({
     userId: v.string(),
     instructorId: v.optional(v.string()),
+    storeId: v.optional(v.string()), // Add storeId for consistency with digital products
     title: v.string(),
     description: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
@@ -65,7 +66,8 @@ export default defineSchema({
   .index("by_instructorId", ["instructorId"])
   .index("by_slug", ["slug"])
   .index("by_categoryId", ["courseCategoryId"])
-  .index("by_userId", ["userId"]),
+  .index("by_userId", ["userId"])
+  .index("by_storeId", ["storeId"]), // Add index for storeId filtering
 
   courseCategories: defineTable({
     name: v.string(),

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@clerk/nextjs";
-import { createCourse } from "@/app/actions/course-actions";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { useStoreId } from "@/hooks/useStoreId";
 import { 
   Plus, 
   Trash2, 
@@ -75,6 +77,10 @@ export default function CreateCourseForm({
   const { user } = useUser();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const storeId = useStoreId(); // Get current store ID from URL
+  
+  // Convex mutations
+  const createCourseWithData = useMutation(api.courses.createCourseWithData);
 
   // Course basic info
   const [title, setTitle] = useState("");
@@ -91,6 +97,7 @@ export default function CreateCourseForm({
 
   // Load initial data from props
   useEffect(() => {
+    console.log("🔥 CreateCourseForm useEffect triggered - initialData:", initialData);
     if (initialData) {
       console.log("📥 CreateCourseForm loading initial data:", initialData);
       
@@ -100,7 +107,20 @@ export default function CreateCourseForm({
       if (initialData.skillLevel !== undefined) setSkillLevel(initialData.skillLevel);
       if (initialData.thumbnail !== undefined) setThumbnail(initialData.thumbnail);
       if (initialData.price !== undefined) setPrice(initialData.price);
-      if (initialData.modules !== undefined) setModules(initialData.modules);
+      if (initialData.modules !== undefined) {
+        console.log("🔥 Loading modules from initialData:", initialData.modules);
+        setModules(initialData.modules);
+        console.log("🔥 Modules state updated to:", initialData.modules);
+        
+        // Auto-expand modules that should be expanded
+        if (initialData.modules.length > 0) {
+          const lastModuleIndex = initialData.modules.length - 1;
+          setExpandedModules(prev => ({
+            ...prev,
+            [lastModuleIndex]: true  // Auto-expand the last module
+          }));
+        }
+      }
     }
   }, [initialData]);
 
@@ -120,6 +140,7 @@ export default function CreateCourseForm({
     if (onDataChange) {
       const currentData = getCurrentFormData();
       console.log("🔄 CreateCourseForm notifying data change:", currentData);
+      console.log("🔥 Current modules in notifyDataChange:", currentData.modules);
       onDataChange(currentData);
     }
   };
@@ -155,21 +176,69 @@ export default function CreateCourseForm({
   ];
 
   const addModule = () => {
+    console.log("🔥 BEFORE addModule - current modules:", modules);
+    console.log("🔥 BEFORE addModule - current expandedModules:", expandedModules);
     const newModule: Module = {
       title: "",
       description: "",
       orderIndex: modules.length,
       lessons: [],
     };
-    setModules([...modules, newModule]);
-    setTimeout(notifyDataChange, 0);
+    const newModules = [...modules, newModule];
+    const newModuleIndex = modules.length;
+    console.log("🔥 AFTER addModule - new modules:", newModules);
+    console.log("🔥 Setting module", newModuleIndex, "as expanded");
+    setModules(newModules);
+    
+    // Auto-expand the newly added module
+    setExpandedModules(prev => {
+      const newExpanded = {
+        ...prev,
+        [newModuleIndex]: true
+      };
+      console.log("🔥 New expandedModules state:", newExpanded);
+      return newExpanded;
+    });
+    
+    // Fix timing issue - use the newModules array directly instead of stale state
+    console.log("🔥 Calling notifyDataChange with new modules:", newModules);
+    if (onDataChange) {
+      const currentData = {
+        title,
+        description,
+        category,
+        skillLevel,
+        thumbnail,
+        price,
+        modules: newModules  // Use the fresh array instead of stale state
+      };
+      console.log("🔄 CreateCourseForm notifying data change (direct):", currentData);
+      onDataChange(currentData);
+    }
   };
 
   const updateModule = (index: number, field: keyof Module, value: any) => {
+    console.log("🔥 updateModule called:", { index, field, value });
+    console.log("🔥 Current modules before update:", modules);
     const updatedModules = [...modules];
     updatedModules[index] = { ...updatedModules[index], [field]: value };
+    console.log("🔥 Updated modules array:", updatedModules);
     setModules(updatedModules);
-    setTimeout(notifyDataChange, 0);
+    
+    // Use direct onDataChange call with the updated data instead of notifyDataChange
+    if (onDataChange) {
+      const currentData = {
+        title,
+        description,
+        category,
+        skillLevel,
+        thumbnail,
+        price,
+        modules: updatedModules  // Use the updated array directly
+      };
+      console.log("🔥 updateModule calling onDataChange with:", currentData);
+      onDataChange(currentData);
+    }
   };
 
   const deleteModule = (index: number) => {
@@ -179,6 +248,7 @@ export default function CreateCourseForm({
   };
 
   const addLesson = (moduleIndex: number) => {
+    console.log("🔥 Adding lesson to module", moduleIndex);
     const newLesson: Lesson = {
       title: "",
       description: "",
@@ -188,28 +258,81 @@ export default function CreateCourseForm({
     
     const updatedModules = [...modules];
     updatedModules[moduleIndex].lessons.push(newLesson);
+    const newLessonIndex = updatedModules[moduleIndex].lessons.length - 1;
     setModules(updatedModules);
-    setTimeout(notifyDataChange, 0);
+    
+    // Auto-expand the newly added lesson
+    const lessonKey = `${moduleIndex}-${newLessonIndex}`;
+    setExpandedLessons(prev => ({
+      ...prev,
+      [lessonKey]: true
+    }));
+    
+    // Use direct onDataChange call for consistency
+    if (onDataChange) {
+      const currentData = {
+        title,
+        description,
+        category,
+        skillLevel,
+        thumbnail,
+        price,
+        modules: updatedModules
+      };
+      console.log("🔥 addLesson calling onDataChange with:", currentData);
+      onDataChange(currentData);
+    }
   };
 
   const updateLesson = (moduleIndex: number, lessonIndex: number, field: keyof Lesson, value: any) => {
+    console.log("🔥 updateLesson called:", { moduleIndex, lessonIndex, field, value });
     const updatedModules = [...modules];
     updatedModules[moduleIndex].lessons[lessonIndex] = {
       ...updatedModules[moduleIndex].lessons[lessonIndex],
       [field]: value,
     };
     setModules(updatedModules);
-    setTimeout(notifyDataChange, 0);
+    
+    // Use direct onDataChange call for consistency
+    if (onDataChange) {
+      const currentData = {
+        title,
+        description,
+        category,
+        skillLevel,
+        thumbnail,
+        price,
+        modules: updatedModules
+      };
+      console.log("🔥 updateLesson calling onDataChange with:", currentData);
+      onDataChange(currentData);
+    }
   };
 
   const deleteLesson = (moduleIndex: number, lessonIndex: number) => {
+    console.log("🔥 Deleting lesson:", { moduleIndex, lessonIndex });
     const updatedModules = [...modules];
     updatedModules[moduleIndex].lessons = updatedModules[moduleIndex].lessons.filter((_, i) => i !== lessonIndex);
     setModules(updatedModules);
-    setTimeout(notifyDataChange, 0);
+    
+    // Use direct onDataChange call for consistency
+    if (onDataChange) {
+      const currentData = {
+        title,
+        description,
+        category,
+        skillLevel,
+        thumbnail,
+        price,
+        modules: updatedModules
+      };
+      console.log("🔥 deleteLesson calling onDataChange with:", currentData);
+      onDataChange(currentData);
+    }
   };
 
   const addChapter = (moduleIndex: number, lessonIndex: number) => {
+    console.log("🔥 Adding chapter to module", moduleIndex, "lesson", lessonIndex);
     const newChapter: Chapter = {
       title: "",
       content: "",
@@ -221,25 +344,69 @@ export default function CreateCourseForm({
     const updatedModules = [...modules];
     updatedModules[moduleIndex].lessons[lessonIndex].chapters.push(newChapter);
     setModules(updatedModules);
-    setTimeout(notifyDataChange, 0);
+    
+    // Use direct onDataChange call for consistency
+    if (onDataChange) {
+      const currentData = {
+        title,
+        description,
+        category,
+        skillLevel,
+        thumbnail,
+        price,
+        modules: updatedModules
+      };
+      console.log("🔥 addChapter calling onDataChange with:", currentData);
+      onDataChange(currentData);
+    }
   };
 
   const updateChapter = (moduleIndex: number, lessonIndex: number, chapterIndex: number, field: keyof Chapter, value: any) => {
+    console.log("🔥 updateChapter called:", { moduleIndex, lessonIndex, chapterIndex, field, value });
     const updatedModules = [...modules];
     updatedModules[moduleIndex].lessons[lessonIndex].chapters[chapterIndex] = {
       ...updatedModules[moduleIndex].lessons[lessonIndex].chapters[chapterIndex],
       [field]: value,
     };
     setModules(updatedModules);
-    setTimeout(notifyDataChange, 0);
+    
+    // Use direct onDataChange call for consistency
+    if (onDataChange) {
+      const currentData = {
+        title,
+        description,
+        category,
+        skillLevel,
+        thumbnail,
+        price,
+        modules: updatedModules
+      };
+      console.log("🔥 updateChapter calling onDataChange with:", currentData);
+      onDataChange(currentData);
+    }
   };
 
   const deleteChapter = (moduleIndex: number, lessonIndex: number, chapterIndex: number) => {
+    console.log("🔥 Deleting chapter:", { moduleIndex, lessonIndex, chapterIndex });
     const updatedModules = [...modules];
     updatedModules[moduleIndex].lessons[lessonIndex].chapters = 
       updatedModules[moduleIndex].lessons[lessonIndex].chapters.filter((_, i) => i !== chapterIndex);
     setModules(updatedModules);
-    setTimeout(notifyDataChange, 0);
+    
+    // Use direct onDataChange call for consistency
+    if (onDataChange) {
+      const currentData = {
+        title,
+        description,
+        category,
+        skillLevel,
+        thumbnail,
+        price,
+        modules: updatedModules
+      };
+      console.log("🔥 deleteChapter calling onDataChange with:", currentData);
+      onDataChange(currentData);
+    }
   };
 
   const toggleModule = (index: number) => {
@@ -271,36 +438,84 @@ export default function CreateCourseForm({
 
     setIsSubmitting(true);
     
-    const courseData = {
-      title,
-      description,
-      price: parseFloat(price),
-      category,
-      skillLevel,
-      thumbnail,
-      isPublished: false,
-      modules,
-    };
-    
-    const result = await createCourse(courseData);
-    
-    setIsSubmitting(false);
-
-    if (result.success && result.courseId) {
-      toast({
-        title: "Course Created!",
-        description: "Your course has been created successfully.",
-      });
-      // Use the slug returned from the server
-      if (result.slug) {
-        router.push(`/courses/${result.slug}`);
-      } else {
-        router.push(`/courses`);
-      }
-    } else {
+    if (!user?.id) {
       toast({
         title: "Error",
-        description: result.error || "Failed to create course",
+        description: "User not authenticated",
+        variant: "destructive",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (!storeId) {
+      toast({
+        title: "Error",
+        description: "Store not found. Please navigate to your store first.",
+        variant: "destructive",
+      });
+      setIsSubmitting(false);
+      return;
+    }
+
+    try {
+      console.log("🚀 Creating course with data:", {
+        userId: user.id,
+        storeId: storeId,
+        data: {
+          title,
+          description,
+          price,
+          category,
+          skillLevel,
+          thumbnail,
+          modules,
+          checkoutHeadline: `Learn ${title}`,
+        }
+      });
+
+      const result = await createCourseWithData({
+        userId: user.id, // Clerk user ID
+        storeId: storeId, // Use actual store ID from URL
+        data: {
+          title,
+          description,
+          price,
+          category,
+          skillLevel,
+          thumbnail,
+          modules,
+          checkoutHeadline: `Learn ${title}`, // Add default checkout headline
+        }
+      });
+      
+      console.log("✅ Course creation result:", result);
+      
+      setIsSubmitting(false);
+
+      if (result.success && result.courseId) {
+        toast({
+          title: "Course Created!",
+          description: "Your course has been created successfully.",
+        });
+        // Use the slug returned from the server
+        if (result.slug) {
+          router.push(`/courses/${result.slug}`);
+        } else {
+          router.push(`/courses`);
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to create course",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      setIsSubmitting(false);
+      toast({
+        title: "Error",
+        description: "Failed to create course",
         variant: "destructive",
       });
     }
@@ -417,63 +632,80 @@ export default function CreateCourseForm({
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>Course Modules</CardTitle>
-                    <Button type="button" onClick={addModule} variant="outline">
+                    <Button 
+                      type="button" 
+                      onClick={() => {
+                        console.log("🔥 Add Module button clicked!");
+                        addModule();
+                      }} 
+                      variant="outline"
+                    >
                       <Plus className="w-4 h-4 mr-2" />
                       Add Module
                     </Button>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  {modules.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <p>No modules yet. Add your first module to get started.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {modules.map((module, moduleIndex) => (
-                        <div key={moduleIndex} className="border border-border rounded-lg">
-                          {/* Module Header */}
-                          <div className="p-4 bg-muted/30 border-b border-border">
-                            <div className="flex items-center justify-between">
-                              <button
-                                type="button"
-                                onClick={() => toggleModule(moduleIndex)}
-                                className="flex items-center space-x-2 text-left"
-                              >
-                                {expandedModules[moduleIndex] ? (
-                                  <ChevronDown className="w-5 h-5" />
-                                ) : (
-                                  <ChevronRight className="w-5 h-5" />
-                                )}
-                                <span className="font-medium">Module {moduleIndex + 1}</span>
-                              </button>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => deleteModule(moduleIndex)}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
+                  {(() => {
+                    console.log("🔥 Modules render check - modules.length:", modules.length, "modules:", modules);
+                    return modules.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <p>No modules yet. Add your first module to get started.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {modules.map((module, moduleIndex) => {
+                          console.log("🔥 Rendering module:", { moduleIndex, module, isExpanded: expandedModules[moduleIndex] });
+                          return (
+                          <div key={moduleIndex} className="border border-border rounded-lg">
+                            {/* Module Header */}
+                            <div className="p-4 bg-muted/30 border-b border-border">
+                              <div className="flex items-center justify-between">
+                                <button
+                                  type="button"
+                                  onClick={() => toggleModule(moduleIndex)}
+                                  className="flex items-center space-x-2 text-left"
+                                >
+                                  {expandedModules[moduleIndex] ? (
+                                    <ChevronDown className="w-5 h-5" />
+                                  ) : (
+                                    <ChevronRight className="w-5 h-5" />
+                                  )}
+                                  <span className="font-medium">Module {moduleIndex + 1}</span>
+                                </button>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => deleteModule(moduleIndex)}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                              
+                              <div className="mt-3 space-y-3">
+                                <Input
+                                  value={module.title}
+                                  onChange={(e) => {
+                                    console.log("🔥 Input onChange triggered:", { moduleIndex, field: "title", value: e.target.value });
+                                    updateModule(moduleIndex, "title", e.target.value);
+                                  }}
+                                  placeholder="Module title"
+                                />
+                                <Textarea
+                                  value={module.description}
+                                  onChange={(e) => {
+                                    console.log("🔥 Textarea onChange triggered:", { moduleIndex, field: "description", value: e.target.value });
+                                    updateModule(moduleIndex, "description", e.target.value);
+                                  }}
+                                  placeholder="Module description"
+                                  rows={2}
+                                />
+                              </div>
                             </div>
-                            
-                            <div className="mt-3 space-y-3">
-                              <Input
-                                value={module.title}
-                                onChange={(e) => updateModule(moduleIndex, "title", e.target.value)}
-                                placeholder="Module title"
-                              />
-                              <Textarea
-                                value={module.description}
-                                onChange={(e) => updateModule(moduleIndex, "description", e.target.value)}
-                                placeholder="Module description"
-                                rows={2}
-                              />
-                            </div>
-                          </div>
 
-                          {/* Module Content */}
-                          {expandedModules[moduleIndex] && (
+                            {/* Module Content */}
+                            {expandedModules[moduleIndex] && (
                             <div className="p-4">
                               <div className="flex items-center justify-between mb-4">
                                 <h4 className="font-medium">Lessons</h4>
@@ -617,9 +849,11 @@ export default function CreateCourseForm({
                             </div>
                           )}
                         </div>
-                      ))}
-                    </div>
-                  )}
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
                 </CardContent>
               </Card>
             </div>

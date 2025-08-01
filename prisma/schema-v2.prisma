@@ -1,0 +1,320 @@
+// generator client {
+//   provider = "prisma-client-js"
+//   output   = "../node_modules/.prisma/client-v2"
+// }
+
+// datasource db {
+//   provider     = "mysql"
+//   url          = env("DATABASE_URL_V2")
+//   relationMode = "prisma"
+// }
+
+// // Core User model - simplified from 30+ fields to essentials
+// model User {
+//   id            String   @id @default(cuid())
+//   email         String   @unique
+//   name          String?
+//   imageUrl      String?
+//   clerkId       String   @unique
+  
+//   // Creator fields
+//   isCreator     Boolean  @default(false)
+//   username      String?  @unique
+//   bio           String?  @db.Text
+  
+//   // Timestamps
+//   createdAt     DateTime @default(now())
+//   updatedAt     DateTime @updatedAt
+  
+//   // Relationships
+//   creatorStore  CreatorStore?
+//   products      Product[]
+//   subscriptions CreatorSubscription[] @relation("UserSubscriptions")
+//   purchases     Purchase[]
+//   reviews       Review[]
+  
+//   // Creator relationships
+//   creatorSubscriptions CreatorSubscription[] @relation("CreatorSubscriptions")
+//   earnings            Earning[]
+//   payouts             Payout[]
+  
+//   @@index([clerkId])
+//   @@index([username])
+//   @@index([isCreator])
+// }
+
+// // Creator's storefront
+// model CreatorStore {
+//   id          String   @id @default(cuid())
+//   userId      String   @unique
+//   user        User     @relation(fields: [userId], references: [id])
+  
+//   // Store info
+//   name        String
+//   slug        String   @unique
+//   description String?  @db.Text
+//   bannerUrl   String?
+//   logoUrl     String?
+  
+//   // Customization
+//   theme       Json     @default("{}")
+//   socialLinks Json     @default("{}")
+  
+//   // Analytics
+//   views       Int      @default(0)
+//   subscribers Int      @default(0)
+//   totalSales  Int      @default(0)
+  
+//   // Status
+//   isActive    Boolean  @default(true)
+//   featured    Boolean  @default(false)
+  
+//   createdAt   DateTime @default(now())
+//   updatedAt   DateTime @updatedAt
+  
+//   @@index([slug])
+//   @@index([isActive])
+//   @@index([featured])
+// }
+
+// // Unified product model replacing courses, coaching, digital products
+// model Product {
+//   id          String   @id @default(cuid())
+//   creatorId   String
+//   creator     User     @relation(fields: [creatorId], references: [id])
+  
+//   // Basic info
+//   type        ProductType
+//   title       String
+//   description String?  @db.Text
+//   price       Decimal  @db.Decimal(10, 2)
+//   currency    String   @default("USD")
+  
+//   // Access control
+//   accessType  AccessType @default(ONE_TIME)
+//   tier        String?    // For subscription products
+  
+//   // Content - flexible JSON structure
+//   content     Json       // Can store course modules, coaching details, files, etc.
+  
+//   // Media
+//   thumbnailUrl String?
+//   previewUrl   String?
+  
+//   // Status
+//   published   Boolean   @default(false)
+//   featured    Boolean   @default(false)
+  
+//   // Analytics
+//   views       Int       @default(0)
+//   sales       Int       @default(0)
+//   rating      Float?    @default(0)
+  
+//   createdAt   DateTime  @default(now())
+//   updatedAt   DateTime  @updatedAt
+  
+//   // Relationships
+//   purchases   Purchase[]
+//   reviews     Review[]
+  
+//   @@index([creatorId, published])
+//   @@index([type, published])
+//   @@index([featured])
+// }
+
+// // Creator subscription plans
+// model CreatorSubscription {
+//   id          String   @id @default(cuid())
+  
+//   // Subscription details
+//   userId      String
+//   user        User     @relation("UserSubscriptions", fields: [userId], references: [id])
+  
+//   creatorId   String
+//   creator     User     @relation("CreatorSubscriptions", fields: [creatorId], references: [id])
+  
+//   tier        String   // basic, pro, premium
+//   price       Decimal  @db.Decimal(10, 2)
+  
+//   // Stripe
+//   stripeSubscriptionId String? @unique
+//   stripePriceId       String?
+//   stripeCustomerId    String?
+  
+//   // Status
+//   status      SubscriptionStatus @default(ACTIVE)
+//   currentPeriodStart DateTime
+//   currentPeriodEnd   DateTime
+//   cancelAtPeriodEnd  Boolean @default(false)
+  
+//   createdAt   DateTime @default(now())
+//   updatedAt   DateTime @updatedAt
+  
+//   @@unique([userId, creatorId])
+//   @@index([userId])
+//   @@index([creatorId])
+//   @@index([status])
+// }
+
+// // Purchase records
+// model Purchase {
+//   id          String   @id @default(cuid())
+  
+//   userId      String
+//   user        User     @relation(fields: [userId], references: [id])
+  
+//   productId   String
+//   product     Product  @relation(fields: [productId], references: [id])
+  
+//   // Payment details
+//   amount      Decimal  @db.Decimal(10, 2)
+//   currency    String   @default("USD")
+  
+//   // Stripe
+//   stripePaymentIntentId String? @unique
+//   stripeRefundId       String?
+  
+//   // Status
+//   status      PurchaseStatus @default(COMPLETED)
+//   refundedAt  DateTime?
+  
+//   createdAt   DateTime @default(now())
+//   updatedAt   DateTime @updatedAt
+  
+//   @@unique([userId, productId])
+//   @@index([userId])
+//   @@index([productId])
+//   @@index([status])
+// }
+
+// // Reviews
+// model Review {
+//   id          String   @id @default(cuid())
+  
+//   userId      String
+//   user        User     @relation(fields: [userId], references: [id])
+  
+//   productId   String
+//   product     Product  @relation(fields: [productId], references: [id])
+  
+//   rating      Int      // 1-5
+//   comment     String?  @db.Text
+  
+//   createdAt   DateTime @default(now())
+//   updatedAt   DateTime @updatedAt
+  
+//   @@unique([userId, productId])
+//   @@index([productId])
+//   @@index([rating])
+// }
+
+// // Creator earnings tracking
+// model Earning {
+//   id          String   @id @default(cuid())
+  
+//   creatorId   String
+//   creator     User     @relation(fields: [creatorId], references: [id])
+  
+//   // Earning details
+//   type        EarningType
+//   amount      Decimal  @db.Decimal(10, 2)
+//   platformFee Decimal  @db.Decimal(10, 2) // 10% platform fee
+//   netAmount   Decimal  @db.Decimal(10, 2) // Amount after fee
+//   currency    String   @default("USD")
+  
+//   // Reference
+//   referenceId String?  // purchaseId or subscriptionId
+//   description String?
+  
+//   createdAt   DateTime @default(now())
+  
+//   @@index([creatorId])
+//   @@index([type])
+//   @@index([createdAt])
+// }
+
+// // Payouts to creators
+// model Payout {
+//   id          String   @id @default(cuid())
+  
+//   creatorId   String
+//   creator     User     @relation(fields: [creatorId], references: [id])
+  
+//   // Payout details
+//   amount      Decimal  @db.Decimal(10, 2)
+//   currency    String   @default("USD")
+  
+//   // Stripe
+//   stripePayoutId String? @unique
+  
+//   // Status
+//   status      PayoutStatus @default(PENDING)
+  
+//   createdAt   DateTime @default(now())
+//   processedAt DateTime?
+  
+//   @@index([creatorId])
+//   @@index([status])
+// }
+
+// // Email list for marketing
+// model EmailSubscriber {
+//   id          String   @id @default(cuid())
+//   email       String   @unique
+//   name        String?
+  
+//   // Subscription preferences
+//   marketingOptIn Boolean @default(true)
+//   creatorUpdates Boolean @default(true)
+  
+//   createdAt   DateTime @default(now())
+//   updatedAt   DateTime @updatedAt
+  
+//   @@index([email])
+// }
+
+// // Enums
+// enum ProductType {
+//   COURSE
+//   COACHING_SESSION
+//   DIGITAL_PRODUCT
+//   CONSULTATION
+//   MEMBERSHIP
+//   PRESET_PACK
+//   SAMPLE_PACK
+//   TEMPLATE
+// }
+
+// enum AccessType {
+//   ONE_TIME
+//   SUBSCRIPTION
+//   FREE
+// }
+
+// enum SubscriptionStatus {
+//   ACTIVE
+//   PAST_DUE
+//   CANCELED
+//   INCOMPLETE
+//   TRIALING
+// }
+
+// enum PurchaseStatus {
+//   PENDING
+//   COMPLETED
+//   FAILED
+//   REFUNDED
+// }
+
+// enum EarningType {
+//   PRODUCT_SALE
+//   SUBSCRIPTION
+//   TIP
+// }
+
+// enum PayoutStatus {
+//   PENDING
+//   PROCESSING
+//   COMPLETED
+//   FAILED
+// }

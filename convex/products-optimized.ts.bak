@@ -1,0 +1,560 @@
+/**
+ * Optimized Convex queries for the marketplace product system
+ * These queries are designed for performance with proper indexing
+ */
+
+import { query, mutation } from "./_generated/server";
+import { v } from "convex/values";
+import { Id } from "./_generated/dataModel";
+
+// Query: Get products by creator with pagination and filtering
+export const getByCreator = query({
+  args: {
+    creatorId: v.id("users"),
+    published: v.optional(v.boolean()),
+    type: v.optional(v.string()),
+    limit: v.optional(v.number()),
+    cursor: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { creatorId, published, type, limit = 20 } = args;
+    
+    let query = ctx.db
+      .query("products")
+      .withIndex("by_creatorId", (q) => q.eq("creatorId", creatorId));
+
+    // Apply filters
+    if (published !== undefined) {
+      query = query.filter((q) => q.eq(q.field("isPublished"), published));
+    }
+    
+    if (type) {
+      query = query.filter((q) => q.eq(q.field("type"), type));
+    }
+
+    // Apply pagination
+    const products = await query
+      .order("desc") // Most recent first
+      .take(limit);
+
+    // Get creator info for each product
+    const productsWithCreator = await Promise.all(
+      products.map(async (product) => {
+        const creator = await ctx.db.get(product.creatorId);
+        const store = await ctx.db
+          .query("creatorStores")
+          .withIndex("by_userId", (q) => q.eq("userId", product.creatorId))
+          .first();
+        
+        return {
+          ...product,
+          creator: creator ? {
+            id: creator._id,
+            name: creator.name,
+            username: creator.username,
+            imageUrl: creator.imageUrl,
+          } : null,
+          store: store ? {
+            id: store._id,
+            name: store.name,
+            slug: store.slug,
+          } : null,
+        };
+      })
+    );
+
+    return productsWithCreator;
+  },
+});
+
+// Query: Get featured products for marketplace homepage
+export const getFeatured = query({
+  args: {
+    limit: v.optional(v.number()),
+    type: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { limit = 12, type } = args;
+    
+    let query = ctx.db
+      .query("products")
+      .withIndex("by_featured", (q) => q.eq("isFeatured", true));
+
+    if (type) {
+      query = query.filter((q) => q.eq(q.field("type"), type));
+    }
+
+    const products = await query
+      .filter((q) => q.eq(q.field("isPublished"), true))
+      .order("desc")
+      .take(limit);
+
+    // Enrich with creator and metrics data
+    return await Promise.all(
+      products.map(async (product) => {
+        const creator = await ctx.db.get(product.creatorId);
+        const store = await ctx.db
+          .query("creatorStores")
+          .withIndex("by_userId", (q) => q.eq("userId", product.creatorId))
+          .first();
+
+        // Get basic metrics (in real implementation, this might be cached)
+        const purchaseCount = await ctx.db
+          .query("purchases")
+          .withIndex("by_productId", (q) => q.eq("productId", product._id))
+          .filter((q) => q.eq(q.field("status"), "completed"))
+          .collect()
+          .then(purchases => purchases.length);
+
+        const reviews = await ctx.db
+          .query("reviews")
+          .withIndex("by_productId", (q) => q.eq("productId", product._id))
+          .filter((q) => q.eq(q.field("isApproved"), true))
+          .collect();
+
+        const avgRating = reviews.length > 0 
+          ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
+          : 0;
+
+        return {
+          ...product,
+          creator: creator ? {
+            id: creator._id,
+            name: creator.name,
+            username: creator.username,
+            imageUrl: creator.imageUrl,
+          } : null,
+          store: store ? {
+            id: store._id,
+            name: store.name,
+            slug: store.slug,
+          } : null,
+          metrics: {
+            ...product.metrics,
+            sales: purchaseCount,
+            rating: avgRating,
+            reviewCount: reviews.length,
+          },
+        };
+      })
+    );
+  },
+});
+
+// Query: Get product by slug with full details
+export const getBySlug = query({
+  args: { slug: v.string() },
+  handler: async (ctx, args) => {
+    const product = await ctx.db
+      .query("products")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .filter((q) => q.eq(q.field("isPublished"), true))
+      .first();
+
+    if (!product) {
+      return null;
+    }
+
+    // Get creator details
+    const creator = await ctx.db.get(product.creatorId);
+    const store = await ctx.db
+      .query("creatorStores")
+      .withIndex("by_userId", (q) => q.eq("userId", product.creatorId))
+      .first();
+
+    // Get reviews
+    const reviews = await ctx.db
+      .query("reviews")
+      .withIndex("by_productId", (q) => q.eq("productId", product._id))
+      .filter((q) => q.eq(q.field("isApproved"), true))
+      .order("desc")
+      .take(10);
+
+    // Get reviews with user details
+    const reviewsWithUsers = await Promise.all(
+      reviews.map(async (review) => {
+        const user = await ctx.db.get(review.userId);
+        return {
+          ...review,
+          user: user ? {
+            id: user._id,
+            name: user.name,
+            imageUrl: user.imageUrl,
+          } : null,
+        };
+      })
+    );
+
+    // Calculate metrics
+    const purchaseCount = await ctx.db
+      .query("purchases")
+      .withIndex("by_productId", (q) => q.eq("productId", product._id))
+      .filter((q) => q.eq(q.field("status"), "completed"))
+      .collect()
+      .then(purchases => purchases.length);
+
+    const avgRating = reviews.length > 0 
+      ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
+      : 0;
+
+    // Get related products from same creator
+    const relatedProducts = await ctx.db
+      .query("products")
+      .withIndex("by_creatorId", (q) => q.eq("creatorId", product.creatorId))
+      .filter((q) => q.and(
+        q.eq(q.field("isPublished"), true),
+        q.neq(q.field("_id"), product._id)
+      ))
+      .take(4);
+
+    return {
+      ...product,
+      creator: creator ? {
+        id: creator._id,
+        name: creator.name,
+        username: creator.username,
+        imageUrl: creator.imageUrl,
+        bio: creator.bio,
+        socialLinks: creator.socialLinks,
+      } : null,
+      store: store ? {
+        id: store._id,
+        name: store.name,
+        slug: store.slug,
+        description: store.description,
+        bannerUrl: store.bannerUrl,
+        theme: store.theme,
+      } : null,
+      reviews: reviewsWithUsers,
+      metrics: {
+        ...product.metrics,
+        sales: purchaseCount,
+        rating: avgRating,
+        reviewCount: reviews.length,
+      },
+      relatedProducts,
+    };
+  },
+});
+
+// Query: Search products with full-text search
+export const search = query({
+  args: {
+    query: v.string(),
+    type: v.optional(v.string()),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const { query: searchQuery, type, limit = 20 } = args;
+    
+    // Use Convex's search functionality
+    let searchResults = await ctx.db
+      .query("products")
+      .withSearchIndex("search_products", (q) => q.search("title", searchQuery))
+      .filter((q) => q.eq(q.field("isPublished"), true))
+      .take(limit);
+
+    // Filter by type if specified
+    if (type) {
+      searchResults = searchResults.filter(product => product.type === type);
+    }
+
+    // Enrich with creator data
+    return await Promise.all(
+      searchResults.map(async (product) => {
+        const creator = await ctx.db.get(product.creatorId);
+        const store = await ctx.db
+          .query("creatorStores")
+          .withIndex("by_userId", (q) => q.eq("userId", product.creatorId))
+          .first();
+
+        return {
+          ...product,
+          creator: creator ? {
+            id: creator._id,
+            name: creator.name,
+            username: creator.username,
+            imageUrl: creator.imageUrl,
+          } : null,
+          store: store ? {
+            id: store._id,
+            name: store.name,
+            slug: store.slug,
+          } : null,
+        };
+      })
+    );
+  },
+});
+
+// Mutation: Create product with optimized data structure
+export const create = mutation({
+  args: {
+    creatorId: v.id("users"),
+    storeId: v.id("creatorStores"),
+    type: v.string(),
+    title: v.string(),
+    description: v.optional(v.string()),
+    price: v.number(),
+    currency: v.optional(v.string()),
+    accessType: v.optional(v.string()),
+    thumbnailUrl: v.optional(v.string()),
+    previewUrl: v.optional(v.string()),
+    downloadUrl: v.optional(v.string()),
+    content: v.optional(v.any()),
+    slug: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // Generate slug if not provided
+    const slug = args.slug || generateSlug(args.title);
+    
+    // Check if slug is unique
+    const existingProduct = await ctx.db
+      .query("products")
+      .withIndex("by_slug", (q) => q.eq("slug", slug))
+      .first();
+    
+    if (existingProduct) {
+      throw new Error("A product with this slug already exists");
+    }
+
+    // Create the product
+    const productId = await ctx.db.insert("products", {
+      creatorId: args.creatorId,
+      storeId: args.storeId,
+      type: args.type as any,
+      title: args.title,
+      description: args.description,
+      price: args.price,
+      currency: args.currency || "USD",
+      accessType: (args.accessType as any) || "one_time",
+      thumbnailUrl: args.thumbnailUrl,
+      previewUrl: args.previewUrl,
+      downloadUrl: args.downloadUrl,
+      content: args.content,
+      slug,
+      isPublished: false,
+      isFeatured: false,
+      metrics: {
+        views: 0,
+        sales: 0,
+        rating: 0,
+        reviewCount: 0,
+      },
+    });
+
+    // Log analytics event
+    await ctx.db.insert("analyticsEvents", {
+      eventType: "product_created",
+      eventData: {
+        productId,
+        productType: args.type,
+        price: args.price,
+      },
+      creatorId: args.creatorId,
+      storeId: args.storeId,
+    });
+
+    return productId;
+  },
+});
+
+// Mutation: Update product metrics (called by analytics)
+export const updateMetrics = mutation({
+  args: {
+    productId: v.id("products"),
+    metrics: v.object({
+      views: v.optional(v.number()),
+      sales: v.optional(v.number()),
+      rating: v.optional(v.number()),
+      reviewCount: v.optional(v.number()),
+    }),
+  },
+  handler: async (ctx, args) => {
+    const product = await ctx.db.get(args.productId);
+    if (!product) {
+      throw new Error("Product not found");
+    }
+
+    const updatedMetrics = {
+      ...product.metrics,
+      ...args.metrics,
+    };
+
+    await ctx.db.patch(args.productId, {
+      metrics: updatedMetrics,
+    });
+
+    return updatedMetrics;
+  },
+});
+
+// Mutation: Toggle featured status
+export const toggleFeatured = mutation({
+  args: {
+    productId: v.id("products"),
+    featured: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    // Check if user has permission (admin only)
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .first();
+
+    if (!user?.admin) {
+      throw new Error("Admin access required");
+    }
+
+    await ctx.db.patch(args.productId, {
+      isFeatured: args.featured,
+    });
+
+    // Log admin action
+    await ctx.db.insert("analyticsEvents", {
+      eventType: "product_featured_toggle",
+      eventData: {
+        productId: args.productId,
+        featured: args.featured,
+        adminId: user._id,
+      },
+      userId: user._id,
+    });
+
+    return args.featured;
+  },
+});
+
+// Utility function to generate URL-friendly slugs
+function generateSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+    .replace(/\s+/g, '-') // Replace spaces with hyphens
+    .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+    .replace(/^-|-$/g, '') // Remove leading/trailing hyphens
+    .substring(0, 60); // Limit length
+}
+
+// Query: Get product analytics for creator dashboard
+export const getAnalytics = query({
+  args: {
+    creatorId: v.id("users"),
+    timeframe: v.optional(v.union(v.literal("7d"), v.literal("30d"), v.literal("90d"))),
+  },
+  handler: async (ctx, args) => {
+    const { creatorId, timeframe = "30d" } = args;
+    
+    // Calculate time range
+    const now = Date.now();
+    const timeRanges = {
+      "7d": 7 * 24 * 60 * 60 * 1000,
+      "30d": 30 * 24 * 60 * 60 * 1000,
+      "90d": 90 * 24 * 60 * 60 * 1000,
+    };
+    const startTime = now - timeRanges[timeframe];
+
+    // Get products for this creator
+    const products = await ctx.db
+      .query("products")
+      .withIndex("by_creatorId", (q) => q.eq("creatorId", creatorId))
+      .collect();
+
+    const productIds = products.map(p => p._id);
+
+    // Get analytics events in time range
+    const events = await ctx.db
+      .query("analyticsEvents")
+      .withIndex("by_creatorId", (q) => q.eq("creatorId", creatorId))
+      .filter((q) => q.gte(q.field("_creationTime"), startTime))
+      .collect();
+
+    // Get purchases in time range
+    const purchases = await ctx.db
+      .query("purchases")
+      .withIndex("by_creatorId", (q) => q.eq("creatorId", creatorId))
+      .filter((q) => q.and(
+        q.gte(q.field("_creationTime"), startTime),
+        q.eq(q.field("status"), "completed")
+      ))
+      .collect();
+
+    // Calculate metrics
+    const views = events.filter(e => e.eventType === "product_view").length;
+    const sales = purchases.length;
+    const revenue = purchases.reduce((sum, p) => sum + p.amount, 0);
+    
+    // Group data by day for charts
+    const dailyData = [];
+    for (let i = 0; i < (timeframe === "7d" ? 7 : timeframe === "30d" ? 30 : 90); i++) {
+      const date = new Date(now - i * 24 * 60 * 60 * 1000);
+      const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+      const dayEnd = dayStart + 24 * 60 * 60 * 1000;
+
+      const dayViews = events.filter(e => 
+        e.eventType === "product_view" && 
+        e._creationTime >= dayStart && 
+        e._creationTime < dayEnd
+      ).length;
+
+      const daySales = purchases.filter(p => 
+        p._creationTime >= dayStart && 
+        p._creationTime < dayEnd
+      ).length;
+
+      const dayRevenue = purchases
+        .filter(p => p._creationTime >= dayStart && p._creationTime < dayEnd)
+        .reduce((sum, p) => sum + p.amount, 0);
+
+      dailyData.unshift({
+        date: date.toISOString().split('T')[0],
+        views: dayViews,
+        sales: daySales,
+        revenue: dayRevenue,
+      });
+    }
+
+    // Top performing products
+    const productPerformance = await Promise.all(
+      products.map(async (product) => {
+        const productPurchases = purchases.filter(p => p.productId === product._id);
+        const productViews = events.filter(e => 
+          e.eventType === "product_view" && 
+          e.eventData?.productId === product._id
+        );
+
+        return {
+          id: product._id,
+          title: product.title,
+          type: product.type,
+          views: productViews.length,
+          sales: productPurchases.length,
+          revenue: productPurchases.reduce((sum, p) => sum + p.amount, 0),
+          conversionRate: productViews.length > 0 
+            ? (productPurchases.length / productViews.length) * 100 
+            : 0,
+        };
+      })
+    );
+
+    return {
+      overview: {
+        views,
+        sales,
+        revenue,
+        products: products.length,
+        conversionRate: views > 0 ? (sales / views) * 100 : 0,
+      },
+      dailyData,
+      topProducts: productPerformance
+        .sort((a, b) => b.revenue - a.revenue)
+        .slice(0, 5),
+      timeframe,
+    };
+  },
+});

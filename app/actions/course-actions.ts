@@ -4,6 +4,8 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getUserFromClerk } from "@/lib/data";
+import { ConvexHttpClient } from "convex/browser";
+import { api } from "@/convex/_generated/api";
 import { generateSlug, generateUniqueSlug } from "@/lib/utils";
 import { UTApi } from "uploadthing/server";
 import { ElevenLabsClient } from "@elevenlabs/elevenlabs-js";
@@ -134,6 +136,99 @@ const utapi = new UTApi({
 // Global audio cache type declaration
 declare global {
   var audioCache: Map<string, ArrayBuffer> | undefined;
+}
+
+
+
+// Temporary function to list courses from Prisma for migration
+export async function listPrismaCourses() {
+  try {
+    const { userId: clerkId } = await auth();
+    
+    if (!clerkId) {
+      return { success: false, error: "Unauthorized", courses: [] };
+    }
+
+    const prismaUser = await getUserFromClerk(clerkId);
+    if (!prismaUser) {
+      return { success: false, error: "User not found", courses: [] };
+    }
+
+    const courses = await prisma.course.findMany({
+      where: { userId: prismaUser.id },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        price: true,
+        imageUrl: true,
+        isPublished: true,
+        slug: true,
+        createdAt: true
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return { success: true, courses };
+  } catch (error) {
+    console.error("Error listing Prisma courses:", error);
+    return { success: false, error: "Failed to list courses", courses: [] };
+  }
+}
+
+// Temporary migration function to move courses from Prisma to Convex
+export async function migrateCourseFromPrismaToConvex(courseId: string) {
+  try {
+    const { userId: clerkId } = await auth();
+    
+    if (!clerkId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    // Get the course from Prisma
+    const prismaUser = await getUserFromClerk(clerkId);
+    if (!prismaUser) {
+      return { success: false, error: "User not found" };
+    }
+
+    const prismaCourse = await prisma.course.findFirst({
+      where: { 
+        id: courseId,
+        userId: prismaUser.id 
+      }
+    });
+
+    if (!prismaCourse) {
+      return { success: false, error: "Course not found in Prisma" };
+    }
+
+    // Create the course in Convex using the HTTP client
+    const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+    
+    const convexCourseId = await convex.mutation(api.courses.createCourseWithData, {
+      userId: clerkId, // Use Clerk ID for Convex
+      storeId: "default",
+      data: {
+        title: prismaCourse.title,
+        description: prismaCourse.description || "",
+        price: prismaCourse.price?.toString() || "0",
+        category: "General", // Default since Prisma might not have this
+        skillLevel: "Beginner", // Default since Prisma might not have this
+        thumbnail: prismaCourse.imageUrl || "",
+        modules: [], // Default empty modules
+        checkoutHeadline: `Learn ${prismaCourse.title}`,
+      }
+    });
+
+    return { 
+      success: true, 
+      message: `Course "${prismaCourse.title}" migrated successfully`,
+      convexCourseId 
+    };
+  } catch (error) {
+    console.error("Error migrating course:", error);
+    return { success: false, error: "Failed to migrate course" };
+  }
 }
 
 export async function createCourse(courseData: CourseData) {

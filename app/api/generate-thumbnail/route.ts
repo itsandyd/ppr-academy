@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
       prompt,
       size: "1536x1024",
       n: 1,
-      quality: "hd"
+      quality: "auto"
     });
     
     console.log("📏 Generated image size: 1024x1024");

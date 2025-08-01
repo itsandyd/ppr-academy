@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "concurrently \"next dev --turbopack\" \"npx convex dev\" --names \"next,convex\" --prefix-colors \"blue,green\"",
+    "dev:next": "next dev --turbopack",
+    "dev:convex": "convex dev",
     "convex:dev": "convex dev",
     "convex:deploy": "convex deploy",
     "convex:dashboard": "convex dashboard",
@@ -80,6 +82,7 @@
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.0.2",
     "autoprefixer": "^10.4.20",
+    "concurrently": "^9.2.0",
     "dotenv-cli": "^8.0.0",
     "postcss": "^8.5.3",
     "prettier": "^3.4.2",

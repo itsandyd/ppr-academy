@@ -17,7 +17,6 @@ import type * as courses from "../courses.js";
 import type * as customers from "../customers.js";
 import type * as digitalProducts from "../digitalProducts.js";
 import type * as emailCampaigns from "../emailCampaigns.js";
-import type * as emailWorkflows from "../emailWorkflows.js";
 import type * as emails from "../emails.js";
 import type * as leadSubmissions from "../leadSubmissions.js";
 import type * as stores from "../stores.js";
@@ -36,7 +35,6 @@ declare const fullApi: ApiFromModules<{
   customers: typeof customers;
   digitalProducts: typeof digitalProducts;
   emailCampaigns: typeof emailCampaigns;
-  emailWorkflows: typeof emailWorkflows;
   emails: typeof emails;
   leadSubmissions: typeof leadSubmissions;
   stores: typeof stores;

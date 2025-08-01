@@ -12,7 +12,7 @@ import { ProductsList } from "./components/ProductsList";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SignInButton } from "@clerk/nextjs";
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 
 function StoreContent() {
   const { user: clerkUser, isLoaded: userLoaded } = useUser();
@@ -64,13 +64,51 @@ function StoreContent() {
   const currentStore = stores?.[0];
 
   // Fetch products for the current store
-  const products = useQuery(
+  const digitalProducts = useQuery(
     api.digitalProducts.getProductsByStore,
     currentStore?._id ? { storeId: currentStore._id } : "skip"
   );
 
+  // Fetch courses for the current store (using Convex)
+  const courses = useQuery(
+    api.courses.getCoursesByStore,
+    currentStore?._id ? { storeId: currentStore._id } : "skip"
+  );
+
+  // Debug: Fetch ALL courses to see if any exist (temporary for debugging)
+  const allCourses = useQuery(api.courses.getCourses, {});
+
+  // Debug logging (temporary for debugging)
+  console.log("🔍 Store Debug Info:");
+  console.log("📱 Clerk User ID:", clerkUser?.id);
+  console.log("🏪 Current Store ID:", currentStore?._id);
+  console.log("📚 Store Courses from Convex:", courses);
+  console.log("🌍 ALL Courses from Convex:", allCourses);
+  console.log("🛍️ Digital Products from Convex:", digitalProducts);
+
+  // Combine and transform courses and digital products into unified format
+  const products = React.useMemo(() => {
+    const transformedCourses = (courses || []).map(course => ({
+      _id: course._id,
+      title: course.title,
+      description: course.description,
+      price: course.price || 0,
+      imageUrl: course.imageUrl,
+      isPublished: course.isPublished,
+      style: undefined, // Courses don't have style
+      slug: course.slug
+    }));
+
+    const allProducts = [
+      ...(digitalProducts || []),
+      ...transformedCourses
+    ];
+
+    return allProducts;
+  }, [digitalProducts, courses]);
+
   // Show loading state while data is being fetched
-  if (!userLoaded || !clerkUser) {
+  if (!userLoaded || !clerkUser || courses === undefined || digitalProducts === undefined) {
     return (
       <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-16 py-10 md:py-16">
         <div className="flex-1 flex flex-col gap-8">
