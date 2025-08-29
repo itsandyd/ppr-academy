@@ -48,16 +48,16 @@ export function AppSidebar() {
   const currentStore = stores?.find(s => s._id === storeId) || stores?.[0];
 
   const mainNavItems: NavItem[] = [
-    { icon: Home, href: "/home", label: "Home" },
-    { icon: BarChart3, href: "/analytics", label: "Analytics" },
-    { icon: Users, href: `/store/${storeId}/customers`, label: "Customers" },
-    { icon: Mail, href: `/store/${storeId}/email-campaigns`, label: "Email Campaigns" },
-    { icon: Package, href: `/store/${storeId}/products`, label: "Products" },
-    { icon: Store, href: "/store", label: "Store" },
+    { icon: Home, href: "/dashboard/home", label: "Home" },
+    { icon: BarChart3, href: "/dashboard/analytics", label: "Analytics" },
+    { icon: Users, href: `/dashboard/store/${storeId || 'setup'}/customers`, label: "Customers" },
+    { icon: Mail, href: `/dashboard/store/${storeId || 'setup'}/email-campaigns`, label: "Email Campaigns" },
+    { icon: Package, href: `/dashboard/store/${storeId || 'setup'}/products`, label: "Products" },
+    { icon: Store, href: "/dashboard/store", label: "Store" },
   ];
 
   const bottomNavItems: NavItem[] = [
-    { icon: Settings, href: "/store/settings", label: "Settings" },
+    { icon: Settings, href: "/dashboard/store/settings", label: "Settings" },
   ];
 
   return (
