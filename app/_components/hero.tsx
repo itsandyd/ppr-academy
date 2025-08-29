@@ -1,6 +1,8 @@
 import { FC } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Play, Zap, CheckCircle } from "lucide-react";
+import { SignUpButton } from "@clerk/nextjs";
+import Link from "next/link";
 
 interface HeroProps {}
 
@@ -30,35 +32,39 @@ export const Hero: FC<HeroProps> = () => {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button 
-                variant="default" 
-                size="lg" 
-                className="rounded-xl bg-white text-[#6356FF] hover:bg-white/90 font-semibold shadow-lg shadow-black/5"
-              >
-                Join the Platform
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="lg" 
-                className="rounded-xl text-white border-white/20 hover:bg-white/10"
-              >
-                <Play className="mr-2 h-4 w-4" />
-                Browse Creators
-              </Button>
+              <SignUpButton mode="modal">
+                <Button 
+                  variant="default" 
+                  size="lg" 
+                  className="rounded-xl bg-white text-[#6356FF] hover:bg-white/90 font-semibold shadow-lg shadow-black/5"
+                >
+                  Join the Platform
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </SignUpButton>
+              <Link href="/courses">
+                <Button 
+                  variant="ghost" 
+                  size="lg" 
+                  className="rounded-xl text-white border-white/20 hover:bg-white/10"
+                >
+                  <Play className="mr-2 h-4 w-4" />
+                  Browse Creators
+                </Button>
+              </Link>
             </div>
 
-            <div className="flex items-center space-x-6 text-sm text-white/60">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 text-sm text-white/60">
               <div className="flex items-center space-x-2">
-                <CheckCircle className="w-4 h-4" />
+                <CheckCircle className="w-4 h-4 flex-shrink-0" />
                 <span>Free to browse creators</span>
               </div>
               <div className="flex items-center space-x-2">
-                <CheckCircle className="w-4 h-4" />
+                <CheckCircle className="w-4 h-4 flex-shrink-0" />
                 <span>Direct creator subscriptions</span>
               </div>
               <div className="flex items-center space-x-2">
-                <CheckCircle className="w-4 h-4" />
+                <CheckCircle className="w-4 h-4 flex-shrink-0" />
                 <span>Creator money-back guarantee</span>
               </div>
             </div>
