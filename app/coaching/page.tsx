@@ -8,6 +8,9 @@ export const metadata = {
   description: "Connect with expert music production coaches for personalized mentorship and skill development.",
 };
 
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic';
+
 export default async function CoachingPage() {
   const { userId } = await auth();
   

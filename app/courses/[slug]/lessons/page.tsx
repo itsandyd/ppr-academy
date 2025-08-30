@@ -8,6 +8,9 @@ import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { getUserFromClerk } from "@/lib/data";
 import { prisma } from "@/lib/prisma";
+
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic';
 import Link from "next/link";
 import { 
   Clock, 

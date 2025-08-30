@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button";
 import { getUserFromClerk } from "@/lib/data";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic';
 import { 
   Clock, 
   PlayCircle,

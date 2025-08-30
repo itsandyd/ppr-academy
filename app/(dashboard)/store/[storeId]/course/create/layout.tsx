@@ -11,6 +11,9 @@ import { ArrowLeft, BookOpen, CreditCard, Image, Settings, Check, Clock, AlertCi
 import Link from "next/link";
 import { CourseCreationProvider, useCourseCreation } from "./context";
 
+// Prevent static generation for this layout
+export const dynamic = 'force-dynamic';
+
 interface CourseCreateLayoutProps {
   children: React.ReactNode;
 }

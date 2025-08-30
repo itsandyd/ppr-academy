@@ -8,6 +8,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 import { getUserFromClerk, getUserEnrollments, getUserCourses, getFeaturedCourses, getPopularCourses } from "@/lib/data";
+
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic';
 import { ensureUserExists } from "@/app/actions/user-actions";
 import { 
   BookOpen, 

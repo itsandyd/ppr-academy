@@ -6,6 +6,9 @@ import { api } from "@/convex/_generated/api";
 import { useUser } from "@clerk/nextjs";
 import { useParams, useRouter } from "next/navigation";
 import { useValidStoreId } from "@/hooks/useStoreId";
+
+// Prevent static generation for this page
+export const dynamic = 'force-dynamic';
 import { FilterChip } from './components/FilterChip';
 import { EmptyStateCard } from './components/EmptyStateCard';
 import { AddContactsDialog } from './components/AddContactsDialog';

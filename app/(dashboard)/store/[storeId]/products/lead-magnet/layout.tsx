@@ -8,6 +8,9 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { PhonePreview } from "@/app/(dashboard)/store/components/PhonePreview";
 import { LeadMagnetContext } from "./context";
 
+// Prevent static generation for this layout
+export const dynamic = 'force-dynamic';
+
 // Import FormField type from context
 interface FormField {
   id: string;
