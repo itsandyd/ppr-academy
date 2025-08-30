@@ -40,7 +40,7 @@ function Steps({ current }: StepsProps) {
             </span>
           </div>
           {index < steps.length - 1 && (
-            <div className="w-16 h-0.5 bg-[#E3E5EC] mx-4 mt-[-1rem]" />
+            <div className="w-16 h-0.5 bg-border mx-4 mt-[-1rem]" />
           )}
         </div>
       ))}
@@ -97,7 +97,7 @@ function ChallengeCard() {
       <div className="absolute top-4 right-4 transform rotate-[-2deg]">
         <Badge 
           variant="secondary" 
-          className="bg-[#5273FF] text-white px-3 py-1 text-sm font-bold"
+          className="bg-primary text-primary-foreground px-3 py-1 text-sm font-bold"
         >
           30 DAYS
         </Badge>
