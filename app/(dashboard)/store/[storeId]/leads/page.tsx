@@ -11,6 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Download, Mail, Calendar, TrendingUp, Users, Eye } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
+// Prevent static generation for this page
+export const dynamic = 'force-dynamic';
+
 export default function LeadsPage() {
   const { user } = useUser();
   const params = useParams();

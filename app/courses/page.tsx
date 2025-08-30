@@ -7,6 +7,9 @@ import CourseManagement from "@/components/course-management";
 import { BookOpen } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic';
+
 interface SearchParams {
   search?: string;
   category?: string;

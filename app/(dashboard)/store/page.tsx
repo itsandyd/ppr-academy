@@ -14,6 +14,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SignInButton } from "@clerk/nextjs";
 import React, { useEffect } from "react";
 
+// Prevent static generation for this page
+export const dynamic = 'force-dynamic';
+
 function StoreContent() {
   const { user: clerkUser, isLoaded: userLoaded } = useUser();
   const { isAuthenticated } = useConvexAuth();

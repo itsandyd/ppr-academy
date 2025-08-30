@@ -8,6 +8,9 @@ import { useParams } from "next/navigation";
 import { PhonePreview } from "@/app/(dashboard)/store/components/PhonePreview";
 import { CheckoutPhonePreview } from "./checkout/CheckoutPhonePreview";
 
+// Prevent static generation for this layout
+export const dynamic = 'force-dynamic';
+
 interface WizardLayoutProps {
   children: React.ReactNode;
 }

@@ -41,8 +41,8 @@ export function AppSidebar() {
     user?.id ? { userId: user.id } : "skip"
   );
   
-  // Use URL storeId if available, otherwise use first store
-  const storeId = urlStoreId || stores?.[0]?._id;
+  // Use URL storeId if available, otherwise use first store or fallback
+  const storeId = urlStoreId || stores?.[0]?._id || 'setup';
   
   // Get current store object for displaying slug
   const currentStore = stores?.find(s => s._id === storeId) || stores?.[0];

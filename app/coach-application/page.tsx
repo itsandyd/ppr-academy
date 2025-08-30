@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic';
+
 export default async function CoachApplicationPage() {
   const { userId: clerkId } = await auth();
   

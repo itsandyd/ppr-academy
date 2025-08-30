@@ -8,9 +8,11 @@ import { useAuth } from '@clerk/nextjs'
 export default function ConvexClientProvider({ children }: { children: ReactNode }) {
   const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
   
-  // If no Convex URL is available, render children without Convex provider
-  if (!convexUrl || convexUrl.includes('dummy')) {
-    console.warn('⚠️  Convex not configured properly. Please run "npx convex dev" to set up.')
+  // If no Convex URL is available or it's a build environment, render children without Convex provider
+  if (!convexUrl || convexUrl.includes('dummy') || convexUrl === 'https://dummy-url.convex.cloud') {
+    if (typeof window !== 'undefined') {
+      console.warn('⚠️  Convex not configured properly. Please run "npx convex dev" to set up.')
+    }
     return <>{children}</>;
   }
 
