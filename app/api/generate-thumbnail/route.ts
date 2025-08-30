@@ -3,9 +3,8 @@ import OpenAI from "openai";
 import { auth } from "@clerk/nextjs/server";
 import { UTApi } from "uploadthing/server";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
 
 const utapi = new UTApi();
 
@@ -21,6 +20,11 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Initialize OpenAI client at runtime
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
 
     const { userId } = await auth();
     

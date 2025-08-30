@@ -12,6 +12,9 @@ import { ComparisonChecklist } from "./_components/comparison-checklist";
 import { FinalCTA } from "./_components/final-cta";
 import { Footer } from "./_components/footer";
 
+// Force dynamic rendering to avoid build-time Clerk issues
+export const dynamic = 'force-dynamic';
+
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background">

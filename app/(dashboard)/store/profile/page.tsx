@@ -4,6 +4,9 @@ import Link from "next/link";
 import { HeaderForm } from "./components/HeaderForm";
 import { PhonePreview } from "./components/PhonePreview";
 
+// Force dynamic rendering for Clerk hooks
+export const dynamic = 'force-dynamic';
+
 export default function HeaderEditPage() {
   return (
     <div className="min-h-screen">
