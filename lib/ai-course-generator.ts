@@ -9,10 +9,12 @@ import {
 
 // Multi-Agent System for Course Generation - removed duplicate interfaces
 
-// Initialize OpenAI
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Lazy OpenAI initialization to avoid build-time issues
+function getOpenAIClient() {
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+}
 
 // Base Agent Interface
 interface Agent {
@@ -150,7 +152,7 @@ class ResearchAgent implements Agent {
   private async analyzeResearchData(data: any[], context: AgentContext): Promise<any> {
     const researchSummary = data.map(item => `${item.title}: ${item.content}`).join('\n\n');
     
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAIClient().chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
@@ -204,7 +206,7 @@ class StructureAgent implements Agent {
     try {
       const researchContext = (context.researchData as any)?.analysis || `Creating course structure for ${context.topic}`;
       
-      const completion = await openai.chat.completions.create({
+      const completion = await getOpenAIClient().chat.completions.create({
         model: "gpt-4o",
         messages: [
           {
@@ -431,7 +433,7 @@ class ContentAgent implements Agent {
     context: AgentContext
   ): Promise<{content: string, wordCount: number, keyTopics: string[]}> {
     
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAIClient().chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
@@ -1185,7 +1187,7 @@ export async function generateAICourseLegacy(request: CourseGenerationRequest): 
 
   try {
     console.log('Generating course structure...');
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAIClient().chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
@@ -1447,7 +1449,7 @@ async function generateCourseStructure(request: CourseGenerationRequest, researc
   ).join('\n');
 
   try {
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAIClient().chat.completions.create({
       model: "gpt-4o",
       messages: [
         {

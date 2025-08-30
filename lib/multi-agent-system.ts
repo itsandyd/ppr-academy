@@ -1,10 +1,12 @@
 import OpenAI from 'openai';
 import { searchTavily, searchTopicImages } from './ai-course-generator';
 
-// Initialize OpenAI
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Lazy OpenAI initialization to avoid build-time issues
+function getOpenAIClient() {
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+}
 
 // Base Agent Interface
 export interface Agent {
@@ -140,7 +142,7 @@ export class ResearchAgent implements Agent {
   private async analyzeResearchData(data: any[], context: AgentContext): Promise<any> {
     const researchSummary = data.map(item => `${item.title}: ${item.content}`).join('\n\n');
     
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAIClient().chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
@@ -193,7 +195,7 @@ export class StructureAgent implements Agent {
     try {
       const researchContext = context.researchData?.analysis || `Creating course structure for ${context.topic}`;
       
-      const completion = await openai.chat.completions.create({
+      const completion = await getOpenAIClient().chat.completions.create({
         model: "gpt-4o",
         messages: [
           {
@@ -382,7 +384,7 @@ PROGRESSION CONTEXT:
 - Each chapter should introduce UNIQUE techniques or applications
 ` : '';
 
-    const completion = await openai.chat.completions.create({
+    const completion = await getOpenAIClient().chat.completions.create({
       model: "gpt-4o",
       messages: [
         {
