@@ -2,6 +2,9 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic';
+
 export default function DashboardDemo() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#F5F6FF] to-white flex items-center justify-center p-8">

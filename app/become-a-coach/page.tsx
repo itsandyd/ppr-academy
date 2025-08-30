@@ -7,6 +7,9 @@ export const metadata = {
   description: "Join our community of expert music production coaches and help students achieve their goals",
 };
 
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic';
+
 export default async function BecomeCoachPage() {
   const { userId } = await auth();
   

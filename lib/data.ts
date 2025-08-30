@@ -7,6 +7,12 @@ export async function getUserFromClerk(clerkId: string) {
   console.log(`🔍 Looking up user with clerkId: ${clerkId}`);
   
   try {
+    // During build time, return null to avoid database/API calls
+    if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_URL) {
+      console.log('⚠️ Build time detected, skipping user lookup');
+      return null;
+    }
+    
     // First, try to find the user in our database
     let user = await prisma.user.findUnique({
       where: { clerkId },

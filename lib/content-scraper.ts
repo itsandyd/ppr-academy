@@ -3,7 +3,10 @@ import { YoutubeTranscript } from "youtube-transcript";
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
 import OpenAI from "openai";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Lazy OpenAI initialization to avoid build-time issues
+function getOpenAIClient() {
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 async function fixYouTubeTranscriptErrors(content: string, title: string): Promise<string> {
   try {
@@ -11,7 +14,7 @@ async function fixYouTubeTranscriptErrors(content: string, title: string): Promi
 
 ${content}`;
 
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAIClient().chat.completions.create({
       model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
       messages: [{ role: "user", content: prompt }],
       temperature: 0.1, // Low temperature for consistent corrections
@@ -58,7 +61,7 @@ Format as plain text with clear section breaks using line spacing and simple tex
 
 Return only the cleaned content without any meta-commentary.`;
 
-    const response = await openai.chat.completions.create({
+    const response = await getOpenAIClient().chat.completions.create({
       model: "gpt-4o", // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
       messages: [{ role: "user", content: prompt }],
       max_tokens: 5000,

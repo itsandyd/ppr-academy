@@ -8,6 +8,9 @@ import { getUserFromClerk } from "@/lib/data";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import ContentRenderer from "@/components/content-renderer";
+
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic';
 import { 
   Clock, 
   PlayCircle,

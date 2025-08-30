@@ -3,6 +3,9 @@ import { auth } from "@clerk/nextjs/server";
 import { getAdminStats, getAllUsers, getPendingCourses, getAllCourses, getRecentReviews, getCoachApplications } from "@/lib/admin-data";
 import AdminDashboard from "@/components/admin/admin-dashboard";
 
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic';
+
 export default async function AdminPage() {
   const { userId: clerkId } = await auth();
   

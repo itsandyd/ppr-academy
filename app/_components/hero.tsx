@@ -1,3 +1,5 @@
+"use client";
+
 import { FC } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Play, Zap, CheckCircle } from "lucide-react";

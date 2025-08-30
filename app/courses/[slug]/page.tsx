@@ -8,6 +8,9 @@ import { prisma } from "@/lib/prisma";
 import { CourseDetailClient } from "@/components/course/course-detail-client";
 import { CourseEditHeader } from "@/components/course/course-edit-header";
 import { CourseContentEditor } from "@/components/course/course-content-editor";
+
+// Force dynamic rendering for this page
+export const dynamic = 'force-dynamic';
 import { 
   Clock, 
   Star,
