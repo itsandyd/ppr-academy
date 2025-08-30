@@ -17,7 +17,8 @@ export interface ProductOption {
   title: string;
   subtitle: string;
   icon: LucideIcon;
-  tint: string;
+  colorClass: string; // CSS class using design system colors
+  iconColorClass?: string; // Optional custom icon color
 }
 
 export const options: ProductOption[] = [
@@ -26,69 +27,79 @@ export const options: ProductOption[] = [
     title: "Collect Emails / Applications",
     subtitle: "Collect Your Audience's Info with a Lead Magnet",
     icon: Mail,
-    tint: "#FDEDF4"
+    colorClass: "bg-accent/20 hover:bg-accent/30",
+    iconColorClass: "text-primary"
   },
   {
     id: "digital",
     title: "Digital Product",
     subtitle: "PDFs, Guides, Templates, Exclusive Content, eBooks, etc.",
     icon: Box,
-    tint: "#E7F2FF"
+    colorClass: "bg-primary/10 hover:bg-primary/15",
+    iconColorClass: "text-primary"
   },
   {
     id: "coaching",
     title: "Coaching Call",
     subtitle: "Book Discovery Calls, Paid Coaching",
     icon: Calendar,
-    tint: "#E8F6FF"
+    colorClass: "bg-secondary/30 hover:bg-secondary/40",
+    iconColorClass: "text-secondary-foreground"
   },
   {
     id: "custom",
     title: "Custom Product",
     subtitle: '"Ask Me Anything" requests, Audits/Analyses, Video Reviews',
     icon: Package,
-    tint: "#FFF9DA"
+    colorClass: "bg-muted hover:bg-muted/80",
+    iconColorClass: "text-primary"
   },
   {
     id: "ecourse",
     title: "eCourse",
     subtitle: "Create, Host, and Sell your Course within Stan",
     icon: GraduationCap,
-    tint: "#E4F3FF"
+    colorClass: "bg-chart-1/10 hover:bg-chart-1/15",
+    iconColorClass: "text-chart-1"
   },
   {
     id: "membership",
     title: "Recurring Membership",
     subtitle: "Charge Recurring Subscriptions",
     icon: Repeat,
-    tint: "#E9F4FF"
+    colorClass: "bg-chart-2/10 hover:bg-chart-2/15",
+    iconColorClass: "text-chart-2"
   },
   {
     id: "webinar",
     title: "Webinar",
     subtitle: "Host exclusive coaching sessions or online events with multiple customers",
     icon: Tv,
-    tint: "#EDF8FF"
+    colorClass: "bg-chart-3/10 hover:bg-chart-3/15",
+    iconColorClass: "text-chart-3"
   },
   {
     id: "community",
     title: "Community",
     subtitle: "Host a free or paid community",
     icon: Users,
-    tint: "#F2ECFF"
+    colorClass: "bg-chart-4/10 hover:bg-chart-4/15",
+    iconColorClass: "text-chart-4"
   },
   {
     id: "url",
     title: "URL / Media",
     subtitle: "Link to a Website, Affiliate Link, or even Embed Youtube and Spotify content",
     icon: Link,
-    tint: "#FFEDEE"
+    colorClass: "bg-chart-5/10 hover:bg-chart-5/15",
+    iconColorClass: "text-chart-5"
   },
   {
     id: "affiliate",
-    title: "Stan Affiliate Link",
-    subtitle: "Refer a friend and receive 20% of their Stan Subscription fee each month!",
+    title: "PausePlayRepeat Affiliate Link",
+    subtitle: "Refer a friend and receive 20% of their PausePlayRepeat Subscription fee each month!",
     icon: DollarSign,
-    tint: "#EAF2FF"
+    colorClass: "bg-destructive/10 hover:bg-destructive/15",
+    iconColorClass: "text-destructive"
   }
 ]; 

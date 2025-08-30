@@ -81,7 +81,11 @@ export default function ChooseProductTypePage() {
         {options.map((option) => (
           <OptionCard 
             key={option.id} 
-            {...option} 
+            title={option.title}
+            subtitle={option.subtitle}
+            icon={option.icon}
+            colorClass={option.colorClass}
+            iconColorClass={option.iconColorClass}
             onClick={() => handleOptionClick(option.id)}
           />
         ))}
