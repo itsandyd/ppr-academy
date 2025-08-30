@@ -119,11 +119,11 @@ function ChallengeCard() {
 }
 
 export default function DashboardHome() {
-  const userName = "Alex"; // Dummy data
+  const userName = "Creator"; // Fallback name
 
   return (
     <section className="flex flex-col gap-8 py-10 md:py-16">
-              <h1 className="text-4xl font-bold text-foreground">
+      <h1 className="text-4xl font-bold text-foreground">
         Welcome {userName}, you're in
         <span className="inline-block ml-2">🎉</span>
       </h1>

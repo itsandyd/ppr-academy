@@ -1,6 +1,7 @@
 import { FC } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import { SignUpButton } from "@clerk/nextjs";
 
 interface FinalCTAProps {}
 
@@ -23,14 +24,16 @@ export const FinalCTA: FC<FinalCTAProps> = () => {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button 
-              variant="default" 
-              size="lg" 
-              className="w-full sm:w-auto rounded-xl bg-white text-[#6356FF] hover:bg-white/90 font-bold px-12 py-6 text-xl shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105"
-            >
-              Join the Platform
-              <ArrowRight className="ml-2 w-5 h-5" />
-            </Button>
+            <SignUpButton mode="modal">
+              <Button 
+                variant="default" 
+                size="lg" 
+                className="w-full sm:w-auto rounded-xl bg-white text-[#6356FF] hover:bg-white/90 font-bold px-12 py-6 text-xl shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105"
+              >
+                Join the Platform
+                <ArrowRight className="ml-2 w-5 h-5" />
+              </Button>
+            </SignUpButton>
           </div>
 
           {/* Trust Indicators */}
