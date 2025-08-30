@@ -735,7 +735,7 @@ export default function CreateCourseForm({
                                 <div className="space-y-3">
                                   {module.lessons.map((lesson, lessonIndex) => (
                                     <div key={lessonIndex} className="border border-border rounded shadow-sm">
-                                      {/* Lesson Header */>
+                                      {/* Lesson Header */}
                                       <div className="p-3 bg-muted/20 border-b border-border">
                                         <div className="flex items-center justify-between">
                                           <button
