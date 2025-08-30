@@ -14,7 +14,9 @@ export default async function CreateCoursePage() {
 
   return (
     <div className="min-h-screen bg-slate-50 pt-16">
-      <CreateCourseForm />
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8">
+        <CreateCourseForm />
+      </div>
     </div>
   );
 } 
