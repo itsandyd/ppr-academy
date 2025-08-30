@@ -522,10 +522,10 @@ export default function CreateCourseForm({
   };
 
   return (
-    <form id="course-form" onSubmit={handleSubmit} className="space-y-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <form id="course-form" onSubmit={handleSubmit} className="space-y-6 md:space-y-8">
+          <div className="flex flex-col lg:grid lg:grid-cols-3 gap-6 md:gap-8">
             {/* Course Details */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="order-1 lg:col-span-2 space-y-4 md:space-y-6">
               {/* Basic Information - Conditionally rendered */}
               {!hideBasicInfo && (
                 <Card>
@@ -543,6 +543,7 @@ export default function CreateCourseForm({
                       }}
                       placeholder="Enter course title"
                       required
+                      className="min-h-[44px]"
                     />
                   </div>
 
@@ -557,10 +558,11 @@ export default function CreateCourseForm({
                       placeholder="Describe what students will learn..."
                       rows={4}
                       required
+                      className="min-h-[100px]"
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium mb-2 text-foreground">Category *</label>
                       <Select value={category} onValueChange={(value) => {
@@ -609,6 +611,7 @@ export default function CreateCourseForm({
                       }}
                       placeholder="0.00"
                       required
+                      className="min-h-[44px]"
                     />
                   </div>
 
@@ -621,6 +624,7 @@ export default function CreateCourseForm({
                         setTimeout(notifyDataChange, 0);
                       }}
                       placeholder="https://example.com/image.jpg"
+                      className="min-h-[44px]"
                     />
                   </div>
                 </CardContent>
@@ -630,7 +634,7 @@ export default function CreateCourseForm({
               {/* Course Modules */}
               <Card>
                 <CardHeader>
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <CardTitle>Course Modules</CardTitle>
                     <Button 
                       type="button" 
@@ -639,6 +643,7 @@ export default function CreateCourseForm({
                         addModule();
                       }} 
                       variant="outline"
+                      className="w-full sm:w-auto min-h-[44px]"
                     >
                       <Plus className="w-4 h-4 mr-2" />
                       Add Module
@@ -657,14 +662,14 @@ export default function CreateCourseForm({
                         {modules.map((module, moduleIndex) => {
                           console.log("🔥 Rendering module:", { moduleIndex, module, isExpanded: expandedModules[moduleIndex] });
                           return (
-                          <div key={moduleIndex} className="border border-border rounded-lg">
+                          <div key={moduleIndex} className="border border-border rounded-lg shadow-sm">
                             {/* Module Header */}
-                            <div className="p-4 bg-muted/30 border-b border-border">
+                            <div className="p-3 md:p-4 bg-muted/30 border-b border-border">
                               <div className="flex items-center justify-between">
                                 <button
                                   type="button"
                                   onClick={() => toggleModule(moduleIndex)}
-                                  className="flex items-center space-x-2 text-left"
+                                  className="flex items-center space-x-2 text-left min-h-[44px] flex-1 mr-2"
                                 >
                                   {expandedModules[moduleIndex] ? (
                                     <ChevronDown className="w-5 h-5" />
@@ -678,6 +683,7 @@ export default function CreateCourseForm({
                                   variant="outline"
                                   size="sm"
                                   onClick={() => deleteModule(moduleIndex)}
+                                  className="min-h-[44px] min-w-[44px]"
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </Button>
@@ -691,6 +697,7 @@ export default function CreateCourseForm({
                                     updateModule(moduleIndex, "title", e.target.value);
                                   }}
                                   placeholder="Module title"
+                                  className="min-h-[44px]"
                                 />
                                 <Textarea
                                   value={module.description}
@@ -700,20 +707,22 @@ export default function CreateCourseForm({
                                   }}
                                   placeholder="Module description"
                                   rows={2}
+                                  className="min-h-[44px]"
                                 />
                               </div>
                             </div>
 
                             {/* Module Content */}
                             {expandedModules[moduleIndex] && (
-                            <div className="p-4">
-                              <div className="flex items-center justify-between mb-4">
+                            <div className="p-3 md:p-4">
+                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
                                 <h4 className="font-medium">Lessons</h4>
                                 <Button
                                   type="button"
                                   variant="outline"
                                   size="sm"
                                   onClick={() => addLesson(moduleIndex)}
+                                  className="w-full sm:w-auto min-h-[44px]"
                                 >
                                   <Plus className="w-4 h-4 mr-2" />
                                   Add Lesson
@@ -725,14 +734,14 @@ export default function CreateCourseForm({
                               ) : (
                                 <div className="space-y-3">
                                   {module.lessons.map((lesson, lessonIndex) => (
-                                    <div key={lessonIndex} className="border border-border rounded">
-                                      {/* Lesson Header */}
+                                    <div key={lessonIndex} className="border border-border rounded shadow-sm">
+                                      {/* Lesson Header */>
                                       <div className="p-3 bg-muted/20 border-b border-border">
                                         <div className="flex items-center justify-between">
                                           <button
                                             type="button"
                                             onClick={() => toggleLesson(moduleIndex, lessonIndex)}
-                                            className="flex items-center space-x-2"
+                                            className="flex items-center space-x-2 min-h-[44px] flex-1 mr-2"
                                           >
                                             {expandedLessons[`${moduleIndex}-${lessonIndex}`] ? (
                                               <ChevronDown className="w-4 h-4" />
@@ -748,6 +757,7 @@ export default function CreateCourseForm({
                                             variant="outline"
                                             size="sm"
                                             onClick={() => deleteLesson(moduleIndex, lessonIndex)}
+                                            className="min-h-[44px] min-w-[44px]"
                                           >
                                             <Trash2 className="w-3 h-3" />
                                           </Button>
@@ -758,14 +768,14 @@ export default function CreateCourseForm({
                                             value={lesson.title}
                                             onChange={(e) => updateLesson(moduleIndex, lessonIndex, "title", e.target.value)}
                                             placeholder="Lesson title"
-                                            className="text-sm"
+                                            className="text-sm min-h-[40px]"
                                           />
                                           <Textarea
                                             value={lesson.description}
                                             onChange={(e) => updateLesson(moduleIndex, lessonIndex, "description", e.target.value)}
                                             placeholder="Lesson description"
                                             rows={2}
-                                            className="text-sm"
+                                            className="text-sm min-h-[40px]"
                                           />
                                         </div>
                                       </div>
@@ -773,13 +783,14 @@ export default function CreateCourseForm({
                                       {/* Lesson Chapters */}
                                       {expandedLessons[`${moduleIndex}-${lessonIndex}`] && (
                                         <div className="p-3">
-                                          <div className="flex items-center justify-between mb-3">
+                                          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
                                             <h5 className="text-sm font-medium">Chapters</h5>
                                             <Button
                                               type="button"
                                               variant="outline"
                                               size="sm"
                                               onClick={() => addChapter(moduleIndex, lessonIndex)}
+                                              className="w-full sm:w-auto min-h-[40px]"
                                             >
                                               <Plus className="w-3 h-3 mr-1" />
                                               Add Chapter
@@ -789,10 +800,10 @@ export default function CreateCourseForm({
                                           {lesson.chapters.length === 0 ? (
                                             <p className="text-muted-foreground text-center py-2 text-sm">No chapters yet</p>
                                           ) : (
-                                            <div className="space-y-2">
+                                            <div className="space-y-3">
                                               {lesson.chapters.map((chapter, chapterIndex) => (
-                                                <div key={chapterIndex} className="border border-border rounded p-3 bg-muted/20">
-                                                  <div className="flex items-center justify-between mb-2">
+                                                <div key={chapterIndex} className="border border-border rounded p-3 bg-muted/20 shadow-sm">
+                                                  <div className="flex items-center justify-between mb-3">
                                                     <span className="text-sm font-medium">
                                                       Chapter {chapterIndex + 1}
                                                     </span>
@@ -801,6 +812,7 @@ export default function CreateCourseForm({
                                                       variant="outline"
                                                       size="sm"
                                                       onClick={() => deleteChapter(moduleIndex, lessonIndex, chapterIndex)}
+                                                      className="min-h-[40px] min-w-[40px]"
                                                     >
                                                       <Trash2 className="w-3 h-3" />
                                                     </Button>
@@ -811,28 +823,28 @@ export default function CreateCourseForm({
                                                       value={chapter.title}
                                                       onChange={(e) => updateChapter(moduleIndex, lessonIndex, chapterIndex, "title", e.target.value)}
                                                       placeholder="Chapter title"
-                                                      className="text-sm"
+                                                      className="text-sm min-h-[40px]"
                                                     />
                                                     <Textarea
                                                       value={chapter.content}
                                                       onChange={(e) => updateChapter(moduleIndex, lessonIndex, chapterIndex, "content", e.target.value)}
                                                       placeholder="Chapter content"
                                                       rows={2}
-                                                      className="text-sm"
+                                                      className="text-sm min-h-[40px]"
                                                     />
-                                                    <div className="grid grid-cols-2 gap-2">
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                                       <Input
                                                         value={chapter.videoUrl}
                                                         onChange={(e) => updateChapter(moduleIndex, lessonIndex, chapterIndex, "videoUrl", e.target.value)}
                                                         placeholder="Video URL"
-                                                        className="text-sm"
+                                                        className="text-sm min-h-[40px]"
                                                       />
                                                       <Input
                                                         type="number"
                                                         value={chapter.duration}
                                                         onChange={(e) => updateChapter(moduleIndex, lessonIndex, chapterIndex, "duration", parseInt(e.target.value) || 0)}
                                                         placeholder="Duration (seconds)"
-                                                        className="text-sm"
+                                                        className="text-sm min-h-[40px]"
                                                       />
                                                     </div>
                                                   </div>
@@ -859,7 +871,7 @@ export default function CreateCourseForm({
             </div>
 
             {/* Sidebar */}
-            <div className="lg:col-span-1 space-y-6">
+            <div className="order-2 lg:col-span-1 space-y-4 md:space-y-6">
               {/* Course Preview */}
               <Card>
                 <CardHeader>
