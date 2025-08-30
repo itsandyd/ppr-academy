@@ -4,12 +4,14 @@ import { FC, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Music, Sun, Moon, Menu, X } from "lucide-react";
 import { useTheme } from "next-themes";
-import { SignUpButton } from "@clerk/nextjs";
+import { SignUpButton, useAuth } from "@clerk/nextjs";
+import Link from "next/link";
 
 interface StickyNavProps {}
 
 export const StickyNav: FC<StickyNavProps> = () => {
   const { theme, setTheme } = useTheme();
+  const { isSignedIn } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -55,11 +57,19 @@ export const StickyNav: FC<StickyNavProps> = () => {
             </Button>
 
             {/* CTA Button */}
-            <SignUpButton mode="modal">
-              <Button variant="default" size="lg" className="rounded-xl bg-white text-[#6356FF] hover:bg-white/90 font-semibold">
-                Join the Platform
-              </Button>
-            </SignUpButton>
+            {isSignedIn ? (
+              <Link href="/dashboard">
+                <Button variant="default" size="lg" className="rounded-xl bg-white text-[#6356FF] hover:bg-white/90 font-semibold">
+                  Dashboard
+                </Button>
+              </Link>
+            ) : (
+              <SignUpButton mode="modal">
+                <Button variant="default" size="lg" className="rounded-xl bg-white text-[#6356FF] hover:bg-white/90 font-semibold">
+                  Join the Platform
+                </Button>
+              </SignUpButton>
+            )}
           </div>
 
           {/* Mobile Menu Button */}

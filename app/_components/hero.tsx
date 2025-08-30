@@ -3,12 +3,14 @@
 import { FC } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Play, Zap, CheckCircle } from "lucide-react";
-import { SignUpButton } from "@clerk/nextjs";
+import { SignUpButton, useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 
 interface HeroProps {}
 
 export const Hero: FC<HeroProps> = () => {
+  const { isSignedIn } = useAuth();
+  
   return (
     <section className="relative bg-gradient-to-b from-[#6356FF] to-[#5273FF] overflow-hidden">
       <div className="mx-auto w-full max-w-[1140px] px-6 py-24 md:py-32">
@@ -34,16 +36,29 @@ export const Hero: FC<HeroProps> = () => {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4">
-              <SignUpButton mode="modal">
-                <Button 
-                  variant="default" 
-                  size="lg" 
-                  className="rounded-xl bg-white text-[#6356FF] hover:bg-white/90 font-semibold shadow-lg shadow-black/5"
-                >
-                  Join the Platform
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </SignUpButton>
+              {isSignedIn ? (
+                <Link href="/home">
+                  <Button 
+                    variant="default" 
+                    size="lg" 
+                    className="rounded-xl bg-white text-[#6356FF] hover:bg-white/90 font-semibold shadow-lg shadow-black/5"
+                  >
+                    Go to Dashboard
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
+              ) : (
+                <SignUpButton mode="modal">
+                  <Button 
+                    variant="default" 
+                    size="lg" 
+                    className="rounded-xl bg-white text-[#6356FF] hover:bg-white/90 font-semibold shadow-lg shadow-black/5"
+                  >
+                    Join the Platform
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </SignUpButton>
+              )}
               <Link href="/courses">
                 <Button 
                   variant="ghost" 

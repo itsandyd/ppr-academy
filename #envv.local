@@ -1,0 +1,41 @@
+# Convex
+NEXT_PUBLIC_CONVEX_URL=https://fastidious-snake-859.convex.cloud
+
+# Clerk Authentication - REPLACE WITH YOUR REAL API KEYS
+NEXT_PUBLIC_CLERK_FRONTEND_API_URL=https://arriving-vulture-83.clerk.accounts.dev
+
+# Clerk URLs
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard/store
+NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard/store
+
+
+# DATABASE_URL='mysql://pqozx63rd02z2xtf3ybs:pscale_pw_WL5WMp234raQ0NixLFEXNhLboMzmQAWHbQankQT9wbJ@gcp.connect.psdb.cloud/pauseplayrepeat?sslaccept=strict'
+## PRODUCTION
+DATABASE_URL="mysql://ka2th8t6f4qwonfpjgmg:pscale_pw_v4288Ri9yj1ne3ogb5R0v7vmT1OAK56oh7MD7J3Ob7l@gcp.connect.psdb.cloud/pauseplayrepeat?sslaccept=strict'"
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_YXJyaXZpbmctdnVsdHVyZS04My5jbGVyay5hY2NvdW50cy5kZXYk
+CLERK_SECRET_KEY=sk_test_Gu94fiOVeY6xbhUAPWlAVHATvJqBcNpisrd2Wfzdx3
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
+NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard
+OPENAI_API_KEY="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"
+TAVILY_API_KEY="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"
+DISCORD_CLIENT_ID="1071023976375136386"
+DISCORD_CLIENT_SECRET="k9i60EEOGwWCIDiTjyGhjPWebDKKRUbC"
+DISCORD_BOT_TOKEN="MTA3MTAyMzk3NjM3NTEzNjM4Ng.GK1y5B.I2pBEjYtiwMqQ_pWuCCjFGegtqC-ryCaPmQdIM"
+DISCORD_GUILD_ID="189844558152990720"
+# Cron Job Security (optional but recommended)
+CRON_SECRET=your_secure_random_string_for_cron_auth
+# App URL (for Discord OAuth redirect)
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+ELEVEN_LABS_API_KEY="sk_e0afc74e3e38674f8f2f840350b2e771c54ce8f02b6bb62c"
+
+# UploadThing Configuration (SDK v7)
+UPLOADTHING_TOKEN='eyJhcGlLZXkiOiJza19saXZlXzUxYWU5Y2U1NDBhZmM1ZTM4ZmY5M2QxNjgxMTBiMmU1YzZkM2ExZjdmYWNlNTRiYWU5N2JkY2UxYjA1Zjg5YmMiLCJhcHBJZCI6IjN1bHVic3RpcTIiLCJyZWdpb25zIjpbInNlYTEiXX0='
+
+# Deployment used by `npx convex dev`
+CONVEX_DEPLOYMENT=dev:fastidious-snake-859 # team: itsandyd, project: ppr-academy-49fc1
+
+RESEND_API_KEY=re_MmX2RQqw_35QdDqeQ7nmYEZEhxX1u1TGy

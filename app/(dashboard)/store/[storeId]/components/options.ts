@@ -57,7 +57,7 @@ export const options: ProductOption[] = [
   {
     id: "ecourse",
     title: "eCourse",
-    subtitle: "Create, Host, and Sell your Course within Stan",
+    subtitle: "Create, Host, and Sell your Course within PausePlayRepeat",
     icon: GraduationCap,
     colorClass: "bg-chart-1/10 hover:bg-chart-1/15",
     iconColorClass: "text-chart-1"

@@ -3,11 +3,14 @@
 import { FC } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
-import { SignUpButton } from "@clerk/nextjs";
+import { SignUpButton, useAuth } from "@clerk/nextjs";
+import Link from "next/link";
 
 interface FinalCTAProps {}
 
 export const FinalCTA: FC<FinalCTAProps> = () => {
+  const { isSignedIn } = useAuth();
+  
   return (
     <section className="py-24 md:py-32 bg-gradient-to-b from-[#6356FF] to-[#5273FF] relative overflow-hidden">
       <div className="absolute inset-0 bg-[url('/noise.png')] opacity-20 mix-blend-overlay"></div>
@@ -26,16 +29,29 @@ export const FinalCTA: FC<FinalCTAProps> = () => {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <SignUpButton mode="modal">
-              <Button 
-                variant="default" 
-                size="lg" 
-                className="w-full sm:w-auto rounded-xl bg-white text-[#6356FF] hover:bg-white/90 font-bold px-12 py-6 text-xl shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105"
-              >
-                Join the Platform
-                <ArrowRight className="ml-2 w-5 h-5" />
-              </Button>
-            </SignUpButton>
+            {isSignedIn ? (
+              <Link href="/dashboard">
+                <Button 
+                  variant="default" 
+                  size="lg" 
+                  className="w-full sm:w-auto rounded-xl bg-white text-[#6356FF] hover:bg-white/90 font-bold px-12 py-6 text-xl shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105"
+                >
+                  Go to Dashboard
+                  <ArrowRight className="ml-2 w-5 h-5" />
+                </Button>
+              </Link>
+            ) : (
+              <SignUpButton mode="modal">
+                <Button 
+                  variant="default" 
+                  size="lg" 
+                  className="w-full sm:w-auto rounded-xl bg-white text-[#6356FF] hover:bg-white/90 font-bold px-12 py-6 text-xl shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105"
+                >
+                  Join the Platform
+                  <ArrowRight className="ml-2 w-5 h-5" />
+                </Button>
+              </SignUpButton>
+            )}
           </div>
 
           {/* Trust Indicators */}
