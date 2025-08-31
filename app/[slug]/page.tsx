@@ -614,8 +614,88 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
               ))}
               
               {/* Other Products */}
-              {products?.filter(p => !(p.price === 0 && p.style === "card") && p.isPublished).map((product) => (
-                <Card key={product._id} className="group p-6 border-premium bg-card hover:scale-[1.02] transition-all duration-300 cursor-pointer">
+              {products?.filter(p => !(p.price === 0 && p.style === "card") && p.isPublished).map((product) => {
+                const isLeadMagnet = product.price === 0;
+                
+                if (isLeadMagnet) {
+                  // Free products (lead magnets) should show opt-in form
+                  return (
+                    <Dialog key={product._id}>
+                      <DialogTrigger asChild>
+                        <Card className="group p-6 border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer">
+                          {/* Image */}
+                          <div className="w-full h-48 bg-gradient-to-br from-green-100 to-emerald-200 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
+                            {product.imageUrl ? (
+                              <img 
+                                src={product.imageUrl} 
+                                alt={product.title}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              />
+                            ) : (
+                              <div className="text-center">
+                                <Gift className="w-16 h-16 text-green-600 mx-auto mb-2" />
+                                <span className="text-sm text-green-600 font-medium">Free Resource</span>
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Content */}
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <Badge className="bg-green-600 hover:bg-green-700 text-white border-0 font-semibold">
+                                FREE
+                              </Badge>
+                              <Gift className="w-5 h-5 text-green-600" />
+                            </div>
+                            <h3 className="font-bold text-xl text-green-800 line-clamp-2">
+                              {product.title}
+                            </h3>
+                            <p className="text-green-700 text-sm line-clamp-3 leading-relaxed">
+                              {product.description || "Get this amazing free resource"}
+                            </p>
+                            <div className="flex items-center justify-between pt-2">
+                              <span className="text-xs text-green-600 font-medium">Click to get free resource</span>
+                              <ArrowRight className="w-4 h-4 text-green-600 group-hover:translate-x-1 transition-all duration-200" />
+                            </div>
+                          </div>
+                        </Card>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-md bg-card border-0 shadow-xl data-[state=open]:backdrop-brightness-90">
+                        <DialogHeader>
+                          <DialogTitle className="text-center text-xl font-bold text-green-800">
+                            Get Your Free Resource
+                          </DialogTitle>
+                          <DialogDescription className="text-center text-green-600">
+                            Enter your details below to access "{product.title}"
+                          </DialogDescription>
+                        </DialogHeader>
+                        <LeadMagnetPreview 
+                          leadMagnet={{
+                            ...product,
+                            productId: product._id,
+                            title: product.title,
+                            subtitle: product.description || "",
+                            imageUrl: product.imageUrl,
+                            ctaText: product.buttonLabel || "Get Free Resource",
+                            downloadUrl: product.downloadUrl
+                          }}
+                          isFullScreen={true}
+                          storeData={{ store, user }}
+                        />
+                      </DialogContent>
+                    </Dialog>
+                  );
+                }
+                
+                // Paid products show checkout functionality
+                return (
+                  <Card 
+                    key={product._id} 
+                    className="group p-6 border-premium bg-card hover:scale-[1.02] transition-all duration-300 cursor-pointer"
+                    onClick={() => {
+                      alert(`Purchase ${product.title} for $${product.price}\n\nCheckout functionality coming soon!`);
+                    }}
+                  >
                   {/* Image */}
                   <div className="w-full h-48 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
                     {product.imageUrl ? (
@@ -652,6 +732,8 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
                     </div>
                   </div>
                 </Card>
+                );
+              })}
               ))}
               
               {/* Empty State */}

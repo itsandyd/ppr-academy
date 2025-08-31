@@ -64,8 +64,8 @@ export function OptionsForm() {
                   value={step.label.toLowerCase()}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     step.active
-                      ? "bg-white border border-[#6356FF] text-[#6356FF] font-bold data-[state=active]:bg-white data-[state=active]:text-[#6356FF]"
-                      : "text-[#4B4E68] hover:text-[#6356FF] data-[state=active]:bg-transparent"
+                      ? "bg-background border border-primary text-primary font-bold data-[state=active]:bg-background data-[state=active]:text-primary"
+                      : "text-muted-foreground hover:text-primary data-[state=active]:bg-transparent"
                   }`}
                   asChild={!step.active}
                 >
@@ -93,9 +93,9 @@ export function OptionsForm() {
         <Accordion type="single" collapsible className="space-y-8">
           {/* Email Flows */}
           <AccordionItem value="flows" className="border-none">
-            <AccordionTrigger className="h-16 rounded-xl px-6 shadow-sm border border-transparent hover:border-[#E8EAF8] transition-colors bg-white data-[state=open]:border-[#E8EAF8] hover:no-underline">
+            <AccordionTrigger className="h-16 rounded-xl px-6 shadow-sm border border-transparent hover:border-border transition-colors bg-card data-[state=open]:border-border hover:no-underline">
               <div className="flex items-center flex-1">
-                <Mail size={20} className="mr-4 text-[#4B4E68]" />
+                <Mail size={20} className="mr-4 text-muted-foreground" />
                 <span className="flex-1 text-base font-semibold text-left">Email Flows</span>
               </div>
               <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
@@ -113,9 +113,9 @@ export function OptionsForm() {
 
           {/* Confirmation Email */}
           <AccordionItem value="confirmation" className="border-none">
-            <AccordionTrigger className="h-16 rounded-xl px-6 shadow-sm border border-transparent hover:border-[#E8EAF8] transition-colors bg-white data-[state=open]:border-[#E8EAF8] hover:no-underline">
+            <AccordionTrigger className="h-16 rounded-xl px-6 shadow-sm border border-transparent hover:border-border transition-colors bg-card data-[state=open]:border-border hover:no-underline">
               <div className="flex items-center flex-1">
-                <Mail size={20} className="mr-4 text-[#4B4E68]" />
+                <Mail size={20} className="mr-4 text-muted-foreground" />
                 <span className="flex-1 text-base font-semibold text-left">Confirmation Email</span>
               </div>
               <ChevronDown className="h-4 w-4 shrink-0 transition-transform duration-200" />
@@ -139,7 +139,7 @@ export function OptionsForm() {
         {/* Action Row */}
         <div className="pt-20">
           <div className="flex items-center gap-6 justify-center relative">
-            <span className="absolute -top-6 right-0 italic text-xs text-[#6B6E85]">
+            <span className="absolute -top-6 right-0 italic text-xs text-muted-foreground">
               Improve this page
             </span>
             <Button 
@@ -152,7 +152,7 @@ export function OptionsForm() {
             </Button>
             <Button
               type="submit"
-              className="bg-[#6356FF] hover:bg-[#5248E6] text-white rounded-lg px-8 py-2 flex items-center gap-2"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg px-8 py-2 flex items-center gap-2"
               disabled={!formState.isDirty || !formState.isValid}
             >
               <Send size={16} />

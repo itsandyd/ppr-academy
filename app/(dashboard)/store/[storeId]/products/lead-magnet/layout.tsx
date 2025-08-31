@@ -59,16 +59,16 @@ export default function WizardLayout({ children }: WizardLayoutProps) {
     formFields: defaultFields
   });
 
-  // Get store data
+  // Get store data by slug (storeId from URL is actually the slug)
   const store = useQuery(
-    api.stores.getStoreById,
-    storeId ? { storeId: storeId as any } : "skip"
+    api.stores.getStoreBySlug,
+    storeId ? { slug: storeId } : "skip"
   );
 
   // Fetch existing products to load saved lead magnet data
   const existingProducts = useQuery(
     api.digitalProducts.getProductsByStore,
-    storeId ? { storeId: storeId } : "skip"
+    store?._id ? { storeId: store._id } : "skip"
   );
 
   // Fetch specific product if in edit mode

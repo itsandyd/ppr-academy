@@ -31,8 +31,9 @@ export function ProductsList({ products, storeId }: ProductsListProps) {
   const updateProduct = useMutation(api.digitalProducts.updateProduct);
 
   const isCourse = (product: Product) => {
-    // Courses don't have a style property, digital products do
-    return product.style === undefined;
+    // Courses have a slug property and no style property
+    // Digital products have a style property and no slug property
+    return product.slug !== undefined && product.style === undefined;
   };
 
   const handleDelete = async (productId: string, title: string) => {

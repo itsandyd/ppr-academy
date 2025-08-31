@@ -17,6 +17,7 @@ import { useUploadThing } from "@/lib/uploadthing-hooks";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useLeadMagnetContext } from "../context";
 
 // FormSection component
 function FormSection({ index, title, children }: { index: number; title: string; children: React.ReactNode }) {
@@ -46,6 +47,7 @@ export function ProductForm() {
   const [uploadedFileUrl, setUploadedFileUrl] = useState<string>("");
   const [uploadedFileName, setUploadedFileName] = useState<string>("");
   const { toast } = useToast();
+  const { leadMagnetData, updateLeadMagnetData } = useLeadMagnetContext();
   
   // Convex mutations
   const updateProduct = useMutation(api.digitalProducts.updateProduct);
@@ -66,6 +68,14 @@ export function ProductForm() {
 
   const { register, control, formState, handleSubmit, watch, setValue } = form;
   const resourceType = watch("resourceType");
+  const resourceUrl = watch("resourceUrl");
+  
+  // Update context when URL changes
+  useEffect(() => {
+    if (resourceType === "url" && resourceUrl && resourceUrl.trim()) {
+      updateLeadMagnetData({ downloadUrl: resourceUrl });
+    }
+  }, [resourceType, resourceUrl, updateLeadMagnetData]);
 
   // Fetch existing products to load saved resource data
   const existingProducts = useQuery(
@@ -75,6 +85,40 @@ export function ProductForm() {
 
   // Load existing resource data on mount
   useEffect(() => {
+    console.log("📁 Loading data - existingProducts:", existingProducts?.length, "leadMagnetData:", leadMagnetData);
+    
+    // First, try to load from context (most recent data)
+    if (leadMagnetData.downloadUrl) {
+      console.log("📁 Loading from context - downloadUrl:", leadMagnetData.downloadUrl);
+      
+      // Check if it's a file URL or external URL
+      if (leadMagnetData.downloadUrl.includes('utfs.io') || leadMagnetData.downloadUrl.includes('uploadthing')) {
+        // It's an uploaded file
+        setUploadedFileUrl(leadMagnetData.downloadUrl);
+        setUploadedFileName("uploaded-file");
+        setValue("resourceFile", leadMagnetData.downloadUrl, { shouldValidate: true, shouldDirty: true });
+        setValue("resourceType", "file");
+        console.log("📁 Set form values from context - file:", leadMagnetData.downloadUrl);
+        
+        // Force validation after setting values
+        setTimeout(() => {
+          form.trigger();
+        }, 100);
+      } else {
+        // It's an external URL
+        setValue("resourceUrl", leadMagnetData.downloadUrl, { shouldValidate: true, shouldDirty: true });
+        setValue("resourceType", "url");
+        console.log("📁 Set form values from context - url:", leadMagnetData.downloadUrl);
+        
+        // Force validation after setting values
+        setTimeout(() => {
+          form.trigger();
+        }, 100);
+      }
+      return; // Don't load from database if we have context data
+    }
+    
+    // Fallback: load from database if no context data
     if (existingProducts && existingProducts.length > 0) {
       // Find lead magnets (typically price: 0 and style: "card")
       const leadMagnets = existingProducts.filter((product: any) => 
@@ -85,19 +129,19 @@ export function ProductForm() {
         // Load the most recent lead magnet
         const latestLeadMagnet = leadMagnets.sort((a: any, b: any) => b._creationTime - a._creationTime)[0];
         
-        console.log("📁 Loading saved lead magnet:", latestLeadMagnet);
+        console.log("📁 Loading saved lead magnet from database:", latestLeadMagnet);
         
         // Load the saved resource data from downloadUrl
         if (latestLeadMagnet.downloadUrl) {
-          console.log("📁 Found saved resource:", latestLeadMagnet.downloadUrl);
+          console.log("📁 Found saved resource in database:", latestLeadMagnet.downloadUrl);
           
           // Check if it's a file URL or external URL
           if (latestLeadMagnet.downloadUrl.includes('utfs.io') || latestLeadMagnet.downloadUrl.includes('uploadthing')) {
             // It's an uploaded file
             setUploadedFileUrl(latestLeadMagnet.downloadUrl);
-          setUploadedFileName(latestLeadMagnet.title || "saved-file");
+            setUploadedFileName(latestLeadMagnet.title || "saved-file");
             setValue("resourceFile", latestLeadMagnet.downloadUrl, { shouldValidate: true, shouldDirty: true });
-          setValue("resourceType", "file");
+            setValue("resourceType", "file");
           } else {
             // It's an external URL
             setValue("resourceUrl", latestLeadMagnet.downloadUrl, { shouldValidate: true, shouldDirty: true });
@@ -106,7 +150,7 @@ export function ProductForm() {
         }
       }
     }
-  }, [existingProducts, setValue]);
+  }, [existingProducts, setValue, leadMagnetData]);
 
   // Trigger validation when resourceType changes
   useEffect(() => {
@@ -130,20 +174,31 @@ export function ProductForm() {
           shouldTouch: true 
         });
         
-        // Force validation multiple ways
+        // Update the lead magnet context with the download URL
+        updateLeadMagnetData({ downloadUrl: uploadedUrl });
+        
+        // Force validation and form state update
         setTimeout(async () => {
           console.log("🔄 Triggering validation...");
-          const isValid1 = await form.trigger("resourceFile");
-          console.log("🔄 trigger('resourceFile') result:", isValid1);
           
-          const isValid2 = await form.trigger();
-          console.log("🔄 trigger() result:", isValid2);
+          // Clear any existing errors first
+          form.clearErrors();
           
-          // Force form state update
+          // Trigger validation
+          const isValid = await form.trigger();
+          console.log("🔄 trigger() result:", isValid);
+          
+          // Force a re-render by updating form state
+          form.setValue("resourceFile", uploadedUrl, { 
+            shouldValidate: true, 
+            shouldDirty: true,
+            shouldTouch: true 
+          });
+          
           console.log("🔍 After triggers - form values:", form.getValues());
           console.log("🔍 After triggers - form valid:", form.formState.isValid);
           console.log("🔍 After triggers - form errors:", form.formState.errors);
-        }, 200);
+        }, 100);
         
         toast({
           title: "Success",
@@ -575,18 +630,19 @@ export function ProductForm() {
             )}
           </Button>
           
-          {/* Manual override when file is uploaded but form validation is stuck
-          {(resourceType === "file" && form.getValues("resourceFile")) || 
-           (resourceType === "url" && form.getValues("resourceUrl")) ? (
+          {/* Manual override when file is uploaded but form validation is stuck */}
+          {!formState.isValid && 
+           ((resourceType === "file" && (uploadedFileUrl || form.getValues("resourceFile"))) || 
+            (resourceType === "url" && form.getValues("resourceUrl"))) ? (
             <Button
               type="button"
               onClick={() => onSubmit(form.getValues())}
               className="bg-green-600 hover:bg-green-700 text-white px-8 py-2 rounded-lg ml-2"
-              disabled={isUploading}
+              disabled={isUploading || isLoading}
             >
               Continue Anyway ✅
             </Button>
-          ) : null} */}
+          ) : null}
         </div>
       </form>
     </div>
