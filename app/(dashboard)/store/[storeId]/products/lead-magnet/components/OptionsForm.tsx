@@ -173,7 +173,7 @@ export function OptionsForm() {
           <AccordionItem value="email-flows" className="border-none">
             <AccordionTrigger className="h-16 rounded-xl px-6 shadow-sm border border-transparent hover:border-[#E8EAF8] transition-colors bg-white hover:no-underline">
               <div className="flex items-center">
-                <Mail size={20} className="mr-5 text-[#4B4E68]" />
+                <Mail size={20} className="mr-5 text-muted-foreground" />
                 <span className="text-base font-semibold">Email Flows</span>
               </div>
             </AccordionTrigger>
@@ -186,7 +186,7 @@ export function OptionsForm() {
           <AccordionItem value="confirmation-email" className="border-none">
             <AccordionTrigger className="h-16 rounded-xl px-6 shadow-sm border border-transparent hover:border-[#E8EAF8] transition-colors bg-white hover:no-underline">
               <div className="flex items-center">
-                <Mail size={20} className="mr-5 text-[#4B4E68]" />
+                <Mail size={20} className="mr-5 text-muted-foreground" />
                 <span className="text-base font-semibold">Confirmation Email</span>
               </div>
             </AccordionTrigger>
@@ -199,14 +199,14 @@ export function OptionsForm() {
 
         {/* Form Actions */}
         <div className="flex items-center gap-6 justify-end relative">
-          <span className="absolute -top-6 right-0 italic text-xs text-[#6B6E85]">
+          <span className="absolute -top-6 right-0 italic text-xs text-muted-foreground">
             Improve this page
           </span>
           
           <Button 
             variant="outline" 
             type="button"
-            className="flex items-center gap-2 h-10 rounded-lg border-[#E5E7F5] text-[#6B6E85] hover:border-[#6356FF] hover:text-[#6356FF]"
+            className="flex items-center gap-2 h-10 rounded-lg border-border text-muted-foreground hover:border-primary hover:text-primary"
           >
             <Save size={16} />
             Save as Draft
@@ -215,7 +215,7 @@ export function OptionsForm() {
           <Button
             type="submit"
             disabled={isSaving}
-            className="bg-[#6356FF] hover:bg-[#5248E6] text-white h-10 rounded-lg flex items-center gap-2 disabled:opacity-50"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground h-10 rounded-lg flex items-center gap-2 disabled:opacity-50"
           >
             <Send size={16} />
             {isSaving ? "Saving..." : "Publish"}

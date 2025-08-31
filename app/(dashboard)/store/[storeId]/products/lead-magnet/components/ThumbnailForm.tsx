@@ -28,7 +28,7 @@ function FormSection({ index, title, children }: FormSectionProps) {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <div className="w-7 h-7 rounded-full bg-[#F1F2FF] text-[#6356FF] font-medium flex items-center justify-center text-sm">
+        <div className="w-7 h-7 rounded-full bg-primary/10 text-primary font-medium flex items-center justify-center text-sm">
           {index}
         </div>
         <h3 className="text-base font-semibold">{title}</h3>
@@ -320,7 +320,7 @@ export function ThumbnailForm() {
 
         {/* Form Actions */}
         <div className="flex items-center gap-6 justify-end relative">
-          <span className="absolute -top-6 right-0 italic text-xs text-[#6B6E85]">
+          <span className="absolute -top-6 right-0 italic text-xs text-muted-foreground">
             Improve this page
           </span>
           
@@ -329,7 +329,7 @@ export function ThumbnailForm() {
             type="button"
             onClick={handleSaveAsDraft}
             disabled={isLoading}
-            className="flex items-center gap-2 h-10 rounded-lg border-[#E5E7F5] text-[#6B6E85] hover:border-[#6356FF] hover:text-[#6356FF]"
+            className="flex items-center gap-2 h-10 rounded-lg border-border text-muted-foreground hover:border-primary hover:text-primary"
           >
             <Save size={16} />
             {isLoading ? "Saving..." : "Save as Draft"}
@@ -338,7 +338,7 @@ export function ThumbnailForm() {
           <Button
             type="submit"
             disabled={isLoading || !formState.isValid}
-            className="bg-[#6356FF] hover:bg-[#5248E6] text-white h-10 rounded-lg flex items-center gap-2"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground h-10 rounded-lg flex items-center gap-2"
           >
             <ArrowRight size={16} />
             {isLoading ? "Saving..." : "Save & Continue"}

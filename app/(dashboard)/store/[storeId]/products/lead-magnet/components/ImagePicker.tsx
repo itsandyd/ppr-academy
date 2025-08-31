@@ -144,7 +144,7 @@ export function ImagePicker({ file, onChange }: ImagePickerProps) {
       <div className="flex-1">
         <Button 
           variant="outline" 
-          className="border-[#6356FF] text-[#6356FF] rounded-lg px-5 py-1.5 relative"
+          className="border-primary text-primary rounded-lg px-5 py-1.5 relative"
           onClick={() => document.getElementById('image-upload')?.click()}
           disabled={isUploading}
         >

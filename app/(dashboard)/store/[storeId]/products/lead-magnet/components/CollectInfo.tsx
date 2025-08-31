@@ -73,7 +73,7 @@ export function CollectInfo({ fields, onChange }: CollectInfoProps) {
       
       {/* Display existing fields */}
       {fields.map((field) => (
-        <div key={field.id} className="p-4 border border-[#E3E5EC] rounded-lg bg-[#F9FAFC] space-y-3">
+        <div key={field.id} className="p-4 border border-border rounded-lg bg-card space-y-3">
           <div className="flex items-center justify-between">
             <Input
               value={field.label}
@@ -87,7 +87,7 @@ export function CollectInfo({ fields, onChange }: CollectInfoProps) {
                 variant="ghost"
                 size="sm"
                 onClick={() => removeField(field.id)}
-                className="h-6 w-6 p-0 hover:bg-red-100"
+                className="h-6 w-6 p-0 hover:bg-destructive/10 text-destructive"
               >
                 <X className="h-3 w-3" />
               </Button>
@@ -98,7 +98,7 @@ export function CollectInfo({ fields, onChange }: CollectInfoProps) {
             value={field.placeholder}
             onChange={(e) => updateField(field.id, { placeholder: e.target.value })}
             placeholder="Placeholder text"
-            className="text-xs bg-white"
+            className="text-xs bg-background"
           />
 
           <div className="grid grid-cols-2 gap-3">
@@ -150,7 +150,7 @@ export function CollectInfo({ fields, onChange }: CollectInfoProps) {
         type="button"
         variant="outline"
         onClick={addField}
-        className="w-full border-dashed border-[#6356FF] text-[#6356FF] hover:bg-[#6356FF]/5"
+        className="w-full border-dashed border-primary text-primary hover:bg-primary/5"
       >
         <Plus className="w-4 h-4 mr-2" />
         Add Field

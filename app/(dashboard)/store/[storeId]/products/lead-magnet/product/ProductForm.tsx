@@ -23,10 +23,10 @@ function FormSection({ index, title, children }: { index: number; title: string;
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-full bg-[#6356FF] text-white flex items-center justify-center text-sm font-medium">
+        <div className="w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-sm font-medium">
           {index}
         </div>
-        <h3 className="text-lg font-semibold text-[#0F0F1C]">{title}</h3>
+        <h3 className="text-lg font-semibold text-foreground">{title}</h3>
       </div>
       <div className="ml-11">
         {children}
@@ -345,8 +345,8 @@ export function ProductForm() {
                   value={step.label.toLowerCase()}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     step.active
-                      ? "bg-white border border-[#6356FF] text-[#6356FF] font-bold data-[state=active]:bg-white data-[state=active]:text-[#6356FF]"
-                      : "text-[#4B4E68] hover:text-[#6356FF] data-[state=active]:bg-transparent"
+                      ? "bg-background border border-primary text-primary font-bold data-[state=active]:bg-background data-[state=active]:text-primary"
+                      : "text-muted-foreground hover:text-primary data-[state=active]:bg-transparent"
                   }`}
                   asChild
                 >
@@ -375,7 +375,7 @@ export function ProductForm() {
                     type="button"
                     variant={field.value === "file" ? "default" : "outline"}
                     onClick={() => field.onChange("file")}
-                    className={`flex-1 ${field.value === "file" ? "bg-[#6356FF] text-white" : ""}`}
+                    className={`flex-1 ${field.value === "file" ? "bg-primary text-primary-foreground" : ""}`}
                   >
                     <Upload className="w-4 h-4 mr-2" />
                     Upload File
@@ -384,7 +384,7 @@ export function ProductForm() {
                     type="button"
                     variant={field.value === "url" ? "default" : "outline"}
                     onClick={() => field.onChange("url")}
-                    className={`flex-1 ${field.value === "url" ? "bg-[#6356FF] text-white" : ""}`}
+                    className={`flex-1 ${field.value === "url" ? "bg-primary text-primary-foreground" : ""}`}
                   >
                     <Link2 className="w-4 h-4 mr-2" />
                     Provide URL
@@ -398,7 +398,7 @@ export function ProductForm() {
               <Card className="border-dashed border-2 border-[#DDE1F7] p-6">
                 {uploadedFileUrl ? (
                   <div className="flex items-center gap-3">
-                    <FileText className="w-8 h-8 text-[#6356FF]" />
+                    <FileText className="w-8 h-8 text-primary" />
                     <div className="flex-1">
                       <p className="font-medium text-sm">{uploadedFileName}</p>
                       <p className="text-xs text-muted-foreground">File uploaded successfully</p>
@@ -414,7 +414,7 @@ export function ProductForm() {
                   </div>
                 ) : (
                   <div className="text-center">
-                    <FileText className="w-16 h-16 text-[#6356FF] mx-auto mb-4" />
+                    <FileText className="w-16 h-16 text-primary mx-auto mb-4" />
                     <p className="font-medium mb-2">Upload your lead magnet file</p>
                     <p className="text-sm text-muted-foreground mb-4">
                       PDF ebooks, Word docs, guides, templates, checklists (max 128MB)<br/>
@@ -425,7 +425,7 @@ export function ProductForm() {
                       variant="outline"
                       onClick={() => document.getElementById('file-upload')?.click()}
                       disabled={isUploading}
-                      className="border-[#6356FF] text-[#6356FF]"
+                      className="border-primary text-primary"
                     >
                       {isUploading ? (
                         <>
@@ -562,7 +562,7 @@ export function ProductForm() {
           
           <Button
             type="submit"
-            className="bg-[#6356FF] hover:bg-[#5248E6] text-white px-8 py-2 rounded-lg"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-2 rounded-lg"
             disabled={!formState.isValid || isUploading || isLoading}
           >
             {isLoading ? (

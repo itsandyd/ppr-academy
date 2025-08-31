@@ -35,7 +35,7 @@ export function ConfirmationEmail({ control, register, setValue }: ConfirmationE
           type="button"
           variant="link"
           size="sm"
-          className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-[#6356FF] p-0"
+          className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-primary p-0"
           onClick={() => setValue('confirmationSubject', defaultSubject)}
         >
           Restore Default
@@ -104,7 +104,7 @@ export function ConfirmationEmail({ control, register, setValue }: ConfirmationE
           type="button"
           variant="link"
           size="sm"
-          className="absolute right-2 -bottom-7 text-xs text-[#6356FF] p-0"
+          className="absolute right-2 -bottom-7 text-xs text-primary p-0"
           onClick={() => setValue('confirmationBody', defaultBody)}
         >
           Restore Default

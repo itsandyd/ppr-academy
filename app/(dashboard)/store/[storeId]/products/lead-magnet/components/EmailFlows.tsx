@@ -35,10 +35,10 @@ export function EmailFlows({ control }: EmailFlowsProps) {
   // If no flows exist, show the callout tile
   if (fields.length === 0) {
     return (
-      <Card className="bg-[#EFF1FF] p-5 flex items-center justify-between rounded-xl border-none">
+      <Card className="bg-primary/5 p-5 flex items-center justify-between rounded-xl border-none">
         <div>
           <p className="font-semibold text-[15px] leading-6">Add an Email Flow</p>
-          <p className="text-[#6B6E85] text-[13px] leading-5 mt-1">
+          <p className="text-muted-foreground text-[13px] leading-5 mt-1">
             Send an automatic email drip to your customers when this product is purchased.
           </p>
         </div>
@@ -46,7 +46,7 @@ export function EmailFlows({ control }: EmailFlowsProps) {
         <Button
           type="button"
           onClick={() => append(emptyFlow())}
-          className="bg-[#6356FF] hover:bg-[#5248E6] h-8 px-5 text-white rounded-lg"
+          className="bg-primary hover:bg-primary/90 h-8 px-5 text-primary-foreground rounded-lg"
         >
           <Plus className="h-4 w-4 mr-1" /> Add Flow
         </Button>
@@ -66,7 +66,7 @@ export function EmailFlows({ control }: EmailFlowsProps) {
         type="button"
         onClick={() => append(emptyFlow())}
         variant="outline"
-        className="w-full border-dashed border-[#6356FF] text-[#6356FF] hover:bg-[#6356FF]/5"
+        className="w-full border-dashed border-primary text-primary hover:bg-primary/5"
       >
         <Plus className="w-4 h-4 mr-2" />
         Add Another Flow
