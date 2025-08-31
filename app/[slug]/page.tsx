@@ -916,7 +916,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
       {/* Mobile Layout - Matches PhonePreview.tsx */}
       <div className="lg:hidden min-h-screen bg-background flex flex-col">
         {/* Mobile App Header (matches PhonePreview) */}
-        <div className="bg-card border-b border-border p-4 sticky top-0 z-30">
+        <div className="bg-background/95 backdrop-blur-sm border-b border-border p-4 sticky top-0 z-30">
           <div className="flex items-center gap-3">
             <Avatar className="w-10 h-10">
               <AvatarImage src={avatarUrl} alt={`${displayName}'s profile`} />
@@ -932,7 +932,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
         </div>
         
         {/* Mobile App Content (matches PhonePreview) */}
-        <div className="flex-1 p-4 overflow-y-auto">
+        <div className="flex-1 p-4 overflow-y-auto bg-background">
           <LinkInBioLayout products={products || []} leadMagnetData={leadMagnetData} storeData={{ store, user }} />
         </div>
       </div>
