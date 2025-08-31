@@ -157,7 +157,7 @@ function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData }: { le
 
   if (showSuccess) {
     return (
-      <div className="w-full p-4 space-y-4 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 rounded-lg">
+      <div className="w-full p-4 space-y-4 bg-green-50 dark:bg-green-950/20 rounded-lg">
         {/* Success Header */}
         <div className="text-center space-y-3">
           <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900/50 rounded-full flex items-center justify-center">
@@ -227,7 +227,7 @@ function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData }: { le
   return (
     <div className="w-full p-4 space-y-4 bg-card">
       {/* Image Preview */}
-      <div className="w-full h-32 bg-gradient-to-br from-green-50 to-emerald-100 rounded-lg flex items-center justify-center border border-green-200">
+      <div className="w-full h-32 bg-green-50 dark:bg-green-950/20 rounded-lg flex items-center justify-center border border-green-200 dark:border-green-800">
         {leadMagnet?.imageUrl ? (
           <img 
             src={leadMagnet.imageUrl} 
@@ -328,10 +328,24 @@ function LinkInBioLayout({ products, leadMagnetData, storeData }: { products: an
       {leadMagnets.map((leadMagnet) => {
         const [isOpen, setIsOpen] = React.useState(false);
         
+        // Prevent body scroll when modal is open
+        React.useEffect(() => {
+          if (isOpen) {
+            document.body.style.overflow = 'hidden';
+          } else {
+            document.body.style.overflow = 'unset';
+          }
+          
+          // Cleanup on unmount
+          return () => {
+            document.body.style.overflow = 'unset';
+          };
+        }, [isOpen]);
+        
         return (
           <div key={leadMagnet._id}>
             <Card 
-              className="p-4 border border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 hover:shadow-md transition-all cursor-pointer touch-manipulation"
+              className="p-4 border border-green-200 bg-green-50 dark:bg-green-950/20 hover:shadow-md transition-all cursor-pointer touch-manipulation"
               onClick={() => {
                 console.log('Mobile card clicked:', leadMagnet.title);
                 setIsOpen(true);
@@ -360,8 +374,8 @@ function LinkInBioLayout({ products, leadMagnetData, storeData }: { products: an
             
             {/* Lead Magnet Modal */}
             {isOpen && (
-              <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4">
-                <div className="bg-card border border-border rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-xl">
+              <div className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+                <div className="bg-background border border-border rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl">
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="text-green-800 dark:text-green-400 text-xl font-bold">{leadMagnet.title}</h3>
                     <button 
@@ -374,7 +388,7 @@ function LinkInBioLayout({ products, leadMagnetData, storeData }: { products: an
                   <p className="text-green-600 dark:text-green-400 text-sm mb-4">
                     Enter your details below to get instant access to your free resource
                   </p>
-                  <div className="bg-muted/30 rounded-lg">
+                  <div className="bg-card rounded-lg">
                     <LeadMagnetPreview 
                       leadMagnet={{
                         title: leadMagnet.title,
@@ -399,6 +413,20 @@ function LinkInBioLayout({ products, leadMagnetData, storeData }: { products: an
       {otherProducts.map((product) => {
         const [isOpen, setIsOpen] = React.useState(false);
         const isLeadMagnet = product.price === 0;
+        
+        // Prevent body scroll when modal is open
+        React.useEffect(() => {
+          if (isOpen) {
+            document.body.style.overflow = 'hidden';
+          } else {
+            document.body.style.overflow = 'unset';
+          }
+          
+          // Cleanup on unmount
+          return () => {
+            document.body.style.overflow = 'unset';
+          };
+        }, [isOpen]);
         
         return (
           <div key={product._id}>
@@ -448,8 +476,8 @@ function LinkInBioLayout({ products, leadMagnetData, storeData }: { products: an
             
             {/* Modal for free products (lead magnets) */}
             {isLeadMagnet && isOpen && (
-              <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4">
-                <div className="bg-card border border-border rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-xl">
+              <div className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+                <div className="bg-background border border-border rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl">
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="text-green-800 dark:text-green-400 text-xl font-bold">{product.title}</h3>
                     <button 
@@ -465,7 +493,7 @@ function LinkInBioLayout({ products, leadMagnetData, storeData }: { products: an
                   <p className="text-green-600 dark:text-green-400 text-sm mb-4">
                     Enter your details below to get instant access to your free resource
                   </p>
-                  <div className="bg-muted/30 rounded-lg">
+                  <div className="bg-card rounded-lg">
                     <LeadMagnetPreview 
                       leadMagnet={{
                         title: product.title,
@@ -630,9 +658,9 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
               {products?.filter(p => p.price === 0 && p.style === "card" && p.isPublished).map((leadMagnet) => (
                 <Dialog key={leadMagnet._id}>
                   <DialogTrigger asChild>
-                    <Card className="group p-6 border border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer">
+                    <Card className="group p-6 border border-green-200 bg-green-50 dark:bg-green-950/20 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer">
                       {/* Image */}
-                      <div className="w-full h-48 bg-gradient-to-br from-green-100 to-emerald-200 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
+                      <div className="w-full h-48 bg-green-100 dark:bg-green-900/30 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
                         {leadMagnet.imageUrl ? (
                           <img 
                             src={leadMagnet.imageUrl} 
@@ -674,7 +702,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
                         Enter your details below to get instant access to your free resource
                       </DialogDescription>
                     </DialogHeader>
-                    <div className="bg-card rounded-lg">
+                    <div className="bg-background rounded-lg">
                       <LeadMagnetPreview 
                         leadMagnet={{
                           title: leadMagnet.title,
@@ -701,9 +729,9 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
                   return (
                     <Dialog key={product._id}>
                       <DialogTrigger asChild>
-                        <Card className="group p-6 border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer">
+                        <Card className="group p-6 border-green-200 bg-green-50 dark:bg-green-950/20 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer">
                           {/* Image */}
-                          <div className="w-full h-48 bg-gradient-to-br from-green-100 to-emerald-200 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
+                          <div className="w-full h-48 bg-green-100 dark:bg-green-900/30 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
                             {product.imageUrl ? (
                               <img 
                                 src={product.imageUrl} 
@@ -874,7 +902,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
       {/* Mobile Layout - Matches PhonePreview.tsx */}
       <div className="lg:hidden min-h-screen bg-background flex flex-col">
         {/* Mobile App Header (matches PhonePreview) */}
-        <div className="bg-card border-b border-border p-4 sticky top-0 z-40">
+        <div className="bg-card border-b border-border p-4 sticky top-0 z-30">
           <div className="flex items-center gap-3">
             <Avatar className="w-10 h-10">
               <AvatarImage src={avatarUrl} alt={`${displayName}'s profile`} />
