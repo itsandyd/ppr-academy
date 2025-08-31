@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState, useEffect, use } from "react";
+import * as React from "react";
 import { CheckCircle, Download, Mail, ArrowRight, Store, Gift, ExternalLink } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { notFound } from "next/navigation";
@@ -156,31 +157,31 @@ function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData }: { le
 
   if (showSuccess) {
     return (
-      <div className="w-full p-4 space-y-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg">
+      <div className="w-full p-4 space-y-4 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 rounded-lg">
         {/* Success Header */}
         <div className="text-center space-y-3">
-          <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-            <CheckCircle className="w-8 h-8 text-green-600" />
+          <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900/50 rounded-full flex items-center justify-center">
+            <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
           </div>
-          <h3 className="font-bold text-lg text-green-800">
+          <h3 className="font-bold text-lg text-green-800 dark:text-green-300">
             🎉 Success!
           </h3>
-          <p className="text-sm text-green-700">
+          <p className="text-sm text-green-700 dark:text-green-400">
             Thanks {formData.name || "John"}! Check your email for your free resource.
           </p>
         </div>
 
         {/* Download Preview */}
-        <div className="bg-white rounded-lg p-4 border border-green-200">
+        <div className="bg-card rounded-lg p-4 border border-green-200 dark:border-green-800">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-              <Download className="w-5 h-5 text-green-600" />
+            <div className="w-10 h-10 bg-green-100 dark:bg-green-900/50 rounded-lg flex items-center justify-center">
+              <Download className="w-5 h-5 text-green-600 dark:text-green-400" />
             </div>
             <div className="flex-1">
-              <p className="font-medium text-sm">
+              <p className="font-medium text-sm text-foreground">
                 {leadMagnet?.title || "Ultimate Marketing Guide"}
               </p>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-muted-foreground">
                 {leadMagnet?.downloadUrl ? 'Ready for Download' : 'PDF • 2.3 MB'}
               </p>
             </div>
@@ -196,10 +197,10 @@ function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData }: { le
         </div>
 
         {/* Email Confirmation */}
-        <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+        <div className="bg-blue-50 dark:bg-blue-950/30 rounded-lg p-3 border border-blue-200 dark:border-blue-800">
           <div className="flex items-center gap-2">
-            <Mail className="w-4 h-4 text-blue-600" />
-            <p className="text-xs text-blue-700">
+            <Mail className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <p className="text-xs text-blue-700 dark:text-blue-300">
               Confirmation email sent to {formData.email || "john@example.com"}
             </p>
           </div>
@@ -207,7 +208,7 @@ function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData }: { le
 
         {/* Next Steps */}
         <div className="pt-2 space-y-2">
-          <p className="text-xs text-gray-600 text-center">
+          <p className="text-xs text-muted-foreground text-center">
             Want more marketing tips? Follow us on social media!
           </p>
           <Button 
@@ -324,10 +325,18 @@ function LinkInBioLayout({ products, leadMagnetData, storeData }: { products: an
   return (
     <div className="w-full space-y-3">
       {/* Lead Magnet Cards */}
-      {leadMagnets.map((leadMagnet) => (
-        <Dialog key={leadMagnet._id}>
-          <DialogTrigger asChild>
-            <Card className="p-4 border border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 hover:shadow-md transition-all cursor-pointer">
+      {leadMagnets.map((leadMagnet) => {
+        const [isOpen, setIsOpen] = React.useState(false);
+        
+        return (
+          <div key={leadMagnet._id}>
+            <Card 
+              className="p-4 border border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 hover:shadow-md transition-all cursor-pointer touch-manipulation"
+              onClick={() => {
+                console.log('Mobile card clicked:', leadMagnet.title);
+                setIsOpen(true);
+              }}
+            >
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
                   <Gift className="w-6 h-6 text-green-600" />
@@ -348,64 +357,134 @@ function LinkInBioLayout({ products, leadMagnetData, storeData }: { products: an
                 </div>
               </div>
             </Card>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md bg-white border-0 shadow-xl data-[state=open]:backdrop-brightness-90">
-            <DialogHeader className="pb-4">
-              <DialogTitle className="text-green-800 text-xl font-bold">{leadMagnet.title}</DialogTitle>
-              <DialogDescription className="text-green-600 text-sm">
-                Enter your details below to get instant access to your free resource
-              </DialogDescription>
-            </DialogHeader>
-            <div className="bg-white rounded-lg">
-                          <LeadMagnetPreview 
-              leadMagnet={{
-                title: leadMagnet.title,
-                subtitle: leadMagnet.description,
-                imageUrl: leadMagnet.imageUrl,
-                ctaText: leadMagnet.buttonLabel,
-                downloadUrl: leadMagnet.downloadUrl,
-                productId: leadMagnet._id
-              }} 
-              storeData={storeData}
-              isFullScreen={false} 
-            />
-            </div>
-          </DialogContent>
-        </Dialog>
-      ))}
+            
+            {/* Lead Magnet Modal */}
+            {isOpen && (
+              <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4">
+                <div className="bg-card border border-border rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-xl">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-green-800 dark:text-green-400 text-xl font-bold">{leadMagnet.title}</h3>
+                    <button 
+                      onClick={() => setIsOpen(false)}
+                      className="text-muted-foreground hover:text-foreground text-xl font-bold"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <p className="text-green-600 dark:text-green-400 text-sm mb-4">
+                    Enter your details below to get instant access to your free resource
+                  </p>
+                  <div className="bg-muted/30 rounded-lg">
+                    <LeadMagnetPreview 
+                      leadMagnet={{
+                        title: leadMagnet.title,
+                        subtitle: leadMagnet.description,
+                        imageUrl: leadMagnet.imageUrl,
+                        ctaText: leadMagnet.buttonLabel,
+                        downloadUrl: leadMagnet.downloadUrl,
+                        productId: leadMagnet._id
+                      }} 
+                      storeData={storeData}
+                      isFullScreen={false} 
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
 
       {/* Other Products */}
-      {otherProducts.map((product) => (
-        <Card key={product._id} className="p-4 border border-gray-200 hover:shadow-md transition-all cursor-pointer">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
-              {product.imageUrl ? (
-          <img 
-            src={product.imageUrl} 
-            alt={product.title}
-            className="w-full h-full object-cover"
-          />
-              ) : (
-                <Store className="w-6 h-6 text-blue-600" />
-              )}
-        </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-sm truncate">
-        {product.title}
-      </h3>
-              <p className="text-xs text-muted-foreground truncate">
-                {product.description || "Digital Product"}
-        </p>
-            </div>
-            <div className="flex items-center gap-1 flex-shrink-0">
-        <Badge variant="secondary" className="text-xs">
-                ${product.price}
-        </Badge>
-              <ExternalLink className="w-4 h-4 text-muted-foreground" />
-      </div>
+      {otherProducts.map((product) => {
+        const [isOpen, setIsOpen] = React.useState(false);
+        const isLeadMagnet = product.price === 0;
+        
+        return (
+          <div key={product._id}>
+            <Card 
+              className="p-4 border border-gray-200 hover:shadow-md transition-all cursor-pointer touch-manipulation"
+              onClick={() => {
+                console.log('Product clicked:', product.title, 'Price:', product.price);
+                if (isLeadMagnet) {
+                  setIsOpen(true);
+                } else {
+                  alert(`Purchase ${product.title} for $${product.price}\n\nCheckout functionality coming soon!`);
+                }
+              }}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  {product.imageUrl ? (
+                    <img 
+                      src={product.imageUrl} 
+                      alt={product.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <Store className="w-6 h-6 text-blue-600" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-sm truncate">
+                    {product.title}
+                  </h3>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {product.description || "Digital Product"}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <Badge variant="secondary" className="text-xs">
+                    ${product.price}
+                  </Badge>
+                  {isLeadMagnet ? (
+                    <ArrowRight className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <ExternalLink className="w-4 h-4 text-muted-foreground" />
+                  )}
+                </div>
+              </div>
+            </Card>
+            
+            {/* Modal for free products (lead magnets) */}
+            {isLeadMagnet && isOpen && (
+              <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4">
+                <div className="bg-card border border-border rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-xl">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-green-800 dark:text-green-400 text-xl font-bold">{product.title}</h3>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsOpen(false);
+                      }}
+                      className="text-muted-foreground hover:text-foreground text-xl font-bold"
+                    >
+                      ×
+                    </button>
+                  </div>
+                  <p className="text-green-600 dark:text-green-400 text-sm mb-4">
+                    Enter your details below to get instant access to your free resource
+                  </p>
+                  <div className="bg-muted/30 rounded-lg">
+                    <LeadMagnetPreview 
+                      leadMagnet={{
+                        title: product.title,
+                        subtitle: product.description,
+                        imageUrl: product.imageUrl,
+                        ctaText: product.buttonLabel || "Get Free Resource",
+                        downloadUrl: product.downloadUrl,
+                        productId: product._id
+                      }} 
+                      storeData={storeData}
+                      isFullScreen={false} 
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-        </Card>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -588,7 +667,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
                       </div>
                     </Card>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-md bg-card border-0 shadow-xl data-[state=open]:backdrop-brightness-90">
+                  <DialogContent className="w-[95vw] max-w-md mx-auto bg-card border-0 shadow-xl data-[state=open]:backdrop-brightness-90 p-6 max-h-[90vh] overflow-y-auto">
                     <DialogHeader className="pb-4">
                       <DialogTitle className="text-green-800 text-xl font-bold">{leadMagnet.title}</DialogTitle>
                       <DialogDescription className="text-green-600 text-sm">
@@ -660,7 +739,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
                           </div>
                         </Card>
                       </DialogTrigger>
-                      <DialogContent className="sm:max-w-md bg-card border-0 shadow-xl data-[state=open]:backdrop-brightness-90">
+                      <DialogContent className="w-[95vw] max-w-md mx-auto bg-card border-0 shadow-xl data-[state=open]:backdrop-brightness-90 p-6 max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
                           <DialogTitle className="text-center text-xl font-bold text-green-800">
                             Get Your Free Resource
@@ -795,7 +874,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
       {/* Mobile Layout - Matches PhonePreview.tsx */}
       <div className="lg:hidden min-h-screen bg-background flex flex-col">
         {/* Mobile App Header (matches PhonePreview) */}
-        <div className="bg-card border-b border-border p-4 sticky top-0 z-10">
+        <div className="bg-card border-b border-border p-4 sticky top-0 z-40">
           <div className="flex items-center gap-3">
             <Avatar className="w-10 h-10">
               <AvatarImage src={avatarUrl} alt={`${displayName}'s profile`} />
