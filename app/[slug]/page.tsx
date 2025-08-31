@@ -734,7 +734,6 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
                 </Card>
                 );
               })}
-              ))}
               
               {/* Empty State */}
               {(!products || products.filter(p => p.isPublished).length === 0) && (
