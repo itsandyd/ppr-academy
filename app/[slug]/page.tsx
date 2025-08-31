@@ -32,6 +32,8 @@ function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData }: { le
   const trackDownload = hasLeadSubmissionsAPI ? useMutation((api as any).leadSubmissions.trackDownload) : null;
 
   const handleSubmit = async () => {
+    console.log("🎯 handleSubmit called!", { formData, isSubmitting });
+    
     if (!formData.name?.trim() || !formData.email?.trim()) {
       alert("Please fill in both name and email");
       return;
@@ -123,6 +125,8 @@ function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData }: { le
   };
 
   const handleDownload = async () => {
+    console.log("📥 handleDownload called!", { submissionResult });
+    
     if (submissionResult?.downloadUrl && submissionResult?.submissionId) {
       try {
         // Track download if API is available
@@ -157,25 +161,25 @@ function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData }: { le
 
   if (showSuccess) {
     return (
-      <div className="w-full p-4 space-y-4 bg-green-50 dark:bg-green-950/20 rounded-lg">
+      <div className="w-full p-4 space-y-4 bg-primary/5 rounded-lg">
         {/* Success Header */}
         <div className="text-center space-y-3">
-          <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900/50 rounded-full flex items-center justify-center">
-            <CheckCircle className="w-8 h-8 text-green-600 dark:text-green-400" />
+          <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+            <CheckCircle className="w-8 h-8 text-primary" />
           </div>
-          <h3 className="font-bold text-lg text-green-800 dark:text-green-300">
+          <h3 className="font-bold text-lg text-primary">
             🎉 Success!
           </h3>
-          <p className="text-sm text-green-700 dark:text-green-400">
+          <p className="text-sm text-primary/80">
             Thanks {formData.name || "John"}! Check your email for your free resource.
           </p>
         </div>
 
         {/* Download Preview */}
-        <div className="bg-card rounded-lg p-4 border border-green-200 dark:border-green-800">
+        <div className="bg-card rounded-lg p-4 border border-primary/20">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-green-100 dark:bg-green-900/50 rounded-lg flex items-center justify-center">
-              <Download className="w-5 h-5 text-green-600 dark:text-green-400" />
+            <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+              <Download className="w-5 h-5 text-primary" />
             </div>
             <div className="flex-1">
               <p className="font-medium text-sm text-foreground">
@@ -187,8 +191,13 @@ function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData }: { le
             </div>
           </div>
           <Button 
-            className="w-full mt-3 bg-green-600 hover:bg-green-700 text-white text-sm"
-            onClick={handleDownload}
+            type="button"
+            className="w-full mt-3 bg-primary hover:bg-primary/90 text-primary-foreground text-sm relative z-10 pointer-events-auto touch-manipulation min-h-[44px]"
+            onClick={(e) => {
+              e.preventDefault();
+              console.log("💾 Download button clicked!");
+              handleDownload();
+            }}
             disabled={!submissionResult?.downloadUrl}
           >
             <Download className="w-4 h-4 mr-2" />
@@ -225,9 +234,9 @@ function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData }: { le
   }
 
   return (
-    <div className="w-full p-4 space-y-4 bg-card">
+    <div className="w-full p-4 space-y-4 bg-card relative z-0">
       {/* Image Preview */}
-      <div className="w-full h-32 bg-green-50 dark:bg-green-950/20 rounded-lg flex items-center justify-center border border-green-200 dark:border-green-800">
+      <div className="w-full h-32 bg-primary/5 rounded-lg flex items-center justify-center border border-primary/20">
         {leadMagnet?.imageUrl ? (
           <img 
             src={leadMagnet.imageUrl} 
@@ -236,10 +245,10 @@ function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData }: { le
           />
         ) : (
           <div className="text-center">
-            <div className="w-16 h-16 bg-green-200 rounded-lg mx-auto mb-2 flex items-center justify-center">
-              <Gift className="w-8 h-8 text-green-600" />
+            <div className="w-16 h-16 bg-primary/20 rounded-lg mx-auto mb-2 flex items-center justify-center">
+              <Gift className="w-8 h-8 text-primary" />
             </div>
-            <span className="text-xs text-green-600 font-medium">Lead Magnet</span>
+            <span className="text-xs text-primary font-medium">Lead Magnet</span>
           </div>
         )}
       </div>
@@ -255,24 +264,29 @@ function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData }: { le
       </div>
 
       {/* Form Fields */}
-      <div className="space-y-3">
+      <div className="space-y-3 relative z-10">
         <Input 
           placeholder="Your Name" 
           value={formData.name}
           onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-          className="h-12 bg-card border-border text-foreground placeholder-muted-foreground focus:border-green-500 focus:ring-green-500" 
+          className="h-12 bg-card border-border text-foreground placeholder-muted-foreground focus:border-primary focus:ring-primary relative z-10 pointer-events-auto min-h-[44px] touch-manipulation" 
         />
         <Input 
           placeholder="Your Email" 
           type="email"
           value={formData.email}
           onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-          className="h-12 bg-card border-border text-foreground placeholder-muted-foreground focus:border-green-500 focus:ring-green-500" 
+          className="h-12 bg-card border-border text-foreground placeholder-muted-foreground focus:border-primary focus:ring-primary relative z-10 pointer-events-auto min-h-[44px] touch-manipulation" 
         />
         <Button 
-          onClick={handleSubmit}
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            console.log("🔥 Button clicked!");
+            handleSubmit();
+          }}
           disabled={isSubmitting}
-          className="w-full h-12 bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2 font-semibold disabled:opacity-50"
+          className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground flex items-center justify-center gap-2 font-semibold disabled:opacity-50 relative z-10 pointer-events-auto touch-manipulation min-h-[44px]"
         >
           {isSubmitting ? "Submitting..." : (leadMagnet?.ctaText || "Get Free Resource")}
           <ArrowRight className="w-4 h-4" />
@@ -280,13 +294,13 @@ function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData }: { le
       </div>
 
       {/* Trust Indicators */}
-      <div className="flex items-center justify-center gap-4 pt-2">
+      <div className="flex items-center justify-center gap-4 pt-2 relative z-10">
         <div className="flex items-center gap-1">
-          <CheckCircle className="w-4 h-4 text-green-600" />
+          <CheckCircle className="w-4 h-4 text-primary" />
           <span className="text-xs text-muted-foreground font-medium">No spam</span>
         </div>
         <div className="flex items-center gap-1">
-          <CheckCircle className="w-4 h-4 text-green-600" />
+          <CheckCircle className="w-4 h-4 text-primary" />
           <span className="text-xs text-muted-foreground font-medium">Instant access</span>
         </div>
       </div>
@@ -294,8 +308,8 @@ function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData }: { le
       {/* Auto-cycle indicator */}
       <div className="flex justify-center pt-1">
         <div className="flex gap-1">
-          <div className={`w-2 h-2 rounded-full ${!showSuccess ? "bg-green-500" : "bg-muted"}`} />
-          <div className={`w-2 h-2 rounded-full ${showSuccess ? "bg-green-500" : "bg-muted"}`} />
+          <div className={`w-2 h-2 rounded-full ${!showSuccess ? "bg-primary" : "bg-muted"}`} />
+          <div className={`w-2 h-2 rounded-full ${showSuccess ? "bg-primary" : "bg-muted"}`} />
         </div>
       </div>
     </div>
@@ -345,29 +359,29 @@ function LinkInBioLayout({ products, leadMagnetData, storeData }: { products: an
         return (
           <div key={leadMagnet._id}>
             <Card 
-              className="p-4 border border-green-200 bg-green-50 dark:bg-green-950/20 hover:shadow-md transition-all cursor-pointer touch-manipulation"
+              className="p-4 border border-primary/20 bg-primary/5 hover:shadow-md transition-all cursor-pointer touch-manipulation"
               onClick={() => {
                 console.log('Mobile card clicked:', leadMagnet.title);
                 setIsOpen(true);
               }}
             >
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Gift className="w-6 h-6 text-green-600" />
+                <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Gift className="w-6 h-6 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-sm text-green-800 truncate">
+                  <h3 className="font-semibold text-sm text-primary truncate">
                     {leadMagnet.title}
                   </h3>
-                  <p className="text-xs text-green-600 truncate">
+                  <p className="text-xs text-primary/80 truncate">
                     Free Resource • Click to get access
                   </p>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
-                  <Badge className="bg-green-100 text-green-800 text-xs border-green-200">
+                  <Badge className="bg-primary/10 text-primary text-xs border-primary/20">
                     FREE
                   </Badge>
-                  <ArrowRight className="w-4 h-4 text-green-600" />
+                  <ArrowRight className="w-4 h-4 text-primary" />
                 </div>
               </div>
             </Card>
@@ -377,7 +391,7 @@ function LinkInBioLayout({ products, leadMagnetData, storeData }: { products: an
               <div className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
                 <div className="bg-background border border-border rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl">
                   <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-green-800 dark:text-green-400 text-xl font-bold">{leadMagnet.title}</h3>
+                    <h3 className="text-primary text-xl font-bold">{leadMagnet.title}</h3>
                     <button 
                       onClick={() => setIsOpen(false)}
                       className="text-muted-foreground hover:text-foreground text-xl font-bold"
@@ -385,10 +399,10 @@ function LinkInBioLayout({ products, leadMagnetData, storeData }: { products: an
                       ×
                     </button>
                   </div>
-                  <p className="text-green-600 dark:text-green-400 text-sm mb-4">
+                  <p className="text-primary/80 text-sm mb-4">
                     Enter your details below to get instant access to your free resource
                   </p>
-                  <div className="bg-card rounded-lg">
+                  <div className="bg-card rounded-lg relative z-0">
                     <LeadMagnetPreview 
                       leadMagnet={{
                         title: leadMagnet.title,
@@ -466,7 +480,7 @@ function LinkInBioLayout({ products, leadMagnetData, storeData }: { products: an
                     ${product.price}
                   </Badge>
                   {isLeadMagnet ? (
-                    <ArrowRight className="w-4 h-4 text-green-600" />
+                    <ArrowRight className="w-4 h-4 text-primary" />
                   ) : (
                     <ExternalLink className="w-4 h-4 text-muted-foreground" />
                   )}
@@ -479,7 +493,7 @@ function LinkInBioLayout({ products, leadMagnetData, storeData }: { products: an
               <div className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
                 <div className="bg-background border border-border rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl">
                   <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-green-800 dark:text-green-400 text-xl font-bold">{product.title}</h3>
+                    <h3 className="text-primary text-xl font-bold">{product.title}</h3>
                     <button 
                       onClick={(e) => {
                         e.stopPropagation();
@@ -490,10 +504,10 @@ function LinkInBioLayout({ products, leadMagnetData, storeData }: { products: an
                       ×
                     </button>
                   </div>
-                  <p className="text-green-600 dark:text-green-400 text-sm mb-4">
+                  <p className="text-primary/80 text-sm mb-4">
                     Enter your details below to get instant access to your free resource
                   </p>
-                  <div className="bg-card rounded-lg">
+                  <div className="bg-card rounded-lg relative z-0">
                     <LeadMagnetPreview 
                       leadMagnet={{
                         title: product.title,
@@ -632,15 +646,15 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
         <div className="max-w-6xl mx-auto px-6 py-12">
           {/* {hasLeadMagnets && (
             <div className="mb-16">
-              <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-8 mb-8">
+              <div className="bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20 rounded-2xl p-8 mb-8">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  <span className="font-bold text-green-800 text-lg">🎁 FREE STARTER RESOURCE</span>
+                  <div className="w-3 h-3 bg-primary rounded-full"></div>
+                  <span className="font-bold text-primary text-lg">🎁 FREE STARTER RESOURCE</span>
                 </div>
-                <h2 className="text-2xl font-bold text-green-800 mb-2">
+                <h2 className="text-2xl font-bold text-primary mb-2">
                   {latestLeadMagnet?.title}
                 </h2>
-                <p className="text-green-700 mb-6">
+                <p className="text-primary/80 mb-6">
                   Get instant access to this valuable resource - completely free! Join thousands who have already downloaded it.
                 </p>
                 <div className="bg-white rounded-xl shadow-lg overflow-hidden max-w-md">
@@ -658,9 +672,9 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
               {products?.filter(p => p.price === 0 && p.style === "card" && p.isPublished).map((leadMagnet) => (
                 <Dialog key={leadMagnet._id}>
                   <DialogTrigger asChild>
-                    <Card className="group p-6 border border-green-200 bg-green-50 dark:bg-green-950/20 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer">
+                    <Card className="group p-6 border border-primary/20 bg-primary/5 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer">
                       {/* Image */}
-                      <div className="w-full h-48 bg-green-100 dark:bg-green-900/30 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
+                      <div className="w-full h-48 bg-primary/10 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
                         {leadMagnet.imageUrl ? (
                           <img 
                             src={leadMagnet.imageUrl} 
@@ -669,8 +683,8 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
                           />
                         ) : (
                           <div className="text-center">
-                            <Gift className="w-16 h-16 text-green-600 mx-auto mb-2" />
-                            <span className="text-sm text-green-600 font-medium">Free Resource</span>
+                            <Gift className="w-16 h-16 text-primary mx-auto mb-2" />
+                            <span className="text-sm text-primary font-medium">Free Resource</span>
                           </div>
                         )}
                       </div>
@@ -678,31 +692,31 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
                       {/* Content */}
                       <div className="space-y-3">
                         <div className="flex items-center gap-2">
-                          <Badge className="bg-green-100 text-green-800 text-xs border-green-200 font-semibold">
+                          <Badge className="bg-primary/10 text-primary text-xs border-primary/20 font-semibold">
                             FREE
                           </Badge>
                         </div>
-                        <h3 className="font-bold text-lg text-green-800 line-clamp-2">
+                        <h3 className="font-bold text-lg text-primary line-clamp-2">
                           {leadMagnet.title}
                         </h3>
-                        <p className="text-green-600 text-sm line-clamp-3 leading-relaxed">
+                        <p className="text-primary/80 text-sm line-clamp-3 leading-relaxed">
                           {leadMagnet.description || "Get instant access to this valuable free resource"}
                         </p>
                         <div className="flex items-center justify-between pt-2">
-                          <span className="text-xs text-green-600 font-medium">Click to get access</span>
-                          <ArrowRight className="w-4 h-4 text-green-600 group-hover:translate-x-1 transition-transform duration-200" />
+                          <span className="text-xs text-primary font-medium">Click to get access</span>
+                          <ArrowRight className="w-4 h-4 text-primary group-hover:translate-x-1 transition-transform duration-200" />
                         </div>
                       </div>
                     </Card>
                   </DialogTrigger>
                   <DialogContent className="w-[95vw] max-w-md mx-auto bg-card border-0 shadow-xl data-[state=open]:backdrop-brightness-90 p-6 max-h-[90vh] overflow-y-auto">
                     <DialogHeader className="pb-4">
-                      <DialogTitle className="text-green-800 text-xl font-bold">{leadMagnet.title}</DialogTitle>
-                      <DialogDescription className="text-green-600 text-sm">
+                      <DialogTitle className="text-primary text-xl font-bold">{leadMagnet.title}</DialogTitle>
+                      <DialogDescription className="text-primary/80 text-sm">
                         Enter your details below to get instant access to your free resource
                       </DialogDescription>
                     </DialogHeader>
-                    <div className="bg-background rounded-lg">
+                    <div className="bg-background rounded-lg relative z-0">
                       <LeadMagnetPreview 
                         leadMagnet={{
                           title: leadMagnet.title,
@@ -729,9 +743,9 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
                   return (
                     <Dialog key={product._id}>
                       <DialogTrigger asChild>
-                        <Card className="group p-6 border-green-200 bg-green-50 dark:bg-green-950/20 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer">
+                        <Card className="group p-6 border-primary/20 bg-primary/5 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer">
                           {/* Image */}
-                          <div className="w-full h-48 bg-green-100 dark:bg-green-900/30 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
+                          <div className="w-full h-48 bg-primary/10 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
                             {product.imageUrl ? (
                               <img 
                                 src={product.imageUrl} 
@@ -740,8 +754,8 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
                               />
                             ) : (
                               <div className="text-center">
-                                <Gift className="w-16 h-16 text-green-600 mx-auto mb-2" />
-                                <span className="text-sm text-green-600 font-medium">Free Resource</span>
+                                <Gift className="w-16 h-16 text-primary mx-auto mb-2" />
+                                <span className="text-sm text-primary font-medium">Free Resource</span>
                               </div>
                             )}
                           </div>
@@ -749,30 +763,30 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
                           {/* Content */}
                           <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                              <Badge className="bg-green-600 hover:bg-green-700 text-white border-0 font-semibold">
+                              <Badge className="bg-primary hover:bg-primary/90 text-primary-foreground border-0 font-semibold">
                                 FREE
                               </Badge>
-                              <Gift className="w-5 h-5 text-green-600" />
+                              <Gift className="w-5 h-5 text-primary" />
                             </div>
-                            <h3 className="font-bold text-xl text-green-800 line-clamp-2">
+                            <h3 className="font-bold text-xl text-primary line-clamp-2">
                               {product.title}
                             </h3>
-                            <p className="text-green-700 text-sm line-clamp-3 leading-relaxed">
+                            <p className="text-primary/80 text-sm line-clamp-3 leading-relaxed">
                               {product.description || "Get this amazing free resource"}
                             </p>
                             <div className="flex items-center justify-between pt-2">
-                              <span className="text-xs text-green-600 font-medium">Click to get free resource</span>
-                              <ArrowRight className="w-4 h-4 text-green-600 group-hover:translate-x-1 transition-all duration-200" />
+                              <span className="text-xs text-primary font-medium">Click to get free resource</span>
+                              <ArrowRight className="w-4 h-4 text-primary group-hover:translate-x-1 transition-all duration-200" />
                             </div>
                           </div>
                         </Card>
                       </DialogTrigger>
-                      <DialogContent className="w-[95vw] max-w-md mx-auto bg-card border-0 shadow-xl data-[state=open]:backdrop-brightness-90 p-6 max-h-[90vh] overflow-y-auto">
+                      <DialogContent className="w-[95vw] max-w-md mx-auto dark:bg-black bg-white border-0 shadow-xl data-[state=open]:backdrop-brightness-90 p-6 max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
-                          <DialogTitle className="text-center text-xl font-bold text-green-800">
+                          <DialogTitle className="text-center text-xl font-bold text-primary">
                             Get Your Free Resource
                           </DialogTitle>
-                          <DialogDescription className="text-center text-green-600">
+                          <DialogDescription className="text-center text-primary/80">
                             Enter your details below to access "{product.title}"
                           </DialogDescription>
                         </DialogHeader>
