@@ -112,8 +112,15 @@ export function LinkInBioLayout({ products, leadMagnetData, storeData }: LinkInB
             
             {/* Lead Magnet Modal */}
             {isOpen && (
-              <div className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-                <div className="bg-background border border-border rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+              <div 
+                className="fixed inset-0 z-[9999] bg-background flex items-center justify-center p-4"
+                style={{ 
+                  backgroundColor: 'hsl(var(--background))',
+                  opacity: 1,
+                  pointerEvents: 'auto'
+                }}
+              >
+                <div className="bg-white dark:bg-black border border-border rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl">
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="text-primary text-xl font-bold">{leadMagnet.title}</h3>
                     <button 
@@ -214,8 +221,15 @@ export function LinkInBioLayout({ products, leadMagnetData, storeData }: LinkInB
             
             {/* Modal for free products (lead magnets) */}
             {isLeadMagnet && isOpen && (
-              <div className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-                <div className="bg-background border border-border rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+              <div 
+                className="fixed inset-0 z-[9999] bg-background flex items-center justify-center p-4"
+                style={{ 
+                  backgroundColor: 'hsl(var(--background))',
+                  opacity: 1,
+                  pointerEvents: 'auto'
+                }}
+              >
+                <div className="bg-white dark:bg-black border border-border rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl">
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="text-primary text-xl font-bold">{product.title}</h3>
                     <button 

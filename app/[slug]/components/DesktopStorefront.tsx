@@ -3,9 +3,44 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
 import { ArrowRight, Store, Gift, ExternalLink } from "lucide-react";
 import { LeadMagnetPreview } from "./LeadMagnetPreview";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import * as React from "react";
+import { cn } from "@/lib/utils";
+
+// Custom DialogContent with solid overlay
+const CustomDialogContent = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
+>(({ className, children, ...props }, ref) => (
+  <DialogPortal>
+    <DialogPrimitive.Overlay 
+      className="fixed inset-0 z-[99998] bg-background" 
+      style={{ 
+        backgroundColor: 'hsl(var(--background)) !important',
+        opacity: '1 !important',
+        pointerEvents: 'auto'
+      }} 
+    />
+    <DialogPrimitive.Content
+      ref={ref}
+      className={cn(
+        "fixed left-[50%] top-[50%] z-[99999] grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border border-border bg-white dark:bg-black p-6 shadow-2xl duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-lg",
+        className
+      )}
+      {...props}
+    >
+      {children}
+      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+        <span className="text-xl font-bold text-muted-foreground hover:text-foreground">×</span>
+        <span className="sr-only">Close</span>
+      </DialogPrimitive.Close>
+    </DialogPrimitive.Content>
+  </DialogPortal>
+));
+CustomDialogContent.displayName = "CustomDialogContent";
 
 interface Product {
   _id: string;
@@ -39,7 +74,7 @@ interface DesktopStorefrontProps {
 
 export function DesktopStorefront({ store, user, products, displayName, initials, avatarUrl }: DesktopStorefrontProps) {
   return (
-    <div className="hidden lg:block">
+    <div>
       {/* Store Landing Page Header */}
       <div className="bg-gradient-to-r from-primary to-primary/90">
         <div className="max-w-6xl mx-auto px-6 py-12">
@@ -120,7 +155,7 @@ export function DesktopStorefront({ store, user, products, displayName, initials
                     </div>
                   </Card>
                 </DialogTrigger>
-                <DialogContent className="w-[95vw] max-w-md mx-auto bg-card border-0 shadow-xl data-[state=open]:backdrop-brightness-90 p-6 max-h-[90vh] overflow-y-auto">
+                <CustomDialogContent className="w-[95vw] max-w-md mx-auto max-h-[90vh] overflow-y-auto">
                   <DialogHeader className="pb-4">
                     <DialogTitle className="text-primary text-xl font-bold">{leadMagnet.title}</DialogTitle>
                     <DialogDescription className="text-primary/80 text-sm">
@@ -141,7 +176,7 @@ export function DesktopStorefront({ store, user, products, displayName, initials
                       isFullScreen={false} 
                     />
                   </div>
-                </DialogContent>
+                </CustomDialogContent>
               </Dialog>
             ))}
             
@@ -192,7 +227,7 @@ export function DesktopStorefront({ store, user, products, displayName, initials
                         </div>
                       </Card>
                     </DialogTrigger>
-                    <DialogContent className="w-[95vw] max-w-md mx-auto bg-background border-0 shadow-xl data-[state=open]:backdrop-brightness-90 p-6 max-h-[90vh] overflow-y-auto">
+                    <CustomDialogContent className="w-[95vw] max-w-md mx-auto max-h-[90vh] overflow-y-auto">
                       <DialogHeader>
                         <DialogTitle className="text-center text-xl font-bold text-primary">
                           Get Your Free Resource
@@ -214,7 +249,7 @@ export function DesktopStorefront({ store, user, products, displayName, initials
                         isFullScreen={true}
                         storeData={{ store, user }}
                       />
-                    </DialogContent>
+                    </CustomDialogContent>
                   </Dialog>
                 );
               }

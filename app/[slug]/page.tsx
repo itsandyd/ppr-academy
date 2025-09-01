@@ -7,6 +7,7 @@ import { notFound } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { DesktopStorefront } from "./components/DesktopStorefront";
 import { MobileStorefront } from "./components/MobileStorefront";
+import { useEffect, useState } from "react";
 
 interface StorefrontPageProps {
   params: Promise<{
@@ -19,6 +20,20 @@ interface StorefrontPageProps {
 export default function StorefrontPage({ params }: StorefrontPageProps) {
   // Unwrap the params Promise
   const { slug } = use(params);
+  
+  // Track if we're on desktop or mobile
+  const [isDesktop, setIsDesktop] = useState(false);
+  
+  useEffect(() => {
+    const checkIsDesktop = () => {
+      setIsDesktop(window.innerWidth >= 1024); // lg breakpoint
+    };
+    
+    checkIsDesktop();
+    window.addEventListener('resize', checkIsDesktop);
+    
+    return () => window.removeEventListener('resize', checkIsDesktop);
+  }, []);
   
   // Fetch store by slug
   const store = useQuery(
@@ -78,26 +93,28 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
     downloadUrl: latestLeadMagnet.downloadUrl
   } : null;
 
-    return (
+  return (
     <div className="min-h-screen bg-background">
-      <DesktopStorefront 
-        store={store}
-        user={user}
-        products={products as any || []}
-        displayName={displayName}
-        initials={initials}
-        avatarUrl={avatarUrl}
-      />
-      
-      <MobileStorefront 
-        store={store}
-        user={user}
-        products={products as any || []}
-        displayName={displayName}
-        initials={initials}
-        avatarUrl={avatarUrl}
-        leadMagnetData={leadMagnetData}
-      />
+      {isDesktop ? (
+        <DesktopStorefront 
+          store={store}
+          user={user}
+          products={products as any || []}
+          displayName={displayName}
+          initials={initials}
+          avatarUrl={avatarUrl}
+        />
+      ) : (
+        <MobileStorefront 
+          store={store}
+          user={user}
+          products={products as any || []}
+          displayName={displayName}
+          initials={initials}
+          avatarUrl={avatarUrl}
+          leadMagnetData={leadMagnetData}
+        />
+      )}
     </div>
   );
 } 

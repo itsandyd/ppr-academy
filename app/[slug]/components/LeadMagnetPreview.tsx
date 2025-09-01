@@ -187,7 +187,7 @@ export function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData 
         </div>
 
         {/* Download Preview */}
-        <div className="bg-card rounded-lg p-4 border border-primary/20">
+        <div className="bg-white dark:bg-black rounded-lg p-4 border border-primary/20">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
               <Download className="w-5 h-5 text-primary" />
@@ -245,7 +245,7 @@ export function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData 
   }
 
   return (
-    <div className="w-full p-4 space-y-4 bg-card relative z-0">
+    <div className="w-full p-4 space-y-4 bg-white dark:bg-black relative z-0">
       {/* Image Preview */}
       <div className="w-full h-32 bg-primary/5 rounded-lg flex items-center justify-center border border-primary/20">
         {leadMagnet?.imageUrl ? (
@@ -280,14 +280,14 @@ export function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData 
           placeholder="Your Name" 
           value={formData.name}
           onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-          className="h-12 bg-card border-border text-foreground placeholder-muted-foreground focus:border-primary focus:ring-primary relative z-10 pointer-events-auto min-h-[44px] touch-manipulation" 
+          className="h-12 bg-white dark:bg-black border-border text-foreground placeholder-muted-foreground focus:border-primary focus:ring-primary relative z-10 pointer-events-auto min-h-[44px] touch-manipulation" 
         />
         <Input 
           placeholder="Your Email" 
           type="email"
           value={formData.email}
           onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-          className="h-12 bg-card border-border text-foreground placeholder-muted-foreground focus:border-primary focus:ring-primary relative z-10 pointer-events-auto min-h-[44px] touch-manipulation" 
+          className="h-12 bg-white dark:bg-black border-border text-foreground placeholder-muted-foreground focus:border-primary focus:ring-primary relative z-10 pointer-events-auto min-h-[44px] touch-manipulation" 
         />
         <Button 
           type="button"

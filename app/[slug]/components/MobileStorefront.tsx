@@ -42,7 +42,7 @@ interface MobileStorefrontProps {
 
 export function MobileStorefront({ store, user, products, displayName, initials, avatarUrl, leadMagnetData }: MobileStorefrontProps) {
   return (
-    <div className="lg:hidden min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Mobile App Header (matches PhonePreview) */}
       <div className="bg-background/95 backdrop-blur-sm border-b border-border p-4 sticky top-0 z-30">
         <div className="flex items-center gap-3">
