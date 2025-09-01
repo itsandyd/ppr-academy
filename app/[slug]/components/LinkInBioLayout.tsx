@@ -45,8 +45,8 @@ export function LinkInBioLayout({ products, leadMagnetData, storeData }: LinkInB
   const publishedProducts = products?.filter(p => p.isPublished) || [];
   
   // Separate lead magnets from other products
-  const leadMagnets = publishedProducts.filter(p => p.price === 0 && p.style === "card");
-  const otherProducts = publishedProducts.filter(p => !(p.price === 0 && p.style === "card"));
+  const leadMagnets = publishedProducts.filter(p => p.price === 0 && (p.style === "card" || p.style === "callout"));
+  const otherProducts = publishedProducts.filter(p => !(p.price === 0 && (p.style === "card" || p.style === "callout")));
 
   if (publishedProducts.length === 0) {
     return (

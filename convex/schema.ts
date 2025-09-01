@@ -246,7 +246,7 @@ export default defineSchema({
     userId: v.string(),
     isPublished: v.optional(v.boolean()),
     buttonLabel: v.optional(v.string()),
-    style: v.optional(v.union(v.literal("button"), v.literal("card"), v.literal("minimal"))),
+    style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))),
     orderBumpEnabled: v.optional(v.boolean()),
     orderBumpProductName: v.optional(v.string()),
     orderBumpDescription: v.optional(v.string()),

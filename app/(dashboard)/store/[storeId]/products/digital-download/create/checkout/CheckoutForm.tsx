@@ -81,7 +81,7 @@ export function CheckoutForm() {
   ];
 
   return (
-    <div className="max-w-[680px] space-y-10">
+    <div className="max-w-[640px]">
       {/* Navigation Tabs */}
       <div className="mb-8">
         <Tabs value={currentStep} className="w-full">
@@ -91,7 +91,7 @@ export function CheckoutForm() {
               return (
                 <TabsTrigger
                   key={step.label}
-                  value={step.label.toLowerCase().replace(' ', '-')}
+                  value={step.label.toLowerCase().replace(' page', '').replace(' ', '-')}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     step.active
                       ? "bg-white border border-[#6356FF] text-[#6356FF] font-bold data-[state=active]:bg-white data-[state=active]:text-[#6356FF]"
@@ -151,14 +151,14 @@ export function CheckoutForm() {
           <Button 
             variant="outline" 
             type="button"
-            className="flex items-center gap-2 h-10 rounded-lg"
+            className="flex items-center gap-2 h-10 rounded-lg px-4"
           >
             <Save size={16} />
             Save as Draft
           </Button>
           <Button
             type="submit"
-            className="bg-[#6356FF] hover:bg-[#5248E6] text-white h-10 rounded-lg flex items-center gap-2"
+            className="bg-[#6356FF] hover:bg-[#5248E6] text-white h-10 rounded-lg px-8 flex items-center gap-2"
             disabled={!formState.isDirty || !formState.isValid}
           >
             <ArrowRight size={16} />

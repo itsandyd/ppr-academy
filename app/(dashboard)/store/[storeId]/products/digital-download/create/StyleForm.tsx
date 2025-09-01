@@ -2,7 +2,11 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter, usePathname, useParams } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { useEffect, useState, createContext, useContext } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Image, CreditCard, Settings, Save, ArrowRight } from "lucide-react";
@@ -11,6 +15,7 @@ import { schema, ThumbnailStyleSchema } from "./schema";
 import { StylePicker } from "./StylePicker";
 import { ImagePicker } from "./ImagePicker";
 import { TextInputs } from "./TextInputs";
+import { usePreview } from "./PreviewContext";
 
 interface FormSectionProps {
   index: number;
@@ -33,25 +38,107 @@ function FormSection({ index, title, children }: FormSectionProps) {
 }
 
 export function StyleForm() {
+  const { user } = useUser();
+  const params = useParams();
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const currentStep = searchParams.get("step") || "thumbnail";
+  const storeId = params.storeId as string;
+  const productId = searchParams.get("productId");
+  const { setImageFile, setImagePreviewUrl } = usePreview();
+
+  // Convex mutations and queries
+  const createProduct = useMutation(api.digitalProducts.createProduct);
+  const updateProduct = useMutation(api.digitalProducts.updateProduct);
+  const existingProduct = useQuery(
+    api.digitalProducts.getProductById,
+    productId ? { productId: productId as any } : "skip"
+  );
   
+  // Initialize form with existing product data or URL params
   const form = useForm<ThumbnailStyleSchema>({
     resolver: zodResolver(schema),
     defaultValues: { 
-      style: "button", 
-      title: "", 
-      subtitle: "", 
-      buttonLabel: "Get Now"
+      style: (searchParams.get("style") as "button" | "callout" | "preview") || 
+             (existingProduct?.style as "button" | "callout" | "preview") || "button", 
+      title: searchParams.get("title") || existingProduct?.title || "", 
+      subtitle: searchParams.get("subtitle") || existingProduct?.description || "", 
+      buttonLabel: searchParams.get("buttonLabel") || existingProduct?.buttonLabel || "Get Now"
     },
   });
 
-  const { register, watch, setValue, formState, handleSubmit } = form;
+  const { register, watch, setValue, formState, handleSubmit, reset } = form;
+  
+  // Update form when existing product loads
+  useEffect(() => {
+    if (existingProduct && !searchParams.get("title")) {
+      reset({
+        style: (existingProduct.style as "button" | "callout" | "preview") || "button",
+        title: existingProduct.title || "",
+        subtitle: existingProduct.description || "",
+        buttonLabel: existingProduct.buttonLabel || "Get Now",
+      });
+    }
+  }, [existingProduct, reset, searchParams]);
   
   const char = {
     title: watch("title").length,
     subtitle: watch("subtitle")?.length || 0,
     button: watch("buttonLabel").length,
+  };
+
+  // Update URL params when form values change
+  const updatePreview = (values: Partial<ThumbnailStyleSchema>) => {
+    const params = new URLSearchParams(searchParams.toString());
+    Object.entries(values).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        params.set(key, String(value));
+      }
+    });
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  };
+
+  // Save as draft functionality
+  const handleSaveAsDraft = async () => {
+    if (!user?.id) return;
+
+    const formData = form.getValues();
+    
+    try {
+      if (productId && existingProduct) {
+        // Update existing product
+        await updateProduct({
+          id: productId as any,
+          title: formData.title || undefined,
+          description: formData.subtitle || undefined,
+          buttonLabel: formData.buttonLabel || undefined,
+          style: formData.style,
+        });
+      } else {
+        // Create new product
+        const newProductId = await createProduct({
+          title: formData.title || "Untitled Product",
+          description: formData.subtitle || undefined,
+          price: 9.99, // Default price, can be changed in checkout step
+          storeId,
+          userId: user.id,
+          buttonLabel: formData.buttonLabel || undefined,
+          style: formData.style,
+        });
+        
+        // Add productId to URL for future saves
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("productId", newProductId);
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+      }
+      
+      // Show success feedback (you could add a toast here)
+      console.log("Product saved as draft successfully");
+    } catch (error) {
+      console.error("Failed to save draft:", error);
+      // Show error feedback (you could add a toast here)
+    }
   };
 
   const onSubmit = (data: ThumbnailStyleSchema) => {
@@ -126,20 +213,41 @@ export function StyleForm() {
         <FormSection index={1} title="Pick a style">
           <StylePicker 
             value={watch("style")} 
-            onSelect={(style) => setValue("style", style, { shouldDirty: true })} 
+            onSelect={(style) => {
+              setValue("style", style, { shouldDirty: true });
+              updatePreview({ style });
+            }} 
           />
         </FormSection>
 
         {/* Step 2 - Select image */}
         <FormSection index={2} title="Select image">
           <ImagePicker 
-            onChange={(file) => setValue("image", file || undefined, { shouldDirty: true })} 
+            onChange={(file) => {
+              setValue("image", file || undefined, { shouldDirty: true });
+              setImageFile(file);
+              
+              // Create preview URL for the phone preview
+              if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                  setImagePreviewUrl(e.target?.result as string);
+                };
+                reader.readAsDataURL(file);
+              } else {
+                setImagePreviewUrl(null);
+              }
+            }} 
           />
         </FormSection>
 
         {/* Step 3 - Add text */}
         <FormSection index={3} title="Add text">
-          <TextInputs register={register} char={char} />
+          <TextInputs 
+            register={register} 
+            char={char} 
+            onUpdate={(field, value) => updatePreview({ [field]: value })}
+          />
         </FormSection>
 
         {/* Action Bar */}
@@ -150,6 +258,7 @@ export function StyleForm() {
           <Button 
             variant="outline" 
             type="button"
+            onClick={handleSaveAsDraft}
             className="flex items-center gap-2 h-10 rounded-lg px-4"
           >
             <Save size={16} />

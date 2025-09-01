@@ -81,7 +81,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
   const avatarUrl = user?.imageUrl || "";
 
   // Check if there are lead magnets (price: 0)
-  const leadMagnets = products?.filter(p => p.price === 0 && p.style === "card") || [];
+  const leadMagnets = products?.filter(p => p.price === 0 && (p.style === "card" || p.style === "callout")) || [];
   const hasLeadMagnets = leadMagnets.length > 0;
   const latestLeadMagnet = hasLeadMagnets ? leadMagnets.sort((a, b) => b._creationTime - a._creationTime)[0] : null;
 
@@ -117,4 +117,4 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
       )}
     </div>
   );
-} 
+}

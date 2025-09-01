@@ -45,6 +45,9 @@ interface PhonePreviewProps {
     price?: number;
     imageUrl?: string;
   };
+  // Style and button props for digital product creation
+  style?: "button" | "callout" | "preview" | "card" | "minimal";
+  buttonLabel?: string;
 }
 
 // Link-in-Bio Style Component for Phone Preview
@@ -54,10 +57,10 @@ function LinkInBioLayout({ products, leadMagnetData, storeData, onLeadMagnetClic
   const draftProducts = allProducts.filter(p => !p.isPublished);
   
   // Separate lead magnets from other products for both published and draft
-  const leadMagnets = publishedProducts.filter(p => p.price === 0 && p.style === "card");
-  const draftLeadMagnets = draftProducts.filter(p => p.price === 0 && p.style === "card");
-  const otherProducts = publishedProducts.filter(p => !(p.price === 0 && p.style === "card"));
-  const draftOtherProducts = draftProducts.filter(p => !(p.price === 0 && p.style === "card"));
+  const leadMagnets = publishedProducts.filter(p => p.price === 0 && (p.style === "card" || p.style === "callout"));
+  const draftLeadMagnets = draftProducts.filter(p => p.price === 0 && (p.style === "card" || p.style === "callout"));
+  const otherProducts = publishedProducts.filter(p => !(p.price === 0 && (p.style === "card" || p.style === "callout")));
+  const draftOtherProducts = draftProducts.filter(p => !(p.price === 0 && (p.style === "card" || p.style === "callout")));
 
   if (allProducts.length === 0) {
     return (
@@ -432,7 +435,9 @@ export function PhonePreview({
   store, 
   mode = "store",
   leadMagnet,
-  digitalProduct 
+  digitalProduct,
+  style = "button",
+  buttonLabel = "Get Now"
 }: PhonePreviewProps) {
   // State for lead magnet dialog within phone
   const [selectedLeadMagnet, setSelectedLeadMagnet] = useState<any>(null);
@@ -535,46 +540,127 @@ export function PhonePreview({
         return <LeadMagnetPreview leadMagnet={leadMagnet} />;
 
       case "digitalProduct":
+        // Map old style values to new ones for backward compatibility
+        const displayStyle = style === "card" ? "callout" : style === "minimal" ? "button" : style;
+        
         return (
-          <div className="flex-1 space-y-4">
-            {/* Product Image */}
-            <div className="w-full h-40 bg-gradient-to-br from-purple-100 to-pink-100 rounded-lg flex items-center justify-center overflow-hidden">
-              {digitalProduct?.imageUrl ? (
-                <img 
-                  src={digitalProduct.imageUrl} 
-                  alt="Product preview" 
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-muted/50 rounded-lg mx-auto mb-2" />
-                  <span className="text-xs text-muted-foreground">Product Image</span>
+          <div className="flex-1 p-4 overflow-y-auto bg-background">
+            <div className="w-full space-y-3">
+              {(displayStyle === "button" || style === "minimal") && (
+                /* Button Style - Simple compact card */
+                <Card className="p-4 border border-gray-200 hover:shadow-md transition-all cursor-pointer touch-manipulation">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      {digitalProduct?.imageUrl ? (
+                        <img 
+                          src={digitalProduct.imageUrl} 
+                          alt={digitalProduct.title || "Product"}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Store className="w-6 h-6 text-blue-600" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-sm truncate">
+                        {digitalProduct?.title || "Digital Product Title"}
+                      </h3>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {digitalProduct?.description || "Digital Product"}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <Badge variant="secondary" className="text-xs">
+                        ${digitalProduct?.price?.toFixed(2) || "9.99"}
+                      </Badge>
+                      <ExternalLink className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                  </div>
+                </Card>
+              )}
+
+              {(displayStyle === "callout" || style === "card") && (
+                /* Callout Style - Larger card with more details */
+                <Card className="p-6 border border-primary/20 bg-primary/5 hover:shadow-lg transition-all cursor-pointer">
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-4">
+                      <div className="w-16 h-16 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        {digitalProduct?.imageUrl ? (
+                          <img 
+                            src={digitalProduct.imageUrl} 
+                            alt={digitalProduct.title || "Product"}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <Store className="w-8 h-8 text-primary" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-base text-primary">
+                          {digitalProduct?.title || "Digital Product Title"}
+                        </h3>
+                        {digitalProduct?.description && (
+                          <p className="text-sm text-primary/80 mt-1">
+                            {digitalProduct.description}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-2 mt-2">
+                          <Badge className="bg-primary/10 text-primary border-primary/20">
+                            ${digitalProduct?.price?.toFixed(2) || "9.99"}
+                          </Badge>
+                          <span className="text-xs text-primary/60">• Click to purchase</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              )}
+
+              {displayStyle === "preview" && (
+                /* Preview Style - Full product showcase */
+                <div className="space-y-4">
+                  <Card className="overflow-hidden">
+                    {/* Large Product Image */}
+                    <div className="w-full h-48 bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center overflow-hidden">
+                      {digitalProduct?.imageUrl ? (
+                        <img 
+                          src={digitalProduct.imageUrl} 
+                          alt={digitalProduct.title || "Product"}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="text-center">
+                          <div className="w-20 h-20 bg-muted/50 rounded-lg mx-auto mb-2" />
+                          <span className="text-sm text-muted-foreground">Product Image</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Product Details */}
+                    <div className="p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-bold text-lg">
+                          {digitalProduct?.title || "Digital Product Title"}
+                        </h3>
+                        <Badge className="bg-green-100 text-green-800 text-sm">
+                          ${digitalProduct?.price?.toFixed(2) || "9.99"}
+                        </Badge>
+                      </div>
+                      
+                      {digitalProduct?.description && (
+                        <p className="text-sm text-muted-foreground">
+                          {digitalProduct.description}
+                        </p>
+                      )}
+                      
+                      <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-12">
+                        {buttonLabel}
+                      </Button>
+                    </div>
+                  </Card>
                 </div>
               )}
             </div>
-
-            {/* Product Info */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-lg leading-tight">
-                  {digitalProduct?.title || "Digital Product Title"}
-                </h3>
-                <Badge className="bg-green-100 text-green-800">
-                  ${digitalProduct?.price?.toFixed(2) || "9.99"}
-                </Badge>
-              </div>
-              
-              {digitalProduct?.description && (
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {digitalProduct.description}
-                </p>
-              )}
-            </div>
-
-            {/* Purchase Button */}
-            <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
-              Buy Now
-            </Button>
           </div>
         );
 

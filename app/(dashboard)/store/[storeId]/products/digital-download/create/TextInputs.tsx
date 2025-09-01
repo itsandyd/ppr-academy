@@ -11,9 +11,10 @@ interface TextInputsProps {
     subtitle: number;
     button: number;
   };
+  onUpdate?: (field: string, value: string) => void;
 }
 
-export function TextInputs({ register, char }: TextInputsProps) {
+export function TextInputs({ register, char, onUpdate }: TextInputsProps) {
   return (
     <div className="space-y-4">
       {/* Title Input */}
@@ -28,6 +29,10 @@ export function TextInputs({ register, char }: TextInputsProps) {
           {...register("title")}
           placeholder="Enter title"
           className="h-12 rounded-xl border-interactive px-4"
+          onChange={(e) => {
+            register("title").onChange(e);
+            onUpdate?.("title", e.target.value);
+          }}
         />
       </div>
 
@@ -43,6 +48,10 @@ export function TextInputs({ register, char }: TextInputsProps) {
           {...register("subtitle")}
           placeholder="Enter subtitle (optional)"
           className="h-12 rounded-xl border-interactive px-4"
+          onChange={(e) => {
+            register("subtitle").onChange(e);
+            onUpdate?.("subtitle", e.target.value);
+          }}
         />
       </div>
 
@@ -58,6 +67,10 @@ export function TextInputs({ register, char }: TextInputsProps) {
           {...register("buttonLabel")}
           placeholder="Enter button text"
           className="h-12 rounded-xl border-interactive px-4"
+          onChange={(e) => {
+            register("buttonLabel").onChange(e);
+            onUpdate?.("buttonLabel", e.target.value);
+          }}
         />
       </div>
     </div>

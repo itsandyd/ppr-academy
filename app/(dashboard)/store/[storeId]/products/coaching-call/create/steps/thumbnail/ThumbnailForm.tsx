@@ -9,6 +9,7 @@ import { Save, ArrowRight } from "lucide-react";
 import { schema, ThumbnailSchema } from "./schema";
 import { StylePicker } from "./StylePicker";
 import { ImagePicker } from "./ImagePicker";
+import { useCoachingPreview } from "../../CoachingPreviewContext";
 
 interface FormSectionProps {
   index: number;
@@ -34,6 +35,7 @@ export default function ThumbnailForm() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { updateFormData, setImageFile, setImagePreviewUrl } = useCoachingPreview();
   
   const form = useForm<ThumbnailSchema>({
     resolver: zodResolver(schema),
@@ -64,7 +66,10 @@ export default function ThumbnailForm() {
         <FormSection index={1} title="Pick a style">
           <StylePicker
             value={watch("style")}
-            onSelect={(style) => setValue("style", style)}
+            onSelect={(style) => {
+              setValue("style", style);
+              updateFormData({ style });
+            }}
           />
         </FormSection>
 
@@ -72,7 +77,21 @@ export default function ThumbnailForm() {
         <FormSection index={2} title="Select image">
           <ImagePicker
             value={watch("image")}
-            onChange={(file) => setValue("image", file)}
+            onChange={(file) => {
+              setValue("image", file);
+              setImageFile(file);
+              
+              // Create preview URL for the phone preview
+              if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                  setImagePreviewUrl(e.target?.result as string);
+                };
+                reader.readAsDataURL(file);
+              } else {
+                setImagePreviewUrl(null);
+              }
+            }}
           />
         </FormSection>
 
@@ -84,6 +103,10 @@ export default function ThumbnailForm() {
               placeholder="Enter your call title..."
               className="h-12 rounded-xl border-[#E5E7F5] px-4 text-base"
               maxLength={50}
+              onChange={(e) => {
+                register("title").onChange(e);
+                updateFormData({ title: e.target.value });
+              }}
             />
             <div className="flex justify-end mt-2">
               <span 

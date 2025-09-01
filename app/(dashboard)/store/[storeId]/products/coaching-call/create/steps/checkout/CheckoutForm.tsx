@@ -10,6 +10,7 @@ import { schema, CheckoutSchema } from "./schema";
 import { DescriptionEditor } from "./DescriptionEditor";
 import { SessionSettings } from "./SessionSettings";
 import { InfoFields } from "./InfoFields";
+import { useCoachingPreview } from "../../CoachingPreviewContext";
 
 interface FormSectionProps {
   index: number;
@@ -35,6 +36,7 @@ export default function CheckoutForm() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { updateFormData } = useCoachingPreview();
   
   const form = useForm<CheckoutSchema>({
     resolver: zodResolver(schema),
@@ -74,6 +76,10 @@ export default function CheckoutForm() {
               placeholder="Enter your coaching call title..."
               className="h-12 rounded-xl border-[#E5E7F5] px-4 text-base"
               maxLength={80}
+              onChange={(e) => {
+                register("title").onChange(e);
+                updateFormData({ title: e.target.value });
+              }}
             />
             <div className="flex justify-end">
               <span 
@@ -101,8 +107,14 @@ export default function CheckoutForm() {
             duration={watch("duration")}
             price={watch("price")}
             sessionType={watch("sessionType")}
-            onDurationChange={(duration) => setValue("duration", duration)}
-            onPriceChange={(price) => setValue("price", price)}
+            onDurationChange={(duration) => {
+              setValue("duration", duration);
+              updateFormData({ duration });
+            }}
+            onPriceChange={(price) => {
+              setValue("price", price);
+              updateFormData({ price });
+            }}
             onSessionTypeChange={(type) => setValue("sessionType", type)}
           />
         </FormSection>

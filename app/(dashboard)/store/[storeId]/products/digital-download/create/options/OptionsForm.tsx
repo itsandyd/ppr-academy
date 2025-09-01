@@ -71,7 +71,7 @@ export function OptionsForm() {
   ];
 
   return (
-    <div className="max-w-[720px] space-y-10">
+    <div className="max-w-[640px]">
       {/* Navigation Tabs */}
       <div className="mb-8">
         <Tabs value={currentStep} className="w-full">
@@ -179,14 +179,14 @@ export function OptionsForm() {
           <Button 
             variant="outline" 
             type="button"
-            className="flex items-center gap-2 h-10 rounded-lg"
+            className="flex items-center gap-2 h-10 rounded-lg px-4"
           >
             <Save size={16} />
             Save as Draft
           </Button>
           <Button
             type="submit"
-            className="bg-[#6356FF] hover:bg-[#5248E6] text-white h-10 rounded-lg flex items-center gap-2"
+            className="bg-[#6356FF] hover:bg-[#5248E6] text-white h-10 rounded-lg px-8 flex items-center gap-2"
             disabled={!formState.isDirty || !formState.isValid}
           >
             <Send size={16} />
