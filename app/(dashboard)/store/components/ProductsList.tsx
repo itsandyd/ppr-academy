@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, Edit, Trash2, Package } from "lucide-react";
+import { Eye, Edit, Trash2, Package, BookOpen } from "lucide-react";
 import Link from "next/link";
 
 interface Product {
@@ -16,8 +16,9 @@ interface Product {
   price: number;
   imageUrl?: string;
   isPublished?: boolean;
-  style?: "button" | "card" | "minimal";
+  style?: "button" | "card" | "minimal" | "callout" | "preview";
   slug?: string; // For courses
+  userId?: string; // For courses
 }
 
 interface ProductsListProps {
@@ -29,6 +30,8 @@ export function ProductsList({ products, storeId }: ProductsListProps) {
   const { toast } = useToast();
   const deleteProduct = useMutation(api.digitalProducts.deleteProduct);
   const updateProduct = useMutation(api.digitalProducts.updateProduct);
+  const toggleCoursePublished = useMutation(api.courses.togglePublished);
+  const deleteCourse = useMutation(api.courses.deleteCourse);
 
   const isCourse = (product: Product) => {
     // Courses have a slug property and no style property
@@ -66,6 +69,76 @@ export function ProductsList({ products, storeId }: ProductsListProps) {
       toast({
         title: "Error",
         description: "Failed to update product. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const toggleCoursePublish = async (courseId: string, currentStatus: boolean, title: string, userId: string) => {
+    try {
+      console.log("🔄 Toggling course publish status:", { courseId, currentStatus, userId });
+      
+      const result = await toggleCoursePublished({ 
+        courseId: courseId as any, 
+        userId: userId
+      });
+      
+      console.log("✅ Toggle result:", result);
+      
+      if (result.success) {
+        toast({
+          title: currentStatus ? "Course unpublished" : "Course published",
+          description: `"${title}" is now ${!currentStatus ? "published" : "unpublished"}.`,
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to update course. You may not have permission to modify this course.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("❌ Course toggle error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update course. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteCourse = async (courseId: string, title: string, userId: string) => {
+    if (!confirm(`Are you sure you want to delete "${title}"? This will permanently delete the course and all its content. This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      console.log("🗑️ Deleting course:", { courseId, userId });
+      
+      const result = await deleteCourse({ 
+        courseId: courseId as any, 
+        userId: userId
+      });
+      
+      console.log("✅ Delete result:", result);
+      
+      if (result.success) {
+        toast({
+          title: "Course deleted",
+          description: `"${title}" has been deleted successfully.`,
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: result.message || "Failed to delete course.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("❌ Course delete error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete course. Please try again.",
         variant: "destructive",
       });
     }
@@ -143,15 +216,37 @@ export function ProductsList({ products, storeId }: ProductsListProps) {
                   <div className="flex items-center gap-2">
                     {isCourse(product) ? (
                       <>
-                        <Button variant="outline" size="sm" disabled className="opacity-50">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => toggleCoursePublish(product._id, product.isPublished || false, product.title, product.userId || "")}
+                        >
                           <Eye className="h-3 w-3 mr-1" />
-                          Course
+                          {product.isPublished ? "Unpublish" : "Publish"}
                         </Button>
+                        
                         <Button variant="outline" size="sm" asChild>
-                          <Link href={`/courses/${product.slug || product._id}`}>
+                          <Link href={`/store/${storeId}/course/create?step=course&courseId=${product._id}`}>
                             <Edit className="h-3 w-3 mr-1" />
-                            View Course
+                            Edit Course
                           </Link>
+                        </Button>
+                        
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href={`/store/${storeId}/courses/${product._id}`}>
+                            <BookOpen className="h-3 w-3 mr-1" />
+                            View
+                          </Link>
+                        </Button>
+                        
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeleteCourse(product._id, product.title, product.userId || "")}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          Delete
                         </Button>
                       </>
                     ) : (

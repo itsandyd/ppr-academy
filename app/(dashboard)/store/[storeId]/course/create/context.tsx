@@ -347,20 +347,49 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
         modules: state.data.modules,
       };
 
-      const result = await createCourseMutation({
-        userId: convexUser._id,
-        storeId,
-        data: requiredData,
-      });
-
-      if (result.success) {
-        toast({
-          title: "Course Created!",
-          description: "Your course has been created successfully.",
+      // Check if we're editing an existing course or creating a new one
+      if (state.courseId) {
+        // Update existing course
+        const result = await updateCourseWithModulesMutation({
+          courseId: state.courseId,
+          courseData: {
+            title: requiredData.title,
+            description: requiredData.description,
+            checkoutHeadline: requiredData.checkoutHeadline,
+            price: parseFloat(requiredData.price),
+            category: requiredData.category,
+            skillLevel: requiredData.skillLevel,
+            imageUrl: requiredData.thumbnail,
+          },
+          modules: requiredData.modules,
         });
-        return { success: true, courseId: result.courseId };
+
+        if (result.success) {
+          toast({
+            title: "Course Updated!",
+            description: "Your course has been updated successfully.",
+          });
+          return { success: true, courseId: state.courseId };
+        } else {
+          return { success: false, error: result.error || "Failed to update course" };
+        }
       } else {
-        return { success: false, error: "Failed to create course" };
+        // Create new course
+        const result = await createCourseMutation({
+          userId: convexUser._id,
+          storeId,
+          data: requiredData,
+        });
+
+        if (result.success) {
+          toast({
+            title: "Course Created!",
+            description: "Your course has been created successfully.",
+          });
+          return { success: true, courseId: result.courseId };
+        } else {
+          return { success: false, error: "Failed to create course" };
+        }
       }
     } catch (error) {
       return { 

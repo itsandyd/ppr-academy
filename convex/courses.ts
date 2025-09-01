@@ -614,8 +614,91 @@ export const getCourseForEdit = query({
     }
     
     return {
-      ...course,
-      modules: courseModules,
+      _id: course._id,
+      _creationTime: course._creationTime,
+      userId: course.userId,
+      instructorId: course.instructorId,
+      title: course.title,
+      description: course.description,
+      imageUrl: course.imageUrl,
+      price: course.price,
+      isPublished: course.isPublished,
+      courseCategoryId: course.courseCategoryId,
+      slug: course.slug,
+      category: course.category,
+      skillLevel: course.skillLevel,
+      checkoutHeadline: course.checkoutHeadline,
+      checkoutDescription: course.checkoutDescription,
+      paymentDescription: course.paymentDescription,
+      guaranteeText: course.guaranteeText,
+      showGuarantee: course.showGuarantee,
+      acceptsPayPal: course.acceptsPayPal,
+      acceptsStripe: course.acceptsStripe,
+      modules: courseModules.length > 0 ? courseModules : undefined,
     };
+  },
+});
+
+// Delete course and all related data
+export const deleteCourse = mutation({
+  args: {
+    courseId: v.id("courses"),
+    userId: v.string(),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    try {
+      const course = await ctx.db.get(args.courseId);
+      
+      if (!course) {
+        return { success: false, message: "Course not found" };
+      }
+      
+      // Check if user owns the course
+      if (course.userId !== args.userId) {
+        return { success: false, message: "You don't have permission to delete this course" };
+      }
+      
+      // Delete all course modules
+      const modules = await ctx.db
+        .query("courseModules")
+        .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId))
+        .collect();
+      
+      for (const module of modules) {
+        // Delete all lessons in this module
+        const lessons = await ctx.db
+          .query("courseLessons")
+          .withIndex("by_moduleId", (q) => q.eq("moduleId", module._id))
+          .collect();
+        
+        for (const lesson of lessons) {
+          // Delete all chapters in this lesson
+          const chapters = await ctx.db
+            .query("courseChapters")
+            .withIndex("by_lessonId", (q) => q.eq("lessonId", lesson._id))
+            .collect();
+          
+          for (const chapter of chapters) {
+            await ctx.db.delete(chapter._id);
+          }
+          
+          await ctx.db.delete(lesson._id);
+        }
+        
+        await ctx.db.delete(module._id);
+      }
+      
+      // Delete the course itself
+      await ctx.db.delete(args.courseId);
+      
+      return { success: true, message: "Course deleted successfully" };
+    } catch (error) {
+      console.error("Failed to delete course:", error);
+      return { success: false, message: "Failed to delete course" };
+    }
   },
 }); 

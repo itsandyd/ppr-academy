@@ -99,7 +99,8 @@ function StoreContent() {
       imageUrl: course.imageUrl,
       isPublished: course.isPublished,
       style: undefined, // Courses don't have style
-      slug: course.slug
+      slug: course.slug,
+      userId: course.userId // Add userId for course management
     }));
 
     const allProducts = [
