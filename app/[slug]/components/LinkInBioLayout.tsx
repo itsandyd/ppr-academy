@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Store, Gift, ExternalLink } from "lucide-react";
+import { ArrowRight, Store, Gift, ExternalLink, GraduationCap } from "lucide-react";
 import { LeadMagnetPreview } from "./LeadMagnetPreview";
 
 interface Product {
@@ -158,6 +158,7 @@ export function LinkInBioLayout({ products, leadMagnetData, storeData }: LinkInB
       {otherProducts.map((product) => {
         const [isOpen, setIsOpen] = React.useState(false);
         const isLeadMagnet = product.price === 0;
+        const isCourse = product.slug !== undefined && product.style === undefined;
         
         // Prevent body scroll when modal is open
         React.useEffect(() => {
@@ -176,42 +177,70 @@ export function LinkInBioLayout({ products, leadMagnetData, storeData }: LinkInB
         return (
           <div key={product._id}>
             <Card 
-              className="p-4 border border-gray-200 hover:shadow-md transition-all cursor-pointer touch-manipulation"
+              className={`p-4 border hover:shadow-md transition-all cursor-pointer touch-manipulation ${
+                isCourse 
+                  ? "border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50" 
+                  : "border-gray-200"
+              }`}
               onClick={() => {
-                console.log('Product clicked:', product.title, 'Price:', product.price);
+                console.log('Product clicked:', product.title, 'Type:', isCourse ? 'Course' : 'Digital Product', 'Price:', product.price);
                 if (isLeadMagnet) {
                   setIsOpen(true);
+                } else if (isCourse) {
+                  // Navigate to course purchase/enrollment page
+                  window.location.href = `/store/${storeData?.store._id}/courses/${product._id}/enroll`;
                 } else {
+                  // Handle digital product purchase
                   alert(`Purchase ${product.title} for $${product.price}\n\nCheckout functionality coming soon!`);
                 }
               }}
             >
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+                <div className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden ${
+                  isCourse 
+                    ? "bg-emerald-100" 
+                    : "bg-blue-100"
+                }`}>
                   {product.imageUrl ? (
                     <img 
                       src={product.imageUrl} 
                       alt={product.title}
                       className="w-full h-full object-cover"
                     />
+                  ) : isCourse ? (
+                    <GraduationCap className="w-6 h-6 text-emerald-600" />
                   ) : (
                     <Store className="w-6 h-6 text-blue-600" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-sm truncate">
+                  <h3 className={`font-semibold text-sm truncate ${
+                    isCourse ? "text-emerald-800" : "text-foreground"
+                  }`}>
                     {product.title}
                   </h3>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {product.description || "Digital Product"}
+                  <p className={`text-xs truncate ${
+                    isCourse ? "text-emerald-600" : "text-muted-foreground"
+                  }`}>
+                    {isCourse 
+                      ? `Course • ${product.description || "Learn essential skills"}` 
+                      : (product.description || "Digital Product")
+                    }
                   </p>
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0">
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge 
+                    variant={isCourse ? "default" : "secondary"} 
+                    className={`text-xs ${
+                      isCourse ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-100" : ""
+                    }`}
+                  >
                     ${product.price}
                   </Badge>
                   {isLeadMagnet ? (
                     <ArrowRight className="w-4 h-4 text-primary" />
+                  ) : isCourse ? (
+                    <GraduationCap className="w-4 h-4 text-emerald-600" />
                   ) : (
                     <ExternalLink className="w-4 h-4 text-muted-foreground" />
                   )}

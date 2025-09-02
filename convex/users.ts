@@ -188,6 +188,14 @@ export const updateUserByClerkId = mutation({
     twitter: v.optional(v.string()),
     youtube: v.optional(v.string()),
     website: v.optional(v.string()),
+    // Stripe Connect fields
+    stripeConnectAccountId: v.optional(v.string()),
+    stripeAccountStatus: v.optional(v.union(
+      v.literal("pending"),
+      v.literal("restricted"),
+      v.literal("enabled")
+    )),
+    stripeOnboardingComplete: v.optional(v.boolean()),
   },
   returns: v.union(
     v.object({

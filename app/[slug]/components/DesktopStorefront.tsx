@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
-import { ArrowRight, Store, Gift, ExternalLink } from "lucide-react";
+import { ArrowRight, Store, Gift, ExternalLink, GraduationCap } from "lucide-react";
 import { LeadMagnetPreview } from "./LeadMagnetPreview";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import * as React from "react";
@@ -94,15 +94,15 @@ export function DesktopStorefront({ store, user, products, displayName, initials
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
             <div className="bg-white/10 backdrop-blur rounded-lg p-4">
               <div className="text-2xl font-bold text-background">{products?.filter(p => p.isPublished).length || 0}</div>
-              <div className="text-background/80 text-sm">Products Available</div>
+              <div className="text-background/80 text-sm">Products & Courses</div>
             </div>
             <div className="bg-white/10 backdrop-blur rounded-lg p-4">
               <div className="text-2xl font-bold text-background">{products?.filter(p => p.price === 0 && p.isPublished).length || 0}</div>
               <div className="text-background/80 text-sm">Free Resources</div>
             </div>
             <div className="bg-white/10 backdrop-blur rounded-lg p-4">
-              <div className="text-2xl font-bold text-background">⚡</div>
-              <div className="text-background/80 text-sm">Instant Download</div>
+              <div className="text-2xl font-bold text-background">🎓</div>
+              <div className="text-background/80 text-sm">Learn & Grow</div>
             </div>
           </div>
         </div>
@@ -114,8 +114,8 @@ export function DesktopStorefront({ store, user, products, displayName, initials
         <div className="space-y-8">
           <h2 className="text-2xl font-bold text-center text-foreground mb-8">Available Products & Resources</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {/* Lead Magnet Cards */}
-            {products?.filter(p => p.price === 0 && p.style === "card" && p.isPublished).map((leadMagnet) => (
+            {/* Lead Magnet Cards (Free Digital Products Only) */}
+            {products?.filter(p => p.productType === "digitalProduct" && p.price === 0 && (p.style === "card" || p.style === "callout") && p.isPublished).map((leadMagnet) => (
               <Dialog key={leadMagnet._id}>
                 <DialogTrigger asChild>
                   <Card className="group p-6 border border-primary/20 bg-primary/5 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer">
@@ -180,8 +180,153 @@ export function DesktopStorefront({ store, user, products, displayName, initials
               </Dialog>
             ))}
             
-            {/* Other Products */}
-            {products?.filter(p => !(p.price === 0 && p.style === "card") && p.isPublished).map((product) => {
+            {/* Free Courses */}
+            {products?.filter(p => p.productType === "course" && p.price === 0 && p.isPublished).map((course) => (
+              <Card 
+                key={course._id} 
+                className="group p-6 border border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer"
+                onClick={() => {
+                  window.location.href = `/store/${store._id}/courses/${course._id}/enroll`;
+                }}
+              >
+                {/* Image */}
+                <div className="w-full h-48 bg-emerald-100 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
+                  {course.imageUrl ? (
+                    <img 
+                      src={course.imageUrl} 
+                      alt={course.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : (
+                    <div className="text-center">
+                      <GraduationCap className="w-16 h-16 text-emerald-600 mx-auto mb-2" />
+                      <span className="text-sm text-emerald-600 font-medium">Free Course</span>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Content */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-emerald-100 text-emerald-800 text-xs border-emerald-200 font-semibold">
+                      FREE COURSE
+                    </Badge>
+                    <Badge variant="secondary" className="text-xs">
+                      {course.category || "Course"}
+                    </Badge>
+                  </div>
+                  <h3 className="font-bold text-lg text-emerald-800 line-clamp-2">
+                    {course.title}
+                  </h3>
+                  <p className="text-emerald-700 text-sm line-clamp-3 leading-relaxed">
+                    {course.description || "Comprehensive course content"}
+                  </p>
+                  <div className="flex items-center justify-between pt-2">
+                    <span className="text-xs text-emerald-600 font-medium">Click to enroll</span>
+                    <GraduationCap className="w-5 h-5 text-emerald-600 group-hover:scale-110 transition-transform duration-200" />
+                  </div>
+                </div>
+              </Card>
+            ))}
+            
+            {/* Paid Courses */}
+            {products?.filter(p => p.productType === "course" && p.price > 0 && p.isPublished).map((course) => (
+              <Card 
+                key={course._id} 
+                className="group p-6 border border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer"
+                onClick={() => {
+                  window.location.href = `/store/${store._id}/courses/${course._id}/enroll`;
+                }}
+              >
+                {/* Image */}
+                <div className="w-full h-48 bg-emerald-100 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
+                  {course.imageUrl ? (
+                    <img 
+                      src={course.imageUrl} 
+                      alt={course.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : (
+                    <div className="text-center">
+                      <GraduationCap className="w-16 h-16 text-emerald-600 mx-auto mb-2" />
+                      <span className="text-sm text-emerald-600 font-medium">Course</span>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Content */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 font-semibold">
+                      ${course.price}
+                    </Badge>
+                    <Badge variant="secondary" className="text-xs">
+                      {course.category || "Course"}
+                    </Badge>
+                  </div>
+                  <h3 className="font-bold text-lg text-emerald-800 line-clamp-2">
+                    {course.title}
+                  </h3>
+                  <p className="text-emerald-700 text-sm line-clamp-3 leading-relaxed">
+                    {course.description || "Comprehensive course content"}
+                  </p>
+                  <div className="flex items-center justify-between pt-2">
+                    <span className="text-xs text-emerald-600 font-medium">Click to enroll</span>
+                    <GraduationCap className="w-5 h-5 text-emerald-600 group-hover:scale-110 transition-transform duration-200" />
+                  </div>
+                </div>
+              </Card>
+            ))}
+            
+            {/* Paid Digital Products */}
+            {products?.filter(p => p.productType === "digitalProduct" && p.price > 0 && p.isPublished).map((product) => (
+              <Card 
+                key={product._id} 
+                className="group p-6 border-premium bg-card hover:scale-[1.02] transition-all duration-300 cursor-pointer"
+                onClick={() => {
+                  alert(`Purchase ${product.title} for $${product.price}\n\nCheckout functionality coming soon!`);
+                }}
+              >
+                {/* Image */}
+                <div className="w-full h-48 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
+                  {product.imageUrl ? (
+                    <img 
+                      src={product.imageUrl} 
+                      alt={product.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  ) : (
+                    <div className="text-center">
+                      <Store className="w-16 h-16 text-blue-600 mx-auto mb-2" />
+                      <span className="text-sm text-blue-600 font-medium">Digital Product</span>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Content */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Badge variant="secondary" className="text-primary bg-primary/10 border-primary/20 font-semibold">
+                      ${product.price}
+                    </Badge>
+                    <ExternalLink className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors duration-200" />
+                  </div>
+                  <h3 className="font-bold text-lg text-card-foreground line-clamp-2">
+                    {product.title}
+                  </h3>
+                  <p className="text-muted-foreground text-sm line-clamp-3 leading-relaxed">
+                    {product.description || "High-quality digital product"}
+                  </p>
+                  <div className="flex items-center justify-between pt-2">
+                    <span className="text-xs text-muted-foreground font-medium">Click to purchase</span>
+                    <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:translate-x-1 group-hover:text-primary transition-all duration-200" />
+                  </div>
+                </div>
+              </Card>
+            ))}
+
+            {/* Free Digital Products (Non-Card Style) */}
+            {products?.filter(p => p.productType === "digitalProduct" && p.price === 0 && p.style !== "card" && p.style !== "callout" && p.isPublished).map((product) => {
               const isLeadMagnet = product.price === 0;
               
               if (isLeadMagnet) {

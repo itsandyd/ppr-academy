@@ -1,0 +1,18 @@
+{
+    "mcpServers": {
+      "stripe": {
+        "command": "npx",
+        "args": ["-y", "@stripe/mcp", "--tools=all"],
+        "env": {
+          "STRIPE_SECRET_KEY": "rk_test_51GWg7pCGBaYrnzqjQlUIQUo9Z30BtiPmFqGuPk0sGBgzCQjoNXUPPyF7gxHaGt5b7qnorvU6P2N9mVsDzHX4QoAm00zj0CTThG"
+        }
+      },
+      "convex": {
+        "command": "npx",
+        "args": ["-y", "@convex-dev/mcp-server"],
+        "env": {
+          "CONVEX_URL": "https://fastidious-snake-859.convex.cloud"
+        }
+      }
+    }
+  }

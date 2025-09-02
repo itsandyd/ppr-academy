@@ -53,8 +53,20 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
     store ? { storeId: store._id } : "skip"
   );
 
+  // Fetch courses for this store
+  const courses = useQuery(
+    api.courses.getCoursesByStore,
+    store ? { storeId: store._id } : "skip"
+  );
+
+  // TODO: Fetch coaching profiles for this store
+  // const coachProfiles = useQuery(
+  //   api.coachProfiles.getProfilesByStore,
+  //   store ? { storeId: store._id } : "skip"
+  // );
+
   // Loading state
-  if (store === undefined || user === undefined || products === undefined) {
+  if (store === undefined || user === undefined || products === undefined || courses === undefined) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex items-center gap-3">
@@ -80,6 +92,33 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
     .slice(0, 2);
   const avatarUrl = user?.imageUrl || "";
 
+  // Combine all product types into unified list
+  const allProducts = [
+    // Digital Products (keep as-is)
+    ...(products || []).map(product => ({
+      ...product,
+      productType: "digitalProduct",
+    })),
+    
+    // Courses (add course-specific properties)
+    ...(courses || []).map(course => ({
+      ...course,
+      productType: "course",
+      style: undefined, // Courses don't have style
+      buttonLabel: "Enroll Now", // Default CTA for courses
+    })),
+    
+    // TODO: Add coaching profiles when available
+    // ...(coachProfiles || []).map(profile => ({
+    //   ...profile,
+    //   productType: "coaching",
+    //   price: profile.basePrice,
+    //   title: profile.title,
+    //   description: profile.description,
+    //   buttonLabel: "Book Session",
+    // }))
+  ];
+
   // Check if there are lead magnets (price: 0)
   const leadMagnets = products?.filter(p => p.price === 0 && (p.style === "card" || p.style === "callout")) || [];
   const hasLeadMagnets = leadMagnets.length > 0;
@@ -99,7 +138,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
         <DesktopStorefront 
           store={store}
           user={user}
-          products={products as any || []}
+          products={allProducts as any || []}
           displayName={displayName}
           initials={initials}
           avatarUrl={avatarUrl}
@@ -108,7 +147,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
         <MobileStorefront 
           store={store}
           user={user}
-          products={products as any || []}
+          products={allProducts as any || []}
           displayName={displayName}
           initials={initials}
           avatarUrl={avatarUrl}

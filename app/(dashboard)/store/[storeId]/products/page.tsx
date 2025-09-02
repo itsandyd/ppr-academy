@@ -48,6 +48,7 @@ export default function ChooseProductTypePage() {
       'digital': `/store/${storeId}/products/digital-download/create`,
       'coaching': `/store/${storeId}/products/coaching-call/create`,
       'ecourse': `/store/${storeId}/course/create`, // eCourse creation page
+      'bundle': `/store/${storeId}/products/bundle/create`, // Bundle creation page
       // TODO: Add routes for other product types when pages are created
       'custom': '#', // Custom Product
       'membership': '#', // Recurring Membership

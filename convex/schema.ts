@@ -23,6 +23,12 @@ export default defineSchema({
     discordId: v.optional(v.string()),
     discordVerified: v.optional(v.boolean()),
     stripeConnectAccountId: v.optional(v.string()),
+    stripeAccountStatus: v.optional(v.union(
+      v.literal("pending"),
+      v.literal("restricted"),
+      v.literal("enabled")
+    )),
+    stripeOnboardingComplete: v.optional(v.boolean()),
     admin: v.optional(v.boolean()),
     clerkId: v.optional(v.string()),
     firstName: v.optional(v.string()),

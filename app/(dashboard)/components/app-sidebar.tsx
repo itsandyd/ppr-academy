@@ -57,7 +57,7 @@ export function AppSidebar() {
   ];
 
   const bottomNavItems: NavItem[] = [
-    { icon: Settings, href: "/store/settings", label: "Settings" },
+    { icon: Settings, href: `/store/${storeId || 'setup'}/settings/payouts`, label: "Payouts" },
   ];
 
   return (

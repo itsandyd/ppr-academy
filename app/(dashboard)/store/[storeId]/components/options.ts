@@ -9,6 +9,7 @@ import {
   Users,
   Link,
   DollarSign,
+  Layers,
   type LucideIcon
 } from "lucide-react";
 
@@ -61,6 +62,14 @@ export const options: ProductOption[] = [
     icon: GraduationCap,
     colorClass: "bg-chart-1/10 hover:bg-chart-1/15",
     iconColorClass: "text-chart-1"
+  },
+  {
+    id: "bundle",
+    title: "Bundle",
+    subtitle: "Group multiple courses and products together at a discounted price",
+    icon: Layers,
+    colorClass: "bg-emerald-50 hover:bg-emerald-100",
+    iconColorClass: "text-emerald-600"
   },
   {
     id: "membership",
