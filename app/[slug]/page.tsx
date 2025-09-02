@@ -53,7 +53,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
     store ? { storeId: store._id } : "skip"
   );
 
-  // Fetch courses for this store
+  // Fetch courses from Convex
   const courses = useQuery(
     api.courses.getCoursesByStore,
     store ? { storeId: store._id } : "skip"

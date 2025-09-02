@@ -187,8 +187,8 @@ export function LinkInBioLayout({ products, leadMagnetData, storeData }: LinkInB
                 if (isLeadMagnet) {
                   setIsOpen(true);
                 } else if (isCourse) {
-                  // Navigate to course purchase/enrollment page
-                  window.location.href = `/store/${storeData?.store._id}/courses/${product._id}/enroll`;
+                  // Navigate to public course landing page
+                  window.location.href = `/courses/${product.slug}`;
                 } else {
                   // Handle digital product purchase
                   alert(`Purchase ${product.title} for $${product.price}\n\nCheckout functionality coming soon!`);

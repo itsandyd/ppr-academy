@@ -59,6 +59,7 @@ export const getCourseBySlug = query({
       isPublished: v.optional(v.boolean()),
       courseCategoryId: v.optional(v.string()),
       slug: v.optional(v.string()),
+      storeId: v.optional(v.string()),
       // Additional fields for course creation form
       category: v.optional(v.string()),
       skillLevel: v.optional(v.string()),
@@ -73,10 +74,38 @@ export const getCourseBySlug = query({
     v.null()
   ),
   handler: async (ctx, args) => {
-    return await ctx.db
+    const course = await ctx.db
       .query("courses")
       .withIndex("by_slug", (q) => q.eq("slug", args.slug))
       .unique();
+
+    if (!course) {
+      return null;
+    }
+
+    return {
+      _id: course._id,
+      _creationTime: course._creationTime,
+      userId: course.userId,
+      instructorId: course.instructorId,
+      title: course.title,
+      description: course.description,
+      imageUrl: course.imageUrl,
+      price: course.price,
+      isPublished: course.isPublished,
+      courseCategoryId: course.courseCategoryId,
+      slug: course.slug,
+      storeId: course.storeId, // Add missing storeId field
+      category: course.category,
+      skillLevel: course.skillLevel,
+      checkoutHeadline: course.checkoutHeadline,
+      checkoutDescription: course.checkoutDescription,
+      paymentDescription: course.paymentDescription,
+      guaranteeText: course.guaranteeText,
+      showGuarantee: course.showGuarantee,
+      acceptsPayPal: course.acceptsPayPal,
+      acceptsStripe: course.acceptsStripe,
+    };
   },
 });
 

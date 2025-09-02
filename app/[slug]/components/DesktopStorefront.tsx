@@ -186,7 +186,7 @@ export function DesktopStorefront({ store, user, products, displayName, initials
                 key={course._id} 
                 className="group p-6 border border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer"
                 onClick={() => {
-                  window.location.href = `/store/${store._id}/courses/${course._id}/enroll`;
+                  window.location.href = `/courses/${course.slug}`;
                 }}
               >
                 {/* Image */}
@@ -235,7 +235,7 @@ export function DesktopStorefront({ store, user, products, displayName, initials
                 key={course._id} 
                 className="group p-6 border border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer"
                 onClick={() => {
-                  window.location.href = `/store/${store._id}/courses/${course._id}/enroll`;
+                  window.location.href = `/courses/${course.slug}`;
                 }}
               >
                 {/* Image */}
