@@ -68,6 +68,9 @@ export default defineSchema({
     showGuarantee: v.optional(v.boolean()),
     acceptsPayPal: v.optional(v.boolean()),
     acceptsStripe: v.optional(v.boolean()),
+    // Stripe integration fields
+    stripeProductId: v.optional(v.string()),
+    stripePriceId: v.optional(v.string()),
   })
   .index("by_instructorId", ["instructorId"])
   .index("by_slug", ["slug"])

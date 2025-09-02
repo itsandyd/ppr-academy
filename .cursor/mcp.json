@@ -13,6 +13,13 @@
         "env": {
           "CONVEX_URL": "https://fastidious-snake-859.convex.cloud"
         }
+      },
+          "playwright": {
+            "command": "npx",
+            "args": ["@playwright/mcp@latest"],
+            "env": {
+              "HEADLESS": "1"
+            }
       }
     }
   }

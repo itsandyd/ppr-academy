@@ -1,6 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements } from "@stripe/react-stripe-js";
+import { StripePaymentForm } from "./StripePaymentForm";
+
+// Initialize Stripe
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,6 +63,8 @@ export function CourseCheckout({ course, store, creator }: CourseCheckoutProps) 
     name: "",
     email: "",
   });
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
   // Calculate course stats
@@ -74,32 +82,56 @@ export function CourseCheckout({ course, store, creator }: CourseCheckoutProps) 
 
   const handleEnrollment = async () => {
     if (!customerData.name.trim() || !customerData.email.trim()) {
-      alert("Please fill in all required fields");
+      setPaymentError("Please fill in all required fields");
       return;
     }
 
+    // Clear any previous errors
+    setPaymentError(null);
     setIsProcessing(true);
-    try {
-      // TODO: Implement Stripe payment processing
-      console.log("Course enrollment:", {
-        courseId: course._id,
-        courseSlug: course.slug,
-        storeId: course.storeId,
-        customerData,
-        amount: course.price || 0,
-      });
 
+    try {
       if (course.price && course.price > 0) {
-        alert(`Payment processing coming soon!\n\nCourse: ${course.title}\nPrice: $${course.price}\nCustomer: ${customerData.name}`);
+        // Paid course - redirect to Stripe Checkout
+        const response = await fetch("/api/courses/create-checkout-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            courseId: course._id,
+            courseSlug: course.slug || course._id,
+            customerEmail: customerData.email,
+            customerName: customerData.name,
+            coursePrice: course.price,
+            courseTitle: course.title,
+            stripePriceId: (course as any).stripePriceId, // Use stored Stripe price ID
+            // TODO: Add creator's Stripe Connect account ID
+            // creatorStripeAccountId: creator?.stripeConnectAccountId,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.checkoutUrl) {
+          // Redirect to Stripe's hosted checkout page
+          window.location.href = data.checkoutUrl;
+        } else {
+          setPaymentError(data.error || "Failed to create checkout session");
+        }
       } else {
         // Free course - direct enrollment
-        alert(`Free course enrollment!\n\nCourse: ${course.title}\nStudent: ${customerData.name}\nAccess granted immediately!`);
+        console.log("Free course enrollment:", {
+          courseId: course._id,
+          customerData,
+        });
+        
+        // TODO: Create free enrollment in Convex
+        setPaymentSuccess(true);
+        alert(`Free course enrollment successful!\n\nCourse: ${course.title}\nStudent: ${customerData.name}\nAccess granted immediately!`);
       }
       
-      // TODO: Redirect to course access page after payment
     } catch (error) {
       console.error("Enrollment error:", error);
-      alert("Failed to enroll. Please try again.");
+      setPaymentError("Failed to process enrollment. Please try again.");
     } finally {
       setIsProcessing(false);
     }
@@ -176,15 +208,15 @@ export function CourseCheckout({ course, store, creator }: CourseCheckoutProps) 
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <CreditCard className="w-5 h-5 text-emerald-600" />
-                    Payment Information
+                    Secure Checkout
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-6 text-center">
                     <CreditCard className="w-12 h-12 text-emerald-600 mx-auto mb-3" />
-                    <h3 className="font-semibold text-emerald-800 mb-2">Secure Payment</h3>
+                    <h3 className="font-semibold text-emerald-800 mb-2">Stripe Checkout</h3>
                     <p className="text-emerald-700 text-sm mb-4">
-                      Stripe payment integration will be implemented here
+                      You'll be redirected to Stripe's secure checkout page to complete your purchase
                     </p>
                     <div className="flex items-center justify-center gap-4 text-xs text-emerald-600">
                       <div className="flex items-center gap-1">
@@ -193,7 +225,7 @@ export function CourseCheckout({ course, store, creator }: CourseCheckoutProps) 
                       </div>
                       <div className="flex items-center gap-1">
                         <CheckCircle className="w-3 h-3" />
-                        <span>Secure Checkout</span>
+                        <span>Stripe Powered</span>
                       </div>
                     </div>
                   </div>
@@ -207,6 +239,15 @@ export function CourseCheckout({ course, store, creator }: CourseCheckoutProps) 
                   <p className="text-emerald-700 text-sm">
                     This course is completely free. Just enter your details above to get instant access.
                   </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Error Display */}
+            {paymentError && (
+              <Card className="border-red-200 bg-red-50">
+                <CardContent className="p-4">
+                  <p className="text-red-700 text-sm">{paymentError}</p>
                 </CardContent>
               </Card>
             )}

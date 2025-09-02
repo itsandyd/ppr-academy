@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, action, internalMutation, internalQuery } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { Doc, Id } from "./_generated/dataModel";
 import { QueryCtx, MutationCtx } from "./_generated/server";
 
@@ -105,6 +106,8 @@ export const getCourseBySlug = query({
       showGuarantee: course.showGuarantee,
       acceptsPayPal: course.acceptsPayPal,
       acceptsStripe: course.acceptsStripe,
+      stripeProductId: course.stripeProductId,
+      stripePriceId: course.stripePriceId,
     };
   },
 });
@@ -337,6 +340,8 @@ export const updateCourse = mutation({
     showGuarantee: v.optional(v.boolean()),
     acceptsPayPal: v.optional(v.boolean()),
     acceptsStripe: v.optional(v.boolean()),
+    stripeProductId: v.optional(v.string()),
+    stripePriceId: v.optional(v.string()),
   },
   returns: v.union(
     v.object({
@@ -665,6 +670,98 @@ export const getCourseForEdit = query({
       acceptsStripe: course.acceptsStripe,
       modules: courseModules.length > 0 ? courseModules : undefined,
     };
+  },
+});
+
+// Sync course to Stripe (create product and price)
+export const syncCourseToStripe = action({
+  args: {
+    courseId: v.id("courses"),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    stripeProductId: v.optional(v.string()),
+    stripePriceId: v.optional(v.string()),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    try {
+      // Get course data
+      const course = await ctx.runQuery(internal.courses.getCourseById, {
+        courseId: args.courseId,
+      });
+
+      if (!course) {
+        return { success: false, message: "Course not found" };
+      }
+
+      if (!course.price || course.price <= 0) {
+        return { success: false, message: "Cannot sync free course to Stripe" };
+      }
+
+      // Call API to create Stripe product
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+      const response: Response = await fetch(`${baseUrl}/api/courses/sync-to-stripe`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          courseId: course._id,
+          courseTitle: course.title,
+          courseDescription: course.description,
+          coursePrice: course.price,
+          courseImageUrl: course.imageUrl,
+        }),
+      });
+
+      const data: any = await response.json();
+
+      if (data.success) {
+        // Update course with Stripe IDs
+        await ctx.runMutation(internal.courses.updateCourseStripeIds, {
+          courseId: args.courseId,
+          stripeProductId: data.stripeProductId,
+          stripePriceId: data.stripePriceId,
+        });
+
+        return {
+          success: true,
+          stripeProductId: data.stripeProductId,
+          stripePriceId: data.stripePriceId,
+          message: "Course synced to Stripe successfully",
+        };
+      } else {
+        return { success: false, message: data.error || "Failed to sync to Stripe" };
+      }
+    } catch (error) {
+      console.error("Stripe sync error:", error);
+      return { success: false, message: "Failed to sync course to Stripe" };
+    }
+  },
+});
+
+// Internal mutation to update Stripe IDs
+export const updateCourseStripeIds = internalMutation({
+  args: {
+    courseId: v.id("courses"),
+    stripeProductId: v.string(),
+    stripePriceId: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.courseId, {
+      stripeProductId: args.stripeProductId,
+      stripePriceId: args.stripePriceId,
+    });
+    return null;
+  },
+});
+
+// Internal query to get course by ID
+export const getCourseById = internalQuery({
+  args: { courseId: v.id("courses") },
+  returns: v.union(v.any(), v.null()),
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.courseId);
   },
 });
 

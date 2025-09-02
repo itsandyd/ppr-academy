@@ -9,8 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRouter, useParams } from "next/navigation";
-import CreateCourseForm from "@/components/create-course-form";
 import { useCourseCreation } from "../context";
+import { CourseContentManager } from "../components/CourseContentManager";
 
 const categories = [
   "Hip-Hop Production",
@@ -379,19 +379,10 @@ export function CourseContentForm() {
       <CourseThumbnailCard />
       
       {/* Course Content Structure */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Course Content</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <CreateCourseForm 
-            initialData={state.data}
-            onDataChange={handleModulesDataChange}
-            disableSubmit={true}
-            hideBasicInfo={true}
-          />
-        </CardContent>
-      </Card>
+      <CourseContentManager
+        modules={state.data?.modules || []}
+        onModulesChange={(modules) => handleModulesDataChange({ ...state.data, modules })}
+      />
 
       {/* Navigation */}
       <div className="flex justify-between pt-6 border-t border-border">
