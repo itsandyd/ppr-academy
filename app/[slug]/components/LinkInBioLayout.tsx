@@ -44,9 +44,9 @@ interface LinkInBioLayoutProps {
 export function LinkInBioLayout({ products, leadMagnetData, storeData }: LinkInBioLayoutProps) {
   const publishedProducts = products?.filter(p => p.isPublished) || [];
   
-  // Separate lead magnets from other products
-  const leadMagnets = publishedProducts.filter(p => p.price === 0 && (p.style === "card" || p.style === "callout"));
-  const otherProducts = publishedProducts.filter(p => !(p.price === 0 && (p.style === "card" || p.style === "callout")));
+  // Separate lead magnets from other products (exclude URL/Media from lead magnets)
+  const leadMagnets = publishedProducts.filter(p => p.price === 0 && (p.style === "card" || p.style === "callout") && !p.url);
+  const otherProducts = publishedProducts.filter(p => !(p.price === 0 && (p.style === "card" || p.style === "callout") && !p.url));
 
   if (publishedProducts.length === 0) {
     return (
@@ -157,8 +157,9 @@ export function LinkInBioLayout({ products, leadMagnetData, storeData }: LinkInB
       {/* Other Products */}
       {otherProducts.map((product) => {
         const [isOpen, setIsOpen] = React.useState(false);
-        const isLeadMagnet = product.price === 0;
+        const isLeadMagnet = product.price === 0 && (product.style === "card" || product.style === "callout") && !product.url;
         const isCourse = product.slug !== undefined && product.style === undefined;
+        const isUrlMedia = product.url !== undefined;
         
         // Prevent body scroll when modal is open
         React.useEffect(() => {
@@ -183,12 +184,15 @@ export function LinkInBioLayout({ products, leadMagnetData, storeData }: LinkInB
                   : "border-gray-200"
               }`}
               onClick={() => {
-                console.log('Product clicked:', product.title, 'Type:', isCourse ? 'Course' : 'Digital Product', 'Price:', product.price);
+                console.log('Product clicked:', product.title, 'Type:', isCourse ? 'Course' : isUrlMedia ? 'URL/Media' : 'Digital Product', 'Price:', product.price);
                 if (isLeadMagnet) {
                   setIsOpen(true);
                 } else if (isCourse) {
                   // Navigate to public course landing page
                   window.location.href = `/courses/${product.slug}`;
+                } else if (isUrlMedia) {
+                  // Open URL in new tab
+                  window.open(product.url, '_blank', 'noopener,noreferrer');
                 } else {
                   // Handle digital product purchase
                   alert(`Purchase ${product.title} for $${product.price}\n\nCheckout functionality coming soon!`);

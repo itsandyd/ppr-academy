@@ -94,10 +94,10 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
 
   // Combine all product types into unified list
   const allProducts = [
-    // Digital Products (keep as-is)
+    // Digital Products (preserve existing productType or default to "digitalProduct")
     ...(products || []).map(product => ({
       ...product,
-      productType: "digitalProduct",
+      productType: product.productType || "digitalProduct",
     })),
     
     // Courses (add course-specific properties)

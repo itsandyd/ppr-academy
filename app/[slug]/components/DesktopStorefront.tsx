@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
-import { ArrowRight, Store, Gift, ExternalLink, GraduationCap } from "lucide-react";
+import { ArrowRight, Store, Gift, ExternalLink, GraduationCap, Youtube, Music, Globe, Link } from "lucide-react";
 import { LeadMagnetPreview } from "./LeadMagnetPreview";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import * as React from "react";
@@ -114,8 +114,8 @@ export function DesktopStorefront({ store, user, products, displayName, initials
         <div className="space-y-8">
           <h2 className="text-2xl font-bold text-center text-foreground mb-8">Available Products & Resources</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {/* Lead Magnet Cards (Free Digital Products Only) */}
-            {products?.filter(p => p.productType === "digitalProduct" && p.price === 0 && (p.style === "card" || p.style === "callout") && p.isPublished).map((leadMagnet) => (
+            {/* Lead Magnet Cards (Free Digital Products Only - NOT URL/Media) */}
+            {products?.filter(p => p.productType === "digitalProduct" && p.price === 0 && (p.style === "card" || p.style === "callout") && p.isPublished && !p.url).map((leadMagnet) => (
               <Dialog key={leadMagnet._id}>
                 <DialogTrigger asChild>
                   <Card className="group p-6 border border-primary/20 bg-primary/5 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer">
@@ -277,6 +277,65 @@ export function DesktopStorefront({ store, user, products, displayName, initials
                 </div>
               </Card>
             ))}
+            
+            {/* URL/Media Products */}
+            {products?.filter(p => p.productType === "urlMedia" && p.isPublished).map((urlMedia) => {
+              const getMediaIcon = (mediaType?: string) => {
+                switch (mediaType) {
+                  case "youtube": return <Youtube className="w-16 h-16 text-red-600" />;
+                  case "spotify": return <Music className="w-16 h-16 text-green-600" />;
+                  default: return <Link className="w-16 h-16 text-blue-600" />;
+                }
+              };
+
+              const getMediaBadge = (mediaType?: string) => {
+                switch (mediaType) {
+                  case "youtube": return <Badge className="bg-red-100 text-red-800">YouTube</Badge>;
+                  case "spotify": return <Badge className="bg-green-100 text-green-800">Spotify</Badge>;
+                  default: return <Badge className="bg-blue-100 text-blue-800">Link</Badge>;
+                }
+              };
+
+              return (
+                <Card 
+                  key={urlMedia._id} 
+                  className="group p-6 border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer"
+                  onClick={() => {
+                    // Open URL in new tab
+                    window.open(urlMedia.url, '_blank', 'noopener,noreferrer');
+                  }}
+                >
+                  {/* Media Display */}
+                  <div className="w-full h-48 bg-blue-100 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
+                    <div className="text-center">
+                      {getMediaIcon(urlMedia.mediaType)}
+                      <span className="text-sm text-blue-600 font-medium mt-2 block">
+                        {urlMedia.mediaType === "youtube" ? "Video Content" : 
+                         urlMedia.mediaType === "spotify" ? "Music Content" : "External Link"}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* Content */}
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      {getMediaBadge(urlMedia.mediaType)}
+                      <Badge variant="secondary" className="text-xs">FREE</Badge>
+                    </div>
+                    <h3 className="font-bold text-lg text-blue-800 line-clamp-2">
+                      {urlMedia.title}
+                    </h3>
+                    <p className="text-blue-700 text-sm line-clamp-3 leading-relaxed">
+                      {urlMedia.description || "Click to visit this link"}
+                    </p>
+                    <div className="flex items-center justify-between pt-2">
+                      <span className="text-xs text-blue-600 font-medium">Click to open</span>
+                      <ExternalLink className="w-5 h-5 text-blue-600 group-hover:scale-110 transition-transform duration-200" />
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
             
             {/* Paid Digital Products */}
             {products?.filter(p => p.productType === "digitalProduct" && p.price > 0 && p.isPublished).map((product) => (
