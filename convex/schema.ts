@@ -256,6 +256,11 @@ export default defineSchema({
     isPublished: v.optional(v.boolean()),
     buttonLabel: v.optional(v.string()),
     style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))),
+    // URL/Media specific fields
+    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"))),
+    url: v.optional(v.string()),
+    displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
+    mediaType: v.optional(v.union(v.literal("youtube"), v.literal("spotify"), v.literal("website"), v.literal("social"))),
     orderBumpEnabled: v.optional(v.boolean()),
     orderBumpProductName: v.optional(v.string()),
     orderBumpDescription: v.optional(v.string()),

@@ -18,6 +18,11 @@ export const getProductsByStore = query({
     isPublished: v.optional(v.boolean()),
     buttonLabel: v.optional(v.string()),
     style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))),
+    // URL/Media specific fields
+    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"))),
+    url: v.optional(v.string()),
+    displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
+    mediaType: v.optional(v.union(v.literal("youtube"), v.literal("spotify"), v.literal("website"), v.literal("social"))),
     orderBumpEnabled: v.optional(v.boolean()),
     orderBumpProductName: v.optional(v.string()),
     orderBumpDescription: v.optional(v.string()),
@@ -54,6 +59,11 @@ export const getProductsByUser = query({
     isPublished: v.optional(v.boolean()),
     buttonLabel: v.optional(v.string()),
     style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))),
+    // URL/Media specific fields
+    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"))),
+    url: v.optional(v.string()),
+    displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
+    mediaType: v.optional(v.union(v.literal("youtube"), v.literal("spotify"), v.literal("website"), v.literal("social"))),
     orderBumpEnabled: v.optional(v.boolean()),
     orderBumpProductName: v.optional(v.string()),
     orderBumpDescription: v.optional(v.string()),
@@ -91,6 +101,11 @@ export const getProductById = query({
       isPublished: v.optional(v.boolean()),
       buttonLabel: v.optional(v.string()),
       style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))),
+    // URL/Media specific fields
+    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"))),
+    url: v.optional(v.string()),
+    displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
+    mediaType: v.optional(v.union(v.literal("youtube"), v.literal("spotify"), v.literal("website"), v.literal("social"))),
       orderBumpEnabled: v.optional(v.boolean()),
       orderBumpProductName: v.optional(v.string()),
       orderBumpDescription: v.optional(v.string()),
@@ -122,6 +137,11 @@ export const createProduct = mutation({
     userId: v.string(),
     buttonLabel: v.optional(v.string()),
     style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))),
+    // URL/Media specific fields
+    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"))),
+    url: v.optional(v.string()),
+    displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
+    mediaType: v.optional(v.union(v.literal("youtube"), v.literal("spotify"), v.literal("website"), v.literal("social"))),
   },
   returns: v.id("digitalProducts"),
   handler: async (ctx, args) => {
@@ -146,6 +166,11 @@ export const updateProduct = mutation({
     isPublished: v.optional(v.boolean()),
     buttonLabel: v.optional(v.string()),
     style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))),
+    // URL/Media specific fields
+    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"))),
+    url: v.optional(v.string()),
+    displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
+    mediaType: v.optional(v.union(v.literal("youtube"), v.literal("spotify"), v.literal("website"), v.literal("social"))),
     orderBumpEnabled: v.optional(v.boolean()),
     orderBumpProductName: v.optional(v.string()),
     orderBumpDescription: v.optional(v.string()),
@@ -172,6 +197,11 @@ export const updateProduct = mutation({
       isPublished: v.optional(v.boolean()),
       buttonLabel: v.optional(v.string()),
       style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))),
+    // URL/Media specific fields
+    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"))),
+    url: v.optional(v.string()),
+    displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
+    mediaType: v.optional(v.union(v.literal("youtube"), v.literal("spotify"), v.literal("website"), v.literal("social"))),
       orderBumpEnabled: v.optional(v.boolean()),
       orderBumpProductName: v.optional(v.string()),
       orderBumpDescription: v.optional(v.string()),
@@ -231,5 +261,30 @@ export const deleteProduct = mutation({
   handler: async (ctx, args) => {
     await ctx.db.delete(args.id);
     return null;
+  },
+});
+
+// Create URL/Media product
+export const createUrlMediaProduct = mutation({
+  args: {
+    title: v.string(),
+    description: v.optional(v.string()),
+    url: v.string(),
+    displayStyle: v.union(v.literal("embed"), v.literal("card"), v.literal("button")),
+    mediaType: v.union(v.literal("youtube"), v.literal("spotify"), v.literal("website"), v.literal("social")),
+    storeId: v.string(),
+    userId: v.string(),
+    buttonLabel: v.optional(v.string()),
+  },
+  returns: v.id("digitalProducts"),
+  handler: async (ctx, args) => {
+    return await ctx.db.insert("digitalProducts", {
+      ...args,
+      productType: "urlMedia",
+      price: 0, // URL/Media products are typically free
+      isPublished: false,
+      orderBumpEnabled: false,
+      affiliateEnabled: false,
+    });
   },
 }); 

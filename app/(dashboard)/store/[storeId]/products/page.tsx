@@ -54,7 +54,7 @@ export default function ChooseProductTypePage() {
       'membership': '#', // Recurring Membership
       'webinar': '#', // Webinar
       'community': '#', // Community
-      'url': '#', // URL / Media
+      'url': `/store/${storeId}/products/url-media/create`, // URL / Media
       'affiliate': '#', // Stan Affiliate Link
     };
 
