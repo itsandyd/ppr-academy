@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Book,
   PlayCircle,
@@ -201,7 +202,7 @@ export default function CoursePlayerPage() {
         <div className={`fixed lg:static inset-y-0 left-0 z-50 w-80 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden transition-transform duration-300 lg:translate-x-0 shadow-xl lg:shadow-none ${
           mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}>
-          <div className="p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
             {/* Mobile Close Button */}
             <div className="lg:hidden flex justify-between items-center mb-4">
               <h2 className="font-semibold text-gray-900 dark:text-gray-100">Course Content</h2>
@@ -215,19 +216,22 @@ export default function CoursePlayerPage() {
               </Button>
             </div>
             
-            <div className="space-y-3">
-              <div>
-                <h2 className="font-bold text-lg text-gray-900 dark:text-gray-100 line-clamp-2 hidden lg:block">
+            <div className="space-y-4">
+              {/* Course Title & Progress */}
+              <div className="space-y-3">
+                <h2 className="font-bold text-base text-gray-900 dark:text-gray-100 line-clamp-2 hidden lg:block leading-tight">
                   {courseData?.title}
                 </h2>
-                <div className="flex items-center space-x-2 mt-2">
-                  <Progress value={overallProgress} className="flex-1 h-2" />
-                  <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
-                    {overallProgress}%
-                  </span>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
+                    <span>Progress</span>
+                    <span className="font-medium">{overallProgress}%</span>
+                  </div>
+                  <Progress value={overallProgress} className="h-2" />
                 </div>
               </div>
-              
+
+              {/* Course Home Button */}
               <Button asChild variant="ghost" size="sm" className="w-full justify-start">
                 <Link href="/library/courses">
                   <Home className="w-4 h-4 mr-2" />
@@ -237,66 +241,71 @@ export default function CoursePlayerPage() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-6 bg-white dark:bg-gray-900">
-            {/* Course Modules */}
-            {courseData.modules?.map((module, moduleIndex) => (
-              <div key={module._id} className="mb-6">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                    Module {moduleIndex + 1}: {module.title}
-                  </h3>
-                  <Badge variant="secondary" className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                    {module.lessons?.reduce((acc, lesson) => acc + (lesson.chapters?.length || 0), 0) || 0}/{module.lessons?.reduce((acc, lesson) => acc + (lesson.chapters?.length || 0), 0) || 0}
-                  </Badge>
-                </div>
-
-                {/* Lessons */}
-                {module.lessons?.map((lesson, lessonIndex) => (
-                  <div key={lesson._id} className="ml-4 mb-4">
-                    <h4 className="font-medium text-sm text-gray-600 dark:text-gray-400 mb-2">
-                      Lesson {lessonIndex + 1}: {lesson.title}
-                    </h4>
-                    
-                    {/* Chapters */}
-                    <div className="space-y-1">
-                      {lesson.chapters?.map((chapter, chapterIndex) => (
-                        <button
-                          key={chapter._id}
-                          onClick={() => setSelectedChapter(chapter._id)}
-                          className={`w-full text-left p-3 rounded-lg border transition-colors ${
-                            selectedChapter === chapter._id
-                              ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300"
-                              : "bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100"
-                          }`}
-                        >
-                          <div className="flex items-center space-x-3">
-                            <div className="flex-shrink-0">
-                              {chapter.isCompleted ? (
-                                <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
-                              ) : (
-                                <PlayCircle className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm font-medium truncate">
-                                {chapterIndex + 1}. {chapter.title}
-                              </div>
-                              {chapter.timeSpent && (
-                                <div className="text-xs text-gray-500 dark:text-gray-400">
-                                  <Clock className="w-3 h-3 inline mr-1" />
-                                  {Math.round(chapter.timeSpent / 60)}m watched
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
+          <ScrollArea className="flex-1 bg-white dark:bg-gray-900 h-full">
+            <div className="p-4 space-y-6">
+              {/* Course Modules */}
+              {courseData.modules?.map((module, moduleIndex) => (
+                <div key={module._id} className="space-y-3">
+                  {/* Module Header */}
+                  <div className="flex items-center justify-between py-2 px-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
+                    <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100">
+                      Module {moduleIndex + 1}: {module.title}
+                    </h3>
+                    <Badge variant="secondary" className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                      {module.lessons?.reduce((acc, lesson) => acc + (lesson.chapters?.length || 0), 0) || 0}
+                    </Badge>
                   </div>
-                ))}
-              </div>
+
+                  {/* Lessons */}
+                  <div className="space-y-3">
+                    {module.lessons?.map((lesson, lessonIndex) => (
+                      <div key={lesson._id} className="pl-3">
+                        <h4 className="font-medium text-xs text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">
+                          Lesson {lessonIndex + 1}: {lesson.title}
+                        </h4>
+                        
+                        {/* Chapters */}
+                        <div className="space-y-2 pl-2">
+                          {lesson.chapters?.map((chapter, chapterIndex) => (
+                            <button
+                              key={chapter._id}
+                              onClick={() => setSelectedChapter(chapter._id)}
+                              className={`w-full text-left p-3 rounded-lg border transition-all duration-200 ${
+                                selectedChapter === chapter._id
+                                  ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 shadow-sm"
+                                  : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-gray-100 hover:border-gray-300 dark:hover:border-gray-600"
+                              }`}
+                            >
+                              <div className="flex items-start space-x-3">
+                                <div className="flex-shrink-0 mt-0.5">
+                                  {chapter.isCompleted ? (
+                                    <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
+                                  ) : (
+                                    <PlayCircle className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-sm font-medium leading-snug">
+                                    {chapterIndex + 1}. {chapter.title}
+                                  </div>
+                                  {chapter.timeSpent && (
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center">
+                                      <Clock className="w-3 h-3 mr-1" />
+                                      {Math.round(chapter.timeSpent / 60)}m watched
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
             ))}
-          </div>
+            </div>
+          </ScrollArea>
         </div>
 
         {/* Lesson Canvas */}

@@ -19,14 +19,12 @@ import {
   Package, 
   TrendingUp, 
   Clock,
-  Home,
-  User
+  Home
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useUser } from "@clerk/nextjs";
+import { useUser, UserButton } from "@clerk/nextjs";
 
 export function LibrarySidebar() {
   const pathname = usePathname();
@@ -111,12 +109,13 @@ export function LibrarySidebar() {
       <SidebarFooter className="p-4">
         {user && (
           <div className="flex items-center gap-3 p-2 rounded-lg bg-accent">
-            <Avatar className="w-8 h-8">
-              <AvatarImage src={user.imageUrl} alt={user.fullName || "User"} />
-              <AvatarFallback>
-                <User className="w-4 h-4" />
-              </AvatarFallback>
-            </Avatar>
+            <UserButton 
+              appearance={{
+                elements: {
+                  avatarBox: "w-8 h-8"
+                }
+              }}
+            />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground truncate">
                 {user.fullName || user.emailAddresses[0]?.emailAddress}
