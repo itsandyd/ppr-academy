@@ -77,6 +77,7 @@ const CREATE_SECTION: DropdownSection = {
 };
 
 const AUTHENTICATED_LINKS: NavLink[] = [
+  { href: "/library", label: "My Library", icon: BookOpen },
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
 ];
 

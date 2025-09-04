@@ -345,15 +345,42 @@ export default defineSchema({
   .index("by_scheduledDate", ["scheduledDate"])
   .index("by_status", ["status"]),
 
-  // User Progress Tracking
+  // User Progress Tracking - Enhanced for library
   userProgress: defineTable({
     userId: v.string(),
+    courseId: v.optional(v.id("courses")),
+    moduleId: v.optional(v.string()),
+    lessonId: v.optional(v.string()),
     chapterId: v.string(),
     isCompleted: v.optional(v.boolean()),
+    completedAt: v.optional(v.number()),
+    timeSpent: v.optional(v.number()), // in seconds
+    lastAccessedAt: v.optional(v.number()),
+    progressPercentage: v.optional(v.number()), // 0-100
   })
   .index("by_userId", ["userId"])
+  .index("by_courseId", ["courseId"])
+  .index("by_moduleId", ["moduleId"])
+  .index("by_lessonId", ["lessonId"])
   .index("by_chapterId", ["chapterId"])
-  .index("by_user_chapter", ["userId", "chapterId"]),
+  .index("by_user_chapter", ["userId", "chapterId"])
+  .index("by_user_course", ["userId", "courseId"]),
+
+  // Library Sessions - Track user activity in library
+  librarySessions: defineTable({
+    userId: v.string(),
+    sessionType: v.union(v.literal("course"), v.literal("download"), v.literal("coaching"), v.literal("browse")),
+    resourceId: v.optional(v.string()), // courseId, productId, etc.
+    startedAt: v.number(),
+    endedAt: v.optional(v.number()),
+    duration: v.optional(v.number()), // in seconds
+    deviceType: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+  })
+  .index("by_userId", ["userId"])
+  .index("by_sessionType", ["sessionType"])
+  .index("by_resourceId", ["resourceId"])
+  .index("by_startedAt", ["startedAt"]),
 
   // Lead Magnet Submissions
   leadSubmissions: defineTable({
@@ -394,10 +421,12 @@ export default defineSchema({
   .index("by_type", ["type"])
   .index("by_email_and_store", ["email", "storeId"]),
 
-  // Purchase History
+  // Purchase History - Enhanced for library system
   purchases: defineTable({
-    customerId: v.id("customers"),
-    productId: v.id("digitalProducts"),
+    userId: v.string(), // Direct user ID from Clerk for library access
+    customerId: v.optional(v.id("customers")), // Keep for backward compatibility
+    productId: v.optional(v.id("digitalProducts")), // Optional for course purchases
+    courseId: v.optional(v.id("courses")), // For course purchases
     storeId: v.string(),
     adminUserId: v.string(),
     amount: v.number(),
@@ -405,12 +434,23 @@ export default defineSchema({
     status: v.union(v.literal("pending"), v.literal("completed"), v.literal("refunded")),
     paymentMethod: v.optional(v.string()),
     transactionId: v.optional(v.string()),
+    productType: v.union(v.literal("digitalProduct"), v.literal("course"), v.literal("coaching"), v.literal("bundle")),
+    // Library access fields
+    accessGranted: v.optional(v.boolean()),
+    accessExpiresAt: v.optional(v.number()),
+    downloadCount: v.optional(v.number()),
+    lastAccessedAt: v.optional(v.number()),
   })
+  .index("by_userId", ["userId"])
   .index("by_customerId", ["customerId"])
   .index("by_productId", ["productId"])
+  .index("by_courseId", ["courseId"])
   .index("by_storeId", ["storeId"])
   .index("by_adminUserId", ["adminUserId"])
-  .index("by_status", ["status"]),
+  .index("by_status", ["status"])
+  .index("by_productType", ["productType"])
+  .index("by_user_product", ["userId", "productId"])
+  .index("by_user_course", ["userId", "courseId"]),
 
   // Subscriptions
   subscriptions: defineTable({

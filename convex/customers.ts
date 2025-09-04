@@ -134,6 +134,7 @@ export const getCustomersByType = query({
 // Create a purchase record
 export const createPurchase = mutation({
   args: {
+    userId: v.string(), // Required for library access
     customerId: v.id("customers"),
     productId: v.id("digitalProducts"),
     storeId: v.string(),
@@ -146,6 +147,7 @@ export const createPurchase = mutation({
   returns: v.id("purchases"),
   handler: async (ctx, args) => {
     const purchaseId = await ctx.db.insert("purchases", {
+      userId: args.userId,
       customerId: args.customerId,
       productId: args.productId,
       storeId: args.storeId,
@@ -155,6 +157,8 @@ export const createPurchase = mutation({
       status: "completed",
       paymentMethod: args.paymentMethod,
       transactionId: args.transactionId,
+      productType: "digitalProduct", // Default to digital product
+      accessGranted: true,
     });
 
     // Update customer's total spent and type
@@ -276,8 +280,10 @@ export const getPurchasesForCustomer = query({
   returns: v.array(v.object({
     _id: v.id("purchases"),
     _creationTime: v.number(),
-    customerId: v.id("customers"),
-    productId: v.id("digitalProducts"),
+    userId: v.string(),
+    customerId: v.optional(v.id("customers")),
+    productId: v.optional(v.id("digitalProducts")),
+    courseId: v.optional(v.id("courses")),
     storeId: v.string(),
     adminUserId: v.string(),
     amount: v.number(),
@@ -285,6 +291,11 @@ export const getPurchasesForCustomer = query({
     status: v.union(v.literal("pending"), v.literal("completed"), v.literal("refunded")),
     paymentMethod: v.optional(v.string()),
     transactionId: v.optional(v.string()),
+    productType: v.union(v.literal("digitalProduct"), v.literal("course"), v.literal("coaching"), v.literal("bundle")),
+    accessGranted: v.optional(v.boolean()),
+    accessExpiresAt: v.optional(v.number()),
+    downloadCount: v.optional(v.number()),
+    lastAccessedAt: v.optional(v.number()),
   })),
   handler: async (ctx, args) => {
     return await ctx.db

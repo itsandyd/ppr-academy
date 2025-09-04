@@ -20,6 +20,7 @@ import type * as emailCampaigns from "../emailCampaigns.js";
 import type * as emailWorkflows from "../emailWorkflows.js";
 import type * as emails from "../emails.js";
 import type * as leadSubmissions from "../leadSubmissions.js";
+import type * as library from "../library.js";
 import type * as stores from "../stores.js";
 import type * as users from "../users.js";
 
@@ -39,6 +40,7 @@ declare const fullApi: ApiFromModules<{
   emailWorkflows: typeof emailWorkflows;
   emails: typeof emails;
   leadSubmissions: typeof leadSubmissions;
+  library: typeof library;
   stores: typeof stores;
   users: typeof users;
 }>;
