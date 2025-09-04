@@ -45,7 +45,7 @@ export default function LibraryRecentPage() {
       title: course.title,
       description: course.description,
       imageUrl: course.imageUrl,
-      href: `/library/courses/${course._id}`,
+      href: `/library/courses/${course.slug}`,
       timestamp: course.lastAccessedAt || course.purchaseDate,
       storeName: course.storeName,
       progress: course.progress,

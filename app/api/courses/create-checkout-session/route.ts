@@ -15,6 +15,7 @@ export async function POST(request: NextRequest) {
       customerName, 
       coursePrice, 
       courseTitle,
+      userId, // User ID for library access
       stripePriceId, // Use stored price ID
       creatorStripeAccountId 
     } = await request.json();
@@ -50,6 +51,7 @@ export async function POST(request: NextRequest) {
         courseSlug,
         customerEmail,
         customerName,
+        userId, // Include userId in metadata for webhook
         productType: "course",
       },
     };
@@ -69,7 +71,7 @@ export async function POST(request: NextRequest) {
     console.log("✅ Checkout session created:", {
       sessionId: session.id,
       courseTitle,
-      amount: courseAmount / 100,
+      amount: coursePrice,
       platformFee: platformFeeAmount / 100,
       customer: customerName,
     });

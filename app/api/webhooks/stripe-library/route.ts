@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
         try {
           // Create course enrollment in Convex
           const enrollmentId = await convex.mutation(api.library.createCourseEnrollment, {
-            userId: metadata.customerEmail, // We'll need to get the actual user ID
+            userId: metadata.userId || metadata.customerEmail, // Use userId from metadata
             courseId: metadata.courseId as any,
             amount: (session.amount_total || 0) / 100, // Convert from cents
             currency: session.currency || "usd",

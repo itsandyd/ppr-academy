@@ -84,7 +84,7 @@ export default function LibraryOverviewPage() {
       title: course.title,
       description: `${course.progress || 0}% complete`,
       imageUrl: course.imageUrl,
-      href: `/library/courses/${course._id}`,
+      href: `/library/courses/${course.slug}`,
       timestamp: course.lastAccessedAt || course._creationTime,
     })) || []),
     ...(digitalProducts?.slice(0, 2).map(product => ({
@@ -204,7 +204,7 @@ export default function LibraryOverviewPage() {
                   </p>
                 </div>
                 <Button asChild size="sm" variant="outline">
-                  <Link href={`/library/courses/${course._id}`}>
+                  <Link href={`/library/courses/${course.slug}`}>
                     Continue
                   </Link>
                 </Button>

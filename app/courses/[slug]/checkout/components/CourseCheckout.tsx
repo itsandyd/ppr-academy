@@ -52,16 +52,28 @@ interface Creator {
   imageUrl?: string;
 }
 
+interface User {
+  id: string;
+  fullName?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  emailAddresses: Array<{
+    emailAddress: string;
+  }>;
+}
+
 interface CourseCheckoutProps {
   course: Course;
   store: Store;
   creator: Creator | null;
+  user: User | null;
 }
 
-export function CourseCheckout({ course, store, creator }: CourseCheckoutProps) {
+export function CourseCheckout({ course, store, creator, user }: CourseCheckoutProps) {
+  // Auto-populate form with user data
   const [customerData, setCustomerData] = useState({
-    name: "",
-    email: "",
+    name: user?.fullName || `${user?.firstName || ""} ${user?.lastName || ""}`.trim() || "",
+    email: user?.emailAddresses?.[0]?.emailAddress || "",
   });
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
@@ -103,6 +115,7 @@ export function CourseCheckout({ course, store, creator }: CourseCheckoutProps) 
             customerName: customerData.name,
             coursePrice: course.price,
             courseTitle: course.title,
+            userId: user?.id, // Include user ID for library access
             stripePriceId: (course as any).stripePriceId, // Use stored Stripe price ID
             // TODO: Add creator's Stripe Connect account ID
             // creatorStripeAccountId: creator?.stripeConnectAccountId,

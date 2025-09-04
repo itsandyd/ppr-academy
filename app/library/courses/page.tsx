@@ -200,7 +200,7 @@ export default function LibraryCoursesPage() {
                   </div>
 
                   <Button asChild className="w-full">
-                    <Link href={`/library/courses/${course._id}`}>
+                    <Link href={`/library/courses/${course.slug}`}>
                       <PlayCircle className="w-4 h-4 mr-2" />
                       {(course.progress || 0) > 0 ? "Continue Learning" : "Start Course"}
                     </Link>

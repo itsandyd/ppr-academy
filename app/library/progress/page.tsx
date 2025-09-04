@@ -156,7 +156,7 @@ export default function LibraryProgressPage() {
                       }
                     </span>
                     <Button asChild variant="ghost" size="sm">
-                      <Link href={`/library/courses/${course._id}`}>
+                      <Link href={`/library/courses/${course.slug}`}>
                         Continue
                       </Link>
                     </Button>
