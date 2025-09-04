@@ -76,10 +76,10 @@ export function ChapterDialog({
         )}
       </DialogTrigger>
       
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <FileText className="w-5 h-5 text-purple-600" />
+          <DialogTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+            <FileText className="w-5 h-5 text-purple-600 dark:text-purple-400" />
             Add Chapter to "{lessonTitle}"
           </DialogTitle>
         </DialogHeader>

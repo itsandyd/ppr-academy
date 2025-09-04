@@ -31,13 +31,17 @@ export default function LibraryOverviewPage() {
   const { user } = useUser();
   const searchParams = useSearchParams();
   
-  // Handle purchase success
+  // Handle purchase success and enrollment success
   useEffect(() => {
     const purchaseStatus = searchParams.get("purchase");
     const sessionId = searchParams.get("session_id");
+    const enrollmentStatus = searchParams.get("enrollment");
+    const courseName = searchParams.get("course");
     
     if (purchaseStatus === "success" && sessionId) {
       toast.success("🎉 Purchase successful! Welcome to your new content.");
+    } else if (enrollmentStatus === "success" && courseName) {
+      toast.success(`🎉 Successfully enrolled in "${decodeURIComponent(courseName)}"! Start learning now.`);
     }
   }, [searchParams]);
   

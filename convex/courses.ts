@@ -38,6 +38,9 @@ export const getCourses = query({
     showGuarantee: v.optional(v.boolean()),
     acceptsPayPal: v.optional(v.boolean()),
     acceptsStripe: v.optional(v.boolean()),
+    // Stripe integration fields
+    stripeProductId: v.optional(v.string()),
+    stripePriceId: v.optional(v.string()),
   })),
   handler: async (ctx) => {
     return await ctx.db.query("courses").collect();
@@ -140,6 +143,9 @@ export const getCoursesByUser = query({
     showGuarantee: v.optional(v.boolean()),
     acceptsPayPal: v.optional(v.boolean()),
     acceptsStripe: v.optional(v.boolean()),
+    // Stripe integration fields
+    stripeProductId: v.optional(v.string()),
+    stripePriceId: v.optional(v.string()),
   })),
   handler: async (ctx, args) => {
     return await ctx.db
@@ -212,6 +218,9 @@ export const getCoursesByInstructor = query({
     showGuarantee: v.optional(v.boolean()),
     acceptsPayPal: v.optional(v.boolean()),
     acceptsStripe: v.optional(v.boolean()),
+    // Stripe integration fields
+    stripeProductId: v.optional(v.string()),
+    stripePriceId: v.optional(v.string()),
   })),
   handler: async (ctx, args) => {
     return await ctx.db

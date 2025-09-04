@@ -64,10 +64,10 @@ export function LessonDialog({ moduleTitle, onLessonAdd, existingLessons, trigge
         )}
       </DialogTrigger>
       
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Play className="w-5 h-5 text-blue-600" />
+          <DialogTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+            <Play className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             Add Lesson to "{moduleTitle}"
           </DialogTitle>
         </DialogHeader>
@@ -75,7 +75,7 @@ export function LessonDialog({ moduleTitle, onLessonAdd, existingLessons, trigge
         <div className="space-y-6 py-4">
           {/* Lesson Title */}
           <div className="space-y-2">
-            <Label htmlFor="lesson-title">Lesson Title *</Label>
+            <Label htmlFor="lesson-title" className="text-gray-700 dark:text-gray-300">Lesson Title *</Label>
             <Input
               id="lesson-title"
               placeholder="e.g., EQ3 Overview and Controls"
@@ -83,14 +83,14 @@ export function LessonDialog({ moduleTitle, onLessonAdd, existingLessons, trigge
               onChange={(e) => setLessonData(prev => ({ ...prev, title: e.target.value }))}
               className="h-12"
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               This will be Lesson {existingLessons.length + 1} in {moduleTitle}
             </p>
           </div>
 
           {/* Lesson Description */}
           <div className="space-y-2">
-            <Label htmlFor="lesson-description">Lesson Description</Label>
+            <Label htmlFor="lesson-description" className="text-gray-700 dark:text-gray-300">Lesson Description</Label>
             <Textarea
               id="lesson-description"
               placeholder="Describe what students will learn in this lesson..."
@@ -99,24 +99,24 @@ export function LessonDialog({ moduleTitle, onLessonAdd, existingLessons, trigge
               rows={4}
               className="resize-none"
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               Optional: Provide a brief overview of the lesson content
             </p>
           </div>
 
           {/* Lesson Preview */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h4 className="font-medium text-blue-800 mb-2">Preview:</h4>
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+            <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-2">Preview:</h4>
             <div className="text-sm">
-              <div className="font-medium text-blue-700">
+              <div className="font-medium text-blue-700 dark:text-blue-300">
                 Lesson {existingLessons.length + 1}: {lessonData.title || "Lesson Title"}
               </div>
               {lessonData.description && (
-                <div className="text-blue-600 mt-1">
+                <div className="text-blue-600 dark:text-blue-400 mt-1">
                   {lessonData.description}
                 </div>
               )}
-              <div className="text-xs text-blue-500 mt-2">
+              <div className="text-xs text-blue-500 dark:text-blue-400 mt-2">
                 In Module: {moduleTitle}
               </div>
             </div>
@@ -124,7 +124,7 @@ export function LessonDialog({ moduleTitle, onLessonAdd, existingLessons, trigge
         </div>
 
         {/* Dialog Actions */}
-        <div className="flex items-center gap-3 justify-end pt-6 border-t border-border">
+        <div className="flex items-center gap-3 justify-end pt-6 border-t border-gray-200 dark:border-gray-700">
           <Button variant="outline" onClick={handleCancel}>
             <X className="w-4 h-4 mr-2" />
             Cancel

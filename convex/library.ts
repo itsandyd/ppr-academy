@@ -2,6 +2,26 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
 
+// Check if user already has access to a specific course
+export const hasUserPurchasedCourse = query({
+  args: { 
+    userId: v.string(),
+    courseId: v.id("courses"),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const existingPurchase = await ctx.db
+      .query("purchases")
+      .withIndex("by_user_course", (q) => 
+        q.eq("userId", args.userId).eq("courseId", args.courseId)
+      )
+      .filter((q) => q.eq(q.field("status"), "completed"))
+      .first();
+
+    return !!existingPurchase;
+  },
+});
+
 // Get all purchases for a user (for library overview)
 export const getUserPurchases = query({
   args: { userId: v.string() },
@@ -127,19 +147,29 @@ export const getUserCourses = query({
       )
       .collect();
 
-    // Get course details and progress
+    // Deduplicate courses by courseId (in case user has multiple purchases for same course)
+    const uniqueCourseIds = Array.from(new Set(
+      coursePurchases
+        .filter(p => p.courseId)
+        .map(p => p.courseId!)
+    ));
+
+    // Get course details and progress for unique courses only
     const userCourses = await Promise.all(
-      coursePurchases.map(async (purchase) => {
-        if (!purchase.courseId) return null;
-        
-        const course = await ctx.db.get(purchase.courseId);
+      uniqueCourseIds.map(async (courseId) => {
+        const course = await ctx.db.get(courseId);
         if (!course) return null;
+
+        // Get the most recent purchase for this course
+        const purchase = coursePurchases
+          .filter(p => p.courseId === courseId)
+          .sort((a, b) => b._creationTime - a._creationTime)[0];
 
         // Get user progress for this course
         const userProgress = await ctx.db
           .query("userProgress")
           .withIndex("by_user_course", (q) => 
-            q.eq("userId", args.userId).eq("courseId", purchase.courseId!)
+            q.eq("userId", args.userId).eq("courseId", courseId)
           )
           .collect();
 
@@ -619,6 +649,19 @@ export const createCourseEnrollment = mutation({
     const course = await ctx.db.get(args.courseId);
     if (!course) {
       throw new Error("Course not found");
+    }
+
+    // Check if user already has this course
+    const existingPurchase = await ctx.db
+      .query("purchases")
+      .withIndex("by_user_course", (q) => 
+        q.eq("userId", args.userId).eq("courseId", args.courseId)
+      )
+      .filter((q) => q.eq(q.field("status"), "completed"))
+      .first();
+
+    if (existingPurchase) {
+      throw new Error("You already have access to this course");
     }
 
     // Create purchase record

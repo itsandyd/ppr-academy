@@ -4,6 +4,9 @@ import { useState } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
 import { StripePaymentForm } from "./StripePaymentForm";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { useRouter } from "next/navigation";
 
 // Initialize Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
@@ -70,6 +73,15 @@ interface CourseCheckoutProps {
 }
 
 export function CourseCheckout({ course, store, creator, user }: CourseCheckoutProps) {
+  const router = useRouter();
+  const createCourseEnrollment = useMutation(api.library.createCourseEnrollment);
+  
+  // Check if user already has access to this course
+  const hasAccess = useQuery(
+    api.library.hasUserPurchasedCourse,
+    user?.id ? { userId: user.id, courseId: course._id as any } : "skip"
+  );
+  
   // Auto-populate form with user data
   const [customerData, setCustomerData] = useState({
     name: user?.fullName || `${user?.firstName || ""} ${user?.lastName || ""}`.trim() || "",
@@ -135,11 +147,29 @@ export function CourseCheckout({ course, store, creator, user }: CourseCheckoutP
         console.log("Free course enrollment:", {
           courseId: course._id,
           customerData,
+          userId: user?.id,
         });
         
-        // TODO: Create free enrollment in Convex
+        if (!user?.id) {
+          setPaymentError("User authentication required for enrollment");
+          return;
+        }
+        
+        // Create free enrollment in Convex
+        const purchaseId = await createCourseEnrollment({
+          userId: user.id,
+          courseId: course._id as any,
+          amount: 0,
+          currency: "USD",
+          paymentMethod: "free",
+          transactionId: `free_${Date.now()}_${user.id}`,
+        });
+        
+        console.log("Free enrollment created:", purchaseId);
         setPaymentSuccess(true);
-        alert(`Free course enrollment successful!\n\nCourse: ${course.title}\nStudent: ${customerData.name}\nAccess granted immediately!`);
+        
+        // Redirect to library with success message
+        router.push(`/library?enrollment=success&course=${encodeURIComponent(course.title)}`);
       }
       
     } catch (error) {
@@ -149,6 +179,39 @@ export function CourseCheckout({ course, store, creator, user }: CourseCheckoutP
       setIsProcessing(false);
     }
   };
+
+  // If user already has access, show access granted page
+  if (hasAccess === true) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="max-w-2xl w-full mx-6">
+          <CardContent className="text-center py-12">
+            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <CheckCircle className="w-10 h-10 text-green-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-foreground mb-4">You Already Have Access!</h2>
+            <p className="text-muted-foreground mb-8 text-lg">
+              You've already purchased "{course.title}". You can access it anytime from your library.
+            </p>
+            <div className="space-y-4">
+              <Button asChild className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-12 text-lg">
+                <Link href="/library">
+                  <GraduationCap className="w-5 h-5 mr-2" />
+                  Go to My Library
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="w-full h-12">
+                <Link href={`/courses/${course.slug}`}>
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Back to Course Page
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">

@@ -63,10 +63,10 @@ export function ModuleDialog({ onModuleAdd, existingModules, trigger }: ModuleDi
         )}
       </DialogTrigger>
       
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <BookOpen className="w-5 h-5 text-emerald-600" />
+          <DialogTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+            <BookOpen className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
             Add New Module
           </DialogTitle>
         </DialogHeader>

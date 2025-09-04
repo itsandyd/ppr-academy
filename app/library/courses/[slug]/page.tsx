@@ -162,13 +162,13 @@ export default function CoursePlayerPage() {
   const previousChapter = currentChapterIndex > 0 ? allChapters[currentChapterIndex - 1] : null;
   const nextChapter = currentChapterIndex < allChapters.length - 1 ? allChapters[currentChapterIndex + 1] : null;
 
+  // Calculate overall progress
+  const completedChapters = allChapters.filter(chapter => chapter.isCompleted).length;
+  const totalChapters = allChapters.length;
+  const overallProgress = totalChapters > 0 ? Math.round((completedChapters / totalChapters) * 100) : 0;
+
   return (
     <div className="min-h-screen bg-background">
-      <div className="p-4">
-        <h1>Course Player - Mobile Optimized</h1>
-        <p>Testing mobile layout...</p>
-      </div>
-      
       {/* Mobile Header */}
       <div className="lg:hidden bg-card border-b border-border p-4 mb-4 rounded-lg">
         <div className="flex items-center justify-between">
@@ -182,8 +182,8 @@ export default function CoursePlayerPage() {
             <span className="font-medium">Course Menu</span>
           </Button>
           <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-            <Progress value={0} className="w-16 h-2" />
-            <span>0%</span>
+            <Progress value={overallProgress} className="w-16 h-2" />
+            <span>{overallProgress}%</span>
           </div>
         </div>
       </div>
@@ -198,280 +198,281 @@ export default function CoursePlayerPage() {
 
       <div className="flex h-[calc(100vh-120px)] lg:gap-6">
         {/* Course Outline Sidebar */}
-        <div className={`fixed lg:static inset-y-0 left-0 z-50 w-80 bg-card rounded-lg border border-border overflow-hidden transition-transform duration-300 lg:translate-x-0 ${
+        <div className={`fixed lg:static inset-y-0 left-0 z-50 w-80 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden transition-transform duration-300 lg:translate-x-0 shadow-xl lg:shadow-none ${
           mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}>
-          <div className="p-6 border-b border-border">
-          {/* Mobile Close Button */}
-          <div className="lg:hidden flex justify-between items-center mb-4">
-            <h2 className="font-semibold">Course Content</h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setMobileSidebarOpen(false)}
-            >
-              ✕
-            </Button>
-          </div>
-          
-          <div className="space-y-3">
-            <div>
-              <h2 className="font-bold text-lg text-foreground line-clamp-2 hidden lg:block">
-                {courseData?.title}
-              </h2>
-              <div className="flex items-center space-x-2 mt-2">
-                <Progress value={0} className="flex-1 h-2" />
-                <span className="text-sm font-medium text-muted-foreground">
-                  0%
-                </span>
-              </div>
+          <div className="p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+            {/* Mobile Close Button */}
+            <div className="lg:hidden flex justify-between items-center mb-4">
+              <h2 className="font-semibold text-gray-900 dark:text-gray-100">Course Content</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setMobileSidebarOpen(false)}
+                className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
+              >
+                ✕
+              </Button>
             </div>
             
-            <Button asChild variant="ghost" size="sm" className="w-full justify-start">
-              <Link href="/library/courses">
-                <Home className="w-4 h-4 mr-2" />
-                Course Home
-              </Link>
-            </Button>
+            <div className="space-y-3">
+              <div>
+                <h2 className="font-bold text-lg text-gray-900 dark:text-gray-100 line-clamp-2 hidden lg:block">
+                  {courseData?.title}
+                </h2>
+                <div className="flex items-center space-x-2 mt-2">
+                  <Progress value={overallProgress} className="flex-1 h-2" />
+                  <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                    {overallProgress}%
+                  </span>
+                </div>
+              </div>
+              
+              <Button asChild variant="ghost" size="sm" className="w-full justify-start">
+                <Link href="/library/courses">
+                  <Home className="w-4 h-4 mr-2" />
+                  Course Home
+                </Link>
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-6 bg-white dark:bg-gray-900">
+            {/* Course Modules */}
+            {courseData.modules?.map((module, moduleIndex) => (
+              <div key={module._id} className="mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                    Module {moduleIndex + 1}: {module.title}
+                  </h3>
+                  <Badge variant="secondary" className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                    {module.lessons?.reduce((acc, lesson) => acc + (lesson.chapters?.length || 0), 0) || 0}/{module.lessons?.reduce((acc, lesson) => acc + (lesson.chapters?.length || 0), 0) || 0}
+                  </Badge>
+                </div>
+
+                {/* Lessons */}
+                {module.lessons?.map((lesson, lessonIndex) => (
+                  <div key={lesson._id} className="ml-4 mb-4">
+                    <h4 className="font-medium text-sm text-gray-600 dark:text-gray-400 mb-2">
+                      Lesson {lessonIndex + 1}: {lesson.title}
+                    </h4>
+                    
+                    {/* Chapters */}
+                    <div className="space-y-1">
+                      {lesson.chapters?.map((chapter, chapterIndex) => (
+                        <button
+                          key={chapter._id}
+                          onClick={() => setSelectedChapter(chapter._id)}
+                          className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                            selectedChapter === chapter._id
+                              ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300"
+                              : "bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100"
+                          }`}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className="flex-shrink-0">
+                              {chapter.isCompleted ? (
+                                <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
+                              ) : (
+                                <PlayCircle className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium truncate">
+                                {chapterIndex + 1}. {chapter.title}
+                              </div>
+                              {chapter.timeSpent && (
+                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                  <Clock className="w-3 h-3 inline mr-1" />
+                                  {Math.round(chapter.timeSpent / 60)}m watched
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ))}
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6">
-          {/* Course Modules */}
-          {courseData.modules?.map((module, moduleIndex) => (
-            <div key={module._id} className="mb-6">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-foreground">
-                  Module {moduleIndex + 1}: {module.title}
-                </h3>
-                <Badge variant="secondary" className="text-xs">
-                  {module.lessons?.reduce((acc, lesson) => acc + (lesson.chapters?.length || 0), 0) || 0}/{module.lessons?.reduce((acc, lesson) => acc + (lesson.chapters?.length || 0), 0) || 0}
-                </Badge>
-              </div>
-
-              {/* Lessons */}
-              {module.lessons?.map((lesson, lessonIndex) => (
-                <div key={lesson._id} className="ml-4 mb-4">
-                  <h4 className="font-medium text-sm text-muted-foreground mb-2">
-                    Lesson {lessonIndex + 1}: {lesson.title}
-                  </h4>
-                  
-                  {/* Chapters */}
-                  <div className="space-y-1">
-                    {lesson.chapters?.map((chapter, chapterIndex) => (
-                      <button
-                        key={chapter._id}
-                        onClick={() => setSelectedChapter(chapter._id)}
-                        className={`w-full text-left p-3 rounded-lg border transition-colors ${
-                          selectedChapter === chapter._id
-                            ? "bg-primary/10 border-primary text-primary"
-                            : "bg-background border-border hover:bg-muted"
-                        }`}
-                      >
-                        <div className="flex items-center space-x-3">
-                          <div className="flex-shrink-0">
-                            {chapter.isCompleted ? (
-                              <CheckCircle className="w-4 h-4 text-green-600" />
-                            ) : (
-                              <PlayCircle className="w-4 h-4 text-muted-foreground" />
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium truncate">
-                              {chapterIndex + 1}. {chapter.title}
-                            </div>
-                            {chapter.timeSpent && (
-                              <div className="text-xs text-muted-foreground">
-                                <Clock className="w-3 h-3 inline mr-1" />
-                                {Math.round(chapter.timeSpent / 60)}m watched
-                              </div>
-                            )}
+        {/* Lesson Canvas */}
+        <div className="flex-1 bg-card rounded-lg border border-border overflow-hidden">
+          {currentChapter ? (
+            <div className="h-full flex flex-col">
+              {/* Chapter Header */}
+              <div className={`p-4 lg:p-8 border-b border-border ${!currentChapter.videoUrl && !currentChapter.audioUrl ? 'flex-1' : 'h-60 lg:h-80'}`}>
+                <div className="max-w-4xl mx-auto h-full flex flex-col justify-center">
+                  <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-4">
+                    <span>{currentModule?.title}</span>
+                    <ChevronRight className="w-4 h-4" />
+                    <span>{currentLesson?.title}</span>
+                  </div>
+                  <h1 className="text-xl lg:text-3xl font-bold text-primary mb-4 lg:mb-6">
+                    {currentChapter.title}
+                  </h1>
+                  {currentChapter.description && (
+                    <>
+                      {!currentChapter.videoUrl && !currentChapter.audioUrl ? (
+                        <div className="flex-1 max-w-3xl overflow-y-auto">
+                          <div className="text-base lg:text-lg text-muted-foreground leading-relaxed whitespace-pre-wrap pr-4">
+                            {currentChapter.description}
                           </div>
                         </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Lesson Canvas */}
-      <div className="flex-1 lg:ml-0 bg-card rounded-lg border border-border overflow-hidden">
-        {currentChapter ? (
-          <div className="h-full flex flex-col">
-            {/* Chapter Header */}
-            <div className={`p-4 lg:p-8 border-b border-border ${!currentChapter.videoUrl && !currentChapter.audioUrl ? 'flex-1' : 'h-60 lg:h-80'}`}>
-              <div className="max-w-4xl mx-auto h-full flex flex-col justify-center">
-                <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-4">
-                  <span>{currentModule?.title}</span>
-                  <ChevronRight className="w-4 h-4" />
-                  <span>{currentLesson?.title}</span>
-                </div>
-                <h1 className="text-xl lg:text-3xl font-bold text-primary mb-4 lg:mb-6">
-                  {currentChapter.title}
-                </h1>
-                {currentChapter.description && (
-                  <>
-                    {!currentChapter.videoUrl && !currentChapter.audioUrl ? (
-                      <div className="flex-1 max-w-3xl overflow-y-auto">
-                        <div className="text-base lg:text-lg text-muted-foreground leading-relaxed whitespace-pre-wrap pr-4">
+                      ) : (
+                        <div className="text-base lg:text-lg text-muted-foreground leading-relaxed whitespace-pre-wrap max-w-3xl line-clamp-3 lg:line-clamp-4">
                           {currentChapter.description}
                         </div>
-                      </div>
-                    ) : (
-                      <div className="text-base lg:text-lg text-muted-foreground leading-relaxed whitespace-pre-wrap max-w-3xl line-clamp-3 lg:line-clamp-4">
-                        {currentChapter.description}
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Chapter Content */}
-            <div className="flex-1 flex flex-col">
-              {/* Video/Audio Player */}
-              {(currentChapter.videoUrl || currentChapter.audioUrl) && (
-                <div className="p-4 lg:p-6">
-                  <div className="max-w-4xl mx-auto">
-                    {currentChapter.videoUrl && (
-                      <div className="aspect-video bg-black rounded-lg overflow-hidden">
-                        <video
-                          controls
-                          className="w-full h-full"
-                          src={currentChapter.videoUrl}
-                          poster={courseData.imageUrl}
-                        >
-                          Your browser does not support the video tag.
-                        </video>
-                      </div>
-                    )}
-
-                    {currentChapter.audioUrl && !currentChapter.videoUrl && (
-                      <div className="bg-muted rounded-lg p-6">
-                        <audio
-                          controls
-                          className="w-full"
-                          src={currentChapter.audioUrl}
-                        >
-                          Your browser does not support the audio tag.
-                        </audio>
-                      </div>
-                    )}
-                  </div>
+                      )}
+                    </>
+                  )}
                 </div>
-              )}
+              </div>
 
-              {/* Chapter Actions */}
-              <div className="mt-auto p-4 lg:p-6 border-t border-border">
-                <div className="max-w-4xl mx-auto flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    {!currentChapter.isCompleted && (
-                      <Button
-                        onClick={() => handleChapterComplete(currentChapter._id)}
-                        className="flex items-center space-x-2"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                        <span>Mark as Complete</span>
-                      </Button>
-                    )}
-                    {currentChapter.isCompleted && (
-                      <div className="flex items-center space-x-2 text-green-600">
-                        <CheckCircle className="w-4 h-4" />
-                        <span className="text-sm font-medium">Completed</span>
-                      </div>
-                    )}
+              {/* Chapter Content */}
+              <div className="flex-1 flex flex-col">
+                {/* Video/Audio Player */}
+                {(currentChapter.videoUrl || currentChapter.audioUrl) && (
+                  <div className="p-4 lg:p-6">
+                    <div className="max-w-4xl mx-auto">
+                      {currentChapter.videoUrl && (
+                        <div className="aspect-video bg-black rounded-lg overflow-hidden">
+                          <video
+                            controls
+                            className="w-full h-full"
+                            src={currentChapter.videoUrl}
+                            poster={courseData.imageUrl}
+                          >
+                            Your browser does not support the video tag.
+                          </video>
+                        </div>
+                      )}
+
+                      {currentChapter.audioUrl && !currentChapter.videoUrl && (
+                        <div className="bg-muted rounded-lg p-6">
+                          <audio
+                            controls
+                            className="w-full"
+                            src={currentChapter.audioUrl}
+                          >
+                            Your browser does not support the audio tag.
+                          </audio>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    {currentChapter.lastAccessedAt && (
-                      <span>
-                        Last accessed {formatDistanceToNow(new Date(currentChapter.lastAccessedAt))} ago
-                      </span>
-                    )}
+                )}
+
+                {/* Chapter Actions */}
+                <div className="mt-auto p-4 lg:p-6 border-t border-border">
+                  <div className="max-w-4xl mx-auto flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      {!currentChapter.isCompleted && (
+                        <Button
+                          onClick={() => handleChapterComplete(currentChapter._id)}
+                          className="flex items-center space-x-2"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          <span>Mark as Complete</span>
+                        </Button>
+                      )}
+                      {currentChapter.isCompleted && (
+                        <div className="flex items-center space-x-2 text-green-600">
+                          <CheckCircle className="w-4 h-4" />
+                          <span className="text-sm font-medium">Completed</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {currentChapter.lastAccessedAt && (
+                        <span>
+                          Last accessed {formatDistanceToNow(new Date(currentChapter.lastAccessedAt))} ago
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Navigation Footer */}
-            <div className="border-t border-border p-3 lg:p-4 mt-auto">
-              <div className="max-w-4xl mx-auto flex items-center justify-between gap-2">
-                {previousChapter ? (
-                  <Button
-                    variant="outline"
-                    onClick={() => setSelectedChapter(previousChapter._id)}
-                    className="flex items-center space-x-2 flex-1 lg:flex-none"
-                    size="sm"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                    <div className="text-left hidden lg:block">
-                      <div className="text-xs text-muted-foreground">Previous Chapter</div>
-                      <div className="font-medium">{previousChapter.title}</div>
-                    </div>
-                    <span className="lg:hidden text-sm">Previous</span>
-                  </Button>
-                ) : (
-                  <div />
-                )}
+              {/* Navigation Footer */}
+              <div className="border-t border-border p-3 lg:p-4 mt-auto">
+                <div className="max-w-4xl mx-auto flex items-center justify-between gap-2">
+                  {previousChapter ? (
+                    <Button
+                      variant="outline"
+                      onClick={() => setSelectedChapter(previousChapter._id)}
+                      className="flex items-center space-x-2 flex-1 lg:flex-none"
+                      size="sm"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      <div className="text-left hidden lg:block">
+                        <div className="text-xs text-muted-foreground">Previous Chapter</div>
+                        <div className="font-medium">{previousChapter.title}</div>
+                      </div>
+                      <span className="lg:hidden text-sm">Previous</span>
+                    </Button>
+                  ) : (
+                    <div />
+                  )}
 
-                {nextChapter ? (
-                  <Button
-                    onClick={() => setSelectedChapter(nextChapter._id)}
-                    className="flex items-center space-x-2 flex-1 lg:flex-none"
-                    size="sm"
-                  >
-                    <div className="text-right hidden lg:block">
-                      <div className="text-xs opacity-75">Next Chapter</div>
-                      <div className="font-medium">{nextChapter.title}</div>
-                    </div>
-                    <span className="lg:hidden text-sm">Next</span>
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
-                ) : (
-                  <Button variant="outline" asChild size="sm" className="flex-1 lg:flex-none">
-                    <Link href="/library/courses">
-                      <CheckCircle className="w-4 h-4 mr-2" />
-                      <span className="hidden lg:inline">Course Complete</span>
-                      <span className="lg:hidden">Complete</span>
-                    </Link>
-                  </Button>
-                )}
+                  {nextChapter ? (
+                    <Button
+                      onClick={() => setSelectedChapter(nextChapter._id)}
+                      className="flex items-center space-x-2 flex-1 lg:flex-none"
+                      size="sm"
+                    >
+                      <div className="text-right hidden lg:block">
+                        <div className="text-xs opacity-75">Next Chapter</div>
+                        <div className="font-medium">{nextChapter.title}</div>
+                      </div>
+                      <span className="lg:hidden text-sm">Next</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  ) : (
+                    <Button variant="outline" asChild size="sm" className="flex-1 lg:flex-none">
+                      <Link href="/library/courses">
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        <span className="hidden lg:inline">Course Complete</span>
+                        <span className="lg:hidden">Complete</span>
+                      </Link>
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        ) : (
-          /* Course Overview */
-          <div className="p-8 text-center">
-            <Book className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-foreground mb-2">Welcome to {courseData.title}</h2>
-            <p className="text-muted-foreground mb-6">
-              Select a chapter from the sidebar to begin your learning journey.
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto">
-              {courseData.modules?.slice(0, 3).map((module, index) => (
-                <Card key={module._id} className="text-left">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-lg">Module {index + 1}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <h3 className="font-semibold mb-2">{module.title}</h3>
-                    <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                      {module.description || "Start learning with this module"}
-                    </p>
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>{module.lessons?.length || 0} lessons</span>
-                      <span>{module.lessons?.reduce((acc, lesson) => acc + (lesson.chapters?.length || 0), 0) || 0} chapters</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+          ) : (
+            /* Course Overview */
+            <div className="p-8 text-center">
+              <Book className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-foreground mb-2">Welcome to {courseData.title}</h2>
+              <p className="text-muted-foreground mb-6">
+                Select a chapter from the sidebar to begin your learning journey.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto">
+                {courseData.modules?.slice(0, 3).map((module, index) => (
+                  <Card key={module._id} className="text-left">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg">Module {index + 1}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <h3 className="font-semibold mb-2">{module.title}</h3>
+                      <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                        {module.description || "Start learning with this module"}
+                      </p>
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>{module.lessons?.length || 0} lessons</span>
+                        <span>{module.lessons?.reduce((acc, lesson) => acc + (lesson.chapters?.length || 0), 0) || 0} chapters</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
