@@ -424,6 +424,7 @@ export const updateCourseWithModules = mutation({
           videoUrl: v.string(),
           duration: v.number(),
           orderIndex: v.number(),
+          generatedAudioData: v.optional(v.string()),
         })),
       })),
     }))),
@@ -496,6 +497,10 @@ export const updateCourseWithModules = mutation({
                     courseId,
                     lessonId,
                     isPublished: false,
+                    // Save generated audio data if present
+                    generatedAudioUrl: chapterData.generatedAudioData || undefined,
+                    audioGenerationStatus: chapterData.generatedAudioData ? "completed" as const : undefined,
+                    audioGeneratedAt: chapterData.generatedAudioData ? Date.now() : undefined,
                   });
                 }
               }
@@ -595,6 +600,7 @@ export const getCourseForEdit = query({
             videoUrl: v.string(),
             duration: v.number(),
             orderIndex: v.number(),
+            generatedAudioData: v.optional(v.string()),
           })),
         })),
       }))),
@@ -644,6 +650,7 @@ export const getCourseForEdit = query({
           videoUrl: chapter.videoUrl || "",
           duration: 0, // Default duration
           orderIndex: chapter.position,
+          generatedAudioData: chapter.generatedAudioUrl || undefined,
         }));
 
         courseLessons.push({
@@ -841,5 +848,40 @@ export const deleteCourse = mutation({
       console.error("Failed to delete course:", error);
       return { success: false, message: "Failed to delete course" };
     }
+  },
+});
+
+export const getChapterById = query({
+  args: {
+    chapterId: v.id("courseChapters"),
+    userId: v.string(),
+  },
+  returns: v.union(v.object({
+    _id: v.id("courseChapters"),
+    title: v.string(),
+    description: v.optional(v.string()),
+    videoUrl: v.optional(v.string()),
+    audioUrl: v.optional(v.string()),
+    position: v.number(),
+    courseId: v.string(),
+    lessonId: v.optional(v.string()),
+    generatedAudioUrl: v.optional(v.string()),
+    generatedVideoUrl: v.optional(v.string()),
+    audioGenerationStatus: v.optional(v.union(v.literal("pending"), v.literal("generating"), v.literal("completed"), v.literal("failed"))),
+    videoGenerationStatus: v.optional(v.union(v.literal("pending"), v.literal("generating"), v.literal("completed"), v.literal("failed"))),
+  }), v.null()),
+  handler: async (ctx, args) => {
+    const chapter = await ctx.db.get(args.chapterId);
+    if (!chapter) {
+      return null;
+    }
+
+    // Verify ownership - get the course and check if user owns it
+    const course = await ctx.db.get(chapter.courseId as Id<"courses">);
+    if (!course || course.userId !== args.userId) {
+      return null;
+    }
+
+    return chapter;
   },
 }); 

@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { AudioPlayer } from "./components/AudioPlayer";
+import { GenerateAudioButton } from "./components/GenerateAudioButton";
 import {
   Book,
   PlayCircle,
@@ -199,10 +201,10 @@ export default function CoursePlayerPage() {
 
       <div className="flex h-[calc(100vh-120px)] lg:gap-6">
         {/* Course Outline Sidebar */}
-        <div className={`fixed lg:static inset-y-0 left-0 z-50 w-80 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden transition-transform duration-300 lg:translate-x-0 shadow-xl lg:shadow-none ${
+        <div className={`fixed lg:static top-0 bottom-0 lg:inset-y-0 left-0 z-50 w-80 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden transition-transform duration-300 lg:translate-x-0 shadow-xl lg:shadow-none flex flex-col ${
           mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}>
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+          <div className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
             {/* Mobile Close Button */}
             <div className="lg:hidden flex justify-between items-center mb-4">
               <h2 className="font-semibold text-gray-900 dark:text-gray-100">Course Content</h2>
@@ -241,8 +243,8 @@ export default function CoursePlayerPage() {
             </div>
           </div>
 
-          <ScrollArea className="flex-1 bg-white dark:bg-gray-900 h-full">
-            <div className="p-4 space-y-6">
+          <ScrollArea className="flex-1 bg-white dark:bg-gray-900 h-0 min-h-0">
+            <div className="p-4 space-y-6 pb-8">
               {/* Course Modules */}
               {courseData.modules?.map((module, moduleIndex) => (
                 <div key={module._id} className="space-y-3">
@@ -327,13 +329,13 @@ export default function CoursePlayerPage() {
                     <>
                       {!currentChapter.videoUrl && !currentChapter.audioUrl ? (
                         <div className="flex-1 max-w-3xl overflow-y-auto">
-                          <div className="text-base lg:text-lg text-muted-foreground leading-relaxed whitespace-pre-wrap pr-4">
-                            {currentChapter.description}
+                          <div className="prose prose-base lg:prose-lg max-w-none text-muted-foreground pr-4">
+                            <div dangerouslySetInnerHTML={{ __html: currentChapter.description }} />
                           </div>
                         </div>
                       ) : (
-                        <div className="text-base lg:text-lg text-muted-foreground leading-relaxed whitespace-pre-wrap max-w-3xl line-clamp-3 lg:line-clamp-4">
-                          {currentChapter.description}
+                        <div className="prose prose-base lg:prose-lg max-w-3xl text-muted-foreground line-clamp-3 lg:line-clamp-4">
+                          <div dangerouslySetInnerHTML={{ __html: currentChapter.description }} />
                         </div>
                       )}
                     </>
@@ -344,33 +346,57 @@ export default function CoursePlayerPage() {
               {/* Chapter Content */}
               <div className="flex-1 flex flex-col">
                 {/* Video/Audio Player */}
-                {(currentChapter.videoUrl || currentChapter.audioUrl) && (
+                {(currentChapter.videoUrl || currentChapter.audioUrl || currentChapter.generatedAudioUrl || currentChapter.generatedVideoUrl) && (
                   <div className="p-4 lg:p-6">
-                    <div className="max-w-4xl mx-auto">
-                      {currentChapter.videoUrl && (
+                    <div className="max-w-4xl mx-auto space-y-4">
+                      {/* Video Player (prioritize generated video, then original video) */}
+                      {(currentChapter.generatedVideoUrl || currentChapter.videoUrl) && (
                         <div className="aspect-video bg-black rounded-lg overflow-hidden">
                           <video
                             controls
                             className="w-full h-full"
-                            src={currentChapter.videoUrl}
+                            src={currentChapter.generatedVideoUrl || currentChapter.videoUrl}
                             poster={courseData.imageUrl}
                           >
                             Your browser does not support the video tag.
                           </video>
+                          {currentChapter.generatedVideoUrl && (
+                            <div className="mt-2 text-xs text-blue-600 dark:text-blue-400 text-center">
+                              🤖 AI-Generated Video
+                            </div>
+                          )}
                         </div>
                       )}
 
-                      {currentChapter.audioUrl && !currentChapter.videoUrl && (
-                        <div className="bg-muted rounded-lg p-6">
-                          <audio
-                            controls
-                            className="w-full"
+                      {/* Audio Player (show if no video, or if there's generated audio) */}
+                      {((currentChapter.generatedAudioUrl || currentChapter.audioUrl) && !currentChapter.videoUrl && !currentChapter.generatedVideoUrl) && (
+                        <AudioPlayer
+                          src={currentChapter.generatedAudioUrl || currentChapter.audioUrl}
+                          title={currentChapter.title}
+                          isGenerated={!!currentChapter.generatedAudioUrl}
+                        />
+                      )}
+
+                      {/* Show both if there's both original and generated content */}
+                      {currentChapter.generatedAudioUrl && currentChapter.audioUrl && (
+                        <div className="space-y-3">
+                          <h4 className="text-sm font-medium text-muted-foreground">Additional Audio</h4>
+                          <AudioPlayer
                             src={currentChapter.audioUrl}
-                          >
-                            Your browser does not support the audio tag.
-                          </audio>
+                            title={`${currentChapter.title} (Original)`}
+                            isGenerated={false}
+                          />
                         </div>
                       )}
+
+                      {/* Audio Generation Button */}
+                      <div className="flex justify-center pt-4">
+                        <GenerateAudioButton
+                          chapterId={currentChapter._id}
+                          hasGeneratedAudio={!!currentChapter.generatedAudioUrl}
+                          hasContent={!!currentChapter.description?.trim()}
+                        />
+                      </div>
                     </div>
                   </div>
                 )}

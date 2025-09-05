@@ -113,6 +113,28 @@ export function CourseContentManager({ modules, onModulesChange }: CourseContent
     }
   };
 
+  // Edit functions
+  const editModule = (moduleIndex: number, moduleData: Omit<Module, 'lessons'>) => {
+    const updatedModules = [...modules];
+    updatedModules[moduleIndex] = { ...updatedModules[moduleIndex], ...moduleData };
+    onModulesChange(updatedModules);
+  };
+
+  const editLesson = (moduleIndex: number, lessonIndex: number, lessonData: Omit<Lesson, 'chapters'>) => {
+    const updatedModules = [...modules];
+    updatedModules[moduleIndex].lessons[lessonIndex] = { 
+      ...updatedModules[moduleIndex].lessons[lessonIndex], 
+      ...lessonData 
+    };
+    onModulesChange(updatedModules);
+  };
+
+  const editChapter = (moduleIndex: number, lessonIndex: number, chapterIndex: number, chapterData: Chapter) => {
+    const updatedModules = [...modules];
+    updatedModules[moduleIndex].lessons[lessonIndex].chapters[chapterIndex] = chapterData;
+    onModulesChange(updatedModules);
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -175,6 +197,21 @@ export function CourseContentManager({ modules, onModulesChange }: CourseContent
                       <Badge variant="secondary" className="text-xs">
                         {module.lessons.length} lessons
                       </Badge>
+                      <ModuleDialog
+                        onModuleAdd={addModule}
+                        onModuleEdit={(moduleData) => editModule(moduleIndex, moduleData)}
+                        existingModules={modules}
+                        editData={module}
+                        trigger={
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-blue-600 hover:text-blue-700"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                        }
+                      />
                       <Button
                         variant="ghost"
                         size="sm"
@@ -227,6 +264,22 @@ export function CourseContentManager({ modules, onModulesChange }: CourseContent
                                 <Badge variant="secondary" className="text-xs">
                                   {lesson.chapters.length} chapters
                                 </Badge>
+                                <LessonDialog
+                                  moduleTitle={module.title}
+                                  onLessonAdd={(lessonData) => addLesson(moduleIndex, lessonData)}
+                                  onLessonEdit={(lessonData) => editLesson(moduleIndex, lessonIndex, lessonData)}
+                                  existingLessons={module.lessons}
+                                  editData={lesson}
+                                  trigger={
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="text-blue-600 hover:text-blue-700"
+                                    >
+                                      <Edit className="w-3 h-3" />
+                                    </Button>
+                                  }
+                                />
                                 <Button
                                   variant="ghost"
                                   size="sm"
@@ -276,14 +329,33 @@ export function CourseContentManager({ modules, onModulesChange }: CourseContent
                                             </span>
                                           )}
                                         </div>
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          onClick={() => removeChapter(moduleIndex, lessonIndex, chapterIndex)}
-                                          className="text-red-600 hover:text-red-700"
-                                        >
-                                          <Trash2 className="w-3 h-3" />
-                                        </Button>
+                                        <div className="flex items-center gap-1">
+                                          <ChapterDialog
+                                            moduleTitle={module.title}
+                                            lessonTitle={lesson.title}
+                                            onChapterAdd={(chapterData) => addChapter(moduleIndex, lessonIndex, chapterData)}
+                                            onChapterEdit={(chapterData) => editChapter(moduleIndex, lessonIndex, chapterIndex, chapterData)}
+                                            existingChapters={lesson.chapters}
+                                            editData={chapter}
+                                            trigger={
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="text-blue-600 hover:text-blue-700"
+                                              >
+                                                <Edit className="w-3 h-3" />
+                                              </Button>
+                                            }
+                                          />
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => removeChapter(moduleIndex, lessonIndex, chapterIndex)}
+                                            className="text-red-600 hover:text-red-700"
+                                          >
+                                            <Trash2 className="w-3 h-3" />
+                                          </Button>
+                                        </div>
                                       </div>
                                     </CardContent>
                                   </Card>

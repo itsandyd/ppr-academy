@@ -18,16 +18,20 @@ interface Lesson {
 interface LessonDialogProps {
   moduleTitle: string;
   onLessonAdd: (lesson: Omit<Lesson, 'chapters'>) => void;
+  onLessonEdit?: (lesson: Omit<Lesson, 'chapters'>) => void;
   existingLessons: Lesson[];
+  editData?: Lesson;
   trigger?: React.ReactNode;
 }
 
-export function LessonDialog({ moduleTitle, onLessonAdd, existingLessons, trigger }: LessonDialogProps) {
+export function LessonDialog({ moduleTitle, onLessonAdd, onLessonEdit, existingLessons, editData, trigger }: LessonDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [lessonData, setLessonData] = useState({
-    title: "",
-    description: "",
+    title: editData?.title || "",
+    description: editData?.description || "",
   });
+
+  const isEditing = !!editData;
 
   const handleSave = () => {
     if (!lessonData.title.trim()) {
@@ -35,21 +39,31 @@ export function LessonDialog({ moduleTitle, onLessonAdd, existingLessons, trigge
       return;
     }
 
-    const newLesson = {
+    const lessonToSave = {
       title: lessonData.title.trim(),
       description: lessonData.description.trim(),
-      orderIndex: existingLessons.length + 1,
+      orderIndex: isEditing ? editData!.orderIndex : existingLessons.length + 1,
     };
 
-    onLessonAdd(newLesson);
+    if (isEditing && onLessonEdit) {
+      onLessonEdit(lessonToSave);
+    } else {
+      onLessonAdd(lessonToSave);
+    }
     
     // Reset form and close dialog
-    setLessonData({ title: "", description: "" });
+    if (!isEditing) {
+      setLessonData({ title: "", description: "" });
+    }
     setIsOpen(false);
   };
 
   const handleCancel = () => {
-    setLessonData({ title: "", description: "" });
+    if (isEditing && editData) {
+      setLessonData({ title: editData.title, description: editData.description });
+    } else {
+      setLessonData({ title: "", description: "" });
+    }
     setIsOpen(false);
   };
 
@@ -68,7 +82,7 @@ export function LessonDialog({ moduleTitle, onLessonAdd, existingLessons, trigge
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
             <Play className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            Add Lesson to "{moduleTitle}"
+            {isEditing ? `Edit Lesson in "${moduleTitle}"` : `Add Lesson to "${moduleTitle}"`}
           </DialogTitle>
         </DialogHeader>
         
@@ -84,7 +98,7 @@ export function LessonDialog({ moduleTitle, onLessonAdd, existingLessons, trigge
               className="h-12"
             />
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              This will be Lesson {existingLessons.length + 1} in {moduleTitle}
+              {isEditing ? `Editing Lesson ${editData?.orderIndex} in ${moduleTitle}` : `This will be Lesson ${existingLessons.length + 1} in ${moduleTitle}`}
             </p>
           </div>
 
@@ -109,7 +123,7 @@ export function LessonDialog({ moduleTitle, onLessonAdd, existingLessons, trigge
             <h4 className="font-medium text-blue-800 dark:text-blue-200 mb-2">Preview:</h4>
             <div className="text-sm">
               <div className="font-medium text-blue-700 dark:text-blue-300">
-                Lesson {existingLessons.length + 1}: {lessonData.title || "Lesson Title"}
+                Lesson {isEditing ? editData?.orderIndex : existingLessons.length + 1}: {lessonData.title || "Lesson Title"}
               </div>
               {lessonData.description && (
                 <div className="text-blue-600 dark:text-blue-400 mt-1">
@@ -135,7 +149,7 @@ export function LessonDialog({ moduleTitle, onLessonAdd, existingLessons, trigge
             className="bg-blue-600 hover:bg-blue-700"
           >
             <Save className="w-4 h-4 mr-2" />
-            Add Lesson
+            {isEditing ? "Update Lesson" : "Add Lesson"}
           </Button>
         </div>
       </DialogContent>

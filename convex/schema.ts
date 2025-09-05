@@ -111,6 +111,15 @@ export default defineSchema({
     courseId: v.string(),
     audioUrl: v.optional(v.string()),
     lessonId: v.optional(v.string()),
+    // AI-generated content fields
+    generatedAudioUrl: v.optional(v.string()),
+    generatedVideoUrl: v.optional(v.string()),
+    audioGenerationStatus: v.optional(v.union(v.literal("pending"), v.literal("generating"), v.literal("completed"), v.literal("failed"))),
+    videoGenerationStatus: v.optional(v.union(v.literal("pending"), v.literal("generating"), v.literal("completed"), v.literal("failed"))),
+    audioGeneratedAt: v.optional(v.number()),
+    videoGeneratedAt: v.optional(v.number()),
+    audioGenerationError: v.optional(v.string()),
+    videoGenerationError: v.optional(v.string()),
   })
   .index("by_courseId", ["courseId"])
   .index("by_lessonId", ["lessonId"])

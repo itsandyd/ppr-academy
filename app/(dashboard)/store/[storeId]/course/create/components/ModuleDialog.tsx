@@ -17,16 +17,20 @@ interface Module {
 
 interface ModuleDialogProps {
   onModuleAdd: (module: Omit<Module, 'lessons'>) => void;
+  onModuleEdit?: (module: Omit<Module, 'lessons'>) => void;
   existingModules: Module[];
+  editData?: Module;
   trigger?: React.ReactNode;
 }
 
-export function ModuleDialog({ onModuleAdd, existingModules, trigger }: ModuleDialogProps) {
+export function ModuleDialog({ onModuleAdd, onModuleEdit, existingModules, editData, trigger }: ModuleDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [moduleData, setModuleData] = useState({
-    title: "",
-    description: "",
+    title: editData?.title || "",
+    description: editData?.description || "",
   });
+
+  const isEditing = !!editData;
 
   const handleSave = () => {
     if (!moduleData.title.trim()) {
@@ -34,21 +38,31 @@ export function ModuleDialog({ onModuleAdd, existingModules, trigger }: ModuleDi
       return;
     }
 
-    const newModule = {
+    const moduleToSave = {
       title: moduleData.title.trim(),
       description: moduleData.description.trim(),
-      orderIndex: existingModules.length + 1,
+      orderIndex: isEditing ? editData!.orderIndex : existingModules.length + 1,
     };
 
-    onModuleAdd(newModule);
+    if (isEditing && onModuleEdit) {
+      onModuleEdit(moduleToSave);
+    } else {
+      onModuleAdd(moduleToSave);
+    }
     
     // Reset form and close dialog
-    setModuleData({ title: "", description: "" });
+    if (!isEditing) {
+      setModuleData({ title: "", description: "" });
+    }
     setIsOpen(false);
   };
 
   const handleCancel = () => {
-    setModuleData({ title: "", description: "" });
+    if (isEditing && editData) {
+      setModuleData({ title: editData.title, description: editData.description });
+    } else {
+      setModuleData({ title: "", description: "" });
+    }
     setIsOpen(false);
   };
 
@@ -67,7 +81,7 @@ export function ModuleDialog({ onModuleAdd, existingModules, trigger }: ModuleDi
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
             <BookOpen className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-            Add New Module
+            {isEditing ? "Edit Module" : "Add New Module"}
           </DialogTitle>
         </DialogHeader>
         
@@ -83,7 +97,7 @@ export function ModuleDialog({ onModuleAdd, existingModules, trigger }: ModuleDi
               className="h-12"
             />
             <p className="text-xs text-muted-foreground">
-              This will be Module {existingModules.length + 1}
+              {isEditing ? `Editing Module ${editData?.orderIndex}` : `This will be Module ${existingModules.length + 1}`}
             </p>
           </div>
 
@@ -108,7 +122,7 @@ export function ModuleDialog({ onModuleAdd, existingModules, trigger }: ModuleDi
             <h4 className="font-medium text-emerald-800 mb-2">Preview:</h4>
             <div className="text-sm">
               <div className="font-medium text-emerald-700">
-                Module {existingModules.length + 1}: {moduleData.title || "Module Title"}
+                Module {isEditing ? editData?.orderIndex : existingModules.length + 1}: {moduleData.title || "Module Title"}
               </div>
               {moduleData.description && (
                 <div className="text-emerald-600 mt-1">
@@ -131,7 +145,7 @@ export function ModuleDialog({ onModuleAdd, existingModules, trigger }: ModuleDi
             className="bg-emerald-600 hover:bg-emerald-700"
           >
             <Save className="w-4 h-4 mr-2" />
-            Add Module
+            {isEditing ? "Update Module" : "Add Module"}
           </Button>
         </div>
       </DialogContent>

@@ -13,6 +13,7 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
+import type * as audioGeneration from "../audioGeneration.js";
 import type * as courses from "../courses.js";
 import type * as customers from "../customers.js";
 import type * as digitalProducts from "../digitalProducts.js";
@@ -33,6 +34,7 @@ import type * as users from "../users.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  audioGeneration: typeof audioGeneration;
   courses: typeof courses;
   customers: typeof customers;
   digitalProducts: typeof digitalProducts;
