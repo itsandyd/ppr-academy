@@ -277,48 +277,48 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
       </div>
 
       {/* Instructor Section */}
-      <div className="py-12 sm:py-16 bg-white">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6">
+      <div className="py-12 sm:py-16 bg-white overflow-hidden">
+        <div className="max-w-4xl mx-auto px-3 sm:px-4 lg:px-6">
           <div className="text-center mb-8 sm:mb-12">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-4">Meet Your Instructor</h2>
+            <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-foreground mb-4 break-words">Meet Your Instructor</h2>
           </div>
 
-          <Card className="p-6 sm:p-8 border-emerald-200">
-            <div className="flex flex-col sm:flex-row items-start gap-6">
-              <Avatar className="w-16 h-16 sm:w-20 sm:h-20 mx-auto sm:mx-0 flex-shrink-0">
+          <Card className="p-4 sm:p-6 lg:p-8 border-emerald-200 min-w-0">
+            <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
+              <Avatar className="w-14 h-14 sm:w-16 sm:h-16 lg:w-20 lg:h-20 mx-auto sm:mx-0 flex-shrink-0">
                 <AvatarImage src={creator?.imageUrl} alt={creatorName} />
-                <AvatarFallback className="text-lg sm:text-xl font-bold bg-emerald-100 text-emerald-600">
+                <AvatarFallback className="text-base sm:text-lg lg:text-xl font-bold bg-emerald-100 text-emerald-600">
                   {creatorInitials}
                 </AvatarFallback>
               </Avatar>
               
-              <div className="flex-1 text-center sm:text-left">
-                <h3 className="text-xl sm:text-2xl font-bold text-foreground mb-2">{creatorName}</h3>
-                <p className="text-emerald-600 font-medium mb-4 text-sm sm:text-base">Course Creator • {store.name}</p>
+              <div className="flex-1 text-center sm:text-left min-w-0">
+                <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground mb-2 break-words">{creatorName}</h3>
+                <p className="text-emerald-600 font-medium mb-4 text-xs sm:text-sm lg:text-base break-words">Course Creator • {store.name}</p>
                 
                 {creator?.bio ? (
-                  <p className="text-muted-foreground leading-relaxed mb-6 text-sm sm:text-base">
+                  <p className="text-muted-foreground leading-relaxed mb-4 sm:mb-6 text-xs sm:text-sm lg:text-base break-words">
                     {creator.bio}
                   </p>
                 ) : (
-                  <p className="text-muted-foreground leading-relaxed mb-6 text-sm sm:text-base">
+                  <p className="text-muted-foreground leading-relaxed mb-4 sm:mb-6 text-xs sm:text-sm lg:text-base break-words">
                     Passionate educator and industry expert dedicated to helping students master their craft through practical, 
                     hands-on learning experiences.
                   </p>
                 )}
 
-                <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-4 sm:gap-6">
-                  <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4 text-emerald-600" />
-                    <span className="text-sm font-medium">1000+ Students</span>
+                <div className="flex flex-col gap-3 sm:gap-2 lg:gap-0 lg:flex-row items-center justify-center sm:justify-start lg:gap-4 xl:gap-6">
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <Users className="w-3 h-3 sm:w-4 sm:h-4 text-emerald-600 flex-shrink-0" />
+                    <span className="text-xs sm:text-sm font-medium whitespace-nowrap">1000+ Students</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Award className="w-4 h-4 text-emerald-600" />
-                    <span className="text-sm font-medium">Expert Instructor</span>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <Award className="w-3 h-3 sm:w-4 sm:h-4 text-emerald-600 flex-shrink-0" />
+                    <span className="text-xs sm:text-sm font-medium whitespace-nowrap">Expert Instructor</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Star className="w-4 h-4 text-emerald-600 fill-current" />
-                    <span className="text-sm font-medium">4.9 Rating</span>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <Star className="w-3 h-3 sm:w-4 sm:h-4 text-emerald-600 fill-current flex-shrink-0" />
+                    <span className="text-xs sm:text-sm font-medium whitespace-nowrap">4.9 Rating</span>
                   </div>
                 </div>
               </div>
