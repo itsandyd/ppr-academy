@@ -72,19 +72,19 @@ export function CheckoutForm() {
   const isValid = formData.price && formData.checkoutHeadline;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       {/* Pricing */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+      <Card className="border-0 sm:border shadow-none sm:shadow-sm">
+        <CardHeader className="px-4 sm:px-6">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <DollarSign className="w-5 h-5" />
             Pricing
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
+        <CardContent className="px-4 sm:px-6 space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             <div>
-              <Label htmlFor="price" className="text-foreground">Course Price (USD) *</Label>
+              <Label htmlFor="price" className="text-foreground text-sm font-medium">Course Price (USD) *</Label>
               <Input
                 id="price"
                 type="number"
@@ -93,12 +93,12 @@ export function CheckoutForm() {
                 value={formData.price}
                 onChange={(e) => handleInputChange("price", e.target.value)}
                 placeholder="99.00"
-                className="mt-2"
+                className="mt-2 h-12 text-base"
               />
             </div>
 
             <div>
-              <Label htmlFor="original-price" className="text-foreground">Original Price (optional)</Label>
+              <Label htmlFor="original-price" className="text-foreground text-sm font-medium">Original Price (optional)</Label>
               <Input
                 id="original-price"
                 type="number"
@@ -107,10 +107,10 @@ export function CheckoutForm() {
                 value={formData.originalPrice}
                 onChange={(e) => handleInputChange("originalPrice", e.target.value)}
                 placeholder="149.00"
-                className="mt-2"
+                className="mt-2 h-12 text-base"
               />
               {discountPercentage > 0 && (
-                <p className="text-sm text-primary mt-1">
+                <p className="text-sm text-primary mt-1 font-medium">
                   {discountPercentage}% discount
                 </p>
               )}
@@ -118,13 +118,13 @@ export function CheckoutForm() {
           </div>
 
           <div>
-            <Label htmlFor="payment-description" className="text-foreground">Payment Description</Label>
+            <Label htmlFor="payment-description" className="text-foreground text-sm font-medium">Payment Description</Label>
             <Input
               id="payment-description"
               value={formData.paymentDescription}
               onChange={(e) => handleInputChange("paymentDescription", e.target.value)}
               placeholder="Complete Course Access"
-              className="mt-2"
+              className="mt-2 h-12 text-base"
             />
             <p className="text-sm text-muted-foreground mt-1">
               This appears on the payment button
@@ -134,34 +134,34 @@ export function CheckoutForm() {
       </Card>
 
       {/* Checkout Page */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+      <Card className="border-0 sm:border shadow-none sm:shadow-sm">
+        <CardHeader className="px-4 sm:px-6">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <CreditCard className="w-5 h-5" />
             Checkout Page
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="px-4 sm:px-6 space-y-6">
           <div>
-            <Label htmlFor="checkout-headline" className="text-foreground">Checkout Headline *</Label>
+            <Label htmlFor="checkout-headline" className="text-foreground text-sm font-medium">Checkout Headline *</Label>
             <Input
               id="checkout-headline"
               value={formData.checkoutHeadline}
               onChange={(e) => handleInputChange("checkoutHeadline", e.target.value)}
               placeholder="Get Instant Access to the Complete Course"
-              className="mt-2"
+              className="mt-2 h-12 text-base"
             />
           </div>
 
           <div>
-            <Label htmlFor="checkout-description" className="text-foreground">Checkout Description</Label>
+            <Label htmlFor="checkout-description" className="text-foreground text-sm font-medium">Checkout Description</Label>
             <Textarea
               id="checkout-description"
               value={formData.checkoutDescription}
               onChange={(e) => handleInputChange("checkoutDescription", e.target.value)}
               placeholder="Describe the value and what students get..."
               rows={4}
-              className="mt-2"
+              className="mt-2 text-base min-h-[100px] resize-none"
             />
           </div>
 
@@ -179,15 +179,15 @@ export function CheckoutForm() {
               />
             </div>
 
-            {formData.showGuarantee && (
+              {formData.showGuarantee && (
               <div>
-                <Label htmlFor="guarantee-text" className="text-foreground">Guarantee Text</Label>
+                <Label htmlFor="guarantee-text" className="text-foreground text-sm font-medium">Guarantee Text</Label>
                 <Input
                   id="guarantee-text"
                   value={formData.guaranteeText}
                   onChange={(e) => handleInputChange("guaranteeText", e.target.value)}
                   placeholder="30-Day Money-Back Guarantee"
-                  className="mt-2"
+                  className="mt-2 h-12 text-base"
                 />
               </div>
             )}
@@ -196,35 +196,37 @@ export function CheckoutForm() {
       </Card>
 
       {/* Payment Methods */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Payment Methods</CardTitle>
+      <Card className="border-0 sm:border shadow-none sm:shadow-sm">
+        <CardHeader className="px-4 sm:px-6">
+          <CardTitle className="text-lg sm:text-xl">Payment Methods</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-foreground">Accept Stripe Payments</Label>
-                <p className="text-sm text-muted-foreground">
+        <CardContent className="px-4 sm:px-6">
+          <div className="space-y-6">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <Label className="text-foreground text-sm font-medium">Accept Stripe Payments</Label>
+                <p className="text-sm text-muted-foreground mt-1">
                   Credit cards, Apple Pay, Google Pay
                 </p>
               </div>
               <Switch
                 checked={formData.acceptsStripe}
                 onCheckedChange={(checked) => handleInputChange("acceptsStripe", checked)}
+                className="mt-1"
               />
             </div>
 
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="text-foreground">Accept PayPal</Label>
-                <p className="text-sm text-muted-foreground">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <Label className="text-foreground text-sm font-medium">Accept PayPal</Label>
+                <p className="text-sm text-muted-foreground mt-1">
                   PayPal and PayPal Pay Later
                 </p>
               </div>
               <Switch
                 checked={formData.acceptsPayPal}
                 onCheckedChange={(checked) => handleInputChange("acceptsPayPal", checked)}
+                className="mt-1"
               />
             </div>
           </div>
@@ -232,31 +234,63 @@ export function CheckoutForm() {
       </Card>
 
       {/* Navigation */}
-      <div className="flex justify-between pt-6 border-t border-border">
-        <Button variant="outline" onClick={handleBack} className="gap-2">
-          <ArrowLeft className="w-4 h-4" />
-          Back to Thumbnail
-        </Button>
-        
-        <div className="flex gap-2">
-                      <Button 
+      <div className="pt-6 border-t border-border space-y-4">
+        {/* Mobile: Stack buttons vertically */}
+        <div className="flex flex-col sm:hidden gap-3">
+          <Button 
+            onClick={handleNext}
+            disabled={!isValid}
+            className="gap-2 h-12 order-1"
+          >
+            Continue to Course Content
+            <ArrowRight className="w-4 h-4" />
+          </Button>
+          
+          <div className="flex gap-3 order-2">
+            <Button variant="outline" onClick={handleBack} className="gap-2 h-12 flex-1">
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </Button>
+            
+            <Button 
               variant="outline" 
               onClick={saveCourse}
               disabled={state.isSaving}
-              className="gap-2"
+              className="gap-2 h-12 flex-1"
+            >
+              <Save className="w-4 h-4" />
+              {state.isSaving ? "Saving..." : "Save"}
+            </Button>
+          </div>
+        </div>
+        
+        {/* Desktop: Horizontal layout */}
+        <div className="hidden sm:flex justify-between">
+          <Button variant="outline" onClick={handleBack} className="gap-2 h-10">
+            <ArrowLeft className="w-4 h-4" />
+            Back to Thumbnail
+          </Button>
+          
+          <div className="flex gap-3">
+            <Button 
+              variant="outline" 
+              onClick={saveCourse}
+              disabled={state.isSaving}
+              className="gap-2 h-10"
             >
               <Save className="w-4 h-4" />
               {state.isSaving ? "Saving..." : "Save Course"}
             </Button>
           
-          <Button 
-            onClick={handleNext}
-            disabled={!isValid}
-            className="gap-2"
-          >
-            Continue to Course Content
-            <ArrowRight className="w-4 h-4" />
-          </Button>
+            <Button 
+              onClick={handleNext}
+              disabled={!isValid}
+              className="gap-2 h-10"
+            >
+              Continue to Course Content
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </div>
     </div>

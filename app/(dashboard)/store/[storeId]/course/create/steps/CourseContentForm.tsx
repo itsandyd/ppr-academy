@@ -52,58 +52,58 @@ function CourseBasicInfoCard() {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Course Information</CardTitle>
+    <Card className="border-0 sm:border shadow-none sm:shadow-sm">
+      <CardHeader className="px-4 sm:px-6">
+        <CardTitle className="text-lg sm:text-xl">Course Information</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="px-4 sm:px-6 space-y-6">
         <div>
-          <Label htmlFor="title" className="text-foreground">Course Title *</Label>
+          <Label htmlFor="title" className="text-foreground text-sm font-medium">Course Title *</Label>
           <Input
             id="title"
             value={state.data?.title || ""}
             onChange={(e) => handleInputChange("title", e.target.value)}
             placeholder="Enter course title"
-            className="mt-2"
+            className="mt-2 h-12 text-base"
           />
         </div>
 
         <div>
-          <Label htmlFor="description" className="text-foreground">Course Description *</Label>
+          <Label htmlFor="description" className="text-foreground text-sm font-medium">Course Description *</Label>
           <Textarea
             id="description"
             value={state.data?.description || ""}
             onChange={(e) => handleInputChange("description", e.target.value)}
             placeholder="Describe what students will learn..."
             rows={4}
-            className="mt-2"
+            className="mt-2 text-base min-h-[100px] resize-none"
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
           <div>
-            <Label className="text-foreground">Category *</Label>
+            <Label className="text-foreground text-sm font-medium">Category *</Label>
             <Select value={state.data?.category || ""} onValueChange={(value) => handleInputChange("category", value)}>
-              <SelectTrigger className="mt-2">
+              <SelectTrigger className="mt-2 h-12 text-base">
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
                 {categories.map((cat) => (
-                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                  <SelectItem key={cat} value={cat} className="text-base py-3">{cat}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
           <div>
-            <Label className="text-foreground">Skill Level *</Label>
+            <Label className="text-foreground text-sm font-medium">Skill Level *</Label>
             <Select value={state.data?.skillLevel || ""} onValueChange={(value) => handleInputChange("skillLevel", value)}>
-              <SelectTrigger className="mt-2">
+              <SelectTrigger className="mt-2 h-12 text-base">
                 <SelectValue placeholder="Select level" />
               </SelectTrigger>
               <SelectContent>
                 {skillLevels.map((level) => (
-                  <SelectItem key={level} value={level}>{level}</SelectItem>
+                  <SelectItem key={level} value={level} className="text-base py-3">{level}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -192,22 +192,22 @@ function CourseThumbnailCard() {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Course Thumbnail</CardTitle>
+    <Card className="border-0 sm:border shadow-none sm:shadow-sm">
+      <CardHeader className="px-4 sm:px-6">
+        <CardTitle className="text-lg sm:text-xl">Course Thumbnail</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
+      <CardContent className="px-4 sm:px-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* AI Generation Section */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="text-foreground font-medium">Generate with AI</Label>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <Label className="text-foreground font-medium text-sm">Generate with AI</Label>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleGenerateWithAI}
                 disabled={isGenerating || !state.data?.title || !state.data?.description}
-                className="gap-2"
+                className="gap-2 h-10 sm:h-8 w-full sm:w-auto"
               >
                 {isGenerating ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -254,7 +254,7 @@ function CourseThumbnailCard() {
 
           {/* Upload Area */}
           <div
-            className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+            className={`border-2 border-dashed rounded-lg p-6 sm:p-8 text-center transition-colors ${
               isDragOver
                 ? "border-primary bg-primary/5"
                 : "border-border hover:border-border-strong"
@@ -263,28 +263,28 @@ function CourseThumbnailCard() {
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-            <div className="space-y-2">
-              <p className="text-foreground font-medium">Drop your thumbnail here</p>
-              <p className="text-sm text-muted-foreground">or click to browse files</p>
-              <Button variant="outline" size="sm">
+            <Upload className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-4 text-muted-foreground" />
+            <div className="space-y-2 sm:space-y-3">
+              <p className="text-foreground font-medium text-sm sm:text-base">Drop your thumbnail here</p>
+              <p className="text-xs sm:text-sm text-muted-foreground">or click to browse files</p>
+              <Button variant="outline" size="sm" className="h-10 px-6">
                 Choose File
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground mt-4">
+            <p className="text-xs text-muted-foreground mt-3 sm:mt-4 leading-relaxed">
               Recommended: 1920x1080px (16:9 ratio), max 5MB
             </p>
           </div>
 
           {/* URL Input */}
           <div className="relative">
-            <Label htmlFor="thumbnail-url" className="text-foreground">Or enter image URL</Label>
+            <Label htmlFor="thumbnail-url" className="text-foreground text-sm font-medium">Or enter image URL</Label>
             <Input
               id="thumbnail-url"
               value={state.data?.thumbnail || ""}
               onChange={(e) => handleInputChange("thumbnail", e.target.value)}
               placeholder="https://example.com/image.jpg"
-              className="mt-2"
+              className="mt-2 h-12 text-base"
             />
           </div>
 
@@ -385,31 +385,63 @@ export function CourseContentForm() {
       />
 
       {/* Navigation */}
-      <div className="flex justify-between pt-6 border-t border-border">
-        <Button variant="outline" onClick={handleBack} className="gap-2">
-          <ArrowLeft className="w-4 h-4" />
-          Back to Checkout
-        </Button>
-        
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={saveCourse}
-            disabled={state.isSaving}
-            className="gap-2"
-          >
-            <Save className="w-4 h-4" />
-            {state.isSaving ? "Saving..." : "Save Course"}
-          </Button>
-        
+      <div className="pt-6 border-t border-border space-y-4">
+        {/* Mobile: Stack buttons vertically */}
+        <div className="flex flex-col sm:hidden gap-3">
           <Button 
             onClick={handleNext} 
             disabled={!isValid}
-            className="gap-2"
+            className="gap-2 h-12 order-1"
           >
             Continue to Options
             <ArrowRight className="w-4 h-4" />
           </Button>
+          
+          <div className="flex gap-3 order-2">
+            <Button variant="outline" onClick={handleBack} className="gap-2 h-12 flex-1">
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              onClick={saveCourse}
+              disabled={state.isSaving}
+              className="gap-2 h-12 flex-1"
+            >
+              <Save className="w-4 h-4" />
+              {state.isSaving ? "Saving..." : "Save"}
+            </Button>
+          </div>
+        </div>
+        
+        {/* Desktop: Horizontal layout */}
+        <div className="hidden sm:flex justify-between">
+          <Button variant="outline" onClick={handleBack} className="gap-2 h-10">
+            <ArrowLeft className="w-4 h-4" />
+            Back to Checkout
+          </Button>
+          
+          <div className="flex gap-3">
+            <Button 
+              variant="outline" 
+              onClick={saveCourse}
+              disabled={state.isSaving}
+              className="gap-2 h-10"
+            >
+              <Save className="w-4 h-4" />
+              {state.isSaving ? "Saving..." : "Save Course"}
+            </Button>
+          
+            <Button 
+              onClick={handleNext} 
+              disabled={!isValid}
+              className="gap-2 h-10"
+            >
+              Continue to Options
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </div>
     </div>

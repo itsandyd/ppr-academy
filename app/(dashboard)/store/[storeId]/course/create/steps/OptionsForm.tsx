@@ -102,116 +102,120 @@ export function OptionsForm() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       {/* Sharing & SEO */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+      <Card className="border-0 sm:border shadow-none sm:shadow-sm">
+        <CardHeader className="px-4 sm:px-6">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <Share className="w-5 h-5" />
             Sharing & SEO
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-foreground">Enable Social Sharing</Label>
-              <p className="text-sm text-muted-foreground">
+        <CardContent className="px-4 sm:px-6 space-y-6">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <Label className="text-foreground text-sm font-medium">Enable Social Sharing</Label>
+              <p className="text-sm text-muted-foreground mt-1">
                 Allow students to share course progress
               </p>
             </div>
             <Switch
               checked={formData.enableSharing}
               onCheckedChange={(checked) => handleInputChange("enableSharing", checked)}
+              className="mt-1"
             />
           </div>
 
           <div>
-            <Label htmlFor="seo-title" className="text-foreground">SEO Title</Label>
+            <Label htmlFor="seo-title" className="text-foreground text-sm font-medium">SEO Title</Label>
             <Input
               id="seo-title"
               value={formData.seoTitle}
               onChange={(e) => handleInputChange("seoTitle", e.target.value)}
               placeholder="Course title for search engines"
-              className="mt-2"
+              className="mt-2 h-12 text-base"
             />
           </div>
 
           <div>
-            <Label htmlFor="seo-description" className="text-foreground">SEO Description</Label>
+            <Label htmlFor="seo-description" className="text-foreground text-sm font-medium">SEO Description</Label>
             <Textarea
               id="seo-description"
               value={formData.seoDescription}
               onChange={(e) => handleInputChange("seoDescription", e.target.value)}
               placeholder="Course description for search engines"
               rows={3}
-              className="mt-2"
+              className="mt-2 text-base min-h-[80px] resize-none"
             />
           </div>
         </CardContent>
       </Card>
 
       {/* Student Features */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+      <Card className="border-0 sm:border shadow-none sm:shadow-sm">
+        <CardHeader className="px-4 sm:px-6">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <Award className="w-5 h-5" />
             Student Features
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-foreground">Enable Comments</Label>
-              <p className="text-sm text-muted-foreground">
+        <CardContent className="px-4 sm:px-6 space-y-6">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <Label className="text-foreground text-sm font-medium">Enable Comments</Label>
+              <p className="text-sm text-muted-foreground mt-1">
                 Students can comment on lessons
               </p>
             </div>
             <Switch
               checked={formData.enableComments}
               onCheckedChange={(checked) => handleInputChange("enableComments", checked)}
+              className="mt-1"
             />
           </div>
 
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-foreground">Progress Tracking</Label>
-              <p className="text-sm text-muted-foreground">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <Label className="text-foreground text-sm font-medium">Progress Tracking</Label>
+              <p className="text-sm text-muted-foreground mt-1">
                 Show course completion progress
               </p>
             </div>
             <Switch
               checked={formData.enableProgress}
               onCheckedChange={(checked) => handleInputChange("enableProgress", checked)}
+              className="mt-1"
             />
           </div>
 
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-foreground">Completion Certificates</Label>
-              <p className="text-sm text-muted-foreground">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <Label className="text-foreground text-sm font-medium">Completion Certificates</Label>
+              <p className="text-sm text-muted-foreground mt-1">
                 Award certificates when course is completed
               </p>
             </div>
             <Switch
               checked={formData.enableCertificates}
               onCheckedChange={(checked) => handleInputChange("enableCertificates", checked)}
+              className="mt-1"
             />
           </div>
 
           {formData.enableCertificates && (
             <div>
-              <Label className="text-foreground">Certificate Template</Label>
+              <Label className="text-foreground text-sm font-medium">Certificate Template</Label>
               <Select 
                 value={formData.certificateTemplate} 
                 onValueChange={(value) => handleInputChange("certificateTemplate", value)}
               >
-                <SelectTrigger className="mt-2">
+                <SelectTrigger className="mt-2 h-12 text-base">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="modern">Modern</SelectItem>
-                  <SelectItem value="classic">Classic</SelectItem>
-                  <SelectItem value="minimal">Minimal</SelectItem>
+                  <SelectItem value="modern" className="text-base py-3">Modern</SelectItem>
+                  <SelectItem value="classic" className="text-base py-3">Classic</SelectItem>
+                  <SelectItem value="minimal" className="text-base py-3">Minimal</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -220,55 +224,56 @@ export function OptionsForm() {
       </Card>
 
       {/* Access Control */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+      <Card className="border-0 sm:border shadow-none sm:shadow-sm">
+        <CardHeader className="px-4 sm:px-6">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <Settings className="w-5 h-5" />
             Access Control
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-foreground">Content Dripping</Label>
-              <p className="text-sm text-muted-foreground">
+        <CardContent className="px-4 sm:px-6 space-y-6">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <Label className="text-foreground text-sm font-medium">Content Dripping</Label>
+              <p className="text-sm text-muted-foreground mt-1">
                 Release lessons gradually over time
               </p>
             </div>
             <Switch
               checked={formData.drippingEnabled}
               onCheckedChange={(checked) => handleInputChange("drippingEnabled", checked)}
+              className="mt-1"
             />
           </div>
 
           {formData.drippingEnabled && (
             <div>
-              <Label htmlFor="dripping-days" className="text-foreground">Days Between Lessons</Label>
+              <Label htmlFor="dripping-days" className="text-foreground text-sm font-medium">Days Between Lessons</Label>
               <Input
                 id="dripping-days"
                 type="number"
                 min="1"
                 value={formData.drippingDays}
                 onChange={(e) => handleInputChange("drippingDays", e.target.value)}
-                className="mt-2"
+                className="mt-2 h-12 text-base"
               />
             </div>
           )}
 
           <div>
-            <Label className="text-foreground">Access Duration</Label>
+            <Label className="text-foreground text-sm font-medium">Access Duration</Label>
             <Select 
               value={formData.accessDuration} 
               onValueChange={(value) => handleInputChange("accessDuration", value)}
             >
-              <SelectTrigger className="mt-2">
+              <SelectTrigger className="mt-2 h-12 text-base">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="lifetime">Lifetime Access</SelectItem>
-                <SelectItem value="1year">1 Year</SelectItem>
-                <SelectItem value="6months">6 Months</SelectItem>
-                <SelectItem value="3months">3 Months</SelectItem>
+                <SelectItem value="lifetime" className="text-base py-3">Lifetime Access</SelectItem>
+                <SelectItem value="1year" className="text-base py-3">1 Year</SelectItem>
+                <SelectItem value="6months" className="text-base py-3">6 Months</SelectItem>
+                <SelectItem value="3months" className="text-base py-3">3 Months</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -276,77 +281,66 @@ export function OptionsForm() {
       </Card>
 
       {/* Email Automation */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+      <Card className="border-0 sm:border shadow-none sm:shadow-sm">
+        <CardHeader className="px-4 sm:px-6">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <MessageSquare className="w-5 h-5" />
             Email Automation
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-foreground">Welcome Email</Label>
-              <p className="text-sm text-muted-foreground">
+        <CardContent className="px-4 sm:px-6 space-y-6">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <Label className="text-foreground text-sm font-medium">Welcome Email</Label>
+              <p className="text-sm text-muted-foreground mt-1">
                 Send welcome email when student enrolls
               </p>
             </div>
             <Switch
               checked={formData.welcomeEmail}
               onCheckedChange={(checked) => handleInputChange("welcomeEmail", checked)}
+              className="mt-1"
             />
           </div>
 
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-foreground">Completion Email</Label>
-              <p className="text-sm text-muted-foreground">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <Label className="text-foreground text-sm font-medium">Completion Email</Label>
+              <p className="text-sm text-muted-foreground mt-1">
                 Send congratulations when course is completed
               </p>
             </div>
             <Switch
               checked={formData.completionEmail}
               onCheckedChange={(checked) => handleInputChange("completionEmail", checked)}
+              className="mt-1"
             />
           </div>
 
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-foreground">Reminder Emails</Label>
-              <p className="text-sm text-muted-foreground">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <Label className="text-foreground text-sm font-medium">Reminder Emails</Label>
+              <p className="text-sm text-muted-foreground mt-1">
                 Send reminders to inactive students
               </p>
             </div>
             <Switch
               checked={formData.reminderEmails}
               onCheckedChange={(checked) => handleInputChange("reminderEmails", checked)}
+              className="mt-1"
             />
           </div>
         </CardContent>
       </Card>
 
       {/* Navigation */}
-      <div className="flex justify-between pt-6 border-t border-border">
-        <Button variant="outline" onClick={handleBack} className="gap-2">
-          <ArrowLeft className="w-4 h-4" />
-          Back to Course Content
-        </Button>
-        
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={saveCourse}
-            disabled={state.isSaving}
-            className="gap-2"
-          >
-            <Save className="w-4 h-4" />
-            {state.isSaving ? "Saving..." : "Save Course"}
-          </Button>
-          
+      <div className="pt-6 border-t border-border space-y-4">
+        {/* Mobile: Stack buttons vertically */}
+        <div className="flex flex-col sm:hidden gap-3">
           <Button 
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="gap-2"
+            className="gap-2 h-12 order-1"
           >
             {isSubmitting ? (
               "Creating Course..."
@@ -357,6 +351,58 @@ export function OptionsForm() {
               </>
             )}
           </Button>
+          
+          <div className="flex gap-3 order-2">
+            <Button variant="outline" onClick={handleBack} className="gap-2 h-12 flex-1">
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </Button>
+            
+            <Button 
+              variant="outline" 
+              onClick={saveCourse}
+              disabled={state.isSaving}
+              className="gap-2 h-12 flex-1"
+            >
+              <Save className="w-4 h-4" />
+              {state.isSaving ? "Saving..." : "Save"}
+            </Button>
+          </div>
+        </div>
+        
+        {/* Desktop: Horizontal layout */}
+        <div className="hidden sm:flex justify-between">
+          <Button variant="outline" onClick={handleBack} className="gap-2 h-10">
+            <ArrowLeft className="w-4 h-4" />
+            Back to Course Content
+          </Button>
+          
+          <div className="flex gap-3">
+            <Button 
+              variant="outline" 
+              onClick={saveCourse}
+              disabled={state.isSaving}
+              className="gap-2 h-10"
+            >
+              <Save className="w-4 h-4" />
+              {state.isSaving ? "Saving..." : "Save Course"}
+            </Button>
+            
+            <Button 
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className="gap-2 h-10"
+            >
+              {isSubmitting ? (
+                "Creating Course..."
+              ) : (
+                <>
+                  <Check className="w-4 h-4" />
+                  Create Course
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
