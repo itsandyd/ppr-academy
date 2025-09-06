@@ -188,7 +188,7 @@ export function CourseContentManager({ modules, onModulesChange }: CourseContent
                           Module {moduleIndex + 1}: {module.title}
                         </h4>
                         {module.description && (
-                          <p className="text-sm text-emerald-600 mt-1">{module.description}</p>
+                          <p className="text-xs sm:text-sm text-emerald-600 mt-1 line-clamp-2 sm:line-clamp-none">{module.description}</p>
                         )}
                       </div>
                     </button>
@@ -255,7 +255,7 @@ export function CourseContentManager({ modules, onModulesChange }: CourseContent
                                     Lesson {lessonIndex + 1}: {lesson.title}
                                   </h5>
                                   {lesson.description && (
-                                    <p className="text-sm text-blue-600 mt-1">{lesson.description}</p>
+                                    <p className="text-xs sm:text-sm text-blue-600 mt-1 line-clamp-2 sm:line-clamp-none">{lesson.description}</p>
                                   )}
                                 </div>
                               </button>

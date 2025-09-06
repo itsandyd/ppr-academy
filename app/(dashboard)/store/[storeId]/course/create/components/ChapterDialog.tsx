@@ -517,15 +517,15 @@ export function ChapterDialog({
         )}
       </DialogTrigger>
       
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
+      <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
-            <FileText className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+          <DialogTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100 text-sm sm:text-base">
+            <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 dark:text-purple-400" />
             {isEditing ? `Edit Chapter in "${lessonTitle}"` : `Add Chapter to "${lessonTitle}"`}
           </DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-6 py-4">
+        <div className="space-y-4 sm:space-y-6 py-4">
           {/* Chapter Title */}
           <div className="space-y-2">
             <Label htmlFor="chapter-title">Chapter Title *</Label>
@@ -534,7 +534,7 @@ export function ChapterDialog({
               placeholder="e.g., Introduction to EQ3 Controls"
               value={chapterData.title}
               onChange={(e) => setChapterData(prev => ({ ...prev, title: e.target.value }))}
-              className="h-12"
+              className="h-10 sm:h-12"
             />
             <p className="text-xs text-muted-foreground">
               {isEditing ? `Editing Chapter ${editData?.orderIndex} in ${lessonTitle}` : `This will be Chapter ${existingChapters.length + 1} in ${lessonTitle}`}
@@ -563,7 +563,7 @@ export function ChapterDialog({
               placeholder="https://youtube.com/watch?v=..."
               value={chapterData.videoUrl}
               onChange={(e) => setChapterData(prev => ({ ...prev, videoUrl: e.target.value }))}
-              className="h-12"
+              className="h-10 sm:h-12"
             />
             <p className="text-xs text-muted-foreground">
               Optional: Add a video to accompany this chapter
@@ -579,7 +579,7 @@ export function ChapterDialog({
               placeholder="15"
               value={chapterData.duration || ""}
               onChange={(e) => setChapterData(prev => ({ ...prev, duration: parseInt(e.target.value) || 0 }))}
-              className="h-12"
+              className="h-10 sm:h-12"
               min="0"
             />
             <p className="text-xs text-muted-foreground">
@@ -588,10 +588,10 @@ export function ChapterDialog({
           </div>
 
           {/* AI Generation Section */}
-          <div className="space-y-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-            <div className="flex items-center gap-2 mb-3">
-              <Volume2 className="w-5 h-5 text-blue-600" />
-              <h4 className="font-medium text-blue-800 dark:text-blue-200">AI Content Generation</h4>
+          <div className="space-y-3 sm:space-y-4 p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+            <div className="flex items-center gap-2 mb-2 sm:mb-3">
+              <Volume2 className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+              <h4 className="font-medium text-blue-800 dark:text-blue-200 text-sm sm:text-base">AI Content Generation</h4>
             </div>
 
             {/* Voice Selection */}
@@ -635,14 +635,14 @@ export function ChapterDialog({
                 })()}
 
                 {/* Generation Buttons */}
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-2">
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={handleGenerateAudio}
                     disabled={!chapterData.content.trim() || !getTextPreview()?.validation.isValid || isGeneratingAudio}
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-2 w-full sm:w-auto"
                   >
                     {isGeneratingAudio ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -658,7 +658,7 @@ export function ChapterDialog({
                     size="sm"
                     onClick={handleGenerateVideo}
                     disabled={!chapterData.content.trim() || isGeneratingVideo}
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-2 w-full sm:w-auto"
                   >
                     {isGeneratingVideo ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -750,14 +750,14 @@ export function ChapterDialog({
           </div>
 
           {/* Chapter Preview */}
-          <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-            <h4 className="font-medium text-purple-800 mb-2">Preview:</h4>
+          <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 sm:p-4">
+            <h4 className="font-medium text-purple-800 mb-2 text-sm sm:text-base">Preview:</h4>
             <div className="text-sm space-y-2">
               <div className="font-medium text-purple-700">
                 Chapter {existingChapters.length + 1}: {chapterData.title || "Chapter Title"}
               </div>
               {chapterData.content && (
-                <div className="text-purple-600 bg-white p-3 rounded border max-h-32 overflow-y-auto prose prose-sm">
+                <div className="text-purple-600 bg-white p-2 sm:p-3 rounded border max-h-24 sm:max-h-32 overflow-y-auto prose prose-sm">
                   <div dangerouslySetInnerHTML={{ 
                     __html: chapterData.content.length > 200 
                       ? chapterData.content.slice(0, 200) + "..." 
@@ -767,8 +767,8 @@ export function ChapterDialog({
               )}
               {chapterData.videoUrl && (
                 <div className="flex items-center gap-2 text-purple-600">
-                  <Video className="w-4 h-4" />
-                  <span>Video included</span>
+                  <Video className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span className="text-xs sm:text-sm">Video included</span>
                 </div>
               )}
               {chapterData.duration > 0 && (
@@ -784,15 +784,19 @@ export function ChapterDialog({
         </div>
 
         {/* Dialog Actions */}
-        <div className="flex items-center gap-3 justify-end pt-6 border-t border-border">
-          <Button variant="outline" onClick={handleCancel}>
+        <div className="flex flex-col sm:flex-row items-center gap-3 justify-end pt-4 sm:pt-6 border-t border-border">
+          <Button 
+            variant="outline" 
+            onClick={handleCancel}
+            className="w-full sm:w-auto order-2 sm:order-1"
+          >
             <X className="w-4 h-4 mr-2" />
             Cancel
           </Button>
           <Button 
             onClick={handleSave}
             disabled={!chapterData.title.trim() || !chapterData.content.trim()}
-            className="bg-purple-600 hover:bg-purple-700"
+            className="bg-purple-600 hover:bg-purple-700 w-full sm:w-auto order-1 sm:order-2"
           >
             <Save className="w-4 h-4 mr-2" />
             {isEditing ? "Update Chapter" : "Add Chapter"}
