@@ -77,7 +77,7 @@ export function ModuleDialog({ onModuleAdd, onModuleEdit, existingModules, editD
         )}
       </DialogTrigger>
       
-      <DialogContent className="max-w-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
+      <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
             <BookOpen className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
@@ -85,7 +85,7 @@ export function ModuleDialog({ onModuleAdd, onModuleEdit, existingModules, editD
           </DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-6 py-4">
+        <div className="space-y-4 sm:space-y-6 py-4">
           {/* Module Title */}
           <div className="space-y-2">
             <Label htmlFor="module-title">Module Title *</Label>
@@ -94,7 +94,7 @@ export function ModuleDialog({ onModuleAdd, onModuleEdit, existingModules, editD
               placeholder="e.g., EQ and Filters"
               value={moduleData.title}
               onChange={(e) => setModuleData(prev => ({ ...prev, title: e.target.value }))}
-              className="h-12"
+              className="h-10 sm:h-12"
             />
             <p className="text-xs text-muted-foreground">
               {isEditing ? `Editing Module ${editData?.orderIndex}` : `This will be Module ${existingModules.length + 1}`}
@@ -109,8 +109,8 @@ export function ModuleDialog({ onModuleAdd, onModuleEdit, existingModules, editD
               placeholder="Describe what students will learn in this module..."
               value={moduleData.description}
               onChange={(e) => setModuleData(prev => ({ ...prev, description: e.target.value }))}
-              rows={4}
-              className="resize-none"
+              rows={3}
+              className="resize-none min-h-[72px] sm:min-h-[96px]"
             />
             <p className="text-xs text-muted-foreground">
               Optional: Provide an overview of the module content
@@ -118,14 +118,14 @@ export function ModuleDialog({ onModuleAdd, onModuleEdit, existingModules, editD
           </div>
 
           {/* Module Preview */}
-          <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
-            <h4 className="font-medium text-emerald-800 mb-2">Preview:</h4>
+          <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 sm:p-4">
+            <h4 className="font-medium text-emerald-800 mb-2 text-sm sm:text-base">Preview:</h4>
             <div className="text-sm">
               <div className="font-medium text-emerald-700">
                 Module {isEditing ? editData?.orderIndex : existingModules.length + 1}: {moduleData.title || "Module Title"}
               </div>
               {moduleData.description && (
-                <div className="text-emerald-600 mt-1">
+                <div className="text-emerald-600 mt-1 text-xs sm:text-sm">
                   {moduleData.description}
                 </div>
               )}
@@ -134,15 +134,19 @@ export function ModuleDialog({ onModuleAdd, onModuleEdit, existingModules, editD
         </div>
 
         {/* Dialog Actions */}
-        <div className="flex items-center gap-3 justify-end pt-6 border-t border-border">
-          <Button variant="outline" onClick={handleCancel}>
+        <div className="flex flex-col sm:flex-row items-center gap-3 justify-end pt-4 sm:pt-6 border-t border-border">
+          <Button 
+            variant="outline" 
+            onClick={handleCancel}
+            className="w-full sm:w-auto order-2 sm:order-1"
+          >
             <X className="w-4 h-4 mr-2" />
             Cancel
           </Button>
           <Button 
             onClick={handleSave}
             disabled={!moduleData.title.trim()}
-            className="bg-emerald-600 hover:bg-emerald-700"
+            className="bg-emerald-600 hover:bg-emerald-700 w-full sm:w-auto order-1 sm:order-2"
           >
             <Save className="w-4 h-4 mr-2" />
             {isEditing ? "Update Module" : "Add Module"}
