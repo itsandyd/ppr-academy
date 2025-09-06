@@ -489,6 +489,11 @@ export const updateCourseWithModules = mutation({
 
               if (lessonData.chapters && lessonData.chapters.length > 0) {
                 for (const chapterData of lessonData.chapters) {
+                  console.log(`🎵 Creating chapter "${chapterData.title}" with audio:`, {
+                    hasGeneratedAudio: !!chapterData.generatedAudioData,
+                    audioDataLength: chapterData.generatedAudioData?.length || 0,
+                  });
+                  
                   await ctx.db.insert("courseChapters", {
                     title: chapterData.title,
                     description: chapterData.content,
@@ -513,6 +518,114 @@ export const updateCourseWithModules = mutation({
     } catch (error) {
       console.error("Error updating course with modules:", error);
       return { success: false, error: "Failed to update course" };
+    }
+  },
+});
+
+// Create or update a single chapter (for auto-save in ChapterDialog)
+export const createOrUpdateChapter = mutation({
+  args: {
+    courseId: v.id("courses"),
+    lessonId: v.optional(v.id("courseLessons")),
+    chapterId: v.union(v.id("courseChapters"), v.null()), // If provided, update existing chapter
+    chapterData: v.object({
+      title: v.string(),
+      content: v.string(),
+      videoUrl: v.optional(v.string()),
+      duration: v.optional(v.number()),
+      position: v.number(),
+      generatedAudioData: v.optional(v.string()),
+    }),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    chapterId: v.optional(v.id("courseChapters")),
+    error: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    try {
+      // Verify user authentication
+      const identity = await ctx.auth.getUserIdentity();
+      if (!identity) {
+        return { success: false, error: "No user authentication found" };
+      }
+
+      // Get Convex user from Clerk ID
+      const convexUser = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+        .unique();
+
+      if (!convexUser) {
+        return { success: false, error: "User not found in database" };
+      }
+
+      // Verify course ownership
+      const course = await ctx.db.get(args.courseId);
+      if (!course) {
+        return { success: false, error: "Course not found" };
+      }
+      
+      if (course.userId !== convexUser._id) {
+        return { success: false, error: "You don't have permission to edit this course" };
+      }
+
+
+      const chapterDbData = {
+        title: args.chapterData.title,
+        description: args.chapterData.content,
+        videoUrl: args.chapterData.videoUrl || undefined,
+        position: args.chapterData.position,
+        courseId: args.courseId,
+        lessonId: args.lessonId || undefined,
+        isPublished: false,
+        // Save generated audio data if present
+        generatedAudioUrl: args.chapterData.generatedAudioData || undefined,
+        audioGenerationStatus: args.chapterData.generatedAudioData ? "completed" as const : undefined,
+        audioGeneratedAt: args.chapterData.generatedAudioData ? Date.now() : undefined,
+      };
+
+      let chapterId: Id<"courseChapters">;
+
+      if (args.chapterId && args.chapterId !== null) {
+        // Update existing chapter
+        await ctx.db.patch(args.chapterId, chapterDbData);
+        chapterId = args.chapterId;
+        console.log(`📝 Updated existing chapter: ${args.chapterData.title}`);
+      } else {
+        // Try to find existing chapter by title, courseId, and lessonId
+        const existingChapter = await ctx.db
+          .query("courseChapters")
+          .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId))
+          .filter((q) => 
+            q.and(
+              q.eq(q.field("title"), args.chapterData.title),
+              args.lessonId 
+                ? q.eq(q.field("lessonId"), args.lessonId)
+                : q.eq(q.field("lessonId"), undefined)
+            )
+          )
+          .first();
+
+        if (existingChapter) {
+          // Update existing chapter
+          await ctx.db.patch(existingChapter._id, chapterDbData);
+          chapterId = existingChapter._id;
+          console.log(`🔄 Found and updated existing chapter: ${args.chapterData.title} (ID: ${existingChapter._id})`);
+        } else {
+          // Create new chapter
+          chapterId = await ctx.db.insert("courseChapters", chapterDbData);
+          console.log(`✨ Created new chapter: ${args.chapterData.title}`);
+        }
+      }
+
+      return { success: true, chapterId };
+    } catch (error) {
+      console.error("Error creating/updating chapter:", error);
+      return { 
+        success: false, 
+        error: "Failed to save chapter" 
+      };
     }
   },
 });
@@ -884,4 +997,101 @@ export const getChapterById = query({
 
     return chapter;
   },
-}); 
+});
+
+// Clean up duplicate chapters (utility function for one-time cleanup)
+export const cleanupDuplicateChapters = mutation({
+  args: {
+    courseId: v.id("courses"),
+    userId: v.string(),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    removedCount: v.number(),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    try {
+      // Verify user authentication
+      const identity = await ctx.auth.getUserIdentity();
+      if (!identity) {
+        return { success: false, removedCount: 0, message: "No user authentication found" };
+      }
+
+      // Get Convex user from Clerk ID
+      const convexUser = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+        .unique();
+
+      if (!convexUser) {
+        return { success: false, removedCount: 0, message: "User not found in database" };
+      }
+
+      // Verify course ownership
+      const course = await ctx.db.get(args.courseId);
+      if (!course) {
+        return { success: false, removedCount: 0, message: "Course not found" };
+      }
+      
+      if (course.userId !== convexUser._id) {
+        return { success: false, removedCount: 0, message: "You don't have permission to edit this course" };
+      }
+
+      // Get all chapters for this course
+      const allChapters = await ctx.db
+        .query("courseChapters")
+        .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId))
+        .collect();
+
+      console.log(`🧹 Found ${allChapters.length} chapters for course ${args.courseId}`);
+
+      // Group chapters by title and lessonId to find duplicates
+      const chapterGroups: Record<string, typeof allChapters> = {};
+      
+      for (const chapter of allChapters) {
+        const groupKey = `${chapter.title}|${chapter.lessonId || 'no-lesson'}`;
+        if (!chapterGroups[groupKey]) {
+          chapterGroups[groupKey] = [];
+        }
+        chapterGroups[groupKey].push(chapter);
+      }
+
+      let removedCount = 0;
+
+      // For each group with duplicates, keep the most recent one (by _creationTime) and delete the rest
+      for (const [groupKey, chapters] of Object.entries(chapterGroups)) {
+        if (chapters.length > 1) {
+          // Sort by creation time (newest first)
+          chapters.sort((a, b) => b._creationTime - a._creationTime);
+          
+          // Keep the first (newest) chapter, delete the rest
+          const toKeep = chapters[0];
+          const toDelete = chapters.slice(1);
+          
+          console.log(`🧹 Group "${groupKey}": keeping ${toKeep._id} (${new Date(toKeep._creationTime).toISOString()}), deleting ${toDelete.length} duplicates`);
+          
+          for (const duplicate of toDelete) {
+            await ctx.db.delete(duplicate._id);
+            removedCount++;
+            console.log(`🗑️ Deleted duplicate chapter: ${duplicate._id} (${new Date(duplicate._creationTime).toISOString()})`);
+          }
+        }
+      }
+
+      return {
+        success: true,
+        removedCount,
+        message: `Cleanup complete. Removed ${removedCount} duplicate chapters.`,
+      };
+    } catch (error) {
+      console.error("Error cleaning up duplicate chapters:", error);
+      return { 
+        success: false, 
+        removedCount: 0,
+        message: "Failed to cleanup duplicate chapters" 
+      };
+    }
+  },
+});
+

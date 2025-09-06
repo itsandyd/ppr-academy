@@ -1,16 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cleanTextForSpeech, validateTextForSpeech } from '@/lib/text-utils';
 import { auth } from '@clerk/nextjs/server';
+import { ConvexHttpClient } from 'convex/browser';
+import { api } from '@/convex/_generated/api';
 
 export async function POST(req: NextRequest) {
   try {
     // Check authentication
-    const { userId } = await auth();
+    const { userId, getToken } = await auth();
     if (!userId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
+    }
+
+    // Initialize Convex client for server-side use
+    const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+    const token = await getToken({ template: "convex" });
+    if (token) {
+      convex.setAuth(token);
     }
 
     const body = await req.json();
@@ -42,28 +51,81 @@ export async function POST(req: NextRequest) {
 
     // Check if ElevenLabs API key is configured
     if (!process.env.ELEVENLABS_API_KEY) {
-      // For development/demo purposes, return a simulated success response
-      console.log('ElevenLabs API not configured, returning simulated response');
+      // For development/demo purposes, create a simulated audio file and upload it to Convex
+      console.log('ElevenLabs API not configured, creating simulated audio file');
       
       const estimatedDuration = validation.wordCount / 150; // minutes
       const simulatedAudioSize = cleanedText.length * 100; // rough estimate
       
-      // Create a simple base64 audio data placeholder
-      const simulatedAudioData = "data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA";
-      
-      return NextResponse.json({
-        success: true,
-        audioData: simulatedAudioData,
-        metadata: {
+      try {
+        // Create a minimal MP3 file buffer (silent audio)
+        const silentMp3Buffer = Buffer.from([
+          0x49, 0x44, 0x33, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x23, 0x54, 0x53, 0x53, 0x45,
+          0x00, 0x00, 0x00, 0x0F, 0x00, 0x00, 0x03, 0x4C, 0x61, 0x76, 0x66, 0x35, 0x38, 0x2E,
+          0x37, 0x36, 0x2E, 0x31, 0x30, 0x30, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+          0x00, 0x00, 0x00, 0x00, 0xFF, 0xFB, 0x90, 0x00
+        ]);
+        
+        const blob = new Blob([silentMp3Buffer], { type: 'audio/mpeg' });
+        
+        // Generate upload URL from Convex
+        const uploadUrl = await convex.mutation(api.files.generateUploadUrl, {});
+        
+        // Upload the file
+        const uploadResponse = await fetch(uploadUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'audio/mpeg' },
+          body: blob,
+        });
+        
+        if (!uploadResponse.ok) {
+          throw new Error('Failed to upload simulated audio file');
+        }
+        
+        const { storageId } = await uploadResponse.json();
+        
+        // Save the file reference and get the URL
+        const audioUrl = await convex.mutation(api.files.saveAudioFile, {
+          storageId,
           chapterId,
-          cleanedText,
-          validation,
-          audioSize: simulatedAudioSize,
-          estimatedDuration,
-          isSimulated: true,
-        },
-        message: 'Demo mode: ElevenLabs API not configured. This is a simulated response.',
-      });
+          filename: `chapter_${chapterId}_simulated_audio.mp3`,
+          size: silentMp3Buffer.length,
+        });
+        
+        return NextResponse.json({
+          success: true,
+          audioUrl: audioUrl,
+          metadata: {
+            chapterId,
+            cleanedText,
+            validation,
+            audioSize: simulatedAudioSize,
+            estimatedDuration,
+            isSimulated: true,
+          },
+          message: 'Demo mode: ElevenLabs API not configured. Created simulated audio file.',
+        });
+      } catch (uploadError) {
+        console.error('Failed to upload simulated audio:', uploadError);
+        
+        // Fallback to base64 if upload fails
+        const simulatedAudioData = "data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA";
+        
+        return NextResponse.json({
+          success: true,
+          audioData: simulatedAudioData,
+          metadata: {
+            chapterId,
+            cleanedText,
+            validation,
+            audioSize: simulatedAudioSize,
+            estimatedDuration,
+            isSimulated: true,
+            isBase64Fallback: true,
+          },
+          message: 'Demo mode: ElevenLabs API not configured. Using base64 fallback.',
+        });
+      }
     }
 
     // Generate audio using ElevenLabs API
@@ -96,21 +158,64 @@ export async function POST(req: NextRequest) {
 
     // Get the audio data
     const audioBuffer = await response.arrayBuffer();
-    const audioBase64 = Buffer.from(audioBuffer).toString('base64');
-
-    // TODO: Upload to Convex file storage and save URL to chapter
-    // For now, return the audio data and metadata
-    return NextResponse.json({
-      success: true,
-      audioData: `data:audio/mpeg;base64,${audioBase64}`,
-      metadata: {
+    
+    // Upload audio to Convex file storage
+    try {
+      const blob = new Blob([audioBuffer], { type: 'audio/mpeg' });
+      
+      // Generate upload URL from Convex
+      const uploadUrl = await convex.mutation(api.files.generateUploadUrl, {});
+      
+      // Upload the file
+      const uploadResponse = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'audio/mpeg' },
+        body: blob,
+      });
+      
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to upload audio file');
+      }
+      
+      const { storageId } = await uploadResponse.json();
+      
+      // Save the file reference and get the URL
+      const audioUrl = await convex.mutation(api.files.saveAudioFile, {
+        storageId,
         chapterId,
-        cleanedText,
-        validation,
-        audioSize: audioBuffer.byteLength,
-        estimatedDuration: validation.wordCount / 150, // minutes
-      },
-    });
+        filename: `chapter_${chapterId}_audio.mp3`,
+        size: audioBuffer.byteLength,
+      });
+      
+      return NextResponse.json({
+        success: true,
+        audioUrl: audioUrl,
+        metadata: {
+          chapterId,
+          cleanedText,
+          validation,
+          audioSize: audioBuffer.byteLength,
+          estimatedDuration: validation.wordCount / 150, // minutes
+        },
+      });
+    } catch (uploadError) {
+      console.error('Failed to upload to Convex storage:', uploadError);
+      
+      // Fallback: return base64 data
+      const audioBase64 = Buffer.from(audioBuffer).toString('base64');
+      return NextResponse.json({
+        success: true,
+        audioData: `data:audio/mpeg;base64,${audioBase64}`,
+        metadata: {
+          chapterId,
+          cleanedText,
+          validation,
+          audioSize: audioBuffer.byteLength,
+          estimatedDuration: validation.wordCount / 150, // minutes
+          isBase64Fallback: true,
+        },
+      });
+    }
 
   } catch (error) {
     console.error('Audio generation error:', error);

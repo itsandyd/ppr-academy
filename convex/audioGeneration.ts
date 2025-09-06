@@ -100,12 +100,12 @@ export const generateAudio = internalAction({
 
       const result = await response.json();
 
-      // Store the generated audio file (for now, we'll store the base64 data URL)
-      // In a production environment, you'd want to upload this to Convex file storage
+      // Store the generated audio URL or fallback to base64 data
+      const audioUrl = result.audioUrl || result.audioData;
       await ctx.runMutation(internal.audioGeneration.updateAudioGenerationStatus, {
         chapterId: args.chapterId,
         status: "completed",
-        audioUrl: result.audioData,
+        audioUrl: audioUrl,
         generatedAt: Date.now(),
       });
 
@@ -348,13 +348,15 @@ export const updateVideoGenerationStatus = internalMutation({
 export const saveGeneratedAudioToChapter = mutation({
   args: {
     chapterId: v.id("courseChapters"),
-    audioData: v.string(), // base64 audio data
+    audioData: v.optional(v.string()), // base64 audio data (fallback)
+    audioUrl: v.optional(v.string()), // preferred: actual file URL
     metadata: v.object({
       voiceName: v.string(),
       wordCount: v.optional(v.number()),
       estimatedDuration: v.optional(v.number()),
       audioSize: v.optional(v.number()),
       isSimulated: v.optional(v.boolean()),
+      isBase64Fallback: v.optional(v.boolean()),
     }),
   },
   returns: v.object({
@@ -380,9 +382,14 @@ export const saveGeneratedAudioToChapter = mutation({
         return { success: false, error: "Unauthorized" };
       }
 
-      // Update the chapter with the generated audio data
+      // Update the chapter with the generated audio URL or data
+      const audioUrlToStore = args.audioUrl || args.audioData;
+      if (!audioUrlToStore) {
+        return { success: false, error: "No audio URL or data provided" };
+      }
+      
       await ctx.db.patch(args.chapterId, {
-        generatedAudioUrl: args.audioData,
+        generatedAudioUrl: audioUrlToStore,
         audioGenerationStatus: "completed" as const,
         audioGeneratedAt: Date.now(),
       });

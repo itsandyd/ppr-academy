@@ -103,6 +103,7 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
   const { toast } = useToast();
   const storeId = useValidStoreId();
   const courseId = searchParams.get("courseId") as Id<"courses"> | undefined;
+  
 
   // Redirect if storeId is invalid
   useEffect(() => {
@@ -122,11 +123,13 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
     user?.id ? { clerkId: user.id } : "skip"
   );
 
+
   // Get existing course if editing
   const existingCourse = useQuery(
     api.courses.getCourseForEdit,
     courseId && convexUser?._id ? { courseId, userId: convexUser._id } : "skip"
   );
+
 
   // Convex mutations
   const updateCourseWithModulesMutation = useMutation(api.courses.updateCourseWithModules);
@@ -174,9 +177,7 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
 
   // Load existing course data if editing
   useEffect(() => {
-    if (existingCourse && !state.isLoading) {
-      console.log("🔥 Loading existing course data:", existingCourse);
-      console.log("🔥 Existing course modules:", existingCourse.modules);
+    if (existingCourse && !state.courseId) {
       
       const newData = {
         title: existingCourse.title || "",
@@ -209,7 +210,7 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
         stepCompletion,
       }));
     }
-  }, [existingCourse, state.isLoading]);
+  }, [existingCourse]); // Remove state.isLoading dependency to avoid circular updates
 
   const validateStep = (step: keyof StepCompletion): boolean => {
     return validateStepWithData(step, state.data);
@@ -425,8 +426,9 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
     }
   };
 
+
   return (
-    <CourseCreationContext.Provider 
+    <CourseCreationContext.Provider
       value={{
         state,
         updateData,

@@ -548,4 +548,17 @@ export default defineSchema({
     .index("by_storeId", ["storeId"])
     .index("by_adminUserId", ["adminUserId"])
     .index("by_category", ["category"]),
+
+  // Audio files metadata
+  audioFiles: defineTable({
+    storageId: v.id("_storage"),
+    chapterId: v.string(),
+    filename: v.string(),
+    size: v.number(),
+    uploadedBy: v.string(), // userId
+    uploadedAt: v.number(),
+  })
+    .index("by_chapterId", ["chapterId"])
+    .index("by_uploadedBy", ["uploadedBy"])
+    .index("by_storageId", ["storageId"]),
 }); 

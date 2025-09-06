@@ -86,80 +86,82 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Hero Section */}
-      <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white">
-        <div className="max-w-6xl mx-auto px-6 py-16">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+      <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white overflow-hidden">
+        <div className="max-w-6xl mx-auto px-3 sm:px-4 lg:px-6 py-8 sm:py-12 lg:py-16">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 items-center">
             {/* Left: Course Info */}
-            <div className="space-y-8">
+            <div className="space-y-4 sm:space-y-6 lg:space-y-8 min-w-0">
               {/* Course Category & Level */}
-              <div className="flex items-center gap-3">
-                <Badge className="bg-white/20 text-white border-white/30 hover:bg-white/20">
+              <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                <Badge className="bg-white/20 text-white border-white/30 hover:bg-white/20 text-xs sm:text-sm shrink-0">
                   {course.category || "Course"}
                 </Badge>
-                <Badge variant="outline" className="border-white/30 text-white hover:bg-white/10">
+                <Badge variant="outline" className="border-white/30 text-white hover:bg-white/10 text-xs sm:text-sm shrink-0">
                   {course.skillLevel || "All Levels"}
                 </Badge>
               </div>
 
               {/* Course Title */}
-              <h1 className="text-5xl font-bold leading-tight">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold leading-tight break-words">
                 {course.title}
               </h1>
 
               {/* Course Description */}
-              <p className="text-xl text-white/90 leading-relaxed">
+              <p className="text-sm sm:text-base lg:text-lg xl:text-xl text-white/90 leading-relaxed break-words">
                 {course.description || "Master essential skills with this comprehensive course designed for creators like you."}
               </p>
 
               {/* Course Stats */}
-              <div className="flex items-center gap-8">
+              <div className="flex items-center gap-4 sm:gap-6 lg:gap-8 flex-wrap">
                 <div className="flex items-center gap-2">
-                  <BookOpen className="w-5 h-5 text-white/80" />
-                  <span className="font-medium">{totalModules} Modules</span>
+                  <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-white/80 flex-shrink-0" />
+                  <span className="font-medium text-sm sm:text-base">{totalModules} Modules</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Play className="w-5 h-5 text-white/80" />
-                  <span className="font-medium">{totalLessons} Lessons</span>
+                  <Play className="w-4 h-4 sm:w-5 sm:h-5 text-white/80 flex-shrink-0" />
+                  <span className="font-medium text-sm sm:text-base">{totalLessons} Lessons</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-white/80" />
-                  <span className="font-medium">~{estimatedHours} Hours</span>
+                  <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-white/80 flex-shrink-0" />
+                  <span className="font-medium text-sm sm:text-base">~{estimatedHours} Hours</span>
                 </div>
               </div>
 
               {/* CTA */}
-              <div className="flex items-center gap-4">
+              <div className="flex flex-col gap-4 w-full">
                 <Button 
                   size="lg"
                   onClick={handleEnrollClick}
-                  className="bg-white text-emerald-600 hover:bg-white/90 text-lg px-8 py-4 h-auto"
+                  className="bg-white text-emerald-600 hover:bg-white/90 text-sm sm:text-base lg:text-lg px-4 sm:px-6 lg:px-8 py-3 sm:py-4 h-auto w-full max-w-xs mx-auto sm:mx-0 sm:max-w-none sm:w-auto"
                 >
-                  {course.price && course.price > 0 ? (
-                    <>Enroll Now - ${course.price}</>
-                  ) : (
-                    <>Enroll for Free</>
-                  )}
-                  <ArrowRight className="w-5 h-5 ml-2" />
+                  <span className="truncate">
+                    {course.price && course.price > 0 ? (
+                      <>Enroll Now - ${course.price}</>
+                    ) : (
+                      <>Enroll for Free</>
+                    )}
+                  </span>
+                  <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2 flex-shrink-0" />
                 </Button>
                 
-                <div className="text-white/80">
-                  <div className="flex items-center gap-1">
-                    <Star className="w-4 h-4 fill-current" />
-                    <Star className="w-4 h-4 fill-current" />
-                    <Star className="w-4 h-4 fill-current" />
-                    <Star className="w-4 h-4 fill-current" />
-                    <Star className="w-4 h-4 fill-current" />
+                <div className="text-white/80 text-center sm:text-left">
+                  <div className="flex items-center justify-center sm:justify-start gap-1 mb-1">
+                    <Star className="w-3 h-3 sm:w-4 sm:h-4 fill-current flex-shrink-0" />
+                    <Star className="w-3 h-3 sm:w-4 sm:h-4 fill-current flex-shrink-0" />
+                    <Star className="w-3 h-3 sm:w-4 sm:h-4 fill-current flex-shrink-0" />
+                    <Star className="w-3 h-3 sm:w-4 sm:h-4 fill-current flex-shrink-0" />
+                    <Star className="w-3 h-3 sm:w-4 sm:h-4 fill-current flex-shrink-0" />
                   </div>
-                  <p className="text-sm">Join thousands of students</p>
+                  <p className="text-xs sm:text-sm">Join thousands of students</p>
                 </div>
               </div>
             </div>
 
             {/* Right: Course Image */}
-            <div className="relative">
-              <div className="w-full h-96 bg-white/10 rounded-2xl overflow-hidden backdrop-blur-sm border border-white/20">
+            <div className="relative mt-6 sm:mt-8 lg:mt-0 min-w-0">
+              <div className="w-full h-48 sm:h-64 lg:h-80 xl:h-96 bg-white/10 rounded-xl sm:rounded-2xl overflow-hidden backdrop-blur-sm border border-white/20">
                 {course.imageUrl ? (
                   <img 
                     src={course.imageUrl} 
@@ -168,16 +170,16 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
-                    <GraduationCap className="w-24 h-24 text-white/60" />
+                    <GraduationCap className="w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 xl:w-24 xl:h-24 text-white/60" />
                   </div>
                 )}
               </div>
               
-              {/* Floating Stats */}
-              <div className="absolute -bottom-6 -right-6 bg-white rounded-xl p-4 shadow-2xl">
+              {/* Floating Stats - Hidden on mobile to prevent overflow */}
+              <div className="hidden lg:block absolute -bottom-4 -right-4 xl:-bottom-6 xl:-right-6 bg-white rounded-xl p-3 xl:p-4 shadow-2xl">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-emerald-600">{totalLessons}</div>
-                  <div className="text-sm text-muted-foreground">Lessons</div>
+                  <div className="text-xl xl:text-2xl font-bold text-emerald-600">{totalLessons}</div>
+                  <div className="text-xs xl:text-sm text-muted-foreground">Lessons</div>
                 </div>
               </div>
             </div>
@@ -186,39 +188,39 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
       </div>
 
       {/* What You'll Learn Section */}
-      <div className="py-16 bg-white">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-foreground mb-4">What You'll Learn</h2>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+      <div className="py-12 sm:py-16 bg-white overflow-hidden">
+        <div className="max-w-6xl mx-auto px-3 sm:px-4 lg:px-6">
+          <div className="text-center mb-8 sm:mb-12">
+            <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-foreground mb-4 break-words">What You'll Learn</h2>
+            <p className="text-sm sm:text-base lg:text-lg xl:text-xl text-muted-foreground max-w-3xl mx-auto break-words">
               This comprehensive course covers everything you need to know, with hands-on examples and real-world applications.
             </p>
           </div>
 
           {/* Course Modules */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
             {course.modules?.map((module) => (
-              <Card key={module.orderIndex} className="border-emerald-200 hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <CardTitle className="text-xl text-emerald-800 flex items-center gap-3">
-                    <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
-                      <span className="text-emerald-600 font-bold text-sm">{module.orderIndex}</span>
+              <Card key={module.orderIndex} className="border-emerald-200 hover:shadow-lg transition-shadow min-w-0">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-base sm:text-lg lg:text-xl text-emerald-800 flex items-start gap-3">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                      <span className="text-emerald-600 font-bold text-xs sm:text-sm">{module.orderIndex}</span>
                     </div>
-                    {module.title}
+                    <span className="leading-tight break-words min-w-0">{module.title}</span>
                   </CardTitle>
-                  <p className="text-muted-foreground">{module.description}</p>
+                  <p className="text-muted-foreground text-xs sm:text-sm lg:text-base break-words">{module.description}</p>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
+                  <div className="space-y-2 sm:space-y-3">
                     {module.lessons.map((lesson) => (
-                      <div key={lesson.orderIndex} className="flex items-center gap-3 p-3 bg-emerald-50 rounded-lg">
-                        <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-                        <div>
-                          <h4 className="font-medium text-sm text-emerald-800">
+                      <div key={lesson.orderIndex} className="flex items-start gap-2 sm:gap-3 p-2 sm:p-3 bg-emerald-50 rounded-lg min-w-0">
+                        <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                        <div className="min-w-0 flex-1">
+                          <h4 className="font-medium text-xs sm:text-sm lg:text-base text-emerald-800 leading-snug break-words">
                             {lesson.title}
                           </h4>
                           {lesson.description && (
-                            <p className="text-xs text-emerald-600 mt-1">
+                            <p className="text-xs sm:text-sm text-emerald-600 mt-1 leading-relaxed break-words">
                               {lesson.description}
                             </p>
                           )}
@@ -234,39 +236,39 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
       </div>
 
       {/* Benefits Section */}
-      <div className="py-16 bg-emerald-50">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-foreground mb-4">Why Choose This Course?</h2>
+      <div className="py-12 sm:py-16 bg-emerald-50 overflow-hidden">
+        <div className="max-w-6xl mx-auto px-3 sm:px-4 lg:px-6">
+          <div className="text-center mb-8 sm:mb-12">
+            <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-foreground mb-4 break-words">Why Choose This Course?</h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <Card className="text-center p-8 border-emerald-200">
-              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Target className="w-8 h-8 text-emerald-600" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+            <Card className="text-center p-6 sm:p-8 border-emerald-200">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Target className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-600" />
               </div>
-              <h3 className="text-xl font-bold text-foreground mb-3">Practical Learning</h3>
-              <p className="text-muted-foreground">
+              <h3 className="text-lg sm:text-xl font-bold text-foreground mb-3">Practical Learning</h3>
+              <p className="text-muted-foreground text-sm sm:text-base">
                 Learn by doing with hands-on exercises and real-world examples that you can apply immediately.
               </p>
             </Card>
 
-            <Card className="text-center p-8 border-emerald-200">
-              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Zap className="w-8 h-8 text-emerald-600" />
+            <Card className="text-center p-6 sm:p-8 border-emerald-200">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Zap className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-600" />
               </div>
-              <h3 className="text-xl font-bold text-foreground mb-3">Instant Access</h3>
-              <p className="text-muted-foreground">
+              <h3 className="text-lg sm:text-xl font-bold text-foreground mb-3">Instant Access</h3>
+              <p className="text-muted-foreground text-sm sm:text-base">
                 Start learning immediately after enrollment. All content is available right away with lifetime access.
               </p>
             </Card>
 
-            <Card className="text-center p-8 border-emerald-200">
-              <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <TrendingUp className="w-8 h-8 text-emerald-600" />
+            <Card className="text-center p-6 sm:p-8 border-emerald-200 sm:col-span-2 lg:col-span-1">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-600" />
               </div>
-              <h3 className="text-xl font-bold text-foreground mb-3">Level Up Skills</h3>
-              <p className="text-muted-foreground">
+              <h3 className="text-lg sm:text-xl font-bold text-foreground mb-3">Level Up Skills</h3>
+              <p className="text-muted-foreground text-sm sm:text-base">
                 Transform your abilities with expert techniques and insider knowledge from industry professionals.
               </p>
             </Card>
@@ -275,37 +277,37 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
       </div>
 
       {/* Instructor Section */}
-      <div className="py-16 bg-white">
-        <div className="max-w-4xl mx-auto px-6">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-foreground mb-4">Meet Your Instructor</h2>
+      <div className="py-12 sm:py-16 bg-white">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6">
+          <div className="text-center mb-8 sm:mb-12">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-4">Meet Your Instructor</h2>
           </div>
 
-          <Card className="p-8 border-emerald-200">
-            <div className="flex items-start gap-6">
-              <Avatar className="w-20 h-20">
+          <Card className="p-6 sm:p-8 border-emerald-200">
+            <div className="flex flex-col sm:flex-row items-start gap-6">
+              <Avatar className="w-16 h-16 sm:w-20 sm:h-20 mx-auto sm:mx-0 flex-shrink-0">
                 <AvatarImage src={creator?.imageUrl} alt={creatorName} />
-                <AvatarFallback className="text-xl font-bold bg-emerald-100 text-emerald-600">
+                <AvatarFallback className="text-lg sm:text-xl font-bold bg-emerald-100 text-emerald-600">
                   {creatorInitials}
                 </AvatarFallback>
               </Avatar>
               
-              <div className="flex-1">
-                <h3 className="text-2xl font-bold text-foreground mb-2">{creatorName}</h3>
-                <p className="text-emerald-600 font-medium mb-4">Course Creator • {store.name}</p>
+              <div className="flex-1 text-center sm:text-left">
+                <h3 className="text-xl sm:text-2xl font-bold text-foreground mb-2">{creatorName}</h3>
+                <p className="text-emerald-600 font-medium mb-4 text-sm sm:text-base">Course Creator • {store.name}</p>
                 
                 {creator?.bio ? (
-                  <p className="text-muted-foreground leading-relaxed mb-6">
+                  <p className="text-muted-foreground leading-relaxed mb-6 text-sm sm:text-base">
                     {creator.bio}
                   </p>
                 ) : (
-                  <p className="text-muted-foreground leading-relaxed mb-6">
+                  <p className="text-muted-foreground leading-relaxed mb-6 text-sm sm:text-base">
                     Passionate educator and industry expert dedicated to helping students master their craft through practical, 
                     hands-on learning experiences.
                   </p>
                 )}
 
-                <div className="flex items-center gap-6">
+                <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-4 sm:gap-6">
                   <div className="flex items-center gap-2">
                     <Users className="w-4 h-4 text-emerald-600" />
                     <span className="text-sm font-medium">1000+ Students</span>
@@ -326,54 +328,56 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
       </div>
 
       {/* CTA Section */}
-      <div className="py-16 bg-gradient-to-r from-emerald-600 to-teal-600 text-white">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <h2 className="text-4xl font-bold mb-4">Ready to Start Learning?</h2>
-          <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
+      <div className="py-12 sm:py-16 bg-gradient-to-r from-emerald-600 to-teal-600 text-white overflow-hidden">
+        <div className="max-w-4xl mx-auto px-3 sm:px-4 lg:px-6 text-center">
+          <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold mb-4 break-words">Ready to Start Learning?</h2>
+          <p className="text-sm sm:text-base lg:text-lg xl:text-xl text-white/90 mb-6 sm:mb-8 max-w-2xl mx-auto break-words">
             Join thousands of students who have transformed their skills with this comprehensive course.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+          <div className="flex flex-col items-center justify-center gap-4 sm:gap-6">
             <Button 
               size="lg"
               onClick={handleEnrollClick}
-              className="bg-white text-emerald-600 hover:bg-white/90 text-xl px-12 py-6 h-auto"
+              className="bg-white text-emerald-600 hover:bg-white/90 text-base sm:text-lg lg:text-xl px-6 sm:px-8 lg:px-12 py-3 sm:py-4 lg:py-6 h-auto w-full max-w-xs sm:max-w-sm"
             >
-              {course.price && course.price > 0 ? (
-                <>Enroll Now - ${course.price}</>
-              ) : (
-                <>Start Learning for Free</>
-              )}
-              <ArrowRight className="w-6 h-6 ml-3" />
+              <span className="truncate">
+                {course.price && course.price > 0 ? (
+                  <>Enroll Now - ${course.price}</>
+                ) : (
+                  <>Start Learning for Free</>
+                )}
+              </span>
+              <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 ml-2 flex-shrink-0" />
             </Button>
             
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-1 mb-1">
-                <CheckCircle className="w-4 h-4" />
+            <div className="text-center space-y-2">
+              <div className="flex items-center justify-center gap-2">
+                <CheckCircle className="w-4 h-4 flex-shrink-0" />
                 <span className="text-sm">30-day money-back guarantee</span>
               </div>
-              <div className="flex items-center justify-center gap-1">
-                <CheckCircle className="w-4 h-4" />
+              <div className="flex items-center justify-center gap-2">
+                <CheckCircle className="w-4 h-4 flex-shrink-0" />
                 <span className="text-sm">Lifetime access included</span>
               </div>
             </div>
           </div>
 
           {/* Social Proof */}
-          <div className="mt-12 pt-8 border-t border-white/20">
-            <p className="text-white/80 mb-4">Trusted by creators worldwide</p>
-            <div className="flex items-center justify-center gap-8">
+          <div className="mt-8 sm:mt-12 pt-6 sm:pt-8 border-t border-white/20">
+            <p className="text-white/80 mb-4 text-sm sm:text-base">Trusted by creators worldwide</p>
+            <div className="flex items-center justify-center gap-6 sm:gap-8">
               <div className="text-center">
-                <div className="text-2xl font-bold">1,000+</div>
-                <div className="text-sm text-white/80">Students</div>
+                <div className="text-xl sm:text-2xl font-bold">1,000+</div>
+                <div className="text-xs sm:text-sm text-white/80">Students</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold">4.9</div>
-                <div className="text-sm text-white/80">Rating</div>
+                <div className="text-xl sm:text-2xl font-bold">4.9</div>
+                <div className="text-xs sm:text-sm text-white/80">Rating</div>
               </div>
               <div className="text-center">
-                <div className="text-2xl font-bold">98%</div>
-                <div className="text-sm text-white/80">Completion</div>
+                <div className="text-xl sm:text-2xl font-bold">98%</div>
+                <div className="text-xs sm:text-sm text-white/80">Completion</div>
               </div>
             </div>
           </div>
@@ -381,23 +385,23 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
       </div>
 
       {/* Footer */}
-      <div className="py-8 bg-muted/30">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="flex items-center justify-between">
+      <div className="py-6 sm:py-8 bg-muted/30">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <Avatar className="w-10 h-10">
+              <Avatar className="w-10 h-10 flex-shrink-0">
                 <AvatarImage src={creator?.imageUrl} alt={creatorName} />
                 <AvatarFallback className="bg-emerald-100 text-emerald-600">
                   {creatorInitials}
                 </AvatarFallback>
               </Avatar>
-              <div>
-                <p className="font-medium text-foreground">{store.name}</p>
-                <p className="text-sm text-muted-foreground">by {creatorName}</p>
+              <div className="text-center sm:text-left">
+                <p className="font-medium text-foreground text-sm sm:text-base">{store.name}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">by {creatorName}</p>
               </div>
             </div>
             
-            <Link href={`/${store.slug}`} className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
+            <Link href={`/${store.slug}`} className="text-xs sm:text-sm text-emerald-600 hover:text-emerald-700 font-medium">
               View All Products →
             </Link>
           </div>

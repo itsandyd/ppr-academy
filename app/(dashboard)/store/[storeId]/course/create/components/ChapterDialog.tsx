@@ -10,9 +10,11 @@ import { VoiceSelector } from "./VoiceSelector";
 import { Plus, FileText, Save, X, Video, Volume2, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 import { useUser } from "@clerk/nextjs";
 import { toast } from "sonner";
 import { cleanTextForSpeech, previewCleanedText } from "@/lib/text-utils";
+import { useCourseCreation } from "../context";
 
 interface Chapter {
   title: string;
@@ -31,6 +33,10 @@ interface ChapterDialogProps {
   existingChapters: Chapter[];
   editData?: Chapter;
   trigger?: React.ReactNode;
+  // Add these for auto-save functionality
+  courseId?: string;
+  lessonId?: string;
+  chapterId?: string; // For editing existing chapters
 }
 
 export function ChapterDialog({ 
@@ -40,7 +46,10 @@ export function ChapterDialog({
   onChapterEdit,
   existingChapters,
   editData,
-  trigger 
+  trigger,
+  courseId,
+  lessonId,
+  chapterId
 }: ChapterDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [chapterData, setChapterData] = useState({
@@ -53,6 +62,7 @@ export function ChapterDialog({
   // Load existing generated audio data when editing
   useEffect(() => {
     if (editData?.generatedAudioData) {
+      console.log(`🎵 Loading audio from editData: ${editData.generatedAudioData.substring(0, 100)}...`);
       setGeneratedAudioData(editData.generatedAudioData);
       setShowAudioPreview(true);
       // Set some basic metadata for existing audio
@@ -67,6 +77,7 @@ export function ChapterDialog({
 
   const isEditing = !!editData;
   const { user } = useUser();
+  const { state } = useCourseCreation();
   
   // Audio generation state
   const [showAudioPreview, setShowAudioPreview] = useState(false);
@@ -81,6 +92,208 @@ export function ChapterDialog({
   const startAudioGeneration = useMutation(api.audioGeneration.startAudioGeneration);
   const startVideoGeneration = useMutation(api.audioGeneration.startVideoGeneration);
   const saveGeneratedAudio = useMutation(api.audioGeneration.saveGeneratedAudioToChapter);
+  
+  // Auto-save mutation
+  const createOrUpdateChapter = useMutation(api.courses.createOrUpdateChapter);
+  
+  // Track the actual Convex chapter ID for auto-save
+  const [actualChapterId, setActualChapterId] = useState<string | null>(chapterId || null);
+  
+  // Create a stable unique key for this chapter based on its content
+  // This should remain the same across dialog reopenings for the same chapter
+  // Use editData title if available (for consistency when editing), otherwise use current title
+  const titleForKey = editData?.title || chapterData.title;
+  const chapterKey = `${state.courseId}_${titleForKey.replace(/\s+/g, '_').toLowerCase()}_${moduleTitle.replace(/\s+/g, '_').toLowerCase()}_${lessonTitle.replace(/\s+/g, '_').toLowerCase()}`;
+
+  // Debug dialog open state
+  useEffect(() => {
+    if (isOpen) {
+      console.log(`🚪 ChapterDialog opened:`, {
+        isEditing,
+        chapterKey,
+        actualChapterId,
+        hasEditData: !!editData,
+        hasEditDataWithAudio: !!(editData?.generatedAudioData),
+        showAudioPreview,
+        hasGeneratedAudioData: !!generatedAudioData,
+      });
+    }
+  }, [isOpen, isEditing, chapterKey, actualChapterId, editData, showAudioPreview, generatedAudioData]);
+  
+  // Debug: Log the chapter key components
+  console.log(`🔑 Chapter key components:`, {
+    courseId: state.courseId,
+    chapterTitle: editData?.title || chapterData.title,
+    moduleTitle: moduleTitle,
+    lessonTitle: lessonTitle,
+    finalKey: chapterKey
+  });
+  
+  // Try to get existing chapter ID from localStorage for this specific chapter
+  useEffect(() => {
+    if (!actualChapterId && typeof window !== 'undefined' && chapterKey) {
+      const storageKey = `chapter_${chapterKey}_id`;
+      const storedChapterId = localStorage.getItem(storageKey);
+      console.log(`🔍 Looking for stored chapter ID with key: ${storageKey}`);
+      
+      if (storedChapterId) {
+        setActualChapterId(storedChapterId);
+        console.log(`🔄 Restored chapter ID from storage: ${storedChapterId} for key: ${chapterKey}`);
+      } else {
+        console.log(`🔍 No stored chapter ID found for key: ${chapterKey}`);
+        
+        // Debug: Show all localStorage keys that contain 'chapter'
+        const allKeys = Object.keys(localStorage).filter(key => key.includes('chapter'));
+        console.log(`🔍 All chapter keys in localStorage:`, allKeys);
+      }
+    }
+  }, [chapterKey, actualChapterId]);
+
+  // Fetch existing chapter data if we have a chapter ID and user
+  // Always fetch when we have an actualChapterId, unless we already have audio loaded
+  const shouldFetchChapterData = !!(
+    actualChapterId && 
+    user?.id && 
+    !showAudioPreview // Only skip if we already have audio preview loaded
+  );
+
+  const existingChapterData = useQuery(
+    api.courses.getChapterById,
+    shouldFetchChapterData ? { 
+      chapterId: actualChapterId as Id<"courseChapters">,
+      userId: user.id 
+    } : "skip"
+  );
+
+  // Debug the query state
+  console.log(`🔍 Query state:`, {
+    actualChapterId,
+    hasEditData: !!editData,
+    hasEditDataWithAudio: !!(editData?.generatedAudioData),
+    hasUserId: !!user?.id,
+    showAudioPreview,
+    hasGeneratedAudioData: !!generatedAudioData,
+    shouldQuery: shouldFetchChapterData,
+    existingChapterData: existingChapterData ? 'loaded' : 'not loaded',
+    queryResult: existingChapterData
+  });
+
+  // Load existing chapter data when it's fetched
+  useEffect(() => {
+    if (existingChapterData) {
+      console.log(`🔄 Loading existing chapter data:`, existingChapterData);
+      
+      // Only update chapter data if we don't have editData (avoid overwriting form data)
+      if (!editData) {
+        setChapterData({
+          title: existingChapterData.title || "",
+          content: existingChapterData.description || "",
+          videoUrl: existingChapterData.videoUrl || "",
+          duration: 0, // Duration not stored in database
+        });
+      }
+      
+      // Always load existing audio if available and not already loaded
+      if (existingChapterData.generatedAudioUrl && !generatedAudioData) {
+        console.log(`🎵 Restoring audio from database: ${existingChapterData.generatedAudioUrl.substring(0, 100)}...`);
+        setGeneratedAudioData(existingChapterData.generatedAudioUrl);
+        setShowAudioPreview(true);
+        
+        // Set basic metadata for existing audio
+        setAudioMetadata({
+          isSimulated: false,
+          wordCount: 0,
+          estimatedDuration: 0,
+          audioSize: 0,
+        });
+      }
+    } else if (shouldFetchChapterData && actualChapterId) {
+      // Query returned null - chapter might not exist or permission issue
+      console.log(`❌ Failed to load chapter data for ID: ${actualChapterId}`);
+      console.log(`🧹 Clearing invalid chapter ID from localStorage`);
+      
+      // Clear the invalid chapter ID from localStorage
+      const storageKey = `chapter_${chapterKey}_id`;
+      localStorage.removeItem(storageKey);
+      setActualChapterId(null);
+    }
+  }, [existingChapterData, editData, generatedAudioData, shouldFetchChapterData, actualChapterId, chapterKey]);
+
+  // Auto-save function
+  const autoSaveChapter = async (audioData?: string) => {
+    // Only auto-save if we have courseId and the chapter has content
+    if (!state.courseId || !chapterData.title.trim()) {
+      
+      if (!state.courseId) {
+        toast.info("💡 Tip: Save your course first to enable auto-save for chapters with generated audio", {
+          duration: 4000,
+        });
+      }
+      return;
+    }
+
+    try {
+      // Use passed audioData or fallback to state
+      const audioToSave = audioData || generatedAudioData;
+      
+      
+      // Ensure courseId is properly typed for Convex
+      if (!state.courseId) {
+        console.error("No courseId available for auto-save");
+        return;
+      }
+
+      console.log(`💾 ${actualChapterId ? 'Updating' : 'Creating'} chapter:`, {
+        chapterId: actualChapterId,
+        title: chapterData.title,
+        chapterKey: chapterKey,
+        hasAudioData: !!audioToSave
+      });
+
+      const result = await createOrUpdateChapter({
+        courseId: state.courseId as Id<"courses">,
+        lessonId: lessonId as Id<"courseLessons"> | undefined,
+        chapterId: (actualChapterId as Id<"courseChapters">) || null,
+        chapterData: {
+          title: chapterData.title,
+          content: chapterData.content,
+          videoUrl: chapterData.videoUrl || undefined,
+          duration: chapterData.duration,
+          position: existingChapters.length + 1,
+          generatedAudioData: audioToSave || undefined,
+        },
+      });
+
+      if (result.success && result.chapterId) {
+        // Always update the actualChapterId to ensure we have the latest ID
+        const wasCreatingNew = !actualChapterId;
+        const idChanged = actualChapterId && actualChapterId !== result.chapterId;
+        
+        if (wasCreatingNew) {
+          setActualChapterId(result.chapterId);
+          // Store in localStorage for future sessions
+          localStorage.setItem(`chapter_${chapterKey}_id`, result.chapterId);
+          console.log("✅ Chapter auto-saved with ID:", result.chapterId, "stored with key:", chapterKey);
+          toast.success("Chapter saved to Convex!");
+        } else if (idChanged) {
+          // The function found an existing chapter with a different ID
+          // This can happen when the localStorage had a stale ID and the function found the real chapter
+          setActualChapterId(result.chapterId);
+          localStorage.setItem(`chapter_${chapterKey}_id`, result.chapterId);
+          console.log("🔄 Chapter ID corrected:", result.chapterId, "stored with key:", chapterKey);
+          toast.success("Chapter updated!");
+        } else {
+          console.log("✅ Chapter auto-updated with ID:", result.chapterId, "key:", chapterKey);
+          toast.success("Chapter updated!");
+        }
+      } else {
+        console.error("Auto-save failed:", result.error);
+        toast.error(`Auto-save failed: ${result.error}`);
+      }
+    } catch (error) {
+      console.error("Auto-save failed:", error);
+    }
+  };
 
   const handleSave = () => {
     if (!chapterData.title.trim()) {
@@ -122,13 +335,25 @@ export function ChapterDialog({
         videoUrl: editData.videoUrl, 
         duration: editData.duration 
       });
+      // Restore original audio data if it existed
+      if (editData.generatedAudioData) {
+        setGeneratedAudioData(editData.generatedAudioData);
+        setShowAudioPreview(true);
+      } else {
+        setGeneratedAudioData(null);
+        setAudioMetadata(null);
+        setShowAudioPreview(false);
+      }
     } else {
       setChapterData({ title: "", content: "", videoUrl: "", duration: 0 });
+      // For new chapters, only clear audio if it wasn't saved to database
+      if (!actualChapterId) {
+        setGeneratedAudioData(null);
+        setAudioMetadata(null);
+        setShowAudioPreview(false);
+      }
+      // If we have actualChapterId, the audio will be restored when dialog reopens
     }
-    // Clear generated audio
-    setGeneratedAudioData(null);
-    setAudioMetadata(null);
-    setShowAudioPreview(false);
     setIsOpen(false);
   };
 
@@ -154,6 +379,14 @@ export function ChapterDialog({
       // Call the actual audio generation API
       toast.success(`Audio generation started! Estimated duration: ${preview.estimatedDuration} minutes`);
       
+      // Use the actual chapter ID if we have one, otherwise create a temporary one
+      const chapterIdForAudio = actualChapterId || `temp-${Date.now()}`;
+      console.log(`🎵 Generating audio for chapter ID: ${chapterIdForAudio}`, {
+        hasExistingId: !!actualChapterId,
+        chapterTitle: chapterData.title,
+        chapterKey: chapterKey
+      });
+      
       const response = await fetch('/api/generate-audio', {
         method: 'POST',
         headers: {
@@ -161,7 +394,7 @@ export function ChapterDialog({
         },
         body: JSON.stringify({
           htmlContent: chapterData.content,
-          chapterId: editData ? `existing-${Date.now()}` : 'temp-chapter-id', // Temporary ID for new chapters
+          chapterId: chapterIdForAudio,
           voice: selectedVoiceName,
           voiceId: selectedVoiceId,
         }),
@@ -179,10 +412,25 @@ export function ChapterDialog({
         throw new Error(result.error || 'Audio generation failed');
       }
       
-      // Store the generated audio data
-      setGeneratedAudioData(result.audioData);
+      // Store the generated audio URL or fallback data
+      const audioToStore = result.audioUrl || result.audioData;
+      const isUrl = result.audioUrl && !result.audioUrl.startsWith('data:');
+      
+      console.log(`🎵 Audio generation result:`, {
+        hasUrl: !!result.audioUrl,
+        hasData: !!result.audioData,
+        isRealUrl: isUrl,
+        isSimulated: result.metadata?.isSimulated,
+        isBase64Fallback: result.metadata?.isBase64Fallback,
+        audioLength: audioToStore?.length || 0
+      });
+      
+      setGeneratedAudioData(audioToStore);
       setAudioMetadata(result.metadata);
       setShowAudioPreview(true);
+      
+      // Auto-save the chapter with the generated audio immediately
+      autoSaveChapter(audioToStore);
       
       if (result.metadata.isSimulated) {
         toast.success(`Demo: Audio generation simulated with ${selectedVoiceName} voice! ${result.message}`, {
@@ -475,6 +723,17 @@ export function ChapterDialog({
                   <p className="text-xs text-blue-600 dark:text-blue-400">
                     💡 Generate audio narration from your chapter content using AI text-to-speech, then combine with images to create a video.
                   </p>
+                  
+                  {state.courseId ? (
+                    <p className="text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 p-2 rounded border">
+                      ✅ <strong>Auto-save enabled:</strong> Generated audio will be saved to Convex automatically.
+                    </p>
+                  ) : (
+                    <p className="text-xs text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 p-2 rounded border">
+                      ⏳ <strong>Save course first:</strong> Audio will be temporarily stored until you save the course.
+                    </p>
+                  )}
+                  
                   <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 p-2 rounded border">
                     🔧 <strong>Setup Required:</strong> Add your ElevenLabs API key to environment variables for real audio generation. Currently running in demo mode.
                   </p>

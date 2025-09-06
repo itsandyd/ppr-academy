@@ -20,6 +20,7 @@ import type * as digitalProducts from "../digitalProducts.js";
 import type * as emailCampaigns from "../emailCampaigns.js";
 import type * as emailWorkflows from "../emailWorkflows.js";
 import type * as emails from "../emails.js";
+import type * as files from "../files.js";
 import type * as leadSubmissions from "../leadSubmissions.js";
 import type * as library from "../library.js";
 import type * as stores from "../stores.js";
@@ -41,6 +42,7 @@ declare const fullApi: ApiFromModules<{
   emailCampaigns: typeof emailCampaigns;
   emailWorkflows: typeof emailWorkflows;
   emails: typeof emails;
+  files: typeof files;
   leadSubmissions: typeof leadSubmissions;
   library: typeof library;
   stores: typeof stores;
