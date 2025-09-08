@@ -8,7 +8,7 @@ import { api, internal } from "./_generated/api";
 export const generateAllCourseEmbeddings = action({
   args: {
     userId: v.string(),
-    overwrite: v.optional(v.boolean()), // Whether to overwrite existing embeddings
+    overwrite: v.boolean(), // Whether to overwrite existing embeddings
   },
   returns: v.object({
     success: v.boolean(),
@@ -28,7 +28,8 @@ export const generateAllCourseEmbeddings = action({
       // Get all courses
       const courses = await ctx.runQuery(internal.embeddings.getAllCourses, {});
       
-      console.log(`Found ${courses.length} courses to process`);
+      console.log(`🚀 Starting embedding generation with overwrite: ${args.overwrite}`);
+      console.log(`📚 Found ${courses.length} courses to process`);
 
       for (const course of courses) {
         try {
@@ -39,6 +40,7 @@ export const generateAllCourseEmbeddings = action({
           });
 
           // Process course content
+          console.log(`📋 Course "${course.title}": ${existingCourseEmbeddings} existing embeddings, overwrite: ${args.overwrite}`);
           if (existingCourseEmbeddings === 0 || args.overwrite) {
             if (existingCourseEmbeddings > 0 && args.overwrite) {
               // Delete existing embeddings first
