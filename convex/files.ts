@@ -48,8 +48,7 @@ export const saveAudioFile = mutation({
       chapterId: args.chapterId,
       filename: args.filename,
       size: args.size,
-      uploadedBy: identity.subject,
-      uploadedAt: Date.now(),
+      url,
     });
     
     return url;

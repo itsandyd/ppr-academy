@@ -1876,7 +1876,7 @@ export default function AdminDashboard({
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-6 pt-8">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
               <Card>
                 <CardHeader>
                   <CardTitle>Platform Growth</CardTitle>
@@ -1915,6 +1915,25 @@ export default function AdminDashboard({
                       </div>
                       <Badge variant="secondary">Operational</Badge>
                     </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>AI & Embeddings</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <p className="text-sm text-slate-600 mb-4">
+                      Manage vector embeddings for semantic search and AI-powered features.
+                    </p>
+                    <Link href="/admin/embeddings">
+                      <Button className="w-full">
+                        <Sparkles className="w-4 h-4 mr-2" />
+                        Manage Course Embeddings
+                      </Button>
+                    </Link>
                   </div>
                 </CardContent>
               </Card>

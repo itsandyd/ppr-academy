@@ -549,16 +549,40 @@ export default defineSchema({
     .index("by_adminUserId", ["adminUserId"])
     .index("by_category", ["category"]),
 
-  // Audio files metadata
+  // RAG System - Vector Embeddings
+  embeddings: defineTable({
+    content: v.string(),
+    embedding: v.array(v.number()), // OpenAI embeddings are 1536 dimensions
+    userId: v.string(),
+    metadata: v.optional(v.any()), // Store any additional metadata (courseId, type, etc.)
+    title: v.optional(v.string()),
+    category: v.optional(v.string()),
+    sourceType: v.optional(v.union(
+      v.literal("course"),
+      v.literal("chapter"), 
+      v.literal("lesson"),
+      v.literal("document"),
+      v.literal("custom")
+    )),
+    sourceId: v.optional(v.string()), // ID of the source (courseId, chapterId, etc.)
+  })
+    .index("by_userId", ["userId"])
+    .index("by_category", ["category"])
+    .index("by_sourceType", ["sourceType"])
+    .index("by_sourceId", ["sourceId"])
+    .index("by_user_category", ["userId", "category"])
+    .index("by_user_sourceType", ["userId", "sourceType"]),
+
+  // Audio Files Storage
   audioFiles: defineTable({
     storageId: v.id("_storage"),
     chapterId: v.string(),
     filename: v.string(),
     size: v.number(),
-    uploadedBy: v.string(), // userId
-    uploadedAt: v.number(),
+    url: v.optional(v.string()),
+    uploadedBy: v.optional(v.string()),
+    uploadedAt: v.optional(v.number()),
   })
     .index("by_chapterId", ["chapterId"])
-    .index("by_uploadedBy", ["uploadedBy"])
     .index("by_storageId", ["storageId"]),
 }); 
