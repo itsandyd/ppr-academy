@@ -32,38 +32,7 @@ export const searchSimilar: any = action({
     metadata: v.any(),
   })),
   handler: async (ctx, args) => {
-    // Generate embedding for the query
-    const queryEmbedding: number[] = await generateQueryEmbedding(args.query);
-
-    // Get relevant embeddings from Convex
-    const embeddings = await ctx.runQuery(internal.rag.getEmbeddings, {
-      userId: args.userId,
-      category: args.category,
-      sourceType: args.sourceType,
-    });
-
-    // Calculate similarities and sort
-    const results = embeddings
-      .map((item: any) => ({
-        ...item,
-        similarity: cosineSimilarity(queryEmbedding, item.embedding),
-      }))
-      .filter((item: any) => item.similarity >= (args.threshold || 0.7))
-      .sort((a: any, b: any) => b.similarity - a.similarity)
-      .slice(0, args.limit || 5)
-      .map(({ embedding, ...item }: any) => ({
-        _id: item._id,
-        content: item.content,
-        title: item.title,
-        similarity: item.similarity,
-        userId: item.userId,
-        category: item.category,
-        sourceType: item.sourceType,
-        sourceId: item.sourceId,
-        metadata: item.metadata || {},
-      }));
-
-    return results;
+    return await performSimilaritySearch(ctx, args);
   },
 });
 
@@ -93,13 +62,14 @@ export const askQuestion: any = action({
     })),
   }),
   handler: async (ctx, args) => {
-    // Search for relevant content with explicit typing
-    const relevantContent = await searchSimilar.handler(ctx, {
+    // Search for relevant content using helper function
+    const relevantContent = await performSimilaritySearch(ctx, {
       query: args.question,
       userId: args.userId,
       category: args.category,
       sourceType: args.sourceType,
       limit: args.limit || 3,
+      threshold: 0.7,
     });
 
     // Build context from relevant documents
@@ -190,4 +160,57 @@ function cosineSimilarity(a: number[], b: number[]): number {
   }
   
   return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
+// Helper function for similarity search (shared between actions)
+async function performSimilaritySearch(ctx: any, args: {
+  query: string;
+  userId?: string;
+  category?: string;
+  sourceType?: string;
+  limit?: number;
+  threshold?: number;
+}): Promise<Array<{
+  _id: any;
+  content: string;
+  title?: string;
+  similarity: number;
+  userId: string;
+  category?: string;
+  sourceType?: string;
+  sourceId?: string;
+  metadata: any;
+}>> {
+  // Generate embedding for the query
+  const queryEmbedding: number[] = await generateQueryEmbedding(args.query);
+
+  // Get relevant embeddings from Convex
+  const embeddings = await ctx.runQuery(internal.rag.getEmbeddings, {
+    userId: args.userId,
+    category: args.category,
+    sourceType: args.sourceType,
+  });
+
+  // Calculate similarities and sort
+  const results = embeddings
+    .map((item: any) => ({
+      ...item,
+      similarity: cosineSimilarity(queryEmbedding, item.embedding),
+    }))
+    .filter((item: any) => item.similarity >= (args.threshold || 0.7))
+    .sort((a: any, b: any) => b.similarity - a.similarity)
+    .slice(0, args.limit || 5)
+    .map(({ embedding, ...item }: any) => ({
+      _id: item._id,
+      content: item.content,
+      title: item.title,
+      similarity: item.similarity,
+      userId: item.userId,
+      category: item.category,
+      sourceType: item.sourceType,
+      sourceId: item.sourceId,
+      metadata: item.metadata || {},
+    }));
+
+  return results;
 }

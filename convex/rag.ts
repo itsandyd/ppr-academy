@@ -132,6 +132,7 @@ export const getEmbeddings = internalQuery({
   },
   returns: v.array(v.object({
     _id: v.id("embeddings"),
+    _creationTime: v.number(),
     content: v.string(),
     title: v.optional(v.string()),
     embedding: v.array(v.number()),

@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
+import { CourseQAChat } from "@/components/course/CourseQAChat";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { Id } from "@/convex/_generated/dataModel";
@@ -509,6 +510,15 @@ export default function CoursePlayerPage() {
           )}
         </div>
       </div>
+
+      {/* Q&A Chat Component for enrolled students */}
+      {courseData && user && (
+        <CourseQAChat 
+          courseId={courseData._id}
+          courseTitle={courseData.title}
+          userId={user.id}
+        />
+      )}
     </div>
   );
 }

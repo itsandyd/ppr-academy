@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { CourseQAChat } from "@/components/course/CourseQAChat";
 
 interface Course {
   _id: string;
@@ -407,6 +408,13 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
           </div>
         </div>
       </div>
+
+      {/* Q&A Chat Component */}
+      <CourseQAChat 
+        courseId={course._id}
+        courseTitle={course.title}
+        userId={course.userId}
+      />
     </div>
   );
 }
