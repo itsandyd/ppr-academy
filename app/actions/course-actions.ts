@@ -1,7 +1,7 @@
 "use server";
 
 import { auth } from "@clerk/nextjs/server";
-import { prisma } from "@/lib/prisma";
+// Prisma removed - using Convex instead
 import { revalidatePath } from "next/cache";
 import { getUserFromClerk } from "@/lib/data";
 import { ConvexHttpClient } from "convex/browser";

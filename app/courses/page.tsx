@@ -4,10 +4,18 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useUser } from "@clerk/nextjs";
 import { useState } from "react";
-import { BookOpen, Loader2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { BookOpen, Loader2, Search, Filter } from "lucide-react";
+import { CourseCardEnhanced } from "@/components/ui/course-card-enhanced";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import Link from "next/link";
 
 export default function CoursesPage() {
@@ -28,7 +36,7 @@ export default function CoursesPage() {
 
   // Check if user is admin
   const convexUser = useQuery(
-    api.users.getUserByClerkId,
+    api.users.getUserFromClerk,
     user?.id ? { clerkId: user.id } : "skip"
   );
   const isAdmin = convexUser?.admin || false;

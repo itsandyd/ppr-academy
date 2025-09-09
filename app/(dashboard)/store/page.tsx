@@ -20,11 +20,11 @@ export const dynamic = 'force-dynamic';
 function StoreContent() {
   const { user: clerkUser, isLoaded: userLoaded } = useUser();
   const { isAuthenticated } = useConvexAuth();
-  const createUser = useMutation(api.users.createUser);
+  const createUser = useMutation(api.users.createOrUpdateUserFromClerk);
 
   // Fetch user from Convex database using Clerk ID
   const convexUser = useQuery(
-    api.users.getUserByClerkId,
+    api.users.getUserFromClerk,
     clerkUser?.id ? { clerkId: clerkUser.id } : "skip"
   );
 
@@ -43,9 +43,6 @@ function StoreContent() {
             firstName: clerkUser.firstName || undefined,
             lastName: clerkUser.lastName || undefined,
             imageUrl: clerkUser.imageUrl || undefined,
-            name: clerkUser.firstName && clerkUser.lastName 
-              ? `${clerkUser.firstName} ${clerkUser.lastName}` 
-              : clerkUser.firstName || clerkUser.lastName || undefined
           });
           console.log("User created in Convex");
         } catch (error) {
@@ -126,47 +123,95 @@ function StoreContent() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-16 py-10 md:py-16">
-      {/* LEFT COLUMN */}
-      <div className="flex-1 flex flex-col gap-8">
-        <div className="flex items-center justify-between border-b pb-4">
-          <h1 className="text-3xl font-bold">
-            {currentStore?.name || "My Store"}
-          </h1>
-          <span className="text-sm text-muted-foreground">
-            pauseplayrepeat.com/{currentStore?.slug || currentStore?.name || "user"}
-          </span>
+    <div className="space-y-8">
+      {/* Enhanced Store Header */}
+      <div className="bg-gradient-to-r from-emerald-600 via-blue-600 to-purple-600 rounded-2xl p-8 text-white relative overflow-hidden">
+        <div className="relative z-10">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">
+                {currentStore?.name || "My Store"} 🏪
+              </h1>
+              <p className="text-white/80 text-lg">
+                Manage your products and track performance
+              </p>
+              <p className="text-white/60 text-sm mt-2">
+                pauseplayrepeat.com/{currentStore?.slug || currentStore?.name || "user"}
+              </p>
+            </div>
+            <div className="hidden md:flex items-center gap-4">
+              <div className="text-right">
+                <div className="text-2xl font-bold">{products.length}</div>
+                <div className="text-sm text-white/80">Products</div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Quick Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+              <div className="text-2xl font-bold">{products.length}</div>
+              <div className="text-sm text-white/80">Total Products</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+              <div className="text-2xl font-bold">{products.filter(p => p.isPublished).length}</div>
+              <div className="text-sm text-white/80">Published</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+              <div className="text-2xl font-bold">{courses?.length || 0}</div>
+              <div className="text-sm text-white/80">Courses</div>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
+              <div className="text-2xl font-bold">{digitalProducts?.length || 0}</div>
+              <div className="text-sm text-white/80">Digital Products</div>
+            </div>
+          </div>
         </div>
         
-        <ModeSwitcher storeId={currentStore?._id} />
-        
-        <ProfileCard 
-          user={clerkUser}
-          store={currentStore}
-        />
-        
-        <AddProductBar 
-          storeId={currentStore?._id}
-          userId={clerkUser.id}
-        />
-
-        {/* Products List */}
-        <ProductsList 
-          products={products}
-          storeId={currentStore?._id}
-        />
-        
-                          <Button variant="link" className="text-primary text-sm mt-4 hover:underline p-0 h-auto">
-          Add Section
-        </Button>
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full -translate-y-32 translate-x-32"></div>
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white rounded-full translate-y-24 -translate-x-24"></div>
+        </div>
       </div>
 
-      {/* RIGHT COLUMN */}
-      <PhonePreview 
-        user={clerkUser}
-        products={products}
-        store={currentStore}
-      />
+      <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
+        {/* LEFT COLUMN - Store Management */}
+        <div className="xl:col-span-3 space-y-8">
+          <ModeSwitcher storeId={currentStore?._id} />
+          
+          <ProfileCard 
+            user={clerkUser}
+            store={currentStore}
+          />
+          
+          <AddProductBar 
+            storeId={currentStore?._id}
+            userId={clerkUser.id}
+          />
+
+          {/* Enhanced Products List */}
+          <ProductsList 
+            products={products}
+            storeId={currentStore?._id}
+          />
+          
+          <Button variant="link" className="text-primary text-sm mt-4 hover:underline p-0 h-auto">
+            Add Section
+          </Button>
+        </div>
+
+        {/* RIGHT COLUMN - Phone Preview */}
+        <div className="xl:col-span-1">
+          <div className="sticky top-8">
+            <PhonePreview 
+              user={clerkUser}
+              products={products}
+              store={currentStore}
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,143 +1,417 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { CourseCardEnhanced } from "@/components/ui/course-card-enhanced";
+import { useUser } from "@clerk/nextjs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  BookOpen, 
+  TrendingUp, 
+  Award, 
+  Clock, 
+  Target,
+  Users,
+  Star,
+  Play,
+  Calendar,
+  Bell,
+  ChevronRight
+} from "lucide-react";
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
 
-interface StepsProps {
-  current: number;
-}
-
-function Steps({ current }: StepsProps) {
-  const steps = [
-    { label: "Set up store", number: 1 },
-    { label: "Add products", number: 2 },
-    { label: "Go live", number: 3 },
-  ];
-
-  return (
-    <div className="flex items-center justify-center max-w-md mx-auto">
-      {steps.map((step, index) => (
-        <div key={step.number} className="flex items-center">
-          <div className="flex flex-col items-center">
-            <div
-              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-                step.number <= current
-                  ? "bg-primary text-primary-foreground"
-                  : "border-2 border-primary text-primary bg-card"
-              }`}
-            >
-              {step.number <= current ? (
-                <Check className="w-4 h-4" />
-              ) : (
-                step.number
-              )}
-            </div>
-            <span className="text-xs text-muted-foreground mt-2 text-center">
-              {step.label}
-            </span>
-          </div>
-          {index < steps.length - 1 && (
-            <div className="w-16 h-0.5 bg-border mx-4 mt-[-1rem]" />
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function ChallengeCopy() {
-  return (
-    <div className="max-w-lg">
-                <h2 className="text-3xl font-extrabold text-foreground uppercase mb-6">
-        JOIN THE CHALLENGE ///
-      </h2>
-              <p className="text-base text-muted-foreground leading-relaxed mb-6 max-w-prose">
-        Take part in our 30-day creator challenge and build your online business 
-        from scratch. Get daily tasks, expert guidance, and join a community of 
-        ambitious creators just like you.
-      </p>
-      <Button 
-        size="lg" 
-        className="bg-black text-white rounded-xl mt-6 px-8 py-3 font-semibold hover:scale-105 transition-transform"
-      >
-        Let's Go!
-      </Button>
-    </div>
-  );
-}
-
-function ChallengeCard() {
-  const avatarUrls = [
-    "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop&crop=face",
-    "https://images.unsplash.com/photo-1494790108755-2616b612b639?w=32&h=32&fit=crop&crop=face",
-    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=32&h=32&fit=crop&crop=face",
-    "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=32&h=32&fit=crop&crop=face",
-    "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=32&h=32&fit=crop&crop=face",
-    "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=32&h=32&fit=crop&crop=face",
-    "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=32&h=32&fit=crop&crop=face",
-  ];
-
-  return (
-    <Card className="relative aspect-[16/9] rounded-3xl overflow-hidden shadow-lg max-w-md">
-      {/* Background Image Placeholder */}
-      <div className="absolute inset-0 bg-gradient-to-br from-gray-200 to-gray-400">
-        {/* TODO: Replace with actual grayscale image */}
-        <div className="w-full h-full bg-muted flex items-center justify-center">
-          <div className="text-center">
-            <div className="text-6xl mb-2">📸</div>
-            <div className="text-sm text-muted-foreground">Challenge Image</div>
-          </div>
-        </div>
-      </div>
-
-      {/* 30 DAYS Badge */}
-      <div className="absolute top-4 right-4 transform rotate-[-2deg]">
-        <Badge 
-          variant="secondary" 
-          className="bg-primary text-primary-foreground px-3 py-1 text-sm font-bold"
-        >
-          30 DAYS
-        </Badge>
-      </div>
-
-      {/* Avatar Strip */}
-      <div className="absolute bottom-4 left-4 flex -space-x-2">
-        {avatarUrls.map((url, index) => (
-          <Avatar key={index} className="w-8 h-8 border-2 border-white">
-            <AvatarImage src={url} alt={`Participant ${index + 1}`} />
-            <AvatarFallback className="text-xs">
-              {String.fromCharCode(65 + index)}
-            </AvatarFallback>
-          </Avatar>
-        ))}
-      </div>
-    </Card>
-  );
-}
 
 export default function DashboardHome() {
-  const userName = "Creator"; // Fallback name
+  const { user } = useUser();
+
+  // Mock data - replace with real data from your Convex queries
+  const userData = {
+    name: user?.firstName || "Student",
+    email: user?.primaryEmailAddress?.emailAddress || "",
+    avatar: user?.imageUrl,
+    level: "Music Producer Level 3",
+    xp: 2450,
+    nextLevelXp: 3000,
+  };
+
+  const stats = {
+    coursesEnrolled: 8,
+    coursesCompleted: 3,
+    totalHoursLearned: 47,
+    currentStreak: 12,
+    certificatesEarned: 3,
+    nextMilestone: {
+      title: "Complete 5 Courses",
+      progress: 3,
+      target: 5,
+    },
+  };
+
+  const recentActivity = [
+    {
+      id: "1",
+      type: "completed_lesson" as const,
+      title: "Finished 'Advanced EQ Techniques'",
+      courseName: "Mixing Masterclass",
+      timestamp: "2 hours ago",
+    },
+    {
+      id: "2", 
+      type: "started_course" as const,
+      title: "Started new course",
+      courseName: "Beat Making Fundamentals",
+      timestamp: "1 day ago",
+    },
+    {
+      id: "3",
+      type: "earned_certificate" as const,
+      title: "Earned certificate",
+      courseName: "Music Theory Basics",
+      timestamp: "3 days ago",
+    },
+  ];
+
+  // Mock course data for the "Continue Learning" section
+  const continueLearningCourses = [
+    {
+      id: "1",
+      title: "Advanced Mixing Techniques",
+      description: "Master the art of professional mixing with industry-standard techniques and tools.",
+      imageUrl: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=225&fit=crop",
+      price: 99,
+      category: "Mixing",
+      skillLevel: "Intermediate" as const,
+      slug: "advanced-mixing-techniques",
+      instructor: {
+        name: "Alex Johnson",
+        avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop&crop=face",
+        verified: true,
+      },
+      stats: {
+        students: 1250,
+        lessons: 24,
+        duration: "8h 30m",
+        rating: 4.8,
+        reviews: 156,
+      },
+      progress: 65,
+      isEnrolled: true,
+      isNew: false,
+      isTrending: true,
+    },
+    {
+      id: "2",
+      title: "Beat Making Fundamentals",
+      description: "Learn the basics of creating beats from scratch using modern production techniques.",
+      imageUrl: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=225&fit=crop",
+      price: 79,
+      category: "Beat Making",
+      skillLevel: "Beginner" as const,
+      slug: "beat-making-fundamentals",
+      instructor: {
+        name: "Sarah Chen",
+        avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b639?w=32&h=32&fit=crop&crop=face",
+        verified: true,
+      },
+      stats: {
+        students: 2100,
+        lessons: 18,
+        duration: "6h 45m",
+        rating: 4.9,
+        reviews: 203,
+      },
+      progress: 25,
+      isEnrolled: true,
+      isNew: true,
+      isTrending: false,
+    },
+    {
+      id: "3",
+      title: "Vocal Production Masterclass",
+      description: "Professional vocal recording, editing, and production techniques for modern music.",
+      imageUrl: "https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=400&h=225&fit=crop",
+      price: 129,
+      category: "Vocal Production",
+      skillLevel: "Advanced" as const,
+      slug: "vocal-production-masterclass",
+      instructor: {
+        name: "Mike Rodriguez",
+        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=32&h=32&fit=crop&crop=face",
+        verified: true,
+      },
+      stats: {
+        students: 890,
+        lessons: 32,
+        duration: "12h 15m",
+        rating: 4.7,
+        reviews: 98,
+      },
+      progress: 0,
+      isEnrolled: true,
+      isNew: false,
+      isTrending: false,
+    },
+  ];
+
+  const levelProgress = (userData.xp / userData.nextLevelXp) * 100;
 
   return (
-    <section className="flex flex-col gap-8 py-10 md:py-16">
-      <h1 className="text-4xl font-bold text-foreground">
-        Welcome {userName}, you're in
-        <span className="inline-block ml-2">🎉</span>
-      </h1>
+    <div className="space-y-8">
+      {/* Welcome Header */}
+      <div className="bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 rounded-2xl p-8 text-white relative overflow-hidden">
+        <div className="relative z-10">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">
+                Welcome back, {userData.name}! 👋
+              </h1>
+              <p className="text-white/80">
+                Ready to continue your music production journey?
+              </p>
+            </div>
+            <div className="hidden md:flex items-center gap-4">
+              <Avatar className="w-16 h-16 border-2 border-white/20">
+                <AvatarImage src={userData.avatar} />
+                <AvatarFallback className="text-2xl">
+                  {userData.name.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+            </div>
+          </div>
+          
+          {/* Level Progress */}
+          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-medium">{userData.level}</span>
+              <span className="text-sm text-white/80">
+                {userData.xp} / {userData.nextLevelXp} XP
+              </span>
+            </div>
+            <Progress value={levelProgress} className="h-2 bg-white/20" />
+          </div>
 
-      {/* Progress tracker */}
-      <Steps current={1} />
-
-      <div className="flex flex-col lg:flex-row gap-16 mt-8">
-        <ChallengeCopy />   {/* left column */}
-        <ChallengeCard />   {/* right column */}
+          <div className="flex flex-wrap gap-4">
+            <Button className="bg-white/20 hover:bg-white/30 border border-white/30 backdrop-blur-sm text-white">
+              <Play className="w-4 h-4 mr-2" />
+              Continue Learning
+            </Button>
+            <Button variant="ghost" className="text-white hover:bg-white/10">
+              <BookOpen className="w-4 h-4 mr-2" />
+              Browse Courses
+            </Button>
+          </div>
+        </div>
+        
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full -translate-y-32 translate-x-32"></div>
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white rounded-full translate-y-24 -translate-x-24"></div>
+        </div>
       </div>
-    </section>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Courses Enrolled
+                </p>
+                <p className="text-2xl font-bold">{stats.coursesEnrolled}</p>
+              </div>
+              <BookOpen className="w-8 h-8 text-blue-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Completed
+                </p>
+                <p className="text-2xl font-bold">{stats.coursesCompleted}</p>
+              </div>
+              <Award className="w-8 h-8 text-green-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Hours Learned
+                </p>
+                <p className="text-2xl font-bold">{stats.totalHoursLearned}</p>
+              </div>
+              <Clock className="w-8 h-8 text-orange-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Current Streak
+                </p>
+                <p className="text-2xl font-bold">{stats.currentStreak}</p>
+              </div>
+              <TrendingUp className="w-8 h-8 text-purple-500" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        {/* Main Content */}
+        <div className="lg:col-span-3 space-y-8">
+          {/* Content Tabs */}
+          <Tabs defaultValue="continue" className="w-full">
+            <TabsList className="grid w-full max-w-md grid-cols-3">
+              <TabsTrigger value="continue">Continue</TabsTrigger>
+              <TabsTrigger value="recommended">Recommended</TabsTrigger>
+              <TabsTrigger value="favorites">Favorites</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="continue" className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {continueLearningCourses.map((course) => (
+                  <CourseCardEnhanced
+                    key={course.id}
+                    id={course.id}
+                    title={course.title}
+                    description={course.description}
+                    imageUrl={course.imageUrl}
+                    price={course.price}
+                    category={course.category}
+                    skillLevel={course.skillLevel}
+                    slug={course.slug}
+                    instructor={course.instructor}
+                    stats={course.stats}
+                    progress={course.progress}
+                    isEnrolled={course.isEnrolled}
+                    isNew={course.isNew}
+                    isTrending={course.isTrending}
+                    variant="default"
+                  />
+                ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="recommended" className="space-y-6">
+              <div className="text-center py-12">
+                <BookOpen className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">Personalized Recommendations</h3>
+                <p className="text-muted-foreground">
+                  Based on your learning progress, we'll recommend courses tailored for you.
+                </p>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="favorites" className="space-y-6">
+              <div className="text-center py-12">
+                <Star className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">Your Favorites</h3>
+                <p className="text-muted-foreground">
+                  Courses you've bookmarked will appear here.
+                </p>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-6">
+          {/* Next Milestone */}
+          <Card>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Target className="w-5 h-5 text-purple-500" />
+                Next Milestone
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="font-medium">{stats.nextMilestone.title}</span>
+                    <span className="text-muted-foreground">
+                      {stats.nextMilestone.progress}/{stats.nextMilestone.target}
+                    </span>
+                  </div>
+                  <Progress 
+                    value={(stats.nextMilestone.progress / stats.nextMilestone.target) * 100} 
+                    className="h-2"
+                  />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Complete {stats.nextMilestone.target - stats.nextMilestone.progress} more lessons to unlock your next achievement!
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Recent Activity */}
+          <Card>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Clock className="w-5 h-5 text-blue-500" />
+                Recent Activity
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {recentActivity.slice(0, 5).map((activity) => (
+                  <div key={activity.id} className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0">
+                      {activity.type === "completed_lesson" && <Award className="w-4 h-4 text-white" />}
+                      {activity.type === "started_course" && <Play className="w-4 h-4 text-white" />}
+                      {activity.type === "earned_certificate" && <Award className="w-4 h-4 text-white" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium line-clamp-2">{activity.title}</p>
+                      <p className="text-xs text-muted-foreground">{activity.courseName}</p>
+                      <p className="text-xs text-muted-foreground">{activity.timestamp}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Quick Actions */}
+          <Card>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Quick Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button variant="outline" className="w-full justify-start">
+                <Calendar className="w-4 h-4 mr-2" />
+                Schedule Study Time
+              </Button>
+              <Button variant="outline" className="w-full justify-start">
+                <BookOpen className="w-4 h-4 mr-2" />
+                Browse New Courses
+              </Button>
+              <Button variant="outline" className="w-full justify-start">
+                <Award className="w-4 h-4 mr-2" />
+                View Certificates
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
   );
 } 

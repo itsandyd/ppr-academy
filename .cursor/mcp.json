@@ -20,6 +20,14 @@
             "env": {
               "HEADLESS": "1"
             }
+      },
+      "nia": {
+        "command": "python3",
+        "args": ["-m", "nia_mcp_server"],
+        "env": {
+          "NIA_API_KEY": "nk_TiPeA4Rco8afmgOmkzV1pVGVWE6Ce942",
+          "NIA_API_URL": "https://apigcp.trynia.ai/"
+        }
       }
     }
   }

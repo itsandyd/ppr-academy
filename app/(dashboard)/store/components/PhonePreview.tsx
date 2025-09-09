@@ -28,7 +28,7 @@ interface PhonePreviewProps {
     slug?: string;
     userId: string;
   };
-  mode?: "store" | "leadMagnet" | "digitalProduct" | "profile";
+  mode?: "store" | "leadMagnet" | "digitalProduct" | "profile" | "course";
   // Lead magnet specific props
   leadMagnet?: {
     title?: string;
@@ -44,6 +44,16 @@ interface PhonePreviewProps {
     description?: string;
     price?: number;
     imageUrl?: string;
+  };
+  // Course preview specific props
+  coursePreview?: {
+    title?: string;
+    description?: string;
+    category?: string;
+    skillLevel?: string;
+    thumbnail?: string;
+    price?: number;
+    modules?: number;
   };
   // Style and button props for digital product creation
   style?: "button" | "callout" | "preview" | "card" | "minimal";
@@ -436,6 +446,7 @@ export function PhonePreview({
   mode = "store",
   leadMagnet,
   digitalProduct,
+  coursePreview,
   style = "button",
   buttonLabel = "Get Now"
 }: PhonePreviewProps) {
@@ -445,7 +456,7 @@ export function PhonePreview({
 
   // Get updated user data from Convex
   const convexUser = useQuery(
-    api.users.getUserByClerkId,
+    api.users.getUserFromClerk,
     user?.id ? { clerkId: user.id } : "skip"
   );
 
@@ -453,7 +464,7 @@ export function PhonePreview({
   if (convexUser === undefined) {
     return (
       <div className="lg:sticky lg:top-24">
-        <Card className="w-[356px] h-[678px] rounded-3xl border-4 border-foreground/90 bg-card flex flex-col p-6">
+        <Card className="w-[320px] h-[610px] rounded-3xl border-4 border-foreground/90 bg-card flex flex-col p-6">
           <div className="animate-pulse">
             <div className="flex items-center gap-3 mb-6">
                               <div className="w-10 h-10 bg-muted rounded-full"></div>
@@ -675,6 +686,89 @@ export function PhonePreview({
           </div>
         );
 
+      case "course":
+        return (
+          <div className="flex-1 overflow-hidden bg-background">
+            <div className="h-full p-2 overflow-y-auto">
+              <div className="space-y-2 max-w-none">
+                {/* Course Preview Card */}
+                <Card className="p-3 border border-gray-200 rounded-lg shadow-sm overflow-hidden max-w-none">
+                  {/* Course Thumbnail */}
+                  {coursePreview?.thumbnail ? (
+                    <div className="w-full h-20 mb-2 rounded-md overflow-hidden bg-gray-100">
+                      <img 
+                        src={coursePreview.thumbnail} 
+                        alt={coursePreview.title || "Course thumbnail"}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-full h-20 mb-2 rounded-md bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
+                      <div className="text-center">
+                        <div className="w-6 h-6 mx-auto mb-1 rounded-full bg-blue-500 flex items-center justify-center">
+                          <span className="text-white font-bold text-xs">📚</span>
+                        </div>
+                        <p className="text-xs text-gray-600">Course thumbnail</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Course Info */}
+                  <div className="space-y-2 max-w-none overflow-hidden">
+                    <div className="flex items-start gap-2 max-w-none overflow-hidden">
+                      <h3 className="font-bold text-xs text-gray-900 leading-tight flex-1 min-w-0 truncate">
+                        {coursePreview?.title || "Course Title"}
+                      </h3>
+                      {coursePreview?.price && (
+                        <Badge variant="secondary" className="bg-green-100 text-green-800 font-semibold text-xs flex-shrink-0 px-1 py-0">
+                          ${coursePreview.price}
+                        </Badge>
+                      )}
+                    </div>
+
+                    <p className="text-xs text-gray-600 leading-relaxed line-clamp-2 max-w-none overflow-hidden">
+                      {coursePreview?.description || "Course description will appear here..."}
+                    </p>
+
+                    {/* Course Meta */}
+                    <div className="flex flex-wrap items-center gap-1 pt-1 max-w-none overflow-hidden">
+                      {coursePreview?.category && (
+                        <Badge variant="outline" className="text-xs px-1 py-0 max-w-[80px] truncate">
+                          {coursePreview.category}
+                        </Badge>
+                      )}
+                      {coursePreview?.skillLevel && (
+                        <Badge variant="outline" className="text-xs px-1 py-0 max-w-[70px] truncate">
+                          {coursePreview.skillLevel}
+                        </Badge>
+                      )}
+                      {coursePreview?.modules !== undefined && coursePreview.modules > 0 && (
+                        <Badge variant="outline" className="text-xs px-1 py-0">
+                          {coursePreview.modules}m
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* CTA Button */}
+                    <Button className="w-full mt-2 h-7 text-xs bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white">
+                      Enroll Now
+                    </Button>
+                  </div>
+                </Card>
+
+                {/* Preview Status */}
+                <div className="text-center py-1">
+                  <div className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 rounded-full text-blue-700 text-xs">
+                    <div className="w-1 h-1 bg-blue-500 rounded-full animate-pulse"></div>
+                    Live preview
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Updates as you create</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
       default: // "store" mode
         return (
           <div className="flex-1 p-4 overflow-y-auto">
@@ -691,7 +785,7 @@ export function PhonePreview({
 
   return (
     <div className="lg:sticky lg:top-24">
-      <Card className="w-[356px] h-[678px] rounded-3xl border-4 border-foreground/90 bg-card flex flex-col overflow-hidden">
+      <Card className="w-[320px] h-[610px] rounded-3xl border-4 border-foreground/90 bg-card flex flex-col overflow-hidden">
         {/* Header */}
         <div className="bg-card border-b border-border p-4">
           <div className="flex items-center gap-3">

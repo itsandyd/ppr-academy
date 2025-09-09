@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+// Prisma removed - using Convex instead
 
-const prisma = new PrismaClient();
+// PrismaClient removed - using Convex instead
 
 export async function GET(
   request: NextRequest,

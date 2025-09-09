@@ -34,7 +34,7 @@ export function ProfileCard({ user, store }: ProfileCardProps) {
   
   // Get updated user data from Convex
   const convexUser = useQuery(
-    api.users.getUserByClerkId,
+    api.users.getUserFromClerk,
     user?.id ? { clerkId: user.id } : "skip"
   );
 

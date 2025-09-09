@@ -1,6 +1,6 @@
 'use server'
 
-import { prisma } from '@/lib/prisma'
+// Prisma removed - using Convex instead
 import { auth } from '@clerk/nextjs/server'
 
 export interface Coach {

@@ -41,7 +41,7 @@ export default function CourseCheckoutPage() {
 
   // Fetch creator data
   const creator = useQuery(
-    api.users.getUserByClerkId,
+    api.users.getUserFromClerk,
     course ? { clerkId: course.userId } : "skip"
   );
 

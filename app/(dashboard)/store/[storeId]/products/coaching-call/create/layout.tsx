@@ -42,7 +42,7 @@ function WizardLayoutInner({ children }: WizardLayoutProps) {
   );
 
   const convexUser = useQuery(
-    api.users.getUserByClerkId,
+    api.users.getUserFromClerk,
     user?.id ? { clerkId: user.id } : "skip"
   );
 

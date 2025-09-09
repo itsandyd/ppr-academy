@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { getUserFromClerk } from "@/lib/data";
-import { prisma } from "@/lib/prisma";
+// Prisma removed - using Convex instead
 
 // Force dynamic rendering for this page
 export const dynamic = 'force-dynamic';

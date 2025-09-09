@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+// Prisma removed - using Convex instead
 
 export async function getAdminStats() {
   try {

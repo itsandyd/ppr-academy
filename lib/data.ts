@@ -1,4 +1,7 @@
-import { prisma } from "@/lib/prisma";
+// This file is deprecated - use /lib/convex-data.ts instead
+// Keeping for backward compatibility during migration
+
+import { getAuthenticatedUser, getUserCourses, getCourseBySlug } from "@/lib/convex-data";
 import { CourseWithDetails, EnrollmentWithCourse } from "@/lib/types";
 import { auth } from "@clerk/nextjs/server";
 

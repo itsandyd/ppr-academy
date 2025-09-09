@@ -1,5 +1,5 @@
 import { StickyNav } from "./_components/sticky-nav";
-import { Hero } from "./_components/hero";
+import { HeroEnhanced } from "./_components/hero-enhanced";
 import { SocialProofStrip } from "./_components/social-proof-strip";
 import { DashboardShowcase } from "./_components/dashboard-showcase";
 import { FeatureGrid } from "./_components/feature-grid";
@@ -18,7 +18,7 @@ export const dynamic = 'force-dynamic';
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background">
-      <Hero />
+      <HeroEnhanced />
       <SocialProofStrip />
       <DashboardShowcase />
       <FeatureGrid />

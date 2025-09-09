@@ -25,7 +25,7 @@ export default function PublicCoursePage() {
 
   // Fetch creator data from Convex
   const creator = useQuery(
-    api.users.getUserByClerkId,
+    api.users.getUserFromClerk,
     course ? { clerkId: course.userId } : "skip"
   );
 

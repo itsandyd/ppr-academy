@@ -1,7 +1,11 @@
 import { Webhook } from 'svix';
 import { headers } from 'next/headers';
 import { WebhookEvent } from '@clerk/nextjs/server';
-import { prisma } from '@/lib/prisma';
+import { ConvexHttpClient } from "convex/browser";
+import { api } from "@/convex/_generated/api";
+
+// Initialize Convex client
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 export async function POST(req: Request) {
   // Get the headers
@@ -52,24 +56,17 @@ export async function POST(req: Request) {
     }
 
     try {
-      await prisma.user.upsert({
-        where: { clerkId: id },
-        update: {
-          email,
-          firstName: first_name,
-          lastName: last_name,
-          imageUrl: image_url,
-        },
-        create: {
-          clerkId: id,
-          email,
-          firstName: first_name,
-          lastName: last_name,
-          imageUrl: image_url,
-        },
+      await convex.mutation(api.users.createOrUpdateUserFromClerk, {
+        clerkId: id,
+        email,
+        firstName: first_name,
+        lastName: last_name,
+        imageUrl: image_url,
       });
+      
+      console.log(`✅ Successfully processed ${eventType} for user: ${id}`);
     } catch (error) {
-      console.error('Error upserting user:', error);
+      console.error('Error creating/updating user in Convex:', error);
       return new Response('Error creating/updating user', { status: 500 });
     }
   }
@@ -78,11 +75,13 @@ export async function POST(req: Request) {
     const { id } = evt.data;
 
     try {
-      await prisma.user.delete({
-        where: { clerkId: id },
+      await convex.mutation(api.users.deleteUser, {
+        clerkId: id,
       });
+      
+      console.log(`✅ Successfully deleted user: ${id}`);
     } catch (error) {
-      console.error('Error deleting user:', error);
+      console.error('Error deleting user from Convex:', error);
       return new Response('Error deleting user', { status: 500 });
     }
   }

@@ -43,7 +43,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
 
   // Fetch user data if store exists
   const user = useQuery(
-    api.users.getUserByClerkId,
+    api.users.getUserFromClerk,
     store ? { clerkId: store.userId } : "skip"
   );
 

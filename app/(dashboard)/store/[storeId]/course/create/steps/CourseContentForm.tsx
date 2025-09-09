@@ -52,65 +52,101 @@ function CourseBasicInfoCard() {
   };
 
   return (
-    <Card className="border-0 sm:border shadow-none sm:shadow-sm">
-      <CardHeader className="px-4 sm:px-6">
-        <CardTitle className="text-lg sm:text-xl">Course Information</CardTitle>
-      </CardHeader>
-      <CardContent className="px-4 sm:px-6 space-y-6">
-        <div>
-          <Label htmlFor="title" className="text-foreground text-sm font-medium">Course Title *</Label>
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="text-center">
+        <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-50 to-purple-50 rounded-full text-blue-700 font-medium mb-4 border border-blue-200">
+          <Sparkles className="w-4 h-4" />
+          Course Information
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          Tell us about your course
+        </h2>
+        <p className="text-gray-600 max-w-2xl mx-auto">
+          Provide the basic information that will help students understand what they'll learn in your course.
+        </p>
+      </div>
+
+      {/* Form Fields */}
+      <div className="space-y-8">
+        <div className="space-y-3">
+          <Label htmlFor="title" className="text-base font-semibold text-gray-900">
+            Course Title *
+          </Label>
           <Input
             id="title"
+            placeholder="Ultimate Guide to Ableton Live Audio Effects"
             value={state.data?.title || ""}
             onChange={(e) => handleInputChange("title", e.target.value)}
-            placeholder="Enter course title"
-            className="mt-2 h-12 text-base"
+            className="h-14 text-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl"
           />
+          <p className="text-sm text-gray-500">
+            Choose a clear, descriptive title that tells students exactly what they'll learn.
+          </p>
         </div>
 
-        <div>
-          <Label htmlFor="description" className="text-foreground text-sm font-medium">Course Description *</Label>
+        <div className="space-y-3">
+          <Label htmlFor="description" className="text-base font-semibold text-gray-900">
+            Course Description *
+          </Label>
           <Textarea
             id="description"
+            placeholder="What are audio effects? Ranging from subtle mixing tools to extreme sound manglers, effects are used in every part of the music production process. A good understanding of audio effects will help you improve your mixes, add character to your sounds, and take your music to the next level..."
             value={state.data?.description || ""}
             onChange={(e) => handleInputChange("description", e.target.value)}
-            placeholder="Describe what students will learn..."
-            rows={4}
-            className="mt-2 text-base min-h-[100px] resize-none"
+            className="min-h-[150px] text-base border-2 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 resize-none rounded-xl"
+            rows={6}
           />
+          <p className="text-sm text-gray-500">
+            Describe what students will learn and how it will benefit them. Be specific and compelling.
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-          <div>
-            <Label className="text-foreground text-sm font-medium">Category *</Label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-3">
+            <Label htmlFor="category" className="text-base font-semibold text-gray-900">
+              Category *
+            </Label>
             <Select value={state.data?.category || ""} onValueChange={(value) => handleInputChange("category", value)}>
-              <SelectTrigger className="mt-2 h-12 text-base">
-                <SelectValue placeholder="Select category" />
+              <SelectTrigger className="h-14 border-2 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl text-base">
+                <SelectValue placeholder="Choose a category" />
               </SelectTrigger>
               <SelectContent>
-                {categories.map((cat) => (
-                  <SelectItem key={cat} value={cat} className="text-base py-3">{cat}</SelectItem>
+                {categories.map((category) => (
+                  <SelectItem key={category} value={category} className="text-base py-3">
+                    {category}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-sm text-gray-500">
+              Help students find your course by selecting the most relevant category.
+            </p>
           </div>
 
-          <div>
-            <Label className="text-foreground text-sm font-medium">Skill Level *</Label>
+          <div className="space-y-3">
+            <Label htmlFor="skillLevel" className="text-base font-semibold text-gray-900">
+              Skill Level *
+            </Label>
             <Select value={state.data?.skillLevel || ""} onValueChange={(value) => handleInputChange("skillLevel", value)}>
-              <SelectTrigger className="mt-2 h-12 text-base">
-                <SelectValue placeholder="Select level" />
+              <SelectTrigger className="h-14 border-2 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl text-base">
+                <SelectValue placeholder="Select skill level" />
               </SelectTrigger>
               <SelectContent>
                 {skillLevels.map((level) => (
-                  <SelectItem key={level} value={level} className="text-base py-3">{level}</SelectItem>
+                  <SelectItem key={level} value={level} className="text-base py-3">
+                    {level}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-sm text-gray-500">
+              Set expectations by indicating the required skill level for your course.
+            </p>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
@@ -192,11 +228,22 @@ function CourseThumbnailCard() {
   };
 
   return (
-    <Card className="border-0 sm:border shadow-none sm:shadow-sm">
-      <CardHeader className="px-4 sm:px-6">
-        <CardTitle className="text-lg sm:text-xl">Course Thumbnail</CardTitle>
-      </CardHeader>
-      <CardContent className="px-4 sm:px-6">
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="text-center">
+        <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-50 to-pink-50 rounded-full text-purple-700 font-medium mb-4 border border-purple-200">
+          <Upload className="w-4 h-4" />
+          Course Thumbnail
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          Add a compelling thumbnail
+        </h2>
+        <p className="text-gray-600 max-w-2xl mx-auto">
+          A great thumbnail helps students discover your course. You can upload your own or generate one with AI.
+        </p>
+      </div>
+
+      <div className="space-y-6">
         <div className="space-y-4 sm:space-y-6">
           {/* AI Generation Section */}
           <div className="space-y-3">
@@ -327,8 +374,8 @@ function CourseThumbnailCard() {
             </div>
           )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 

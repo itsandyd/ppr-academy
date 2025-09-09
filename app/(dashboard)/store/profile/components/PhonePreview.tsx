@@ -15,7 +15,7 @@ export function PhonePreview({ className }: PhonePreviewProps) {
   
   // Get updated user data from Convex
   const convexUser = useQuery(
-    api.users.getUserByClerkId,
+    api.users.getUserFromClerk,
     clerkUser?.id ? { clerkId: clerkUser.id } : "skip"
   );
 

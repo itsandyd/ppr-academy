@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getUserFromClerk } from "@/lib/data";
-import { prisma } from "@/lib/prisma";
+// Prisma removed - using Convex instead
 import Link from "next/link";
 
 // Force dynamic rendering for this page

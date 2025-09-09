@@ -1,6 +1,6 @@
 "use server";
 
-import { prisma } from "@/lib/prisma";
+// Prisma removed - using Convex instead
 import { revalidatePath } from "next/cache";
 
 interface CoachApplicationData {

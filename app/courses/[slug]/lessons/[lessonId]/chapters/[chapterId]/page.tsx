@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { getUserFromClerk } from "@/lib/data";
-import { prisma } from "@/lib/prisma";
+// Prisma removed - using Convex instead
 import Link from "next/link";
 import ContentRenderer from "@/components/content-renderer";
 

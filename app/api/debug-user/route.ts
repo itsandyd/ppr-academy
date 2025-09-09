@@ -1,5 +1,5 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
-import { prisma } from "@/lib/prisma";
+// Prisma removed - using Convex instead
 import { NextResponse } from "next/server";
 
 export async function GET() {

@@ -5,10 +5,46 @@ import { CheckoutForm } from "./steps/CheckoutForm";
 import { CourseContentForm } from "./steps/CourseContentForm";
 import { OptionsForm } from "./steps/OptionsForm";
 import { useSearchParams } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
+import { useCourseCreation } from "./context";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { BookOpen, CreditCard, Settings, Sparkles, Clock, CheckCircle } from "lucide-react";
+import { Suspense } from "react";
 
-export default function CreateCoursePage() {
+// Step metadata for enhanced UI
+const stepMetadata = {
+  course: {
+    title: "Course Information",
+    description: "Set up your course basics and content structure",
+    icon: BookOpen,
+    color: "from-blue-500 to-cyan-500",
+    estimatedTime: "5-10 min"
+  },
+  checkout: {
+    title: "Checkout Configuration",
+    description: "Configure pricing and payment options",
+    icon: CreditCard,
+    color: "from-emerald-500 to-teal-500",
+    estimatedTime: "3-5 min"
+  },
+  options: {
+    title: "Advanced Options",
+    description: "Customize course settings and features",
+    icon: Settings,
+    color: "from-purple-500 to-pink-500",
+    estimatedTime: "5-8 min"
+  }
+};
+
+function CreateCourseContent() {
   const searchParams = useSearchParams();
   const step = searchParams.get("step") || "course";
+  const { state } = useCourseCreation();
+  
+  const currentStepMeta = stepMetadata[step as keyof typeof stepMetadata] || stepMetadata.course;
+  const Icon = currentStepMeta.icon;
+  const isCompleted = state.stepCompletion[step as keyof typeof state.stepCompletion];
 
   const renderStep = () => {
     switch (step) {
@@ -24,5 +60,33 @@ export default function CreateCoursePage() {
     }
   };
 
-  return renderStep();
+  return (
+    <AnimatePresence mode="wait">
+      <motion.div
+        key={step}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        transition={{ duration: 0.4, ease: "easeInOut" }}
+      >
+        {renderStep()}
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+export default function CreateCoursePage() {
+  return (
+    <Suspense fallback={
+      <div className="space-y-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-3/4 mb-4"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2 mb-6"></div>
+          <div className="h-64 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    }>
+      <CreateCourseContent />
+    </Suspense>
+  );
 } 
