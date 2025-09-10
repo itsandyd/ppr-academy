@@ -126,6 +126,7 @@ export const getCoursesByUser = query({
     _creationTime: v.number(),
     userId: v.string(),
     instructorId: v.optional(v.string()),
+    storeId: v.optional(v.string()), // ✅ Added missing storeId field
     title: v.string(),
     description: v.optional(v.string()),
     imageUrl: v.optional(v.string()),
@@ -201,6 +202,7 @@ export const getCoursesByInstructor = query({
     _creationTime: v.number(),
     userId: v.string(),
     instructorId: v.optional(v.string()),
+    storeId: v.optional(v.string()), // ✅ Added missing storeId field
     title: v.string(),
     description: v.optional(v.string()),
     imageUrl: v.optional(v.string()),

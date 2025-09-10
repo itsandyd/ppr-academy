@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import { useSearchParams, useRouter, useParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
@@ -16,7 +17,6 @@ import Link from "next/link";
 import { CourseCreationProvider, useCourseCreation } from "./context";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import React from "react";
 
 // Prevent static generation for this layout
 export const dynamic = 'force-dynamic';
@@ -54,16 +54,40 @@ function LayoutContent({ children }: CourseCreateLayoutProps) {
   const params = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const storeId = params.storeId as string;
+  const rawStoreId = params.storeId as string;
   const currentStep = searchParams.get("step") || "course";
   const [showMobilePreview, setShowMobilePreview] = useState(false);
   
   const { state, canPublish, createCourse, saveCourse } = useCourseCreation();
 
-  // Get store data
+  // Get user's stores to handle invalid storeId case
+  const userStores = useQuery(
+    api.stores.getStoresByUser,
+    user?.id ? { userId: user.id } : "skip"
+  );
+  
+  // Detect if rawStoreId is actually a user ID and get the correct store ID
+  const isUserIdInsteadOfStoreId = rawStoreId && rawStoreId.startsWith('ks7');
+  const correctStoreId = isUserIdInsteadOfStoreId ? userStores?.[0]?._id : rawStoreId;
+  
+  // Redirect to correct URL if we detected a user ID in the URL
+  React.useEffect(() => {
+    if (isUserIdInsteadOfStoreId && correctStoreId && correctStoreId !== rawStoreId) {
+      const currentSearch = searchParams.toString();
+      const newUrl = `/store/${correctStoreId}/course/create${currentSearch ? `?${currentSearch}` : ''}`;
+      console.log('🔄 Redirecting from invalid store ID to correct one:', { rawStoreId, correctStoreId, newUrl });
+      router.replace(newUrl);
+      return;
+    }
+  }, [isUserIdInsteadOfStoreId, correctStoreId, rawStoreId, router, searchParams]);
+  
+  // Use the correct store ID for queries
+  const storeId = correctStoreId;
+
+  // Get store data (skip if we're about to redirect)
   const store = useQuery(
     api.stores.getStoreById,
-    storeId ? { storeId: storeId as any } : "skip"
+    storeId && !isUserIdInsteadOfStoreId ? { storeId: storeId as any } : "skip"
   );
 
   const navigateToStep = (step: string) => {

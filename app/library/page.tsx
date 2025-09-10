@@ -1,412 +1,416 @@
 "use client";
 
-import { useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { CourseCardEnhanced } from "@/components/ui/course-card-enhanced";
 import { useUser } from "@clerk/nextjs";
-import { useSearchParams } from "next/navigation";
-import { useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  Book,
-  Download,
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  BookOpen, 
+  TrendingUp, 
+  Award, 
+  Clock, 
+  Target,
+  Users,
+  Star,
+  Play,
   Calendar,
-  Package,
-  Clock,
-  TrendingUp,
-  PlayCircle,
-  FileText,
-  ExternalLink,
-  CheckCircle,
-  Search,
+  Bell,
+  ChevronRight
 } from "lucide-react";
-import Link from "next/link";
-import { formatDistanceToNow } from "date-fns";
-import { toast } from "sonner";
 
-export default function LibraryOverviewPage() {
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
+export default function LibraryPage() {
   const { user } = useUser();
-  const searchParams = useSearchParams();
-  
-  // Handle purchase success and enrollment success
-  useEffect(() => {
-    const purchaseStatus = searchParams.get("purchase");
-    const sessionId = searchParams.get("session_id");
-    const enrollmentStatus = searchParams.get("enrollment");
-    const courseName = searchParams.get("course");
-    
-    if (purchaseStatus === "success" && sessionId) {
-      toast.success("🎉 Purchase successful! Welcome to your new content.");
-    } else if (enrollmentStatus === "success" && courseName) {
-      toast.success(`🎉 Successfully enrolled in "${decodeURIComponent(courseName)}"! Start learning now.`);
-    }
-  }, [searchParams]);
-  
-  const purchases = useQuery(
-    api.library.getUserPurchases,
-    user?.id ? { userId: user.id } : "skip"
-  );
 
-  const courses = useQuery(
-    api.library.getUserCourses,
-    user?.id ? { userId: user.id } : "skip"
-  );
-
-  const digitalProducts = useQuery(
-    api.library.getUserDigitalProducts,
-    user?.id ? { userId: user.id } : "skip"
-  );
-
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-foreground">Please sign in</h2>
-          <p className="text-muted-foreground">Access your library by signing in</p>
-        </div>
-      </div>
-    );
-  }
+  // Mock data - replace with real data from your Convex queries
+  const userData = {
+    name: user?.firstName || "Student",
+    email: user?.primaryEmailAddress?.emailAddress || "",
+    avatar: user?.imageUrl,
+    level: "Music Producer Level 3",
+    xp: 2450,
+    nextLevelXp: 3000,
+  };
 
   const stats = {
-    totalPurchases: purchases?.length || 0,
-    totalCourses: courses?.length || 0,
-    totalDownloads: digitalProducts?.length || 0,
-    totalCoaching: purchases?.filter(p => p.productType === "coaching").length || 0,
-    completedCourses: courses?.filter(c => (c.progress || 0) >= 100).length || 0,
-    avgProgress: courses?.length ? 
-      Math.round((courses.reduce((sum, c) => sum + (c.progress || 0), 0) / courses.length)) : 0,
+    coursesEnrolled: 8,
+    coursesCompleted: 3,
+    totalHoursLearned: 47,
+    currentStreak: 12,
+    certificatesEarned: 3,
+    nextMilestone: {
+      title: "Complete 5 Courses",
+      progress: 3,
+      target: 5,
+    },
   };
 
   const recentActivity = [
-    ...(courses?.slice(0, 3).map(course => ({
-      type: "course" as const,
-      id: course._id,
-      title: course.title,
-      description: `${course.progress || 0}% complete`,
-      imageUrl: course.imageUrl,
-      href: `/library/courses/${course.slug}`,
-      timestamp: course.lastAccessedAt || course._creationTime,
-    })) || []),
-    ...(digitalProducts?.slice(0, 2).map(product => ({
-      type: "download" as const,
-      id: product._id,
-      title: product.title,
-      description: `Downloaded ${product.downloadCount || 0} times`,
-      imageUrl: product.imageUrl,
-      href: `/library/downloads/${product._id}`,
-      timestamp: product.lastAccessedAt || product._creationTime,
-    })) || []),
-  ].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0)).slice(0, 5);
+    {
+      id: "1",
+      type: "completed_lesson" as const,
+      title: "Finished 'Advanced EQ Techniques'",
+      courseName: "Mixing Masterclass",
+      timestamp: "2 hours ago",
+    },
+    {
+      id: "2", 
+      type: "started_course" as const,
+      title: "Started new course",
+      courseName: "Beat Making Fundamentals",
+      timestamp: "1 day ago",
+    },
+    {
+      id: "3",
+      type: "earned_certificate" as const,
+      title: "Earned certificate",
+      courseName: "Music Theory Basics",
+      timestamp: "3 days ago",
+    },
+  ];
+
+  // Mock course data for the "Continue Learning" section
+  const continueLearningCourses = [
+    {
+      id: "1",
+      title: "Advanced Mixing Techniques",
+      description: "Master the art of professional mixing with industry-standard techniques and tools.",
+      imageUrl: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=225&fit=crop",
+      price: 99,
+      category: "Mixing",
+      skillLevel: "Intermediate" as const,
+      slug: "advanced-mixing-techniques",
+      instructor: {
+        name: "Alex Johnson",
+        avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop&crop=face",
+        verified: true,
+      },
+      stats: {
+        students: 1250,
+        lessons: 24,
+        duration: "8h 30m",
+        rating: 4.8,
+        reviews: 156,
+      },
+      progress: 65,
+      isEnrolled: true,
+      isNew: false,
+      isTrending: true,
+    },
+    {
+      id: "2",
+      title: "Beat Making Fundamentals",
+      description: "Learn the basics of creating beats from scratch using modern production techniques.",
+      imageUrl: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=225&fit=crop",
+      price: 79,
+      category: "Beat Making",
+      skillLevel: "Beginner" as const,
+      slug: "beat-making-fundamentals",
+      instructor: {
+        name: "Sarah Chen",
+        avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b639?w=32&h=32&fit=crop&crop=face",
+        verified: true,
+      },
+      stats: {
+        students: 2100,
+        lessons: 18,
+        duration: "6h 45m",
+        rating: 4.9,
+        reviews: 203,
+      },
+      progress: 25,
+      isEnrolled: true,
+      isNew: true,
+      isTrending: false,
+    },
+    {
+      id: "3",
+      title: "Vocal Production Masterclass",
+      description: "Professional vocal recording, editing, and production techniques for modern music.",
+      imageUrl: "https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=400&h=225&fit=crop",
+      price: 129,
+      category: "Vocal Production",
+      skillLevel: "Advanced" as const,
+      slug: "vocal-production-masterclass",
+      instructor: {
+        name: "Mike Rodriguez",
+        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=32&h=32&fit=crop&crop=face",
+        verified: true,
+      },
+      stats: {
+        students: 890,
+        lessons: 32,
+        duration: "12h 15m",
+        rating: 4.7,
+        reviews: 98,
+      },
+      progress: 0,
+      isEnrolled: true,
+      isNew: false,
+      isTrending: false,
+    },
+  ];
+
+  const levelProgress = (userData.xp / userData.nextLevelXp) * 100;
 
   return (
     <div className="space-y-8">
       {/* Welcome Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">
-          Welcome back, {user.firstName}!
-        </h1>
-        <p className="text-muted-foreground mt-2">
-          Continue your learning journey and explore your content library.
-        </p>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Courses</CardTitle>
-            <Book className="w-4 h-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalCourses}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats.completedCourses} completed
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Downloads</CardTitle>
-            <Download className="w-4 h-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalDownloads}</div>
-            <p className="text-xs text-muted-foreground">
-              Digital products owned
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Progress</CardTitle>
-            <TrendingUp className="w-4 h-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.avgProgress}%</div>
-            <p className="text-xs text-muted-foreground">
-              Across all courses
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Spent</CardTitle>
-            <Package className="w-4 h-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              ${purchases?.reduce((sum, p) => sum + p.amount, 0).toFixed(2) || "0.00"}
+      <div className="bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 rounded-2xl p-8 text-white relative overflow-hidden">
+        <div className="relative z-10">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-3xl font-bold mb-2">
+                Welcome back, {userData.name}! 👋
+              </h1>
+              <p className="text-white/80">
+                Ready to continue your music production journey?
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              {stats.totalPurchases} purchases
-            </p>
-          </CardContent>
-        </Card>
+            <div className="hidden md:flex items-center gap-4">
+              <Avatar className="w-16 h-16 border-2 border-white/20">
+                <AvatarImage src={userData.avatar} />
+                <AvatarFallback className="text-2xl">
+                  {userData.name.charAt(0)}
+                </AvatarFallback>
+              </Avatar>
+            </div>
+          </div>
+          
+          {/* Level Progress */}
+          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-medium">{userData.level}</span>
+              <span className="text-sm text-white/80">
+                {userData.xp} / {userData.nextLevelXp} XP
+              </span>
+            </div>
+            <Progress value={levelProgress} className="h-2 bg-white/20" />
+          </div>
+
+          <div className="flex flex-wrap gap-4">
+            <Button className="bg-white/20 hover:bg-white/30 border border-white/30 backdrop-blur-sm text-white">
+              <Play className="w-4 h-4 mr-2" />
+              Continue Learning
+            </Button>
+            <Button variant="ghost" className="text-white hover:bg-white/10">
+              <BookOpen className="w-4 h-4 mr-2" />
+              Browse Courses
+            </Button>
+          </div>
+        </div>
+        
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full -translate-y-32 translate-x-32"></div>
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white rounded-full translate-y-24 -translate-x-24"></div>
+        </div>
       </div>
 
-      {/* Quick Access Sections */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Continue Learning */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <PlayCircle className="w-5 h-5" />
-              <span>Continue Learning</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {courses?.slice(0, 3).map((course) => (
-              <div key={course._id} className="flex items-center space-x-4 p-3 bg-background rounded-lg">
-                <div className="w-12 h-12 bg-muted rounded-lg overflow-hidden">
-                  {course.imageUrl ? (
-                    <img 
-                      src={course.imageUrl} 
-                      alt={course.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <Book className="w-6 h-6 text-muted-foreground" />
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-foreground truncate">{course.title}</h3>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <Progress value={course.progress || 0} className="flex-1 h-2" />
-                    <span className="text-xs text-muted-foreground">{course.progress || 0}%</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {course.storeName}
-                  </p>
-                </div>
-                <Button asChild size="sm" variant="outline">
-                  <Link href={`/library/courses/${course.slug}`}>
-                    Continue
-                  </Link>
-                </Button>
-              </div>
-            ))}
-            
-            {courses && courses.length === 0 && (
-              <div className="text-center py-8">
-                <Book className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="font-medium text-foreground">No courses yet</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Start learning by purchasing your first course
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Courses Enrolled
                 </p>
-                <Button asChild>
-                  <Link href="/courses">Browse Courses</Link>
-                </Button>
+                <p className="text-2xl font-bold">{stats.coursesEnrolled}</p>
               </div>
-            )}
-
-            {courses && courses.length > 3 && (
-              <Button asChild variant="outline" className="w-full">
-                <Link href="/library/courses">View All Courses</Link>
-              </Button>
-            )}
+              <BookOpen className="w-8 h-8 text-blue-500" />
+            </div>
           </CardContent>
         </Card>
 
-        {/* Recent Downloads */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Download className="w-5 h-5" />
-              <span>Your Downloads</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {digitalProducts?.slice(0, 3).map((product) => (
-              <div key={product._id} className="flex items-center space-x-4 p-3 bg-background rounded-lg">
-                <div className="w-12 h-12 bg-muted rounded-lg overflow-hidden">
-                  {product.imageUrl ? (
-                    <img 
-                      src={product.imageUrl} 
-                      alt={product.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <FileText className="w-6 h-6 text-muted-foreground" />
-                    </div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-foreground truncate">{product.title}</h3>
-                  <div className="flex items-center space-x-2 mt-1">
-                    <Badge variant="secondary" className="text-xs">
-                      {product.productType === "urlMedia" ? "URL/Media" : "Digital"}
-                    </Badge>
-                    {product.downloadCount && (
-                      <span className="text-xs text-muted-foreground">
-                        Downloaded {product.downloadCount}x
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {product.storeName}
-                  </p>
-                </div>
-                <Button asChild size="sm" variant="outline">
-                  <Link href={`/library/downloads/${product._id}`}>
-                    {product.productType === "urlMedia" ? (
-                      <>
-                        <ExternalLink className="w-4 h-4 mr-1" />
-                        View
-                      </>
-                    ) : (
-                      <>
-                        <Download className="w-4 h-4 mr-1" />
-                        Access
-                      </>
-                    )}
-                  </Link>
-                </Button>
-              </div>
-            ))}
-
-            {digitalProducts && digitalProducts.length === 0 && (
-              <div className="text-center py-8">
-                <Download className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="font-medium text-foreground">No downloads yet</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Purchase digital products to access them here
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Completed
                 </p>
-                <Button asChild>
-                  <Link href="/courses">Browse Products</Link>
-                </Button>
+                <p className="text-2xl font-bold">{stats.coursesCompleted}</p>
               </div>
-            )}
+              <Award className="w-8 h-8 text-green-500" />
+            </div>
+          </CardContent>
+        </Card>
 
-            {digitalProducts && digitalProducts.length > 3 && (
-              <Button asChild variant="outline" className="w-full">
-                <Link href="/library/downloads">View All Downloads</Link>
-              </Button>
-            )}
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Hours Learned
+                </p>
+                <p className="text-2xl font-bold">{stats.totalHoursLearned}</p>
+              </div>
+              <Clock className="w-8 h-8 text-orange-500" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">
+                  Current Streak
+                </p>
+                <p className="text-2xl font-bold">{stats.currentStreak}</p>
+              </div>
+              <TrendingUp className="w-8 h-8 text-purple-500" />
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Recent Activity */}
-      {recentActivity.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Clock className="w-5 h-5" />
-              <span>Recent Activity</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {recentActivity.map((item) => (
-                <div key={`${item.type}-${item.id}`} className="flex items-center space-x-4 p-3 bg-background rounded-lg hover:bg-accent transition-colors">
-                  <div className="w-10 h-10 bg-muted rounded-lg overflow-hidden">
-                    {item.imageUrl ? (
-                      <img 
-                        src={item.imageUrl} 
-                        alt={item.title}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        {item.type === "course" ? (
-                          <Book className="w-5 h-5 text-muted-foreground" />
-                        ) : (
-                          <FileText className="w-5 h-5 text-muted-foreground" />
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-foreground truncate">{item.title}</h3>
-                    <p className="text-sm text-muted-foreground">{item.description}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(item.timestamp || 0), { addSuffix: true })}
-                    </p>
-                  </div>
-                  <Button asChild size="sm" variant="ghost">
-                    <Link href={item.href}>
-                      <ExternalLink className="w-4 h-4" />
-                    </Link>
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        {/* Main Content */}
+        <div className="lg:col-span-3 space-y-8">
+          {/* Content Tabs */}
+          <Tabs defaultValue="continue" className="w-full">
+            <TabsList className="grid w-full max-w-md grid-cols-3">
+              <TabsTrigger value="continue">Continue</TabsTrigger>
+              <TabsTrigger value="recommended">Recommended</TabsTrigger>
+              <TabsTrigger value="favorites">Favorites</TabsTrigger>
+            </TabsList>
 
-      {/* Empty State */}
-      {(!purchases || purchases.length === 0) && (
-        <Card>
-          <CardContent className="text-center py-12">
-            <Package className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-foreground mb-2">Your library is empty</h2>
-            <p className="text-muted-foreground mb-6">
-              Start building your collection by purchasing courses and digital products
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button asChild>
-                <Link href="/courses">
-                  <Book className="w-4 h-4 mr-2" />
-                  Browse Courses
-                </Link>
+            <TabsContent value="continue" className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {continueLearningCourses.map((course) => (
+                  <CourseCardEnhanced
+                    key={course.id}
+                    id={course.id}
+                    title={course.title}
+                    description={course.description}
+                    imageUrl={course.imageUrl}
+                    price={course.price}
+                    category={course.category}
+                    skillLevel={course.skillLevel}
+                    slug={course.slug}
+                    instructor={course.instructor}
+                    stats={course.stats}
+                    progress={course.progress}
+                    isEnrolled={course.isEnrolled}
+                    isNew={course.isNew}
+                    isTrending={course.isTrending}
+                    variant="default"
+                  />
+                ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="recommended" className="space-y-6">
+              <div className="text-center py-12">
+                <BookOpen className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">Personalized Recommendations</h3>
+                <p className="text-muted-foreground">
+                  Based on your learning progress, we'll recommend courses tailored for you.
+                </p>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="favorites" className="space-y-6">
+              <div className="text-center py-12">
+                <Star className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">Your Favorites</h3>
+                <p className="text-muted-foreground">
+                  Courses you've bookmarked will appear here.
+                </p>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-6">
+          {/* Next Milestone */}
+          <Card>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Target className="w-5 h-5 text-purple-500" />
+                Next Milestone
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="font-medium">{stats.nextMilestone.title}</span>
+                    <span className="text-muted-foreground">
+                      {stats.nextMilestone.progress}/{stats.nextMilestone.target}
+                    </span>
+                  </div>
+                  <Progress 
+                    value={(stats.nextMilestone.progress / stats.nextMilestone.target) * 100} 
+                    className="h-2"
+                  />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Complete {stats.nextMilestone.target - stats.nextMilestone.progress} more lessons to unlock your next achievement!
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Recent Activity */}
+          <Card>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Clock className="w-5 h-5 text-blue-500" />
+                Recent Activity
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {recentActivity.slice(0, 5).map((activity) => (
+                  <div key={activity.id} className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0">
+                      {activity.type === "completed_lesson" && <Award className="w-4 h-4 text-white" />}
+                      {activity.type === "started_course" && <Play className="w-4 h-4 text-white" />}
+                      {activity.type === "earned_certificate" && <Award className="w-4 h-4 text-white" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium line-clamp-2">{activity.title}</p>
+                      <p className="text-xs text-muted-foreground">{activity.courseName}</p>
+                      <p className="text-xs text-muted-foreground">{activity.timestamp}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Quick Actions */}
+          <Card>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg">Quick Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button variant="outline" className="w-full justify-start">
+                <Calendar className="w-4 h-4 mr-2" />
+                Schedule Study Time
               </Button>
-              <Button asChild variant="outline">
-                <Link href="/creators">
-                  <Search className="w-4 h-4 mr-2" />
-                  Explore Creators
-                </Link>
+              <Button variant="outline" className="w-full justify-start">
+                <BookOpen className="w-4 h-4 mr-2" />
+                Browse New Courses
               </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+              <Button variant="outline" className="w-full justify-start">
+                <Award className="w-4 h-4 mr-2" />
+                View Certificates
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   );
-}
-
-// Helper function to get icon for product type
-function getProductTypeIcon(type: string) {
-  switch (type) {
-    case "course":
-      return Book;
-    case "digitalProduct":
-      return FileText;
-    case "coaching":
-      return Calendar;
-    case "bundle":
-      return Package;
-    default:
-      return FileText;
-  }
 }

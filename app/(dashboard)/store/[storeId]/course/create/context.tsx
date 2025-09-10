@@ -102,7 +102,7 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
   const { user } = useUser();
   const { toast } = useToast();
   const storeId = useValidStoreId();
-  const courseId = searchParams.get("courseId") as Id<"courses"> | undefined;
+  const courseId = (searchParams.get("courseId") || searchParams.get("edit")) as Id<"courses"> | undefined;
   
 
   // Redirect if storeId is invalid
