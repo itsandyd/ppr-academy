@@ -2,6 +2,7 @@
 
 import { Authenticated, Unauthenticated } from "convex/react";
 import { CreatorDashboardEnhanced } from "@/components/dashboard/creator-dashboard-enhanced";
+import { StoreRequiredGuard } from "@/components/dashboard/store-required-guard";
 import { SignInButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 
@@ -9,7 +10,11 @@ import { Button } from "@/components/ui/button";
 export const dynamic = 'force-dynamic';
 
 function StoreContent() {
-  return <CreatorDashboardEnhanced />;
+  return (
+    <StoreRequiredGuard redirectTo="/home">
+      <CreatorDashboardEnhanced />
+    </StoreRequiredGuard>
+  );
 }
 
 export default function MyStorePage() {

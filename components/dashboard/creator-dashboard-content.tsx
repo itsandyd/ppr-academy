@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { StoreSetupWizard } from "./store-setup-wizard";
 import { 
   Music, 
   TrendingUp, 
@@ -43,10 +44,10 @@ export function CreatorDashboardContent() {
   // Use the Convex user ID for all queries
   const convexUserId = convexUser?._id;
 
-  // Fetch user's stores using Convex user ID
+  // Fetch user's stores using Clerk ID (stores are indexed by Clerk ID)
   const stores = useQuery(
     api.stores.getStoresByUser,
-    convexUserId ? { userId: convexUserId } : "skip"
+    user?.id ? { userId: user.id } : "skip"
   );
   
   // Get the first store ID (or use a fallback)
@@ -152,10 +153,18 @@ export function CreatorDashboardContent() {
         icon: Headphones,
         color: "from-orange-500 to-red-500",
         href: `/store/${baseStoreId}/products/coaching-call/create`
+      },
+      {
+        title: "View Analytics",
+        description: "Track your performance",
+        icon: BarChart3,
+        color: "from-indigo-500 to-purple-500",
+        href: "/home/analytics"
       }
     ];
   }, [storeId]);
 
+  // Show loading state
   if (!user) {
     return (
       <div className="space-y-8">
@@ -163,6 +172,38 @@ export function CreatorDashboardContent() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[1, 2, 3, 4].map((i) => (
             <Skeleton key={i} className="h-24" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Show store setup wizard if user has no stores
+  if (user?.id && stores !== undefined && stores.length === 0) {
+    return (
+      <StoreSetupWizard 
+        onStoreCreated={() => {
+          // Refresh the page or navigate to dashboard
+          window.location.reload();
+        }} 
+      />
+    );
+  }
+
+  // Show loading state while data is being fetched
+  if (user?.id && stores === undefined) {
+    return (
+      <div className="space-y-8">
+        <div className="flex items-center gap-4">
+          <Skeleton className="w-12 h-12 rounded-full" />
+          <div className="space-y-2">
+            <Skeleton className="h-6 w-64" />
+            <Skeleton className="h-4 w-48" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <Skeleton key={i} className="h-32" />
           ))}
         </div>
       </div>

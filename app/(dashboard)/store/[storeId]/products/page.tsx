@@ -2,22 +2,83 @@
 
 import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { useValidStoreId } from "@/hooks/useStoreId";
+import { StoreRequiredGuard } from "@/components/dashboard/store-required-guard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertTriangle, Music, BookOpen, Users, Zap, Search, Filter } from "lucide-react";
+import { AlertTriangle, Music, BookOpen, Users, Zap, Search, Filter, Package, Plus, Eye, DollarSign, TrendingUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MusicOptionCard } from "../components/MusicOptionCard";
 import { musicOptions, groupedOptions, popularOptions } from "../components/music-options";
+import { ProductsList } from "../../components/ProductsList";
 
-export default function ChooseProductTypePage() {
+export default function ProductsPage() {
   const params = useParams();
   const router = useRouter();
+  const { user } = useUser();
   const storeId = useValidStoreId();
-  const [activeTab, setActiveTab] = useState("popular");
+  const [activeTab, setActiveTab] = useState("manage");
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Get user from Convex using Clerk ID
+  const convexUser = useQuery(
+    api.users.getUserFromClerk,
+    user?.id ? { clerkId: user.id } : "skip"
+  );
+
+  // Get user's products
+  const userCourses = useQuery(
+    api.courses.getCoursesByUser,
+    convexUser?._id ? { userId: convexUser._id } : "skip"
+  );
+
+  const digitalProducts = useQuery(
+    api.digitalProducts.getProductsByUser,
+    convexUser?._id ? { userId: convexUser._id } : "skip"
+  );
+
+  // Combine products for display
+  const allProducts = [
+    ...(userCourses?.map(course => ({
+      _id: course._id,
+      title: course.title,
+      description: course.description,
+      price: course.price || 0,
+      imageUrl: course.imageUrl,
+      isPublished: course.isPublished,
+      slug: course.slug,
+      userId: course.userId,
+      type: 'course',
+      storeId: course.storeId,
+    })) || []),
+    ...(digitalProducts?.map(product => ({
+      _id: product._id,
+      title: product.title || 'Untitled Product',
+      description: product.description,
+      price: product.price || 0,
+      imageUrl: product.imageUrl,
+      isPublished: product.isPublished,
+      userId: product.userId,
+      type: 'digitalProduct',
+      storeId: product.storeId,
+    })) || [])
+  ];
+
+  const musicProducts = allProducts.filter(p => p.type === 'digitalProduct');
+  const courseProducts = allProducts.filter(p => p.type === 'course');
+
+  // Calculate stats
+  const stats = {
+    totalProducts: allProducts.length,
+    publishedProducts: allProducts.filter(p => p.isPublished).length,
+    totalViews: 0, // Placeholder for future analytics
+    totalRevenue: 0, // Placeholder for future analytics
+  };
 
   if (!storeId) {
     return (
@@ -101,22 +162,74 @@ export default function ChooseProductTypePage() {
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
+          className="flex items-center justify-between mb-8"
         >
-          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20 px-4 py-2 rounded-full mb-6">
-            <Music className="w-4 h-4 text-purple-600" />
-            <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Music Creator Studio</span>
-          </div>
-          
-          <h1 className="text-4xl md:text-5xl font-bold text-slate-900 dark:text-slate-100 mb-4">
-            What are you creating today?
-          </h1>
-          <p className="text-xl text-slate-600 dark:text-slate-400 max-w-3xl mx-auto leading-relaxed">
-            Choose the perfect format for your music content — from sample packs and beats to courses and coaching sessions.
-          </p>
+          <div>
+            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20 px-4 py-2 rounded-full mb-4">
+              <Music className="w-4 h-4 text-purple-600" />
+              <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Music Creator Studio</span>
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold text-slate-900 dark:text-slate-100 mb-2">
+              My Products
+            </h1>
+            <p className="text-xl text-slate-600 dark:text-slate-400 leading-relaxed">
+              Manage your existing products or create new ones to grow your music business
+        </p>
+      </div>
         </motion.div>
 
-        {/* Category Tabs */}
+        {/* Stats Overview - only show if user has products */}
+        {allProducts.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8"
+          >
+            <Card className="bg-gradient-to-br from-blue-500 to-cyan-500 text-white">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Products</CardTitle>
+                <Package className="h-4 w-4 text-white/80" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.totalProducts}</div>
+                <p className="text-xs text-white/70">Published: {stats.publishedProducts}</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-br from-emerald-500 to-teal-500 text-white">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                <DollarSign className="h-4 w-4 text-white/80" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">$0.00</div>
+                <p className="text-xs text-white/70">+0% from last month</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-br from-purple-500 to-pink-500 text-white">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Views</CardTitle>
+                <Eye className="h-4 w-4 text-white/80" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">0</div>
+                <p className="text-xs text-white/70">+0% from last month</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-br from-orange-500 to-red-500 text-white">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Growth Rate</CardTitle>
+                <TrendingUp className="h-4 w-4 text-white/80" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">+0%</div>
+                <p className="text-xs text-white/70">New products this month</p>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
+        {/* Main Tabs */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -124,167 +237,249 @@ export default function ChooseProductTypePage() {
           className="mb-8"
         >
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-4 mb-8">
-              <TabsTrigger value="popular" className="flex items-center gap-2">
-                <Zap className="w-4 h-4" />
-                <span className="hidden sm:inline">Popular</span>
+            <TabsList className="grid w-full max-w-lg mx-auto grid-cols-2 mb-8">
+              <TabsTrigger value="manage" className="flex items-center gap-2">
+                <Package className="w-4 h-4" />
+                <span>My Products</span>
               </TabsTrigger>
-              <TabsTrigger value="music" className="flex items-center gap-2">
-                <Music className="w-4 h-4" />
-                <span className="hidden sm:inline">Music</span>
-              </TabsTrigger>
-              <TabsTrigger value="content" className="flex items-center gap-2">
-                <BookOpen className="w-4 h-4" />
-                <span className="hidden sm:inline">Content</span>
-              </TabsTrigger>
-              <TabsTrigger value="services" className="flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                <span className="hidden sm:inline">Services</span>
+              <TabsTrigger value="create" className="flex items-center gap-2">
+                <Plus className="w-4 h-4" />
+                <span>Create New</span>
               </TabsTrigger>
             </TabsList>
 
             <AnimatePresence mode="wait">
-              {activeTab === "popular" && (
-                <TabsContent key="tab-popular" value="popular" className="space-y-8">
+              {activeTab === "manage" && (
+                <TabsContent key="tab-manage" value="manage" className="space-y-8">
                   <motion.div
-                    key="popular-header"
+                    key="manage-content"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
-                    className="text-center mb-8"
                   >
-                    <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">
-                      🔥 Most Popular Choices
-                    </h2>
-                    <p className="text-slate-600 dark:text-slate-400">
-                      The top picks among music creators on our platform
-                    </p>
+                    {allProducts.length > 0 ? (
+                      <Tabs defaultValue="all" className="space-y-6">
+                        <TabsList className="grid w-full max-w-md mx-auto grid-cols-3">
+                          <TabsTrigger value="all" className="flex items-center gap-2">
+                            <Package className="w-4 h-4" />
+                            All
+                          </TabsTrigger>
+                          <TabsTrigger value="music" className="flex items-center gap-2">
+                            <Music className="w-4 h-4" />
+                            Music
+                          </TabsTrigger>
+                          <TabsTrigger value="courses" className="flex items-center gap-2">
+                            <BookOpen className="w-4 h-4" />
+                            Courses
+                          </TabsTrigger>
+                        </TabsList>
+
+                        <TabsContent value="all">
+                          <ProductsList products={allProducts} storeId={storeId} />
+                        </TabsContent>
+                        <TabsContent value="music">
+                          <ProductsList products={musicProducts} storeId={storeId} />
+                        </TabsContent>
+                        <TabsContent value="courses">
+                          <ProductsList products={courseProducts} storeId={storeId} />
+                        </TabsContent>
+                      </Tabs>
+                    ) : (
+                      <Card className="text-center py-16">
+                        <CardContent>
+                          <Package className="w-20 h-20 text-muted-foreground mx-auto mb-6" />
+                          <h3 className="text-2xl font-semibold mb-3">No products yet</h3>
+                          <p className="text-muted-foreground mb-8 max-w-md mx-auto">
+                            Start by creating your first product to begin selling your music and content to your audience.
+                          </p>
+                          <Button 
+                            onClick={() => setActiveTab("create")}
+                            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+                          >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Create Your First Product
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    )}
                   </motion.div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {popularOptions.map((option, index) => (
-                      <MusicOptionCard
-                        key={`popular-${option.id}`}
-                        title={option.title}
-                        subtitle={option.subtitle}
-                        icon={option.icon}
-                        gradient={option.gradient}
-                        iconColor={option.iconColor}
-                        isPopular={option.isPopular}
-                        isNew={option.isNew}
-                        onClick={() => handleOptionClick(option.id)}
-                        index={index}
-                      />
-                    ))}
-                  </div>
                 </TabsContent>
               )}
 
-              {activeTab === "music" && (
-                <TabsContent key="tab-music" value="music" className="space-y-8">
+              {activeTab === "create" && (
+                <TabsContent key="tab-create" value="create" className="space-y-8">
                   <motion.div
-                    key="music-header"
+                    key="create-content"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
                     className="text-center mb-8"
                   >
-                    <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">
-                      🎵 Music Products
+                    <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-4">
+                      What are you creating today?
                     </h2>
-                    <p className="text-slate-600 dark:text-slate-400">
-                      Sell your beats, samples, presets, and project files
+                    <p className="text-xl text-slate-600 dark:text-slate-400 max-w-3xl mx-auto leading-relaxed">
+                      Choose the perfect format for your music content — from sample packs and beats to courses and coaching sessions.
                     </p>
                   </motion.div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {groupedOptions.music.map((option, index) => (
-                      <MusicOptionCard
-                        key={`music-${option.id}`}
-                        title={option.title}
-                        subtitle={option.subtitle}
-                        icon={option.icon}
-                        gradient={option.gradient}
-                        iconColor={option.iconColor}
-                        isPopular={option.isPopular}
-                        isNew={option.isNew}
-                        onClick={() => handleOptionClick(option.id)}
-                        index={index}
-                      />
-                    ))}
-                  </div>
-                </TabsContent>
-              )}
 
-              {activeTab === "content" && (
-                <TabsContent key="tab-content" value="content" className="space-y-8">
-                  <motion.div
-                    key="content-header"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    className="text-center mb-8"
-                  >
-                    <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">
-                      📚 Educational Content
-                    </h2>
-                    <p className="text-slate-600 dark:text-slate-400">
-                      Share your knowledge through courses, guides, and tutorials
-                    </p>
-                  </motion.div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {groupedOptions.content.map((option, index) => (
-                      <MusicOptionCard
-                        key={`content-${option.id}`}
-                        title={option.title}
-                        subtitle={option.subtitle}
-                        icon={option.icon}
-                        gradient={option.gradient}
-                        iconColor={option.iconColor}
-                        isPopular={option.isPopular}
-                        isNew={option.isNew}
-                        onClick={() => handleOptionClick(option.id)}
-                        index={index}
-                      />
-                    ))}
-                  </div>
-                </TabsContent>
-              )}
+                  {/* Creation Category Tabs */}
+                  <Tabs defaultValue="popular" className="w-full">
+                    <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-4 mb-8">
+                      <TabsTrigger value="popular" className="flex items-center gap-2">
+                        <Zap className="w-4 h-4" />
+                        <span className="hidden sm:inline">Popular</span>
+                      </TabsTrigger>
+                      <TabsTrigger value="music" className="flex items-center gap-2">
+                        <Music className="w-4 h-4" />
+                        <span className="hidden sm:inline">Music</span>
+                      </TabsTrigger>
+                      <TabsTrigger value="content" className="flex items-center gap-2">
+                        <BookOpen className="w-4 h-4" />
+                        <span className="hidden sm:inline">Content</span>
+                      </TabsTrigger>
+                      <TabsTrigger value="services" className="flex items-center gap-2">
+                        <Users className="w-4 h-4" />
+                        <span className="hidden sm:inline">Services</span>
+                      </TabsTrigger>
+                    </TabsList>
 
-              {activeTab === "services" && (
-                <TabsContent key="tab-services" value="services" className="space-y-8">
-                  <motion.div
-                    key="services-header"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    className="text-center mb-8"
-                  >
-                    <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">
-                      🎧 Services & Community
-                    </h2>
-                    <p className="text-slate-600 dark:text-slate-400">
-                      Offer coaching, mixing services, and build your community
-                    </p>
-                  </motion.div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {[...groupedOptions.services, ...groupedOptions.community].map((option, index) => (
-                      <MusicOptionCard
-                        key={`services-${option.id}`}
-                        title={option.title}
-                        subtitle={option.subtitle}
-                        icon={option.icon}
-                        gradient={option.gradient}
-                        iconColor={option.iconColor}
-                        isPopular={option.isPopular}
-                        isNew={option.isNew}
-                        onClick={() => handleOptionClick(option.id)}
-                        index={index}
-                      />
-                    ))}
-                  </div>
+                    <TabsContent value="popular" className="space-y-8">
+                      <motion.div
+                        key="popular-header"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        className="text-center mb-8"
+                      >
+                        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">
+                          🔥 Most Popular Choices
+                        </h2>
+                        <p className="text-slate-600 dark:text-slate-400">
+                          The top picks among music creators on our platform
+                        </p>
+                      </motion.div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {popularOptions.map((option, index) => (
+                          <MusicOptionCard
+                            key={`popular-${option.id}`}
+                            title={option.title}
+                            subtitle={option.subtitle}
+                            icon={option.icon}
+                            gradient={option.gradient}
+                            iconColor={option.iconColor}
+                            isPopular={option.isPopular}
+                            isNew={option.isNew}
+                            onClick={() => handleOptionClick(option.id)}
+                            index={index}
+                          />
+                        ))}
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="music" className="space-y-8">
+                      <motion.div
+                        key="music-header"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        className="text-center mb-8"
+                      >
+                        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">
+                          🎵 Music Products
+                        </h2>
+                        <p className="text-slate-600 dark:text-slate-400">
+                          Sell your beats, samples, presets, and project files
+                        </p>
+                      </motion.div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {groupedOptions.music.map((option, index) => (
+                          <MusicOptionCard
+                            key={`music-${option.id}`}
+                            title={option.title}
+                            subtitle={option.subtitle}
+                            icon={option.icon}
+                            gradient={option.gradient}
+                            iconColor={option.iconColor}
+                            isPopular={option.isPopular}
+                            isNew={option.isNew}
+                            onClick={() => handleOptionClick(option.id)}
+                            index={index}
+                          />
+                        ))}
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="content" className="space-y-8">
+                      <motion.div
+                        key="content-header"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        className="text-center mb-8"
+                      >
+                        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">
+                          📚 Educational Content
+                        </h2>
+                        <p className="text-slate-600 dark:text-slate-400">
+                          Share your knowledge through courses, guides, and tutorials
+                        </p>
+                      </motion.div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {groupedOptions.content.map((option, index) => (
+                          <MusicOptionCard
+                            key={`content-${option.id}`}
+                            title={option.title}
+                            subtitle={option.subtitle}
+                            icon={option.icon}
+                            gradient={option.gradient}
+                            iconColor={option.iconColor}
+                            isPopular={option.isPopular}
+                            isNew={option.isNew}
+                            onClick={() => handleOptionClick(option.id)}
+                            index={index}
+                          />
+                        ))}
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="services" className="space-y-8">
+                      <motion.div
+                        key="services-header"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        className="text-center mb-8"
+                      >
+                        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">
+                          🎧 Services & Community
+                        </h2>
+                        <p className="text-slate-600 dark:text-slate-400">
+                          Offer coaching, mixing services, and build your community
+                        </p>
+                      </motion.div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {[...groupedOptions.services, ...groupedOptions.community].map((option, index) => (
+                          <MusicOptionCard
+                            key={`services-${option.id}`}
+            title={option.title}
+            subtitle={option.subtitle}
+            icon={option.icon}
+                            gradient={option.gradient}
+                            iconColor={option.iconColor}
+                            isPopular={option.isPopular}
+                            isNew={option.isNew}
+            onClick={() => handleOptionClick(option.id)}
+                            index={index}
+          />
+        ))}
+                      </div>
+                    </TabsContent>
+                  </Tabs>
                 </TabsContent>
               )}
             </AnimatePresence>
@@ -330,4 +525,4 @@ export default function ChooseProductTypePage() {
       </div>
     </div>
   );
-}
+} 

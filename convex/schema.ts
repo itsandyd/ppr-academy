@@ -585,4 +585,132 @@ export default defineSchema({
   })
     .index("by_chapterId", ["chapterId"])
     .index("by_storageId", ["storageId"]),
+
+  // Analytics Events - Track all user interactions
+  analyticsEvents: defineTable({
+    userId: v.string(), // Clerk user ID
+    storeId: v.optional(v.string()),
+    eventType: v.union(
+      v.literal("page_view"),
+      v.literal("product_view"),
+      v.literal("course_view"),
+      v.literal("purchase"),
+      v.literal("download"),
+      v.literal("video_play"),
+      v.literal("video_complete"),
+      v.literal("lesson_complete"),
+      v.literal("course_complete"),
+      v.literal("search"),
+      v.literal("click"),
+      v.literal("signup"),
+      v.literal("login")
+    ),
+    resourceId: v.optional(v.string()), // courseId, productId, etc.
+    resourceType: v.optional(v.union(
+      v.literal("course"),
+      v.literal("digitalProduct"),
+      v.literal("lesson"),
+      v.literal("chapter"),
+      v.literal("page")
+    )),
+    metadata: v.optional(v.object({
+      // Flexible metadata for different event types
+      page: v.optional(v.string()),
+      referrer: v.optional(v.string()),
+      searchTerm: v.optional(v.string()),
+      duration: v.optional(v.number()),
+      progress: v.optional(v.number()),
+      value: v.optional(v.number()), // for purchase events
+      country: v.optional(v.string()),
+      city: v.optional(v.string()),
+      device: v.optional(v.string()),
+      browser: v.optional(v.string()),
+      os: v.optional(v.string()),
+    })),
+    sessionId: v.optional(v.string()),
+    ipAddress: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+    timestamp: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_storeId", ["storeId"])
+    .index("by_eventType", ["eventType"])
+    .index("by_resourceId", ["resourceId"])
+    .index("by_timestamp", ["timestamp"])
+    .index("by_user_event", ["userId", "eventType"])
+    .index("by_store_event", ["storeId", "eventType"])
+    .index("by_user_timestamp", ["userId", "timestamp"])
+    .index("by_store_timestamp", ["storeId", "timestamp"]),
+
+  // Product Views - Track detailed product/course views
+  productViews: defineTable({
+    userId: v.optional(v.string()), // Optional for anonymous views
+    storeId: v.string(),
+    resourceId: v.string(), // courseId or productId
+    resourceType: v.union(v.literal("course"), v.literal("digitalProduct")),
+    viewDuration: v.optional(v.number()), // in seconds
+    referrer: v.optional(v.string()),
+    country: v.optional(v.string()),
+    device: v.optional(v.string()),
+    sessionId: v.optional(v.string()),
+    timestamp: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_storeId", ["storeId"])
+    .index("by_resourceId", ["resourceId"])
+    .index("by_resourceType", ["resourceType"])
+    .index("by_timestamp", ["timestamp"])
+    .index("by_store_resource", ["storeId", "resourceId"])
+    .index("by_store_timestamp", ["storeId", "timestamp"]),
+
+  // Revenue Tracking - Detailed revenue analytics
+  revenueEvents: defineTable({
+    userId: v.string(), // Buyer's user ID
+    storeId: v.string(),
+    creatorId: v.string(), // Creator's user ID
+    purchaseId: v.id("purchases"),
+    resourceId: v.string(), // courseId or productId
+    resourceType: v.union(v.literal("course"), v.literal("digitalProduct"), v.literal("coaching"), v.literal("bundle")),
+    grossAmount: v.number(),
+    platformFee: v.number(),
+    processingFee: v.number(),
+    netAmount: v.number(),
+    currency: v.string(),
+    paymentMethod: v.optional(v.string()),
+    country: v.optional(v.string()),
+    timestamp: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_storeId", ["storeId"])
+    .index("by_creatorId", ["creatorId"])
+    .index("by_purchaseId", ["purchaseId"])
+    .index("by_resourceId", ["resourceId"])
+    .index("by_timestamp", ["timestamp"])
+    .index("by_creator_timestamp", ["creatorId", "timestamp"])
+    .index("by_store_timestamp", ["storeId", "timestamp"]),
+
+  // User Sessions - Track user engagement sessions
+  userSessions: defineTable({
+    userId: v.string(),
+    storeId: v.optional(v.string()),
+    sessionId: v.string(),
+    startTime: v.number(),
+    endTime: v.optional(v.number()),
+    duration: v.optional(v.number()), // in seconds
+    pageViews: v.number(),
+    events: v.number(),
+    country: v.optional(v.string()),
+    city: v.optional(v.string()),
+    device: v.optional(v.string()),
+    browser: v.optional(v.string()),
+    os: v.optional(v.string()),
+    referrer: v.optional(v.string()),
+    landingPage: v.optional(v.string()),
+    exitPage: v.optional(v.string()),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_storeId", ["storeId"])
+    .index("by_sessionId", ["sessionId"])
+    .index("by_startTime", ["startTime"])
+    .index("by_user_start", ["userId", "startTime"]),
 }); 

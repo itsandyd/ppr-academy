@@ -81,49 +81,43 @@ export function AppSidebarEnhanced() {
 
   const navigationSections: NavSection[] = [
     {
-      label: "Dashboard",
+      label: "Overview",
       items: [
         { 
           icon: Home, 
           href: "/home", 
-          label: "Overview",
+          label: "Dashboard",
           gradient: "from-blue-500 to-cyan-500"
         },
         { 
           icon: TrendingUp, 
-          href: "/analytics", 
+          href: "/home/analytics", 
           label: "Analytics",
           gradient: "from-emerald-500 to-teal-500"
         },
       ]
     },
     {
-      label: "Music Business",
+      label: "Create & Distribute",
       items: [
         { 
-          icon: Music, 
+          icon: Package, 
           href: `/store/${storeId || 'setup'}/products`, 
-          label: "My Music",
-          badge: "Create",
+          label: "Create Product",
+          badge: "New",
           gradient: "from-purple-500 to-pink-500"
         },
+      ]
+    },
+    {
+      label: "Audience & Growth",
+      items: [
         { 
           icon: Users, 
           href: `/store/${storeId || 'setup'}/customers`, 
           label: "Fans",
           gradient: "from-orange-500 to-red-500"
         },
-        { 
-          icon: DollarSign, 
-          href: `/store/${storeId || 'setup'}/settings/payouts`, 
-          label: "Earnings",
-          gradient: "from-green-500 to-emerald-500"
-        },
-      ]
-    },
-    {
-      label: "Marketing",
-      items: [
         { 
           icon: Mail, 
           href: `/store/${storeId || 'setup'}/email-campaigns`, 
@@ -140,13 +134,19 @@ export function AppSidebarEnhanced() {
       ]
     },
     {
-      label: "Tools",
+      label: "Manage & Monetize",
       items: [
         { 
           icon: Store, 
-          href: "/store", 
-          label: "Creator Hub",
+          href: `/store/${storeId || 'setup'}/products`, 
+          label: "My Products",
           gradient: "from-rose-500 to-pink-500"
+        },
+        { 
+          icon: DollarSign, 
+          href: `/store/${storeId || 'setup'}/settings/payouts`, 
+          label: "Earnings",
+          gradient: "from-green-500 to-emerald-500"
         },
         { 
           icon: Settings, 
@@ -168,40 +168,42 @@ export function AppSidebarEnhanced() {
     <Sidebar className="border-r border-border/50 bg-gradient-to-b from-background to-background/95">
       <SidebarHeader className="border-b border-border/50 bg-card/50 backdrop-blur-sm">
         <motion.div 
-          className="flex flex-col space-y-3 px-4 py-6"
+          className="px-4 py-4"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          {/* Brand Header */}
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-primary to-primary/70 rounded-lg flex items-center justify-center">
+          {/* Brand Header - Simplified and cleaner */}
+          <div className="flex items-center space-x-3 mb-3">
+            <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center shadow-sm">
               <Music className="w-4 h-4 text-primary-foreground" />
             </div>
-            <div>
-              <h2 className="text-lg font-bold text-foreground bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                PPR Academy
+            <div className="flex-1 min-w-0">
+              <h2 className="text-base font-bold text-foreground leading-tight">
+                PausePlayRepeat
               </h2>
-              <p className="text-xs text-muted-foreground">Music Creator Studio</p>
+              <p className="text-xs text-muted-foreground/80 leading-tight">
+                Creator Studio
+              </p>
             </div>
           </div>
           
-          {/* Store Info */}
+          {/* Store Info - More compact */}
           {currentStore && (
             <motion.div 
-              className="flex items-center space-x-2 p-2 rounded-lg bg-muted/50 border border-border/30"
-              whileHover={{ scale: 1.02 }}
+              className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-muted/30 border border-border/20 hover:bg-muted/50 transition-colors duration-200"
+              whileHover={{ scale: 1.01 }}
               transition={{ type: "spring", stiffness: 400, damping: 25 }}
             >
-              <div className="w-6 h-6 bg-gradient-to-br from-green-500 to-emerald-500 rounded-md flex items-center justify-center">
-                <Disc className="w-3 h-3 text-white" />
+              <div className="w-5 h-5 bg-gradient-to-br from-emerald-500 to-green-600 rounded-md flex items-center justify-center">
+                <Disc className="w-2.5 h-2.5 text-white" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-foreground truncate">
+                <p className="text-xs font-medium text-foreground truncate leading-tight">
                   {currentStore.name || "My Store"}
                 </p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {currentStore.slug ? `/${currentStore.slug}` : "/setup"}
+                <p className="text-xs text-muted-foreground/70 truncate leading-tight">
+                  /{currentStore.slug || "setup"}
                 </p>
               </div>
             </motion.div>
@@ -218,7 +220,7 @@ export function AppSidebarEnhanced() {
             transition={{ duration: 0.3, delay: sectionIndex * 0.1 }}
           >
             <SidebarGroup>
-              <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground/80 uppercase tracking-wider mb-2 px-2">
+              <SidebarGroupLabel className="text-xs font-medium text-muted-foreground/70 uppercase tracking-wide mb-1 px-2">
                 {section.label}
               </SidebarGroupLabel>
               <SidebarGroupContent>
@@ -300,7 +302,7 @@ export function AppSidebarEnhanced() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.2 }}
           >
-            <p className="text-xs font-semibold text-muted-foreground/80 uppercase tracking-wider px-1">
+            <p className="text-xs font-medium text-muted-foreground/70 uppercase tracking-wide px-1 mb-1">
               Quick Actions
             </p>
             <div className="grid grid-cols-2 gap-2">
