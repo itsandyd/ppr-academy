@@ -27,6 +27,7 @@ import type * as embeddings from "../embeddings.js";
 import type * as files from "../files.js";
 import type * as leadSubmissions from "../leadSubmissions.js";
 import type * as library from "../library.js";
+import type * as musicShowcase from "../musicShowcase.js";
 import type * as rag from "../rag.js";
 import type * as ragActions from "../ragActions.js";
 import type * as stores from "../stores.js";
@@ -55,6 +56,7 @@ declare const fullApi: ApiFromModules<{
   files: typeof files;
   leadSubmissions: typeof leadSubmissions;
   library: typeof library;
+  musicShowcase: typeof musicShowcase;
   rag: typeof rag;
   ragActions: typeof ragActions;
   stores: typeof stores;

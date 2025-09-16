@@ -713,4 +713,208 @@ export default defineSchema({
     .index("by_sessionId", ["sessionId"])
     .index("by_startTime", ["startTime"])
     .index("by_user_start", ["userId", "startTime"]),
+
+  // Simplified Music Showcase - Artist Profiles
+  artistProfiles: defineTable({
+    userId: v.string(), // Clerk user ID
+    storeId: v.optional(v.string()),
+    // Basic Info
+    artistName: v.string(),
+    displayName: v.optional(v.string()),
+    bio: v.optional(v.string()),
+    location: v.optional(v.string()),
+    website: v.optional(v.string()),
+    // Profile Media
+    profileImage: v.optional(v.string()),
+    bannerImage: v.optional(v.string()),
+    // Social Links (same as SoundPitch structure)
+    socialLinks: v.optional(v.object({
+      spotify: v.optional(v.string()),
+      soundcloud: v.optional(v.string()),
+      instagram: v.optional(v.string()),
+      twitter: v.optional(v.string()),
+      youtube: v.optional(v.string()),
+      tiktok: v.optional(v.string()),
+      facebook: v.optional(v.string()),
+      bandcamp: v.optional(v.string()),
+      apple_music: v.optional(v.string()),
+    })),
+    // Settings
+    isPublic: v.optional(v.boolean()),
+    // Stats
+    totalViews: v.optional(v.number()),
+    totalLikes: v.optional(v.number()),
+    totalFollowers: v.optional(v.number()),
+    totalPlays: v.optional(v.number()), // Added back for compatibility
+    // SEO
+    slug: v.optional(v.string()),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_storeId", ["storeId"])
+    .index("by_slug", ["slug"])
+    .index("by_isPublic", ["isPublic"]),
+
+  // URL-Based Music Tracks (No file uploads)
+  musicTracks: defineTable({
+    userId: v.string(),
+    artistProfileId: v.id("artistProfiles"),
+    storeId: v.optional(v.string()),
+    // Track Info
+    title: v.string(),
+    artist: v.optional(v.string()),
+    description: v.optional(v.string()),
+    genre: v.optional(v.string()),
+    tags: v.optional(v.array(v.string())),
+    // URL-Based Data (core feature)
+    originalUrl: v.string(), // Spotify, SoundCloud, YouTube, etc.
+    platform: v.union(
+      v.literal("spotify"),
+      v.literal("soundcloud"), 
+      v.literal("youtube"),
+      v.literal("apple_music"),
+      v.literal("bandcamp"),
+      v.literal("other")
+    ),
+    embedUrl: v.optional(v.string()), // Processed embed URL
+    // Extracted Metadata
+    artworkUrl: v.optional(v.string()),
+    duration: v.optional(v.number()),
+    releaseDate: v.optional(v.string()),
+    // Custom Fields (user can override)
+    customGenre: v.optional(v.string()), // User can customize genre
+    customTags: v.optional(v.array(v.string())),
+    customDescription: v.optional(v.string()),
+    // Settings
+    isPublic: v.optional(v.boolean()),
+    isFeatured: v.optional(v.boolean()),
+    // Stats
+    viewCount: v.optional(v.number()),
+    likeCount: v.optional(v.number()),
+    shareCount: v.optional(v.number()),
+    playCount: v.optional(v.number()), // Added back for compatibility
+    // SEO
+    slug: v.optional(v.string()),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_artistProfileId", ["artistProfileId"])
+    .index("by_storeId", ["storeId"])
+    .index("by_platform", ["platform"])
+    .index("by_genre", ["genre"])
+    .index("by_isPublic", ["isPublic"])
+    .index("by_isFeatured", ["isFeatured"]),
+
+  // Track Plays - Analytics for music
+  trackPlays: defineTable({
+    trackId: v.id("musicTracks"),
+    userId: v.optional(v.string()), // Optional for anonymous plays
+    artistProfileId: v.id("artistProfiles"),
+    // Play Details
+    playDuration: v.optional(v.number()), // How long they listened (seconds)
+    completionPercentage: v.optional(v.number()), // % of track completed
+    // Context
+    source: v.optional(v.union(
+      v.literal("profile"),
+      v.literal("embed"),
+      v.literal("direct_link"),
+      v.literal("search"),
+      v.literal("playlist")
+    )),
+    referrer: v.optional(v.string()),
+    // Technical Info
+    ipAddress: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+    country: v.optional(v.string()),
+    city: v.optional(v.string()),
+    device: v.optional(v.string()),
+    timestamp: v.number(),
+  })
+    .index("by_trackId", ["trackId"])
+    .index("by_userId", ["userId"])
+    .index("by_artistProfileId", ["artistProfileId"])
+    .index("by_timestamp", ["timestamp"])
+    .index("by_track_timestamp", ["trackId", "timestamp"]),
+
+  // Track Likes/Hearts
+  trackLikes: defineTable({
+    trackId: v.id("musicTracks"),
+    userId: v.string(),
+    artistProfileId: v.id("artistProfiles"),
+    timestamp: v.number(),
+  })
+    .index("by_trackId", ["trackId"])
+    .index("by_userId", ["userId"])
+    .index("by_user_track", ["userId", "trackId"])
+    .index("by_artistProfileId", ["artistProfileId"]),
+
+  // Track Comments
+  trackComments: defineTable({
+    trackId: v.id("musicTracks"),
+    userId: v.string(),
+    artistProfileId: v.id("artistProfiles"),
+    // Comment Content
+    content: v.string(),
+    timestamp: v.number(),
+    // Position in track (for waveform comments like SoundCloud)
+    timePosition: v.optional(v.number()), // Position in seconds
+    // Moderation
+    isApproved: v.optional(v.boolean()),
+    isReported: v.optional(v.boolean()),
+    // Threading
+    parentCommentId: v.optional(v.id("trackComments")), // For replies
+  })
+    .index("by_trackId", ["trackId"])
+    .index("by_userId", ["userId"])
+    .index("by_artistProfileId", ["artistProfileId"])
+    .index("by_timestamp", ["timestamp"])
+    .index("by_timePosition", ["timePosition"])
+    .index("by_parentCommentId", ["parentCommentId"]),
+
+  // Artist Follows
+  artistFollows: defineTable({
+    followerId: v.string(), // User who is following
+    artistProfileId: v.id("artistProfiles"), // Artist being followed
+    artistUserId: v.string(), // Artist's user ID for notifications
+    timestamp: v.number(),
+    // Notification preferences
+    notifyNewTracks: v.optional(v.boolean()),
+    notifyLiveStreams: v.optional(v.boolean()),
+  })
+    .index("by_followerId", ["followerId"])
+    .index("by_artistProfileId", ["artistProfileId"])
+    .index("by_artistUserId", ["artistUserId"])
+    .index("by_follower_artist", ["followerId", "artistProfileId"]),
+
+  // Playlists (User-created collections)
+  musicPlaylists: defineTable({
+    userId: v.string(),
+    title: v.string(),
+    description: v.optional(v.string()),
+    artworkUrl: v.optional(v.string()),
+    // Settings
+    isPublic: v.optional(v.boolean()),
+    isCollaborative: v.optional(v.boolean()),
+    // Stats
+    trackCount: v.optional(v.number()),
+    totalDuration: v.optional(v.number()), // Total duration in seconds
+    playCount: v.optional(v.number()),
+    likeCount: v.optional(v.number()),
+    // SEO
+    slug: v.optional(v.string()),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_slug", ["slug"])
+    .index("by_isPublic", ["isPublic"]),
+
+  // Playlist Tracks (Many-to-many relationship)
+  playlistTracks: defineTable({
+    playlistId: v.id("musicPlaylists"),
+    trackId: v.id("musicTracks"),
+    addedBy: v.string(), // User who added the track
+    position: v.number(), // Order in playlist
+    timestamp: v.number(),
+  })
+    .index("by_playlistId", ["playlistId"])
+    .index("by_trackId", ["trackId"])
+    .index("by_position", ["position"])
+    .index("by_playlist_position", ["playlistId", "position"]),
 }); 

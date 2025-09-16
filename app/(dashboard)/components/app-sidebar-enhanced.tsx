@@ -107,6 +107,19 @@ export function AppSidebarEnhanced() {
           badge: "New",
           gradient: "from-purple-500 to-pink-500"
         },
+        { 
+          icon: Music, 
+          href: `/music/showcase`, 
+          label: "Music Showcase",
+          badge: "Beta",
+          gradient: "from-blue-500 to-indigo-500"
+        },
+        { 
+          icon: Upload, 
+          href: `/music/add`, 
+          label: "Add Track",
+          gradient: "from-green-500 to-teal-500"
+        },
       ]
     },
     {
