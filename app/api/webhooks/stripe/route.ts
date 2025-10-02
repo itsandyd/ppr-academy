@@ -61,6 +61,34 @@ export async function POST(request: NextRequest) {
         
         break;
 
+      case "checkout.session.completed":
+        // Handle successful checkout (for credits)
+        const session = event.data.object as Stripe.Checkout.Session;
+        console.log("💳 Checkout completed:", {
+          id: session.id,
+          amount: session.amount_total ? session.amount_total / 100 : 0,
+          currency: session.currency,
+          metadata: session.metadata,
+        });
+
+        // Handle credit package purchases
+        if (session.metadata?.productType === "credit_package") {
+          const { userId, packageId, credits, bonusCredits } = session.metadata;
+          const totalCredits = parseInt(credits) + parseInt(bonusCredits || "0");
+
+          console.log("🪙 Processing credit purchase:", {
+            userId,
+            packageId,
+            totalCredits,
+            sessionId: session.id,
+          });
+
+          // TODO: Call Convex mutation to add credits to user account
+          // This will be implemented once we have the mutation ready
+        }
+
+        break;
+
       case "payment_intent.payment_failed":
         // Handle failed payments
         const failedPayment = event.data.object as Stripe.PaymentIntent;

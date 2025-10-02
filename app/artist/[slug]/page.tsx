@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { use } from 'react';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { ArtistShowcase } from '@/components/music/artist-showcase';
@@ -11,13 +11,13 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 interface ArtistProfilePageProps {
-  params: {
+  params: Promise<{
     slug: string;
-  };
+  }>;
 }
 
 export default function ArtistProfilePage({ params }: ArtistProfilePageProps) {
-  const { slug } = params;
+  const { slug } = use(params);
   
   // Get artist profile by slug
   const artistProfile = useQuery(api.musicShowcase.getArtistProfileBySlug, { slug });
@@ -140,19 +140,4 @@ export default function ArtistProfilePage({ params }: ArtistProfilePageProps) {
       </div>
     </div>
   );
-}
-
-// Generate metadata for SEO
-export async function generateMetadata({ params }: ArtistProfilePageProps) {
-  const { slug } = params;
-  
-  return {
-    title: `${slug} - Music Showcase | PPR Academy`,
-    description: `Discover music and tracks by ${slug} on PPR Academy. Professional music showcase with course integration.`,
-    openGraph: {
-      title: `${slug} - Music Showcase`,
-      description: `Discover music and tracks by ${slug} on PPR Academy`,
-      type: 'profile',
-    },
-  };
 }

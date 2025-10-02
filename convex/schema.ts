@@ -1025,4 +1025,217 @@ export default defineSchema({
     .index("by_trackId", ["trackId"])
     .index("by_position", ["position"])
     .index("by_playlist_position", ["playlistId", "position"]),
+
+  // ============================================================================
+  // SAMPLE MARKETPLACE - Splice-Clone System
+  // ============================================================================
+
+  // User Credit Balances
+  userCredits: defineTable({
+    userId: v.string(), // Clerk user ID
+    balance: v.number(), // Current credit balance
+    lifetimeEarned: v.number(), // Total credits earned (for creators)
+    lifetimeSpent: v.number(), // Total credits spent
+    lastUpdated: v.number(),
+  })
+    .index("by_userId", ["userId"]),
+
+  // Credit Transactions
+  creditTransactions: defineTable({
+    userId: v.string(),
+    type: v.union(
+      v.literal("purchase"), // Bought credits with money
+      v.literal("spend"), // Spent credits on samples
+      v.literal("earn"), // Earned from selling samples
+      v.literal("bonus"), // Promotional credits
+      v.literal("refund") // Refunded transaction
+    ),
+    amount: v.number(), // Positive for earn/purchase, negative for spend
+    balance: v.number(), // Balance after transaction
+    description: v.string(),
+    relatedResourceId: v.optional(v.string()), // Sample/pack ID if applicable
+    relatedResourceType: v.optional(v.union(
+      v.literal("sample"),
+      v.literal("pack"),
+      v.literal("credit_package")
+    )),
+    metadata: v.optional(v.object({
+      stripePaymentId: v.optional(v.string()),
+      dollarAmount: v.optional(v.number()),
+      packageName: v.optional(v.string()),
+    })),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_type", ["type"])
+    .index("by_user_type", ["userId", "type"]),
+
+  // Audio Samples
+  audioSamples: defineTable({
+    userId: v.string(), // Creator
+    storeId: v.string(),
+    
+    // Basic Info
+    title: v.string(),
+    description: v.optional(v.string()),
+    
+    // Audio File
+    storageId: v.id("_storage"), // Convex storage ID
+    fileUrl: v.string(), // Public URL for streaming
+    fileName: v.string(),
+    fileSize: v.number(), // in bytes
+    duration: v.number(), // in seconds
+    format: v.string(), // "wav", "mp3", "aiff"
+    
+    // Metadata
+    bpm: v.optional(v.number()),
+    key: v.optional(v.string()), // "C", "Am", "D#", etc.
+    genre: v.string(),
+    subGenre: v.optional(v.string()),
+    tags: v.array(v.string()),
+    category: v.union(
+      v.literal("drums"),
+      v.literal("bass"),
+      v.literal("synth"),
+      v.literal("vocals"),
+      v.literal("fx"),
+      v.literal("melody"),
+      v.literal("loops"),
+      v.literal("one-shots")
+    ),
+    
+    // Waveform data
+    waveformData: v.optional(v.array(v.number())), // Peaks for visualization
+    peakAmplitude: v.optional(v.number()),
+    
+    // Pricing & Status
+    creditPrice: v.number(), // Cost in credits
+    isPublished: v.boolean(),
+    isFree: v.optional(v.boolean()),
+    
+    // Stats
+    downloads: v.number(),
+    plays: v.number(),
+    favorites: v.number(),
+    
+    // License
+    licenseType: v.union(
+      v.literal("royalty-free"),
+      v.literal("exclusive"),
+      v.literal("commercial")
+    ),
+    licenseTerms: v.optional(v.string()),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_storeId", ["storeId"])
+    .index("by_genre", ["genre"])
+    .index("by_category", ["category"])
+    .index("by_published", ["isPublished"])
+    .index("by_user_published", ["userId", "isPublished"])
+    .index("by_genre_published", ["genre", "isPublished"])
+    .index("by_category_published", ["category", "isPublished"]),
+
+  // Sample Packs
+  samplePacks: defineTable({
+    userId: v.string(), // Creator
+    storeId: v.string(),
+    
+    // Basic Info
+    name: v.string(),
+    description: v.string(),
+    coverImageUrl: v.optional(v.string()),
+    coverImageStorageId: v.optional(v.id("_storage")),
+    
+    // Pack Contents
+    sampleIds: v.array(v.id("audioSamples")),
+    totalSamples: v.number(),
+    totalSize: v.number(), // in bytes
+    totalDuration: v.number(), // in seconds
+    
+    // Metadata (aggregated from samples)
+    genres: v.array(v.string()),
+    categories: v.array(v.string()),
+    tags: v.array(v.string()),
+    bpmRange: v.optional(v.object({
+      min: v.number(),
+      max: v.number(),
+    })),
+    
+    // Pricing & Status
+    creditPrice: v.number(),
+    isPublished: v.boolean(),
+    
+    // Stats
+    downloads: v.number(),
+    favorites: v.number(),
+    
+    // License
+    licenseType: v.union(
+      v.literal("royalty-free"),
+      v.literal("exclusive"),
+      v.literal("commercial")
+    ),
+    licenseTerms: v.optional(v.string()),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_storeId", ["storeId"])
+    .index("by_published", ["isPublished"])
+    .index("by_user_published", ["userId", "isPublished"]),
+
+  // Sample Downloads (Track who downloaded what)
+  sampleDownloads: defineTable({
+    userId: v.string(), // Downloader
+    sampleId: v.optional(v.id("audioSamples")),
+    packId: v.optional(v.id("samplePacks")),
+    creatorId: v.string(), // Creator who uploaded
+    
+    // Transaction Info
+    creditAmount: v.number(),
+    transactionId: v.id("creditTransactions"),
+    
+    // Download Tracking
+    downloadCount: v.number(), // Allow re-downloads
+    lastDownloadAt: v.optional(v.number()),
+    
+    // License Info
+    licenseType: v.string(),
+    licenseKey: v.optional(v.string()), // Unique license identifier
+  })
+    .index("by_userId", ["userId"])
+    .index("by_sampleId", ["sampleId"])
+    .index("by_packId", ["packId"])
+    .index("by_creatorId", ["creatorId"])
+    .index("by_user_sample", ["userId", "sampleId"])
+    .index("by_user_pack", ["userId", "packId"]),
+
+  // Sample Favorites
+  sampleFavorites: defineTable({
+    userId: v.string(),
+    sampleId: v.optional(v.id("audioSamples")),
+    packId: v.optional(v.id("samplePacks")),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_sampleId", ["sampleId"])
+    .index("by_packId", ["packId"])
+    .index("by_user_sample", ["userId", "sampleId"])
+    .index("by_user_pack", ["userId", "packId"]),
+
+  // Credit Packages (Different tiers for buying credits)
+  creditPackages: defineTable({
+    name: v.string(), // "Starter", "Pro", "Ultimate"
+    credits: v.number(), // Number of credits
+    priceUsd: v.number(), // Price in dollars
+    bonusCredits: v.optional(v.number()), // Extra credits for bulk
+    description: v.string(),
+    isActive: v.boolean(),
+    stripePriceId: v.string(),
+    displayOrder: v.number(),
+    
+    // Badge/label
+    badge: v.optional(v.string()), // "Most Popular", "Best Value"
+    
+    // Stats
+    purchaseCount: v.number(),
+  })
+    .index("by_active", ["isActive"])
+    .index("by_displayOrder", ["displayOrder"]),
 }); 

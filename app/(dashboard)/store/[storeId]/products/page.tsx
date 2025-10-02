@@ -16,6 +16,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MusicOptionCard } from "../components/MusicOptionCard";
 import { musicOptions, groupedOptions, popularOptions } from "../components/music-options";
 import { ProductsList } from "../../components/ProductsList";
+import { SamplesList } from "@/components/samples/SamplesList";
+import { CreditBalance } from "@/components/credits/CreditBalance";
 
 export default function ProductsPage() {
   const params = useParams();
@@ -40,6 +42,12 @@ export default function ProductsPage() {
   const digitalProducts = useQuery(
     api.digitalProducts.getProductsByUser,
     convexUser?._id ? { userId: convexUser._id } : "skip"
+  );
+
+  // Get user's samples
+  const userSamples = useQuery(
+    api.samples.getStoreSamples,
+    storeId ? { storeId } : "skip"
   );
 
   // Combine products for display
@@ -74,8 +82,8 @@ export default function ProductsPage() {
 
   // Calculate stats
   const stats = {
-    totalProducts: allProducts.length,
-    publishedProducts: allProducts.filter(p => p.isPublished).length,
+    totalProducts: allProducts.length + (userSamples?.length || 0),
+    publishedProducts: allProducts.filter(p => p.isPublished).length + (userSamples?.filter(s => s.isPublished).length || 0),
     totalViews: 0, // Placeholder for future analytics
     totalRevenue: 0, // Placeholder for future analytics
   };
@@ -178,12 +186,22 @@ export default function ProductsPage() {
       </div>
         </motion.div>
 
+        {/* Credit Balance Widget */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="mb-8"
+        >
+          <CreditBalance storeId={storeId} showDetails />
+        </motion.div>
+
         {/* Stats Overview - only show if user has products */}
         {allProducts.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
+            transition={{ delay: 0.15 }}
             className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8"
           >
             <Card className="bg-gradient-to-br from-blue-500 to-cyan-500 text-white">
@@ -257,16 +275,25 @@ export default function ProductsPage() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
                   >
-                    {allProducts.length > 0 ? (
+                    {allProducts.length > 0 || (userSamples && userSamples.length > 0) ? (
                       <Tabs defaultValue="all" className="space-y-6">
-                        <TabsList className="grid w-full max-w-md mx-auto grid-cols-3">
+                        <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-4">
                           <TabsTrigger value="all" className="flex items-center gap-2">
                             <Package className="w-4 h-4" />
                             All
                           </TabsTrigger>
+                          <TabsTrigger value="samples" className="flex items-center gap-2">
+                            <Music className="w-4 h-4" />
+                            Samples
+                            {userSamples && userSamples.length > 0 && (
+                              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                                {userSamples.length}
+                              </Badge>
+                            )}
+                          </TabsTrigger>
                           <TabsTrigger value="music" className="flex items-center gap-2">
                             <Music className="w-4 h-4" />
-                            Music
+                            Products
                           </TabsTrigger>
                           <TabsTrigger value="courses" className="flex items-center gap-2">
                             <BookOpen className="w-4 h-4" />
@@ -275,7 +302,34 @@ export default function ProductsPage() {
                         </TabsList>
 
                         <TabsContent value="all">
+                          {userSamples && userSamples.length > 0 && (
+                            <div className="mb-8">
+                              <SamplesList samples={userSamples} storeId={storeId} />
+                            </div>
+                          )}
                           <ProductsList products={allProducts} storeId={storeId} />
+                        </TabsContent>
+                        <TabsContent value="samples">
+                          {userSamples && userSamples.length > 0 ? (
+                            <SamplesList samples={userSamples} storeId={storeId} />
+                          ) : (
+                            <Card className="text-center py-16">
+                              <CardContent>
+                                <Music className="w-20 h-20 text-muted-foreground mx-auto mb-6" />
+                                <h3 className="text-2xl font-semibold mb-3">No samples yet</h3>
+                                <p className="text-muted-foreground mb-8 max-w-md mx-auto">
+                                  Upload your first sample to start building your sample library and earning credits.
+                                </p>
+                                <Button 
+                                  onClick={() => router.push(`/store/${storeId}/samples/upload`)}
+                                  className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
+                                >
+                                  <Plus className="w-4 h-4 mr-2" />
+                                  Upload Sample
+                                </Button>
+                              </CardContent>
+                            </Card>
+                          )}
                         </TabsContent>
                         <TabsContent value="music">
                           <ProductsList products={musicProducts} storeId={storeId} />

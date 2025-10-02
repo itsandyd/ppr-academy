@@ -18,6 +18,7 @@ import type * as analytics from "../analytics.js";
 import type * as analyticsTracking from "../analyticsTracking.js";
 import type * as audioGeneration from "../audioGeneration.js";
 import type * as courses from "../courses.js";
+import type * as credits from "../credits.js";
 import type * as customers from "../customers.js";
 import type * as digitalProducts from "../digitalProducts.js";
 import type * as emailCampaigns from "../emailCampaigns.js";
@@ -32,6 +33,9 @@ import type * as library from "../library.js";
 import type * as musicShowcase from "../musicShowcase.js";
 import type * as rag from "../rag.js";
 import type * as ragActions from "../ragActions.js";
+import type * as samplePacks from "../samplePacks.js";
+import type * as samples from "../samples.js";
+import type * as seedCreditPackages from "../seedCreditPackages.js";
 import type * as stores from "../stores.js";
 import type * as users from "../users.js";
 
@@ -49,6 +53,7 @@ declare const fullApi: ApiFromModules<{
   analyticsTracking: typeof analyticsTracking;
   audioGeneration: typeof audioGeneration;
   courses: typeof courses;
+  credits: typeof credits;
   customers: typeof customers;
   digitalProducts: typeof digitalProducts;
   emailCampaigns: typeof emailCampaigns;
@@ -63,6 +68,9 @@ declare const fullApi: ApiFromModules<{
   musicShowcase: typeof musicShowcase;
   rag: typeof rag;
   ragActions: typeof ragActions;
+  samplePacks: typeof samplePacks;
+  samples: typeof samples;
+  seedCreditPackages: typeof seedCreditPackages;
   stores: typeof stores;
   users: typeof users;
 }>;
