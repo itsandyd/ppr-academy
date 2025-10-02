@@ -13,7 +13,8 @@ export const getUserCredits = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error("Not authenticated");
+      // Return null if not authenticated (instead of throwing)
+      return null;
     }
     const userId = identity.subject;
 
