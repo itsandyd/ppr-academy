@@ -13,6 +13,7 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
+import type * as accessControl from "../accessControl.js";
 import type * as analytics from "../analytics.js";
 import type * as analyticsTracking from "../analyticsTracking.js";
 import type * as audioGeneration from "../audioGeneration.js";
@@ -25,6 +26,7 @@ import type * as emails from "../emails.js";
 import type * as embeddingActions from "../embeddingActions.js";
 import type * as embeddings from "../embeddings.js";
 import type * as files from "../files.js";
+import type * as http from "../http.js";
 import type * as leadSubmissions from "../leadSubmissions.js";
 import type * as library from "../library.js";
 import type * as musicShowcase from "../musicShowcase.js";
@@ -42,6 +44,7 @@ import type * as users from "../users.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  accessControl: typeof accessControl;
   analytics: typeof analytics;
   analyticsTracking: typeof analyticsTracking;
   audioGeneration: typeof audioGeneration;
@@ -54,6 +57,7 @@ declare const fullApi: ApiFromModules<{
   embeddingActions: typeof embeddingActions;
   embeddings: typeof embeddings;
   files: typeof files;
+  http: typeof http;
   leadSubmissions: typeof leadSubmissions;
   library: typeof library;
   musicShowcase: typeof musicShowcase;

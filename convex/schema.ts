@@ -71,12 +71,17 @@ export default defineSchema({
     // Stripe integration fields
     stripeProductId: v.optional(v.string()),
     stripePriceId: v.optional(v.string()),
+    // Soft delete support
+    deletedAt: v.optional(v.number()),
+    deletedBy: v.optional(v.string()),
   })
   .index("by_instructorId", ["instructorId"])
   .index("by_slug", ["slug"])
   .index("by_categoryId", ["courseCategoryId"])
   .index("by_userId", ["userId"])
-  .index("by_storeId", ["storeId"]), // Add index for storeId filtering
+  .index("by_storeId", ["storeId"]) // Add index for storeId filtering
+  .index("by_published", ["isPublished"])
+  .index("by_instructor_published", ["instructorId", "isPublished"]),
 
   courseCategories: defineTable({
     name: v.string(),
@@ -373,7 +378,10 @@ export default defineSchema({
   .index("by_lessonId", ["lessonId"])
   .index("by_chapterId", ["chapterId"])
   .index("by_user_chapter", ["userId", "chapterId"])
-  .index("by_user_course", ["userId", "courseId"]),
+  .index("by_user_course", ["userId", "courseId"])
+  // NEW: Performance indexes for completion queries
+  .index("by_user_completed", ["userId", "isCompleted"])
+  .index("by_course_completed", ["courseId", "isCompleted"]),
 
   // Library Sessions - Track user activity in library
   librarySessions: defineTable({
@@ -459,9 +467,13 @@ export default defineSchema({
   .index("by_status", ["status"])
   .index("by_productType", ["productType"])
   .index("by_user_product", ["userId", "productId"])
-  .index("by_user_course", ["userId", "courseId"]),
+  .index("by_user_course", ["userId", "courseId"])
+  // NEW: Performance indexes for creator dashboard
+  // Note: _creationTime is automatically added to all indexes by Convex
+  .index("by_store_status", ["storeId", "status"])
+  .index("by_user_status", ["userId", "status"]),
 
-  // Subscriptions
+  // Subscriptions (Legacy - keeping for backward compatibility)
   subscriptions: defineTable({
     customerId: v.id("customers"),
     planName: v.string(),
@@ -479,6 +491,102 @@ export default defineSchema({
     .index("by_storeId", ["storeId"])
     .index("by_adminUserId", ["adminUserId"])
     .index("by_status", ["status"]),
+
+  // Creator Subscription System - NEW
+  // Per-creator subscription tiers (like Patreon/Teachable)
+  creatorSubscriptionTiers: defineTable({
+    creatorId: v.string(), // Creator's userId
+    storeId: v.string(),
+    tierName: v.string(), // "Basic", "Pro", "VIP"
+    description: v.string(),
+    priceMonthly: v.number(),
+    priceYearly: v.optional(v.number()),
+    stripePriceIdMonthly: v.string(),
+    stripePriceIdYearly: v.optional(v.string()),
+    benefits: v.array(v.string()),
+    maxCourses: v.optional(v.number()), // null = unlimited
+    isActive: v.boolean(),
+  })
+    .index("by_creatorId", ["creatorId"])
+    .index("by_storeId", ["storeId"])
+    .index("by_active", ["isActive"])
+    .index("by_creator_active", ["creatorId", "isActive"]),
+
+  // User subscriptions to creators
+  userCreatorSubscriptions: defineTable({
+    userId: v.string(), // Subscriber
+    creatorId: v.string(), // Creator being subscribed to
+    tierId: v.id("creatorSubscriptionTiers"),
+    storeId: v.string(),
+    status: v.union(
+      v.literal("active"),
+      v.literal("canceled"),
+      v.literal("past_due"),
+      v.literal("paused")
+    ),
+    stripeSubscriptionId: v.string(),
+    currentPeriodStart: v.number(),
+    currentPeriodEnd: v.number(),
+    cancelAtPeriodEnd: v.boolean(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_creatorId", ["creatorId"])
+    .index("by_user_creator", ["userId", "creatorId"])
+    .index("by_status", ["status"])
+    .index("by_user_status", ["userId", "status"])
+    .index("by_creator_status", ["creatorId", "status"])
+    .index("by_stripe_id", ["stripeSubscriptionId"]),
+
+  // Content access control (granular permissions)
+  contentAccess: defineTable({
+    resourceId: v.string(), // courseId or productId
+    resourceType: v.union(v.literal("course"), v.literal("product"), v.literal("coaching")),
+    accessType: v.union(
+      v.literal("free"), 
+      v.literal("purchase"), 
+      v.literal("subscription")
+    ),
+    requiredTierId: v.optional(v.id("creatorSubscriptionTiers")), // For subscription-only
+    creatorId: v.string(),
+    storeId: v.string(),
+  })
+    .index("by_resourceId", ["resourceId"])
+    .index("by_creatorId", ["creatorId"])
+    .index("by_storeId", ["storeId"])
+    .index("by_resource_type", ["resourceId", "resourceType"]),
+
+  // Creator Earnings Tracking
+  creatorEarnings: defineTable({
+    creatorId: v.string(),
+    storeId: v.string(),
+    transactionType: v.union(
+      v.literal("course_sale"),
+      v.literal("product_sale"),
+      v.literal("subscription_payment"),
+      v.literal("coaching_session")
+    ),
+    purchaseId: v.optional(v.id("purchases")),
+    subscriptionId: v.optional(v.id("userCreatorSubscriptions")),
+    grossAmount: v.number(),
+    platformFee: v.number(), // 10%
+    processingFee: v.number(), // Stripe fees
+    netAmount: v.number(),
+    currency: v.string(),
+    payoutStatus: v.union(
+      v.literal("pending"),
+      v.literal("processing"),
+      v.literal("paid"),
+      v.literal("failed")
+    ),
+    stripeTransferId: v.optional(v.string()),
+    paidAt: v.optional(v.number()),
+  })
+  .index("by_creatorId", ["creatorId"])
+  .index("by_storeId", ["storeId"])
+  .index("by_payoutStatus", ["payoutStatus"])
+  .index("by_creator_status", ["creatorId", "payoutStatus"])
+  .index("by_transactionType", ["transactionType"]),
+  // Note: _creationTime is automatically added to all indexes, so by_creatorId already supports time-based queries
 
   // Email Campaign System
   emailCampaigns: defineTable({
