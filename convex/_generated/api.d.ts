@@ -14,6 +14,7 @@ import type {
   FunctionReference,
 } from "convex/server";
 import type * as accessControl from "../accessControl.js";
+import type * as adminSetup from "../adminSetup.js";
 import type * as analytics from "../analytics.js";
 import type * as analyticsTracking from "../analyticsTracking.js";
 import type * as audioGeneration from "../audioGeneration.js";
@@ -49,6 +50,7 @@ import type * as users from "../users.js";
  */
 declare const fullApi: ApiFromModules<{
   accessControl: typeof accessControl;
+  adminSetup: typeof adminSetup;
   analytics: typeof analytics;
   analyticsTracking: typeof analyticsTracking;
   audioGeneration: typeof audioGeneration;

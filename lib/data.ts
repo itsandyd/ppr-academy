@@ -216,7 +216,8 @@ export async function getUserEnrollments(userId: string): Promise<EnrollmentWith
   }
 }
 
-export async function getUserCourses(userId: string): Promise<CourseWithDetails[]> {
+// DEPRECATED: Use lib/convex-data.ts getUserCourses instead
+export async function getUserCoursesLegacy(userId: string): Promise<CourseWithDetails[]> {
   try {
     const courses = await prisma.course.findMany({
       where: {
