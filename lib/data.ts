@@ -1,249 +1,125 @@
-// This file is deprecated - use /lib/convex-data.ts instead
-// Keeping for backward compatibility during migration
+/**
+ * @deprecated This file is deprecated - use /lib/convex-data.ts instead
+ * 
+ * This file now redirects all calls to Convex-based functions.
+ * Prisma has been completely removed from this project.
+ */
 
-import { getAuthenticatedUser, getUserCourses, getCourseBySlug } from "@/lib/convex-data";
-import { CourseWithDetails, EnrollmentWithCourse } from "@/lib/types";
 import { auth } from "@clerk/nextjs/server";
+import { preloadQuery } from "convex/nextjs";
+import { api } from "@/convex/_generated/api";
+import { fetchQuery } from "convex/nextjs";
 
-// Helper function to get or create user from Clerk
+/**
+ * Get or create user from Clerk ID
+ * @deprecated Use convex/users.ts getUserFromClerk query directly
+ */
 export async function getUserFromClerk(clerkId: string) {
-  console.log(`🔍 Looking up user with clerkId: ${clerkId}`);
+  console.log(`🔍 Looking up user with clerkId: ${clerkId} (via Convex)`);
   
   try {
-    // During build time, return null to avoid database/API calls
-    if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_URL) {
-      console.log('⚠️ Build time detected, skipping user lookup');
-      return null;
+    const user = await fetchQuery(api.users.getUserFromClerk, { clerkId });
+    
+    if (user) {
+      console.log(`✅ Found user in Convex: ${user.email}`);
+      
+      // Transform Convex user to match expected Prisma format
+      // (for backward compatibility with existing code)
+      return {
+        ...user,
+        id: user._id, // Add `id` field that maps to `_id`
+        createdAt: new Date(user._creationTime),
+        updatedAt: new Date(user._creationTime),
+      };
+    } else {
+      console.log(`⚠️ User not found in Convex: ${clerkId}`);
     }
     
-    // First, try to find the user in our database
-    let user = await prisma.user.findUnique({
-      where: { clerkId },
-    });
-
-    if (user) {
-      console.log(`✅ Found existing user in database: ${user.email}`);
-      return user;
-    }
-
-    console.log(`⚠️ User not found in database, fetching from Clerk...`);
-
-    // If user doesn't exist, fetch from Clerk and create in database
-    try {
-      const { clerkClient } = await import('@clerk/nextjs/server');
-      const client = await clerkClient();
-      
-      console.log(`📡 Fetching user data from Clerk...`);
-      const clerkUser = await client.users.getUser(clerkId);
-      
-      if (!clerkUser) {
-        console.error(`❌ User not found in Clerk: ${clerkId}`);
-        return null;
-      }
-
-      console.log(`📋 Clerk user data:`, {
-        id: clerkUser.id,
-        email: clerkUser.primaryEmailAddress?.emailAddress,
-        firstName: clerkUser.firstName,
-        lastName: clerkUser.lastName,
-        hasImage: !!clerkUser.imageUrl
-      });
-      
-      const email = clerkUser.primaryEmailAddress?.emailAddress;
-      
-      if (!email) {
-        console.error(`❌ No email found for Clerk user: ${clerkId}`);
-        return null;
-      }
-
-      // Create user in database
-      console.log(`🔨 Creating user in database...`);
-      user = await prisma.user.create({
-        data: {
-          clerkId,
-          email,
-          firstName: clerkUser.firstName,
-          lastName: clerkUser.lastName,
-          imageUrl: clerkUser.imageUrl,
-        },
-      });
-      
-      console.log(`✅ Successfully created user: ${user.email} (ID: ${user.id})`);
-      return user;
-
-    } catch (createError: any) {
-      console.error("💥 Error creating user from Clerk data:", createError);
-      
-      // If it's a unique constraint error, the user might already exist by email
-      if (createError?.code === 'P2002' || createError?.message?.includes('Unique constraint')) {
-        console.log(`🔄 Unique constraint error, checking for existing user by email...`);
-        
-        try {
-          const { clerkClient } = await import('@clerk/nextjs/server');
-          const client = await clerkClient();
-          const clerkUser = await client.users.getUser(clerkId);
-          const email = clerkUser.primaryEmailAddress?.emailAddress;
-          
-          if (email) {
-            // Try to find user by email and update their clerkId
-            const existingUser = await prisma.user.findUnique({
-              where: { email }
-            });
-            
-            if (existingUser) {
-              if (!existingUser.clerkId) {
-                // Update existing user with clerkId
-                user = await prisma.user.update({
-                  where: { id: existingUser.id },
-                  data: { 
-                    clerkId,
-                    firstName: clerkUser.firstName,
-                    lastName: clerkUser.lastName,
-                    imageUrl: clerkUser.imageUrl,
-                  }
-                });
-                console.log(`✅ Updated existing user with clerkId: ${user.email}`);
-                return user;
-              } else if (existingUser.clerkId === clerkId) {
-                // User already exists with this clerkId
-                console.log(`✅ Found existing user by email: ${existingUser.email}`);
-                return existingUser;
-              } else {
-                // User exists but with different clerkId - update to new clerkId
-                console.log(`🔄 User exists with different clerkId. Email: ${email}, Existing clerkId: ${existingUser.clerkId}, New clerkId: ${clerkId}`);
-                console.log(`🔨 Updating user's clerkId to new value...`);
-                
-                user = await prisma.user.update({
-                  where: { id: existingUser.id },
-                  data: { 
-                    clerkId,
-                    firstName: clerkUser.firstName,
-                    lastName: clerkUser.lastName,
-                    imageUrl: clerkUser.imageUrl,
-                  }
-                });
-                console.log(`✅ Successfully updated user's clerkId: ${user.email}`);
-                return user;
-              }
-            }
-          }
-        } catch (findError) {
-          console.error("💥 Error finding existing user by email:", findError);
-        }
-      }
-      
-      // For any other error, return null
-      return null;
-    }
-
+    return user;
   } catch (error) {
-    console.error("💥 Unexpected error in getUserFromClerk:", error);
+    console.error("💥 Error fetching user from Convex:", error);
     return null;
   }
 }
 
-export async function getFeaturedCourses(): Promise<CourseWithDetails[]> {
+/**
+ * Get featured courses (most recent published courses)
+ * @deprecated Use convex/courses.ts queries directly
+ */
+export async function getFeaturedCourses() {
   try {
-    // Since there's no 'featured' field, let's get the most recent published courses
-    const courses = await prisma.course.findMany({
-      where: {
-        isPublished: true,
-      },
-      include: {
-        instructor: true,
-        _count: {
-          select: {
-            enrollments: true,
-          },
-        },
-      },
-      take: 6,
-      orderBy: { createdAt: 'desc' }
-    });
-    return courses;
+    console.log("📚 Fetching featured courses from Convex...");
+    const courses = await fetchQuery(api.courses.getCourses, {});
+    
+    // Return first 6 courses as "featured"
+    return courses?.slice(0, 6) || [];
   } catch (error) {
     console.error("Error fetching featured courses:", error);
     return [];
   }
 }
 
-export async function getPopularCourses(): Promise<CourseWithDetails[]> {
+/**
+ * Get popular courses
+ * @deprecated Use convex/courses.ts queries directly
+ */
+export async function getPopularCourses() {
   try {
-    const courses = await prisma.course.findMany({
-      include: {
-        instructor: true,
-        _count: {
-          select: {
-            enrollments: true,
-          },
-        },
-      },
-      orderBy: {
-        enrollments: {
-          _count: "desc",
-        },
-      },
-      take: 10,
-    });
-    return courses;
+    console.log("📚 Fetching popular courses from Convex...");
+    const courses = await fetchQuery(api.courses.getCourses, {});
+    
+    // Return first 10 courses as "popular" (can be enhanced with enrollment stats later)
+    return courses?.slice(0, 10) || [];
   } catch (error) {
     console.error("Error fetching popular courses:", error);
     return [];
   }
 }
 
-export async function getUserEnrollments(userId: string): Promise<EnrollmentWithCourse[]> {
+/**
+ * Get user enrollments
+ * @deprecated Use convex/library.ts queries directly
+ */
+export async function getUserEnrollments(userId: string) {
   try {
-    const enrollments = await prisma.enrollment.findMany({
-      where: {
-        userId,
-      },
-      include: {
-        course: {
-          include: {
-            instructor: true,
-          },
-        },
-      },
-      orderBy: {
-        updatedAt: "desc",
-      },
-    });
-    return enrollments;
+    console.log(`📚 Fetching enrollments for user ${userId} from Convex...`);
+    const enrollments = await fetchQuery(api.library.getUserCourses, { userId });
+    
+    return enrollments || [];
   } catch (error) {
     console.error("Error fetching user enrollments:", error);
     return [];
   }
 }
 
-// DEPRECATED: Use lib/convex-data.ts getUserCourses instead
-export async function getUserCoursesLegacy(userId: string): Promise<CourseWithDetails[]> {
+/**
+ * Get user courses (courses created by user)
+ * @deprecated Use convex/courses.ts getCoursesByUser query directly
+ */
+export async function getUserCourses(userId: string) {
   try {
-    const courses = await prisma.course.findMany({
-      where: {
-        instructorId: userId,
-      },
-      include: {
-        instructor: true,
-        _count: {
-          select: {
-            enrollments: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
-    return courses;
+    console.log(`📚 Fetching courses created by user ${userId} from Convex...`);
+    const courses = await fetchQuery(api.courses.getCoursesByUser, { userId });
+    
+    return courses || [];
   } catch (error) {
     console.error("Error fetching user courses:", error);
     return [];
   }
 }
 
-// New function to get current user's enrollments using Clerk auth
-export async function getCurrentUserEnrollments(): Promise<EnrollmentWithCourse[]> {
+/**
+ * @deprecated - kept for backward compatibility
+ */
+export async function getUserCoursesLegacy(userId: string) {
+  return getUserCourses(userId);
+}
+
+/**
+ * Get current user's enrollments using Clerk auth
+ * @deprecated Use Convex queries directly in client components
+ */
+export async function getCurrentUserEnrollments() {
   try {
     const { userId: clerkId } = await auth();
     if (!clerkId) return [];
@@ -251,15 +127,18 @@ export async function getCurrentUserEnrollments(): Promise<EnrollmentWithCourse[
     const user = await getUserFromClerk(clerkId);
     if (!user) return [];
 
-    return getUserEnrollments(user.id);
+    return getUserEnrollments(user._id);
   } catch (error) {
     console.error("Error fetching current user enrollments:", error);
     return [];
   }
 }
 
-// New function to get current user's courses using Clerk auth
-export async function getCurrentUserCourses(): Promise<CourseWithDetails[]> {
+/**
+ * Get current user's courses using Clerk auth
+ * @deprecated Use Convex queries directly in client components
+ */
+export async function getCurrentUserCourses() {
   try {
     const { userId: clerkId } = await auth();
     if (!clerkId) return [];
@@ -267,13 +146,17 @@ export async function getCurrentUserCourses(): Promise<CourseWithDetails[]> {
     const user = await getUserFromClerk(clerkId);
     if (!user) return [];
 
-    return getUserCourses(user.id);
+    return getUserCourses(user._id);
   } catch (error) {
     console.error("Error fetching current user courses:", error);
     return [];
   }
 }
 
+/**
+ * Get courses with optional filters
+ * @deprecated Use convex/courses.ts getCourses query directly
+ */
 export async function getCourses(filters?: {
   search?: string;
   category?: string;
@@ -281,45 +164,59 @@ export async function getCourses(filters?: {
   includeUnpublished?: boolean;
 }) {
   try {
-    const where: any = {};
-
-    // Only filter by published status if not including unpublished courses
-    if (!filters?.includeUnpublished) {
-      where.isPublished = true;
-    }
-
+    console.log(`📚 Fetching courses from Convex with filters:`, filters);
+    
+    // For now, just fetch all courses
+    // You can add filtering logic in the Convex query later
+    const courses = await fetchQuery(api.courses.getCourses, {});
+    
+    // Client-side filtering if needed
+    let filteredCourses = courses || [];
+    
     if (filters?.search) {
-      where.OR = [
-        { title: { contains: filters.search } },
-        { description: { contains: filters.search } },
-        { instructor: { 
-          OR: [
-            { firstName: { contains: filters.search } },
-            { lastName: { contains: filters.search } },
-          ]
-        }}
-      ];
+      const searchLower = filters.search.toLowerCase();
+      filteredCourses = filteredCourses.filter(course => 
+        course.title.toLowerCase().includes(searchLower) ||
+        course.description?.toLowerCase().includes(searchLower)
+      );
     }
-
-    // Since category and skillLevel don't exist in the schema, 
-    // we'll need to handle this differently or update the schema
-    // For now, we'll just ignore these filters
-
-    const courses = await prisma.course.findMany({
-      where,
-      include: {
-        instructor: true,
-        _count: {
-          select: { enrollments: true }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
-
-    console.log(`📚 Fetched ${courses.length} courses (includeUnpublished: ${filters?.includeUnpublished})`);
-    return courses;
+    
+    console.log(`📚 Fetched ${filteredCourses.length} courses from Convex`);
+    return filteredCourses;
   } catch (error) {
     console.error('Error fetching courses:', error);
     return [];
   }
-} 
+}
+
+/**
+ * Get course by slug
+ * @deprecated Use convex/courses.ts getCourseBySlug query directly
+ */
+export async function getCourseBySlug(slug: string) {
+  try {
+    console.log(`📚 Fetching course by slug: ${slug} from Convex...`);
+    const course = await fetchQuery(api.courses.getCourseBySlug, { slug });
+    
+    return course;
+  } catch (error) {
+    console.error(`Error fetching course by slug (${slug}):`, error);
+    return null;
+  }
+}
+
+/**
+ * Re-export functions from convex-data for convenience
+ */
+export { 
+  getAuthenticatedUser,
+  getCourseWithDetails,
+  getUserCourseProgress,
+  isUserEnrolledInCourse,
+  getPublishedCourses,
+  getCoursesByUser,
+  getInstructorCourses,
+  getCoursesByStore,
+  verifyCourseAccess,
+  handleDataError,
+} from "@/lib/convex-data";
