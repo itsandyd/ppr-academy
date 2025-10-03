@@ -18,6 +18,7 @@ import type * as adminSetup from "../adminSetup.js";
 import type * as analytics from "../analytics.js";
 import type * as analyticsTracking from "../analyticsTracking.js";
 import type * as audioGeneration from "../audioGeneration.js";
+import type * as audioGenerationNode from "../audioGenerationNode.js";
 import type * as courses from "../courses.js";
 import type * as credits from "../credits.js";
 import type * as customers from "../customers.js";
@@ -54,6 +55,7 @@ declare const fullApi: ApiFromModules<{
   analytics: typeof analytics;
   analyticsTracking: typeof analyticsTracking;
   audioGeneration: typeof audioGeneration;
+  audioGenerationNode: typeof audioGenerationNode;
   courses: typeof courses;
   credits: typeof credits;
   customers: typeof customers;

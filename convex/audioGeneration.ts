@@ -404,3 +404,308 @@ export const saveGeneratedAudioToChapter = mutation({
     }
   },
 });
+
+// Step 1: Generate audio only (no metadata)
+export const generateAudioOnly = action({
+  args: {
+    description: v.string(),
+    duration: v.number(),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    filePath: v.optional(v.string()),
+    storageId: v.optional(v.string()),
+    audioUrl: v.optional(v.string()),
+    format: v.optional(v.string()),
+    fileSize: v.optional(v.number()),
+    error: v.optional(v.string()),
+  }),
+  handler: async (ctx, args): Promise<{ 
+    success: boolean; 
+    filePath?: string; 
+    storageId?: string;
+    audioUrl?: string; 
+    format?: string;
+    fileSize?: number;
+    error?: string 
+  }> => {
+    try {
+      // Generate sound effect (Node.js action handles ElevenLabs + Convex storage upload)
+      const result = await ctx.runAction(internal.audioGenerationNode.callElevenLabsSFX, {
+        description: args.description,
+        duration: args.duration,
+      });
+      
+      // Return all the fields we need for publishing
+      return {
+        success: result.success,
+        filePath: result.filePath,
+        storageId: result.storageId ? String(result.storageId) : undefined,
+        audioUrl: result.audioUrl,
+        format: result.format,
+        fileSize: result.fileSize,
+        error: result.error,
+      };
+      
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || "Failed to generate audio",
+      };
+    }
+  },
+});
+
+// Step 2: Save to marketplace with metadata (uses existing storage)
+export const saveSampleToMarketplace = action({
+  args: {
+    userId: v.string(),
+    storeId: v.string(),
+    storageId: v.id("_storage"),
+    audioUrl: v.string(),
+    title: v.string(),
+    description: v.string(),
+    duration: v.number(),
+    format: v.string(),
+    fileSize: v.number(),
+    genre: v.string(),
+    category: v.union(
+      v.literal("drums"),
+      v.literal("bass"),
+      v.literal("synth"),
+      v.literal("vocals"),
+      v.literal("fx"),
+      v.literal("melody"),
+      v.literal("loops"),
+      v.literal("one-shots")
+    ),
+    tags: v.array(v.string()),
+    creditPrice: v.number(),
+    licenseType: v.union(
+      v.literal("royalty-free"),
+      v.literal("exclusive"),
+      v.literal("commercial")
+    ),
+  },
+  returns: v.any(),
+  handler: async (ctx, args): Promise<any> => {
+    try {
+      // Audio is already in Convex storage from step 1, just create the DB record
+      const fileName = `${args.title.toLowerCase().replace(/\s+/g, '_')}.${args.format}`;
+      
+      // Create sample record
+      const sampleId: Id<"audioSamples"> = await ctx.runMutation(internal.audioGeneration.createSampleRecord, {
+        userId: args.userId,
+        storeId: args.storeId,
+        title: args.title,
+        description: args.description,
+        storageId: args.storageId,
+        fileUrl: args.audioUrl,
+        fileName,
+        fileSize: args.fileSize,
+        duration: args.duration,
+        format: args.format,
+        genre: args.genre,
+        category: args.category,
+        tags: args.tags,
+        creditPrice: args.creditPrice,
+        licenseType: args.licenseType,
+      });
+      
+      console.log(`✅ Sample published: ${args.title} (${sampleId})`);
+      
+      // Get the created sample
+      const sample: any = await ctx.runQuery(internal.audioGeneration.getSampleById, {
+        sampleId,
+      });
+      
+      return sample;
+      
+    } catch (error: any) {
+      console.error("❌ Error saving sample:", error);
+      throw new Error(error.message || "Failed to save sample");
+    }
+  },
+});
+
+// LEGACY: Generate AI-powered sample using ElevenLabs (all-in-one)
+export const generateAISample = action({
+  args: {
+    userId: v.string(),
+    storeId: v.string(),
+    description: v.string(),
+    title: v.string(),
+    duration: v.number(),
+    genre: v.string(),
+    category: v.union(
+      v.literal("drums"),
+      v.literal("bass"),
+      v.literal("synth"),
+      v.literal("vocals"),
+      v.literal("fx"),
+      v.literal("melody"),
+      v.literal("loops"),
+      v.literal("one-shots")
+    ),
+    tags: v.array(v.string()),
+    creditPrice: v.number(),
+    licenseType: v.union(
+      v.literal("royalty-free"),
+      v.literal("exclusive"),
+      v.literal("commercial")
+    ),
+  },
+  returns: v.any(),
+  handler: async (ctx, args): Promise<any> => {
+    try {
+      console.log("🎵 Generating AI sample:", args.title);
+      
+      // Generate sound effect using ElevenLabs via Node.js action
+      const elevenlabsResult: { success: boolean; filePath?: string; error?: string } = 
+        await ctx.runAction(internal.audioGenerationNode.callElevenLabsSFX, {
+          description: args.description,
+          duration: args.duration,
+        });
+      
+      if (!elevenlabsResult.success || !elevenlabsResult.filePath) {
+        throw new Error(elevenlabsResult.error || "Failed to generate sound effect");
+      }
+      
+      // Read the generated audio file
+      const fs = await import("fs/promises");
+      const path = await import("path");
+      const audioBuffer: Buffer = await fs.readFile(elevenlabsResult.filePath);
+      
+      // Get file stats
+      const stats: { size: number } = await fs.stat(elevenlabsResult.filePath);
+      const fileSize: number = stats.size;
+      
+      // Extract filename
+      const fileName = path.basename(elevenlabsResult.filePath);
+      const format = path.extname(fileName).slice(1); // Remove the dot
+      
+      // Store file in Convex storage - convert Buffer to Uint8Array
+      const storageId = await ctx.storage.store(
+        new Blob([new Uint8Array(audioBuffer)], { type: `audio/${format}` })
+      );
+      
+      // Get storage URL
+      const fileUrl = await ctx.storage.getUrl(storageId);
+      
+      if (!fileUrl) {
+        throw new Error("Failed to get storage URL");
+      }
+      
+      // Create sample record
+      const sampleId: Id<"audioSamples"> = await ctx.runMutation(internal.audioGeneration.createSampleRecord, {
+        userId: args.userId,
+        storeId: args.storeId,
+        title: args.title,
+        description: args.description,
+        storageId,
+        fileUrl,
+        fileName,
+        fileSize,
+        duration: args.duration,
+        format,
+        genre: args.genre,
+        category: args.category,
+        tags: args.tags,
+        creditPrice: args.creditPrice,
+        licenseType: args.licenseType,
+      });
+      
+      // Clean up temporary file
+      await fs.unlink(elevenlabsResult.filePath).catch((err: Error) => 
+        console.warn("Failed to delete temp file:", err)
+      );
+      
+      console.log("✅ AI sample created:", sampleId);
+      
+      // Get the created sample
+      const sample: any = await ctx.runQuery(internal.audioGeneration.getSampleById, {
+        sampleId,
+      });
+      
+      return sample;
+      
+    } catch (error: any) {
+      console.error("❌ Error generating AI sample:", error);
+      throw new Error(error.message || "Failed to generate AI sample");
+    }
+  },
+});
+
+// Internal action to call ElevenLabs API
+// Note: callElevenLabsSFX is now in audioGenerationNode.ts (Node.js action)
+
+// Internal mutation to create sample record
+export const createSampleRecord = internalMutation({
+  args: {
+    userId: v.string(),
+    storeId: v.string(),
+    title: v.string(),
+    description: v.optional(v.string()),
+    storageId: v.id("_storage"),
+    fileUrl: v.string(),
+    fileName: v.string(),
+    fileSize: v.number(),
+    duration: v.number(),
+    format: v.string(),
+    genre: v.string(),
+    category: v.union(
+      v.literal("drums"),
+      v.literal("bass"),
+      v.literal("synth"),
+      v.literal("vocals"),
+      v.literal("fx"),
+      v.literal("melody"),
+      v.literal("loops"),
+      v.literal("one-shots")
+    ),
+    tags: v.array(v.string()),
+    creditPrice: v.number(),
+    licenseType: v.union(
+      v.literal("royalty-free"),
+      v.literal("exclusive"),
+      v.literal("commercial")
+    ),
+  },
+  returns: v.id("audioSamples"),
+  handler: async (ctx, args) => {
+    const sampleId = await ctx.db.insert("audioSamples", {
+      userId: args.userId,
+      storeId: args.storeId,
+      title: args.title,
+      description: args.description,
+      storageId: args.storageId,
+      fileUrl: args.fileUrl,
+      fileName: args.fileName,
+      fileSize: args.fileSize,
+      duration: args.duration,
+      format: args.format,
+      genre: args.genre,
+      category: args.category,
+      tags: args.tags,
+      creditPrice: args.creditPrice,
+      licenseType: args.licenseType,
+      isPublished: true, // Auto-publish admin-created samples
+      downloads: 0,
+      plays: 0,
+      favorites: 0,
+    });
+    
+    return sampleId;
+  },
+});
+
+// Internal query to get sample by ID
+export const getSampleById = internalQuery({
+  args: {
+    sampleId: v.id("audioSamples"),
+  },
+  returns: v.any(),
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.sampleId);
+  },
+});

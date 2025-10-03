@@ -41,6 +41,18 @@ export const getStoresByUser = query({
   },
 });
 
+// Alias for getUserStores (same as getStoresByUser)
+export const getUserStores = query({
+  args: { userId: v.string() },
+  returns: v.array(storeValidator),
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("stores")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .collect();
+  },
+});
+
 // Get store by ID
 export const getStoreById = query({
   args: { storeId: v.id("stores") },
