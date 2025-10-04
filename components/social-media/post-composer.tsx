@@ -485,31 +485,31 @@ export function PostComposer({
               </div>
             )}
 
-            {/* Content */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>
-                  Caption {postType === "story" && <span className="text-muted-foreground font-normal">(optional)</span>}
-                </Label>
-                <span className={cn(
-                  "text-sm",
-                  remainingChars < 0
-                    ? "text-red-500"
-                    : remainingChars < 100
-                    ? "text-yellow-500"
-                    : "text-muted-foreground"
-                )}>
-                  {content.length} / {characterLimit}
-                </span>
+            {/* Content - Hide for Instagram stories */}
+            {postType !== "story" && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Caption</Label>
+                  <span className={cn(
+                    "text-sm",
+                    remainingChars < 0
+                      ? "text-red-500"
+                      : remainingChars < 100
+                      ? "text-yellow-500"
+                      : "text-muted-foreground"
+                  )}>
+                    {content.length} / {characterLimit}
+                  </span>
+                </div>
+                <Textarea
+                  placeholder="Write your caption here..."
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  rows={6}
+                  className="resize-none"
+                />
               </div>
-              <Textarea
-                placeholder={postType === "story" ? "Add a caption (optional)..." : "Write your caption here..."}
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                rows={6}
-                className="resize-none"
-              />
-            </div>
+            )}
 
             {/* Media Upload */}
             <div className="space-y-2">
