@@ -21,6 +21,7 @@ import type * as audioGeneration from "../audioGeneration.js";
 import type * as audioGenerationNode from "../audioGenerationNode.js";
 import type * as courses from "../courses.js";
 import type * as credits from "../credits.js";
+import type * as crons from "../crons.js";
 import type * as customers from "../customers.js";
 import type * as digitalProducts from "../digitalProducts.js";
 import type * as emailCampaigns from "../emailCampaigns.js";
@@ -38,6 +39,8 @@ import type * as ragActions from "../ragActions.js";
 import type * as samplePacks from "../samplePacks.js";
 import type * as samples from "../samples.js";
 import type * as seedCreditPackages from "../seedCreditPackages.js";
+import type * as socialMedia from "../socialMedia.js";
+import type * as socialMediaActions from "../socialMediaActions.js";
 import type * as stores from "../stores.js";
 import type * as users from "../users.js";
 
@@ -58,6 +61,7 @@ declare const fullApi: ApiFromModules<{
   audioGenerationNode: typeof audioGenerationNode;
   courses: typeof courses;
   credits: typeof credits;
+  crons: typeof crons;
   customers: typeof customers;
   digitalProducts: typeof digitalProducts;
   emailCampaigns: typeof emailCampaigns;
@@ -75,6 +79,8 @@ declare const fullApi: ApiFromModules<{
   samplePacks: typeof samplePacks;
   samples: typeof samples;
   seedCreditPackages: typeof seedCreditPackages;
+  socialMedia: typeof socialMedia;
+  socialMediaActions: typeof socialMediaActions;
   stores: typeof stores;
   users: typeof users;
 }>;

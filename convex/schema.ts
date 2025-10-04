@@ -1238,4 +1238,240 @@ export default defineSchema({
   })
     .index("by_active", ["isActive"])
     .index("by_displayOrder", ["displayOrder"]),
+
+  // ============================================================================
+  // SOCIAL MEDIA SCHEDULING SYSTEM
+  // ============================================================================
+
+  // Social Media Accounts - Connected platforms for each store
+  socialAccounts: defineTable({
+    storeId: v.string(),
+    userId: v.string(), // Store owner
+    
+    // Platform Info
+    platform: v.union(
+      v.literal("instagram"),
+      v.literal("twitter"),
+      v.literal("facebook"),
+      v.literal("tiktok"),
+      v.literal("linkedin")
+    ),
+    platformUserId: v.string(), // User ID from the platform
+    platformUsername: v.optional(v.string()),
+    platformDisplayName: v.optional(v.string()),
+    profileImageUrl: v.optional(v.string()),
+    
+    // OAuth Tokens (encrypted in production)
+    accessToken: v.string(),
+    refreshToken: v.optional(v.string()),
+    tokenExpiresAt: v.optional(v.number()),
+    
+    // Account Status
+    isActive: v.boolean(),
+    isConnected: v.boolean(),
+    lastVerified: v.optional(v.number()),
+    connectionError: v.optional(v.string()),
+    
+    // Platform-specific data
+    platformData: v.optional(v.object({
+      // Instagram
+      instagramBusinessAccountId: v.optional(v.string()),
+      // Facebook
+      facebookPageId: v.optional(v.string()),
+      facebookPageAccessToken: v.optional(v.string()),
+      // Platform-specific rate limits
+      dailyPostLimit: v.optional(v.number()),
+      postsToday: v.optional(v.number()),
+    })),
+    
+    // Permissions/Scopes granted
+    grantedScopes: v.array(v.string()),
+    
+    // Account label (optional, for users to distinguish multiple accounts)
+    accountLabel: v.optional(v.string()), // e.g., "Personal", "Business", "Brand Account"
+  })
+    .index("by_storeId", ["storeId"])
+    .index("by_userId", ["userId"])
+    .index("by_platform", ["platform"])
+    .index("by_store_platform", ["storeId", "platform"])
+    .index("by_store_platform_user", ["storeId", "platform", "platformUserId"]) // Unique account identification
+    .index("by_isActive", ["isActive"]),
+
+  // Scheduled Posts - Posts scheduled for future publishing
+  scheduledPosts: defineTable({
+    storeId: v.string(),
+    userId: v.string(),
+    socialAccountId: v.id("socialAccounts"),
+    
+    // Post Content
+    content: v.string(), // Text content
+    mediaUrls: v.optional(v.array(v.string())), // Images/videos
+    mediaStorageIds: v.optional(v.array(v.id("_storage"))), // Convex storage IDs
+    
+    // Scheduling
+    scheduledFor: v.number(), // Unix timestamp
+    timezone: v.string(), // User's timezone
+    
+    // Post Configuration
+    postType: v.union(
+      v.literal("post"),
+      v.literal("story"),
+      v.literal("reel"),
+      v.literal("tweet"),
+      v.literal("thread")
+    ),
+    
+    // Platform-specific options
+    platformOptions: v.optional(v.object({
+      // Instagram
+      instagramLocation: v.optional(v.string()),
+      instagramCaption: v.optional(v.string()),
+      // Twitter
+      twitterReplySettings: v.optional(v.string()),
+      // Facebook
+      facebookTargeting: v.optional(v.string()),
+      // LinkedIn
+      linkedinVisibility: v.optional(v.string()),
+    })),
+    
+    // Status
+    status: v.union(
+      v.literal("draft"),
+      v.literal("scheduled"),
+      v.literal("publishing"),
+      v.literal("published"),
+      v.literal("failed"),
+      v.literal("cancelled")
+    ),
+    
+    // Publishing Info
+    publishedAt: v.optional(v.number()),
+    platformPostId: v.optional(v.string()), // ID from the platform
+    platformPostUrl: v.optional(v.string()), // Direct link to post
+    
+    // Error Handling
+    errorMessage: v.optional(v.string()),
+    retryCount: v.number(),
+    lastRetryAt: v.optional(v.number()),
+    
+    // Analytics (populated after publishing)
+    initialMetrics: v.optional(v.object({
+      likes: v.optional(v.number()),
+      comments: v.optional(v.number()),
+      shares: v.optional(v.number()),
+      views: v.optional(v.number()),
+      clicks: v.optional(v.number()),
+    })),
+  })
+    .index("by_storeId", ["storeId"])
+    .index("by_userId", ["userId"])
+    .index("by_socialAccountId", ["socialAccountId"])
+    .index("by_status", ["status"])
+    .index("by_scheduledFor", ["scheduledFor"])
+    .index("by_store_status", ["storeId", "status"])
+    .index("by_store_scheduled", ["storeId", "scheduledFor"]),
+
+  // Post Analytics - Track performance of published posts
+  postAnalytics: defineTable({
+    scheduledPostId: v.id("scheduledPosts"),
+    socialAccountId: v.id("socialAccounts"),
+    storeId: v.string(),
+    
+    // Platform Info
+    platform: v.union(
+      v.literal("instagram"),
+      v.literal("twitter"),
+      v.literal("facebook"),
+      v.literal("tiktok"),
+      v.literal("linkedin")
+    ),
+    platformPostId: v.string(),
+    
+    // Engagement Metrics
+    likes: v.number(),
+    comments: v.number(),
+    shares: v.number(),
+    saves: v.optional(v.number()), // Instagram
+    views: v.optional(v.number()),
+    impressions: v.optional(v.number()),
+    reach: v.optional(v.number()),
+    clicks: v.optional(v.number()),
+    
+    // Audience Metrics
+    followerCount: v.optional(v.number()),
+    engagementRate: v.optional(v.number()), // Percentage
+    
+    // Time-based tracking
+    timestamp: v.number(), // When these metrics were captured
+    hoursAfterPost: v.optional(v.number()), // 1h, 24h, 7d snapshots
+  })
+    .index("by_scheduledPostId", ["scheduledPostId"])
+    .index("by_socialAccountId", ["socialAccountId"])
+    .index("by_storeId", ["storeId"])
+    .index("by_platform", ["platform"])
+    .index("by_timestamp", ["timestamp"]),
+
+  // Social Media Webhooks - Track incoming webhooks from platforms
+  socialWebhooks: defineTable({
+    platform: v.union(
+      v.literal("instagram"),
+      v.literal("twitter"),
+      v.literal("facebook"),
+      v.literal("tiktok"),
+      v.literal("linkedin")
+    ),
+    
+    // Webhook Data
+    eventType: v.string(), // "post.published", "comment.created", etc.
+    payload: v.any(), // Full webhook payload
+    signature: v.optional(v.string()), // Webhook signature for verification
+    
+    // Processing Status
+    status: v.union(
+      v.literal("pending"),
+      v.literal("processing"),
+      v.literal("processed"),
+      v.literal("failed")
+    ),
+    processedAt: v.optional(v.number()),
+    errorMessage: v.optional(v.string()),
+    
+    // Related Resources
+    socialAccountId: v.optional(v.id("socialAccounts")),
+    scheduledPostId: v.optional(v.id("scheduledPosts")),
+  })
+    .index("by_platform", ["platform"])
+    .index("by_status", ["status"])
+    .index("by_eventType", ["eventType"]),
+
+  // Post Templates - Reusable post templates
+  postTemplates: defineTable({
+    storeId: v.string(),
+    userId: v.string(),
+    
+    // Template Info
+    name: v.string(),
+    description: v.optional(v.string()),
+    category: v.optional(v.string()), // "promotion", "announcement", "engagement"
+    
+    // Template Content
+    content: v.string(),
+    mediaUrls: v.optional(v.array(v.string())),
+    
+    // Platform Targeting
+    platforms: v.array(v.union(
+      v.literal("instagram"),
+      v.literal("twitter"),
+      v.literal("facebook"),
+      v.literal("tiktok"),
+      v.literal("linkedin")
+    )),
+    
+    // Usage Stats
+    useCount: v.number(),
+    lastUsed: v.optional(v.number()),
+  })
+    .index("by_storeId", ["storeId"])
+    .index("by_userId", ["userId"])
+    .index("by_category", ["category"]),
 }); 

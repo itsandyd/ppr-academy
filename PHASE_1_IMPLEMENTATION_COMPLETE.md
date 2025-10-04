@@ -401,3 +401,4 @@ api.accessControl.checkResourceAccess({
 **By:** AI Assistant using Nia MCP Research + Implementation  
 **Reference:** See `COMPREHENSIVE_IMPROVEMENT_PLAN.md` for full roadmap
 
+

@@ -53,7 +53,8 @@ import {
   ChevronUp,
   ChevronDown,
   Activity,
-  Waves
+  Waves,
+  Share2
 } from "lucide-react";
 
 // Hooks and components
@@ -62,6 +63,7 @@ import { api } from "@/convex/_generated/api";
 import { features } from "@/lib/features";
 import { createCoachApplication, getUserCoachProfile, updateCoachApplication } from "@/app/actions/coaching-actions";
 import CoachScheduleManager from "@/components/coach-schedule-manager";
+import { SocialScheduler } from "@/components/social-media/social-scheduler";
 
 // Product type interface for compatibility
 interface Product {
@@ -480,6 +482,7 @@ export function CreatorDashboardEnhanced({
                 { id: 'products', label: 'My Music', icon: Music },
                 { id: 'analytics', label: 'Analytics', icon: TrendingUp },
                 { id: 'coaching', label: 'Coaching', icon: Headphones },
+                { id: 'social', label: 'Social Media', icon: Share2 },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -521,6 +524,7 @@ export function CreatorDashboardEnhanced({
                     { id: 'products', label: 'My Music', icon: Music },
                     { id: 'analytics', label: 'Analytics', icon: TrendingUp },
                     { id: 'coaching', label: 'Coaching', icon: Headphones },
+                    { id: 'social', label: 'Social Media', icon: Share2 },
                   ].map((tab) => (
                     <button
                       key={tab.id}
@@ -896,6 +900,12 @@ export function CreatorDashboardEnhanced({
                       </CardContent>
                     </Card>
                   )}
+                </div>
+              )}
+
+              {activeTab === 'social' && storeId && user?.id && (
+                <div className="space-y-6">
+                  <SocialScheduler storeId={storeId} userId={user.id} />
                 </div>
               )}
             </motion.div>
