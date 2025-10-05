@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { auth } from "@clerk/nextjs/server";
-import { UTApi } from "uploadthing/server";
+import { ConvexHttpClient } from "convex/browser";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
-
-const utapi = new UTApi();
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       apiKey: process.env.OPENAI_API_KEY,
     });
 
-    const { userId } = await auth();
+    const { userId, getToken } = await auth();
     
     if (!userId) {
       console.error("❌ No user ID found");
@@ -34,6 +34,13 @@ export async function POST(request: NextRequest) {
     }
 
     console.log("✅ User authenticated:", userId);
+    
+    // Get Clerk JWT token for Convex authentication
+    const token = await getToken({ template: "convex" });
+    
+    // Initialize Convex client with authentication
+    const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+    convex.setAuth(token!);
 
     const { title, description, category } = await request.json();
     console.log("📝 Request data:", { title, description, category });
@@ -110,21 +117,40 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Upload to uploadthing for permanent storage
-    console.log("☁️ Uploading to storage...");
-    const uploadResponse = await utapi.uploadFiles([imageFile]);
+    // Upload to Convex storage
+    console.log("☁️ Uploading to Convex storage...");
     
-    if (!uploadResponse[0]?.data?.url) {
-      throw new Error("Failed to upload image to storage");
+    // First, get the upload URL from Convex
+    const uploadUrl = await convex.mutation(api.files.generateUploadUrl, {});
+    
+    // Upload the file to Convex storage
+    const uploadResult = await fetch(uploadUrl, {
+      method: "POST",
+      headers: { "Content-Type": imageFile.type },
+      body: imageFile,
+    });
+    
+    if (!uploadResult.ok) {
+      throw new Error("Failed to upload image to Convex storage");
     }
-
-    const permanentUrl = uploadResponse[0].data.url;
-    console.log("✅ Image uploaded successfully:", permanentUrl);
+    
+    const { storageId } = await uploadResult.json();
+    
+    // Get the public URL for the uploaded file from Convex
+    const permanentUrl = await convex.query(api.files.getStorageUrl, { 
+      storageId: storageId as Id<"_storage"> 
+    });
+    
+    if (!permanentUrl) {
+      throw new Error("Failed to get storage URL from Convex");
+    }
+    
+    console.log("✅ Image uploaded successfully to Convex:", permanentUrl);
 
     console.log("🎉 Thumbnail generation successful!");
     return NextResponse.json({
       success: true,
-      imageUrl: permanentUrl, // Use the permanent uploadthing URL
+      imageUrl: permanentUrl, // Use the permanent Convex storage URL
       originalUrl: imageUrl || "base64_converted",
     });
 

@@ -130,6 +130,23 @@ export function CreatorDashboardV2({
 
   // Handlers
   const handleCreateProduct = async () => {
+    // If creating a course, redirect to the full course creation flow
+    if (newProductForm.type === 'course') {
+      // Get the user's store ID
+      const storeId = user?.publicMetadata?.storeId as string;
+      if (!storeId) {
+        toast({
+          title: "Store Not Found",
+          description: "Please set up your store first.",
+          variant: "destructive",
+        });
+        return;
+      }
+      // Redirect to course creation page
+      window.location.href = `/store/${storeId}/course/create`;
+      return;
+    }
+
     if (!newProductForm.title || !newProductForm.price) {
       toast({
         title: "Missing Required Fields",

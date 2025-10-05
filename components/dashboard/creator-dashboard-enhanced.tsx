@@ -244,6 +244,23 @@ export function CreatorDashboardEnhanced({
   // Handle functions (simplified for demo)
   const handleCreateProduct = async () => {
     try {
+      // If creating a course, redirect to the full course creation flow
+      if (newProductForm.type === 'course') {
+        // Get the user's store ID
+        const storeId = user?.publicMetadata?.storeId as string;
+        if (!storeId) {
+          toast({
+            title: "Store Not Found",
+            description: "Please set up your store first.",
+            variant: "destructive",
+          });
+          return;
+        }
+        // Redirect to course creation page
+        window.location.href = `/store/${storeId}/course/create`;
+        return;
+      }
+
       // For now, just show success message - implement actual creation logic later
       toast({
         title: "Product Created",

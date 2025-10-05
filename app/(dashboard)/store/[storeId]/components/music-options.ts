@@ -80,6 +80,7 @@ export const musicOptions: MusicProductOption[] = [
     icon: GraduationCap,
     gradient: "from-indigo-500 to-purple-500",
     iconColor: "text-white",
+    isPopular: true,
     category: 'content'
   },
   {
