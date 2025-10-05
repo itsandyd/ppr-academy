@@ -31,9 +31,11 @@ import {
   Clock,
   Upload,
   AlertCircle,
+  Crop,
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { ImageCropEditor } from "./image-crop-editor";
 
 interface PostComposerProps {
   storeId: string;
@@ -89,6 +91,7 @@ export function PostComposer({
   const [postType, setPostType] = useState<"post" | "reel" | "story">(editPost?.postType as any || "post");
   const [content, setContent] = useState(editPost?.content || "");
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
+  const [postTiming, setPostTiming] = useState<"now" | "later">("later");
   const [scheduledDate, setScheduledDate] = useState<Date | undefined>(
     editPost?.scheduledFor ? new Date(editPost.scheduledFor) : undefined
   );
@@ -101,6 +104,8 @@ export function PostComposer({
   });
   const [timezone, setTimezone] = useState(editPost?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [cropImageIndex, setCropImageIndex] = useState<number | null>(null);
+  const [showCropEditor, setShowCropEditor] = useState(false);
 
   // Mutations
   const createPost = useMutation(api.socialMedia.createScheduledPost);
@@ -129,6 +134,19 @@ export function PostComposer({
       }
     }
   }, [existingMediaUrls]);
+
+  // Reset form when dialog closes
+  useEffect(() => {
+    if (!open && !editPost) {
+      // Only reset if not editing
+      setSelectedAccountId(null);
+      setPostType("post");
+      setContent("");
+      setMediaFiles([]);
+      setScheduledDate(undefined);
+      setScheduledTime("12:00");
+    }
+  }, [open, editPost]);
 
   // Debug
   useEffect(() => {
@@ -186,6 +204,31 @@ export function PostComposer({
       // Create preview
       const preview = URL.createObjectURL(file);
 
+      // Check dimensions for Instagram
+      if (isImage && platform === "instagram") {
+        const img = new Image();
+        img.src = preview;
+        await new Promise((resolve) => {
+          img.onload = resolve;
+        });
+        
+        const aspectRatio = img.width / img.height;
+        const recommendedRatios: Record<string, { min: number; max: number; ideal: string }> = {
+          story: { min: 0.5, max: 0.6, ideal: "9:16 (1080x1920)" },
+          reel: { min: 0.5, max: 0.6, ideal: "9:16 (1080x1920)" },
+          post: { min: 0.8, max: 1.91, ideal: "1:1 (square) or 4:5" },
+        };
+        
+        const rec = recommendedRatios[postType];
+        if (rec && (aspectRatio < rec.min || aspectRatio > rec.max)) {
+          toast({
+            title: "Dimension warning",
+            description: `For ${postType}s, we recommend ${rec.ideal}. Your image is ${img.width}x${img.height}. It may be cropped.`,
+            variant: "default",
+          });
+        }
+      }
+
       const mediaFile: MediaFile = {
         file,
         preview,
@@ -210,6 +253,32 @@ export function PostComposer({
       newFiles.splice(index, 1);
       return newFiles;
     });
+  };
+
+  // Handle crop complete
+  const handleCropComplete = (croppedBlob: Blob, croppedUrl: string) => {
+    if (cropImageIndex === null) return;
+
+    setMediaFiles(prev => {
+      const newFiles = [...prev];
+      const oldPreview = newFiles[cropImageIndex].preview;
+      
+      // Revoke old preview URL
+      URL.revokeObjectURL(oldPreview);
+      
+      // Update with cropped version
+      newFiles[cropImageIndex] = {
+        ...newFiles[cropImageIndex],
+        file: new File([croppedBlob], newFiles[cropImageIndex].file.name, {
+          type: "image/jpeg",
+        }),
+        preview: croppedUrl,
+      };
+      
+      return newFiles;
+    });
+
+    setCropImageIndex(null);
   };
 
   // Upload media files to Convex storage
@@ -334,29 +403,38 @@ export function PostComposer({
       }
     }
 
-    if (!scheduledDate || !scheduledTime) {
-      toast({
-        title: "No schedule time",
-        description: "Please select when to publish this post",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Determine scheduled time based on post timing option
+    let scheduledDateTime: Date;
 
-    // Combine date and time
-    const [hours, minutes] = scheduledTime.split(":").map(Number);
-    const scheduledDateTime = new Date(scheduledDate);
-    scheduledDateTime.setHours(hours, minutes, 0, 0);
+    if (postTiming === "now") {
+      // Post immediately (10 seconds from now so cron picks it up)
+      scheduledDateTime = new Date(Date.now() + 10 * 1000);
+    } else {
+      // Schedule for later
+      if (!scheduledDate || !scheduledTime) {
+        toast({
+          title: "No schedule time",
+          description: "Please select when to publish this post",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    // Validate schedule time (must be at least 30 minutes in future)
-    const minScheduleTime = Date.now() + 30 * 60 * 1000;
-    if (scheduledDateTime.getTime() < minScheduleTime) {
-      toast({
-        title: "Invalid schedule time",
-        description: "Posts must be scheduled at least 30 minutes in advance",
-        variant: "destructive",
-      });
-      return;
+      // Combine date and time
+      const [hours, minutes] = scheduledTime.split(":").map(Number);
+      scheduledDateTime = new Date(scheduledDate);
+      scheduledDateTime.setHours(hours, minutes, 0, 0);
+
+      // Validate schedule time (must be at least 5 minutes in future)
+      const minScheduleTime = Date.now() + 5 * 60 * 1000;
+      if (scheduledDateTime.getTime() < minScheduleTime) {
+        toast({
+          title: "Invalid schedule time",
+          description: "Posts must be scheduled at least 5 minutes in advance",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     setIsSubmitting(true);
@@ -381,7 +459,9 @@ export function PostComposer({
 
         toast({
           title: "Post updated!",
-          description: `Your post will be published on ${format(scheduledDateTime, "PPP 'at' p")}`,
+          description: postTiming === "now"
+            ? "Your post will be published within the next minute"
+            : `Your post will be published on ${format(scheduledDateTime, "PPP 'at' p")}`,
         });
       } else {
         // Create new scheduled post
@@ -397,8 +477,10 @@ export function PostComposer({
         });
 
         toast({
-          title: "Post scheduled!",
-          description: `Your post will be published on ${format(scheduledDateTime, "PPP 'at' p")}`,
+          title: postTiming === "now" ? "Publishing post..." : "Post scheduled!",
+          description: postTiming === "now"
+            ? "Your post will be published within the next minute"
+            : `Your post will be published on ${format(scheduledDateTime, "PPP 'at' p")}`,
         });
       }
 
@@ -429,7 +511,8 @@ export function PostComposer({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-[600px] bg-white dark:bg-black max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editPost ? "Edit Scheduled Post" : "Schedule New Post"}</DialogTitle>
@@ -445,6 +528,7 @@ export function PostComposer({
               <Select
                 value={selectedAccountId || undefined}
                 onValueChange={(value) => setSelectedAccountId(value as Id<"socialAccounts">)}
+                disabled={!!editPost} // Can't change account when editing
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Choose an account..." />
@@ -462,6 +546,11 @@ export function PostComposer({
                   ))}
                 </SelectContent>
               </Select>
+              {editPost && (
+                <p className="text-xs text-muted-foreground">
+                  Account cannot be changed when editing
+                </p>
+              )}
             </div>
 
             {/* Post Type (Instagram only) */}
@@ -513,20 +602,29 @@ export function PostComposer({
 
             {/* Media Upload */}
             <div className="space-y-2">
-              <Label>Media</Label>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="flex items-center justify-between">
+                <Label>Media</Label>
+                {platform === "instagram" && (
+                  <span className="text-xs text-muted-foreground">
+                    {postType === "story" && "9:16 (1080x1920)"}
+                    {postType === "reel" && "9:16 (1080x1920)"}
+                    {postType === "post" && "1:1 or 4:5"}
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
                 {mediaFiles.map((media, index) => (
-                  <div key={index} className="relative aspect-square rounded-lg overflow-hidden border">
+                  <div key={index} className="relative w-32 max-h-48 rounded-lg overflow-hidden border">
                     {media.type === "image" ? (
                       <img
                         src={media.preview}
                         alt={`Upload ${index + 1}`}
-                        className="w-full h-full object-cover"
+                        className="w-full h-auto object-contain"
                       />
                     ) : (
                       <video
                         src={media.preview}
-                        className="w-full h-full object-cover"
+                        className="w-full h-auto object-contain"
                       />
                     )}
                     
@@ -542,15 +640,34 @@ export function PostComposer({
                       </div>
                     )}
                     
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="icon"
-                      className="absolute top-1 right-1 h-6 w-6"
-                      onClick={() => handleRemoveMedia(index)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+                    {/* Action buttons */}
+                    <div className="absolute top-1 right-1 flex gap-1">
+                      {media.type === "image" && (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="icon"
+                          className="h-6 w-6 bg-blue-500 hover:bg-blue-600"
+                          onClick={() => {
+                            setCropImageIndex(index);
+                            setShowCropEditor(true);
+                          }}
+                          title="Crop image"
+                        >
+                          <Crop className="h-3 w-3 text-white" />
+                        </Button>
+                      )}
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={() => handleRemoveMedia(index)}
+                        title="Remove"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
                     
                     <div className="absolute bottom-1 left-1">
                       {media.type === "image" ? (
@@ -571,78 +688,115 @@ export function PostComposer({
                       e.stopPropagation();
                       fileInputRef.current?.click();
                     }}
-                    className="aspect-square rounded-lg border-2 border-dashed border-muted-foreground/25 hover:border-muted-foreground/50 flex flex-col items-center justify-center gap-1 transition-colors"
+                    className="w-32 h-32 rounded-lg border-2 border-dashed border-muted-foreground/25 hover:border-muted-foreground/50 flex flex-col items-center justify-center gap-1 transition-colors"
                   >
                     <Upload className="h-6 w-6 text-muted-foreground" />
                     <span className="text-xs text-muted-foreground">Add Media</span>
                   </button>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground">
-                Images: JPEG, PNG (max 8MB) • Videos: MP4, MOV (max 100MB)
-              </p>
+              <div className="text-xs text-muted-foreground space-y-1">
+                <p>Images: JPEG, PNG (max 8MB) • Videos: MP4, MOV (max 100MB)</p>
+                {platform === "instagram" && (
+                  <p className="text-blue-600 dark:text-blue-400">
+                    {postType === "story" && "📐 Stories: 9:16 ratio recommended (e.g., 1080x1920)"}
+                    {postType === "reel" && "📐 Reels: 9:16 ratio recommended (e.g., 1080x1920), 3-90 sec"}
+                    {postType === "post" && "📐 Posts: 1:1 (square) or 4:5 (portrait) recommended"}
+                  </p>
+                )}
+                {platform === "facebook" && (
+                  <p className="text-blue-600 dark:text-blue-400">
+                    📐 Recommended: 1200x630 for optimal display
+                  </p>
+                )}
+              </div>
             </div>
 
-          {/* Schedule Date & Time */}
-          <div className="space-y-4">
+            {/* Post Timing Options */}
             <div>
-              <Label>Select Date</Label>
-              <div className="mt-2 flex justify-center border rounded-lg p-4 bg-white dark:bg-black">
-                <Calendar
-                  mode="single"
-                  selected={scheduledDate}
-                  onSelect={(date) => {
-                    console.log('✅ Date selected:', date);
-                    setScheduledDate(date);
-                  }}
-                  disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                  className="!bg-transparent"
-                />
+              <Label>When to Post</Label>
+              <div className="flex gap-2 mt-2">
+                <Button
+                  type="button"
+                  variant={postTiming === "now" ? "default" : "outline"}
+                  onClick={() => setPostTiming("now")}
+                  className="flex-1"
+                >
+                  Post Now
+                </Button>
+                <Button
+                  type="button"
+                  variant={postTiming === "later" ? "default" : "outline"}
+                  onClick={() => setPostTiming("later")}
+                  className="flex-1"
+                >
+                  Schedule for Later
+                </Button>
               </div>
-              {scheduledDate && (
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Selected: {format(scheduledDate, "PPPP")}
-                </p>
-              )}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Time</Label>
-                <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <input
-                    type="time"
-                    value={scheduledTime}
-                    onChange={(e) => setScheduledTime(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2 border border-input bg-background rounded-md"
-                  />
+            {/* Show date/time picker only when scheduling for later */}
+            {postTiming === "later" && (
+              <>
+                <div>
+                  <Label>Select Date</Label>
+                  <div className="mt-2 flex justify-center border rounded-lg p-4 bg-white dark:bg-black">
+                    <Calendar
+                      mode="single"
+                      selected={scheduledDate}
+                      onSelect={(date) => {
+                        console.log('✅ Date selected:', date);
+                        setScheduledDate(date);
+                      }}
+                      disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                      className="!bg-transparent"
+                    />
+                  </div>
+                  {scheduledDate && (
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      Selected: {format(scheduledDate, "PPPP")}
+                    </p>
+                  )}
                 </div>
-              </div>
 
-              <div className="space-y-2">
-                <Label>Timezone</Label>
-                <Select value={timezone} onValueChange={setTimezone}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="America/New_York">Eastern Time (ET)</SelectItem>
-                    <SelectItem value="America/Chicago">Central Time (CT)</SelectItem>
-                    <SelectItem value="America/Denver">Mountain Time (MT)</SelectItem>
-                    <SelectItem value="America/Los_Angeles">Pacific Time (PT)</SelectItem>
-                    <SelectItem value="America/Phoenix">Arizona (AZ)</SelectItem>
-                    <SelectItem value="America/Anchorage">Alaska (AK)</SelectItem>
-                    <SelectItem value="Pacific/Honolulu">Hawaii (HI)</SelectItem>
-                    <SelectItem value="Europe/London">London (GMT)</SelectItem>
-                    <SelectItem value="Europe/Paris">Paris (CET)</SelectItem>
-                    <SelectItem value="Asia/Tokyo">Tokyo (JST)</SelectItem>
-                    <SelectItem value="Australia/Sydney">Sydney (AEDT)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Time</Label>
+                    <div className="relative">
+                      <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <input
+                        type="time"
+                        value={scheduledTime}
+                        onChange={(e) => setScheduledTime(e.target.value)}
+                        className="w-full pl-10 pr-3 py-2 border border-input bg-background rounded-md"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Timezone</Label>
+                    <Select value={timezone} onValueChange={setTimezone}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="America/New_York">Eastern Time (ET)</SelectItem>
+                        <SelectItem value="America/Chicago">Central Time (CT)</SelectItem>
+                        <SelectItem value="America/Denver">Mountain Time (MT)</SelectItem>
+                        <SelectItem value="America/Los_Angeles">Pacific Time (PT)</SelectItem>
+                        <SelectItem value="America/Phoenix">Arizona (AZ)</SelectItem>
+                        <SelectItem value="America/Anchorage">Alaska (AK)</SelectItem>
+                        <SelectItem value="Pacific/Honolulu">Hawaii (HI)</SelectItem>
+                        <SelectItem value="Europe/London">London (GMT)</SelectItem>
+                        <SelectItem value="Europe/Paris">Paris (CET)</SelectItem>
+                        <SelectItem value="Asia/Tokyo">Tokyo (JST)</SelectItem>
+                        <SelectItem value="Australia/Sydney">Sydney (AEDT)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           <DialogFooter>
@@ -659,8 +813,8 @@ export function PostComposer({
               disabled={isSubmitting || !selectedAccountId || remainingChars < 0}
             >
               {isSubmitting 
-                ? (editPost ? "Updating..." : "Scheduling...") 
-                : (editPost ? "Update Post" : "Schedule Post")
+                ? (postTiming === "now" ? "Publishing..." : (editPost ? "Updating..." : "Scheduling..."))
+                : (postTiming === "now" ? "Post Now" : (editPost ? "Update Post" : "Schedule Post"))
               }
             </Button>
           </DialogFooter>
@@ -679,5 +833,23 @@ export function PostComposer({
           />
         </DialogContent>
       </Dialog>
+
+      {/* Image Crop Editor */}
+      {cropImageIndex !== null && cropImageIndex >= 0 && cropImageIndex < mediaFiles.length && (
+        <ImageCropEditor
+          image={mediaFiles[cropImageIndex]?.preview || ""}
+          open={showCropEditor}
+          onOpenChange={(open) => {
+            setShowCropEditor(open);
+            if (!open) setCropImageIndex(null);
+          }}
+          onCropComplete={handleCropComplete}
+          postType={postType}
+          suggestedAspectRatio={
+            postType === "story" || postType === "reel" ? 9 / 16 : postType === "post" ? 1 : undefined
+          }
+        />
+      )}
+    </>
   );
 }

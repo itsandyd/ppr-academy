@@ -582,7 +582,7 @@ export const getPostsToPublish = internalQuery({
   returns: v.array(v.any()),
   handler: async (ctx) => {
     const now = Date.now();
-    const fiveMinutesFromNow = now + (5 * 60 * 1000);
+    const oneHourAgo = now - (60 * 60 * 1000); // Don't retry posts older than 1 hour
 
     // Get posts scheduled for the next 5 minutes
     const posts = await ctx.db
@@ -590,18 +590,46 @@ export const getPostsToPublish = internalQuery({
       .withIndex("by_status", (q) => q.eq("status", "scheduled"))
       .collect();
 
-    // Filter posts that should be published now
+    // Filter posts that are due now (scheduledFor time has passed)
     const postsToPublish = posts.filter((post) => {
-      return post.scheduledFor <= fiveMinutesFromNow && post.scheduledFor > now - (60 * 1000);
+      // Post is due if scheduled time is in the past, but not too old (within 1 hour)
+      return post.scheduledFor <= now && post.scheduledFor > oneHourAgo;
     });
+    
+    console.log(`📅 Current time: ${new Date(now).toISOString()}`);
+    console.log(`📋 Found ${posts.length} scheduled posts, ${postsToPublish.length} are due now`);
+    
+    if (postsToPublish.length > 0) {
+      postsToPublish.forEach(post => {
+        console.log(`  ⏰ Post ${post._id} scheduled for ${new Date(post.scheduledFor).toISOString()} (${Math.round((now - post.scheduledFor) / 1000)}s ago)`);
+      });
+    }
 
-    // Enrich with account data
+    // Enrich with account data and media URLs
     const enrichedPosts = await Promise.all(
       postsToPublish.map(async (post) => {
         const account = await ctx.db.get(post.socialAccountId);
+        
+        // Convert storage IDs to public URLs for social media platforms
+        // Instagram and other platforms need publicly accessible URLs with file extensions
+        let mediaUrls: string[] = [];
+        if (post.mediaStorageIds && post.mediaStorageIds.length > 0) {
+          // Get the deployment URL from environment or use default
+          const deploymentUrl = process.env.CONVEX_SITE_URL || process.env.CONVEX_URL;
+          
+          // Generate URLs with file extensions for better Instagram compatibility
+          // Use .jpg as default extension - the endpoint will detect actual type and serve correctly
+          mediaUrls = post.mediaStorageIds.map((storageId: any) => {
+            return `${deploymentUrl}/social/media/${storageId}.jpg`;
+          });
+          
+          console.log(`  📎 Converted ${mediaUrls.length} storage IDs to public URLs`);
+        }
+        
         return {
           ...post,
           account,
+          mediaUrls,
         };
       })
     );

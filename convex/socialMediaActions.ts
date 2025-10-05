@@ -14,99 +14,169 @@ import { Id } from "./_generated/dataModel";
  */
 async function publishToInstagram(post: any, account: any): Promise<{ success: boolean; postId?: string; postUrl?: string; error?: string }> {
   try {
-    const { content, mediaUrls, platformOptions } = post;
+    const { content, mediaUrls, platformOptions, postType } = post;
     const { accessToken, platformData } = account;
+
+    console.log('📸 Publishing to Instagram:', {
+      postType,
+      hasMedia: mediaUrls?.length > 0,
+      mediaCount: mediaUrls?.length || 0,
+      accountId: platformData?.instagramBusinessAccountId,
+    });
 
     if (!platformData?.instagramBusinessAccountId) {
       throw new Error("Instagram Business Account ID not found");
     }
 
-    // Step 1: Upload media (if any)
-    let mediaContainerId: string | undefined;
+    // Instagram requires media for all post types
+    if (!mediaUrls || mediaUrls.length === 0) {
+      throw new Error("Instagram posts require at least one image or video");
+    }
+
+    // Step 1: Upload media
+    const mediaUrl = mediaUrls[0];
+    console.log('📤 Uploading media:', mediaUrl);
     
-    if (mediaUrls && mediaUrls.length > 0) {
-      // For single image/video
-      const mediaUrl = mediaUrls[0];
-      const isVideo = mediaUrl.includes('.mp4') || mediaUrl.includes('.mov');
+    // Detect media type from URL or content
+    const isVideo = mediaUrl.toLowerCase().includes('mp4') || 
+                    mediaUrl.toLowerCase().includes('mov') || 
+                    mediaUrl.toLowerCase().includes('video');
 
-      const uploadEndpoint = `https://graph.facebook.com/v18.0/${platformData.instagramBusinessAccountId}/media`;
-      const uploadParams = new URLSearchParams({
-        access_token: accessToken,
-        caption: content,
-        [isVideo ? 'video_url' : 'image_url']: mediaUrl,
-      });
+    const uploadEndpoint = `https://graph.facebook.com/v18.0/${platformData.instagramBusinessAccountId}/media`;
+    const uploadParams = new URLSearchParams({
+      access_token: accessToken,
+    });
 
-      if (platformOptions?.instagramLocation) {
-        uploadParams.append('location_id', platformOptions.instagramLocation);
-      }
-
-      const uploadResponse = await fetch(`${uploadEndpoint}?${uploadParams}`, {
-        method: 'POST',
-      });
-
-      if (!uploadResponse.ok) {
-        const error = await uploadResponse.json();
-        throw new Error(`Failed to upload media: ${JSON.stringify(error)}`);
-      }
-
-      const uploadData = await uploadResponse.json();
-      mediaContainerId = uploadData.id;
-
-      // For videos, wait for processing
-      if (isVideo) {
-        let processingComplete = false;
-        let attempts = 0;
-        const maxAttempts = 30; // 5 minutes max
-
-        while (!processingComplete && attempts < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, 10000)); // Wait 10 seconds
-
-          const statusResponse = await fetch(
-            `https://graph.facebook.com/v18.0/${mediaContainerId}?fields=status_code&access_token=${accessToken}`
-          );
-          const statusData = await statusResponse.json();
-
-          if (statusData.status_code === 'FINISHED') {
-            processingComplete = true;
-          } else if (statusData.status_code === 'ERROR') {
-            throw new Error('Video processing failed');
-          }
-
-          attempts++;
-        }
-
-        if (!processingComplete) {
-          throw new Error('Video processing timeout');
-        }
+    // Add media URL based on type
+    if (isVideo) {
+      uploadParams.append('video_url', mediaUrl);
+      uploadParams.append('media_type', postType === 'reel' ? 'REELS' : 'VIDEO');
+    } else {
+      uploadParams.append('image_url', mediaUrl);
+      // Stories use a different media type
+      if (postType === 'story') {
+        uploadParams.append('media_type', 'STORIES');
       }
     }
 
-    // Step 2: Publish the post
-    const publishEndpoint = `https://graph.facebook.com/v18.0/${platformData.instagramBusinessAccountId}/media_publish`;
-    const publishParams = new URLSearchParams({
-      access_token: accessToken,
-      creation_id: mediaContainerId!,
-    });
+    // Add caption only for posts and reels (stories don't support captions)
+    if (content && postType !== 'story') {
+      uploadParams.append('caption', content);
+    }
 
-    const publishResponse = await fetch(`${publishEndpoint}?${publishParams}`, {
+    // Add optional location
+    if (platformOptions?.instagramLocation) {
+      uploadParams.append('location_id', platformOptions.instagramLocation);
+    }
+
+    // Upload media to Instagram
+    const uploadResponse = await fetch(`${uploadEndpoint}?${uploadParams}`, {
       method: 'POST',
     });
 
-    if (!publishResponse.ok) {
-      const error = await publishResponse.json();
-      throw new Error(`Failed to publish: ${JSON.stringify(error)}`);
+    if (!uploadResponse.ok) {
+      const error = await uploadResponse.json();
+      console.error('❌ Instagram media upload failed:', error);
+      throw new Error(`Failed to upload media: ${JSON.stringify(error)}`);
     }
 
-    const publishData = await publishResponse.json();
-    const postId = publishData.id;
+    const uploadData = await uploadResponse.json();
+    const mediaContainerId = uploadData.id;
+    console.log('✅ Media container created:', mediaContainerId);
 
-    return {
-      success: true,
-      postId,
-      postUrl: `https://www.instagram.com/p/${postId}/`,
-    };
+    // Wait for media processing
+    if (isVideo) {
+      // For videos and reels, wait for processing with status checks
+      console.log('⏳ Waiting for video processing...');
+      let processingComplete = false;
+      let attempts = 0;
+      const maxAttempts = 30; // 5 minutes max
+
+      while (!processingComplete && attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 10000)); // Wait 10 seconds
+
+        const statusResponse = await fetch(
+          `https://graph.facebook.com/v18.0/${mediaContainerId}?fields=status_code&access_token=${accessToken}`
+        );
+        const statusData = await statusResponse.json();
+
+        console.log(`⏳ Video status check ${attempts + 1}/${maxAttempts}:`, statusData.status_code);
+
+        if (statusData.status_code === 'FINISHED') {
+          processingComplete = true;
+        } else if (statusData.status_code === 'ERROR') {
+          throw new Error('Video processing failed');
+        }
+
+        attempts++;
+      }
+
+      if (!processingComplete) {
+        throw new Error('Video processing timeout');
+      }
+      
+      console.log('✅ Video processing complete');
+    } else {
+      // For images and stories, wait a few seconds for Instagram to process
+      console.log('⏳ Waiting 5 seconds for image processing...');
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      console.log('✅ Image processing wait complete');
+    }
+
+    // Step 2: Publish the post (with retry logic)
+    console.log('📢 Publishing post with container ID:', mediaContainerId);
+    
+    const publishEndpoint = `https://graph.facebook.com/v18.0/${platformData.instagramBusinessAccountId}/media_publish`;
+    const publishParams = new URLSearchParams({
+      access_token: accessToken,
+      creation_id: mediaContainerId,
+    });
+
+    let publishAttempts = 0;
+    const maxPublishAttempts = 5;
+    let lastError: any = null;
+    
+    // Retry publishing if media is not ready yet
+    while (publishAttempts < maxPublishAttempts) {
+      const publishResponse = await fetch(`${publishEndpoint}?${publishParams}`, {
+        method: 'POST',
+      });
+
+      if (publishResponse.ok) {
+        // Success! Parse and return
+        const publishData = await publishResponse.json();
+        const postId = publishData.id;
+        
+        console.log('✅ Instagram post published successfully:', postId);
+
+        return {
+          success: true,
+          postId,
+          postUrl: `https://www.instagram.com/p/${postId}/`,
+        };
+      }
+
+      const error = await publishResponse.json();
+      lastError = error;
+      
+      // Check if it's a "media not ready" error (code 9007)
+      if (error.error?.code === 9007 && publishAttempts < maxPublishAttempts - 1) {
+        console.log(`⏳ Media not ready yet, waiting 3 seconds... (attempt ${publishAttempts + 1}/${maxPublishAttempts})`);
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        publishAttempts++;
+        continue;
+      }
+      
+      // Other errors - throw immediately
+      console.error('❌ Instagram publish failed:', error);
+      throw new Error(`Failed to publish: ${JSON.stringify(error)}`);
+    }
+    
+    // Max attempts reached
+    console.error('❌ Instagram publish failed after retries:', lastError);
+    throw new Error(`Failed to publish after ${maxPublishAttempts} attempts: ${JSON.stringify(lastError)}`);
   } catch (error: any) {
-    console.error('Instagram publish error:', error);
+    console.error('❌ Instagram publish error:', error);
     return {
       success: false,
       error: error.message || 'Unknown error',

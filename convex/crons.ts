@@ -5,7 +5,7 @@ import { v } from "convex/values";
 
 /**
  * Process scheduled social media posts
- * Runs every 5 minutes to check for posts that need to be published
+ * Runs every 1 minute to check for posts that need to be published
  */
 export const processScheduledPosts = internalAction({
   args: {},
@@ -67,10 +67,10 @@ export const refreshExpiringTokens = internalAction({
 
 const crons = cronJobs();
 
-// Run every 5 minutes to process scheduled posts
+// Run every 1 minute to process scheduled posts (industry standard: 1-2 min accuracy)
 crons.interval(
   "process scheduled social media posts",
-  { minutes: 5 },
+  { minutes: 1 },
   internal.crons.processScheduledPosts,
   {}
 );
