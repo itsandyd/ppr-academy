@@ -61,15 +61,15 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
     store ? { clerkId: store.userId } : "skip"
   );
 
-  // Fetch products for this store
+  // Fetch published products for this store (public storefront only shows published)
   const products = useQuery(
-    api.digitalProducts.getProductsByStore,
+    api.digitalProducts.getPublishedProductsByStore,
     store ? { storeId: store._id } : "skip"
   );
 
-  // Fetch courses from Convex
+  // Fetch published courses from Convex (public storefront only shows published)
   const courses = useQuery(
-    api.courses.getCoursesByStore,
+    api.courses.getPublishedCoursesByStore,
     store ? { storeId: store._id } : "skip"
   );
 

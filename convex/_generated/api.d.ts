@@ -23,6 +23,8 @@ import type * as courses from "../courses.js";
 import type * as credits from "../credits.js";
 import type * as crons from "../crons.js";
 import type * as customers from "../customers.js";
+import type * as debug from "../debug.js";
+import type * as debugFix from "../debugFix.js";
 import type * as digitalProducts from "../digitalProducts.js";
 import type * as emailCampaigns from "../emailCampaigns.js";
 import type * as emailWorkflows from "../emailWorkflows.js";
@@ -42,6 +44,7 @@ import type * as seedCreditPackages from "../seedCreditPackages.js";
 import type * as socialMedia from "../socialMedia.js";
 import type * as socialMediaActions from "../socialMediaActions.js";
 import type * as stores from "../stores.js";
+import type * as userLibrary from "../userLibrary.js";
 import type * as users from "../users.js";
 
 /**
@@ -63,6 +66,8 @@ declare const fullApi: ApiFromModules<{
   credits: typeof credits;
   crons: typeof crons;
   customers: typeof customers;
+  debug: typeof debug;
+  debugFix: typeof debugFix;
   digitalProducts: typeof digitalProducts;
   emailCampaigns: typeof emailCampaigns;
   emailWorkflows: typeof emailWorkflows;
@@ -82,6 +87,7 @@ declare const fullApi: ApiFromModules<{
   socialMedia: typeof socialMedia;
   socialMediaActions: typeof socialMediaActions;
   stores: typeof stores;
+  userLibrary: typeof userLibrary;
   users: typeof users;
 }>;
 export declare const api: FilterApi<

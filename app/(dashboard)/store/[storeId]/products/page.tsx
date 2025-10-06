@@ -33,10 +33,10 @@ export default function ProductsPage() {
     user?.id ? { clerkId: user.id } : "skip"
   );
 
-  // Get user's products
+  // Get user's products (using clerkId since courses.userId stores clerkId)
   const userCourses = useQuery(
     api.courses.getCoursesByUser,
-    convexUser?._id ? { userId: convexUser._id } : "skip"
+    convexUser?.clerkId ? { userId: convexUser.clerkId } : "skip"
   );
 
   const digitalProducts = useQuery(

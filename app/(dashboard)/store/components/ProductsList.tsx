@@ -488,7 +488,7 @@ export function ProductsList({ products, storeId }: ProductsListProps) {
                                   <MoreVertical className="h-4 w-4" />
                                 </Button>
                               </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-48">
+                              <DropdownMenuContent align="end" className="w-48 bg-white dark:bg-black">
                                 <DropdownMenuLabel>Manage Course</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem asChild>
@@ -653,7 +653,7 @@ export function ProductsList({ products, storeId }: ProductsListProps) {
                                     <MoreVertical className="h-4 w-4" />
                                   </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
+                                <DropdownMenuContent align="end" className="bg-white dark:bg-black">
                                   <DropdownMenuLabel>Actions</DropdownMenuLabel>
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem asChild>

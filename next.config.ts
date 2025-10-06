@@ -40,6 +40,12 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'fastidious-snake-859.convex.cloud',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
 };

@@ -89,7 +89,7 @@ interface CourseCreationContextType {
   saveCourse: () => Promise<void>;
   validateStep: (step: keyof StepCompletion) => boolean;
   canPublish: () => boolean;
-  createCourse: () => Promise<{ success: boolean; error?: string; courseId?: Id<"courses"> }>;
+  createCourse: () => Promise<{ success: boolean; error?: string; courseId?: Id<"courses">; slug?: string }>;
   togglePublished: () => Promise<{ success: boolean; isPublished?: boolean }>;
 }
 
@@ -124,10 +124,10 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
   );
 
 
-  // Get existing course if editing
+  // Get existing course if editing (using clerkId since courses.userId stores clerkId)
   const existingCourse = useQuery(
     api.courses.getCourseForEdit,
-    courseId && convexUser?._id ? { courseId, userId: convexUser._id } : "skip"
+    courseId && convexUser?.clerkId ? { courseId, userId: convexUser.clerkId } : "skip"
   );
 
 
@@ -370,7 +370,7 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
             title: "Course Updated!",
             description: "Your course has been updated successfully.",
           });
-          return { success: true, courseId: state.courseId };
+          return { success: true, courseId: state.courseId, slug: state.data?.title?.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') };
         } else {
           return { success: false, error: result.error || "Failed to update course" };
         }
@@ -387,7 +387,7 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
             title: "Course Created!",
             description: "Your course has been created successfully.",
           });
-          return { success: true, courseId: result.courseId };
+          return { success: true, courseId: result.courseId, slug: result.slug };
         } else {
           return { success: false, error: "Failed to create course" };
         }

@@ -1,0 +1,42 @@
+# PPR Academy - Cursor AI Rules
+
+## UI Component Guidelines
+
+### Toast Notifications
+- Always use `bg-white dark:bg-black` for toast backgrounds
+- Example: `<Toast className="bg-white dark:bg-black" />`
+
+### Dropdown Menus  
+- Always use `bg-white dark:bg-black` for dropdown backgrounds
+- Example: `<DropdownMenuContent className="bg-white dark:bg-black">`
+
+### Form Validation
+- Mark required fields with red asterisk (*)
+- Show red border when field is touched and empty
+- Display inline error messages below invalid fields
+- Never use placeholder text as actual content
+
+## Data Query Guidelines
+
+### User Queries
+- When querying courses by user: Use `convexUser.clerkId`
+- When querying digital products by user: Use `convexUser._id`
+- Courses store `userId` as Clerk ID, not Convex ID
+
+### Storefront Queries
+- Public storefronts: Use `getPublishedProductsByStore` and `getPublishedCoursesByStore`
+- Dashboard: Use `getProductsByStore` and `getCoursesByStore` (shows all)
+
+## Course Preview Mode
+- Unpublished courses accessible to owner with `?preview=true` URL parameter
+- Show preview banner: "Preview Mode - This course is not published yet"
+- Check: `isOwner && isPreview` before showing unpublished course
+
+## Error Messages
+- Always show specific error messages
+- Include details about what went wrong
+- Never show generic "Failed" without context
+
+## Next.js Configuration
+- When using Convex storage URLs in `next/image` components, add the hostname to `next.config.ts`
+- Add to `images.remotePatterns`: `{ protocol: 'https', hostname: '[deployment].convex.cloud', port: '', pathname: '/**' }`

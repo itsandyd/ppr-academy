@@ -31,6 +31,11 @@ export function CheckoutForm() {
     acceptsStripe: true,
   });
 
+  const [touched, setTouched] = useState({
+    price: false,
+    checkoutHeadline: false,
+  });
+
   // Load data from context when available
   useEffect(() => {
     if (state.data) {
@@ -55,6 +60,14 @@ export function CheckoutForm() {
     
     // Update context with new data
     updateData("checkout", newData);
+  };
+
+  const handleBlur = (field: keyof typeof touched) => {
+    setTouched(prev => ({ ...prev, [field]: true }));
+  };
+
+  const getFieldError = (field: keyof typeof touched, value: any) => {
+    return touched[field] && !value;
   };
 
   const handleBack = () => {
@@ -83,8 +96,10 @@ export function CheckoutForm() {
         </CardHeader>
         <CardContent className="px-4 sm:px-6 space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-            <div>
-              <Label htmlFor="price" className="text-foreground text-sm font-medium">Course Price (USD) *</Label>
+            <div className="space-y-2">
+              <Label htmlFor="price" className="text-foreground text-sm font-medium flex items-center gap-1">
+                Course Price (USD) <span className="text-red-600">*</span>
+              </Label>
               <Input
                 id="price"
                 type="number"
@@ -92,9 +107,19 @@ export function CheckoutForm() {
                 min="0"
                 value={formData.price}
                 onChange={(e) => handleInputChange("price", e.target.value)}
+                onBlur={() => handleBlur("price")}
                 placeholder="99.00"
-                className="mt-2 h-12 text-base"
+                className={`mt-2 h-12 text-base ${
+                  getFieldError("price", formData.price)
+                    ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+                    : ""
+                }`}
               />
+              {getFieldError("price", formData.price) && (
+                <p className="text-sm text-red-600 font-medium">
+                  ⚠️ Price is required
+                </p>
+              )}
             </div>
 
             <div>
@@ -142,15 +167,27 @@ export function CheckoutForm() {
           </CardTitle>
         </CardHeader>
         <CardContent className="px-4 sm:px-6 space-y-6">
-          <div>
-            <Label htmlFor="checkout-headline" className="text-foreground text-sm font-medium">Checkout Headline *</Label>
+          <div className="space-y-2">
+            <Label htmlFor="checkout-headline" className="text-foreground text-sm font-medium flex items-center gap-1">
+              Checkout Headline <span className="text-red-600">*</span>
+            </Label>
             <Input
               id="checkout-headline"
               value={formData.checkoutHeadline}
               onChange={(e) => handleInputChange("checkoutHeadline", e.target.value)}
-              placeholder="Get Instant Access to the Complete Course"
-              className="mt-2 h-12 text-base"
+              onBlur={() => handleBlur("checkoutHeadline")}
+              placeholder="e.g., Start Learning Today"
+              className={`mt-2 h-12 text-base ${
+                getFieldError("checkoutHeadline", formData.checkoutHeadline)
+                  ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+                  : ""
+              }`}
             />
+            {getFieldError("checkoutHeadline", formData.checkoutHeadline) && (
+              <p className="text-sm text-red-600 font-medium">
+                ⚠️ Checkout headline is required
+              </p>
+            )}
           </div>
 
           <div>

@@ -44,11 +44,25 @@ const skillLevels = [
 
 function CourseBasicInfoCard() {
   const { state, updateData } = useCourseCreation();
+  const [touched, setTouched] = useState({
+    title: false,
+    description: false,
+    category: false,
+    skillLevel: false,
+  });
   
   const handleInputChange = (field: string, value: string) => {
     const newData = { ...state.data, [field]: value };
     console.log("🔄 CourseBasicInfoCard updating context with:", { step: "course", data: { [field]: value } });
     updateData("course", { [field]: value });
+  };
+
+  const handleBlur = (field: keyof typeof touched) => {
+    setTouched(prev => ({ ...prev, [field]: true }));
+  };
+
+  const getFieldError = (field: keyof typeof touched, value: any) => {
+    return touched[field] && !value;
   };
 
   return (
@@ -63,52 +77,86 @@ function CourseBasicInfoCard() {
           Tell us about your course
         </h2>
         <p className="text-gray-600 max-w-2xl mx-auto">
-          Provide the basic information that will help students understand what they'll learn in your course.
+          All fields marked with <span className="text-red-600 font-bold">*</span> are required before you can publish your course.
         </p>
       </div>
 
       {/* Form Fields */}
       <div className="space-y-8">
         <div className="space-y-3">
-          <Label htmlFor="title" className="text-base font-semibold text-gray-900">
-            Course Title *
+          <Label htmlFor="title" className="text-base font-semibold text-gray-900 flex items-center gap-1">
+            Course Title <span className="text-red-600">*</span>
           </Label>
           <Input
             id="title"
-            placeholder="Ultimate Guide to Ableton Live Audio Effects"
+            placeholder="e.g., Mastering Hip-Hop Drums"
             value={state.data?.title || ""}
             onChange={(e) => handleInputChange("title", e.target.value)}
-            className="h-14 text-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl"
+            onBlur={() => handleBlur("title")}
+            className={`h-14 text-lg border-2 rounded-xl ${
+              getFieldError("title", state.data?.title)
+                ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+                : "border-gray-200 focus:border-blue-500 focus:ring-blue-500/20"
+            }`}
           />
-          <p className="text-sm text-gray-500">
-            Choose a clear, descriptive title that tells students exactly what they'll learn.
-          </p>
+          {getFieldError("title", state.data?.title) && (
+            <p className="text-sm text-red-600 font-medium">
+              ⚠️ Course title is required
+            </p>
+          )}
+          {!getFieldError("title", state.data?.title) && (
+            <p className="text-sm text-gray-500">
+              Choose a clear, descriptive title that tells students exactly what they'll learn.
+            </p>
+          )}
         </div>
 
         <div className="space-y-3">
-          <Label htmlFor="description" className="text-base font-semibold text-gray-900">
-            Course Description *
+          <Label htmlFor="description" className="text-base font-semibold text-gray-900 flex items-center gap-1">
+            Course Description <span className="text-red-600">*</span>
           </Label>
           <Textarea
             id="description"
-            placeholder="What are audio effects? Ranging from subtle mixing tools to extreme sound manglers, effects are used in every part of the music production process. A good understanding of audio effects will help you improve your mixes, add character to your sounds, and take your music to the next level..."
+            placeholder="Describe what students will learn in this course..."
             value={state.data?.description || ""}
             onChange={(e) => handleInputChange("description", e.target.value)}
-            className="min-h-[150px] text-base border-2 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 resize-none rounded-xl"
+            onBlur={() => handleBlur("description")}
+            className={`min-h-[150px] text-base border-2 resize-none rounded-xl ${
+              getFieldError("description", state.data?.description)
+                ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+                : "border-gray-200 focus:border-blue-500 focus:ring-blue-500/20"
+            }`}
             rows={6}
           />
-          <p className="text-sm text-gray-500">
-            Describe what students will learn and how it will benefit them. Be specific and compelling.
-          </p>
+          {getFieldError("description", state.data?.description) && (
+            <p className="text-sm text-red-600 font-medium">
+              ⚠️ Course description is required
+            </p>
+          )}
+          {!getFieldError("description", state.data?.description) && (
+            <p className="text-sm text-gray-500">
+              Describe what students will learn and how it will benefit them. Be specific and compelling.
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-3">
-            <Label htmlFor="category" className="text-base font-semibold text-gray-900">
-              Category *
+            <Label htmlFor="category" className="text-base font-semibold text-gray-900 flex items-center gap-1">
+              Category <span className="text-red-600">*</span>
             </Label>
-            <Select value={state.data?.category || ""} onValueChange={(value) => handleInputChange("category", value)}>
-              <SelectTrigger className="h-14 border-2 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl text-base">
+            <Select 
+              value={state.data?.category || ""} 
+              onValueChange={(value) => {
+                handleInputChange("category", value);
+                setTouched(prev => ({ ...prev, category: true }));
+              }}
+            >
+              <SelectTrigger className={`h-14 border-2 rounded-xl text-base ${
+                getFieldError("category", state.data?.category)
+                  ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+                  : "border-gray-200 focus:border-blue-500 focus:ring-blue-500/20"
+              }`}>
                 <SelectValue placeholder="Choose a category" />
               </SelectTrigger>
               <SelectContent>
@@ -119,17 +167,34 @@ function CourseBasicInfoCard() {
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-sm text-gray-500">
-              Help students find your course by selecting the most relevant category.
-            </p>
+            {getFieldError("category", state.data?.category) && (
+              <p className="text-sm text-red-600 font-medium">
+                ⚠️ Category is required
+              </p>
+            )}
+            {!getFieldError("category", state.data?.category) && (
+              <p className="text-sm text-gray-500">
+                Help students find your course by selecting the most relevant category.
+              </p>
+            )}
           </div>
 
           <div className="space-y-3">
-            <Label htmlFor="skillLevel" className="text-base font-semibold text-gray-900">
-              Skill Level *
+            <Label htmlFor="skillLevel" className="text-base font-semibold text-gray-900 flex items-center gap-1">
+              Skill Level <span className="text-red-600">*</span>
             </Label>
-            <Select value={state.data?.skillLevel || ""} onValueChange={(value) => handleInputChange("skillLevel", value)}>
-              <SelectTrigger className="h-14 border-2 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl text-base">
+            <Select 
+              value={state.data?.skillLevel || ""} 
+              onValueChange={(value) => {
+                handleInputChange("skillLevel", value);
+                setTouched(prev => ({ ...prev, skillLevel: true }));
+              }}
+            >
+              <SelectTrigger className={`h-14 border-2 rounded-xl text-base ${
+                getFieldError("skillLevel", state.data?.skillLevel)
+                  ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
+                  : "border-gray-200 focus:border-blue-500 focus:ring-blue-500/20"
+              }`}>
                 <SelectValue placeholder="Select skill level" />
               </SelectTrigger>
               <SelectContent>
@@ -140,9 +205,16 @@ function CourseBasicInfoCard() {
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-sm text-gray-500">
-              Set expectations by indicating the required skill level for your course.
-            </p>
+            {getFieldError("skillLevel", state.data?.skillLevel) && (
+              <p className="text-sm text-red-600 font-medium">
+                ⚠️ Skill level is required
+              </p>
+            )}
+            {!getFieldError("skillLevel", state.data?.skillLevel) && (
+              <p className="text-sm text-gray-500">
+                Set expectations by indicating the required skill level for your course.
+              </p>
+            )}
           </div>
         </div>
       </div>

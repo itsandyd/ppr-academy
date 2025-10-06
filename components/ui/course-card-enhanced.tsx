@@ -70,7 +70,10 @@ export const CourseCardEnhanced: FC<CourseCardProps> = ({
   variant = "default",
   className,
 }) => {
-  const href = slug ? `/courses/${slug}` : `/courses/${id}`;
+  // Use library player for enrolled courses, sales page for non-enrolled
+  const href = isEnrolled 
+    ? (slug ? `/library/courses/${slug}` : `/library/courses/${id}`)
+    : (slug ? `/courses/${slug}` : `/courses/${id}`);
   
   const skillLevelColors = {
     Beginner: "bg-green-100 text-green-800 border-green-200",
@@ -317,7 +320,7 @@ export const CourseCardEnhanced: FC<CourseCardProps> = ({
               
               <Link href={href}>
                 <Button className="group/btn">
-                  {isEnrolled ? "Continue" : "Learn More"}
+                  {isEnrolled ? "Continue Learning" : "Learn More"}
                   <ChevronRight className="w-4 h-4 ml-1 group-hover/btn:translate-x-1 transition-transform" />
                 </Button>
               </Link>
@@ -456,7 +459,7 @@ export const CourseCardEnhanced: FC<CourseCardProps> = ({
             
             <Link href={href}>
               <Button size="sm" className="group/btn">
-                {isEnrolled ? "Continue" : "View Course"}
+                {isEnrolled ? "Continue Learning" : "View Course"}
                 <ChevronRight className="w-4 h-4 ml-1 group-hover/btn:translate-x-1 transition-transform" />
               </Button>
             </Link>

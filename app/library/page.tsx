@@ -2,12 +2,15 @@
 
 import { CourseCardEnhanced } from "@/components/ui/course-card-enhanced";
 import { useUser } from "@clerk/nextjs";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
 import { 
   BookOpen, 
   TrendingUp, 
@@ -19,7 +22,8 @@ import {
   Play,
   Calendar,
   Bell,
-  ChevronRight
+  ChevronRight,
+  Loader2
 } from "lucide-react";
 
 // Force dynamic rendering
@@ -27,137 +31,90 @@ export const dynamic = 'force-dynamic';
 
 export default function LibraryPage() {
   const { user } = useUser();
+  
+  // Get Convex user
+  const convexUser = useQuery(
+    api.users.getUserFromClerk,
+    user?.id ? { clerkId: user.id } : "skip"
+  );
 
-  // Mock data - replace with real data from your Convex queries
+  // Fetch user's enrolled courses
+  const enrolledCourses = useQuery(
+    api.userLibrary.getUserEnrolledCourses,
+    convexUser?.clerkId ? { userId: convexUser.clerkId } : "skip"
+  );
+
+  // Fetch user's library stats
+  const userStats = useQuery(
+    api.userLibrary.getUserLibraryStats,
+    convexUser?.clerkId ? { userId: convexUser.clerkId } : "skip"
+  );
+
+  // Fetch recent activity
+  const recentActivity = useQuery(
+    api.userLibrary.getUserRecentActivity,
+    convexUser?.clerkId ? { userId: convexUser.clerkId, limit: 5 } : "skip"
+  );
+
+  // User display data
   const userData = {
     name: user?.firstName || "Student",
     email: user?.primaryEmailAddress?.emailAddress || "",
     avatar: user?.imageUrl,
     level: "Music Producer Level 3",
-    xp: 2450,
+    xp: (userStats?.coursesCompleted || 0) * 100 + (userStats?.totalHoursLearned || 0) * 10,
     nextLevelXp: 3000,
   };
 
-  const stats = {
-    coursesEnrolled: 8,
-    coursesCompleted: 3,
-    totalHoursLearned: 47,
-    currentStreak: 12,
-    certificatesEarned: 3,
-    nextMilestone: {
-      title: "Complete 5 Courses",
-      progress: 3,
-      target: 5,
-    },
+  // Use real stats or defaults
+  const stats = userStats || {
+    coursesEnrolled: 0,
+    coursesCompleted: 0,
+    totalHoursLearned: 0,
+    currentStreak: 0,
+    certificatesEarned: 0,
   };
 
-  const recentActivity = [
-    {
-      id: "1",
-      type: "completed_lesson" as const,
-      title: "Finished 'Advanced EQ Techniques'",
-      courseName: "Mixing Masterclass",
-      timestamp: "2 hours ago",
-    },
-    {
-      id: "2", 
-      type: "started_course" as const,
-      title: "Started new course",
-      courseName: "Beat Making Fundamentals",
-      timestamp: "1 day ago",
-    },
-    {
-      id: "3",
-      type: "earned_certificate" as const,
-      title: "Earned certificate",
-      courseName: "Music Theory Basics",
-      timestamp: "3 days ago",
-    },
-  ];
-
-  // Mock course data for the "Continue Learning" section
-  const continueLearningCourses = [
-    {
-      id: "1",
-      title: "Advanced Mixing Techniques",
-      description: "Master the art of professional mixing with industry-standard techniques and tools.",
-      imageUrl: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=225&fit=crop",
-      price: 99,
-      category: "Mixing",
-      skillLevel: "Intermediate" as const,
-      slug: "advanced-mixing-techniques",
-      instructor: {
-        name: "Alex Johnson",
-        avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop&crop=face",
-        verified: true,
-      },
-      stats: {
-        students: 1250,
-        lessons: 24,
-        duration: "8h 30m",
-        rating: 4.8,
-        reviews: 156,
-      },
-      progress: 65,
-      isEnrolled: true,
-      isNew: false,
-      isTrending: true,
-    },
-    {
-      id: "2",
-      title: "Beat Making Fundamentals",
-      description: "Learn the basics of creating beats from scratch using modern production techniques.",
-      imageUrl: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=225&fit=crop",
-      price: 79,
-      category: "Beat Making",
-      skillLevel: "Beginner" as const,
-      slug: "beat-making-fundamentals",
-      instructor: {
-        name: "Sarah Chen",
-        avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b639?w=32&h=32&fit=crop&crop=face",
-        verified: true,
-      },
-      stats: {
-        students: 2100,
-        lessons: 18,
-        duration: "6h 45m",
-        rating: 4.9,
-        reviews: 203,
-      },
-      progress: 25,
-      isEnrolled: true,
-      isNew: true,
-      isTrending: false,
-    },
-    {
-      id: "3",
-      title: "Vocal Production Masterclass",
-      description: "Professional vocal recording, editing, and production techniques for modern music.",
-      imageUrl: "https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=400&h=225&fit=crop",
-      price: 129,
-      category: "Vocal Production",
-      skillLevel: "Advanced" as const,
-      slug: "vocal-production-masterclass",
-      instructor: {
-        name: "Mike Rodriguez",
-        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=32&h=32&fit=crop&crop=face",
-        verified: true,
-      },
-      stats: {
-        students: 890,
-        lessons: 32,
-        duration: "12h 15m",
-        rating: 4.7,
-        reviews: 98,
-      },
-      progress: 0,
-      isEnrolled: true,
-      isNew: false,
-      isTrending: false,
-    },
-  ];
+  const nextMilestone = {
+    title: "Complete 5 Courses",
+    progress: stats.coursesCompleted,
+    target: 5,
+  };
 
   const levelProgress = (userData.xp / userData.nextLevelXp) * 100;
+
+  // Loading state
+  if (
+    enrolledCourses === undefined ||
+    userStats === undefined ||
+    recentActivity === undefined
+  ) {
+    return (
+      <div className="space-y-8">
+        <Card className="p-8">
+          <div className="flex items-center gap-4">
+            <Skeleton className="w-16 h-16 rounded-full" />
+            <div className="flex-1">
+              <Skeleton className="h-8 w-64 mb-2" />
+              <Skeleton className="h-4 w-96" />
+            </div>
+          </div>
+        </Card>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i}>
+              <CardContent className="p-6">
+                <Skeleton className="h-20" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -284,28 +241,52 @@ export default function LibraryPage() {
             </TabsList>
 
             <TabsContent value="continue" className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {continueLearningCourses.map((course) => (
-                  <CourseCardEnhanced
-                    key={course.id}
-                    id={course.id}
-                    title={course.title}
-                    description={course.description}
-                    imageUrl={course.imageUrl}
-                    price={course.price}
-                    category={course.category}
-                    skillLevel={course.skillLevel}
-                    slug={course.slug}
-                    instructor={course.instructor}
-                    stats={course.stats}
-                    progress={course.progress}
-                    isEnrolled={course.isEnrolled}
-                    isNew={course.isNew}
-                    isTrending={course.isTrending}
-                    variant="default"
-                  />
-                ))}
-              </div>
+              {enrolledCourses && enrolledCourses.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {enrolledCourses.map((course: any) => (
+                    <CourseCardEnhanced
+                      key={course._id}
+                      id={course._id}
+                      title={course.title}
+                      description={course.description || ""}
+                      imageUrl={course.imageUrl || ""}
+                      price={course.price || 0}
+                      category={course.category || "Course"}
+                      skillLevel={course.skillLevel || "Beginner"}
+                      slug={course.slug || ""}
+                      instructor={{
+                        name: "Instructor",
+                        avatar: "",
+                        verified: true,
+                      }}
+                      stats={{
+                        students: 0,
+                        lessons: 0,
+                        duration: "0h 0m",
+                        rating: 0,
+                        reviews: 0,
+                      }}
+                      progress={course.progress || 0}
+                      isEnrolled={true}
+                      isNew={false}
+                      isTrending={false}
+                      variant="default"
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <BookOpen className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No Enrolled Courses Yet</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Start your learning journey by enrolling in a course.
+                  </p>
+                  <Button>
+                    <BookOpen className="w-4 h-4 mr-2" />
+                    Browse Courses
+                  </Button>
+                </div>
+              )}
             </TabsContent>
 
             <TabsContent value="recommended" className="space-y-6">
@@ -344,18 +325,20 @@ export default function LibraryPage() {
               <div className="space-y-4">
                 <div>
                   <div className="flex justify-between text-sm mb-2">
-                    <span className="font-medium">{stats.nextMilestone.title}</span>
+                    <span className="font-medium">{nextMilestone.title}</span>
                     <span className="text-muted-foreground">
-                      {stats.nextMilestone.progress}/{stats.nextMilestone.target}
+                      {nextMilestone.progress}/{nextMilestone.target}
                     </span>
                   </div>
                   <Progress 
-                    value={(stats.nextMilestone.progress / stats.nextMilestone.target) * 100} 
+                    value={(nextMilestone.progress / nextMilestone.target) * 100} 
                     className="h-2"
                   />
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Complete {stats.nextMilestone.target - stats.nextMilestone.progress} more lessons to unlock your next achievement!
+                  {nextMilestone.progress >= nextMilestone.target
+                    ? "🎉 Milestone achieved! Great work!"
+                    : `Complete ${nextMilestone.target - nextMilestone.progress} more ${nextMilestone.target - nextMilestone.progress === 1 ? "course" : "courses"} to unlock your next achievement!`}
                 </p>
               </div>
             </CardContent>
@@ -370,22 +353,33 @@ export default function LibraryPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {recentActivity.slice(0, 5).map((activity) => (
-                  <div key={activity.id} className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0">
-                      {activity.type === "completed_lesson" && <Award className="w-4 h-4 text-white" />}
-                      {activity.type === "started_course" && <Play className="w-4 h-4 text-white" />}
-                      {activity.type === "earned_certificate" && <Award className="w-4 h-4 text-white" />}
+              {recentActivity && recentActivity.length > 0 ? (
+                <div className="space-y-4">
+                  {recentActivity.map((activity: any) => (
+                    <div key={activity.id} className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0">
+                        {activity.type === "completed_lesson" ? (
+                          <Award className="w-4 h-4 text-white" />
+                        ) : activity.type === "started_course" ? (
+                          <Play className="w-4 h-4 text-white" />
+                        ) : (
+                          <Award className="w-4 h-4 text-white" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium line-clamp-2">{activity.title}</p>
+                        <p className="text-xs text-muted-foreground">{activity.courseName}</p>
+                        <p className="text-xs text-muted-foreground">{activity.timestamp}</p>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium line-clamp-2">{activity.title}</p>
-                      <p className="text-xs text-muted-foreground">{activity.courseName}</p>
-                      <p className="text-xs text-muted-foreground">{activity.timestamp}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <Clock className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-sm text-muted-foreground">No recent activity yet</p>
+                </div>
+              )}
             </CardContent>
           </Card>
 

@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
 
-// Get products by store
+// Get products by store (all products - for dashboard)
 export const getProductsByStore = query({
   args: { storeId: v.string() },
   returns: v.array(v.object({
@@ -40,6 +40,50 @@ export const getProductsByStore = query({
       .query("digitalProducts")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .collect();
+  },
+});
+
+// Get published products by store (for public storefront)
+export const getPublishedProductsByStore = query({
+  args: { storeId: v.string() },
+  returns: v.array(v.object({
+    _id: v.id("digitalProducts"),
+    _creationTime: v.number(),
+    title: v.string(),
+    description: v.optional(v.string()),
+    price: v.number(),
+    imageUrl: v.optional(v.string()),
+    downloadUrl: v.optional(v.string()),
+    storeId: v.string(),
+    userId: v.string(),
+    isPublished: v.optional(v.boolean()),
+    buttonLabel: v.optional(v.string()),
+    style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))),
+    // URL/Media specific fields
+    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"))),
+    url: v.optional(v.string()),
+    displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
+    mediaType: v.optional(v.union(v.literal("youtube"), v.literal("spotify"), v.literal("website"), v.literal("social"))),
+    orderBumpEnabled: v.optional(v.boolean()),
+    orderBumpProductName: v.optional(v.string()),
+    orderBumpDescription: v.optional(v.string()),
+    orderBumpPrice: v.optional(v.number()),
+    orderBumpImageUrl: v.optional(v.string()),
+    affiliateEnabled: v.optional(v.boolean()),
+    affiliateCommissionRate: v.optional(v.number()),
+    affiliateMinPayout: v.optional(v.number()),
+    affiliateCookieDuration: v.optional(v.number()),
+    confirmationEmailSubject: v.optional(v.string()),
+    confirmationEmailBody: v.optional(v.string()),
+  })),
+  handler: async (ctx, args) => {
+    const products = await ctx.db
+      .query("digitalProducts")
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+      .collect();
+    
+    // Filter for published products only
+    return products.filter(product => product.isPublished === true);
   },
 });
 

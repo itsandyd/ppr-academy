@@ -17,7 +17,7 @@ export function OptionsForm() {
   const params = useParams();
   const storeId = params.storeId as string;
   
-  const { state, updateData, saveCourse, createCourse } = useCourseCreation();
+  const { state, updateData, saveCourse, createCourse, canPublish, validateStep } = useCourseCreation();
 
   const [formData, setFormData] = useState({
     // Sharing & SEO
@@ -90,19 +90,90 @@ export function OptionsForm() {
     try {
       const result = await createCourse();
       if (result.success) {
-        router.push(`/store/${storeId}/products`);
+        // Get the course slug from result or state
+        const courseSlug = result.slug || (state.data?.title 
+          ? state.data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+          : null);
+        
+        // Show success toast with landing page URL
+        import("@/hooks/use-toast").then(({ toast }) => {
+          toast({
+            title: "Course Created Successfully! 🎉",
+            description: courseSlug 
+              ? `Preview your landing page: ${window.location.origin}/courses/${courseSlug}?preview=true`
+              : "Your course has been created. Go to Products to view it.",
+          });
+        });
+        
+        // Redirect after a short delay to let user see the toast
+        setTimeout(() => {
+          router.push(`/store/${storeId}/products`);
+        }, 3000);
       } else {
         console.error("Failed to create course:", result.error);
+        // Show toast with error
+        import("@/hooks/use-toast").then(({ toast }) => {
+          toast({
+            title: "Cannot Create Course",
+            description: result.error || "Please complete all required steps before creating the course.",
+            variant: "destructive",
+          });
+        });
       }
     } catch (error) {
       console.error("Error creating course:", error);
+      import("@/hooks/use-toast").then(({ toast }) => {
+        toast({
+          title: "Error",
+          description: "An unexpected error occurred. Please try again.",
+          variant: "destructive",
+        });
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // Check which steps are incomplete
+  const incompleteSteps = [];
+  if (!validateStep("course")) incompleteSteps.push("Course Information");
+  if (!validateStep("checkout")) incompleteSteps.push("Checkout Configuration");
+  const canCreateCourse = canPublish();
+
   return (
     <div className="space-y-6 sm:space-y-8">
+      {/* Validation Alert */}
+      {!canCreateCourse && (
+        <Card className="border-2 border-amber-500 bg-amber-50">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center text-sm font-bold">
+                !
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-amber-900 mb-1">
+                  Complete Required Steps
+                </h3>
+                <p className="text-sm text-amber-800 mb-3">
+                  You need to complete the following steps before you can create your course:
+                </p>
+                <ul className="space-y-2">
+                  {incompleteSteps.map((step) => (
+                    <li key={step} className="text-sm text-amber-900 flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
+                      <span className="font-medium">{step}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-sm text-amber-800 mt-3">
+                  Use the navigation buttons below to go back and fill out all required fields (marked with <span className="text-red-600 font-bold">*</span>).
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
       {/* Sharing & SEO */}
       <Card className="border-0 sm:border shadow-none sm:shadow-sm">
         <CardHeader className="px-4 sm:px-6">
@@ -339,7 +410,7 @@ export function OptionsForm() {
         <div className="flex flex-col sm:hidden gap-3">
           <Button 
             onClick={handleSubmit}
-            disabled={isSubmitting}
+            disabled={isSubmitting || !canCreateCourse}
             className="gap-2 h-12 order-1"
           >
             {isSubmitting ? (
@@ -351,6 +422,11 @@ export function OptionsForm() {
               </>
             )}
           </Button>
+          {!canCreateCourse && (
+            <p className="text-sm text-amber-700 text-center order-3">
+              Complete all required steps to enable course creation
+            </p>
+          )}
           
           <div className="flex gap-3 order-2">
             <Button variant="outline" onClick={handleBack} className="gap-2 h-12 flex-1">
@@ -390,7 +466,7 @@ export function OptionsForm() {
             
             <Button 
               onClick={handleSubmit}
-              disabled={isSubmitting}
+              disabled={isSubmitting || !canCreateCourse}
               className="gap-2 h-10"
             >
               {isSubmitting ? (
@@ -404,6 +480,12 @@ export function OptionsForm() {
             </Button>
           </div>
         </div>
+        
+        {!canCreateCourse && (
+          <p className="text-sm text-amber-700 text-center">
+            Complete all required steps to enable course creation
+          </p>
+        )}
       </div>
     </div>
   );

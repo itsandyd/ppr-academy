@@ -157,6 +157,7 @@ export const getCoursesByUser = query({
 });
 
 // Get courses by store (NEW - for consistency with digital products)
+// Get courses by store (all courses - for dashboard)
 export const getCoursesByStore = query({
   args: { storeId: v.string() },
   returns: v.array(v.object({
@@ -191,6 +192,47 @@ export const getCoursesByStore = query({
       .query("courses")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .collect();
+  },
+});
+
+// Get published courses by store (for public storefront)
+export const getPublishedCoursesByStore = query({
+  args: { storeId: v.string() },
+  returns: v.array(v.object({
+    _id: v.id("courses"),
+    _creationTime: v.number(),
+    userId: v.string(),
+    instructorId: v.optional(v.string()),
+    title: v.string(),
+    description: v.optional(v.string()),
+    imageUrl: v.optional(v.string()),
+    price: v.optional(v.number()),
+    isPublished: v.optional(v.boolean()),
+    courseCategoryId: v.optional(v.string()),
+    slug: v.optional(v.string()),
+    storeId: v.optional(v.string()),
+    // Additional fields for course creation form
+    category: v.optional(v.string()),
+    skillLevel: v.optional(v.string()),
+    checkoutHeadline: v.optional(v.string()),
+    checkoutDescription: v.optional(v.string()),
+    paymentDescription: v.optional(v.string()),
+    guaranteeText: v.optional(v.string()),
+    showGuarantee: v.optional(v.boolean()),
+    acceptsPayPal: v.optional(v.boolean()),
+    acceptsStripe: v.optional(v.boolean()),
+    // Stripe integration fields
+    stripeProductId: v.optional(v.string()),
+    stripePriceId: v.optional(v.string()),
+  })),
+  handler: async (ctx, args) => {
+    const courses = await ctx.db
+      .query("courses")
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+      .collect();
+    
+    // Filter for published courses only
+    return courses.filter(course => course.isPublished === true);
   },
 });
 
