@@ -1,6 +1,7 @@
 "use client";
 
 import { CourseCardEnhanced } from "@/components/ui/course-card-enhanced";
+import { CertificateCard } from "@/components/certificates/CertificateCard";
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -54,6 +55,12 @@ export default function LibraryPage() {
   const recentActivity = useQuery(
     api.userLibrary.getUserRecentActivity,
     convexUser?.clerkId ? { userId: convexUser.clerkId, limit: 5 } : "skip"
+  );
+
+  // Fetch user's certificates
+  const userCertificates = useQuery(
+    api.certificates.getUserCertificates,
+    convexUser?.clerkId ? { userId: convexUser.clerkId } : "skip"
   );
 
   // User display data
@@ -234,10 +241,14 @@ export default function LibraryPage() {
         <div className="lg:col-span-3 space-y-8">
           {/* Content Tabs */}
           <Tabs defaultValue="continue" className="w-full">
-            <TabsList className="grid w-full max-w-md grid-cols-3">
+            <TabsList className="grid w-full max-w-2xl grid-cols-4">
               <TabsTrigger value="continue">Continue</TabsTrigger>
               <TabsTrigger value="recommended">Recommended</TabsTrigger>
               <TabsTrigger value="favorites">Favorites</TabsTrigger>
+              <TabsTrigger value="certificates">
+                <Award className="w-4 h-4 mr-2" />
+                Certificates
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="continue" className="space-y-6">
@@ -307,6 +318,53 @@ export default function LibraryPage() {
                   Courses you've bookmarked will appear here.
                 </p>
               </div>
+            </TabsContent>
+
+            <TabsContent value="certificates" className="space-y-6">
+              {userCertificates === undefined ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {[1, 2].map((i) => (
+                    <Card key={i}>
+                      <CardContent className="p-6">
+                        <Skeleton className="h-24 w-full" />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : userCertificates && userCertificates.length > 0 ? (
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold">Your Certificates</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {userCertificates.length} certificate{userCertificates.length !== 1 ? 's' : ''} earned
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {userCertificates.map((certificate: any) => (
+                      <CertificateCard
+                        key={certificate._id}
+                        certificate={certificate}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <Award className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No Certificates Yet</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Complete a course to earn your first certificate!
+                  </p>
+                  <Button variant="outline" onClick={() => {
+                    const continueTab = document.querySelector('[value="continue"]') as HTMLElement;
+                    continueTab?.click();
+                  }}>
+                    Browse Your Courses
+                  </Button>
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         </div>

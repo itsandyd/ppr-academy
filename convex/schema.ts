@@ -1542,4 +1542,96 @@ export default defineSchema({
     .index("by_userId", ["userId"])
     .index("by_eventType", ["eventType"])
     .index("by_timestamp", ["timestamp"]),
+
+  // Q&A System
+  questions: defineTable({
+    courseId: v.id("courses"),
+    lessonId: v.string(),
+    chapterIndex: v.optional(v.number()),
+    lessonIndex: v.optional(v.number()),
+    title: v.string(),
+    content: v.string(),
+    authorId: v.string(),
+    authorName: v.string(),
+    authorAvatar: v.optional(v.string()),
+    isResolved: v.boolean(),
+    acceptedAnswerId: v.optional(v.id("answers")),
+    viewCount: v.number(),
+    upvotes: v.number(),
+    answerCount: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    lastActivityAt: v.number(),
+  })
+    .index("by_course", ["courseId", "lastActivityAt"])
+    .index("by_lesson", ["courseId", "lessonId", "lastActivityAt"])
+    .index("by_author", ["authorId", "createdAt"])
+    .index("by_resolved", ["courseId", "isResolved", "lastActivityAt"]),
+
+  answers: defineTable({
+    questionId: v.id("questions"),
+    courseId: v.id("courses"),
+    content: v.string(),
+    authorId: v.string(),
+    authorName: v.string(),
+    authorAvatar: v.optional(v.string()),
+    isInstructor: v.boolean(),
+    isAccepted: v.boolean(),
+    upvotes: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_question", ["questionId", "createdAt"])
+    .index("by_question_votes", ["questionId", "upvotes"])
+    .index("by_author", ["authorId", "createdAt"]),
+
+  qaVotes: defineTable({
+    targetType: v.union(v.literal("question"), v.literal("answer")),
+    targetId: v.string(),
+    userId: v.string(),
+    voteType: v.union(v.literal("upvote"), v.literal("downvote")),
+    createdAt: v.number(),
+  })
+    .index("by_user_and_target", ["userId", "targetType", "targetId"])
+    .index("by_target", ["targetType", "targetId"]),
+
+  // Course Completion Certificates
+  certificates: defineTable({
+    userId: v.string(),
+    userName: v.string(),
+    userEmail: v.string(),
+    courseId: v.id("courses"),
+    courseTitle: v.string(),
+    instructorName: v.string(),
+    instructorId: v.string(),
+    certificateId: v.string(),
+    completionDate: v.number(),
+    issueDate: v.number(),
+    totalChapters: v.number(),
+    completedChapters: v.number(),
+    completionPercentage: v.number(),
+    timeSpent: v.optional(v.number()),
+    pdfUrl: v.optional(v.string()),
+    pdfStorageId: v.optional(v.id("_storage")),
+    verificationCode: v.string(),
+    isValid: v.boolean(),
+    createdAt: v.number(),
+    lastVerifiedAt: v.optional(v.number()),
+    verificationCount: v.number(),
+  })
+    .index("by_user", ["userId", "createdAt"])
+    .index("by_course", ["courseId", "issueDate"])
+    .index("by_certificate_id", ["certificateId"])
+    .index("by_verification_code", ["verificationCode"])
+    .index("by_user_and_course", ["userId", "courseId"]),
+
+  certificateVerifications: defineTable({
+    certificateId: v.string(),
+    verifierIp: v.optional(v.string()),
+    verifierUserAgent: v.optional(v.string()),
+    isValid: v.boolean(),
+    verifiedAt: v.number(),
+  })
+    .index("by_certificate", ["certificateId", "verifiedAt"])
+    .index("by_date", ["verifiedAt"]),
 }); 

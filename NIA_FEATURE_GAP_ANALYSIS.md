@@ -71,17 +71,29 @@ Based on comprehensive research of modern LMS platforms and comparison with PPR 
 #### Community via Discord:
 - ✅ Live chat channels (Discord)
 - ✅ Voice/video calls (Discord)
+- ✅ **Screen sharing + audio** (Discord) - **KEY REASON FOR DISCORD!**
 - ✅ Direct messaging (Discord)
 - ✅ Private study groups (Discord servers/channels)
 - ✅ Event management (Discord events)
 - ✅ Real-time notifications (Discord)
 
-#### Still Need to Build (Course-Specific):
-- ❌ **In-course Q&A system** (per chapter/lesson) - *Keep questions contextual*
-- ❌ **Course-specific discussion threads** (attached to lessons)
+**🎯 Why Discord Over Custom Platform:**
+- **Screen Recording**: Built-in desktop + audio recording for live sessions
+- **Voice Channels**: Easy instructor office hours and group study sessions
+- **Zero Infrastructure**: No need to build/maintain video/audio infrastructure
+- **Students Already Use It**: Familiar interface, no learning curve
+- **Cost Effective**: Free for unlimited users vs. building WebRTC infrastructure
+
+#### Built On-Platform (Course-Specific):
+- ✅ **In-course Q&A system** (per chapter/lesson) - *Contextual, searchable, permanent*
+- ✅ **Discord OAuth integration** (auto-connect accounts)
+- ✅ **Discord role sync** (auto-assign roles based on enrollments)
+- ✅ **Discord invite automation** (add to server upon purchase)
+
+#### Still Need to Build (Optional):
 - ❌ **Student profiles & portfolios** (on-platform showcase)
-- ❌ **Discord role sync** (auto-assign Discord roles based on enrollments)
-- ❌ **Discord invite automation** (add to server upon purchase)
+- ✅ **Course completion certificates** (with verification) - **COMPLETE!**
+- ❌ **Student project gallery** (showcase work)
 
 #### Industry Examples Using Discord:
 - **The Futur** (Chris Do) - 50K+ members

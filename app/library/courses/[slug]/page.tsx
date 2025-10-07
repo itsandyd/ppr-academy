@@ -27,6 +27,7 @@ import {
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { CourseQAChat } from "@/components/course/CourseQAChat";
+import { LessonQASection } from "@/components/qa/LessonQASection";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { Id } from "@/convex/_generated/dataModel";
@@ -54,6 +55,11 @@ export default function CoursePlayerPage() {
   );
 
   const updateProgress = useMutation(api.library.updateProgress);
+  const generateCertificate = useMutation(api.certificates.generateCertificate);
+  const hasCertificate = useQuery(
+    api.certificates.hasCertificate,
+    user?.id && courseData ? { userId: user.id, courseId: courseData._id } : "skip"
+  );
 
   // Redirect if no access
   useEffect(() => {
@@ -103,6 +109,46 @@ export default function CoursePlayerPage() {
         timeSpent: 300, // Default 5 minutes
       });
       toast.success("Chapter marked as complete!");
+
+      // Check if course is now 100% complete
+      let totalChapters = 0;
+      let completedChapters = 0;
+      
+      courseData.modules?.forEach((module: any) => {
+        module.lessons?.forEach((lesson: any) => {
+          lesson.chapters?.forEach((chapter: any) => {
+            totalChapters++;
+            if (chapter._id === chapterId || chapter.isCompleted) {
+              completedChapters++;
+            }
+          });
+        });
+      });
+
+      const completionPercentage = Math.round((completedChapters / totalChapters) * 100);
+
+      // Generate certificate if 100% complete and doesn't have one yet
+      if (completionPercentage === 100 && !hasCertificate?.hasCertificate) {
+        const result = await generateCertificate({
+          userId: user.id,
+          userName: user.fullName || user.firstName || "Student",
+          userEmail: user.emailAddresses[0]?.emailAddress || "",
+          courseId: courseData._id,
+          courseTitle: courseData.title,
+          instructorName: (courseData as any).creatorName || "Instructor",
+          instructorId: (courseData as any).creatorId || user.id,
+          totalChapters,
+          completedChapters,
+          completionPercentage,
+        });
+
+        if (result.success) {
+          toast.success("🎉 Congratulations! You've earned a certificate!", {
+            description: "Check your library to view and download it",
+            duration: 5000,
+          });
+        }
+      }
     } catch (error) {
       console.error("Error updating progress:", error);
       toast.error("Failed to update progress");
@@ -429,6 +475,23 @@ export default function CoursePlayerPage() {
                         </span>
                       )}
                     </div>
+                  </div>
+                </div>
+
+                {/* Q&A Section */}
+                <div className="p-4 lg:p-6 border-t border-border bg-muted/30">
+                  <div className="max-w-4xl mx-auto">
+                    <LessonQASection
+                      courseId={courseData._id}
+                      lessonId={currentChapter._id}
+                      chapterIndex={currentModule?.lessons?.findIndex((l: any) => 
+                        l.chapters?.some((c: any) => c._id === currentChapter._id)
+                      )}
+                      lessonIndex={currentModule?.lessons?.find((l: any) => 
+                        l.chapters?.some((c: any) => c._id === currentChapter._id)
+                      )?.chapters?.findIndex((c: any) => c._id === currentChapter._id)}
+                      isInstructor={(courseData as any).creatorId === user?.id}
+                    />
                   </div>
                 </div>
               </div>
