@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { DiscordConnectionCard } from "@/components/discord/DiscordConnectionCard";
 import Link from "next/link";
 import { 
   BookOpen, 
@@ -620,73 +621,8 @@ export default function UnifiedDashboard({
               </CardContent>
             </Card>
 
-            {/* Discord Integration */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MessageSquare className="w-5 h-5" />
-                  Discord Integration
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {user.discordVerified ? (
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <CheckCircle className="w-5 h-5 text-green-600" />
-                      <div className="flex-1">
-                        <p className="font-medium text-green-900">Discord Connected</p>
-                        <p className="text-sm text-green-700">
-                          Username: {user.discordUsername || 'Connected'}
-                        </p>
-                      </div>
-                    </div>
-                    <p className="text-sm text-slate-600">
-                      Your Discord account is connected. You can now book coaching sessions and join private coaching channels.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="flex items-start space-x-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
-                      <div className="flex-1">
-                        <p className="font-medium text-blue-900 mb-1">Connect Your Discord Account</p>
-                        <p className="text-sm text-blue-800">
-                          Connect Discord to book coaching sessions and join private coaching channels.
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <h4 className="font-medium text-slate-900">Benefits of connecting Discord:</h4>
-                      <ul className="text-sm text-slate-600 space-y-1">
-                        <li>• Access to private coaching channels</li>
-                        <li>• Real-time communication with coaches</li>
-                        <li>• Automatic session reminders</li>
-                        <li>• Community access and networking</li>
-                      </ul>
-                    </div>
-
-                    <Button 
-                      onClick={handleDiscordAuth}
-                      disabled={isConnectingDiscord}
-                      className="w-full bg-[#5865F2] hover:bg-[#4752C4] text-white"
-                    >
-                      {isConnectingDiscord ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Connecting...
-                        </>
-                      ) : (
-                        <>
-                          <MessageSquare className="w-4 h-4 mr-2" />
-                          Connect Discord Account
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            {/* Discord Integration - Using new component */}
+            <DiscordConnectionCard />
 
             {/* Learning Statistics */}
             <Card>

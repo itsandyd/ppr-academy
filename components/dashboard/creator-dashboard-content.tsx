@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StoreSetupWizard } from "./store-setup-wizard";
+import { DiscordConnectionCard } from "@/components/discord/DiscordConnectionCard";
 import { 
   Music, 
   TrendingUp, 
@@ -415,6 +416,16 @@ export function CreatorDashboardContent() {
             </CardContent>
           </Card>
         </div>
+      </motion.div>
+
+      {/* Discord Community */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.35 }}
+      >
+        <h2 className="text-lg font-semibold mb-4">Community</h2>
+        <DiscordConnectionCard />
       </motion.div>
 
       {/* Recent Products */}
