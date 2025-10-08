@@ -331,4 +331,83 @@ export const createUrlMediaProduct = mutation({
       affiliateEnabled: false,
     });
   },
+});
+
+// Get all published products across all stores (for marketplace homepage)
+export const getAllPublishedProducts = query({
+  args: {},
+  returns: v.array(v.object({
+    _id: v.id("digitalProducts"),
+    _creationTime: v.number(),
+    title: v.string(),
+    description: v.optional(v.string()),
+    price: v.number(),
+    imageUrl: v.optional(v.string()),
+    downloadUrl: v.optional(v.string()),
+    category: v.optional(v.string()),
+    storeId: v.string(), // Store as string to match schema
+    published: v.boolean(),
+    downloadCount: v.optional(v.number()),
+    creatorName: v.optional(v.string()),
+    creatorAvatar: v.optional(v.string()),
+    contentType: v.optional(v.string()),
+  })),
+  handler: async (ctx) => {
+    // Get all published products
+    const products = await ctx.db
+      .query("digitalProducts")
+      .filter((q) => q.eq(q.field("isPublished"), true))
+      .collect();
+
+    // Enrich with download counts and creator info
+    const productsWithDetails = await Promise.all(
+      products.map(async (product) => {
+        // Get download count from purchases
+        const purchases = await ctx.db
+          .query("purchases")
+          .filter((q) => q.eq(q.field("productId"), product._id))
+          .collect();
+        
+        // Get creator info
+        let creatorName = "Creator";
+        let creatorAvatar: string | undefined = undefined;
+
+        // Get store info - storeId is a string in the schema
+        const stores = await ctx.db.query("stores").collect();
+        const store = stores.find(s => s._id === product.storeId);
+        
+        if (store) {
+          const user = await ctx.db
+            .query("users")
+            .filter((q) => q.eq(q.field("clerkId"), store.userId))
+            .first();
+          if (user) {
+            creatorName = user.name || store.name || "Creator";
+            creatorAvatar = user.imageUrl;
+          } else {
+            creatorName = store.name || "Creator";
+          }
+        }
+
+        return {
+          _id: product._id,
+          _creationTime: product._creationTime,
+          title: product.title,
+          description: product.description,
+          price: product.price,
+          imageUrl: product.imageUrl,
+          downloadUrl: product.downloadUrl,
+          category: product.productType,
+          storeId: product.storeId,
+          published: product.isPublished || false,
+          downloadCount: purchases.length,
+          creatorName,
+          creatorAvatar,
+          contentType: "product",
+        };
+      })
+    );
+
+    return productsWithDetails;
+  },
 }); 

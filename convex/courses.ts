@@ -1139,3 +1139,82 @@ export const cleanupDuplicateChapters = mutation({
   },
 });
 
+// Get all published courses across all stores (for marketplace homepage)
+export const getAllPublishedCourses = query({
+  args: {},
+  returns: v.array(v.object({
+    _id: v.id("courses"),
+    _creationTime: v.number(),
+    title: v.string(),
+    slug: v.string(),
+    description: v.optional(v.string()),
+    price: v.number(),
+    thumbnail: v.optional(v.string()),
+    category: v.optional(v.string()),
+    skillLevel: v.optional(v.string()),
+    storeId: v.optional(v.id("stores")),
+    userId: v.string(),
+    published: v.boolean(),
+    enrollmentCount: v.optional(v.number()),
+    creatorName: v.optional(v.string()),
+    creatorAvatar: v.optional(v.string()),
+  })),
+  handler: async (ctx) => {
+    // Get all published courses
+    const courses = await ctx.db
+      .query("courses")
+      .filter((q) => q.eq(q.field("isPublished"), true))
+      .collect();
+
+    // Enrich with enrollment counts and creator info
+    const coursesWithDetails = await Promise.all(
+      courses.map(async (course) => {
+        // Get enrollment count
+        const enrollments = await ctx.db
+          .query("purchases")
+          .filter((q) => q.eq(q.field("courseId"), course._id))
+          .collect();
+        
+        // Get creator info
+        let creatorName = "Creator";
+        let creatorAvatar: string | undefined = undefined;
+
+        // Try to get store info first
+        if (course.storeId) {
+          const store = await ctx.db.get(course.storeId as Id<"stores">);
+          if (store) {
+            const user = await ctx.db
+              .query("users")
+              .filter((q) => q.eq(q.field("clerkId"), store.userId))
+              .first();
+            if (user) {
+              creatorName = user.name || store.name || "Creator";
+              creatorAvatar = user.imageUrl;
+            }
+          }
+        }
+
+        return {
+          _id: course._id,
+          _creationTime: course._creationTime,
+          title: course.title,
+          slug: course.slug || generateSlug(course.title),
+          description: course.description,
+          price: course.price || 0,
+          thumbnail: course.imageUrl,
+          category: course.category,
+          skillLevel: course.skillLevel,
+          storeId: course.storeId as Id<"stores"> | undefined,
+          userId: course.userId,
+          published: course.isPublished || false,
+          enrollmentCount: enrollments.length,
+          creatorName,
+          creatorAvatar,
+        };
+      })
+    );
+
+    return coursesWithDetails;
+  },
+});
+

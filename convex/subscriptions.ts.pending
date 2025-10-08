@@ -1,0 +1,554 @@
+import { v } from "convex/values";
+import { mutation, query } from "./_generated/server";
+import { Id } from "./_generated/dataModel";
+
+/**
+ * SUBSCRIPTION MANAGEMENT
+ * Handles recurring payments and tiered access control
+ */
+
+// ===== QUERIES =====
+
+export const getUserSubscriptions = query({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    const subscriptions = await ctx.db
+      .query("membershipSubscriptions")
+      .withIndex("by_user", (q: any) => q.eq("userId", args.userId))
+      .collect();
+
+    // Enrich with plan details
+    const enriched = await Promise.all(
+      subscriptions.map(async (sub) => {
+        const plan = await ctx.db.get(sub.planId);
+        const store = await ctx.db.get(sub.storeId);
+        return { ...sub, plan, store };
+      })
+    );
+
+    return enriched;
+  },
+});
+
+export const getActiveSubscription = query({
+  args: { 
+    userId: v.string(),
+    storeId: v.id("stores"),
+  },
+  handler: async (ctx, args) => {
+    const subscription = await ctx.db
+      .query("membershipSubscriptions")
+      .withIndex("by_user", (q: any) => q.eq("userId", args.userId))
+      .filter((q: any) => 
+        q.and(
+          q.eq(q.field("storeId"), args.storeId),
+          q.eq(q.field("status"), "active")
+        )
+      )
+      .first();
+
+    if (!subscription) return null;
+
+    const plan = await ctx.db.get(subscription.planId);
+    const store = await ctx.db.get(subscription.storeId);
+
+    return { ...subscription, plan, store };
+  },
+});
+
+export const checkSubscriptionAccess = query({
+  args: {
+    userId: v.string(),
+    storeId: v.id("stores"),
+    courseId: v.optional(v.id("courses")),
+    productId: v.optional(v.id("digitalProducts")),
+  },
+  handler: async (ctx, args) => {
+    // Get active subscription
+    const subscription = await ctx.db
+      .query("membershipSubscriptions")
+      .withIndex("by_user", (q: any) => q.eq("userId", args.userId))
+      .filter((q: any) => 
+        q.and(
+          q.eq(q.field("storeId"), args.storeId),
+          q.eq(q.field("status"), "active")
+        )
+      )
+      .first();
+
+    if (!subscription) {
+      return { hasAccess: false, reason: "no_active_subscription" };
+    }
+
+    // Get plan details
+    const plan = await ctx.db.get(subscription.planId);
+    if (!plan) {
+      return { hasAccess: false, reason: "plan_not_found" };
+    }
+
+    // Check if plan gives access to all content
+    if (args.courseId && plan.hasAllCourses) {
+      return { hasAccess: true, viaSubscription: true, planName: plan.name };
+    }
+    if (args.productId && plan.hasAllProducts) {
+      return { hasAccess: true, viaSubscription: true, planName: plan.name };
+    }
+
+    // Check specific access
+    if (args.courseId && plan.courseAccess.includes(args.courseId)) {
+      return { hasAccess: true, viaSubscription: true, planName: plan.name };
+    }
+    if (args.productId && plan.digitalProductAccess.includes(args.productId)) {
+      return { hasAccess: true, viaSubscription: true, planName: plan.name };
+    }
+
+    return { hasAccess: false, reason: "not_included_in_plan" };
+  },
+});
+
+export const getSubscriptionPlans = query({
+  args: { storeId: v.id("stores") },
+  handler: async (ctx, args) => {
+    const plans = await ctx.db
+      .query("subscriptionPlans")
+      .withIndex("by_store", (q: any) => 
+        q.eq("storeId", args.storeId).eq("isActive", true)
+      )
+      .collect();
+
+    return plans.sort((a, b) => a.tier - b.tier);
+  },
+});
+
+export const getSubscriptionPlanDetails = query({
+  args: { planId: v.id("subscriptionPlans") },
+  handler: async (ctx, args) => {
+    const plan = await ctx.db.get(args.planId);
+    if (!plan) return null;
+
+    // Get course details
+    const courses = await Promise.all(
+      plan.courseAccess.map((id) => ctx.db.get(id))
+    );
+
+    // Get product details
+    const products = await Promise.all(
+      plan.digitalProductAccess.map((id) => ctx.db.get(id))
+    );
+
+    return {
+      ...plan,
+      courses: courses.filter(Boolean),
+      products: products.filter(Boolean),
+    };
+  },
+});
+
+export const getStoreSubscriptionStats = query({
+  args: { storeId: v.id("stores") },
+  handler: async (ctx, args) => {
+    const allSubscriptions = await ctx.db
+      .query("membershipSubscriptions")
+      .withIndex("by_store", (q: any) => q.eq("storeId", args.storeId))
+      .collect();
+
+    const active = allSubscriptions.filter((s) => s.status === "active");
+    const trialing = allSubscriptions.filter((s) => s.status === "trialing");
+    const canceled = allSubscriptions.filter((s) => s.status === "canceled");
+
+    const monthlyRevenue = active
+      .filter((s) => s.billingCycle === "monthly")
+      .reduce((sum, s) => sum + s.amountPaid, 0);
+
+    const yearlyRevenue = active
+      .filter((s) => s.billingCycle === "yearly")
+      .reduce((sum, s) => sum + s.amountPaid, 0);
+
+    return {
+      totalSubscriptions: allSubscriptions.length,
+      activeSubscriptions: active.length,
+      trialingSubscriptions: trialing.length,
+      canceledSubscriptions: canceled.length,
+      monthlyRecurringRevenue: monthlyRevenue,
+      yearlyRecurringRevenue: yearlyRevenue,
+      totalMRR: monthlyRevenue + yearlyRevenue / 12,
+      churnRate: canceled.length / (allSubscriptions.length || 1),
+    };
+  },
+});
+
+// ===== MUTATIONS =====
+
+export const createSubscription = mutation({
+  args: {
+    userId: v.string(),
+    planId: v.id("subscriptionPlans"),
+    billingCycle: v.union(v.literal("monthly"), v.literal("yearly"), v.literal("lifetime")),
+    stripeSubscriptionId: v.optional(v.string()),
+    startTrial: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const plan = await ctx.db.get(args.planId);
+    if (!plan || !plan.isActive) {
+      throw new Error("Plan not found or inactive");
+    }
+
+    // Check for existing active subscription
+    const existing = await ctx.db
+      .query("membershipSubscriptions")
+      .withIndex("by_user", (q: any) => q.eq("userId", args.userId))
+      .filter((q: any) => 
+        q.and(
+          q.eq(q.field("storeId"), plan.storeId),
+          q.eq(q.field("status"), "active")
+        )
+      )
+      .first();
+
+    if (existing) {
+      throw new Error("User already has an active subscription to this store");
+    }
+
+    const now = Date.now();
+    const isTrial = args.startTrial && plan.trialDays && plan.trialDays > 0;
+    const trialEnd = isTrial ? now + plan.trialDays! * 24 * 60 * 60 * 1000 : undefined;
+
+    const amount =
+      args.billingCycle === "monthly"
+        ? plan.monthlyPrice
+        : args.billingCycle === "yearly"
+        ? plan.yearlyPrice
+        : plan.yearlyPrice; // lifetime uses yearly price
+
+    const periodEnd =
+      args.billingCycle === "monthly"
+        ? now + 30 * 24 * 60 * 60 * 1000
+        : args.billingCycle === "yearly"
+        ? now + 365 * 24 * 60 * 60 * 1000
+        : now + 100 * 365 * 24 * 60 * 60 * 1000; // lifetime = 100 years
+
+    const subscriptionId = await ctx.db.insert("membershipSubscriptions", {
+      userId: args.userId,
+      storeId: plan.storeId,
+      planId: args.planId,
+      status: isTrial ? "trialing" : "active",
+      stripeSubscriptionId: args.stripeSubscriptionId,
+      currentPeriodStart: now,
+      currentPeriodEnd: periodEnd,
+      cancelAtPeriodEnd: false,
+      trialStart: isTrial ? now : undefined,
+      trialEnd,
+      billingCycle: args.billingCycle,
+      amountPaid: isTrial ? 0 : amount,
+      currency: plan.currency,
+      nextBillingDate: isTrial ? trialEnd : periodEnd,
+      failedPaymentAttempts: 0,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Update plan student count
+    await ctx.db.patch(args.planId, {
+      currentStudents: plan.currentStudents + 1,
+    });
+
+    return { success: true, subscriptionId };
+  },
+});
+
+export const cancelSubscription = mutation({
+  args: {
+    subscriptionId: v.id("membershipSubscriptions"),
+    cancelImmediately: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const subscription = await ctx.db.get(args.subscriptionId);
+    if (!subscription) {
+      throw new Error("Subscription not found");
+    }
+
+    const now = Date.now();
+
+    if (args.cancelImmediately) {
+      await ctx.db.patch(args.subscriptionId, {
+        status: "canceled",
+        canceledAt: now,
+        updatedAt: now,
+      });
+    } else {
+      // Mark for cancellation at period end
+      await ctx.db.patch(args.subscriptionId, {
+        cancelAtPeriodEnd: true,
+        canceledAt: now,
+        updatedAt: now,
+      });
+    }
+
+    return { success: true };
+  },
+});
+
+export const reactivateSubscription = mutation({
+  args: { subscriptionId: v.id("subscriptions") },
+  handler: async (ctx, args) => {
+    const subscription = await ctx.db.get(args.subscriptionId);
+    if (!subscription) {
+      throw new Error("Subscription not found");
+    }
+
+    if (subscription.status !== "canceled") {
+      throw new Error("Only canceled subscriptions can be reactivated");
+    }
+
+    await ctx.db.patch(args.subscriptionId, {
+      status: "active",
+      cancelAtPeriodEnd: false,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+export const updateSubscriptionStatus = mutation({
+  args: {
+    stripeSubscriptionId: v.string(),
+    status: v.union(
+      v.literal("active"),
+      v.literal("canceled"),
+      v.literal("past_due"),
+      v.literal("expired")
+    ),
+  },
+  handler: async (ctx, args) => {
+    const subscription = await ctx.db
+      .query("membershipSubscriptions")
+      .withIndex("by_stripe_id", (q: any) => q.eq("stripeSubscriptionId", args.stripeSubscriptionId))
+      .first();
+
+    if (!subscription) {
+      throw new Error("Subscription not found");
+    }
+
+    await ctx.db.patch(subscription._id, {
+      status: args.status,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+export const renewSubscription = mutation({
+  args: { subscriptionId: v.id("subscriptions") },
+  handler: async (ctx, args) => {
+    const subscription = await ctx.db.get(args.subscriptionId);
+    if (!subscription) {
+      throw new Error("Subscription not found");
+    }
+
+    const now = Date.now();
+    const nextPeriodEnd =
+      subscription.billingCycle === "monthly"
+        ? subscription.currentPeriodEnd + 30 * 24 * 60 * 60 * 1000
+        : subscription.currentPeriodEnd + 365 * 24 * 60 * 60 * 1000;
+
+    await ctx.db.patch(args.subscriptionId, {
+      currentPeriodStart: subscription.currentPeriodEnd,
+      currentPeriodEnd: nextPeriodEnd,
+      nextBillingDate: nextPeriodEnd,
+      failedPaymentAttempts: 0,
+      status: "active",
+      updatedAt: now,
+    });
+
+    return { success: true, nextBillingDate: nextPeriodEnd };
+  },
+});
+
+export const upgradeSubscription = mutation({
+  args: {
+    subscriptionId: v.id("subscriptions"),
+    newPlanId: v.id("subscriptionPlans"),
+  },
+  handler: async (ctx, args) => {
+    const subscription = await ctx.db.get(args.subscriptionId);
+    if (!subscription) {
+      throw new Error("Subscription not found");
+    }
+
+    const currentPlan = await ctx.db.get(subscription.planId);
+    const newPlan = await ctx.db.get(args.newPlanId);
+
+    if (!currentPlan || !newPlan) {
+      throw new Error("Plan not found");
+    }
+
+    if (newPlan.tier <= currentPlan.tier) {
+      throw new Error("Can only upgrade to a higher tier");
+    }
+
+    // Update subscription
+    await ctx.db.patch(args.subscriptionId, {
+      planId: args.newPlanId,
+      updatedAt: Date.now(),
+    });
+
+    // Update plan student counts
+    await ctx.db.patch(subscription.planId, {
+      currentStudents: Math.max(0, currentPlan.currentStudents - 1),
+    });
+    await ctx.db.patch(args.newPlanId, {
+      currentStudents: newPlan.currentStudents + 1,
+    });
+
+    return { success: true };
+  },
+});
+
+export const downgradeSubscription = mutation({
+  args: {
+    subscriptionId: v.id("subscriptions"),
+    newPlanId: v.id("subscriptionPlans"),
+  },
+  handler: async (ctx, args) => {
+    const subscription = await ctx.db.get(args.subscriptionId);
+    if (!subscription) {
+      throw new Error("Subscription not found");
+    }
+
+    const currentPlan = await ctx.db.get(subscription.planId);
+    const newPlan = await ctx.db.get(args.newPlanId);
+
+    if (!currentPlan || !newPlan) {
+      throw new Error("Plan not found");
+    }
+
+    if (newPlan.tier >= currentPlan.tier) {
+      throw new Error("Can only downgrade to a lower tier");
+    }
+
+    // Schedule downgrade at period end
+    await ctx.db.patch(args.subscriptionId, {
+      planId: args.newPlanId,
+      updatedAt: Date.now(),
+    });
+
+    // Update plan student counts
+    await ctx.db.patch(subscription.planId, {
+      currentStudents: Math.max(0, currentPlan.currentStudents - 1),
+    });
+    await ctx.db.patch(args.newPlanId, {
+      currentStudents: newPlan.currentStudents + 1,
+    });
+
+    return { success: true };
+  },
+});
+
+// ===== SUBSCRIPTION PLAN MANAGEMENT =====
+
+export const createSubscriptionPlan = mutation({
+  args: {
+    storeId: v.id("stores"),
+    creatorId: v.string(),
+    name: v.string(),
+    description: v.string(),
+    tier: v.number(),
+    monthlyPrice: v.number(),
+    yearlyPrice: v.number(),
+    currency: v.string(),
+    features: v.array(v.string()),
+    courseAccess: v.optional(v.array(v.id("courses"))),
+    hasAllCourses: v.optional(v.boolean()),
+    digitalProductAccess: v.optional(v.array(v.id("digitalProducts"))),
+    hasAllProducts: v.optional(v.boolean()),
+    discountPercentage: v.optional(v.number()),
+    trialDays: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+
+    const planId = await ctx.db.insert("subscriptionPlans", {
+      storeId: args.storeId,
+      name: args.name,
+      description: args.description,
+      tier: args.tier,
+      monthlyPrice: args.monthlyPrice,
+      yearlyPrice: args.yearlyPrice,
+      currency: args.currency,
+      features: args.features,
+      courseAccess: args.courseAccess || [],
+      hasAllCourses: args.hasAllCourses || false,
+      digitalProductAccess: args.digitalProductAccess || [],
+      hasAllProducts: args.hasAllProducts || false,
+      discountPercentage: args.discountPercentage,
+      trialDays: args.trialDays,
+      isActive: true,
+      currentStudents: 0,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return { success: true, planId };
+  },
+});
+
+export const updateSubscriptionPlan = mutation({
+  args: {
+    planId: v.id("subscriptionPlans"),
+    name: v.optional(v.string()),
+    description: v.optional(v.string()),
+    monthlyPrice: v.optional(v.number()),
+    yearlyPrice: v.optional(v.number()),
+    features: v.optional(v.array(v.string())),
+    courseAccess: v.optional(v.array(v.id("courses"))),
+    hasAllCourses: v.optional(v.boolean()),
+    digitalProductAccess: v.optional(v.array(v.id("digitalProducts"))),
+    hasAllProducts: v.optional(v.boolean()),
+    discountPercentage: v.optional(v.number()),
+    trialDays: v.optional(v.number()),
+    isActive: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const { planId, ...updates } = args;
+
+    await ctx.db.patch(planId, {
+      ...updates,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+export const deleteSubscriptionPlan = mutation({
+  args: { planId: v.id("subscriptionPlans") },
+  handler: async (ctx, args) => {
+    const plan = await ctx.db.get(args.planId);
+    if (!plan) {
+      throw new Error("Plan not found");
+    }
+
+    // Check if any active subscriptions
+    const activeSubscriptions = await ctx.db
+      .query("membershipSubscriptions")
+      .withIndex("by_plan", (q: any) => 
+        q.eq("planId", args.planId).eq("status", "active")
+      )
+      .collect();
+
+    if (activeSubscriptions.length > 0) {
+      throw new Error("Cannot delete plan with active subscriptions");
+    }
+
+    // Soft delete by marking inactive
+    await ctx.db.patch(args.planId, {
+      isActive: false,
+      updatedAt: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+

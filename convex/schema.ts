@@ -1,5 +1,6 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import * as monetizationSchema from "./monetizationSchema";
 
 export default defineSchema({
   // User Management
@@ -1634,4 +1635,341 @@ export default defineSchema({
   })
     .index("by_certificate", ["certificateId", "verifiedAt"])
     .index("by_date", ["verifiedAt"]),
+
+  // Analytics & Reporting
+  userEvents: defineTable({
+    userId: v.string(),
+    eventType: v.union(
+      v.literal("course_viewed"),
+      v.literal("course_enrolled"),
+      v.literal("chapter_started"),
+      v.literal("chapter_completed"),
+      v.literal("course_completed"),
+      v.literal("video_played"),
+      v.literal("video_paused"),
+      v.literal("video_progress"),
+      v.literal("checkout_started"),
+      v.literal("purchase_completed"),
+      v.literal("refund_requested"),
+      v.literal("question_asked"),
+      v.literal("answer_posted"),
+      v.literal("comment_posted"),
+      v.literal("content_liked"),
+      v.literal("certificate_shared"),
+      v.literal("course_reviewed"),
+      v.literal("login"),
+      v.literal("logout"),
+      v.literal("profile_updated")
+    ),
+    courseId: v.optional(v.id("courses")),
+    chapterId: v.optional(v.string()),
+    productId: v.optional(v.id("digitalProducts")),
+    metadata: v.optional(v.any()),
+    timestamp: v.number(),
+    sessionId: v.optional(v.string()),
+    deviceType: v.optional(v.string()),
+    browserInfo: v.optional(v.string()),
+  })
+    .index("by_user", ["userId", "timestamp"])
+    .index("by_course", ["courseId", "timestamp"])
+    .index("by_event_type", ["eventType", "timestamp"])
+    .index("by_user_and_event", ["userId", "eventType", "timestamp"])
+    .index("by_session", ["sessionId", "timestamp"]),
+
+  videoAnalytics: defineTable({
+    chapterId: v.string(),
+    courseId: v.id("courses"),
+    userId: v.string(),
+    watchDuration: v.number(),
+    videoDuration: v.number(),
+    percentWatched: v.number(),
+    dropOffPoint: v.optional(v.number()),
+    completedWatch: v.boolean(),
+    rewatches: v.number(),
+    playbackSpeed: v.optional(v.number()),
+    qualitySetting: v.optional(v.string()),
+    timestamp: v.number(),
+    sessionId: v.optional(v.string()),
+  })
+    .index("by_chapter", ["chapterId", "timestamp"])
+    .index("by_course", ["courseId", "timestamp"])
+    .index("by_user", ["userId", "timestamp"])
+    .index("by_completion", ["completedWatch", "timestamp"]),
+
+  courseAnalytics: defineTable({
+    courseId: v.id("courses"),
+    creatorId: v.string(),
+    date: v.string(),
+    views: v.number(),
+    enrollments: v.number(),
+    conversionRate: v.number(),
+    activeStudents: v.number(),
+    avgTimeSpent: v.number(),
+    completionRate: v.number(),
+    chaptersStarted: v.number(),
+    chaptersCompleted: v.number(),
+    revenue: v.number(),
+    refunds: v.number(),
+    netRevenue: v.number(),
+    avgRating: v.optional(v.number()),
+    certificatesIssued: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_course", ["courseId", "date"])
+    .index("by_creator", ["creatorId", "date"])
+    .index("by_date", ["date"]),
+
+  revenueAnalytics: defineTable({
+    creatorId: v.string(),
+    storeId: v.id("stores"),
+    date: v.string(),
+    grossRevenue: v.number(),
+    platformFee: v.number(),
+    paymentProcessingFee: v.number(),
+    netRevenue: v.number(),
+    totalTransactions: v.number(),
+    successfulTransactions: v.number(),
+    refundedTransactions: v.number(),
+    courseRevenue: v.number(),
+    digitalProductRevenue: v.number(),
+    newCustomers: v.number(),
+    returningCustomers: v.number(),
+    avgOrderValue: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_creator", ["creatorId", "date"])
+    .index("by_store", ["storeId", "date"])
+    .index("by_date", ["date"]),
+
+  studentProgress: defineTable({
+    userId: v.string(),
+    courseId: v.id("courses"),
+    totalChapters: v.number(),
+    completedChapters: v.number(),
+    completionPercentage: v.number(),
+    totalTimeSpent: v.number(),
+    avgSessionDuration: v.number(),
+    lastAccessedAt: v.number(),
+    enrolledAt: v.number(),
+    daysSinceEnrollment: v.number(),
+    chaptersPerWeek: v.number(),
+    estimatedCompletionDate: v.optional(v.number()),
+    engagementScore: v.number(),
+    performancePercentile: v.optional(v.number()),
+    isAtRisk: v.boolean(),
+    needsHelp: v.boolean(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId", "courseId"])
+    .index("by_course", ["courseId", "completionPercentage"])
+    .index("by_engagement", ["engagementScore"])
+    .index("by_risk", ["isAtRisk", "updatedAt"]),
+
+  chapterAnalytics: defineTable({
+    chapterId: v.string(),
+    courseId: v.id("courses"),
+    chapterIndex: v.number(),
+    totalViews: v.number(),
+    uniqueStudents: v.number(),
+    completionRate: v.number(),
+    avgTimeToComplete: v.number(),
+    avgWatchTime: v.number(),
+    dropOffRate: v.number(),
+    commonDropOffPoint: v.optional(v.number()),
+    questionsAsked: v.number(),
+    avgEngagementScore: v.number(),
+    avgRewatches: v.number(),
+    avgTimeSpent: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_chapter", ["chapterId"])
+    .index("by_course", ["courseId", "chapterIndex"])
+    .index("by_drop_off", ["dropOffRate"])
+    .index("by_difficulty", ["avgRewatches"]),
+
+  learningStreaks: defineTable({
+    userId: v.string(),
+    currentStreak: v.number(),
+    longestStreak: v.number(),
+    lastActivityDate: v.string(),
+    totalDaysActive: v.number(),
+    totalHoursLearned: v.number(),
+    streakMilestones: v.array(v.number()),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_current_streak", ["currentStreak"])
+    .index("by_last_activity", ["lastActivityDate"]),
+
+  recommendations: defineTable({
+    userId: v.string(),
+    recommendations: v.array(v.object({
+      courseId: v.id("courses"),
+      score: v.number(),
+      reason: v.string(),
+    })),
+    generatedAt: v.number(),
+    expiresAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_expiry", ["expiresAt"]),
+
+  // Quizzes & Assessments
+  quizzes: defineTable({
+    title: v.string(),
+    description: v.optional(v.string()),
+    courseId: v.id("courses"),
+    chapterId: v.optional(v.string()),
+    instructorId: v.string(),
+    quizType: v.union(v.literal("practice"), v.literal("assessment"), v.literal("final_exam")),
+    timeLimit: v.optional(v.number()),
+    maxAttempts: v.optional(v.number()),
+    passingScore: v.number(),
+    requiredToPass: v.boolean(),
+    totalPoints: v.number(),
+    showCorrectAnswers: v.boolean(),
+    showScoreImmediately: v.boolean(),
+    shuffleQuestions: v.boolean(),
+    shuffleAnswers: v.boolean(),
+    isPublished: v.boolean(),
+    availableFrom: v.optional(v.number()),
+    availableUntil: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_course", ["courseId", "isPublished"])
+    .index("by_instructor", ["instructorId", "createdAt"])
+    .index("by_chapter", ["chapterId"]),
+
+  quizQuestions: defineTable({
+    quizId: v.id("quizzes"),
+    questionType: v.union(
+      v.literal("multiple_choice"),
+      v.literal("true_false"),
+      v.literal("fill_blank"),
+      v.literal("short_answer"),
+      v.literal("essay"),
+      v.literal("matching")
+    ),
+    questionText: v.string(),
+    questionImage: v.optional(v.string()),
+    explanation: v.optional(v.string()),
+    order: v.number(),
+    points: v.number(),
+    answers: v.any(),
+    caseSensitive: v.optional(v.boolean()),
+    partialCredit: v.optional(v.boolean()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_quiz", ["quizId", "order"]),
+
+  quizAttempts: defineTable({
+    quizId: v.id("quizzes"),
+    userId: v.string(),
+    courseId: v.id("courses"),
+    attemptNumber: v.number(),
+    status: v.union(
+      v.literal("in_progress"),
+      v.literal("submitted"),
+      v.literal("graded"),
+      v.literal("expired")
+    ),
+    startedAt: v.number(),
+    submittedAt: v.optional(v.number()),
+    timeSpent: v.optional(v.number()),
+    score: v.optional(v.number()),
+    percentage: v.optional(v.number()),
+    passed: v.optional(v.boolean()),
+    answers: v.array(v.object({
+      questionId: v.id("quizQuestions"),
+      answer: v.any(),
+      isCorrect: v.optional(v.boolean()),
+      pointsEarned: v.optional(v.number()),
+      gradedAt: v.optional(v.number()),
+      feedback: v.optional(v.string()),
+    })),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user_and_quiz", ["userId", "quizId", "attemptNumber"])
+    .index("by_quiz", ["quizId", "status"])
+    .index("by_user", ["userId", "submittedAt"]),
+
+  quizResults: defineTable({
+    quizId: v.id("quizzes"),
+    userId: v.string(),
+    courseId: v.id("courses"),
+    bestAttemptId: v.id("quizAttempts"),
+    bestScore: v.number(),
+    bestPercentage: v.number(),
+    totalAttempts: v.number(),
+    averageScore: v.number(),
+    averagePercentage: v.number(),
+    hasPassed: v.boolean(),
+    firstPassedAt: v.optional(v.number()),
+    isCompleted: v.boolean(),
+    completedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId", "courseId"])
+    .index("by_quiz", ["quizId", "hasPassed"])
+    .index("by_user_and_quiz", ["userId", "quizId"]),
+
+  questionBanks: defineTable({
+    title: v.string(),
+    description: v.optional(v.string()),
+    instructorId: v.string(),
+    courseId: v.optional(v.id("courses")),
+    tags: v.array(v.string()),
+    questionIds: v.array(v.id("quizQuestions")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_instructor", ["instructorId", "createdAt"])
+    .index("by_course", ["courseId"]),
+
+  // ===== MONETIZATION & PAYMENTS =====
+  // Subscriptions & Memberships (renamed to avoid conflict with existing subscriptions table)
+  membershipSubscriptions: monetizationSchema.subscriptionsTable,
+  subscriptionPlans: monetizationSchema.subscriptionPlansTable,
+  
+  // Coupons & Discounts
+  coupons: monetizationSchema.couponsTable,
+  couponUsages: monetizationSchema.couponUsagesTable,
+  
+  // Affiliate Program
+  affiliates: monetizationSchema.affiliatesTable,
+  affiliateClicks: monetizationSchema.affiliateClicksTable,
+  affiliateSales: monetizationSchema.affiliateSalesTable,
+  affiliatePayouts: monetizationSchema.affiliatePayoutsTable,
+  
+  // Referral Program
+  referrals: monetizationSchema.referralsTable,
+  
+  // Payment Plans (Installments)
+  paymentPlans: monetizationSchema.paymentPlansTable,
+  installmentPayments: monetizationSchema.installmentPaymentsTable,
+  
+  // Bundles
+  bundles: monetizationSchema.bundlesTable,
+  
+  // Tax & Multi-Currency
+  taxRates: monetizationSchema.taxRatesTable,
+  currencyRates: monetizationSchema.currencyRatesTable,
+  
+  // Refunds
+  refunds: monetizationSchema.refundsTable,
+  
+  // Creator Payouts
+  creatorPayouts: monetizationSchema.creatorPayoutsTable,
+  payoutSchedules: monetizationSchema.payoutSchedulesTable,
+  
+  // Free Trials & Upsells
+  freeTrials: monetizationSchema.freeTrialsTable,
+  upsells: monetizationSchema.upsellsTable,
+  upsellInteractions: monetizationSchema.upsellInteractionsTable,
 }); 
