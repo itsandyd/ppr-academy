@@ -86,34 +86,34 @@ export function MigrationDashboard() {
   // Get health status color
   const getHealthColor = (health: string) => {
     switch (health) {
-      case 'healthy': return 'text-green-600 bg-green-100';
-      case 'degraded': return 'text-yellow-600 bg-yellow-100';
-      case 'critical': return 'text-red-600 bg-red-100';
-      default: return 'text-gray-600 bg-gray-100';
+      case 'healthy': return 'text-chart-1 bg-chart-1/10';
+      case 'degraded': return 'text-chart-5 bg-chart-5/10';
+      case 'critical': return 'text-destructive bg-destructive/10';
+      default: return 'text-muted-foreground bg-muted';
     }
   };
 
   // Get alert icon
   const getAlertIcon = (type: string) => {
     switch (type) {
-      case 'error': return <XCircle className="w-4 h-4 text-red-500" />;
-      case 'warning': return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
-      case 'info': return <AlertCircle className="w-4 h-4 text-blue-500" />;
-      default: return <AlertCircle className="w-4 h-4 text-gray-500" />;
+      case 'error': return <XCircle className="w-4 h-4 text-destructive" />;
+      case 'warning': return <AlertTriangle className="w-4 h-4 text-chart-5" />;
+      case 'info': return <AlertCircle className="w-4 h-4 text-primary" />;
+      default: return <AlertCircle className="w-4 h-4 text-muted-foreground" />;
     }
   };
 
   const latestMetrics = metrics[metrics.length - 1];
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <div className="flex justify-between items-start">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Migration Dashboard</h1>
-              <p className="text-gray-600 mt-2">
+              <h1 className="text-3xl font-bold text-foreground">Migration Dashboard</h1>
+              <p className="text-muted-foreground mt-2">
                 Monitor the marketplace migration in real-time
               </p>
             </div>
@@ -155,14 +155,14 @@ export function MigrationDashboard() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">System Health</p>
+                  <p className="text-sm font-medium text-muted-foreground">System Health</p>
                   <div className="flex items-center mt-2">
                     <Badge className={`${getHealthColor(systemStatus?.systemHealth || 'unknown')} border-0`}>
                       {systemStatus?.systemHealth || 'Unknown'}
                     </Badge>
                   </div>
                 </div>
-                <Activity className="w-8 h-8 text-gray-400" />
+                <Activity className="w-8 h-8 text-muted-foreground/40" />
               </div>
             </CardContent>
           </Card>
@@ -171,7 +171,7 @@ export function MigrationDashboard() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Active Alerts</p>
+                  <p className="text-sm font-medium text-muted-foreground">Active Alerts</p>
                   <div className="flex items-center mt-2">
                     <span className="text-2xl font-bold">{systemStatus?.activeAlerts || 0}</span>
                     {systemStatus?.criticalAlerts > 0 && (
@@ -181,7 +181,7 @@ export function MigrationDashboard() {
                     )}
                   </div>
                 </div>
-                <AlertTriangle className="w-8 h-8 text-gray-400" />
+                <AlertTriangle className="w-8 h-8 text-muted-foreground/40" />
               </div>
             </CardContent>
           </Card>
@@ -190,7 +190,7 @@ export function MigrationDashboard() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Migration Progress</p>
+                  <p className="text-sm font-medium text-muted-foreground">Migration Progress</p>
                   <div className="mt-2">
                     {latestMetrics && (
                       <>
@@ -205,7 +205,7 @@ export function MigrationDashboard() {
                     )}
                   </div>
                 </div>
-                <Database className="w-8 h-8 text-gray-400" />
+                <Database className="w-8 h-8 text-muted-foreground/40" />
               </div>
             </CardContent>
           </Card>
@@ -214,14 +214,14 @@ export function MigrationDashboard() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Response Time</p>
+                  <p className="text-sm font-medium text-muted-foreground">Response Time</p>
                   <div className="flex items-center mt-2">
                     <span className="text-2xl font-bold">
                       {latestMetrics?.avgResponseTime || 0}ms
                     </span>
                   </div>
                 </div>
-                <TrendingUp className="w-8 h-8 text-gray-400" />
+                <TrendingUp className="w-8 h-8 text-muted-foreground/40" />
               </div>
             </CardContent>
           </Card>
@@ -273,11 +273,11 @@ export function MigrationDashboard() {
                       </div>
                       <div className="flex justify-between">
                         <span>Migrated:</span>
-                        <span className="font-bold text-green-600">{latestMetrics.migratedUsers}</span>
+                        <span className="font-bold text-chart-1">{latestMetrics.migratedUsers}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Remaining:</span>
-                        <span className="font-bold text-orange-600">
+                        <span className="font-bold text-chart-5">
                           {latestMetrics.totalUsers - latestMetrics.migratedUsers}
                         </span>
                       </div>
@@ -306,11 +306,11 @@ export function MigrationDashboard() {
                       </div>
                       <div className="flex justify-between">
                         <span>Migrated Products:</span>
-                        <span className="font-bold text-green-600">{latestMetrics.migratedProducts}</span>
+                        <span className="font-bold text-chart-1">{latestMetrics.migratedProducts}</span>
                       </div>
                       <div className="flex justify-between">
                         <span>Remaining:</span>
-                        <span className="font-bold text-orange-600">
+                        <span className="font-bold text-chart-5">
                           {latestMetrics.totalCourses - latestMetrics.migratedProducts}
                         </span>
                       </div>
@@ -340,14 +340,14 @@ export function MigrationDashboard() {
                       <div className="flex justify-between">
                         <span>Error Count:</span>
                         <span className={`font-bold ${
-                          latestMetrics.errorCount > 5 ? 'text-red-600' : 'text-green-600'
+                          latestMetrics.errorCount > 5 ? 'text-destructive' : 'text-chart-1'
                         }`}>
                           {latestMetrics.errorCount}
                         </span>
                       </div>
                       <div className="flex justify-between">
                         <span>Last Updated:</span>
-                        <span className="text-sm text-gray-600">
+                        <span className="text-sm text-muted-foreground">
                           {new Date(latestMetrics.timestamp).toLocaleTimeString()}
                         </span>
                       </div>
@@ -363,9 +363,9 @@ export function MigrationDashboard() {
                 <CardTitle>Migration Progress Over Time</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-64 flex items-center justify-center text-gray-500">
+                <div className="h-64 flex items-center justify-center text-muted-foreground">
                   <div className="text-center">
-                    <TrendingUp className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                    <TrendingUp className="w-12 h-12 mx-auto mb-4 text-muted-foreground/40" />
                     <p>Chart visualization would go here</p>
                     <p className="text-sm">Showing migration progress, response times, and error rates</p>
                   </div>
@@ -379,17 +379,17 @@ export function MigrationDashboard() {
             {alerts.length === 0 ? (
               <Card>
                 <CardContent className="p-12 text-center">
-                  <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+                  <CheckCircle className="w-16 h-16 text-chart-1 mx-auto mb-4" />
                   <h3 className="text-lg font-semibold mb-2">No Active Alerts</h3>
-                  <p className="text-gray-600">System is running smoothly</p>
+                  <p className="text-muted-foreground">System is running smoothly</p>
                 </CardContent>
               </Card>
             ) : (
               alerts.map((alert) => (
                 <Alert key={alert.id} className={
-                  alert.type === 'error' ? 'border-red-200 bg-red-50' :
-                  alert.type === 'warning' ? 'border-yellow-200 bg-yellow-50' :
-                  'border-blue-200 bg-blue-50'
+                  alert.type === 'error' ? 'border-destructive/50 bg-destructive/10' :
+                  alert.type === 'warning' ? 'border-chart-5/50 bg-chart-5/10' :
+                  'border-primary/50 bg-primary/10'
                 }>
                   <div className="flex items-start space-x-3">
                     {getAlertIcon(alert.type)}
@@ -398,11 +398,11 @@ export function MigrationDashboard() {
                         {alert.type.toUpperCase()} - {alert.message}
                       </AlertTitle>
                       <AlertDescription>
-                        <div className="text-sm text-gray-600 mb-2">
+                        <div className="text-sm text-muted-foreground mb-2">
                           {new Date(alert.timestamp).toLocaleString()}
                         </div>
                         {alert.metadata && (
-                          <pre className="text-xs bg-gray-100 p-2 rounded mt-2 overflow-x-auto">
+                          <pre className="text-xs bg-muted p-2 rounded mt-2 overflow-x-auto">
                             {JSON.stringify(alert.metadata, null, 2)}
                           </pre>
                         )}
@@ -420,13 +420,13 @@ export function MigrationDashboard() {
               {/* Quick Rollback Options */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center space-x-2 text-yellow-700">
+                  <CardTitle className="flex items-center space-x-2 text-chart-5">
                     <Pause className="w-5 h-5" />
                     <span>Pause Migration</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-gray-600 mb-4">
+                  <p className="text-sm text-muted-foreground mb-4">
                     Pause ongoing data migration while keeping systems running.
                   </p>
                   <div className="space-y-2 text-sm">
@@ -448,13 +448,13 @@ export function MigrationDashboard() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center space-x-2 text-orange-700">
+                  <CardTitle className="flex items-center space-x-2 text-secondary">
                     <RotateCcw className="w-5 h-5" />
                     <span>Disable Marketplace</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-gray-600 mb-4">
+                  <p className="text-sm text-muted-foreground mb-4">
                     Disable new marketplace features and revert to legacy system.
                   </p>
                   <div className="space-y-2 text-sm">
@@ -476,13 +476,13 @@ export function MigrationDashboard() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center space-x-2 text-red-700">
+                  <CardTitle className="flex items-center space-x-2 text-destructive">
                     <XCircle className="w-5 h-5" />
                     <span>Full Rollback</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-gray-600 mb-4">
+                  <p className="text-sm text-muted-foreground mb-4">
                     Complete rollback to pre-migration state. Use only in emergencies.
                   </p>
                   <div className="space-y-2 text-sm">
@@ -506,19 +506,19 @@ export function MigrationDashboard() {
             {/* Emergency Contact Info */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-red-700">Emergency Contacts</CardTitle>
+                <CardTitle className="text-destructive">Emergency Contacts</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <h4 className="font-medium mb-2">Technical Lead</h4>
-                    <p className="text-sm text-gray-600">John Doe - Engineering</p>
+                    <p className="text-sm text-muted-foreground">John Doe - Engineering</p>
                     <p className="text-sm">📧 john.doe@company.com</p>
                     <p className="text-sm">📱 +1 (555) 123-4567</p>
                   </div>
                   <div>
                     <h4 className="font-medium mb-2">DevOps Lead</h4>
-                    <p className="text-sm text-gray-600">Jane Smith - Infrastructure</p>
+                    <p className="text-sm text-muted-foreground">Jane Smith - Infrastructure</p>
                     <p className="text-sm">📧 jane.smith@company.com</p>
                     <p className="text-sm">📱 +1 (555) 765-4321</p>
                   </div>

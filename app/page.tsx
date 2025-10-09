@@ -96,7 +96,7 @@ export default function SectionedMarketplace() {
         <section className="py-8 bg-muted/40">
           <div className="mx-auto w-full max-w-[1140px] px-6">
             <div className="flex items-center gap-3">
-              <Sparkles className="w-6 h-6 text-purple-600" />
+              <Sparkles className="w-6 h-6 text-primary" />
               <div>
                 <h2 className="text-2xl font-bold text-foreground">
                   Search Results for "{searchTerm}"
@@ -115,12 +115,12 @@ export default function SectionedMarketplace() {
         <MarketplaceSection
           title="All Courses"
           subtitle={`${filteredCourses.length} expert-led courses to master music production`}
-          icon={<BookOpen className="w-6 h-6 text-white" />}
+          icon={<BookOpen className="w-6 h-6 text-primary-foreground" />}
           content={filteredCourses}
           viewAllLink="/courses"
           emptyMessage="No courses available yet."
           limit={isSearching ? undefined : 6}
-          gradient="from-green-500 to-emerald-500"
+          gradient="from-chart-1 to-chart-2"
         />
       )}
 
@@ -129,12 +129,12 @@ export default function SectionedMarketplace() {
         <MarketplaceSection
           title="Sample Packs"
           subtitle={`${filteredSamplePacks.length} professional sample collections`}
-          icon={<Layers className="w-6 h-6 text-white" />}
+          icon={<Layers className="w-6 h-6 text-secondary-foreground" />}
           content={filteredSamplePacks}
           viewAllLink="/sample-packs"
           emptyMessage="No sample packs available yet."
           limit={isSearching ? undefined : 6}
-          gradient="from-orange-500 to-red-500"
+          gradient="from-secondary to-chart-5"
         />
       )}
 
@@ -143,12 +143,12 @@ export default function SectionedMarketplace() {
         <MarketplaceSection
           title="Digital Products"
           subtitle={`${filteredProducts.length} presets, templates, and tools`}
-          icon={<Package className="w-6 h-6 text-white" />}
+          icon={<Package className="w-6 h-6 text-accent-foreground" />}
           content={filteredProducts}
           viewAllLink="/products"
           emptyMessage="No products available yet."
           limit={isSearching ? undefined : 6}
-          gradient="from-blue-500 to-cyan-500"
+          gradient="from-accent to-chart-4"
         />
       )}
 
@@ -165,7 +165,7 @@ export default function SectionedMarketplace() {
             </p>
             <button
               onClick={() => setSearchTerm("")}
-              className="text-purple-600 hover:text-purple-700 font-medium"
+              className="text-primary hover:text-primary/80 font-medium"
             >
               Clear search and view all content
             </button>

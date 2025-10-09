@@ -85,7 +85,7 @@ export const HowItWorks: FC<HowItWorksProps> = () => {
                 <div className="space-y-4">
                   {studentSteps.map((step, index) => (
                     <div key={index} className="flex items-start gap-4">
-                      <div className="flex-shrink-0 w-10 h-10 bg-white dark:bg-black rounded-lg flex items-center justify-center shadow-sm">
+                      <div className="flex-shrink-0 w-10 h-10 bg-background rounded-lg flex items-center justify-center shadow-sm">
                         <step.icon className="w-5 h-5 text-green-600 dark:text-green-400" />
                       </div>
                       <div className="flex-1">
@@ -122,7 +122,7 @@ export const HowItWorks: FC<HowItWorksProps> = () => {
               <div className="space-y-6">
                 {/* Header */}
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-500 rounded-xl flex items-center justify-center shadow-lg">
+                  <div className="w-12 h-12 bg-gradient-to-br from-primary to-chart-1 rounded-xl flex items-center justify-center shadow-lg">
                     <Store className="w-6 h-6 text-white" />
                   </div>
                   <div>
@@ -135,7 +135,7 @@ export const HowItWorks: FC<HowItWorksProps> = () => {
                 <div className="space-y-4">
                   {creatorSteps.map((step, index) => (
                     <div key={index} className="flex items-start gap-4">
-                      <div className="flex-shrink-0 w-10 h-10 bg-white dark:bg-black rounded-lg flex items-center justify-center shadow-sm">
+                      <div className="flex-shrink-0 w-10 h-10 bg-background rounded-lg flex items-center justify-center shadow-sm">
                         <step.icon className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                       </div>
                       <div className="flex-1">
@@ -152,7 +152,7 @@ export const HowItWorks: FC<HowItWorksProps> = () => {
 
                 {/* CTA */}
                 <Link href="/sign-up?intent=creator">
-                  <Button className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg shadow-purple-500/25">
+                  <Button className="w-full bg-gradient-to-r from-primary to-chart-1 hover:from-primary/90 hover:to-chart-1/90 text-white shadow-lg shadow-primary/25">
                     Start Creating Free
                     <CheckCircle className="ml-2 w-4 h-4" />
                   </Button>
