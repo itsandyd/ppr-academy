@@ -27,6 +27,7 @@ import type * as certificatesSchema from "../certificatesSchema.js";
 import type * as coachingDiscordActions from "../coachingDiscordActions.js";
 import type * as coachingProducts from "../coachingProducts.js";
 import type * as coachingSessionManager from "../coachingSessionManager.js";
+import type * as coachingSessionQueries from "../coachingSessionQueries.js";
 import type * as coupons from "../coupons.js";
 import type * as courses from "../courses.js";
 import type * as credits from "../credits.js";
@@ -92,6 +93,7 @@ declare const fullApi: ApiFromModules<{
   coachingDiscordActions: typeof coachingDiscordActions;
   coachingProducts: typeof coachingProducts;
   coachingSessionManager: typeof coachingSessionManager;
+  coachingSessionQueries: typeof coachingSessionQueries;
   coupons: typeof coupons;
   courses: typeof courses;
   credits: typeof credits;
