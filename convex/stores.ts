@@ -53,6 +53,20 @@ export const getUserStores = query({
   },
 });
 
+// Get single store for a user (returns first store or null)
+export const getUserStore = query({
+  args: { userId: v.string() },
+  returns: v.union(storeValidator, v.null()),
+  handler: async (ctx, args) => {
+    const stores = await ctx.db
+      .query("stores")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .first();
+    
+    return stores || null;
+  },
+});
+
 // Get store by ID
 export const getStoreById = query({
   args: { storeId: v.id("stores") },
