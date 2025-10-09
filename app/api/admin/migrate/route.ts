@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { requireAdmin } from '@/lib/auth-helpers';
 import { runMarketplaceMigration } from '@/scripts/migrate-to-marketplace';
 import { features } from '@/lib/features';
 
@@ -13,9 +13,6 @@ import { features } from '@/lib/features';
 const MIGRATION_ENABLED = 
   process.env.NODE_ENV === 'development' || 
   process.env.ENABLE_DATA_MIGRATION === 'true';
-
-// Admin user IDs who can run migrations
-const ADMIN_USER_IDS = process.env.ADMIN_USER_IDS?.split(',') || [];
 
 interface MigrationRequest {
   dryRun?: boolean;
@@ -28,27 +25,13 @@ interface MigrationRequest {
 
 export async function POST(request: NextRequest) {
   try {
+    // ✅ SECURITY: Require admin authentication
+    await requireAdmin();
+    
     // Check if migrations are enabled
     if (!MIGRATION_ENABLED) {
       return NextResponse.json(
         { error: 'Migrations are not enabled in this environment' },
-        { status: 403 }
-      );
-    }
-
-    // Authenticate user
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
-
-    // Check if user is admin
-    if (!ADMIN_USER_IDS.includes(userId)) {
-      return NextResponse.json(
-        { error: 'Admin access required' },
         { status: 403 }
       );
     }

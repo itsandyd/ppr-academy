@@ -76,6 +76,12 @@ export function CourseCheckout({ course, store, creator, user }: CourseCheckoutP
   const router = useRouter();
   const createCourseEnrollment = useMutation(api.library.createCourseEnrollment);
   
+  // Fetch creator's Stripe Connect account info
+  const creatorUser = useQuery(
+    api.users.getUserFromClerk,
+    course.userId ? { clerkId: course.userId } : "skip"
+  );
+  
   // Check if user already has access to this course
   const hasAccess = useQuery(
     api.library.hasUserPurchasedCourse,
@@ -129,8 +135,7 @@ export function CourseCheckout({ course, store, creator, user }: CourseCheckoutP
             courseTitle: course.title,
             userId: user?.id, // Include user ID for library access
             stripePriceId: (course as any).stripePriceId, // Use stored Stripe price ID
-            // TODO: Add creator's Stripe Connect account ID
-            // creatorStripeAccountId: creator?.stripeConnectAccountId,
+            creatorStripeAccountId: creatorUser?.stripeConnectAccountId || null,
           }),
         });
 

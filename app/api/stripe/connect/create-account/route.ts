@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { auth } from "@clerk/nextjs/server";
+import { requireAuth } from "@/lib/auth-helpers";
 
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -9,13 +9,15 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId } = await auth();
-    
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    // ✅ SECURITY: Require authentication
+    const user = await requireAuth();
 
-    const { email, businessType = "individual" } = await request.json();
+    const { email, businessType = "individual", userId } = await request.json();
+    
+    // ✅ SECURITY: Verify user can only create account for themselves
+    if (userId && userId !== user.id) {
+      return NextResponse.json({ error: "User mismatch" }, { status: 403 });
+    }
 
     if (!email) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });

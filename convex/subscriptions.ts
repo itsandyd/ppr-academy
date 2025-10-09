@@ -289,7 +289,7 @@ export const cancelSubscription = mutation({
 });
 
 export const reactivateSubscription = mutation({
-  args: { subscriptionId: v.id("subscriptions") },
+  args: { subscriptionId: v.id("membershipSubscriptions") },
   handler: async (ctx, args) => {
     const subscription = await ctx.db.get(args.subscriptionId);
     if (!subscription) {
@@ -340,7 +340,7 @@ export const updateSubscriptionStatus = mutation({
 });
 
 export const renewSubscription = mutation({
-  args: { subscriptionId: v.id("subscriptions") },
+  args: { subscriptionId: v.id("membershipSubscriptions") },
   handler: async (ctx, args) => {
     const subscription = await ctx.db.get(args.subscriptionId);
     if (!subscription) {
@@ -368,7 +368,7 @@ export const renewSubscription = mutation({
 
 export const upgradeSubscription = mutation({
   args: {
-    subscriptionId: v.id("subscriptions"),
+    subscriptionId: v.id("membershipSubscriptions"),
     newPlanId: v.id("subscriptionPlans"),
   },
   handler: async (ctx, args) => {
@@ -408,7 +408,7 @@ export const upgradeSubscription = mutation({
 
 export const downgradeSubscription = mutation({
   args: {
-    subscriptionId: v.id("subscriptions"),
+    subscriptionId: v.id("membershipSubscriptions"),
     newPlanId: v.id("subscriptionPlans"),
   },
   handler: async (ctx, args) => {

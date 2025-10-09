@@ -35,8 +35,44 @@ export async function POST(request: NextRequest) {
           payoutsEnabled: account.payouts_enabled,
         });
         
-        // TODO: Update user record with account status in Convex
-        // This will happen when we implement the user update function
+        // Update user record with account status in Convex
+        try {
+          const { fetchQuery: fetchQueryAccount, fetchMutation: fetchMutationAccount } = await import("convex/nextjs");
+          const { api: apiAccount } = await import("@/convex/_generated/api");
+          
+          // Find user by Stripe account ID
+          const users = await fetchQueryAccount(apiAccount.users.getAllUsers);
+          const user = users?.find((u: any) => u.stripeConnectAccountId === account.id);
+          
+          if (user) {
+            // Determine account status
+            let status: "pending" | "restricted" | "enabled" = "pending";
+            if (account.charges_enabled && account.payouts_enabled) {
+              status = "enabled";
+            } else if (account.details_submitted) {
+              status = "restricted"; // Submitted but not fully enabled
+            }
+            
+            await fetchMutationAccount(apiAccount.users.updateUserByClerkId, {
+              clerkId: user.clerkId,
+              updates: {
+                stripeAccountStatus: status,
+                stripeOnboardingComplete: account.details_submitted || false,
+              },
+            });
+            
+            console.log("✅ Updated user Stripe account status:", {
+              userId: user._id,
+              status,
+              onboardingComplete: account.details_submitted,
+            });
+          } else {
+            console.log("⚠️ No user found with Stripe account ID:", account.id);
+          }
+        } catch (error) {
+          console.error("❌ Failed to update user Stripe status:", error);
+          // Don't throw - we still want to acknowledge the webhook
+        }
         
         break;
 
@@ -62,19 +98,85 @@ export async function POST(request: NextRequest) {
         break;
 
       case "checkout.session.completed":
-        // Handle successful checkout (for credits)
+        // Handle successful checkout (for credits and subscriptions)
         const session = event.data.object as Stripe.Checkout.Session;
         console.log("💳 Checkout completed:", {
           id: session.id,
           amount: session.amount_total ? session.amount_total / 100 : 0,
           currency: session.currency,
           metadata: session.metadata,
+          mode: session.mode,
         });
+
+        // Handle subscription checkouts
+        if (session.mode === "subscription" && session.subscription) {
+          const { planId, userId, storeId, billingCycle } = session.metadata || {};
+          
+          if (planId && userId) {
+            console.log("🔄 Creating subscription in Convex:", {
+              userId,
+              planId,
+              stripeSubscriptionId: session.subscription,
+              billingCycle,
+            });
+
+            const { fetchMutation } = await import("convex/nextjs");
+            const { api } = await import("@/convex/_generated/api");
+
+            await fetchMutation(api.subscriptions.createSubscription, {
+              userId,
+              planId: planId as any,
+              billingCycle: (billingCycle as "monthly" | "yearly") || "monthly",
+              stripeSubscriptionId: session.subscription as string,
+            });
+
+            console.log("✅ Subscription created successfully");
+          }
+        }
+
+        // Handle course purchases
+        if (session.metadata?.productType === "course") {
+          const { userId, courseId, amount, currency } = session.metadata;
+          
+          if (userId && courseId && amount) {
+            console.log("📚 Processing course purchase:", {
+              userId,
+              courseId,
+              amount: parseInt(amount) / 100,
+              currency: currency || "USD",
+              sessionId: session.id,
+              paymentIntentId: session.payment_intent,
+            });
+
+            const { fetchMutation: fetchMutationEnroll } = await import("convex/nextjs");
+            const { api: apiEnroll } = await import("@/convex/_generated/api");
+
+            try {
+              const purchaseId = await fetchMutationEnroll(apiEnroll.library.createCourseEnrollment, {
+                userId,
+                courseId: courseId as any,
+                amount: parseInt(amount),
+                currency: currency || "USD",
+                paymentMethod: "stripe",
+                transactionId: session.payment_intent as string,
+              });
+
+              console.log("✅ Course enrollment created:", { purchaseId, userId, courseId });
+              
+              // TODO: Send confirmation email
+            } catch (error) {
+              console.error("❌ Failed to create course enrollment:", error);
+              // Don't throw - we still want to acknowledge the webhook
+            }
+          }
+        }
 
         // Handle credit package purchases
         if (session.metadata?.productType === "credit_package") {
-          const { userId, packageId, credits, bonusCredits } = session.metadata;
-          const totalCredits = parseInt(credits) + parseInt(bonusCredits || "0");
+          const { userId, packageId, credits, bonusCredits, packageName } = session.metadata;
+          const creditsAmount = parseInt(credits || "0");
+          const bonusAmount = parseInt(bonusCredits || "0");
+          const totalCredits = creditsAmount + bonusAmount;
 
           console.log("🪙 Processing credit purchase:", {
             userId,
@@ -83,10 +185,116 @@ export async function POST(request: NextRequest) {
             sessionId: session.id,
           });
 
-          // TODO: Call Convex mutation to add credits to user account
-          // This will be implemented once we have the mutation ready
+          if (userId && totalCredits > 0) {
+            const { fetchMutation: fetchMutationCredits } = await import("convex/nextjs");
+            const { api: apiCredits } = await import("@/convex/_generated/api");
+
+            try {
+              // Add purchased credits
+              await fetchMutationCredits(apiCredits.credits.addCredits, {
+                userId,
+                amount: creditsAmount,
+                type: "purchase",
+                description: `Purchased ${packageName || "Credit Package"}`,
+                metadata: {
+                  stripePaymentId: session.payment_intent as string,
+                  dollarAmount: session.amount_total ? session.amount_total / 100 : 0,
+                  packageName: packageName || "Credit Package",
+                },
+              });
+
+              // Add bonus credits if any
+              if (bonusAmount > 0) {
+                await fetchMutationCredits(apiCredits.credits.addCredits, {
+                  userId,
+                  amount: bonusAmount,
+                  type: "bonus",
+                  description: `Bonus credits from ${packageName || "Credit Package"}`,
+                  metadata: {
+                    stripePaymentId: session.payment_intent as string,
+                    packageName: packageName || "Credit Package",
+                  },
+                });
+              }
+
+              console.log("✅ Credits added successfully:", {
+                userId,
+                purchased: creditsAmount,
+                bonus: bonusAmount,
+                total: totalCredits,
+              });
+            } catch (error) {
+              console.error("❌ Failed to add credits:", error);
+              // Don't throw - we still want to acknowledge the webhook
+            }
+          }
         }
 
+        break;
+
+      case "customer.subscription.updated":
+        // Handle subscription status changes
+        const updatedSubscription = event.data.object as Stripe.Subscription;
+        console.log("🔄 Subscription updated:", {
+          id: updatedSubscription.id,
+          status: updatedSubscription.status,
+          currentPeriodEnd: new Date(updatedSubscription.current_period_end * 1000),
+        });
+
+        const { fetchMutation: fetchMutationUpdate } = await import("convex/nextjs");
+        const { api: apiUpdate } = await import("@/convex/_generated/api");
+
+        await fetchMutationUpdate(apiUpdate.subscriptions.updateSubscriptionStatus, {
+          stripeSubscriptionId: updatedSubscription.id,
+          status: updatedSubscription.status as "active" | "canceled" | "past_due" | "expired",
+        });
+
+        console.log("✅ Subscription status updated in Convex");
+        break;
+
+      case "customer.subscription.deleted":
+        // Handle subscription cancellation
+        const deletedSubscription = event.data.object as Stripe.Subscription;
+        console.log("❌ Subscription canceled:", {
+          id: deletedSubscription.id,
+          canceledAt: deletedSubscription.canceled_at,
+        });
+
+        const { fetchMutation: fetchMutationDelete } = await import("convex/nextjs");
+        const { api: apiDelete } = await import("@/convex/_generated/api");
+
+        await fetchMutationDelete(apiDelete.subscriptions.updateSubscriptionStatus, {
+          stripeSubscriptionId: deletedSubscription.id,
+          status: "canceled",
+        });
+
+        console.log("✅ Subscription marked as canceled in Convex");
+        break;
+
+      case "invoice.payment_succeeded":
+        // Handle successful subscription renewal
+        const invoice = event.data.object as Stripe.Invoice;
+        if (invoice.subscription) {
+          console.log("💰 Subscription payment succeeded:", {
+            subscriptionId: invoice.subscription,
+            amount: invoice.amount_paid / 100,
+          });
+
+          // Optionally track revenue here
+        }
+        break;
+
+      case "invoice.payment_failed":
+        // Handle failed subscription payment
+        const failedInvoice = event.data.object as Stripe.Invoice;
+        if (failedInvoice.subscription) {
+          console.log("❌ Subscription payment failed:", {
+            subscriptionId: failedInvoice.subscription,
+            attemptCount: failedInvoice.attempt_count,
+          });
+
+          // Optionally send email notification to user
+        }
         break;
 
       case "payment_intent.payment_failed":
@@ -98,7 +306,40 @@ export async function POST(request: NextRequest) {
           metadata: failedPayment.metadata,
         });
         
-        // TODO: Handle payment failure notification
+        // Send payment failure notification
+        try {
+          const metadata = failedPayment.metadata || {};
+          const { customerEmail, customerName, courseTitle, productType } = metadata;
+          
+          if (customerEmail) {
+            // TODO: Integrate with Resend to send actual email
+            // For now, log the failure notification
+            console.log("📧 Payment failure notification (to be sent):", {
+              to: customerEmail,
+              subject: "Payment Issue - Action Required",
+              details: {
+                customerName: customerName || "Customer",
+                productType: productType || "purchase",
+                productName: courseTitle || "your purchase",
+                failureReason: failedPayment.last_payment_error?.message || "Payment declined",
+                paymentIntentId: failedPayment.id,
+                amount: failedPayment.amount / 100,
+                currency: failedPayment.currency,
+              },
+            });
+            
+            // Email template should include:
+            // - Clear subject: "Payment Issue - Action Required"
+            // - Friendly explanation of what happened
+            // - Specific failure reason (if card declined, expired, etc.)
+            // - Link to retry payment
+            // - Support contact information
+            // - Amount and what they were trying to purchase
+          }
+        } catch (error) {
+          console.error("❌ Failed to send payment failure notification:", error);
+          // Don't throw - we still want to acknowledge the webhook
+        }
         
         break;
 

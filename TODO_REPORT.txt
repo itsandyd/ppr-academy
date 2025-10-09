@@ -1,0 +1,75 @@
+./app/archived-coaching/coaching-client.tsx:433:                            // TODO: Implement messaging functionality
+./app/courses/[slug]/success/page.tsx:29:        // TODO: Create payment verification API route
+./app/courses/[slug]/checkout/components/StripePaymentForm.tsx:56:          // TODO: Add creator's Stripe Connect account ID
+./app/courses/[slug]/checkout/components/CourseCheckout.tsx:132:            // TODO: Add creator's Stripe Connect account ID
+./app/actions/course-actions.ts:2179:    console.log(`🔍 DEBUG: Course ${courseId} has ${allChapters.length} chapters:`);
+./app/actions/course-actions.ts:2186:    console.log(`🔍 DEBUG: Found ${moduleChapters.length} legacy module chapters:`);
+./app/actions/course-actions.ts:2207:    console.log(`🔍 DEBUG: Found ${realModules.length} real CourseModule records:`);
+./app/actions/coaching-actions.ts:65:        rating: 4.5, // TODO: Calculate from actual reviews
+./app/actions/coaching-actions.ts:66:        totalSessions: 0, // TODO: Calculate from actual sessions
+./app/actions/coaching-actions.ts:116:      rating: 4.5, // TODO: Calculate from actual reviews
+./app/actions/coaching-actions.ts:117:      totalSessions: 0, // TODO: Calculate from actual sessions
+./app/api/social/webhooks/[platform]/route.ts:172:          // TODO: Call Convex mutation to store webhook
+./app/api/social/webhooks/[platform]/route.ts:216:    // TODO: Call Convex mutation to update analytics
+./app/api/social/webhooks/[platform]/route.ts:228:    // TODO: Call Convex mutation to update post status
+./app/api/social/webhooks/[platform]/route.ts:235:    // TODO: Call Convex mutation to update post status
+./app/api/courses/payment-success/route.ts:30:      // TODO: Create course enrollment in Convex
+./app/api/debug-user/route.ts:13:    console.log(`🔍 DEBUG: Starting debug for clerkId: ${clerkId}`);
+./app/api/webhooks/stripe-library/route.ts:65:          // TODO: Send confirmation email
+./app/api/webhooks/stripe-library/route.ts:66:          // TODO: Trigger any post-purchase workflows
+./app/api/webhooks/stripe/route.ts:38:        // TODO: Update user record with account status in Convex
+./app/api/webhooks/stripe/route.ts:59:        // TODO: Create course enrollment in Convex
+./app/api/webhooks/stripe/route.ts:113:          // TODO: Call Convex mutation to add credits to user account
+./app/api/webhooks/stripe/route.ts:193:        // TODO: Handle payment failure notification
+./app/(dashboard)/store/components/PhonePreview.tsx:246:  // TODO: Replace with actual API calls once Convex API is regenerated
+./app/(dashboard)/store/components/PhonePreview.tsx:257:      // TODO: Replace with actual submitLead API call
+./app/(dashboard)/store/[storeId]/options/OptionsForm.tsx:29:    // TODO: Handle form submission
+./app/(dashboard)/store/[storeId]/course/create/steps/ThumbnailForm.tsx:136:    // TODO: Save form data to context or storage
+./app/(dashboard)/store/[storeId]/course/create/steps/ThumbnailForm.tsx:153:    // TODO: Handle file upload
+./app/(dashboard)/store/[storeId]/course/create/steps/CourseContentForm.tsx:299:    // TODO: Handle file upload
+./app/(dashboard)/store/[storeId]/products/digital-download/create/options/ConfirmationEmail.tsx:34:              // TODO: Reset to default subject
+./app/(dashboard)/store/[storeId]/products/digital-download/create/options/ConfirmationEmail.tsx:70:              // TODO: Reset to default body
+./app/(dashboard)/store/[storeId]/products/digital-download/create/options/OptionsForm.tsx:49:    // TODO: Handle form submission and publish
+./app/(dashboard)/store/[storeId]/products/bundle/create/BundleForm.tsx:115:    // TODO: Create bundle in database
+./app/(dashboard)/store/[storeId]/products/lead-magnet/components/ConfirmationEmail.tsx:21:    // TODO: Implement tag insertion into rich text editor
+./app/(dashboard)/store/[storeId]/products/coaching-call/create/steps/checkout/CheckoutForm.tsx:87:        // TODO: Add update product functionality
+./app/(dashboard)/store/[storeId]/products/page.tsx:138:      'membership': '#', // TODO: Implement membership creation
+./app/(dashboard)/store/[storeId]/products/page.tsx:139:      'webinar': '#', // TODO: Implement webinar creation
+./app/(dashboard)/store/[storeId]/products/page.tsx:144:      'affiliate': '#', // TODO: Implement affiliate program
+./app/(dashboard)/store/[storeId]/products/page.tsx:156:      // TODO: Show coming soon message or create placeholder pages
+./app/(dashboard)/store/[storeId]/leads/page.tsx:22:  // TODO: Replace with actual API calls once Convex API is regenerated
+./app/(dashboard)/store/[storeId]/courses/[courseId]/enroll/components/CourseEnrollmentForm.tsx:76:      // TODO: Implement course enrollment/purchase logic
+./app/(dashboard)/store/[storeId]/courses/[courseId]/enroll/components/CourseEnrollmentForm.tsx:87:      // TODO: Redirect to payment or course access page
+./app/(dashboard)/store/[storeId]/courses/[courseId]/enroll/page.tsx:17:    courseId ? { courseId: courseId as any, userId: "temp" } : "skip" // TODO: Get actual userId or create public course query
+./app/(dashboard)/store/[storeId]/courses/[courseId]/components/CourseViewLayout.tsx:61:  const completedLessons = 0; // TODO: Implement progress tracking
+./app/(dashboard)/store/[storeId]/courses/[courseId]/components/CourseViewLayout.tsx:147:              const moduleCompletedLessons = 0; // TODO: Calculate actual progress
+./app/(dashboard)/store/[storeId]/courses/[courseId]/components/CourseViewLayout.tsx:167:                      const isCompleted = false; // TODO: Check if lesson is completed
+./app/(dashboard)/store/[storeId]/courses/[courseId]/page.tsx:34:    courseId ? { courseId: courseId as any, userId: "temp" } : "skip" // TODO: Get actual userId
+./app/[slug]/page.tsx:77:  // TODO: Fetch coaching profiles for this store
+./app/[slug]/page.tsx:105:    // TODO: Add coaching profiles when available
+./next-env.d.ts:4:// NOTE: This file should not be edited
+./convex/qa.ts:459:      // TODO: Add instructor check
+./convex/courses.ts:365:      // TODO: Add module creation back later
+./convex/http.ts:131:    // TODO: Implement Stripe webhook handling in Phase 2
+./convex/certificates.ts:342:      // TODO: Add authorization check (instructor or admin only)
+./convex/emails.ts:367:    // TODO: Implement actual store-specific campaign sending once API is regenerated
+./convex/seedCreditPackages.ts:24:        stripePriceId: "price_starter", // TODO: Replace with real Stripe price ID
+./convex/seedCreditPackages.ts:36:        stripePriceId: "price_pro", // TODO: Replace with real Stripe price ID
+./convex/seedCreditPackages.ts:48:        stripePriceId: "price_ultimate", // TODO: Replace with real Stripe price ID
+./convex/seedCreditPackages.ts:60:        stripePriceId: "price_mini", // TODO: Replace with real Stripe price ID
+./components/course/course-detail-client.tsx:149:    console.log(`🎵 ===== AUDIO PLAYBACK DEBUG =====`);
+./components/course/course-detail-client.tsx:276:    console.log(`🎵 ===== END AUDIO PLAYBACK DEBUG =====`);
+./components/dashboard/creator-dashboard-v2.tsx:106:    totalRevenue: products.reduce((sum, product) => sum + (product.price * 0), 0), // TODO: Add actual sales data
+./components/dashboard/creator-dashboard-v2.tsx:107:    totalStudents: 0, // TODO: Calculate from purchases/enrollments
+./components/coaching/DiscordVerificationCard.tsx:103:              // TODO: Get invite link from store's Discord guild
+./package-lock.json:4116:      "integrity": "sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA==",
+./package-lock.json:9354:      "integrity": "sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==",
+./lib/admin-data.ts:6: * TODO: Create Convex queries for admin stats and data
+./lib/admin-data.ts:14:    // TODO: Implement Convex queries for admin stats
+./lib/admin-data.ts:44:    // TODO: Implement Convex query to get all users
+./lib/admin-data.ts:55:    // TODO: Implement Convex query to get pending courses
+./lib/admin-data.ts:66:    // TODO: Implement Convex query to get all courses
+./lib/admin-data.ts:77:    // TODO: Implement Convex query for reviews when review system is built
+./lib/admin-data.ts:88:    // TODO: Implement Convex query for coach applications
+./.env.marketplace:59:DEBUG_FEATURE_FLAGS=true
+./.env.marketplace:60:DEBUG_MIGRATION=true

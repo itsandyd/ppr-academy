@@ -7,6 +7,7 @@ import { notFound } from "next/navigation";
 import { Loader2, Search, Filter, BookOpen, Play, Users, Star } from "lucide-react";
 import { DesktopStorefront } from "./components/DesktopStorefront";
 import { MobileStorefront } from "./components/MobileStorefront";
+import { SubscriptionSection } from "./components/SubscriptionSection";
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
@@ -620,6 +621,12 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
           </div>
         </div>
       </div>
+
+      {/* Subscription Section */}
+      <SubscriptionSection 
+        storeId={store._id}
+        storeName={displayName}
+      />
 
       {/* Fallback to original components for specific mobile optimizations if needed */}
       <div className="hidden">

@@ -511,3 +511,5 @@ export const upsellInteractionsTable = defineTable({
   .index("by_user", ["userId", "timestamp"]);
 
 
+
+

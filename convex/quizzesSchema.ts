@@ -198,3 +198,5 @@ export const questionBanksTable = defineTable({
   .index("by_instructor", ["instructorId", "createdAt"])
   .index("by_course", ["courseId"]);
 
+
+

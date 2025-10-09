@@ -16,7 +16,8 @@ import {
   Award,
   Play,
   Heart,
-  Library as LibraryIcon
+  Library as LibraryIcon,
+  CreditCard
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useUser, UserButton, SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
@@ -89,6 +90,12 @@ export function LibrarySidebar() {
           href: "/library/bundles", 
           label: "Bundles",
           gradient: "from-orange-500 to-red-500"
+        },
+        { 
+          icon: CreditCard, 
+          href: "/library/subscriptions", 
+          label: "Subscriptions",
+          gradient: "from-yellow-500 to-orange-500"
         },
       ]
     },

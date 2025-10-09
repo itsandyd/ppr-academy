@@ -67,6 +67,7 @@ import type * as seedCreditPackages from "../seedCreditPackages.js";
 import type * as socialMedia from "../socialMedia.js";
 import type * as socialMediaActions from "../socialMediaActions.js";
 import type * as stores from "../stores.js";
+import type * as subscriptions from "../subscriptions.js";
 import type * as userLibrary from "../userLibrary.js";
 import type * as users from "../users.js";
 
@@ -133,6 +134,7 @@ declare const fullApi: ApiFromModules<{
   socialMedia: typeof socialMedia;
   socialMediaActions: typeof socialMediaActions;
   stores: typeof stores;
+  subscriptions: typeof subscriptions;
   userLibrary: typeof userLibrary;
   users: typeof users;
 }>;

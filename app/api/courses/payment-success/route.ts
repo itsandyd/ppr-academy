@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
+import { requireAuth } from "@/lib/auth-helpers";
 
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -8,6 +9,9 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(request: NextRequest) {
   try {
+    // ✅ SECURITY: Require authentication
+    await requireAuth();
+    
     const { paymentIntentId } = await request.json();
 
     if (!paymentIntentId) {
@@ -27,11 +31,29 @@ export async function POST(request: NextRequest) {
         amount: paymentIntent.amount / 100,
       });
 
-      // TODO: Create course enrollment in Convex
-      // This would call a Convex mutation to:
-      // 1. Create enrollment record
-      // 2. Grant course access
-      // 3. Send confirmation email
+      // Create course enrollment in Convex
+      if (metadata.userId && metadata.courseId) {
+        const { fetchMutation } = await import("convex/nextjs");
+        const { api } = await import("@/convex/_generated/api");
+
+        try {
+          const purchaseId = await fetchMutation(api.library.createCourseEnrollment, {
+            userId: metadata.userId,
+            courseId: metadata.courseId as any,
+            amount: paymentIntent.amount,
+            currency: paymentIntent.currency.toUpperCase(),
+            paymentMethod: "stripe",
+            transactionId: paymentIntent.id,
+          });
+
+          console.log("✅ Course enrollment created:", { purchaseId });
+        } catch (enrollmentError) {
+          console.error("❌ Failed to create enrollment:", enrollmentError);
+          // Continue anyway - don't fail the payment confirmation
+        }
+      }
+      
+      // TODO: Send confirmation email
       
       return NextResponse.json({ 
         success: true, 

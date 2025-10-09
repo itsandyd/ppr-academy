@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { auth } from "@clerk/nextjs/server";
+import { requireAuth } from "@/lib/auth-helpers";
 
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -9,6 +9,9 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(request: NextRequest) {
   try {
+    // ✅ SECURITY: Require authentication
+    await requireAuth();
+    
     const { courseId, customerEmail, customerName, coursePrice, courseTitle, creatorStripeAccountId } = await request.json();
 
     if (!courseId || !customerEmail || !customerName || coursePrice === undefined) {

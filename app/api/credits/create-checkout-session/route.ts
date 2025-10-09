@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
+import { requireAuth } from "@/lib/auth-helpers";
 
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -8,6 +9,9 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(request: NextRequest) {
   try {
+    // ✅ SECURITY: Require authentication
+    const user = await requireAuth();
+    
     const { 
       packageId,
       packageName,
@@ -17,6 +21,14 @@ export async function POST(request: NextRequest) {
       customerEmail,
       userId,
     } = await request.json();
+
+    // ✅ SECURITY: Verify user matches
+    if (userId !== user.id) {
+      return NextResponse.json(
+        { error: "User mismatch" },
+        { status: 403 }
+      );
+    }
 
     if (!packageId || !customerEmail || !userId || priceUsd === undefined) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });

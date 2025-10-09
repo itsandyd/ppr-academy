@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
+import { requireAuth } from "@/lib/auth-helpers";
 
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -8,6 +9,9 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 export async function POST(request: NextRequest) {
   try {
+    // ✅ SECURITY: Require authentication
+    const user = await requireAuth();
+    
     const { 
       courseId, 
       courseSlug,
@@ -19,6 +23,14 @@ export async function POST(request: NextRequest) {
       stripePriceId, // Use stored price ID
       creatorStripeAccountId 
     } = await request.json();
+    
+    // ✅ SECURITY: Verify user matches authenticated user
+    if (userId && userId !== user.id) {
+      return NextResponse.json(
+        { error: "User mismatch" },
+        { status: 403 }
+      );
+    }
 
     if (!courseId || !customerEmail || !customerName || coursePrice === undefined) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -53,6 +65,8 @@ export async function POST(request: NextRequest) {
         customerName,
         userId, // Include userId in metadata for webhook
         productType: "course",
+        amount: (coursePrice * 100).toString(), // Amount in cents as string
+        currency: "usd",
       },
     };
 
@@ -83,6 +97,14 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
+    // Handle auth errors
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json(
+        { error: "Unauthorized. Please sign in." },
+        { status: 401 }
+      );
+    }
+    
     console.error("❌ Checkout session creation failed:", error);
     
     return NextResponse.json(

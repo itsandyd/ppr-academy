@@ -26,21 +26,33 @@ export default function CourseSuccessPage() {
       }
 
       try {
-        // TODO: Create payment verification API route
-        // For now, just simulate success
-        setTimeout(() => {
+        // Call payment verification API
+        const response = await fetch("/api/verify-payment", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ sessionId }),
+        });
+
+        const result = await response.json();
+
+        if (result.success && result.verified) {
           setVerificationResult({
             success: true,
-            courseTitle: "Ultimate Guide to Ableton Live Audio Effects",
-            customerName: "Student",
-            amount: 10,
+            courseTitle: result.courseTitle || "Your Course",
+            customerName: result.customerName || "Student",
+            amount: result.amount || 0,
+            courseId: result.courseId,
           });
-          setIsVerifying(false);
-        }, 2000);
+        } else {
+          setError(result.message || "Payment verification failed");
+        }
 
+        setIsVerifying(false);
       } catch (error) {
         console.error("Payment verification failed:", error);
-        setError("Failed to verify payment");
+        setError("Failed to verify payment. Please check your library or contact support.");
         setIsVerifying(false);
       }
     };
