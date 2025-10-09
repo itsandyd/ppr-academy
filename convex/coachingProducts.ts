@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query, action, internalAction, internalQuery, internalMutation } from "./_generated/server";
+import { mutation, query, internalQuery, internalMutation } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 
@@ -321,6 +321,7 @@ export const bookCoachingSession = mutation({
 
       // Create session
       const sessionId = await ctx.db.insert("coachingSessions", {
+        productId: args.productId,
         coachId,
         studentId: args.studentId,
         scheduledDate: args.scheduledDate,
@@ -338,7 +339,7 @@ export const bookCoachingSession = mutation({
       // Schedule Discord setup (will create channel and assign role)
       await ctx.scheduler.runAfter(
         0,
-        internal.coachingProducts.setupDiscordForSession,
+        internal.coachingDiscordActions.setupDiscordForSession,
         {
           sessionId,
           coachId,
@@ -355,109 +356,7 @@ export const bookCoachingSession = mutation({
   },
 });
 
-// ==================== ACTIONS ====================
-
-// Internal action to set up Discord access for a coaching session
-export const setupDiscordForSession = internalAction({
-  args: {
-    sessionId: v.id("coachingSessions"),
-    coachId: v.string(),
-    studentId: v.string(),
-    productId: v.id("digitalProducts"),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    try {
-      // Get the product to find the store
-      const product = await ctx.runQuery(
-        internal.coachingProducts.getProductForDiscord,
-        { productId: args.productId }
-      );
-
-      if (!product) {
-        console.error("Product not found for Discord setup");
-        return null;
-      }
-
-      // Get store's Discord guild - storeId is a string in digitalProducts
-      const guild = await ctx.runQuery(
-        internal.discordInternal.getStoreDiscordGuildInternal,
-        { storeId: product.storeId as any }
-      );
-
-      if (!guild || !guild.isActive) {
-        console.log("No active Discord guild for store");
-        return null;
-      }
-
-      // Get or create coaching role
-      const roleId = await ensureCoachingRole(ctx, guild.guildId, product.storeId);
-
-      if (roleId) {
-        // Assign role to student
-        const result = await ctx.runAction(internal.discord.assignDiscordRoleInternal, {
-          userId: args.studentId,
-          guildId: guild.guildId,
-          roleId,
-        });
-
-        if (result.success) {
-          console.log(
-            `Successfully assigned coaching role to student ${args.studentId}`
-          );
-
-          // Update the product with the role ID for future reference
-          await ctx.runMutation(
-            internal.coachingProducts.updateProductDiscordRole,
-            {
-              productId: args.productId,
-              discordRoleId: roleId,
-            }
-          );
-        }
-      }
-
-      return null;
-    } catch (error) {
-      console.error("Error setting up Discord for session:", error);
-      return null;
-    }
-  },
-});
-
-// Helper function to ensure coaching role exists
-async function ensureCoachingRole(
-  ctx: any,
-  guildId: string,
-  storeId: string
-): Promise<string | null> {
-  // In a real implementation, this would:
-  // 1. Check if a "Coaching Access" role exists in the Discord guild
-  // 2. Create it if it doesn't exist
-  // 3. Return the role ID
-  
-  // For now, we'll assume the role needs to be configured manually
-  // and stored in the discordGuilds table's courseRoles field
-  
-  const guild = await ctx.runQuery(
-    internal.discordInternal.getDiscordGuildInternal,
-    { guildId }
-  );
-
-  if (guild && guild.courseRoles) {
-    // Check if there's a coaching role configured
-    const coachingRoleId = (guild.courseRoles as any).coachingRole;
-    if (coachingRoleId) {
-      return coachingRoleId;
-    }
-  }
-
-  // Role not configured - log warning
-  console.warn(
-    `No coaching role configured for guild ${guildId}. Please configure in Discord settings.`
-  );
-  return null;
-}
+// ==================== INTERNAL QUERIES/MUTATIONS ====================
 
 // Internal query helper
 export const getProductForDiscord = internalQuery({
@@ -480,18 +379,44 @@ export const getProductForDiscord = internalQuery({
   },
 });
 
-// Internal mutation helper
-export const updateProductDiscordRole = internalMutation({
+// Internal mutation to update session with Discord info
+export const updateSessionDiscordInfo = internalMutation({
   args: {
-    productId: v.id("digitalProducts"),
+    sessionId: v.id("coachingSessions"),
+    discordChannelId: v.string(),
     discordRoleId: v.string(),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.productId, {
+    await ctx.db.patch(args.sessionId, {
+      discordChannelId: args.discordChannelId,
       discordRoleId: args.discordRoleId,
+      discordSetupComplete: true,
     });
     return null;
+  },
+});
+
+// Internal query helper to get session for cleanup
+export const getSessionForCleanup = internalQuery({
+  args: { sessionId: v.id("coachingSessions") },
+  returns: v.union(
+    v.object({
+      discordChannelId: v.optional(v.string()),
+      discordRoleId: v.optional(v.string()),
+      productId: v.id("digitalProducts"),
+    }),
+    v.null()
+  ),
+  handler: async (ctx, args) => {
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) return null;
+
+    return {
+      discordChannelId: session.discordChannelId,
+      discordRoleId: session.discordRoleId,
+      productId: session.productId,
+    };
   },
 });
 

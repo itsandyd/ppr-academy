@@ -342,6 +342,7 @@ export default defineSchema({
   .index("by_userId", ["userId"]),
 
   coachingSessions: defineTable({
+    productId: v.id("digitalProducts"),
     coachId: v.string(),
     studentId: v.string(),
     scheduledDate: v.number(),
@@ -361,8 +362,10 @@ export default defineSchema({
     discordChannelId: v.optional(v.string()),
     discordRoleId: v.optional(v.string()),
     discordSetupComplete: v.optional(v.boolean()),
+    discordCleanedUp: v.optional(v.boolean()),
     reminderSent: v.optional(v.boolean()),
   })
+  .index("by_productId", ["productId"])
   .index("by_coachId", ["coachId"])
   .index("by_studentId", ["studentId"])
   .index("by_scheduledDate", ["scheduledDate"])
