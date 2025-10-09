@@ -4,7 +4,6 @@ import { FC, useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Search, TrendingUp, Users, BookOpen, Package } from "lucide-react";
 import { SignUpButton, useAuth } from "@clerk/nextjs";
 import Link from "next/link";
@@ -110,36 +109,25 @@ export const MarketplaceHero: FC<MarketplaceHeroProps> = ({
             </div>
           </motion.div>
 
-          {/* Category Tabs */}
+          {/* Quick Stats */}
           <motion.div
+            className="flex flex-wrap justify-center gap-4 text-sm text-white/70"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: isVisible ? 1 : 0, y: isVisible ? 0 : 20 }}
             transition={{ duration: 0.8, delay: 0.8 }}
           >
-            <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
-              <TabsList className="inline-flex bg-white/10 backdrop-blur-sm border border-white/20 p-1">
-                <TabsTrigger 
-                  value="all" 
-                  className="text-white data-[state=active]:bg-white data-[state=active]:text-foreground"
-                >
-                  All Content
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="course" 
-                  className="text-white data-[state=active]:bg-white data-[state=active]:text-foreground"
-                >
-                  <BookOpen className="w-4 h-4 mr-2" />
-                  Courses ({totalCourses})
-                </TabsTrigger>
-                <TabsTrigger 
-                  value="product" 
-                  className="text-white data-[state=active]:bg-white data-[state=active]:text-foreground"
-                >
-                  <Package className="w-4 h-4 mr-2" />
-                  Products ({totalProducts})
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+            <div className="flex items-center gap-2 px-4 py-2 bg-white/5 backdrop-blur-sm rounded-full border border-white/10">
+              <BookOpen className="w-4 h-4" />
+              <span>{totalCourses} Courses</span>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2 bg-white/5 backdrop-blur-sm rounded-full border border-white/10">
+              <Package className="w-4 h-4" />
+              <span>{totalProducts} Products</span>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2 bg-white/5 backdrop-blur-sm rounded-full border border-white/10">
+              <Users className="w-4 h-4" />
+              <span>{totalCreators}+ Creators</span>
+            </div>
           </motion.div>
 
           {/* CTA Buttons */}

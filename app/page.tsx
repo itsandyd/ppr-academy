@@ -5,66 +5,68 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { MarketplaceHero } from "./_components/marketplace-hero";
 import { MarketplaceStats } from "./_components/marketplace-stats";
-import { MarketplaceGrid } from "./_components/marketplace-grid";
+import { MarketplaceSection } from "./_components/marketplace-section";
 import { FeatureGrid } from "./_components/feature-grid";
 import { HowItWorks } from "./_components/how-it-works";
 import { FinalCTA } from "./_components/final-cta";
 import { Footer } from "./_components/footer";
-import { TabsContent, Tabs } from "@/components/ui/tabs";
+import { BookOpen, Package, Layers, Sparkles } from "lucide-react";
 
 // Force dynamic rendering to avoid build-time Clerk issues
 export const dynamic = 'force-dynamic';
 
-export default function HybridHomepage() {
+export default function SectionedMarketplace() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState("all");
+  const [activeTab, setActiveTab] = useState("all"); // Keep for hero component
 
   // Fetch data
   const courses = useQuery(api.courses.getAllPublishedCourses) || [];
   const products = useQuery(api.digitalProducts.getAllPublishedProducts) || [];
+  const samplePacks = useQuery(api.samplePacks?.getAllPublishedSamplePacks as any) || [];
   const platformStats = useQuery(api.marketplace?.getPlatformStats as any);
 
-  // Combine content
-  const allContent = useMemo(() => {
-    return [
-      ...courses.map((c: any) => ({ ...c, contentType: 'course' as const })),
-      ...products.map((p: any) => ({ ...p, contentType: 'product' as const })),
-    ];
-  }, [courses, products]);
+  // Transform data to include contentType
+  const coursesWithType = useMemo(() => 
+    courses.map((c: any) => ({ ...c, contentType: 'course' as const })),
+    [courses]
+  );
 
-  // Filter content based on search and active tab
-  const filteredContent = useMemo(() => {
-    let filtered = allContent;
+  const productsWithType = useMemo(() => 
+    products.map((p: any) => ({ ...p, contentType: 'product' as const })),
+    [products]
+  );
 
-    // Filter by tab
-    if (activeTab !== "all") {
-      filtered = filtered.filter((item: any) => item.contentType === activeTab);
-    }
+  const samplePacksWithType = useMemo(() => 
+    samplePacks.map((sp: any) => ({ ...sp, contentType: 'sample-pack' as const })),
+    [samplePacks]
+  );
 
-    // Filter by search
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
-      filtered = filtered.filter((item: any) =>
-        item.title?.toLowerCase().includes(searchLower) ||
-        item.description?.toLowerCase().includes(searchLower) ||
-        item.creatorName?.toLowerCase().includes(searchLower)
-      );
-    }
+  // Filter by search term
+  const filterBySearch = (items: any[]) => {
+    if (!searchTerm) return items;
+    const searchLower = searchTerm.toLowerCase();
+    return items.filter((item: any) =>
+      item.title?.toLowerCase().includes(searchLower) ||
+      item.description?.toLowerCase().includes(searchLower) ||
+      item.creatorName?.toLowerCase().includes(searchLower)
+    );
+  };
 
-    return filtered;
-  }, [allContent, activeTab, searchTerm]);
-
-  // Separate by type for tab content
-  const coursesOnly = filteredContent.filter((c: any) => c.contentType === 'course');
-  const productsOnly = filteredContent.filter((p: any) => p.contentType === 'product');
+  const filteredCourses = useMemo(() => filterBySearch(coursesWithType), [coursesWithType, searchTerm]);
+  const filteredProducts = useMemo(() => filterBySearch(productsWithType), [productsWithType, searchTerm]);
+  const filteredSamplePacks = useMemo(() => filterBySearch(samplePacksWithType), [samplePacksWithType, searchTerm]);
 
   // Stats with defaults
   const stats = {
     totalCreators: platformStats?.totalCreators || 0,
     totalCourses: platformStats?.totalCourses || courses.length,
-    totalProducts: platformStats?.totalProducts || products.length,
+    totalProducts: platformStats?.totalProducts || products.length + samplePacks.length,
     totalStudents: platformStats?.totalStudents || 0,
   };
+
+  // Determine if we're showing search results
+  const isSearching = searchTerm.length > 0;
+  const totalResults = filteredCourses.length + filteredProducts.length + filteredSamplePacks.length;
 
   return (
     <div className="min-h-screen bg-background">
@@ -80,7 +82,7 @@ export default function HybridHomepage() {
       />
 
       {/* 2. PLATFORM STATS */}
-      {platformStats && (
+      {platformStats && !isSearching && (
         <MarketplaceStats
           totalCreators={stats.totalCreators}
           totalCourses={stats.totalCourses}
@@ -89,68 +91,103 @@ export default function HybridHomepage() {
         />
       )}
 
-      {/* 3. MAIN CONTENT GRID */}
-      <section className="py-16 md:py-24 bg-background">
-        <div className="mx-auto w-full max-w-[1140px] px-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsContent value="all" className="mt-0">
-              <div className="mb-8">
-                <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
-                  {searchTerm ? `Search Results for "${searchTerm}"` : "All Content"}
+      {/* Search Results Header */}
+      {isSearching && (
+        <section className="py-8 bg-muted/40">
+          <div className="mx-auto w-full max-w-[1140px] px-6">
+            <div className="flex items-center gap-3">
+              <Sparkles className="w-6 h-6 text-purple-600" />
+              <div>
+                <h2 className="text-2xl font-bold text-foreground">
+                  Search Results for "{searchTerm}"
                 </h2>
                 <p className="text-muted-foreground">
-                  {filteredContent.length} {filteredContent.length === 1 ? "item" : "items"} available
+                  Found {totalResults} {totalResults === 1 ? "result" : "results"}
                 </p>
               </div>
-              <MarketplaceGrid
-                content={filteredContent}
-                emptyMessage={searchTerm ? `No results found for "${searchTerm}". Try different keywords.` : "No content available yet. Check back soon!"}
-              />
-            </TabsContent>
+            </div>
+          </div>
+        </section>
+      )}
 
-            <TabsContent value="course" className="mt-0">
-              <div className="mb-8">
-                <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
-                  {searchTerm ? `Course Results for "${searchTerm}"` : "All Courses"}
-                </h2>
-                <p className="text-muted-foreground">
-                  {coursesOnly.length} {coursesOnly.length === 1 ? "course" : "courses"} available
-                </p>
-              </div>
-              <MarketplaceGrid
-                content={coursesOnly}
-                emptyMessage={searchTerm ? `No courses found for "${searchTerm}". Try different keywords.` : "No courses available yet. Check back soon!"}
-              />
-            </TabsContent>
+      {/* 3. ALL COURSES SECTION */}
+      {filteredCourses.length > 0 && (
+        <MarketplaceSection
+          title="All Courses"
+          subtitle={`${filteredCourses.length} expert-led courses to master music production`}
+          icon={<BookOpen className="w-6 h-6 text-white" />}
+          content={filteredCourses}
+          viewAllLink="/courses"
+          emptyMessage="No courses available yet."
+          limit={isSearching ? undefined : 6}
+          gradient="from-green-500 to-emerald-500"
+        />
+      )}
 
-            <TabsContent value="product" className="mt-0">
-              <div className="mb-8">
-                <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
-                  {searchTerm ? `Product Results for "${searchTerm}"` : "All Products"}
-                </h2>
-                <p className="text-muted-foreground">
-                  {productsOnly.length} {productsOnly.length === 1 ? "product" : "products"} available
-                </p>
-              </div>
-              <MarketplaceGrid
-                content={productsOnly}
-                emptyMessage={searchTerm ? `No products found for "${searchTerm}". Try different keywords.` : "No products available yet. Check back soon!"}
-              />
-            </TabsContent>
-          </Tabs>
-        </div>
-      </section>
+      {/* 4. ALL SAMPLE PACKS SECTION */}
+      {filteredSamplePacks.length > 0 && (
+        <MarketplaceSection
+          title="Sample Packs"
+          subtitle={`${filteredSamplePacks.length} professional sample collections`}
+          icon={<Layers className="w-6 h-6 text-white" />}
+          content={filteredSamplePacks}
+          viewAllLink="/sample-packs"
+          emptyMessage="No sample packs available yet."
+          limit={isSearching ? undefined : 6}
+          gradient="from-orange-500 to-red-500"
+        />
+      )}
 
-      {/* 4. VALUE PROPOSITIONS (from your existing design) */}
-      <FeatureGrid />
+      {/* 5. ALL DIGITAL PRODUCTS SECTION */}
+      {filteredProducts.length > 0 && (
+        <MarketplaceSection
+          title="Digital Products"
+          subtitle={`${filteredProducts.length} presets, templates, and tools`}
+          icon={<Package className="w-6 h-6 text-white" />}
+          content={filteredProducts}
+          viewAllLink="/products"
+          emptyMessage="No products available yet."
+          limit={isSearching ? undefined : 6}
+          gradient="from-blue-500 to-cyan-500"
+        />
+      )}
 
-      {/* 5. HOW IT WORKS */}
-      <HowItWorks />
+      {/* No Results Message */}
+      {isSearching && totalResults === 0 && (
+        <section className="py-20">
+          <div className="mx-auto w-full max-w-[1140px] px-6 text-center">
+            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-muted flex items-center justify-center">
+              <Sparkles className="w-10 h-10 text-muted-foreground" />
+            </div>
+            <h3 className="text-2xl font-bold mb-2 text-foreground">No results found</h3>
+            <p className="text-muted-foreground mb-6">
+              We couldn't find anything matching "{searchTerm}". Try different keywords or browse all content below.
+            </p>
+            <button
+              onClick={() => setSearchTerm("")}
+              className="text-purple-600 hover:text-purple-700 font-medium"
+            >
+              Clear search and view all content
+            </button>
+          </div>
+        </section>
+      )}
 
-      {/* 6. FINAL CREATOR CTA (from your existing design) */}
-      <FinalCTA />
+      {/* Only show marketing sections if NOT searching */}
+      {!isSearching && (
+        <>
+          {/* 6. VALUE PROPOSITIONS */}
+          <FeatureGrid />
 
-      {/* 7. FOOTER (from your existing design) */}
+          {/* 7. HOW IT WORKS */}
+          <HowItWorks />
+
+          {/* 8. FINAL CREATOR CTA */}
+          <FinalCTA />
+        </>
+      )}
+
+      {/* 9. FOOTER (always show) */}
       <Footer />
     </div>
   );

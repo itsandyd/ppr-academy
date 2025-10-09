@@ -16,11 +16,12 @@ interface ContentItem {
   price: number;
   thumbnail?: string;
   imageUrl?: string;
-  contentType: "course" | "product";
+  contentType: "course" | "product" | "sample-pack";
   creatorName?: string;
   creatorAvatar?: string;
   enrollmentCount?: number;
   downloadCount?: number;
+  sampleCount?: number;
   rating?: number;
   slug?: string;
 }
@@ -65,14 +66,33 @@ export const MarketplaceGrid: FC<MarketplaceGridProps> = ({
 
 const ContentCard: FC<{ item: ContentItem; index: number }> = ({ item, index }) => {
   const router = useRouter();
-  const IconComponent = item.contentType === "course" ? BookOpen : Package;
+  
+  // Determine icon and color based on content type
+  const IconComponent = item.contentType === "course" 
+    ? BookOpen 
+    : item.contentType === "sample-pack"
+    ? Package
+    : Package;
+    
   const badgeColor = item.contentType === "course" 
     ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" 
+    : item.contentType === "sample-pack"
+    ? "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400"
     : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400";
+
+  const badgeLabel = item.contentType === "course"
+    ? "Course"
+    : item.contentType === "sample-pack"
+    ? "Sample Pack"
+    : "Product";
 
   const handleClick = () => {
     const slug = item.slug || item.title.toLowerCase().replace(/\s+/g, "-");
-    const path = item.contentType === "course" ? `/courses/${slug}` : `/products/${slug}`;
+    const path = item.contentType === "course" 
+      ? `/courses/${slug}` 
+      : item.contentType === "sample-pack"
+      ? `/sample-packs/${slug}`
+      : `/products/${slug}`;
     router.push(path);
   };
 
@@ -107,7 +127,7 @@ const ContentCard: FC<{ item: ContentItem; index: number }> = ({ item, index }) 
           {/* Type Badge */}
           <Badge className={`absolute top-3 left-3 ${badgeColor} font-medium shadow-lg`}>
             <IconComponent className="w-3 h-3 mr-1" />
-            {item.contentType === "course" ? "Course" : "Product"}
+            {badgeLabel}
           </Badge>
 
           {/* Price Badge */}
@@ -165,6 +185,22 @@ const ContentCard: FC<{ item: ContentItem; index: number }> = ({ item, index }) 
                 <>
                   <Download className="w-4 h-4" />
                   <span>{item.downloadCount}</span>
+                </>
+              )}
+              {item.contentType === "sample-pack" && (
+                <>
+                  {item.sampleCount !== undefined && (
+                    <>
+                      <Package className="w-4 h-4" />
+                      <span>{item.sampleCount} samples</span>
+                    </>
+                  )}
+                  {item.downloadCount !== undefined && item.sampleCount === undefined && (
+                    <>
+                      <Download className="w-4 h-4" />
+                      <span>{item.downloadCount}</span>
+                    </>
+                  )}
                 </>
               )}
             </div>
