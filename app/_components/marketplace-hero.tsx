@@ -138,7 +138,7 @@ export const MarketplaceHero: FC<MarketplaceHeroProps> = ({
             transition={{ duration: 0.8, delay: 1.0 }}
           >
             {isSignedIn ? (
-              <Link href="/home">
+              <Link href="/dashboard">
                 <Button
                   size="lg"
                   className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold px-8 py-3 rounded-xl shadow-2xl shadow-purple-500/25 transition-all duration-300 hover:scale-105"
