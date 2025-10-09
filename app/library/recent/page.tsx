@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
+import { Progress } from "@/components/ui/progress";
 
 export default function LibraryRecentPage() {
   const { user } = useUser();
