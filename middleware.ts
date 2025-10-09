@@ -18,6 +18,28 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.next();
   }
 
+  // ✅ SECURITY: Configure CORS for API routes
+  if (req.nextUrl.pathname.startsWith('/api/')) {
+    const response = NextResponse.next();
+    
+    const allowedOrigin = process.env.NEXT_PUBLIC_APP_URL || '*';
+    
+    response.headers.set('Access-Control-Allow-Origin', allowedOrigin);
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    response.headers.set('Access-Control-Max-Age', '86400');
+    
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+      return new NextResponse(null, { status: 200, headers: response.headers });
+    }
+    
+    // Protect API routes if needed
+    if (isProtectedRoute(req)) await auth.protect();
+    
+    return response;
+  }
+
   if (isProtectedRoute(req)) await auth.protect();
 });
 

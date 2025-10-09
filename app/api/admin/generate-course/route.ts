@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateAICourse } from '@/app/actions/admin-actions';
 import { requireAdmin } from '@/lib/auth-helpers';
+import { checkRateLimit, getRateLimitIdentifier, rateLimiters } from '@/lib/rate-limit';
 
 // Configure max duration for AI course generation (5 minutes)
 export const maxDuration = 300;
@@ -8,7 +9,14 @@ export const maxDuration = 300;
 export async function POST(request: NextRequest) {
   try {
     // ✅ SECURITY: Require admin authentication
-    await requireAdmin();
+    const user = await requireAdmin();
+    
+    // ✅ SECURITY: Rate limiting (strict - admin operations)
+    const identifier = getRateLimitIdentifier(request, user.id);
+    const rateCheck = await checkRateLimit(identifier, rateLimiters.strict);
+    if (rateCheck instanceof NextResponse) {
+      return rateCheck;
+    }
     
     const courseData = await request.json();
     

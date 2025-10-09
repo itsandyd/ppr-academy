@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth-helpers';
+import { checkRateLimit, getRateLimitIdentifier, rateLimiters } from '@/lib/rate-limit';
 import { runMarketplaceMigration } from '@/scripts/migrate-to-marketplace';
 import { features } from '@/lib/features';
 
@@ -26,7 +27,14 @@ interface MigrationRequest {
 export async function POST(request: NextRequest) {
   try {
     // ✅ SECURITY: Require admin authentication
-    await requireAdmin();
+    const user = await requireAdmin();
+    
+    // ✅ SECURITY: Rate limiting (very strict - migrations are critical)
+    const identifier = getRateLimitIdentifier(request, user.id);
+    const rateCheck = await checkRateLimit(identifier, rateLimiters.strict);
+    if (rateCheck instanceof NextResponse) {
+      return rateCheck;
+    }
     
     // Check if migrations are enabled
     if (!MIGRATION_ENABLED) {

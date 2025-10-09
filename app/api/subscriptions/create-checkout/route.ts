@@ -4,15 +4,23 @@ import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { requireAuth } from "@/lib/auth-helpers";
+import { checkRateLimit, getRateLimitIdentifier, rateLimiters } from "@/lib/rate-limit";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2024-12-18.acacia",
+  apiVersion: "2025-08-27.basil",
 });
 
 export async function POST(req: Request) {
   try {
     // ✅ SECURITY: Require authentication
     const user = await requireAuth();
+    
+    // ✅ SECURITY: Rate limiting
+    const identifier = getRateLimitIdentifier(req, user.id);
+    const rateCheck = await checkRateLimit(identifier, rateLimiters.strict);
+    if (rateCheck instanceof NextResponse) {
+      return rateCheck;
+    }
     
     const { planId, userId, userEmail, billingCycle } = await req.json();
 
