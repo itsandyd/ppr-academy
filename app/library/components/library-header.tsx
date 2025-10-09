@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Bell, Search, Settings } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { usePathname } from "next/navigation";
+import { DashboardPreferenceSwitcher } from "@/components/dashboard/dashboard-preference-switcher";
 
 export function LibraryHeader() {
   const pathname = usePathname();
@@ -52,6 +53,9 @@ export function LibraryHeader() {
         <Button variant="ghost" size="icon" className="md:hidden">
           <Search className="w-4 h-4" />
         </Button>
+
+        {/* Dashboard Switcher for hybrid users */}
+        <DashboardPreferenceSwitcher />
 
         {/* Notifications */}
         <Button variant="ghost" size="icon" className="relative">

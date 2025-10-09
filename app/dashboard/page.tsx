@@ -34,6 +34,12 @@ export default function DashboardRedirect() {
     convexUser?.clerkId ? { userId: convexUser.clerkId } : "skip"
   );
 
+  // Check if user has enrolled courses
+  const enrolledCourses = useQuery(
+    api.userLibrary.getUserEnrolledCourses,
+    convexUser?.clerkId ? { userId: convexUser.clerkId } : "skip"
+  );
+
   useEffect(() => {
     // Wait for Clerk to load
     if (!isLoaded) return;
@@ -54,20 +60,66 @@ export default function DashboardRedirect() {
       return;
     }
 
-    // Wait for store check to complete
-    if (userStore === undefined) return;
+    // Wait for both store and enrollment checks to complete
+    if (userStore === undefined || enrolledCourses === undefined) return;
 
-    // User has a store → redirect to creator dashboard
-    if (userStore) {
-      console.log("✅ Creator detected, redirecting to /home");
+    const hasStore = !!userStore;
+    const hasEnrollments = enrolledCourses && enrolledCourses.length > 0;
+
+    // Check URL parameter for preference override
+    const searchParams = new URLSearchParams(window.location.search);
+    const preferenceParam = searchParams.get('view'); // ?view=creator or ?view=student
+
+    if (preferenceParam === 'creator' && hasStore) {
+      console.log("✅ Manual preference: Creator");
       router.push("/home");
       return;
     }
 
-    // User doesn't have a store → redirect to student library
-    console.log("✅ Student detected, redirecting to /library");
+    if (preferenceParam === 'student' && hasEnrollments) {
+      console.log("✅ Manual preference: Student");
+      router.push("/library");
+      return;
+    }
+
+    // Check localStorage for user preference
+    const savedPreference = localStorage.getItem('dashboard-preference');
+
+    // User is BOTH student and creator
+    if (hasStore && hasEnrollments) {
+      console.log("✅ Hybrid user detected (both student and creator)");
+      
+      // Use saved preference if exists
+      if (savedPreference === 'student') {
+        console.log("→ Using saved preference: Student Library");
+        router.push("/library");
+        return;
+      }
+      
+      if (savedPreference === 'creator') {
+        console.log("→ Using saved preference: Creator Dashboard");
+        router.push("/home");
+        return;
+      }
+
+      // Default: Creator dashboard (business first)
+      // They can easily switch to library via nav
+      console.log("→ Defaulting to Creator Dashboard (can switch via nav)");
+      router.push("/home");
+      return;
+    }
+
+    // User is ONLY a creator
+    if (hasStore) {
+      console.log("✅ Creator only, redirecting to /home");
+      router.push("/home");
+      return;
+    }
+
+    // User is ONLY a student (or brand new user)
+    console.log("✅ Student only, redirecting to /library");
     router.push("/library");
-  }, [isLoaded, user, convexUser, userStore, router]);
+  }, [isLoaded, user, convexUser, userStore, enrolledCourses, router]);
 
   // Show loading state while determining route
   return (

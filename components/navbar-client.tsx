@@ -28,6 +28,7 @@ import {
   Briefcase
 } from "lucide-react";
 import { ModeToggle } from "@/components/mode-toggle";
+import { DashboardPreferenceSwitcher } from "@/components/dashboard/dashboard-preference-switcher";
 
 // ============================================================================
 // Types & Interfaces
@@ -272,14 +273,18 @@ const AuthButtons = ({ isSignedIn, hasClerk }: { isSignedIn: boolean; hasClerk: 
         </Button>
       </div>
     ) : isSignedIn ? (
-      <UserButton 
-        afterSignOutUrl="/"
-        appearance={{
-          elements: {
-            avatarBox: "w-10 h-10"
-          }
-        }}
-      />
+      <>
+        {/* Dashboard Switcher for hybrid users */}
+        <DashboardPreferenceSwitcher />
+        <UserButton 
+          afterSignOutUrl="/"
+          appearance={{
+            elements: {
+              avatarBox: "w-10 h-10"
+            }
+          }}
+        />
+      </>
     ) : (
       <>
         <SignInButton mode="modal">
@@ -371,8 +376,10 @@ const MobileAuthSection = ({
   hasClerk: boolean;
 }) => (
   <div className={STYLES.mobileAuth}>
-    <div className="flex justify-center px-3 pb-3">
+    <div className="flex justify-center gap-3 px-3 pb-3">
       <ModeToggle />
+      {/* Dashboard Switcher for hybrid users (mobile) */}
+      {isSignedIn && <DashboardPreferenceSwitcher />}
     </div>
     {!hasClerk ? (
       <div className="space-y-2 px-3">
