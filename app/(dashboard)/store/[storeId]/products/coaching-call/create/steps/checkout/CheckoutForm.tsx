@@ -2,15 +2,18 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { useRouter, usePathname, useSearchParams, useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Save, ArrowRight } from "lucide-react";
+import { Save, ArrowRight, Loader2 } from "lucide-react";
 import { schema, CheckoutSchema } from "./schema";
 import { DescriptionEditor } from "./DescriptionEditor";
 import { SessionSettings } from "./SessionSettings";
 import { InfoFields } from "./InfoFields";
 import { useCoachingPreview } from "../../CoachingPreviewContext";
+import { DiscordVerificationCard } from "@/components/coaching/DiscordVerificationCard";
+import { useCreateCoachingProduct } from "@/hooks/use-coaching-products";
+import { useState } from "react";
 
 interface FormSectionProps {
   index: number;
@@ -36,17 +39,25 @@ export default function CheckoutForm() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { updateFormData } = useCoachingPreview();
+  const params = useParams();
+  const storeId = params.storeId as string;
+  
+  const { formData, updateFormData } = useCoachingPreview();
+  const { createProduct } = useCreateCoachingProduct();
+  
+  const [isDiscordVerified, setIsDiscordVerified] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   
   const form = useForm<CheckoutSchema>({
     resolver: zodResolver(schema),
     defaultValues: { 
-      title: "",
-      description: "",
-      duration: 60,
-      price: 99,
-      sessionType: "video",
-      fields: []
+      title: formData.title || "",
+      description: formData.description || "",
+      duration: formData.duration || 60,
+      price: formData.price || 99,
+      sessionType: formData.sessionType || "video",
+      fields: formData.customFields || []
     },
   });
 
@@ -56,12 +67,89 @@ export default function CheckoutForm() {
   const descriptionLength = watch("description").length;
   const isValid = formState.isValid;
 
-  const onSubmit = (data: CheckoutSchema) => {
-    console.log("Checkout form submitted:", data);
-    // Navigate to availability step
-    const qs = new URLSearchParams(searchParams);
-    qs.set('step', 'availability');
-    router.push(`${pathname}?${qs.toString()}`, { scroll: false });
+  const handleSaveAsDraft = async () => {
+    const values = form.getValues();
+    setIsSaving(true);
+    
+    try {
+      // Save form data to context
+      updateFormData({
+        title: values.title,
+        description: values.description,
+        duration: values.duration,
+        price: values.price,
+        sessionType: values.sessionType,
+        customFields: values.fields,
+      });
+
+      // If we already have a product ID, update it
+      if (formData.productId) {
+        // TODO: Add update product functionality
+        console.log("Update existing product:", formData.productId);
+      } else {
+        // Create a new draft product
+        const productId = await createProduct(storeId, {
+          title: values.title,
+          description: values.description,
+          price: values.price,
+          duration: values.duration,
+          sessionType: values.sessionType,
+          customFields: values.fields,
+          imageUrl: formData.thumbnail,
+          thumbnailStyle: formData.thumbnailStyle,
+        });
+
+        if (productId) {
+          updateFormData({ productId });
+        }
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const onSubmit = async (data: CheckoutSchema) => {
+    setIsCreating(true);
+    
+    try {
+      // Save form data to context
+      updateFormData({
+        title: data.title,
+        description: data.description,
+        duration: data.duration,
+        price: data.price,
+        sessionType: data.sessionType,
+        customFields: data.fields,
+        isDiscordVerified,
+      });
+
+      // Create or update product
+      let productId = formData.productId;
+      
+      if (!productId) {
+        productId = await createProduct(storeId, {
+          title: data.title,
+          description: data.description,
+          price: data.price,
+          duration: data.duration,
+          sessionType: data.sessionType,
+          customFields: data.fields,
+          imageUrl: formData.thumbnail,
+          thumbnailStyle: formData.thumbnailStyle,
+        });
+
+        if (productId) {
+          updateFormData({ productId });
+        }
+      }
+
+      // Navigate to availability step
+      const qs = new URLSearchParams(searchParams);
+      qs.set('step', 'availability');
+      router.push(`${pathname}?${qs.toString()}`, { scroll: false });
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   return (
@@ -97,7 +185,10 @@ export default function CheckoutForm() {
         <FormSection index={2} title="Description">
           <DescriptionEditor
             value={watch("description")}
-            onChange={(value) => setValue("description", value)}
+            onChange={(value) => {
+              setValue("description", value);
+              updateFormData({ description: value });
+            }}
           />
         </FormSection>
 
@@ -115,7 +206,10 @@ export default function CheckoutForm() {
               setValue("price", price);
               updateFormData({ price });
             }}
-            onSessionTypeChange={(type) => setValue("sessionType", type)}
+            onSessionTypeChange={(type) => {
+              setValue("sessionType", type);
+              updateFormData({ sessionType: type });
+            }}
           />
         </FormSection>
 
@@ -123,8 +217,22 @@ export default function CheckoutForm() {
         <FormSection index={4} title="Collect customer info">
           <InfoFields
             fields={watch("fields") || []}
-            onChange={(fields) => setValue("fields", fields)}
+            onChange={(fields) => {
+              setValue("fields", fields);
+              updateFormData({ customFields: fields });
+            }}
           />
+        </FormSection>
+
+        {/* Step 5 - Discord Verification */}
+        <FormSection index={5} title="Discord integration">
+          <div className="space-y-4">
+            <p className="text-sm text-[#6B6E85]">
+              Coaching sessions require Discord for communication. Students will automatically get access to 
+              coaching channels when they book a session.
+            </p>
+            <DiscordVerificationCard onVerificationChange={setIsDiscordVerified} />
+          </div>
         </FormSection>
 
         {/* Action bar */}
@@ -135,18 +243,38 @@ export default function CheckoutForm() {
           <Button 
             variant="outline" 
             type="button"
+            onClick={handleSaveAsDraft}
+            disabled={isSaving || isCreating}
             className="flex items-center gap-2 h-10 rounded-lg border-[#E5E7F5] text-[#6B6E85] hover:border-[#6356FF] hover:text-[#6356FF]"
           >
-            <Save size={16} />
-            Save as Draft
+            {isSaving ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save size={16} />
+                Save as Draft
+              </>
+            )}
           </Button>
           <Button
             type="submit"
+            disabled={!isValid || isCreating || isSaving}
             className="bg-[#6356FF] hover:bg-[#5248E6] text-white h-10 rounded-lg flex items-center gap-2"
-            disabled={!isValid}
           >
-            <ArrowRight size={16} />
-            Next
+            {isCreating ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                Creating...
+              </>
+            ) : (
+              <>
+                <ArrowRight size={16} />
+                Next
+              </>
+            )}
           </Button>
         </div>
       </form>

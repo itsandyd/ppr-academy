@@ -2,23 +2,37 @@
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { useRouter, usePathname, useSearchParams, useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Star, Mail, ChevronDown, Save, Send, Package, Users } from "lucide-react";
+import { Star, Mail, ChevronDown, Save, Send, Package, Users, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { schema, OptionsSchema } from "./schema";
 import { Reviews } from "./Reviews";
 import { EmailFlows } from "./EmailFlows";
 import { OrderBump } from "./OrderBump";
 import { AffiliateShare } from "./AffiliateShare";
+import { useCoachingPreview } from "../../CoachingPreviewContext";
+import { useUpdateCoachingProduct, usePublishCoachingProduct } from "@/hooks/use-coaching-products";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export function OptionsForm() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const params = useParams();
+  const storeId = params.storeId as string;
+  const { toast } = useToast();
+  
+  const { formData, updateFormData } = useCoachingPreview();
+  const { updateProduct } = useUpdateCoachingProduct();
+  const { publishProduct } = usePublishCoachingProduct();
+  
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const form = useForm<OptionsSchema>({
     resolver: zodResolver(schema),
@@ -34,9 +48,72 @@ export function OptionsForm() {
 
   const { control, register, watch, setValue, formState, handleSubmit } = form;
 
-  const onSubmit = (data: OptionsSchema) => {
+  const handleSaveAsDraft = async () => {
+    const values = form.getValues();
+    setIsSaving(true);
+    
+    try {
+      // Save to context
+      updateFormData({
+        orderBump: values.orderBump,
+        affiliate: values.affiliateShare,
+        emailFlows: values.flows,
+      });
+
+      // Update product if it exists
+      if (formData.productId) {
+        await updateProduct(formData.productId, {
+          // Options data would be stored in product metadata
+        });
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const onSubmit = async (data: OptionsSchema) => {
     console.log("Options submitted:", data);
-    // TODO: Handle form submission - save coaching call settings
+    
+    if (!formData.productId) {
+      toast({
+        title: "Error",
+        description: "Product not found. Please go back and complete previous steps.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsPublishing(true);
+    
+    try {
+      // Save options data to context
+      updateFormData({
+        orderBump: data.orderBump,
+        affiliate: data.affiliateShare,
+        emailFlows: data.flows,
+      });
+
+      // Update product with final settings
+      await updateProduct(formData.productId, {
+        // Options would be saved as product metadata
+      });
+
+      // Publish the product
+      const success = await publishProduct(formData.productId);
+      
+      if (success) {
+        toast({
+          title: "Success!",
+          description: "Your coaching product has been published successfully.",
+          className: "bg-white dark:bg-black",
+        });
+        
+        // Redirect to products page
+        router.push(`/store/${storeId}/products`);
+      }
+    } finally {
+      setIsPublishing(false);
+    }
   };
 
   return (
@@ -161,19 +238,39 @@ export function OptionsForm() {
           <Button 
             variant="outline" 
             type="button"
+            onClick={handleSaveAsDraft}
+            disabled={isSaving || isPublishing}
             className="h-10 px-4 rounded-lg border-[#E5E7F5] text-[#6B6E85] hover:text-[#6356FF] hover:border-[#6356FF]"
           >
-            <Save className="h-4 w-4 mr-2" />
-            Save as Draft
+            {isSaving ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                Save as Draft
+              </>
+            )}
           </Button>
           
           <Button
             type="submit"
+            disabled={isPublishing || isSaving}
             className="h-10 px-4 rounded-lg bg-[#6356FF] hover:bg-[#5145E6] text-white"
-            disabled={!formState.isDirty || !formState.isValid}
           >
-            <Send className="h-4 w-4 mr-2" />
-            Publish
+            {isPublishing ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Publishing...
+              </>
+            ) : (
+              <>
+                <Send className="h-4 w-4 mr-2" />
+                Publish
+              </>
+            )}
           </Button>
         </div>
       </form>

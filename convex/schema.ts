@@ -272,10 +272,18 @@ export default defineSchema({
     buttonLabel: v.optional(v.string()),
     style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))),
     // URL/Media specific fields
-    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"))),
+    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"), v.literal("coaching"))),
     url: v.optional(v.string()),
     displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
     mediaType: v.optional(v.union(v.literal("youtube"), v.literal("spotify"), v.literal("website"), v.literal("social"))),
+    // Coaching specific fields
+    duration: v.optional(v.number()), // Session duration in minutes
+    sessionType: v.optional(v.string()), // "video", "audio", "phone"
+    customFields: v.optional(v.any()), // Custom info fields to collect
+    availability: v.optional(v.any()), // Availability configuration
+    thumbnailStyle: v.optional(v.string()), // Thumbnail display style
+    discordRoleId: v.optional(v.string()), // Discord role for coaching access
+    // Order bump & affiliate fields
     orderBumpEnabled: v.optional(v.boolean()),
     orderBumpProductName: v.optional(v.string()),
     orderBumpDescription: v.optional(v.string()),

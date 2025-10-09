@@ -19,10 +19,18 @@ export const getProductsByStore = query({
     buttonLabel: v.optional(v.string()),
     style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))),
     // URL/Media specific fields
-    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"))),
+    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"), v.literal("coaching"))),
     url: v.optional(v.string()),
     displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
     mediaType: v.optional(v.union(v.literal("youtube"), v.literal("spotify"), v.literal("website"), v.literal("social"))),
+    // Coaching specific fields
+    duration: v.optional(v.number()),
+    sessionType: v.optional(v.string()),
+    customFields: v.optional(v.any()),
+    availability: v.optional(v.any()),
+    thumbnailStyle: v.optional(v.string()),
+    discordRoleId: v.optional(v.string()),
+    // Order bump & affiliate fields
     orderBumpEnabled: v.optional(v.boolean()),
     orderBumpProductName: v.optional(v.string()),
     orderBumpDescription: v.optional(v.string()),
@@ -60,10 +68,18 @@ export const getPublishedProductsByStore = query({
     buttonLabel: v.optional(v.string()),
     style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))),
     // URL/Media specific fields
-    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"))),
+    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"), v.literal("coaching"))),
     url: v.optional(v.string()),
     displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
     mediaType: v.optional(v.union(v.literal("youtube"), v.literal("spotify"), v.literal("website"), v.literal("social"))),
+    // Coaching specific fields
+    duration: v.optional(v.number()),
+    sessionType: v.optional(v.string()),
+    customFields: v.optional(v.any()),
+    availability: v.optional(v.any()),
+    thumbnailStyle: v.optional(v.string()),
+    discordRoleId: v.optional(v.string()),
+    // Order bump & affiliate fields
     orderBumpEnabled: v.optional(v.boolean()),
     orderBumpProductName: v.optional(v.string()),
     orderBumpDescription: v.optional(v.string()),
@@ -104,10 +120,18 @@ export const getProductsByUser = query({
     buttonLabel: v.optional(v.string()),
     style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))),
     // URL/Media specific fields
-    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"))),
+    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"), v.literal("coaching"))),
     url: v.optional(v.string()),
     displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
     mediaType: v.optional(v.union(v.literal("youtube"), v.literal("spotify"), v.literal("website"), v.literal("social"))),
+    // Coaching specific fields
+    duration: v.optional(v.number()),
+    sessionType: v.optional(v.string()),
+    customFields: v.optional(v.any()),
+    availability: v.optional(v.any()),
+    thumbnailStyle: v.optional(v.string()),
+    discordRoleId: v.optional(v.string()),
+    // Order bump & affiliate fields
     orderBumpEnabled: v.optional(v.boolean()),
     orderBumpProductName: v.optional(v.string()),
     orderBumpDescription: v.optional(v.string()),
@@ -146,10 +170,18 @@ export const getProductById = query({
       buttonLabel: v.optional(v.string()),
       style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))),
     // URL/Media specific fields
-    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"))),
+    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"), v.literal("coaching"))),
     url: v.optional(v.string()),
     displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
     mediaType: v.optional(v.union(v.literal("youtube"), v.literal("spotify"), v.literal("website"), v.literal("social"))),
+      // Coaching specific fields
+      duration: v.optional(v.number()),
+      sessionType: v.optional(v.string()),
+      customFields: v.optional(v.any()),
+      availability: v.optional(v.any()),
+      thumbnailStyle: v.optional(v.string()),
+      discordRoleId: v.optional(v.string()),
+      // Order bump & affiliate fields
       orderBumpEnabled: v.optional(v.boolean()),
       orderBumpProductName: v.optional(v.string()),
       orderBumpDescription: v.optional(v.string()),
@@ -242,10 +274,18 @@ export const updateProduct = mutation({
       buttonLabel: v.optional(v.string()),
       style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))),
     // URL/Media specific fields
-    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"))),
+    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"), v.literal("coaching"))),
     url: v.optional(v.string()),
     displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
     mediaType: v.optional(v.union(v.literal("youtube"), v.literal("spotify"), v.literal("website"), v.literal("social"))),
+      // Coaching specific fields
+      duration: v.optional(v.number()),
+      sessionType: v.optional(v.string()),
+      customFields: v.optional(v.any()),
+      availability: v.optional(v.any()),
+      thumbnailStyle: v.optional(v.string()),
+      discordRoleId: v.optional(v.string()),
+      // Order bump & affiliate fields
       orderBumpEnabled: v.optional(v.boolean()),
       orderBumpProductName: v.optional(v.string()),
       orderBumpDescription: v.optional(v.string()),

@@ -24,6 +24,7 @@ import type * as audioGenerationNode from "../audioGenerationNode.js";
 import type * as bundles from "../bundles.js";
 import type * as certificates from "../certificates.js";
 import type * as certificatesSchema from "../certificatesSchema.js";
+import type * as coachingProducts from "../coachingProducts.js";
 import type * as coupons from "../coupons.js";
 import type * as courses from "../courses.js";
 import type * as credits from "../credits.js";
@@ -86,6 +87,7 @@ declare const fullApi: ApiFromModules<{
   bundles: typeof bundles;
   certificates: typeof certificates;
   certificatesSchema: typeof certificatesSchema;
+  coachingProducts: typeof coachingProducts;
   coupons: typeof coupons;
   courses: typeof courses;
   credits: typeof credits;

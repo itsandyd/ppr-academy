@@ -9,6 +9,7 @@ import Link from "next/link";
 import { schema, AvailabilitySchema } from "./schema";
 import { ConfigSection } from "./ConfigSection";
 import { DaysGrid } from "./DaysGrid";
+import { useCoachingPreview } from "../../CoachingPreviewContext";
 
 interface FormSectionProps {
   index: number;
@@ -34,17 +35,18 @@ export function AvailabilityForm() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { formData, updateFormData } = useCoachingPreview();
 
   const form = useForm<AvailabilitySchema>({
     resolver: zodResolver(schema),
     defaultValues: { 
       template: 'Default', 
       duration: 30, 
-      timezone: 'America/Chicago', 
-      leadTimeHours: 2, 
-      maxAttendees: 1, 
-      advanceDays: 60, 
-      availability: {} 
+      timezone: formData.timezone || 'America/Chicago', 
+      leadTimeHours: formData.leadTimeHours || 2, 
+      maxAttendees: formData.maxAttendees || 1, 
+      advanceDays: formData.advanceDays || 60, 
+      availability: formData.availability || {} 
     },
   });
   
@@ -58,6 +60,16 @@ export function AvailabilityForm() {
 
   const onSubmit = (data: AvailabilitySchema) => {
     console.log('Availability form data:', data);
+    
+    // Save availability data to context
+    updateFormData({
+      availability: data.availability,
+      timezone: data.timezone,
+      leadTimeHours: data.leadTimeHours,
+      maxAttendees: data.maxAttendees,
+      advanceDays: data.advanceDays,
+    });
+    
     goToNext();
   };
 
