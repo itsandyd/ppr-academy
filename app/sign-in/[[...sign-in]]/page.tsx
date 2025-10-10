@@ -4,10 +4,12 @@ import { SignIn } from "@clerk/nextjs";
 export const dynamic = 'force-dynamic';
 
 interface SignInPageProps {
-  searchParams: { redirect_url?: string };
+  searchParams: Promise<{ redirect_url?: string }>;
 }
 
-export default function SignInPage({ searchParams }: SignInPageProps) {
+export default async function SignInPage({ searchParams }: SignInPageProps) {
+  const params = await searchParams;
+  
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50">
       <div className="w-full max-w-md">
@@ -16,7 +18,7 @@ export default function SignInPage({ searchParams }: SignInPageProps) {
           <p className="text-gray-600 mt-2">Sign in to your PPR Academy account</p>
         </div>
         <SignIn 
-          redirectUrl={searchParams.redirect_url || "/dashboard"}
+          redirectUrl={params.redirect_url || "/dashboard"}
           appearance={{
             elements: {
               formButtonPrimary: "bg-primary hover:bg-primary/90",
