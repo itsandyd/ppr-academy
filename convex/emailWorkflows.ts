@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query, action, internalMutation, internalQuery, internalAction } from "./_generated/server";
-import { internal } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import { Doc, Id } from "./_generated/dataModel";
 
 // Workflow node and edge types
@@ -65,7 +65,7 @@ export const getWorkflowsByStore = query({
 });
 
 // Get a specific workflow
-export const getWorkflow = internalQuery({
+export const getWorkflow = query({
   args: { workflowId: v.id("emailWorkflows") },
   returns: v.union(v.null(), v.object({
     _id: v.id("emailWorkflows"),
@@ -259,7 +259,7 @@ export const triggerWorkflow = internalAction({
   handler: async (ctx, args) => {
     try {
       // Get the workflow
-      const workflow: any = await ctx.runQuery(internal.emailWorkflows.getWorkflow, {
+      const workflow: any = await ctx.runQuery(api.emailWorkflows.getWorkflow, {
         workflowId: args.workflowId,
       });
 
@@ -344,7 +344,7 @@ export const executeWorkflow = internalAction({
       });
 
       // Get the workflow
-      const workflow = await ctx.runQuery(internal.emailWorkflows.getWorkflow, {
+      const workflow = await ctx.runQuery(api.emailWorkflows.getWorkflow, {
         workflowId: execution.workflowId,
       });
 
@@ -555,7 +555,7 @@ export const continueWorkflow = internalAction({
         return null;
       }
 
-      const workflow = await ctx.runQuery(internal.emailWorkflows.getWorkflow, {
+      const workflow = await ctx.runQuery(api.emailWorkflows.getWorkflow, {
         workflowId: execution.workflowId,
       });
 
