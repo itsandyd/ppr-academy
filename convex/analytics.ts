@@ -411,3 +411,155 @@ export const getCourseDropOffPoints = query({
       .slice(0, 5); // Top 5 drop-off points
   },
 });
+
+// ==================== CREATOR ANALYTICS ====================
+
+export const getCreatorAnalytics = query({
+  args: {
+    userId: v.string(), // Clerk ID
+    timeRange: v.union(v.literal("7d"), v.literal("30d"), v.literal("90d"), v.literal("1y")),
+  },
+  returns: v.object({
+    overview: v.object({
+      totalRevenue: v.number(),
+      totalSales: v.number(),
+      totalViews: v.number(),
+      conversionRate: v.number(),
+      totalProducts: v.number(),
+      publishedProducts: v.number(),
+      totalStudents: v.number(),
+      avgRating: v.number(),
+    }),
+    revenueData: v.array(v.object({
+      period: v.string(),
+      revenue: v.number(),
+    })),
+    topProducts: v.array(v.object({
+      _id: v.id("courses"),
+      title: v.string(),
+      type: v.string(),
+      revenue: v.number(),
+      sales: v.number(),
+      views: v.number(),
+      rating: v.number(),
+    })),
+    audienceInsights: v.object({
+      topCountries: v.array(v.object({
+        country: v.string(),
+        percentage: v.number(),
+      })),
+      ageGroups: v.array(v.object({
+        range: v.string(),
+        percentage: v.number(),
+      })),
+      deviceTypes: v.array(v.object({
+        type: v.string(),
+        percentage: v.number(),
+      })),
+    }),
+  }),
+  handler: async (ctx, args) => {
+    // Get all courses by this creator
+    const courses = await ctx.db
+      .query("courses")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    const courseIds = courses.map(c => c._id);
+
+    // Get analytics for all courses
+    const courseAnalytics = await Promise.all(
+      courseIds.map(id => 
+        ctx.db
+          .query("courseAnalytics")
+          .withIndex("by_course", (q) => q.eq("courseId", id))
+          .first()
+      )
+    );
+
+    const validAnalytics = courseAnalytics.filter(a => a !== null);
+
+    // Calculate overview metrics
+    const totalRevenue = validAnalytics.reduce((sum, a) => sum + (a?.revenue || 0), 0);
+    const totalSales = validAnalytics.reduce((sum, a) => sum + (a?.enrollments || 0), 0);
+    const totalViews = validAnalytics.reduce((sum, a) => sum + (a?.views || 0), 0);
+    const avgRating = validAnalytics.length > 0
+      ? validAnalytics.reduce((sum, a) => sum + (a?.avgRating || 0), 0) / validAnalytics.length
+      : 0;
+
+    const conversionRate = totalViews > 0 ? (totalSales / totalViews) * 100 : 0;
+    const publishedCourses = courses.filter(c => c.isPublished).length;
+
+    // Mock revenue data (should be calculated from actual transactions)
+    const revenueData = [
+      { period: "Week 1", revenue: totalRevenue * 0.2 },
+      { period: "Week 2", revenue: totalRevenue * 0.25 },
+      { period: "Week 3", revenue: totalRevenue * 0.3 },
+      { period: "Week 4", revenue: totalRevenue * 0.25 },
+    ];
+
+    // Top products
+    const topProducts = courses
+      .map((course, i) => {
+        const analytics = validAnalytics[i];
+        return {
+          _id: course._id,
+          title: course.title,
+          type: "course",
+          revenue: analytics?.revenue || 0,
+          sales: analytics?.enrollments || 0,
+          views: analytics?.views || 0,
+          rating: analytics?.avgRating || 0,
+        };
+      })
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 10);
+
+    // Mock audience insights
+    const audienceInsights = {
+      topCountries: [
+        { country: "United States", percentage: 45 },
+        { country: "United Kingdom", percentage: 20 },
+        { country: "Canada", percentage: 15 },
+        { country: "Germany", percentage: 10 },
+        { country: "Australia", percentage: 10 },
+      ],
+      ageGroups: [
+        { range: "18-24", percentage: 25 },
+        { range: "25-34", percentage: 40 },
+        { range: "35-44", percentage: 20 },
+        { range: "45+", percentage: 15 },
+      ],
+      deviceTypes: [
+        { type: "Desktop", percentage: 60 },
+        { type: "Mobile", percentage: 30 },
+        { type: "Tablet", percentage: 10 },
+      ],
+    };
+
+    return {
+      overview: {
+        totalRevenue,
+        totalSales,
+        totalViews,
+        conversionRate,
+        totalProducts: courses.length,
+        publishedProducts: publishedCourses,
+        totalStudents: totalSales,
+        avgRating,
+      },
+      revenueData,
+      topProducts,
+      audienceInsights,
+    };
+  },
+});
+
+export const getProductAnalytics = query({
+  args: { userId: v.string() }, // Clerk ID
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    // Placeholder for product-specific analytics
+    return null;
+  },
+});

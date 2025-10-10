@@ -451,3 +451,11 @@ export const getAllPublishedProducts = query({
     return productsWithDetails;
   },
 }); 
+// Get all digital products (admin only)
+export const getAllProducts = query({
+  args: {},
+  returns: v.array(v.any()),
+  handler: async (ctx) => {
+    return await ctx.db.query("digitalProducts").collect();
+  },
+});

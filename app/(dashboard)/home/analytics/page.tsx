@@ -79,14 +79,14 @@ export default function CreatorAnalyticsPage() {
   
   // Fetch analytics data
   const analyticsData = useQuery(api.analytics.getCreatorAnalytics,
-    convexUser?._id ? { 
-      userId: convexUser._id, 
+    user?.id ? { 
+      userId: user.id, // Clerk ID
       timeRange: timeRange as "7d" | "30d" | "90d" | "1y" 
     } : "skip"
   );
   
   const productAnalytics = useQuery(api.analytics.getProductAnalytics,
-    convexUser?._id ? { userId: convexUser._id } : "skip"
+    user?.id ? { userId: user.id } : "skip" // Clerk ID
   );
 
   // Transform analytics data for UI

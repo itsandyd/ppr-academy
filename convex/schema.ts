@@ -1983,4 +1983,35 @@ export default defineSchema({
   freeTrials: monetizationSchema.freeTrialsTable,
   upsells: monetizationSchema.upsellsTable,
   upsellInteractions: monetizationSchema.upsellInteractionsTable,
+
+  // Content Moderation
+  reports: defineTable({
+    type: v.union(
+      v.literal("course"),
+      v.literal("comment"),
+      v.literal("user"),
+      v.literal("product")
+    ),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("reviewed"),
+      v.literal("resolved"),
+      v.literal("dismissed")
+    ),
+    reportedBy: v.string(), // Clerk ID of reporter
+    reportedAt: v.number(),
+    reason: v.string(),
+    contentId: v.string(), // ID of the reported content
+    contentTitle: v.string(),
+    contentPreview: v.optional(v.string()),
+    reporterName: v.string(),
+    reportedUserName: v.optional(v.string()),
+    reviewedBy: v.optional(v.string()), // Admin who reviewed
+    reviewedAt: v.optional(v.number()),
+    resolution: v.optional(v.string()), // Notes about resolution
+  })
+    .index("by_status", ["status"])
+    .index("by_type", ["type"])
+    .index("by_reported_by", ["reportedBy"])
+    .index("by_content_id", ["contentId"]),
 }); 

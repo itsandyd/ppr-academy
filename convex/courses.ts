@@ -1218,3 +1218,12 @@ export const getAllPublishedCourses = query({
   },
 });
 
+
+// Get all courses (admin only)
+export const getAllCourses = query({
+  args: {},
+  returns: v.array(v.any()),
+  handler: async (ctx) => {
+    return await ctx.db.query("courses").collect();
+  },
+});

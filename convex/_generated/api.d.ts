@@ -14,6 +14,7 @@ import type {
   FunctionReference,
 } from "convex/server";
 import type * as accessControl from "../accessControl.js";
+import type * as adminAnalytics from "../adminAnalytics.js";
 import type * as adminSetup from "../adminSetup.js";
 import type * as affiliates from "../affiliates.js";
 import type * as analytics from "../analytics.js";
@@ -61,6 +62,7 @@ import type * as quizzesSchema from "../quizzesSchema.js";
 import type * as rag from "../rag.js";
 import type * as ragActions from "../ragActions.js";
 import type * as recommendations from "../recommendations.js";
+import type * as reports from "../reports.js";
 import type * as samplePacks from "../samplePacks.js";
 import type * as samples from "../samples.js";
 import type * as seedCreditPackages from "../seedCreditPackages.js";
@@ -81,6 +83,7 @@ import type * as users from "../users.js";
  */
 declare const fullApi: ApiFromModules<{
   accessControl: typeof accessControl;
+  adminAnalytics: typeof adminAnalytics;
   adminSetup: typeof adminSetup;
   affiliates: typeof affiliates;
   analytics: typeof analytics;
@@ -128,6 +131,7 @@ declare const fullApi: ApiFromModules<{
   rag: typeof rag;
   ragActions: typeof ragActions;
   recommendations: typeof recommendations;
+  reports: typeof reports;
   samplePacks: typeof samplePacks;
   samples: typeof samples;
   seedCreditPackages: typeof seedCreditPackages;

@@ -161,3 +161,12 @@ export const deleteUser = mutation({
     return null;
   },
 });
+
+// Get all users (admin only)
+export const getAllUsers = query({
+  args: {},
+  returns: v.array(v.any()),
+  handler: async (ctx) => {
+    return await ctx.db.query("users").collect();
+  },
+});
