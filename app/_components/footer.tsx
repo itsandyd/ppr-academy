@@ -1,9 +1,23 @@
+'use client';
+
 import { FC } from 'react'
 import { Music, Twitter, Instagram, Youtube, Linkedin } from 'lucide-react'
+import Link from 'next/link'
+import { useToast } from '@/hooks/use-toast'
 
 interface FooterProps {}
 
 export const Footer: FC<FooterProps> = () => {
+  const { toast } = useToast();
+
+  const showComingSoon = (feature: string) => {
+    toast({
+      title: "Coming Soon! 🚀",
+      description: `${feature} will be available in a future update.`,
+      className: "bg-white dark:bg-black",
+    });
+  };
+
   return (
     <footer className="bg-background border-t">
       <div className="mx-auto w-full max-w-[1140px] px-4 sm:px-6 lg:px-8">
@@ -19,18 +33,18 @@ export const Footer: FC<FooterProps> = () => {
                 The ultimate platform connecting music producers with students through courses, coaching, and exclusive content.
               </p>
               <div className="flex space-x-4">
-                <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+                <button onClick={() => showComingSoon('Twitter/X')} className="text-muted-foreground hover:text-primary transition-colors">
                   <Twitter className="h-5 w-5" />
-                </a>
-                <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+                </button>
+                <button onClick={() => showComingSoon('Instagram')} className="text-muted-foreground hover:text-primary transition-colors">
                   <Instagram className="h-5 w-5" />
-                </a>
-                <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+                </button>
+                <button onClick={() => showComingSoon('YouTube')} className="text-muted-foreground hover:text-primary transition-colors">
                   <Youtube className="h-5 w-5" />
-                </a>
-                <a href="#" className="text-muted-foreground hover:text-primary transition-colors">
+                </button>
+                <button onClick={() => showComingSoon('LinkedIn')} className="text-muted-foreground hover:text-primary transition-colors">
                   <Linkedin className="h-5 w-5" />
-                </a>
+                </button>
               </div>
             </div>
 
@@ -39,24 +53,24 @@ export const Footer: FC<FooterProps> = () => {
               <h3 className="text-sm font-semibold text-foreground mb-4">Product</h3>
               <ul className="space-y-3">
                 <li>
-                  <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  <button onClick={() => showComingSoon('Features')} className="text-sm text-muted-foreground hover:text-primary transition-colors">
                     Features
-                  </a>
+                  </button>
                 </li>
                 <li>
-                  <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  <Link href="/pricing" className="text-sm text-muted-foreground hover:text-primary transition-colors">
                     Pricing
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  <Link href="/store" className="text-sm text-muted-foreground hover:text-primary transition-colors">
                     Dashboard
-                  </a>
+                  </Link>
                 </li>
                 <li>
-                  <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  <button onClick={() => showComingSoon('Analytics')} className="text-sm text-muted-foreground hover:text-primary transition-colors">
                     Analytics
-                  </a>
+                  </button>
                 </li>
               </ul>
             </div>
@@ -66,24 +80,24 @@ export const Footer: FC<FooterProps> = () => {
               <h3 className="text-sm font-semibold text-foreground mb-4">Resources</h3>
               <ul className="space-y-3">
                 <li>
-                  <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  <button onClick={() => showComingSoon('Help Center')} className="text-sm text-muted-foreground hover:text-primary transition-colors">
                     Help Center
-                  </a>
+                  </button>
                 </li>
                 <li>
-                  <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  <button onClick={() => showComingSoon('Blog')} className="text-sm text-muted-foreground hover:text-primary transition-colors">
                     Blog
-                  </a>
+                  </button>
                 </li>
                 <li>
-                  <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  <button onClick={() => showComingSoon('Community')} className="text-sm text-muted-foreground hover:text-primary transition-colors">
                     Community
-                  </a>
+                  </button>
                 </li>
                 <li>
-                  <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  <button onClick={() => showComingSoon('API Documentation')} className="text-sm text-muted-foreground hover:text-primary transition-colors">
                     API Docs
-                  </a>
+                  </button>
                 </li>
               </ul>
             </div>
@@ -93,24 +107,24 @@ export const Footer: FC<FooterProps> = () => {
               <h3 className="text-sm font-semibold text-foreground mb-4">Company</h3>
               <ul className="space-y-3">
                 <li>
-                  <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  <button onClick={() => showComingSoon('About Us')} className="text-sm text-muted-foreground hover:text-primary transition-colors">
                     About
-                  </a>
+                  </button>
                 </li>
                 <li>
-                  <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  <button onClick={() => showComingSoon('Careers')} className="text-sm text-muted-foreground hover:text-primary transition-colors">
                     Careers
-                  </a>
+                  </button>
                 </li>
                 <li>
-                  <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  <button onClick={() => showComingSoon('Press')} className="text-sm text-muted-foreground hover:text-primary transition-colors">
                     Press
-                  </a>
+                  </button>
                 </li>
                 <li>
-                  <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  <button onClick={() => showComingSoon('Contact')} className="text-sm text-muted-foreground hover:text-primary transition-colors">
                     Contact
-                  </a>
+                  </button>
                 </li>
               </ul>
             </div>
@@ -121,15 +135,15 @@ export const Footer: FC<FooterProps> = () => {
         <div className="border-t py-8">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <div className="flex flex-wrap justify-center md:justify-start space-x-6">
-              <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+              <button onClick={() => showComingSoon('Privacy Policy')} className="text-sm text-muted-foreground hover:text-primary transition-colors">
                 Privacy Policy
-              </a>
-              <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+              </button>
+              <button onClick={() => showComingSoon('Terms of Service')} className="text-sm text-muted-foreground hover:text-primary transition-colors">
                 Terms of Service
-              </a>
-              <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+              </button>
+              <button onClick={() => showComingSoon('Cookie Policy')} className="text-sm text-muted-foreground hover:text-primary transition-colors">
                 Cookie Policy
-              </a>
+              </button>
             </div>
             <p className="text-sm text-muted-foreground">
               © 2024 Music Academy. All rights reserved.

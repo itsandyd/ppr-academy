@@ -18,12 +18,14 @@ import { musicOptions, groupedOptions, popularOptions } from "../components/musi
 import { ProductsList } from "../../components/ProductsList";
 import { SamplesList } from "@/components/samples/SamplesList";
 import { CreditBalance } from "@/components/credits/CreditBalance";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ProductsPage() {
   const params = useParams();
   const router = useRouter();
   const { user } = useUser();
   const storeId = useValidStoreId();
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("manage");
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -135,25 +137,37 @@ export default function ProductsPage() {
       
       // Community
       'emails': `/store/${storeId}/products/lead-magnet`,
-      'membership': '#', // TODO: Implement membership creation
-      'webinar': '#', // TODO: Implement webinar creation
+      'membership': '#',
+      'webinar': '#',
       
       // Special
       'bundle': `/store/${storeId}/products/bundle/create`,
       'url': `/store/${storeId}/products/url-media/create`,
-      'affiliate': '#', // TODO: Implement affiliate program
+      'affiliate': '#',
       
       // Legacy mappings (for backward compatibility)
       'custom': '#',
       'community': '#',
     };
 
+    const comingSoonFeatures: Record<string, string> = {
+      'membership': 'Membership Creation',
+      'webinar': 'Webinar System',
+      'affiliate': 'Affiliate Program',
+      'custom': 'Custom Products',
+      'community': 'Community Features',
+    };
+
     const route = routeMap[optionId];
     if (route && route !== '#') {
       router.push(route);
     } else {
-      console.log(`Route not implemented yet for: ${optionId}`);
-      // TODO: Show coming soon message or create placeholder pages
+      const featureName = comingSoonFeatures[optionId] || 'This feature';
+      toast({
+        title: "Coming Soon! 🚀",
+        description: `${featureName} is currently in development and will be available in a future update.`,
+        className: "bg-white dark:bg-black",
+      });
     }
   };
 

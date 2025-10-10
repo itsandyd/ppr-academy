@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { z } from "zod";
+import { useToast } from "@/hooks/use-toast";
 
 const bundleSchema = z.object({
   title: z.string().min(1, "Title is required").max(100),
@@ -61,6 +62,7 @@ export function BundleForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+  const { toast } = useToast();
   const storeId = params.storeId as string;
   const bundleId = searchParams.get("bundleId");
 
@@ -113,7 +115,11 @@ export function BundleForm() {
       savings
     });
     // TODO: Create bundle in database
-    alert(`Bundle creation coming soon!\n\nTitle: ${data.title}\nProducts: ${selectedProducts.length}\nSuggested Price: $${suggestedBundlePrice}`);
+    toast({
+      title: "Coming Soon! 🚀",
+      description: `Bundle creation is currently in development. Your bundle "${data.title}" with ${selectedProducts.length} products will be available soon.`,
+      className: "bg-white dark:bg-black",
+    });
   };
 
   const addProduct = (product: any, type: "course" | "digitalProduct") => {

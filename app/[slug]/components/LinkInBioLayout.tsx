@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, Store, Gift, ExternalLink, GraduationCap } from "lucide-react";
 import { LeadMagnetPreview } from "./LeadMagnetPreview";
+import { useToast } from "@/hooks/use-toast";
 
 interface Product {
   _id: string;
@@ -42,6 +43,7 @@ interface LinkInBioLayoutProps {
 }
 
 export function LinkInBioLayout({ products, leadMagnetData, storeData }: LinkInBioLayoutProps) {
+  const { toast } = useToast();
   const publishedProducts = products?.filter(p => p.isPublished) || [];
   
   // Separate lead magnets from other products (exclude URL/Media from lead magnets)
@@ -195,7 +197,11 @@ export function LinkInBioLayout({ products, leadMagnetData, storeData }: LinkInB
                   window.open(product.url, '_blank', 'noopener,noreferrer');
                 } else {
                   // Handle digital product purchase
-                  alert(`Purchase ${product.title} for $${product.price}\n\nCheckout functionality coming soon!`);
+                  toast({
+                    title: "Coming Soon! 🚀",
+                    description: `Digital product checkout for "${product.title}" is currently in development and will be available soon.`,
+                    className: "bg-white dark:bg-black",
+                  });
                 }
               }}
             >

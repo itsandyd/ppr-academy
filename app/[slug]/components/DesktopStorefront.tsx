@@ -9,6 +9,7 @@ import { LeadMagnetPreview } from "./LeadMagnetPreview";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 // Custom DialogContent with solid overlay
 const CustomDialogContent = React.forwardRef<
@@ -73,6 +74,7 @@ interface DesktopStorefrontProps {
 }
 
 export function DesktopStorefront({ store, user, products, displayName, initials, avatarUrl }: DesktopStorefrontProps) {
+  const { toast } = useToast();
   return (
     <div>
       {/* Store Landing Page Header */}
@@ -343,7 +345,11 @@ export function DesktopStorefront({ store, user, products, displayName, initials
                 key={product._id} 
                 className="group p-6 border-premium bg-card hover:scale-[1.02] transition-all duration-300 cursor-pointer"
                 onClick={() => {
-                  alert(`Purchase ${product.title} for $${product.price}\n\nCheckout functionality coming soon!`);
+                  toast({
+                    title: "Coming Soon! 🚀",
+                    description: `Digital product checkout for "${product.title}" is currently in development and will be available soon.`,
+                    className: "bg-white dark:bg-black",
+                  });
                 }}
               >
                 {/* Image */}
@@ -464,7 +470,11 @@ export function DesktopStorefront({ store, user, products, displayName, initials
                   key={product._id} 
                   className="group p-6 border-premium bg-card hover:scale-[1.02] transition-all duration-300 cursor-pointer"
                   onClick={() => {
-                    alert(`Purchase ${product.title} for $${product.price}\n\nCheckout functionality coming soon!`);
+                    toast({
+                      title: "Coming Soon! 🚀",
+                      description: `Digital product checkout for "${product.title}" is currently in development and will be available soon.`,
+                      className: "bg-white dark:bg-black",
+                    });
                   }}
                 >
                 {/* Image */}

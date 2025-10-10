@@ -52,6 +52,9 @@ export const DashboardPreferenceSwitcher: FC = () => {
   const hasStore = !!userStore;
   const hasEnrollments = enrolledCourses && enrolledCourses.length > 0;
   const isHybrid = hasStore && hasEnrollments;
+  
+  // Show switcher if user has EITHER store OR enrollments
+  const canSwitch = hasStore || hasEnrollments;
 
   // Load saved preference on mount
   useEffect(() => {
@@ -68,8 +71,8 @@ export const DashboardPreferenceSwitcher: FC = () => {
     ? 'student'
     : null;
 
-  // Don't show if not hybrid user
-  if (!isHybrid) return null;
+  // Don't show if user can't switch modes
+  if (!canSwitch) return null;
 
   const handleSwitch = (mode: 'student' | 'creator', savePreference: boolean = false) => {
     if (savePreference) {
@@ -109,71 +112,78 @@ export const DashboardPreferenceSwitcher: FC = () => {
         <DropdownMenuLabel>
           <div className="flex items-center gap-2">
             <span>Switch Dashboard</span>
-            <Badge variant="secondary" className="text-xs">Hybrid</Badge>
+            {isHybrid && <Badge variant="secondary" className="text-xs">Hybrid</Badge>}
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
 
-        {/* Student Mode */}
-        <DropdownMenuItem
-          onClick={() => handleSwitch('student', false)}
-          className="cursor-pointer"
-        >
-          <BookOpen className="w-4 h-4 mr-3" />
-          <div className="flex-1">
-            <div className="font-medium">Student Library</div>
-            <div className="text-xs text-muted-foreground">
-              View enrolled courses & progress
+        {/* Student Mode - show if user has enrollments OR is in library */}
+        {(hasEnrollments || currentMode === 'student') && (
+          <DropdownMenuItem
+            onClick={() => handleSwitch('student', false)}
+            className="cursor-pointer"
+          >
+            <BookOpen className="w-4 h-4 mr-3" />
+            <div className="flex-1">
+              <div className="font-medium">Student Library</div>
+              <div className="text-xs text-muted-foreground">
+                View enrolled courses & progress
+              </div>
             </div>
-          </div>
-          {currentMode === 'student' && (
-            <Check className="w-4 h-4 text-primary" />
-          )}
-        </DropdownMenuItem>
+            {currentMode === 'student' && (
+              <Check className="w-4 h-4 text-primary" />
+            )}
+          </DropdownMenuItem>
+        )}
 
-        {/* Creator Mode */}
-        <DropdownMenuItem
-          onClick={() => handleSwitch('creator', false)}
-          className="cursor-pointer"
-        >
-          <Store className="w-4 h-4 mr-3" />
-          <div className="flex-1">
-            <div className="font-medium">Creator Dashboard</div>
-            <div className="text-xs text-muted-foreground">
-              Manage store & view analytics
+        {/* Creator Mode - show if user has store OR is in creator mode */}
+        {(hasStore || currentMode === 'creator') && (
+          <DropdownMenuItem
+            onClick={() => handleSwitch('creator', false)}
+            className="cursor-pointer"
+          >
+            <Store className="w-4 h-4 mr-3" />
+            <div className="flex-1">
+              <div className="font-medium">Creator Dashboard</div>
+              <div className="text-xs text-muted-foreground">
+                Manage store & view analytics
+              </div>
             </div>
-          </div>
-          {currentMode === 'creator' && (
-            <Check className="w-4 h-4 text-primary" />
-          )}
-        </DropdownMenuItem>
+            {currentMode === 'creator' && (
+              <Check className="w-4 h-4 text-primary" />
+            )}
+          </DropdownMenuItem>
+        )}
 
-        <DropdownMenuSeparator />
-
-        {/* Set Default Preference */}
-        <DropdownMenuLabel className="text-xs text-muted-foreground">
-          Set as default:
-        </DropdownMenuLabel>
-        <DropdownMenuItem
-          onClick={() => handleSwitch('student', true)}
-          className="cursor-pointer text-xs"
-        >
-          <BookOpen className="w-3 h-3 mr-2" />
-          Always Student
-          {preference === 'student' && (
-            <Check className="w-3 h-3 ml-auto text-primary" />
-          )}
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => handleSwitch('creator', true)}
-          className="cursor-pointer text-xs"
-        >
-          <Store className="w-3 h-3 mr-2" />
-          Always Creator
-          {preference === 'creator' && (
-            <Check className="w-3 h-3 ml-auto text-primary" />
-          )}
-        </DropdownMenuItem>
+        {/* Only show default preference options for hybrid users */}
+        {isHybrid && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel className="text-xs text-muted-foreground">
+              Set as default:
+            </DropdownMenuLabel>
+            <DropdownMenuItem
+              onClick={() => handleSwitch('student', true)}
+              className="cursor-pointer text-xs"
+            >
+              <BookOpen className="w-3 h-3 mr-2" />
+              Always Student
+              {preference === 'student' && (
+                <Check className="w-3 h-3 ml-auto text-primary" />
+              )}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => handleSwitch('creator', true)}
+              className="cursor-pointer text-xs"
+            >
+              <Store className="w-3 h-3 mr-2" />
+              Always Creator
+              {preference === 'creator' && (
+                <Check className="w-3 h-3 ml-auto text-primary" />
+              )}
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

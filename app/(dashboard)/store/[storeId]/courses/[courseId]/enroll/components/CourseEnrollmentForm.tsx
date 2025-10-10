@@ -14,7 +14,8 @@ import {
   Star,
   CheckCircle,
   ArrowLeft,
-  CreditCard
+  CreditCard,
+  Loader2
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -73,22 +74,16 @@ export function CourseEnrollmentForm({ course, store, storeId }: CourseEnrollmen
 
     setIsSubmitting(true);
     try {
-      // TODO: Implement course enrollment/purchase logic
-      // This would create a customer record and handle payment
-      console.log("Course enrollment:", {
-        courseId: course._id,
-        storeId,
-        customerData,
-        amount: course.price || 0,
-      });
-
-      alert(`Enrollment functionality coming soon!\n\nCourse: ${course.title}\nPrice: $${course.price}\nCustomer: ${customerData.name} (${customerData.email})`);
+      // Redirect to the proper checkout page
+      const checkoutUrl = `/courses/${course._id}/checkout?${new URLSearchParams({
+        name: customerData.name,
+        email: customerData.email,
+      }).toString()}`;
       
-      // TODO: Redirect to payment or course access page
+      router.push(checkoutUrl);
     } catch (error) {
       console.error("Enrollment error:", error);
-      alert("Failed to enroll. Please try again.");
-    } finally {
+      alert("Failed to redirect to checkout. Please try again.");
       setIsSubmitting(false);
     }
   };
