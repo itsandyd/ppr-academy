@@ -29,6 +29,11 @@ interface NavItem {
   description?: string;
 }
 
+interface AdminSidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
 const navItems: NavItem[] = [
   {
     title: "Dashboard",
@@ -116,15 +121,32 @@ const legacyItems: NavItem[] = [
   },
 ];
 
-export function AdminSidebar() {
+export function AdminSidebar({ isOpen, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
 
+  const handleLinkClick = () => {
+    // Close sidebar on mobile when a link is clicked
+    if (window.innerWidth < 1024) {
+      onClose();
+    }
+  };
+
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 border-r bg-white dark:bg-black">
+    <aside
+      className={cn(
+        "fixed left-0 top-0 h-screen w-64 border-r bg-white dark:bg-black z-50 transition-transform duration-300 ease-in-out",
+        "lg:translate-x-0", // Always visible on desktop
+        isOpen ? "translate-x-0" : "-translate-x-full" // Slide in/out on mobile
+      )}
+    >
       <div className="flex h-full flex-col">
         {/* Header */}
         <div className="border-b p-6">
-          <Link href="/admin" className="flex items-center gap-2">
+          <Link 
+            href="/admin" 
+            className="flex items-center gap-2"
+            onClick={handleLinkClick}
+          >
             <Shield className="h-6 w-6 text-purple-600" />
             <div>
               <h2 className="text-lg font-bold">Admin Panel</h2>
@@ -142,6 +164,7 @@ export function AdminSidebar() {
                 <Link
                   key={item.href}
                   href={item.href}
+                  onClick={handleLinkClick}
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
                     isActive
@@ -177,6 +200,7 @@ export function AdminSidebar() {
                   <Link
                     key={item.href}
                     href={item.href}
+                    onClick={handleLinkClick}
                     className={cn(
                       "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
                       isActive
@@ -197,6 +221,7 @@ export function AdminSidebar() {
         <div className="border-t p-4">
           <Link
             href="/home"
+            onClick={handleLinkClick}
             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
           >
             <TrendingUp className="h-4 w-4" />
