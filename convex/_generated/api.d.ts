@@ -42,6 +42,8 @@ import type * as discordInternal from "../discordInternal.js";
 import type * as discordPublic from "../discordPublic.js";
 import type * as discordSchema from "../discordSchema.js";
 import type * as emailCampaigns from "../emailCampaigns.js";
+import type * as emailQueries from "../emailQueries.js";
+import type * as emailSchema from "../emailSchema.js";
 import type * as emailWorkflows from "../emailWorkflows.js";
 import type * as emails from "../emails.js";
 import type * as embeddingActions from "../embeddingActions.js";
@@ -111,6 +113,8 @@ declare const fullApi: ApiFromModules<{
   discordPublic: typeof discordPublic;
   discordSchema: typeof discordSchema;
   emailCampaigns: typeof emailCampaigns;
+  emailQueries: typeof emailQueries;
+  emailSchema: typeof emailSchema;
   emailWorkflows: typeof emailWorkflows;
   emails: typeof emails;
   embeddingActions: typeof embeddingActions;

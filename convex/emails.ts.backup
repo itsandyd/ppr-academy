@@ -1,0 +1,1827 @@
+"use node";
+
+import { action, mutation, query, internalAction, internalMutation, internalQuery } from "./_generated/server";
+import { v } from "convex/values";
+import { Resend } from "resend";
+import { internal } from "./_generated/api";
+
+// Initialize Resend with environment variable
+let resendClient: Resend | null = null;
+function getResendClient() {
+  if (!resendClient && process.env.RESEND_API_KEY) {
+    resendClient = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resendClient;
+}
+
+// Test email configuration using centralized Resend
+export const testStoreEmailConfig = action({
+  args: {
+    storeId: v.id("stores"),
+    testEmail: v.string(),
+    fromEmail: v.string(),
+    fromName: v.optional(v.string()),
+    replyToEmail: v.optional(v.string()),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+    details: v.optional(v.object({
+      emailId: v.optional(v.string()),
+    })),
+  }),
+  handler: async (ctx, args) => {
+    try {
+      const resend = getResendClient();
+      
+      if (!resend) {
+        return {
+          success: false,
+          message: "Email service not configured. Please contact support.",
+        };
+      }
+
+      // Send test email using centralized Resend with store's sender settings
+      const result = await resend.emails.send({
+        from: args.fromName ? `${args.fromName} <${args.fromEmail}>` : args.fromEmail,
+        to: args.testEmail,
+        replyTo: args.replyToEmail || args.fromEmail,
+        subject: "✅ Email Configuration Test - Success!",
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <h1 style="color: #10b981; margin: 0;">🎉 Email Setup Complete!</h1>
+            </div>
+            
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+              <h2 style="color: #059669; margin: 0 0 10px 0;">Configuration Test Successful</h2>
+              <p style="color: #047857; margin: 0;">Your email configuration is working perfectly!</p>
+            </div>
+            
+            <div style="background: #f8fafc; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+              <h3 style="margin: 0 0 15px 0;">Verified Settings:</h3>
+              <ul style="margin: 0; padding-left: 20px;">
+                <li><strong>From Email:</strong> ${args.fromEmail}</li>
+                ${args.fromName ? `<li><strong>From Name:</strong> ${args.fromName}</li>` : ''}
+                ${args.replyToEmail ? `<li><strong>Reply-to:</strong> ${args.replyToEmail}</li>` : ''}
+              </ul>
+            </div>
+            
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 20px;">
+              <h3 style="color: #1d4ed8; margin: 0 0 10px 0;">🚀 You're ready to send campaigns!</h3>
+              <p style="color: #1e40af; margin: 0;">
+                Your store can now send professional email campaigns to your customers.
+                Visit your Email Campaigns dashboard to create your first campaign.
+              </p>
+            </div>
+            
+            <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+              <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                This test email was sent from your store's email configuration.
+              </p>
+            </div>
+          </div>
+        `,
+      });
+
+      if (result.data?.id) {
+        return {
+          success: true,
+          message: "Test email sent successfully! Check your inbox.",
+          details: {
+            emailId: result.data.id,
+          },
+        };
+      } else {
+        return {
+          success: false,
+          message: "Failed to send test email. Please check your configuration.",
+        };
+      }
+    } catch (error: any) {
+      console.error("Email test failed:", error);
+      
+      let errorMessage = "Failed to send test email. ";
+      
+      if (error.message?.includes("from")) {
+        errorMessage += "Please verify your 'from' email address format.";
+      } else if (error.message?.includes("domain")) {
+        errorMessage += "Please verify your domain is allowed for sending.";
+      } else {
+        errorMessage += `Error: ${error.message}`;
+      }
+
+      return {
+        success: false,
+        message: errorMessage,
+      };
+    }
+  },
+});
+
+// Send lead magnet confirmation email using centralized Resend
+export const sendLeadMagnetConfirmation = action({
+  args: {
+    storeId: v.id("stores"),
+    customerEmail: v.string(),
+    customerName: v.string(),
+    productName: v.string(),
+    downloadUrl: v.string(),
+    confirmationSubject: v.string(),
+    confirmationBody: v.string(),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    emailId: v.optional(v.string()),
+    error: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    try {
+      const resend = getResendClient();
+      
+      if (!resend) {
+        return {
+          success: false,
+          error: "Email service not configured",
+        };
+      }
+
+      // Get store's email configuration
+      const emailConfig = await ctx.runQuery((internal as any).stores.getStoreEmailConfigInternal, {
+        storeId: args.storeId,
+      });
+
+      if (!emailConfig) {
+        return {
+          success: false,
+          error: "Store email configuration not found",
+        };
+      }
+
+      // Replace personalization tokens in subject
+      let personalizedSubject = args.confirmationSubject
+        .replace(/\{\{\s*customer[_\s]name\s*\}\}/gi, args.customerName)
+        .replace(/\{\{\s*product[_\s]name\s*\}\}/gi, args.productName);
+
+      // Replace personalization tokens in body
+      let personalizedBody = args.confirmationBody
+        .replace(/\{\{\s*customer[_\s]name\s*\}\}/gi, args.customerName)
+        .replace(/\{\{\s*product[_\s]name\s*\}\}/gi, args.productName)
+        .replace(/\{\{\s*download[_\s]link\s*\}\}/gi, `<a href="${args.downloadUrl}" style="color: #6356FF; text-decoration: underline;">Download Your Resource</a>`);
+
+      // Add download button to the email
+      const emailWithDownloadButton = `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          ${personalizedBody}
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${args.downloadUrl}" 
+               style="display: inline-block; background: #6356FF; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+              📥 Download Your Resource
+            </a>
+          </div>
+          
+          <div style="border-top: 1px solid #e5e7eb; margin-top: 30px; padding-top: 20px; font-size: 12px; color: #6b7280; text-align: center;">
+            <p>This email was sent because you opted in to receive this resource. The download link will remain active.</p>
+          </div>
+        </div>
+      `;
+
+      // Send email using centralized Resend
+      const result = await resend.emails.send({
+        from: emailConfig.fromName ? `${emailConfig.fromName} <${emailConfig.fromEmail}>` : emailConfig.fromEmail,
+        to: args.customerEmail,
+        replyTo: emailConfig.replyToEmail || emailConfig.fromEmail,
+        subject: personalizedSubject,
+        html: emailWithDownloadButton,
+      });
+
+      if (result.data?.id) {
+        return {
+          success: true,
+          emailId: result.data.id,
+        };
+      } else {
+        return {
+          success: false,
+          error: "Failed to send confirmation email",
+        };
+      }
+    } catch (error: any) {
+      console.error("Lead magnet confirmation email failed:", error);
+      return {
+        success: false,
+        error: error.message || "Failed to send confirmation email",
+      };
+    }
+  },
+});
+
+// Send campaign email using centralized Resend
+export const sendCampaignEmail = action({
+  args: {
+    storeId: v.id("stores"),
+    to: v.string(),
+    subject: v.string(),
+    content: v.string(),
+    fromEmail: v.string(),
+    fromName: v.optional(v.string()),
+    replyToEmail: v.optional(v.string()),
+    customerName: v.optional(v.string()),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    emailId: v.optional(v.string()),
+    error: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    try {
+      const resend = getResendClient();
+      
+      if (!resend) {
+        return {
+          success: false,
+          error: "Email service not configured",
+        };
+      }
+
+      // Replace personalization tokens
+      let personalizedContent = args.content;
+      if (args.customerName) {
+        personalizedContent = personalizedContent.replace(
+          /\{\{customer\.name\}\}/g, 
+          args.customerName
+        );
+      }
+
+      // Send email using centralized Resend
+      const result = await resend.emails.send({
+        from: args.fromName ? `${args.fromName} <${args.fromEmail}>` : args.fromEmail,
+        to: args.to,
+        replyTo: args.replyToEmail || args.fromEmail,
+        subject: args.subject,
+        html: personalizedContent,
+      });
+
+      if (result.data?.id) {
+        return {
+          success: true,
+          emailId: result.data.id,
+        };
+      } else {
+        return {
+          success: false,
+          error: "Failed to send email",
+        };
+      }
+    } catch (error: any) {
+      console.error("Campaign email failed:", error);
+      return {
+        success: false,
+        error: error.message || "Failed to send campaign email",
+      };
+    }
+  },
+});
+
+// Legacy functions for backwards compatibility (can be removed later)
+export const sendLeadMagnetEmail = action({
+  args: {
+    to: v.string(),
+    customerName: v.string(),
+    leadMagnetName: v.string(),
+    downloadUrl: v.string(),
+    storeName: v.string(),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    emailId: v.optional(v.string()),
+    error: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    console.log("📧 Legacy lead magnet email - consider migrating to store-specific configuration");
+    return { success: false, error: "Please configure store-specific email settings" };
+  },
+});
+
+export const sendAdminNotification = action({
+  args: {
+    to: v.string(),
+    customerName: v.string(),
+    customerEmail: v.string(),
+    leadMagnetName: v.string(),
+    storeName: v.string(),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    emailId: v.optional(v.string()),
+    error: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    console.log("📧 Legacy admin notification - consider migrating to store-specific configuration");
+    return { success: false, error: "Please configure store-specific email settings" };
+  },
+});
+
+export const sendWelcomeEmail = action({
+  args: {
+    to: v.string(),
+    name: v.string(),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    emailId: v.optional(v.string()),
+    error: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    console.log("📧 Legacy welcome email - consider migrating to store-specific configuration");
+    return { success: false, error: "Please configure store-specific email settings" };
+  },
+});
+
+export const testEmailConfig = action({
+  args: {
+    testEmail: v.string(),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    return { 
+      success: false, 
+      message: "Please use store-specific email testing instead" 
+    };
+  },
+});
+
+// Send email campaign using store's Resend configuration
+export const sendCampaign = action({
+  args: { campaignId: v.id("emailCampaigns") },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+    sentCount: v.optional(v.number()),
+  }),
+  handler: async (ctx, args) => {
+    // TODO: Implement actual store-specific campaign sending once API is regenerated
+    console.log("📧 Store-specific campaign sending ready for implementation");
+    
+    return { 
+      success: true, 
+      message: "Campaign system ready - will implement store-specific Resend integration",
+      sentCount: 0,
+    };
+  },
+});
+
+// Send admin notification for new lead signup
+export const sendNewLeadAdminNotification = action({
+  args: {
+    storeId: v.id("stores"),
+    customerName: v.string(),
+    customerEmail: v.string(),
+    productName: v.string(),
+    source: v.optional(v.string()),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    emailId: v.optional(v.string()),
+    error: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    try {
+      console.log("📧 Starting admin notification process for new lead:", args.customerEmail);
+      
+      const resend = getResendClient();
+      if (!resend) {
+        console.log("⚠️ RESEND_API_KEY not configured. Admin notification simulation mode.");
+        return {
+          success: true,
+          error: "Email service not configured - simulation mode",
+        };
+      }
+
+      // Get store information
+      const store = await ctx.runQuery((internal as any).stores.getStoreById, {
+        storeId: args.storeId,
+      });
+
+      if (!store) {
+        return {
+          success: false,
+          error: "Store not found",
+        };
+      }
+
+      // Check if admin notifications are enabled
+      const notificationSettings = store.emailConfig?.adminNotifications;
+      const isReturningUser = args.source?.includes("returning user");
+      
+      // Check if notifications are disabled globally
+      if (notificationSettings?.enabled === false) {
+        console.log("📧 Admin notifications disabled for store:", store.name);
+        return {
+          success: true,
+          error: "Admin notifications disabled",
+        };
+      }
+
+      // Check specific notification types
+      if (isReturningUser && notificationSettings?.emailOnReturningUser === false) {
+        console.log("📧 Returning user notifications disabled for store:", store.name);
+        return {
+          success: true,
+          error: "Returning user notifications disabled",
+        };
+      }
+
+      if (!isReturningUser && notificationSettings?.emailOnNewLead === false) {
+        console.log("📧 New lead notifications disabled for store:", store.name);
+        return {
+          success: true,
+          error: "New lead notifications disabled",
+        };
+      }
+
+      // Get admin user information
+      const adminUser = await ctx.runQuery((internal as any).users.getUserById, {
+        userId: store.userId,
+      });
+
+      if (!adminUser?.email) {
+        return {
+          success: false,
+          error: "Admin user email not found",
+        };
+      }
+
+      // Use store's email configuration if available, otherwise use defaults
+      const fromEmail = store.emailConfig?.fromEmail || 'noreply@ppr-academy.com';
+      const fromName = store.emailConfig?.fromName || store.name;
+      const replyToEmail = store.emailConfig?.replyToEmail || adminUser.email;
+
+      // Use custom notification email if specified, otherwise use admin's email
+      const notificationEmail = notificationSettings?.notificationEmail || adminUser.email;
+
+      // Build custom subject with prefix if specified
+      const subjectPrefix = notificationSettings?.customSubjectPrefix || '🎯';
+      const baseSubject = isReturningUser 
+        ? `Returning User: ${args.customerName} re-downloaded ${args.productName}`
+        : `New Lead: ${args.customerName} downloaded ${args.productName}`;
+      const subject = `${subjectPrefix} ${baseSubject}`;
+
+      // Include lead details based on preferences
+      const includeDetails = notificationSettings?.includeLeadDetails !== false; // Default to true
+
+      // Send admin notification email
+      const result = await resend.emails.send({
+        from: fromName ? `${fromName} <${fromEmail}>` : fromEmail,
+        to: notificationEmail,
+        replyTo: replyToEmail,
+        subject: subject,
+        html: getAdminNotificationEmailTemplate({
+          customerName: args.customerName,
+          customerEmail: args.customerEmail,
+          productName: args.productName,
+          source: args.source || "Lead Magnet",
+          storeName: store.name,
+          adminName: adminUser.name || adminUser.firstName || "Admin",
+          includeDetails: includeDetails,
+          isReturningUser: isReturningUser,
+        }),
+      });
+
+      console.log("✅ Admin notification email sent successfully:", result.data?.id);
+      return {
+        success: true,
+        emailId: result.data?.id,
+      };
+    } catch (error: any) {
+      console.error("❌ Failed to send admin notification:", error);
+      return {
+        success: false,
+        error: error.message || "Unknown error",
+      };
+    }
+  },
+});
+
+// Admin notification email template
+function getAdminNotificationEmailTemplate(data: {
+  customerName: string;
+  customerEmail: string;
+  productName: string;
+  source: string;
+  storeName: string;
+  adminName: string;
+  includeDetails?: boolean;
+  isReturningUser?: boolean;
+}) {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>New Lead: ${data.customerName}</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: #22c55e; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+    <h1 style="color: white; margin: 0; font-size: 24px;">🎯 New Lead Generated!</h1>
+  </div>
+  
+  <div style="background: #f0fdf4; padding: 25px; border-radius: 0 0 8px 8px; border: 1px solid #bbf7d0;">
+    <h2 style="color: #14532d; margin-top: 0;">Hi ${data.adminName},</h2>
+    <p style="color: #374151; margin-bottom: 20px;">
+      ${data.isReturningUser 
+        ? `A previous customer has re-engaged with your <strong>${data.storeName}</strong> store!`
+        : `Great news! You have a new lead from your <strong>${data.storeName}</strong> store.`
+      }
+    </p>
+    
+    ${data.includeDetails !== false ? `
+    <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #22c55e;">
+      <h3 style="color: #14532d; margin-top: 0;">${data.isReturningUser ? 'Customer' : 'Lead'} Details:</h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151; width: 120px;">Name:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.customerName}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Email:</td>
+          <td style="padding: 8px 0; color: #1f2937;"><a href="mailto:${data.customerEmail}" style="color: #2563eb; text-decoration: none;">${data.customerEmail}</a></td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Product:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.productName}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Source:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.source}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Time:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${new Date().toLocaleString()}</td>
+        </tr>
+      </table>
+    </div>
+    ` : `
+    <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #22c55e; text-align: center;">
+      <p style="color: #374151; margin: 0;">
+        <strong>${data.customerName}</strong> ${data.isReturningUser ? 're-downloaded' : 'downloaded'} <strong>${data.productName}</strong>
+      </p>
+      <p style="color: #6b7280; font-size: 14px; margin: 10px 0 0 0;">
+        Check your dashboard for full details
+      </p>
+    </div>
+    `}</div>
+    
+    <div style="background: #eff6ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
+      <h3 style="color: #1d4ed8; margin-top: 0;">🚀 Next Steps:</h3>
+      <ul style="color: #374151; margin: 0; padding-left: 20px;">
+        <li>Follow up with a personalized email within 24 hours</li>
+        <li>Check your dashboard for more lead details</li>
+        <li>Consider adding them to your email sequence</li>
+      </ul>
+    </div>
+    
+    <div style="text-align: center; margin-top: 30px;">
+      <p style="color: #6b7280; font-size: 14px; margin: 0;">
+        This notification was sent from your ${data.storeName} store.
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+}
+
+// ============================================================================
+// EMAIL MARKETING SYSTEM - Campaigns, Templates, Automation
+// ============================================================================
+
+/**
+ * Create email template
+ */
+export const createTemplate = mutation({
+  args: {
+    connectionId: v.id("resendConnections"),
+    name: v.string(),
+    subject: v.string(),
+    type: v.union(
+      v.literal("welcome"),
+      v.literal("launch"),
+      v.literal("enrollment"),
+      v.literal("progress_reminder"),
+      v.literal("completion"),
+      v.literal("certificate"),
+      v.literal("new_course"),
+      v.literal("re_engagement"),
+      v.literal("weekly_digest"),
+      v.literal("custom")
+    ),
+    htmlContent: v.string(),
+    textContent: v.string(),
+    variables: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.insert("resendTemplates", {
+      connectionId: args.connectionId,
+      name: args.name,
+      subject: args.subject,
+      type: args.type,
+      htmlContent: args.htmlContent,
+      textContent: args.textContent,
+      variables: args.variables,
+      isActive: true,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+/**
+ * Get templates for a connection
+ */
+export const getTemplates = query({
+  args: {
+    connectionId: v.id("resendConnections"),
+    activeOnly: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const templates = await ctx.db
+      .query("resendTemplates")
+      .withIndex("by_connection", (q) => q.eq("connectionId", args.connectionId))
+      .collect();
+
+    if (args.activeOnly) {
+      return templates.filter((t) => t.isActive);
+    }
+
+    return templates;
+  },
+});
+
+/**
+ * Create email campaign
+ */
+export const createCampaign = mutation({
+  args: {
+    connectionId: v.id("resendConnections"),
+    name: v.string(),
+    subject: v.string(),
+    templateId: v.optional(v.id("resendTemplates")),
+    htmlContent: v.optional(v.string()),
+    textContent: v.optional(v.string()),
+    targetAudience: v.union(
+      v.literal("all_users"),
+      v.literal("course_students"),
+      v.literal("store_students"),
+      v.literal("inactive_users"),
+      v.literal("completed_course"),
+      v.literal("custom_list")
+    ),
+    targetCourseId: v.optional(v.id("courses")),
+    targetStoreId: v.optional(v.id("stores")),
+    customRecipients: v.optional(v.array(v.string())),
+    scheduledFor: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.insert("resendCampaigns", {
+      connectionId: args.connectionId,
+      templateId: args.templateId,
+      name: args.name,
+      subject: args.subject,
+      htmlContent: args.htmlContent,
+      textContent: args.textContent,
+      targetAudience: args.targetAudience,
+      targetCourseId: args.targetCourseId,
+      targetStoreId: args.targetStoreId,
+      customRecipients: args.customRecipients,
+      status: args.scheduledFor ? "scheduled" : "draft",
+      scheduledFor: args.scheduledFor,
+      recipientCount: 0,
+      sentCount: 0,
+      deliveredCount: 0,
+      openedCount: 0,
+      clickedCount: 0,
+      bouncedCount: 0,
+      complainedCount: 0,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+/**
+ * Get campaigns for a connection
+ */
+export const getCampaigns = query({
+  args: {
+    connectionId: v.id("resendConnections"),
+    status: v.optional(v.union(
+      v.literal("draft"),
+      v.literal("scheduled"),
+      v.literal("sending"),
+      v.literal("sent"),
+      v.literal("failed")
+    )),
+  },
+  handler: async (ctx, args) => {
+    const campaigns = await ctx.db
+      .query("resendCampaigns")
+      .withIndex("by_connection", (q) => q.eq("connectionId", args.connectionId))
+      .collect();
+
+    if (args.status) {
+      return campaigns.filter((c) => c.status === args.status);
+    }
+
+    return campaigns;
+  },
+});
+
+/**
+ * Process and send campaign emails (INTERNAL)
+ */
+export const processCampaign = internalAction({
+  args: {
+    campaignId: v.id("resendCampaigns"),
+  },
+  handler: async (ctx, args) => {
+    try {
+      const campaign = await ctx.runQuery(internal.emails.getCampaignById, {
+        campaignId: args.campaignId,
+      });
+
+      if (!campaign) {
+        throw new Error("Campaign not found");
+      }
+
+      // Update status to sending
+      await ctx.runMutation(internal.emails.updateCampaignStatus, {
+        campaignId: args.campaignId,
+        status: "sending",
+      });
+
+      // Get recipients
+      const recipients = await ctx.runQuery(internal.emails.getCampaignRecipients, {
+        campaignId: args.campaignId,
+      });
+
+      // Update recipient count
+      await ctx.runMutation(internal.emails.updateCampaignMetrics, {
+        campaignId: args.campaignId,
+        recipientCount: recipients.length,
+      });
+
+      const resend = getResendClient();
+      if (!resend) {
+        throw new Error("Resend not configured");
+      }
+
+      // Get connection for sender details
+      const connection = await ctx.runQuery(internal.emails.getConnectionById, {
+        connectionId: campaign.connectionId,
+      });
+
+      if (!connection) {
+        throw new Error("Connection not found");
+      }
+
+      // Get email content
+      let htmlContent = campaign.htmlContent || "";
+      let textContent = campaign.textContent || "";
+
+      if (campaign.templateId) {
+        const template = await ctx.runQuery(internal.emails.getTemplateById, {
+          templateId: campaign.templateId,
+        });
+        if (template) {
+          htmlContent = template.htmlContent;
+          textContent = template.textContent;
+        }
+      }
+
+      // Send in batches of 50 to avoid rate limits
+      const batchSize = 50;
+      let sentCount = 0;
+
+      for (let i = 0; i < recipients.length; i += batchSize) {
+        const batch = recipients.slice(i, i + batchSize);
+
+        const results = await Promise.allSettled(
+          batch.map(async (recipient) => {
+            try {
+              const result = await resend.emails.send({
+                from: connection.fromName 
+                  ? `${connection.fromName} <${connection.fromEmail}>` 
+                  : connection.fromEmail,
+                to: recipient.email,
+                subject: campaign.subject,
+                html: htmlContent,
+                text: textContent,
+                replyTo: connection.replyToEmail || connection.fromEmail,
+              });
+
+              // Log email send
+              await ctx.runMutation(internal.emails.logEmail, {
+                connectionId: campaign.connectionId,
+                resendEmailId: result.data?.id,
+                recipientEmail: recipient.email,
+                recipientUserId: recipient.userId,
+                recipientName: recipient.name,
+                campaignId: args.campaignId,
+                templateId: campaign.templateId,
+                subject: campaign.subject,
+                fromEmail: connection.fromEmail,
+                fromName: connection.fromName || "",
+                status: result.error ? "failed" : "sent",
+                errorMessage: result.error?.message,
+              });
+
+              return { success: !result.error };
+            } catch (error: any) {
+              // Log failed send
+              await ctx.runMutation(internal.emails.logEmail, {
+                connectionId: campaign.connectionId,
+                recipientEmail: recipient.email,
+                recipientUserId: recipient.userId,
+                recipientName: recipient.name,
+                campaignId: args.campaignId,
+                templateId: campaign.templateId,
+                subject: campaign.subject,
+                fromEmail: connection.fromEmail,
+                fromName: connection.fromName || "",
+                status: "failed",
+                errorMessage: error.message,
+              });
+              return { success: false };
+            }
+          })
+        );
+
+        const successCount = results.filter(
+          (r) => r.status === "fulfilled" && (r.value as any).success
+        ).length;
+        sentCount += successCount;
+
+        // Update progress
+        await ctx.runMutation(internal.emails.updateCampaignMetrics, {
+          campaignId: args.campaignId,
+          sentCount,
+        });
+
+        // Delay between batches to respect rate limits
+        if (i + batchSize < recipients.length) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+      }
+
+      // Mark campaign as sent
+      await ctx.runMutation(internal.emails.updateCampaignStatus, {
+        campaignId: args.campaignId,
+        status: "sent",
+        sentAt: Date.now(),
+      });
+    } catch (error) {
+      console.error("Campaign processing failed:", error);
+      await ctx.runMutation(internal.emails.updateCampaignStatus, {
+        campaignId: args.campaignId,
+        status: "failed",
+      });
+    }
+  },
+});
+
+/**
+ * Get campaign by ID (INTERNAL)
+ */
+export const getCampaignById = internalQuery({
+  args: { campaignId: v.id("resendCampaigns") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.campaignId);
+  },
+});
+
+/**
+ * Get connection by ID (INTERNAL)
+ */
+export const getConnectionById = internalQuery({
+  args: { connectionId: v.id("resendConnections") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.connectionId);
+  },
+});
+
+/**
+ * Get template by ID (INTERNAL)
+ */
+export const getTemplateById = internalQuery({
+  args: { templateId: v.id("resendTemplates") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.templateId);
+  },
+});
+
+/**
+ * Get campaign recipients (INTERNAL)
+ */
+export const getCampaignRecipients = internalQuery({
+  args: { campaignId: v.id("resendCampaigns") },
+  handler: async (ctx, args) => {
+    const campaign = await ctx.db.get(args.campaignId);
+    if (!campaign) return [];
+
+    // Custom recipients
+    if (campaign.targetAudience === "custom_list" && campaign.customRecipients) {
+      return campaign.customRecipients.map((email: string) => ({ 
+        email, 
+        userId: undefined, 
+        name: undefined 
+      }));
+    }
+
+    const allUsers = await ctx.db.query("users").collect();
+
+    switch (campaign.targetAudience) {
+      case "all_users":
+        return allUsers
+          .filter((u) => u.email)
+          .map((u) => ({ email: u.email!, userId: u.clerkId, name: u.name }));
+
+      case "course_students":
+        if (campaign.targetCourseId) {
+          const courseIdStr = campaign.targetCourseId as string;
+          const enrollments = await ctx.db
+            .query("enrollments")
+            .withIndex("by_courseId", (q) => q.eq("courseId", courseIdStr))
+            .collect();
+          const userIds = new Set(enrollments.map((e) => e.userId));
+          return allUsers
+            .filter((u) => u.email && u.clerkId && userIds.has(u.clerkId))
+            .map((u) => ({ email: u.email!, userId: u.clerkId!, name: u.name }));
+        }
+        break;
+
+      case "store_students":
+        if (campaign.targetStoreId) {
+          const courses = await ctx.db
+            .query("courses")
+            .withIndex("by_storeId", (q) => q.eq("storeId", campaign.targetStoreId))
+            .collect();
+          const courseIds = courses.map((c) => c._id);
+          const enrollments = await ctx.db.query("enrollments").collect();
+          const storeStudentIds = new Set(
+            enrollments
+              .filter((e) => courseIds.includes(e.courseId as any))
+              .map((e) => e.userId)
+          );
+          return allUsers
+            .filter((u) => u.email && u.clerkId && storeStudentIds.has(u.clerkId))
+            .map((u) => ({ email: u.email!, userId: u.clerkId!, name: u.name }));
+        }
+        break;
+
+      case "inactive_users":
+        if (campaign.inactiveDays) {
+          const cutoff = Date.now() - campaign.inactiveDays * 24 * 60 * 60 * 1000;
+          return allUsers
+            .filter((u) => u.email && u._creationTime < cutoff)
+            .map((u) => ({ email: u.email!, userId: u.clerkId, name: u.name }));
+        }
+        break;
+
+      case "completed_course":
+        if (campaign.targetCourseId) {
+          const courseIdStr = campaign.targetCourseId as string;
+          const enrollments = await ctx.db
+            .query("enrollments")
+            .withIndex("by_courseId", (q) => q.eq("courseId", courseIdStr))
+            .collect();
+          const completedIds = new Set(
+            enrollments.filter((e) => e.progress === 100).map((e) => e.userId)
+          );
+          return allUsers
+            .filter((u) => u.email && u.clerkId && completedIds.has(u.clerkId))
+            .map((u) => ({ email: u.email!, userId: u.clerkId!, name: u.name }));
+        }
+        break;
+    }
+
+    return [];
+  },
+});
+
+/**
+ * Update campaign status (INTERNAL)
+ */
+export const updateCampaignStatus = internalMutation({
+  args: {
+    campaignId: v.id("resendCampaigns"),
+    status: v.union(
+      v.literal("draft"),
+      v.literal("scheduled"),
+      v.literal("sending"),
+      v.literal("sent"),
+      v.literal("failed")
+    ),
+    sentAt: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const updates: any = { status: args.status, updatedAt: Date.now() };
+    if (args.sentAt) updates.sentAt = args.sentAt;
+    await ctx.db.patch(args.campaignId, updates);
+  },
+});
+
+/**
+ * Update campaign metrics (INTERNAL)
+ */
+export const updateCampaignMetrics = internalMutation({
+  args: {
+    campaignId: v.id("resendCampaigns"),
+    recipientCount: v.optional(v.number()),
+    sentCount: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const updates: any = { updatedAt: Date.now() };
+    if (args.recipientCount !== undefined) updates.recipientCount = args.recipientCount;
+    if (args.sentCount !== undefined) updates.sentCount = args.sentCount;
+    await ctx.db.patch(args.campaignId, updates);
+  },
+});
+
+/**
+ * Handle webhook event from Resend
+ */
+export const handleWebhookEvent = mutation({
+  args: {
+    event: v.string(),
+    emailId: v.string(),
+    timestamp: v.number(),
+    metadata: v.any(),
+  },
+  handler: async (ctx, args) => {
+    // Find email log by Resend email ID
+    const log = await ctx.db
+      .query("resendLogs")
+      .withIndex("by_resend_id", (q) => q.eq("resendEmailId", args.emailId))
+      .first();
+
+    if (!log) {
+      console.warn(`Email log not found for Resend ID: ${args.emailId}`);
+      return { success: false, message: "Email log not found" };
+    }
+
+    // Determine new status based on event
+    let newStatus: "delivered" | "opened" | "clicked" | "bounced" | "complained" | "failed" = "delivered";
+    const updates: any = { updatedAt: Date.now() };
+
+    switch (args.event) {
+      case "email.delivered":
+        newStatus = "delivered";
+        updates.deliveredAt = args.timestamp;
+        break;
+      case "email.opened":
+        newStatus = "opened";
+        updates.openedAt = args.timestamp;
+        break;
+      case "email.clicked":
+        newStatus = "clicked";
+        updates.clickedAt = args.timestamp;
+        break;
+      case "email.bounced":
+        newStatus = "bounced";
+        updates.bouncedAt = args.timestamp;
+        updates.errorMessage = args.metadata?.bounce_type || "Email bounced";
+        break;
+      case "email.complained":
+        newStatus = "complained";
+        break;
+      case "email.delivery_delayed":
+      case "email.failed":
+        newStatus = "failed";
+        updates.errorMessage = args.metadata?.error || "Email delivery failed";
+        break;
+    }
+
+    // Update log
+    updates.status = newStatus;
+    await ctx.db.patch(log._id, updates);
+
+    // Update campaign metrics if applicable
+    if (log.campaignId) {
+      await ctx.runMutation(internal.emails.incrementCampaignMetric, {
+        campaignId: log.campaignId,
+        metric: newStatus,
+      });
+    }
+
+    return { success: true };
+  },
+});
+
+/**
+ * Increment campaign metric (INTERNAL)
+ */
+export const incrementCampaignMetric = internalMutation({
+  args: {
+    campaignId: v.id("resendCampaigns"),
+    metric: v.union(
+      v.literal("delivered"),
+      v.literal("opened"),
+      v.literal("clicked"),
+      v.literal("bounced"),
+      v.literal("complained"),
+      v.literal("failed")
+    ),
+  },
+  handler: async (ctx, args) => {
+    const campaign = await ctx.db.get(args.campaignId);
+    if (!campaign) return;
+
+    const updates: any = { updatedAt: Date.now() };
+
+    switch (args.metric) {
+      case "delivered":
+        updates.deliveredCount = (campaign.deliveredCount || 0) + 1;
+        break;
+      case "opened":
+        updates.openedCount = (campaign.openedCount || 0) + 1;
+        break;
+      case "clicked":
+        updates.clickedCount = (campaign.clickedCount || 0) + 1;
+        break;
+      case "bounced":
+        updates.bouncedCount = (campaign.bouncedCount || 0) + 1;
+        break;
+      case "complained":
+        updates.complainedCount = (campaign.complainedCount || 0) + 1;
+        break;
+    }
+
+    await ctx.db.patch(args.campaignId, updates);
+  },
+});
+
+/**
+ * Log email send (INTERNAL)
+ */
+export const logEmail = internalMutation({
+  args: {
+    connectionId: v.id("resendConnections"),
+    resendEmailId: v.optional(v.string()),
+    recipientEmail: v.string(),
+    recipientUserId: v.optional(v.string()),
+    recipientName: v.optional(v.string()),
+    campaignId: v.optional(v.id("resendCampaigns")),
+    automationId: v.optional(v.id("resendAutomations")),
+    templateId: v.optional(v.id("resendTemplates")),
+    subject: v.string(),
+    fromEmail: v.string(),
+    fromName: v.string(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("sent"),
+      v.literal("delivered"),
+      v.literal("opened"),
+      v.literal("clicked"),
+      v.literal("bounced"),
+      v.literal("complained"),
+      v.literal("failed")
+    ),
+    errorMessage: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.insert("resendLogs", {
+      connectionId: args.connectionId,
+      resendEmailId: args.resendEmailId,
+      recipientEmail: args.recipientEmail,
+      recipientUserId: args.recipientUserId,
+      recipientName: args.recipientName,
+      campaignId: args.campaignId,
+      automationId: args.automationId,
+      templateId: args.templateId,
+      subject: args.subject,
+      fromEmail: args.fromEmail,
+      fromName: args.fromName,
+      status: args.status,
+      errorMessage: args.errorMessage,
+      sentAt: Date.now(),
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+// Send workflow email using centralized Resend - optimized for automation
+export const sendWorkflowEmail = action({
+  args: {
+    storeId: v.id("stores"),
+    customerEmail: v.string(),
+    customerName: v.optional(v.string()),
+    subject: v.string(),
+    body: v.string(),
+    downloadUrl: v.optional(v.string()),
+    executionData: v.optional(v.any()),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    emailId: v.optional(v.string()),
+    error: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    try {
+      const resend = getResendClient();
+      
+      if (!resend) {
+        return {
+          success: false,
+          error: "Email service not configured",
+        };
+      }
+
+      // Get store's email configuration
+      const emailConfig = await ctx.runQuery((internal as any).stores.getStoreEmailConfigInternal, {
+        storeId: args.storeId,
+      });
+
+      if (!emailConfig) {
+        return {
+          success: false,
+          error: "Store email configuration not found",
+        };
+      }
+
+      // Enhanced personalization with more tokens
+      const customerName = args.customerName || "Customer";
+      const tokens = {
+        customer_name: customerName,
+        customer_email: args.customerEmail,
+        ...args.executionData, // Include any additional data from the workflow
+      };
+
+      // Replace personalization tokens in subject
+      let personalizedSubject = args.subject;
+      Object.entries(tokens).forEach(([key, value]) => {
+        const regex = new RegExp(`\\{\\{\\s*${key}[_\\s]*\\}\\}`, 'gi');
+        personalizedSubject = personalizedSubject.replace(regex, String(value || ''));
+      });
+
+      // Replace personalization tokens in body
+      let personalizedBody = args.body;
+      Object.entries(tokens).forEach(([key, value]) => {
+        const regex = new RegExp(`\\{\\{\\s*${key}[_\\s]*\\}\\}`, 'gi');
+        personalizedBody = personalizedBody.replace(regex, String(value || ''));
+      });
+
+      // Add download button if URL provided
+      const emailWithFormatting = args.downloadUrl ? `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          ${personalizedBody}
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${args.downloadUrl}" 
+               style="display: inline-block; background: #6356FF; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+              📥 Download Your Resource
+            </a>
+          </div>
+          
+          <div style="border-top: 1px solid #e5e7eb; margin-top: 30px; padding-top: 20px; font-size: 12px; color: #6b7280; text-align: center;">
+            <p>This email is part of an automated sequence. You're receiving this because of your interest in our content.</p>
+          </div>
+        </div>
+      ` : `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          ${personalizedBody}
+          
+          <div style="border-top: 1px solid #e5e7eb; margin-top: 30px; padding-top: 20px; font-size: 12px; color: #6b7280; text-align: center;">
+            <p>This email is part of an automated sequence. You're receiving this because of your interest in our content.</p>
+          </div>
+        </div>
+      `;
+
+      // Send email using centralized Resend
+      const result = await resend.emails.send({
+        from: emailConfig.fromName ? `${emailConfig.fromName} <${emailConfig.fromEmail}>` : emailConfig.fromEmail,
+        to: args.customerEmail,
+        replyTo: emailConfig.replyToEmail || emailConfig.fromEmail,
+        subject: personalizedSubject,
+        html: emailWithFormatting,
+      });
+
+      if (result.data?.id) {
+        return {
+          success: true,
+          emailId: result.data.id,
+        };
+      } else {
+        return {
+          success: false,
+          error: result.error?.message || "Failed to send email",
+        };
+      }
+    } catch (error) {
+      console.error("Workflow email error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error occurred",
+      };
+    }
+  },
+});
+
+// ============================================================================
+// AUTOMATION ENGINE
+// ============================================================================
+
+/**
+ * Create automation rule
+ */
+export const createAutomation = mutation({
+  args: {
+    connectionId: v.id("resendConnections"),
+    templateId: v.id("resendTemplates"),
+    name: v.string(),
+    description: v.string(),
+    triggerType: v.union(
+      v.literal("user_signup"),
+      v.literal("course_enrollment"),
+      v.literal("course_progress"),
+      v.literal("course_completion"),
+      v.literal("certificate_issued"),
+      v.literal("purchase"),
+      v.literal("inactivity"),
+      v.literal("quiz_completion"),
+      v.literal("milestone")
+    ),
+    triggerCourseId: v.optional(v.id("courses")),
+    triggerStoreId: v.optional(v.id("stores")),
+    progressThreshold: v.optional(v.number()),
+    inactivityDays: v.optional(v.number()),
+    delayMinutes: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.insert("resendAutomations", {
+      connectionId: args.connectionId,
+      templateId: args.templateId,
+      name: args.name,
+      description: args.description,
+      isActive: true,
+      triggerType: args.triggerType,
+      triggerCourseId: args.triggerCourseId,
+      triggerStoreId: args.triggerStoreId,
+      progressThreshold: args.progressThreshold,
+      inactivityDays: args.inactivityDays,
+      delayMinutes: args.delayMinutes || 0,
+      triggeredCount: 0,
+      sentCount: 0,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+/**
+ * Get automations
+ */
+export const getAutomations = query({
+  args: {
+    connectionId: v.id("resendConnections"),
+    activeOnly: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const automations = await ctx.db
+      .query("resendAutomations")
+      .withIndex("by_connection", (q) => q.eq("connectionId", args.connectionId))
+      .collect();
+
+    if (args.activeOnly) {
+      return automations.filter((a) => a.isActive);
+    }
+
+    return automations;
+  },
+});
+
+/**
+ * Toggle automation
+ */
+export const toggleAutomation = mutation({
+  args: {
+    automationId: v.id("resendAutomations"),
+    isActive: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.automationId, {
+      isActive: args.isActive,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+/**
+ * Process automation triggers (INTERNAL - called by cron)
+ */
+export const processAutomationTriggers = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    // Get all active automations
+    const automations = await ctx.runQuery(internal.emails.getActiveAutomations);
+
+    for (const automation of automations) {
+      try {
+        switch (automation.triggerType) {
+          case "user_signup":
+            await processUserSignupTrigger(ctx, automation);
+            break;
+          case "course_enrollment":
+            await processCourseEnrollmentTrigger(ctx, automation);
+            break;
+          case "course_completion":
+            await processCourseCompletionTrigger(ctx, automation);
+            break;
+          case "inactivity":
+            await processInactivityTrigger(ctx, automation);
+            break;
+          // Add more trigger types as needed
+        }
+      } catch (error) {
+        console.error(`Automation ${automation._id} failed:`, error);
+      }
+    }
+  },
+});
+
+/**
+ * Get active automations (INTERNAL)
+ */
+export const getActiveAutomations = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db
+      .query("resendAutomations")
+      .withIndex("by_active", (q) => q.eq("isActive", true))
+      .collect();
+  },
+});
+
+// Helper functions for automation triggers
+async function processUserSignupTrigger(ctx: any, automation: any) {
+  // Check for new users created in the last hour
+  const oneHourAgo = Date.now() - 60 * 60 * 1000;
+  // Implementation depends on your user creation tracking
+}
+
+async function processCourseEnrollmentTrigger(ctx: any, automation: any) {
+  // Check for new enrollments
+  const oneHourAgo = Date.now() - 60 * 60 * 1000;
+  // Implementation depends on enrollment tracking
+}
+
+async function processCourseCompletionTrigger(ctx: any, automation: any) {
+  // Check for completed courses
+  // Implementation depends on completion tracking
+}
+
+async function processInactivityTrigger(ctx: any, automation: any) {
+  // Check for inactive users
+  if (automation.inactivityDays) {
+    const cutoff = Date.now() - automation.inactivityDays * 24 * 60 * 60 * 1000;
+    // Implementation depends on activity tracking
+  }
+}
+
+// ============================================================================
+// ANALYTICS & REPORTING
+// ============================================================================
+
+/**
+ * Get email analytics for a connection
+ */
+export const getEmailAnalytics = query({
+  args: {
+    connectionId: v.id("resendConnections"),
+    days: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const days = args.days || 30;
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+
+    // Get all email logs
+    const logs = await ctx.db
+      .query("resendLogs")
+      .withIndex("by_connection", (q) => q.eq("connectionId", args.connectionId))
+      .filter((q) => q.gte(q.field("createdAt"), cutoff))
+      .collect();
+
+    const totalSent = logs.length;
+    const delivered = logs.filter((l) => 
+      ["delivered", "opened", "clicked"].includes(l.status)
+    ).length;
+    const opened = logs.filter((l) => 
+      ["opened", "clicked"].includes(l.status)
+    ).length;
+    const clicked = logs.filter((l) => l.status === "clicked").length;
+    const bounced = logs.filter((l) => l.status === "bounced").length;
+    const complained = logs.filter((l) => l.status === "complained").length;
+
+    const openRate = delivered > 0 ? (opened / delivered) * 100 : 0;
+    const clickRate = delivered > 0 ? (clicked / delivered) * 100 : 0;
+    const bounceRate = totalSent > 0 ? (bounced / totalSent) * 100 : 0;
+
+    return {
+      totalSent,
+      delivered,
+      opened,
+      clicked,
+      bounced,
+      complained,
+      openRate: Math.round(openRate * 10) / 10,
+      clickRate: Math.round(clickRate * 10) / 10,
+      bounceRate: Math.round(bounceRate * 10) / 10,
+    };
+  },
+});
+
+/**
+ * Get campaign performance stats
+ */
+export const getCampaignStats = query({
+  args: {
+    campaignId: v.id("resendCampaigns"),
+  },
+  handler: async (ctx, args) => {
+    const campaign = await ctx.db.get(args.campaignId);
+    if (!campaign) {
+      throw new Error("Campaign not found");
+    }
+
+    const openRate = campaign.deliveredCount > 0
+      ? (campaign.openedCount / campaign.deliveredCount) * 100
+      : 0;
+
+    const clickRate = campaign.deliveredCount > 0
+      ? (campaign.clickedCount / campaign.deliveredCount) * 100
+      : 0;
+
+    const bounceRate = campaign.sentCount > 0
+      ? (campaign.bouncedCount / campaign.sentCount) * 100
+      : 0;
+
+    return {
+      recipientCount: campaign.recipientCount,
+      sentCount: campaign.sentCount,
+      deliveredCount: campaign.deliveredCount,
+      openedCount: campaign.openedCount,
+      clickedCount: campaign.clickedCount,
+      bouncedCount: campaign.bouncedCount,
+      complainedCount: campaign.complainedCount,
+      openRate: Math.round(openRate * 10) / 10,
+      clickRate: Math.round(clickRate * 10) / 10,
+      bounceRate: Math.round(bounceRate * 10) / 10,
+    };
+  },
+});
+
+/**
+ * Get email logs
+ */
+export const getEmailLogs = query({
+  args: {
+    connectionId: v.id("resendConnections"),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const orderedQuery = ctx.db
+      .query("resendLogs")
+      .withIndex("by_connection", (q) => q.eq("connectionId", args.connectionId))
+      .order("desc");
+
+    if (args.limit) {
+      return await orderedQuery.take(args.limit);
+    }
+
+    return await orderedQuery.collect();
+  },
+});
+
+/**
+ * Connect admin Resend account
+ */
+export const connectAdminResend = mutation({
+  args: {
+    resendApiKey: v.string(),
+    fromEmail: v.string(),
+    fromName: v.string(),
+    replyToEmail: v.optional(v.string()),
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Check if admin connection exists
+    const existing = await ctx.db
+      .query("resendConnections")
+      .withIndex("by_type", (q) => q.eq("type", "admin"))
+      .first();
+
+    const data = {
+      type: "admin" as const,
+      userId: args.userId,
+      resendApiKey: args.resendApiKey, // TODO: Encrypt
+      fromEmail: args.fromEmail,
+      fromName: args.fromName,
+      replyToEmail: args.replyToEmail,
+      isActive: true,
+      isVerified: false,
+      enableAutomations: true,
+      enableCampaigns: true,
+      updatedAt: Date.now(),
+    };
+
+    if (existing) {
+      await ctx.db.patch(existing._id, data);
+      return existing._id;
+    }
+
+    return await ctx.db.insert("resendConnections", {
+      ...data,
+      createdAt: Date.now(),
+    });
+  },
+});
+
+/**
+ * Connect store Resend configuration
+ */
+export const connectStoreResend = mutation({
+  args: {
+    storeId: v.id("stores"),
+    resendApiKey: v.string(),
+    fromEmail: v.string(),
+    fromName: v.string(),
+    replyToEmail: v.optional(v.string()),
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Check if store connection exists
+    const existing = await ctx.db
+      .query("resendConnections")
+      .withIndex("by_store", (q) => q.eq("storeId", args.storeId))
+      .first();
+
+    const data = {
+      type: "store" as const,
+      storeId: args.storeId,
+      userId: args.userId,
+      resendApiKey: args.resendApiKey, // TODO: Encrypt
+      fromEmail: args.fromEmail,
+      fromName: args.fromName,
+      replyToEmail: args.replyToEmail,
+      isActive: true,
+      isVerified: false,
+      enableAutomations: true,
+      enableCampaigns: true,
+      updatedAt: Date.now(),
+    };
+
+    if (existing) {
+      await ctx.db.patch(existing._id, data);
+      return existing._id;
+    }
+
+    return await ctx.db.insert("resendConnections", {
+      ...data,
+      createdAt: Date.now(),
+    });
+  },
+});
+
+/**
+ * Get admin connection
+ */
+export const getAdminConnection = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db
+      .query("resendConnections")
+      .withIndex("by_type", (q) => q.eq("type", "admin"))
+      .first();
+  },
+});
+
+/**
+ * Get store connection
+ */
+export const getStoreConnection = query({
+  args: {
+    storeId: v.id("stores"),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("resendConnections")
+      .withIndex("by_store", (q) => q.eq("storeId", args.storeId))
+      .first();
+  },
+});
+
+// ============================================================================
+// CRON JOB FUNCTIONS
+// ============================================================================
+
+/**
+ * Process scheduled campaigns (INTERNAL - called by cron)
+ */
+export const processScheduledCampaigns = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    
+    // Get all scheduled campaigns that should be sent
+    const campaigns = await ctx.runQuery(internal.emails.getScheduledCampaigns, {
+      beforeTimestamp: now,
+    });
+
+    for (const campaign of campaigns) {
+      try {
+        await ctx.runAction(internal.emails.processCampaign, {
+          campaignId: campaign._id,
+        });
+      } catch (error) {
+        console.error(`Failed to process campaign ${campaign._id}:`, error);
+      }
+    }
+  },
+});
+
+/**
+ * Get scheduled campaigns (INTERNAL)
+ */
+export const getScheduledCampaigns = internalQuery({
+  args: {
+    beforeTimestamp: v.number(),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("resendCampaigns")
+      .withIndex("by_status", (q) => q.eq("status", "scheduled"))
+      .filter((q) => 
+        q.and(
+          q.neq(q.field("scheduledFor"), undefined),
+          q.lte(q.field("scheduledFor"), args.beforeTimestamp)
+        )
+      )
+      .collect();
+  },
+});
+
+/**
+ * Cleanup old logs (INTERNAL - called by cron)
+ */
+export const cleanupOldLogs = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    // Delete logs older than 90 days
+    const ninetyDaysAgo = Date.now() - 90 * 24 * 60 * 60 * 1000;
+    
+    const oldLogs = await ctx.runQuery(internal.emails.getOldLogs, {
+      cutoffTime: ninetyDaysAgo,
+    });
+
+    for (const log of oldLogs) {
+      await ctx.runMutation(internal.emails.deleteLog, {
+        logId: log._id,
+      });
+    }
+
+    console.log(`Cleaned up ${oldLogs.length} old email logs`);
+  },
+});
+
+/**
+ * Get old logs to delete (INTERNAL)
+ */
+export const getOldLogs = internalQuery({
+  args: {
+    cutoffTime: v.number(),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("resendLogs")
+      .filter((q) => q.lt(q.field("createdAt"), args.cutoffTime))
+      .collect();
+  },
+});
+
+/**
+ * Delete a single log (INTERNAL)
+ */
+export const deleteLog = internalMutation({
+  args: {
+    logId: v.id("resendLogs"),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.logId);
+  },
+}); 

@@ -4,21 +4,53 @@ import { internal } from "./_generated/api";
 const crons = cronJobs();
 
 /**
- * Coaching Session Manager
- * 
- * Runs every 15 minutes to manage coaching session access:
- * - Setup: 2 hours before session (create channel/role, grant access)
- * - Cleanup: 1 hour after session (revoke access, delete channel/role)
- * 
- * This ensures:
- * ✅ Students can't access channels weeks before their session
- * ✅ Old participants can't join recycled channels
- * ✅ Discord stays clean and organized
+ * Process scheduled email campaigns
+ * Runs every 15 minutes
  */
 crons.interval(
-  "manage coaching sessions",
+  "process-scheduled-campaigns",
   { minutes: 15 },
-  internal.coachingSessionManager.manageCoachingSessions
+  internal.emails.processScheduledCampaigns
+);
+
+/**
+ * Process automation triggers
+ * Runs every hour
+ */
+crons.interval(
+  "process-automation-triggers",
+  { hours: 1 },
+  internal.emails.processAutomationTriggers
+);
+
+/**
+ * Cleanup old email logs
+ * Runs daily at 2 AM
+ */
+crons.daily(
+  "cleanup-old-email-logs",
+  { hourUTC: 2, minuteUTC: 0 },
+  internal.emails.cleanupOldLogs
+);
+
+/**
+ * Send weekly digest emails
+ * Runs weekly on Sundays at 9 AM UTC (using cron syntax)
+ */
+crons.cron(
+  "send-weekly-digests",
+  "0 9 * * 0", // Every Sunday at 9:00 AM UTC (minute hour day month day-of-week)
+  internal.emails.sendWeeklyDigests
+);
+
+/**
+ * Sync email statuses with Resend API
+ * Runs every hour as backup for missed webhooks
+ */
+crons.interval(
+  "sync-email-statuses",
+  { hours: 1 },
+  internal.emails.syncEmailStatuses
 );
 
 export default crons;

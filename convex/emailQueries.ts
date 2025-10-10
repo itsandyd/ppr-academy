@@ -1,0 +1,1459 @@
+import { v } from "convex/values";
+import { query, mutation, internalQuery, internalMutation } from "./_generated/server";
+import { internal } from "./_generated/api";
+
+// ============================================================================
+// EMAIL MARKETING SYSTEM - Queries & Mutations (V8 Runtime)
+// ============================================================================
+
+/**
+ * Create email template
+ */
+export const createTemplate = mutation({
+  args: {
+    connectionId: v.id("resendConnections"),
+    name: v.string(),
+    subject: v.string(),
+    type: v.union(
+      v.literal("welcome"),
+      v.literal("launch"),
+      v.literal("enrollment"),
+      v.literal("progress_reminder"),
+      v.literal("completion"),
+      v.literal("certificate"),
+      v.literal("new_course"),
+      v.literal("re_engagement"),
+      v.literal("weekly_digest"),
+      v.literal("custom")
+    ),
+    htmlContent: v.string(),
+    textContent: v.string(),
+    variables: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.insert("resendTemplates", {
+      connectionId: args.connectionId,
+      name: args.name,
+      subject: args.subject,
+      type: args.type,
+      htmlContent: args.htmlContent,
+      textContent: args.textContent,
+      variables: args.variables,
+      isActive: true,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+/**
+ * Get templates for a connection
+ */
+export const getTemplates = query({
+  args: {
+    connectionId: v.id("resendConnections"),
+    activeOnly: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const templates = await ctx.db
+      .query("resendTemplates")
+      .withIndex("by_connection", (q) => q.eq("connectionId", args.connectionId))
+      .collect();
+
+    if (args.activeOnly) {
+      return templates.filter((t) => t.isActive);
+    }
+
+    return templates;
+  },
+});
+
+/**
+ * Create email campaign
+ */
+export const createCampaign = mutation({
+  args: {
+    connectionId: v.id("resendConnections"),
+    name: v.string(),
+    subject: v.string(),
+    templateId: v.optional(v.id("resendTemplates")),
+    htmlContent: v.optional(v.string()),
+    textContent: v.optional(v.string()),
+    targetAudience: v.union(
+      v.literal("all_users"),
+      v.literal("course_students"),
+      v.literal("store_students"),
+      v.literal("inactive_users"),
+      v.literal("completed_course"),
+      v.literal("custom_list")
+    ),
+    targetCourseId: v.optional(v.id("courses")),
+    targetStoreId: v.optional(v.id("stores")),
+    customRecipients: v.optional(v.array(v.string())),
+    scheduledFor: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.insert("resendCampaigns", {
+      connectionId: args.connectionId,
+      templateId: args.templateId,
+      name: args.name,
+      subject: args.subject,
+      htmlContent: args.htmlContent,
+      textContent: args.textContent,
+      targetAudience: args.targetAudience,
+      targetCourseId: args.targetCourseId,
+      targetStoreId: args.targetStoreId,
+      customRecipients: args.customRecipients,
+      status: args.scheduledFor ? "scheduled" : "draft",
+      scheduledFor: args.scheduledFor,
+      recipientCount: 0,
+      sentCount: 0,
+      deliveredCount: 0,
+      openedCount: 0,
+      clickedCount: 0,
+      bouncedCount: 0,
+      complainedCount: 0,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+/**
+ * Get campaigns for a connection
+ */
+export const getCampaigns = query({
+  args: {
+    connectionId: v.id("resendConnections"),
+    status: v.optional(v.union(
+      v.literal("draft"),
+      v.literal("scheduled"),
+      v.literal("sending"),
+      v.literal("sent"),
+      v.literal("failed")
+    )),
+  },
+  handler: async (ctx, args) => {
+    const campaigns = await ctx.db
+      .query("resendCampaigns")
+      .withIndex("by_connection", (q) => q.eq("connectionId", args.connectionId))
+      .collect();
+
+    if (args.status) {
+      return campaigns.filter((c) => c.status === args.status);
+    }
+
+    return campaigns;
+  },
+});
+
+/**
+ * Get campaign by ID (INTERNAL)
+ */
+export const getCampaignById = internalQuery({
+  args: { campaignId: v.id("resendCampaigns") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.campaignId);
+  },
+});
+
+/**
+ * Get connection by ID (INTERNAL)
+ */
+export const getConnectionById = internalQuery({
+  args: { connectionId: v.id("resendConnections") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.connectionId);
+  },
+});
+
+/**
+ * Get template by ID (INTERNAL)
+ */
+export const getTemplateById = internalQuery({
+  args: { templateId: v.id("resendTemplates") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.templateId);
+  },
+});
+
+/**
+ * Get campaign recipients (INTERNAL)
+ */
+export const getCampaignRecipients = internalQuery({
+  args: { campaignId: v.id("resendCampaigns") },
+  handler: async (ctx, args) => {
+    const campaign = await ctx.db.get(args.campaignId);
+    if (!campaign) return [];
+
+    // Custom recipients
+    if (campaign.targetAudience === "custom_list" && campaign.customRecipients) {
+      return campaign.customRecipients.map((email: string) => ({ 
+        email, 
+        userId: undefined, 
+        name: undefined 
+      }));
+    }
+
+    const allUsers = await ctx.db.query("users").collect();
+
+    switch (campaign.targetAudience) {
+      case "all_users":
+        return allUsers
+          .filter((u) => u.email)
+          .map((u) => ({ email: u.email!, userId: u.clerkId, name: u.name }));
+
+      case "course_students":
+        if (campaign.targetCourseId) {
+          const courseIdStr = campaign.targetCourseId as string;
+          const enrollments = await ctx.db
+            .query("enrollments")
+            .withIndex("by_courseId", (q) => q.eq("courseId", courseIdStr))
+            .collect();
+          const userIds = new Set(enrollments.map((e) => e.userId));
+          return allUsers
+            .filter((u) => u.email && u.clerkId && userIds.has(u.clerkId))
+            .map((u) => ({ email: u.email!, userId: u.clerkId!, name: u.name }));
+        }
+        break;
+
+      case "store_students":
+        if (campaign.targetStoreId) {
+          const courses = await ctx.db
+            .query("courses")
+            .withIndex("by_storeId", (q) => q.eq("storeId", campaign.targetStoreId))
+            .collect();
+          const courseIds = courses.map((c) => c._id);
+          const enrollments = await ctx.db.query("enrollments").collect();
+          const storeStudentIds = new Set(
+            enrollments
+              .filter((e) => courseIds.includes(e.courseId as any))
+              .map((e) => e.userId)
+          );
+          return allUsers
+            .filter((u) => u.email && u.clerkId && storeStudentIds.has(u.clerkId))
+            .map((u) => ({ email: u.email!, userId: u.clerkId!, name: u.name }));
+        }
+        break;
+
+      case "inactive_users":
+        if (campaign.inactiveDays) {
+          const cutoff = Date.now() - campaign.inactiveDays * 24 * 60 * 60 * 1000;
+          return allUsers
+            .filter((u) => u.email && u._creationTime < cutoff)
+            .map((u) => ({ email: u.email!, userId: u.clerkId, name: u.name }));
+        }
+        break;
+
+      case "completed_course":
+        if (campaign.targetCourseId) {
+          const courseIdStr = campaign.targetCourseId as string;
+          const enrollments = await ctx.db
+            .query("enrollments")
+            .withIndex("by_courseId", (q) => q.eq("courseId", courseIdStr))
+            .collect();
+          const completedIds = new Set(
+            enrollments.filter((e) => e.progress === 100).map((e) => e.userId)
+          );
+          return allUsers
+            .filter((u) => u.email && u.clerkId && completedIds.has(u.clerkId))
+            .map((u) => ({ email: u.email!, userId: u.clerkId!, name: u.name }));
+        }
+        break;
+    }
+
+    return [];
+  },
+});
+
+/**
+ * Update campaign status (INTERNAL)
+ */
+export const updateCampaignStatus = internalMutation({
+  args: {
+    campaignId: v.id("resendCampaigns"),
+    status: v.union(
+      v.literal("draft"),
+      v.literal("scheduled"),
+      v.literal("sending"),
+      v.literal("sent"),
+      v.literal("failed")
+    ),
+    sentAt: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const updates: any = { status: args.status, updatedAt: Date.now() };
+    if (args.sentAt) updates.sentAt = args.sentAt;
+    await ctx.db.patch(args.campaignId, updates);
+  },
+});
+
+/**
+ * Update campaign metrics (INTERNAL)
+ */
+export const updateCampaignMetrics = internalMutation({
+  args: {
+    campaignId: v.id("resendCampaigns"),
+    recipientCount: v.optional(v.number()),
+    sentCount: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const updates: any = { updatedAt: Date.now() };
+    if (args.recipientCount !== undefined) updates.recipientCount = args.recipientCount;
+    if (args.sentCount !== undefined) updates.sentCount = args.sentCount;
+    await ctx.db.patch(args.campaignId, updates);
+  },
+});
+
+/**
+ * Log email send (INTERNAL)
+ */
+export const logEmail = internalMutation({
+  args: {
+    connectionId: v.id("resendConnections"),
+    resendEmailId: v.optional(v.string()),
+    recipientEmail: v.string(),
+    recipientUserId: v.optional(v.string()),
+    recipientName: v.optional(v.string()),
+    campaignId: v.optional(v.id("resendCampaigns")),
+    automationId: v.optional(v.id("resendAutomations")),
+    templateId: v.optional(v.id("resendTemplates")),
+    subject: v.string(),
+    fromEmail: v.string(),
+    fromName: v.string(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("sent"),
+      v.literal("delivered"),
+      v.literal("opened"),
+      v.literal("clicked"),
+      v.literal("bounced"),
+      v.literal("complained"),
+      v.literal("failed")
+    ),
+    errorMessage: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.insert("resendLogs", {
+      connectionId: args.connectionId,
+      resendEmailId: args.resendEmailId,
+      recipientEmail: args.recipientEmail,
+      recipientUserId: args.recipientUserId,
+      recipientName: args.recipientName,
+      campaignId: args.campaignId,
+      automationId: args.automationId,
+      templateId: args.templateId,
+      subject: args.subject,
+      fromEmail: args.fromEmail,
+      fromName: args.fromName,
+      status: args.status,
+      errorMessage: args.errorMessage,
+      sentAt: Date.now(),
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+/**
+ * Handle webhook event from Resend
+ */
+export const handleWebhookEvent = mutation({
+  args: {
+    event: v.string(),
+    emailId: v.string(),
+    timestamp: v.number(),
+    metadata: v.any(),
+  },
+  handler: async (ctx, args) => {
+    // Find email log by Resend email ID
+    const log = await ctx.db
+      .query("resendLogs")
+      .withIndex("by_resend_id", (q) => q.eq("resendEmailId", args.emailId))
+      .first();
+
+    if (!log) {
+      console.warn(`Email log not found for Resend ID: ${args.emailId}`);
+      return { success: false, message: "Email log not found" };
+    }
+
+    // Determine new status based on event
+    let newStatus: "delivered" | "opened" | "clicked" | "bounced" | "complained" | "failed" = "delivered";
+    const updates: any = { updatedAt: Date.now() };
+
+    switch (args.event) {
+      case "email.delivered":
+        newStatus = "delivered";
+        updates.deliveredAt = args.timestamp;
+        break;
+      case "email.opened":
+        newStatus = "opened";
+        updates.openedAt = args.timestamp;
+        break;
+      case "email.clicked":
+        newStatus = "clicked";
+        updates.clickedAt = args.timestamp;
+        break;
+      case "email.bounced":
+        newStatus = "bounced";
+        updates.bouncedAt = args.timestamp;
+        updates.errorMessage = args.metadata?.bounce_type || "Email bounced";
+        break;
+      case "email.complained":
+        newStatus = "complained";
+        break;
+      case "email.delivery_delayed":
+      case "email.failed":
+        newStatus = "failed";
+        updates.errorMessage = args.metadata?.error || "Email delivery failed";
+        break;
+    }
+
+    // Update log
+    updates.status = newStatus;
+    await ctx.db.patch(log._id, updates);
+
+    // Update campaign metrics if applicable
+    if (log.campaignId) {
+      await ctx.runMutation(internal.emailQueries.incrementCampaignMetric, {
+        campaignId: log.campaignId,
+        metric: newStatus,
+      });
+    }
+
+    return { success: true };
+  },
+});
+
+/**
+ * Increment campaign metric (INTERNAL)
+ */
+export const incrementCampaignMetric = internalMutation({
+  args: {
+    campaignId: v.id("resendCampaigns"),
+    metric: v.union(
+      v.literal("delivered"),
+      v.literal("opened"),
+      v.literal("clicked"),
+      v.literal("bounced"),
+      v.literal("complained"),
+      v.literal("failed")
+    ),
+  },
+  handler: async (ctx, args) => {
+    const campaign = await ctx.db.get(args.campaignId);
+    if (!campaign) return;
+
+    const updates: any = { updatedAt: Date.now() };
+
+    switch (args.metric) {
+      case "delivered":
+        updates.deliveredCount = (campaign.deliveredCount || 0) + 1;
+        break;
+      case "opened":
+        updates.openedCount = (campaign.openedCount || 0) + 1;
+        break;
+      case "clicked":
+        updates.clickedCount = (campaign.clickedCount || 0) + 1;
+        break;
+      case "bounced":
+        updates.bouncedCount = (campaign.bouncedCount || 0) + 1;
+        break;
+      case "complained":
+        updates.complainedCount = (campaign.complainedCount || 0) + 1;
+        break;
+    }
+
+    await ctx.db.patch(args.campaignId, updates);
+  },
+});
+
+// ============================================================================
+// AUTOMATION ENGINE
+// ============================================================================
+
+/**
+ * Create automation rule
+ */
+export const createAutomation = mutation({
+  args: {
+    connectionId: v.id("resendConnections"),
+    templateId: v.id("resendTemplates"),
+    name: v.string(),
+    description: v.string(),
+    triggerType: v.union(
+      v.literal("user_signup"),
+      v.literal("course_enrollment"),
+      v.literal("course_progress"),
+      v.literal("course_completion"),
+      v.literal("certificate_issued"),
+      v.literal("purchase"),
+      v.literal("inactivity"),
+      v.literal("quiz_completion"),
+      v.literal("milestone")
+    ),
+    triggerCourseId: v.optional(v.id("courses")),
+    triggerStoreId: v.optional(v.id("stores")),
+    progressThreshold: v.optional(v.number()),
+    inactivityDays: v.optional(v.number()),
+    delayMinutes: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.insert("resendAutomations", {
+      connectionId: args.connectionId,
+      templateId: args.templateId,
+      name: args.name,
+      description: args.description,
+      isActive: true,
+      triggerType: args.triggerType,
+      triggerCourseId: args.triggerCourseId,
+      triggerStoreId: args.triggerStoreId,
+      progressThreshold: args.progressThreshold,
+      inactivityDays: args.inactivityDays,
+      delayMinutes: args.delayMinutes || 0,
+      triggeredCount: 0,
+      sentCount: 0,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+/**
+ * Get automations
+ */
+export const getAutomations = query({
+  args: {
+    connectionId: v.id("resendConnections"),
+    activeOnly: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const automations = await ctx.db
+      .query("resendAutomations")
+      .withIndex("by_connection", (q) => q.eq("connectionId", args.connectionId))
+      .collect();
+
+    if (args.activeOnly) {
+      return automations.filter((a) => a.isActive);
+    }
+
+    return automations;
+  },
+});
+
+/**
+ * Toggle automation
+ */
+export const toggleAutomation = mutation({
+  args: {
+    automationId: v.id("resendAutomations"),
+    isActive: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.automationId, {
+      isActive: args.isActive,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+/**
+ * Get active automations (INTERNAL)
+ */
+export const getActiveAutomations = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db
+      .query("resendAutomations")
+      .withIndex("by_active", (q) => q.eq("isActive", true))
+      .collect();
+  },
+});
+
+// ============================================================================
+// ANALYTICS & REPORTING
+// ============================================================================
+
+/**
+ * Get email analytics for a connection
+ */
+export const getEmailAnalytics = query({
+  args: {
+    connectionId: v.id("resendConnections"),
+    days: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const days = args.days || 30;
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+
+    // Get all email logs
+    const logs = await ctx.db
+      .query("resendLogs")
+      .withIndex("by_connection", (q) => q.eq("connectionId", args.connectionId))
+      .filter((q) => q.gte(q.field("createdAt"), cutoff))
+      .collect();
+
+    const totalSent = logs.length;
+    const delivered = logs.filter((l) => 
+      ["delivered", "opened", "clicked"].includes(l.status)
+    ).length;
+    const opened = logs.filter((l) => 
+      ["opened", "clicked"].includes(l.status)
+    ).length;
+    const clicked = logs.filter((l) => l.status === "clicked").length;
+    const bounced = logs.filter((l) => l.status === "bounced").length;
+    const complained = logs.filter((l) => l.status === "complained").length;
+
+    const openRate = delivered > 0 ? (opened / delivered) * 100 : 0;
+    const clickRate = delivered > 0 ? (clicked / delivered) * 100 : 0;
+    const bounceRate = totalSent > 0 ? (bounced / totalSent) * 100 : 0;
+
+    return {
+      totalSent,
+      delivered,
+      opened,
+      clicked,
+      bounced,
+      complained,
+      openRate: Math.round(openRate * 10) / 10,
+      clickRate: Math.round(clickRate * 10) / 10,
+      bounceRate: Math.round(bounceRate * 10) / 10,
+    };
+  },
+});
+
+/**
+ * Get campaign performance stats
+ */
+export const getCampaignStats = query({
+  args: {
+    campaignId: v.id("resendCampaigns"),
+  },
+  handler: async (ctx, args) => {
+    const campaign = await ctx.db.get(args.campaignId);
+    if (!campaign) {
+      throw new Error("Campaign not found");
+    }
+
+    const openRate = campaign.deliveredCount > 0
+      ? (campaign.openedCount / campaign.deliveredCount) * 100
+      : 0;
+
+    const clickRate = campaign.deliveredCount > 0
+      ? (campaign.clickedCount / campaign.deliveredCount) * 100
+      : 0;
+
+    const bounceRate = campaign.sentCount > 0
+      ? (campaign.bouncedCount / campaign.sentCount) * 100
+      : 0;
+
+    return {
+      recipientCount: campaign.recipientCount,
+      sentCount: campaign.sentCount,
+      deliveredCount: campaign.deliveredCount,
+      openedCount: campaign.openedCount,
+      clickedCount: campaign.clickedCount,
+      bouncedCount: campaign.bouncedCount,
+      complainedCount: campaign.complainedCount,
+      openRate: Math.round(openRate * 10) / 10,
+      clickRate: Math.round(clickRate * 10) / 10,
+      bounceRate: Math.round(bounceRate * 10) / 10,
+    };
+  },
+});
+
+/**
+ * Get email logs
+ */
+export const getEmailLogs = query({
+  args: {
+    connectionId: v.id("resendConnections"),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const orderedQuery = ctx.db
+      .query("resendLogs")
+      .withIndex("by_connection", (q) => q.eq("connectionId", args.connectionId))
+      .order("desc");
+
+    if (args.limit) {
+      return await orderedQuery.take(args.limit);
+    }
+
+    return await orderedQuery.collect();
+  },
+});
+
+/**
+ * Connect admin Resend account
+ */
+export const connectAdminResend = mutation({
+  args: {
+    resendApiKey: v.string(),
+    fromEmail: v.string(),
+    fromName: v.string(),
+    replyToEmail: v.optional(v.string()),
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Check if admin connection exists
+    const existing = await ctx.db
+      .query("resendConnections")
+      .withIndex("by_type", (q) => q.eq("type", "admin"))
+      .first();
+
+    const data = {
+      type: "admin" as const,
+      userId: args.userId,
+      resendApiKey: args.resendApiKey, // TODO: Encrypt
+      fromEmail: args.fromEmail,
+      fromName: args.fromName,
+      replyToEmail: args.replyToEmail,
+      isActive: true,
+      isVerified: false,
+      enableAutomations: true,
+      enableCampaigns: true,
+      updatedAt: Date.now(),
+    };
+
+    if (existing) {
+      await ctx.db.patch(existing._id, data);
+      return existing._id;
+    }
+
+    return await ctx.db.insert("resendConnections", {
+      ...data,
+      createdAt: Date.now(),
+    });
+  },
+});
+
+/**
+ * Connect store Resend configuration
+ */
+export const connectStoreResend = mutation({
+  args: {
+    storeId: v.id("stores"),
+    resendApiKey: v.string(),
+    fromEmail: v.string(),
+    fromName: v.string(),
+    replyToEmail: v.optional(v.string()),
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Check if store connection exists
+    const existing = await ctx.db
+      .query("resendConnections")
+      .withIndex("by_store", (q) => q.eq("storeId", args.storeId))
+      .first();
+
+    const data = {
+      type: "store" as const,
+      storeId: args.storeId,
+      userId: args.userId,
+      resendApiKey: args.resendApiKey, // TODO: Encrypt
+      fromEmail: args.fromEmail,
+      fromName: args.fromName,
+      replyToEmail: args.replyToEmail,
+      isActive: true,
+      isVerified: false,
+      enableAutomations: true,
+      enableCampaigns: true,
+      updatedAt: Date.now(),
+    };
+
+    if (existing) {
+      await ctx.db.patch(existing._id, data);
+      return existing._id;
+    }
+
+    return await ctx.db.insert("resendConnections", {
+      ...data,
+      createdAt: Date.now(),
+    });
+  },
+});
+
+/**
+ * Get admin connection (PUBLIC)
+ */
+export const getAdminConnection = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db
+      .query("resendConnections")
+      .withIndex("by_type", (q) => q.eq("type", "admin"))
+      .first();
+  },
+});
+
+/**
+ * Get admin connection (INTERNAL - for actions)
+ */
+export const getAdminConnectionInternal = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db
+      .query("resendConnections")
+      .withIndex("by_type", (q) => q.eq("type", "admin"))
+      .first();
+  },
+});
+
+/**
+ * Get store connection
+ */
+export const getStoreConnection = query({
+  args: {
+    storeId: v.id("stores"),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("resendConnections")
+      .withIndex("by_store", (q) => q.eq("storeId", args.storeId))
+      .first();
+  },
+});
+
+/**
+ * Get scheduled campaigns (INTERNAL)
+ */
+export const getScheduledCampaigns = internalQuery({
+  args: {
+    beforeTimestamp: v.number(),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("resendCampaigns")
+      .withIndex("by_status", (q) => q.eq("status", "scheduled"))
+      .filter((q) => 
+        q.and(
+          q.neq(q.field("scheduledFor"), undefined),
+          q.lte(q.field("scheduledFor"), args.beforeTimestamp)
+        )
+      )
+      .collect();
+  },
+});
+
+/**
+ * Get old logs to delete (INTERNAL)
+ */
+export const getOldLogs = internalQuery({
+  args: {
+    cutoffTime: v.number(),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("resendLogs")
+      .filter((q) => q.lt(q.field("createdAt"), args.cutoffTime))
+      .collect();
+  },
+});
+
+/**
+ * Delete a single log (INTERNAL)
+ */
+export const deleteLog = internalMutation({
+  args: {
+    logId: v.id("resendLogs"),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.logId);
+  },
+});
+
+// ============================================================================
+// CONTACT IMPORT SYSTEM
+// ============================================================================
+
+/**
+ * Start contact import
+ */
+export const startContactImport = mutation({
+  args: {
+    connectionId: v.id("resendConnections"),
+    source: v.union(
+      v.literal("csv"),
+      v.literal("mailchimp"),
+      v.literal("activecampaign"),
+      v.literal("convertkit"),
+      v.literal("manual")
+    ),
+    fileName: v.optional(v.string()),
+    totalContacts: v.number(),
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.insert("resendImportedContacts", {
+      connectionId: args.connectionId,
+      source: args.source,
+      fileName: args.fileName,
+      status: "processing",
+      totalContacts: args.totalContacts,
+      processedContacts: 0,
+      successCount: 0,
+      errorCount: 0,
+      duplicateCount: 0,
+      importedBy: args.userId,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+/**
+ * Process contact import batch
+ */
+export const processContactBatch = mutation({
+  args: {
+    importId: v.id("resendImportedContacts"),
+    contacts: v.array(
+      v.object({
+        email: v.string(),
+        name: v.optional(v.string()),
+        firstName: v.optional(v.string()),
+        lastName: v.optional(v.string()),
+        metadata: v.optional(v.any()),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    const importRecord = await ctx.db.get(args.importId);
+    if (!importRecord) {
+      throw new Error("Import not found");
+    }
+
+    let successCount = 0;
+    let errorCount = 0;
+    let duplicateCount = 0;
+    const errors: Array<{ email: string; error: string }> = [];
+
+    // Get existing users
+    const allUsers = await ctx.db.query("users").collect();
+    const existingEmails = new Set(allUsers.map((u) => u.email?.toLowerCase()));
+
+    for (const contact of args.contacts) {
+      try {
+        // Validate email
+        if (!contact.email || !isValidEmail(contact.email)) {
+          errorCount++;
+          errors.push({ email: contact.email, error: "Invalid email format" });
+          continue;
+        }
+
+        const emailLower = contact.email.toLowerCase();
+
+        // Check if already exists
+        if (existingEmails.has(emailLower)) {
+          duplicateCount++;
+          continue;
+        }
+
+        // Success - in a real implementation, you might:
+        // 1. Send them an invite email
+        // 2. Create a "pending" user record
+        // 3. Add to an audience list
+        // For now, we just count it as success
+        successCount++;
+        existingEmails.add(emailLower);
+      } catch (error: any) {
+        errorCount++;
+        errors.push({
+          email: contact.email,
+          error: error.message || "Unknown error",
+        });
+      }
+    }
+
+    // Update import record
+    await ctx.db.patch(args.importId, {
+      processedContacts: (importRecord.processedContacts || 0) + args.contacts.length,
+      successCount: (importRecord.successCount || 0) + successCount,
+      errorCount: (importRecord.errorCount || 0) + errorCount,
+      duplicateCount: (importRecord.duplicateCount || 0) + duplicateCount,
+      errors: errors.length > 0 ? errors : undefined,
+      updatedAt: Date.now(),
+    });
+
+    // Check if import is complete
+    const updatedImport = await ctx.db.get(args.importId);
+    if (updatedImport && updatedImport.processedContacts >= updatedImport.totalContacts) {
+      await ctx.db.patch(args.importId, {
+        status: errorCount > 0 ? "completed_with_errors" : "completed",
+        completedAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+    }
+
+    return {
+      successCount,
+      errorCount,
+      duplicateCount,
+      errors: errors.slice(0, 10), // Return first 10 errors
+    };
+  },
+});
+
+/**
+ * Get import status
+ */
+export const getImportStatus = query({
+  args: {
+    importId: v.id("resendImportedContacts"),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.importId);
+  },
+});
+
+/**
+ * Get all imports for a connection
+ */
+export const getImports = query({
+  args: {
+    connectionId: v.id("resendConnections"),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const query = ctx.db
+      .query("resendImportedContacts")
+      .withIndex("by_connection", (q) => q.eq("connectionId", args.connectionId))
+      .order("desc");
+
+    if (args.limit) {
+      return await query.take(args.limit);
+    }
+
+    return await query.collect();
+  },
+});
+
+/**
+ * Cancel import
+ */
+export const cancelImport = mutation({
+  args: {
+    importId: v.id("resendImportedContacts"),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.importId, {
+      status: "cancelled",
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+/**
+ * Delete import record
+ */
+export const deleteImport = mutation({
+  args: {
+    importId: v.id("resendImportedContacts"),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.importId);
+  },
+});
+
+/**
+ * Create audience list from import
+ */
+export const createAudienceFromImport = mutation({
+  args: {
+    connectionId: v.id("resendConnections"),
+    name: v.string(),
+    description: v.string(),
+    userIds: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.insert("resendAudienceLists", {
+      connectionId: args.connectionId,
+      name: args.name,
+      description: args.description,
+      userIds: args.userIds,
+      subscriberCount: args.userIds.length,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+/**
+ * Get audience lists
+ */
+export const getAudienceLists = query({
+  args: {
+    connectionId: v.id("resendConnections"),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("resendAudienceLists")
+      .withIndex("by_connection", (q) => q.eq("connectionId", args.connectionId))
+      .collect();
+  },
+});
+
+/**
+ * Update audience list
+ */
+export const updateAudienceList = mutation({
+  args: {
+    listId: v.id("resendAudienceLists"),
+    name: v.optional(v.string()),
+    description: v.optional(v.string()),
+    userIds: v.optional(v.array(v.string())),
+  },
+  handler: async (ctx, args) => {
+    const updates: any = { updatedAt: Date.now() };
+    if (args.name !== undefined) updates.name = args.name;
+    if (args.description !== undefined) updates.description = args.description;
+    if (args.userIds !== undefined) {
+      updates.userIds = args.userIds;
+      updates.subscriberCount = args.userIds.length;
+    }
+    await ctx.db.patch(args.listId, updates);
+  },
+});
+
+/**
+ * Delete audience list
+ */
+export const deleteAudienceList = mutation({
+  args: {
+    listId: v.id("resendAudienceLists"),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.listId);
+  },
+});
+
+// Helper function to validate email
+function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+// ============================================================================
+// DOMAIN VERIFICATION SYSTEM
+// ============================================================================
+
+/**
+ * Get domain verification status
+ */
+export const getDomainStatus = query({
+  args: {
+    connectionId: v.id("resendConnections"),
+  },
+  handler: async (ctx, args) => {
+    const connection = await ctx.db.get(args.connectionId);
+    if (!connection) {
+      throw new Error("Connection not found");
+    }
+
+    return {
+      domain: connection.domain,
+      fromEmail: connection.fromEmail,
+      status: connection.status,
+      isActive: connection.isActive,
+      verificationStatus: connection.domainVerificationStatus || "not_verified",
+      dnsRecords: connection.dnsRecords,
+      lastChecked: connection.domainLastChecked,
+    };
+  },
+});
+
+/**
+ * Update domain verification status (INTERNAL)
+ */
+export const updateDomainVerification = internalMutation({
+  args: {
+    connectionId: v.id("resendConnections"),
+    status: v.union(
+      v.literal("verified"),
+      v.literal("pending"),
+      v.literal("failed"),
+      v.literal("not_verified")
+    ),
+    dnsRecords: v.optional(
+      v.object({
+        spf: v.object({
+          record: v.string(),
+          valid: v.boolean(),
+        }),
+        dkim: v.object({
+          record: v.string(),
+          valid: v.boolean(),
+        }),
+        dmarc: v.optional(
+          v.object({
+            record: v.string(),
+            valid: v.boolean(),
+          })
+        ),
+      })
+    ),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.connectionId, {
+      domainVerificationStatus: args.status,
+      dnsRecords: args.dnsRecords,
+      domainLastChecked: Date.now(),
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+// ============================================================================
+// WEEKLY DIGEST SYSTEM
+// ============================================================================
+
+/**
+ * Get users eligible for weekly digest
+ */
+export const getUsersForWeeklyDigest = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    // Get all users who haven't unsubscribed from weekly digest
+    const preferences = await ctx.db
+      .query("resendPreferences")
+      .filter((q) => q.eq(q.field("weeklyDigest"), true))
+      .collect();
+
+    const users: Array<{
+      userId: string;
+      email: string;
+      name: string;
+    }> = [];
+
+    for (const pref of preferences) {
+      const user = await ctx.db
+        .query("users")
+        .filter((q) => q.eq(q.field("clerkId"), pref.userId))
+        .first();
+
+      if (user && user.email && user.clerkId) {
+        users.push({
+          userId: user.clerkId,
+          email: user.email,
+          name: user.name || user.email,
+        });
+      }
+    }
+
+    return users;
+  },
+});
+
+/**
+ * Get digest data for a specific user
+ */
+export const getUserDigestData = internalQuery({
+  args: {
+    userId: v.string(), // Clerk ID
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const oneWeekAgo = now - 7 * 24 * 60 * 60 * 1000;
+
+    // Get user's enrolled courses
+    const enrollments = await ctx.db
+      .query("enrollments")
+      .filter((q) => q.eq(q.field("userId"), args.userId))
+      .collect();
+
+    const courseIds = enrollments.map((e) => e.courseId);
+
+    // Get user's course info
+    const courseProgress: Array<{
+      courseId: string;
+      courseTitle: string;
+      progress: number;
+      completedLessons: number;
+      totalLessons: number;
+    }> = [];
+
+    for (const enrollment of enrollments) {
+      const course = await ctx.db.get(enrollment.courseId as any);
+      if (!course || !("title" in course)) continue;
+
+      // Use enrollment progress if available
+      const progress = (enrollment as any).progress || 0;
+      const completedAt = (enrollment as any).completedAt;
+
+      courseProgress.push({
+        courseId: enrollment.courseId,
+        courseTitle: course.title as string,
+        progress: completedAt ? 100 : progress,
+        completedLessons: completedAt ? 1 : 0,
+        totalLessons: 1,
+      });
+    }
+
+    // Get new courses published this week
+    const newCourses = await ctx.db
+      .query("courses")
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("isPublished"), true),
+          q.gt(q.field("_creationTime"), oneWeekAgo)
+        )
+      )
+      .take(5);
+
+    // Get user's recent activity
+    const recentActivity = await ctx.db
+      .query("enrollments")
+      .filter((q) => q.eq(q.field("userId"), args.userId))
+      .order("desc")
+      .take(5);
+
+    // Get certificates earned this week
+    const certificates = await ctx.db
+      .query("certificates")
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("userId"), args.userId),
+          q.gt(q.field("issueDate"), oneWeekAgo)
+        )
+      )
+      .collect();
+
+    return {
+      user: {
+        userId: args.userId,
+      },
+      stats: {
+        activeCourses: enrollments.length,
+        completedThisWeek: certificates.length,
+        totalProgress: courseProgress.reduce((sum, c) => sum + c.progress, 0) / Math.max(courseProgress.length, 1),
+      },
+      courseProgress: courseProgress.slice(0, 3), // Top 3 in-progress courses
+      newCourses: newCourses.map((c) => ({
+        _id: c._id,
+        title: c.title,
+        description: c.description,
+        thumbnailUrl: c.imageUrl || "",
+      })),
+      certificates: certificates.map((c) => ({
+        courseId: c.courseId,
+        issuedAt: c.issueDate,
+      })),
+      recentActivity: recentActivity.length,
+    };
+  },
+});
+
+/**
+ * Mark digest as sent
+ */
+export const markDigestSent = internalMutation({
+  args: {
+    userId: v.string(),
+    emailLogId: v.id("resendLogs"),
+  },
+  handler: async (ctx, args) => {
+    // Record that digest was sent
+    // You could track this in user preferences or a separate table
+    const pref = await ctx.db
+      .query("resendPreferences")
+      .filter((q) => q.eq(q.field("userId"), args.userId))
+      .first();
+
+    if (pref) {
+      await ctx.db.patch(pref._id, {
+        updatedAt: Date.now(),
+      });
+    }
+  },
+});
+
+// ============================================================================
+// EMAIL STATUS SYNC SYSTEM
+// ============================================================================
+
+/**
+ * Get emails that need status sync
+ * Returns emails that are pending or sent but haven't been updated in 24 hours
+ */
+export const getEmailsNeedingSync = internalQuery({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+
+    // Get emails that are in "sent" or "pending" status
+    // and haven't been updated recently
+    const logs = await ctx.db
+      .query("resendLogs")
+      .filter((q) =>
+        q.or(
+          q.eq(q.field("status"), "sent"),
+          q.eq(q.field("status"), "pending")
+        )
+      )
+      .take(args.limit || 100);
+
+    // Filter to only include those with Resend email IDs and created over 1 hour ago
+    const oneHourAgo = Date.now() - 60 * 60 * 1000;
+    return logs
+      .filter(
+        (log) =>
+          log.resendEmailId &&
+          log.sentAt &&
+          log.sentAt < oneHourAgo
+      )
+      .slice(0, args.limit || 100);
+  },
+});
+
+/**
+ * Update email status from sync
+ */
+export const updateEmailStatusFromSync = internalMutation({
+  args: {
+    emailLogId: v.id("resendLogs"),
+    status: v.union(
+      v.literal("sent"),
+      v.literal("delivered"),
+      v.literal("bounced"),
+      v.literal("failed")
+    ),
+    deliveredAt: v.optional(v.number()),
+    bouncedAt: v.optional(v.number()),
+    bounceReason: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const updates: any = {
+      status: args.status,
+    };
+
+    if (args.deliveredAt) updates.deliveredAt = args.deliveredAt;
+    if (args.bouncedAt) updates.bouncedAt = args.bouncedAt;
+    // Note: bounceReason stored in errorMessage field
+    if (args.bounceReason) {
+      updates.errorMessage = args.bounceReason;
+    }
+
+    await ctx.db.patch(args.emailLogId, updates);
+
+    // Update campaign metrics if applicable
+    const log = await ctx.db.get(args.emailLogId);
+    if (log?.campaignId) {
+      const campaign = await ctx.db.get(log.campaignId);
+      if (campaign) {
+        if (args.status === "delivered" && !log.deliveredAt) {
+          await ctx.db.patch(campaign._id, {
+            deliveredCount: (campaign.deliveredCount || 0) + 1,
+          });
+        } else if (args.status === "bounced" && !log.bouncedAt) {
+          await ctx.db.patch(campaign._id, {
+            bouncedCount: (campaign.bouncedCount || 0) + 1,
+          });
+        }
+      }
+    }
+  },
+});
+

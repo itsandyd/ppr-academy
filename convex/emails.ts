@@ -1,715 +1,807 @@
 "use node";
 
-import { action } from "./_generated/server";
+import { action, internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { Resend } from "resend";
 import { internal } from "./_generated/api";
 
-// Initialize Resend with environment variable
+// Initialize Resend with environment variable or API key
 let resendClient: Resend | null = null;
-function getResendClient() {
-  if (!resendClient && process.env.RESEND_API_KEY) {
-    resendClient = new Resend(process.env.RESEND_API_KEY);
+function getResendClient(apiKey?: string) {
+  const key = apiKey || process.env.RESEND_API_KEY;
+  if (!key) {
+    return null;
+  }
+  if (!resendClient || apiKey) {
+    resendClient = new Resend(key);
   }
   return resendClient;
 }
 
-// Test email configuration using centralized Resend
-export const testStoreEmailConfig = action({
+// ============================================================================
+// EMAIL ACTIONS (Node.js Runtime - Resend Integration)
+// ============================================================================
+
+/**
+ * Process and send campaign emails (INTERNAL)
+ */
+export const processCampaign = internalAction({
   args: {
-    storeId: v.id("stores"),
-    testEmail: v.string(),
-    fromEmail: v.string(),
-    fromName: v.optional(v.string()),
-    replyToEmail: v.optional(v.string()),
+    campaignId: v.id("resendCampaigns"),
+  },
+  handler: async (ctx, args) => {
+    try {
+      const campaign = await ctx.runQuery(internal.emailQueries.getCampaignById, {
+        campaignId: args.campaignId,
+      });
+
+      if (!campaign) {
+        throw new Error("Campaign not found");
+      }
+
+      // Update status to sending
+      await ctx.runMutation(internal.emailQueries.updateCampaignStatus, {
+        campaignId: args.campaignId,
+        status: "sending",
+      });
+
+      // Get recipients
+      const recipients = await ctx.runQuery(internal.emailQueries.getCampaignRecipients, {
+        campaignId: args.campaignId,
+      });
+
+      // Update recipient count
+      await ctx.runMutation(internal.emailQueries.updateCampaignMetrics, {
+        campaignId: args.campaignId,
+        recipientCount: recipients.length,
+      });
+
+      const resend = getResendClient();
+      if (!resend) {
+        throw new Error("Resend not configured");
+      }
+
+      // Get connection for sender details
+      const connection = await ctx.runQuery(internal.emailQueries.getConnectionById, {
+        connectionId: campaign.connectionId,
+      });
+
+      if (!connection) {
+        throw new Error("Connection not found");
+      }
+
+      // Get email content
+      let htmlContent = campaign.htmlContent || "";
+      let textContent = campaign.textContent || "";
+
+      if (campaign.templateId) {
+        const template = await ctx.runQuery(internal.emailQueries.getTemplateById, {
+          templateId: campaign.templateId,
+        });
+        if (template) {
+          htmlContent = template.htmlContent;
+          textContent = template.textContent;
+        }
+      }
+
+      // Send in batches of 50 to avoid rate limits
+      const batchSize = 50;
+      let sentCount = 0;
+
+      for (let i = 0; i < recipients.length; i += batchSize) {
+        const batch = recipients.slice(i, i + batchSize);
+
+        const results = await Promise.allSettled(
+          batch.map(async (recipient) => {
+            try {
+              const result = await resend.emails.send({
+                from: connection.fromName 
+                  ? `${connection.fromName} <${connection.fromEmail}>` 
+                  : connection.fromEmail,
+                to: recipient.email,
+                subject: campaign.subject,
+                html: htmlContent,
+                text: textContent,
+                replyTo: connection.replyToEmail || connection.fromEmail,
+              });
+
+              // Log email send
+              await ctx.runMutation(internal.emailQueries.logEmail, {
+                connectionId: campaign.connectionId,
+                resendEmailId: result.data?.id,
+                recipientEmail: recipient.email,
+                recipientUserId: recipient.userId,
+                recipientName: recipient.name,
+                campaignId: args.campaignId,
+                templateId: campaign.templateId,
+                subject: campaign.subject,
+                fromEmail: connection.fromEmail,
+                fromName: connection.fromName || "",
+                status: result.error ? "failed" : "sent",
+                errorMessage: result.error?.message,
+              });
+
+              return { success: !result.error };
+            } catch (error: any) {
+              // Log failed send
+              await ctx.runMutation(internal.emailQueries.logEmail, {
+                connectionId: campaign.connectionId,
+                recipientEmail: recipient.email,
+                recipientUserId: recipient.userId,
+                recipientName: recipient.name,
+                campaignId: args.campaignId,
+                templateId: campaign.templateId,
+                subject: campaign.subject,
+                fromEmail: connection.fromEmail,
+                fromName: connection.fromName || "",
+                status: "failed",
+                errorMessage: error.message,
+              });
+              return { success: false };
+            }
+          })
+        );
+
+        const successCount = results.filter(
+          (r) => r.status === "fulfilled" && (r.value as any).success
+        ).length;
+        sentCount += successCount;
+
+        // Update progress
+        await ctx.runMutation(internal.emailQueries.updateCampaignMetrics, {
+          campaignId: args.campaignId,
+          sentCount,
+        });
+
+        // Delay between batches to respect rate limits
+        if (i + batchSize < recipients.length) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
+      }
+
+      // Mark campaign as sent
+      await ctx.runMutation(internal.emailQueries.updateCampaignStatus, {
+        campaignId: args.campaignId,
+        status: "sent",
+        sentAt: Date.now(),
+      });
+    } catch (error) {
+      console.error("Campaign processing failed:", error);
+      await ctx.runMutation(internal.emailQueries.updateCampaignStatus, {
+        campaignId: args.campaignId,
+        status: "failed",
+      });
+    }
+  },
+});
+
+/**
+ * Process automation triggers (INTERNAL - called by cron)
+ */
+export const processAutomationTriggers = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    // Get all active automations
+    const automations = await ctx.runQuery(internal.emailQueries.getActiveAutomations);
+
+    for (const automation of automations) {
+      try {
+        switch (automation.triggerType) {
+          case "user_signup":
+            // TODO: Implement trigger logic
+            break;
+          case "course_enrollment":
+            // TODO: Implement trigger logic
+            break;
+          case "course_completion":
+            // TODO: Implement trigger logic
+            break;
+          case "inactivity":
+            // TODO: Implement trigger logic
+            break;
+          // Add more trigger types as needed
+        }
+      } catch (error) {
+        console.error(`Automation ${automation._id} failed:`, error);
+      }
+    }
+  },
+});
+
+/**
+ * Process scheduled campaigns (INTERNAL - called by cron)
+ */
+export const processScheduledCampaigns = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+    
+    // Get all scheduled campaigns that should be sent
+    const campaigns = await ctx.runQuery(internal.emailQueries.getScheduledCampaigns, {
+      beforeTimestamp: now,
+    });
+
+    for (const campaign of campaigns) {
+      try {
+        await ctx.runAction(internal.emails.processCampaign, {
+          campaignId: campaign._id,
+        });
+      } catch (error) {
+        console.error(`Failed to process campaign ${campaign._id}:`, error);
+      }
+    }
+  },
+});
+
+/**
+ * Cleanup old logs (INTERNAL - called by cron)
+ */
+export const cleanupOldLogs = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    // Delete logs older than 90 days
+    const ninetyDaysAgo = Date.now() - 90 * 24 * 60 * 60 * 1000;
+    
+    const oldLogs = await ctx.runQuery(internal.emailQueries.getOldLogs, {
+      cutoffTime: ninetyDaysAgo,
+    });
+
+    for (const log of oldLogs) {
+      await ctx.runMutation(internal.emailQueries.deleteLog, {
+        logId: log._id,
+      });
+    }
+
+    console.log(`Cleaned up ${oldLogs.length} old email logs`);
+  },
+});
+
+// ============================================================================
+// DOMAIN VERIFICATION ACTIONS
+// ============================================================================
+
+/**
+ * Verify domain with Resend API
+ * Checks domain DNS records and updates verification status
+ */
+export const verifyDomain = action({
+  args: {
+    connectionId: v.id("resendConnections"),
   },
   returns: v.object({
     success: v.boolean(),
+    status: v.union(
+      v.literal("verified"),
+      v.literal("pending"),
+      v.literal("failed"),
+      v.literal("not_verified")
+    ),
     message: v.string(),
-    details: v.optional(v.object({
-      emailId: v.optional(v.string()),
-    })),
+    dnsRecords: v.optional(
+      v.object({
+        spf: v.object({
+          record: v.string(),
+          valid: v.boolean(),
+        }),
+        dkim: v.object({
+          record: v.string(),
+          valid: v.boolean(),
+        }),
+        dmarc: v.optional(
+          v.object({
+            record: v.string(),
+            valid: v.boolean(),
+          })
+        ),
+      })
+    ),
   }),
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{
+    success: boolean;
+    status: "verified" | "pending" | "failed" | "not_verified";
+    message: string;
+    dnsRecords?: {
+      spf: { record: string; valid: boolean };
+      dkim: { record: string; valid: boolean };
+      dmarc?: { record: string; valid: boolean };
+    };
+  }> => {
     try {
-      const resend = getResendClient();
-      
-      if (!resend) {
+      // Get connection details
+      const connection: any = await ctx.runQuery(internal.emailQueries.getConnectionById, {
+        connectionId: args.connectionId,
+      });
+
+      if (!connection) {
         return {
           success: false,
-          message: "Email service not configured. Please contact support.",
+          status: "failed" as const,
+          message: "Connection not found",
         };
       }
 
-      // Send test email using centralized Resend with store's sender settings
-      const result = await resend.emails.send({
-        from: args.fromName ? `${args.fromName} <${args.fromEmail}>` : args.fromEmail,
-        to: args.testEmail,
-        replyTo: args.replyToEmail || args.fromEmail,
-        subject: "✅ Email Configuration Test - Success!",
-        html: `
-          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <div style="text-align: center; margin-bottom: 30px;">
-              <h1 style="color: #10b981; margin: 0;">🎉 Email Setup Complete!</h1>
-            </div>
-            
-            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-              <h2 style="color: #059669; margin: 0 0 10px 0;">Configuration Test Successful</h2>
-              <p style="color: #047857; margin: 0;">Your email configuration is working perfectly!</p>
-            </div>
-            
-            <div style="background: #f8fafc; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-              <h3 style="margin: 0 0 15px 0;">Verified Settings:</h3>
-              <ul style="margin: 0; padding-left: 20px;">
-                <li><strong>From Email:</strong> ${args.fromEmail}</li>
-                ${args.fromName ? `<li><strong>From Name:</strong> ${args.fromName}</li>` : ''}
-                ${args.replyToEmail ? `<li><strong>Reply-to:</strong> ${args.replyToEmail}</li>` : ''}
-              </ul>
-            </div>
-            
-            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 20px;">
-              <h3 style="color: #1d4ed8; margin: 0 0 10px 0;">🚀 You're ready to send campaigns!</h3>
-              <p style="color: #1e40af; margin: 0;">
-                Your store can now send professional email campaigns to your customers.
-                Visit your Email Campaigns dashboard to create your first campaign.
-              </p>
-            </div>
-            
-            <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
-              <p style="color: #6b7280; font-size: 14px; margin: 0;">
-                This test email was sent from your store's email configuration.
-              </p>
-            </div>
-          </div>
-        `,
-      });
-
-      if (result.data?.id) {
+      // Initialize Resend with connection's API key
+      const resend = getResendClient(connection.resendApiKey);
+      if (!resend) {
         return {
-          success: true,
-          message: "Test email sent successfully! Check your inbox.",
-          details: {
-            emailId: result.data.id,
+          success: false,
+          status: "failed" as const,
+          message: "Resend client not initialized",
+        };
+      }
+
+      // Extract domain from email
+      const domain: string = connection.fromEmail.split("@")[1];
+      if (!domain) {
+        return {
+          success: false,
+          status: "failed" as const,
+          message: "Invalid email format",
+        };
+      }
+
+      try {
+        // Check domain with Resend API
+        const domainResponse = await resend.domains.get(domain);
+
+        // Check if response is successful
+        if (domainResponse.error) {
+          throw new Error(domainResponse.error.message);
+        }
+
+        const domainInfo = domainResponse.data;
+
+        // Parse DNS records from Resend response
+        const records = domainInfo.records || [];
+        const domainStatus = domainInfo.status || "not_found";
+
+        // Type-safe DNS records parsing
+        const dnsRecords: {
+          spf: { record: string; valid: boolean };
+          dkim: { record: string; valid: boolean };
+          dmarc?: { record: string; valid: boolean };
+        } = {
+          spf: {
+            record: "v=spf1 include:spf.resend.com ~all",
+            valid: domainStatus === "verified",
+          },
+          dkim: {
+            record: "resend._domainkey",
+            valid: domainStatus === "verified",
+          },
+          dmarc: {
+            record: `v=DMARC1; p=none; rua=mailto:postmaster@${domain}`,
+            valid: domainStatus === "verified",
           },
         };
-      } else {
+
+        const verificationStatus = domainStatus === "verified" 
+          ? "verified" as const
+          : domainStatus === "pending" 
+          ? "pending" as const
+          : domainStatus === "failed"
+          ? "failed" as const
+          : "not_verified" as const;
+
+        // Update connection with verification status
+        await ctx.runMutation(internal.emailQueries.updateDomainVerification, {
+          connectionId: args.connectionId,
+          status: verificationStatus,
+          dnsRecords,
+        });
+
+        return {
+          success: true,
+          status: verificationStatus,
+          message: domainStatus === "verified"
+            ? "Domain verified successfully"
+            : domainStatus === "pending"
+            ? "Domain verification pending - please check DNS records"
+            : "Domain verification failed",
+          dnsRecords,
+        };
+      } catch (apiError: any) {
+        // Resend API might not support domain verification yet
+        // Return manual verification instructions
+        console.error("Resend API domain check error:", apiError);
+
+        const dnsRecords = {
+          spf: {
+            record: `v=spf1 include:spf.resend.com ~all`,
+            valid: false,
+          },
+          dkim: {
+            record: `resend._domainkey IN TXT "v=DKIM1; k=rsa; p=YOUR_PUBLIC_KEY"`,
+            valid: false,
+          },
+          dmarc: {
+            record: `v=DMARC1; p=none; rua=mailto:postmaster@${domain}`,
+            valid: false,
+          },
+        };
+
+        await ctx.runMutation(internal.emailQueries.updateDomainVerification, {
+          connectionId: args.connectionId,
+          status: "not_verified" as const,
+          dnsRecords,
+        });
+
         return {
           success: false,
-          message: "Failed to send test email. Please check your configuration.",
+          status: "not_verified" as const,
+          message: "Manual verification required - please add DNS records",
+          dnsRecords,
         };
       }
     } catch (error: any) {
-      console.error("Email test failed:", error);
-      
-      let errorMessage = "Failed to send test email. ";
-      
-      if (error.message?.includes("from")) {
-        errorMessage += "Please verify your 'from' email address format.";
-      } else if (error.message?.includes("domain")) {
-        errorMessage += "Please verify your domain is allowed for sending.";
-      } else {
-        errorMessage += `Error: ${error.message}`;
-      }
-
+      console.error("Domain verification error:", error);
       return {
         success: false,
-        message: errorMessage,
+        status: "failed" as const,
+        message: error.message || "Domain verification failed",
       };
     }
   },
 });
 
-// Send lead magnet confirmation email using centralized Resend
-export const sendLeadMagnetConfirmation = action({
-  args: {
-    storeId: v.id("stores"),
-    customerEmail: v.string(),
-    customerName: v.string(),
-    productName: v.string(),
-    downloadUrl: v.string(),
-    confirmationSubject: v.string(),
-    confirmationBody: v.string(),
-  },
-  returns: v.object({
-    success: v.boolean(),
-    emailId: v.optional(v.string()),
-    error: v.optional(v.string()),
-  }),
-  handler: async (ctx, args) => {
+// ============================================================================
+// WEEKLY DIGEST ACTIONS
+// ============================================================================
+
+/**
+ * Send weekly digest emails to all eligible users
+ * Called by cron job
+ */
+export const sendWeeklyDigests = internalAction({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    console.log("[Weekly Digest] Starting weekly digest send...");
+
     try {
-      const resend = getResendClient();
-      
+      // Get users eligible for digest
+      const users = await ctx.runQuery(internal.emailQueries.getUsersForWeeklyDigest);
+
+      console.log(`[Weekly Digest] Found ${users.length} eligible users`);
+
+      let sent = 0;
+      let skipped = 0;
+      let failed = 0;
+
+      // Get admin connection for platform-wide emails
+      const connection = await ctx.runQuery(internal.emailQueries.getAdminConnectionInternal);
+
+      if (!connection) {
+        console.error("[Weekly Digest] No admin connection found");
+        return null;
+      }
+
+      const resend = getResendClient(connection.resendApiKey);
       if (!resend) {
-        return {
-          success: false,
-          error: "Email service not configured",
-        };
+        console.error("[Weekly Digest] Resend client not initialized");
+        return null;
       }
 
-      // Get store's email configuration
-      const emailConfig = await ctx.runQuery((internal as any).stores.getStoreEmailConfigInternal, {
-        storeId: args.storeId,
-      });
+      // Process users in batches of 10
+      const batchSize = 10;
+      for (let i = 0; i < users.length; i += batchSize) {
+        const batch = users.slice(i, i + batchSize);
 
-      if (!emailConfig) {
-        return {
-          success: false,
-          error: "Store email configuration not found",
-        };
+        for (const user of batch) {
+          try {
+            // Get digest data for this user
+            const digestData = await ctx.runQuery(internal.emailQueries.getUserDigestData, {
+              userId: user.userId,
+            });
+
+            // Skip if no meaningful data
+            if (
+              digestData.stats.activeCourses === 0 &&
+              digestData.newCourses.length === 0 &&
+              digestData.certificates.length === 0
+            ) {
+              skipped++;
+              continue;
+            }
+
+            // Compose digest email
+            const subject = `Your Weekly Summary - ${digestData.stats.completedThisWeek} certificates earned!`;
+            const htmlContent = composeDigestHTML(user, digestData);
+            const textContent = composeDigestText(user, digestData);
+
+            // Send email
+            const result = await resend.emails.send({
+              from: connection.fromName
+                ? `${connection.fromName} <${connection.fromEmail}>`
+                : connection.fromEmail,
+              to: user.email,
+              subject,
+              html: htmlContent,
+              text: textContent,
+              replyTo: connection.replyToEmail || connection.fromEmail,
+            });
+
+            if (result.error) {
+              failed++;
+              console.error(`[Weekly Digest] Failed for ${user.email}:`, result.error);
+              continue;
+            }
+
+            // Log email
+            const logId = await ctx.runMutation(internal.emailQueries.logEmail, {
+              connectionId: connection._id,
+              resendEmailId: result.data?.id,
+              recipientEmail: user.email,
+              recipientUserId: user.userId,
+              recipientName: user.name,
+              templateId: undefined,
+              subject,
+              fromEmail: connection.fromEmail,
+              fromName: connection.fromName || "",
+              status: "sent",
+            });
+
+            // Mark digest as sent
+            await ctx.runMutation(internal.emailQueries.markDigestSent, {
+              userId: user.userId,
+              emailLogId: logId,
+            });
+
+            sent++;
+          } catch (error: any) {
+            failed++;
+            console.error(`[Weekly Digest] Error for ${user.email}:`, error);
+          }
+        }
+
+        // Small delay between batches to respect rate limits
+        if (i + batchSize < users.length) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        }
       }
 
-      // Replace personalization tokens in subject
-      let personalizedSubject = args.confirmationSubject
-        .replace(/\{\{\s*customer[_\s]name\s*\}\}/gi, args.customerName)
-        .replace(/\{\{\s*product[_\s]name\s*\}\}/gi, args.productName);
-
-      // Replace personalization tokens in body
-      let personalizedBody = args.confirmationBody
-        .replace(/\{\{\s*customer[_\s]name\s*\}\}/gi, args.customerName)
-        .replace(/\{\{\s*product[_\s]name\s*\}\}/gi, args.productName)
-        .replace(/\{\{\s*download[_\s]link\s*\}\}/gi, `<a href="${args.downloadUrl}" style="color: #6356FF; text-decoration: underline;">Download Your Resource</a>`);
-
-      // Add download button to the email
-      const emailWithDownloadButton = `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          ${personalizedBody}
-          
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${args.downloadUrl}" 
-               style="display: inline-block; background: #6356FF; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
-              📥 Download Your Resource
-            </a>
-          </div>
-          
-          <div style="border-top: 1px solid #e5e7eb; margin-top: 30px; padding-top: 20px; font-size: 12px; color: #6b7280; text-align: center;">
-            <p>This email was sent because you opted in to receive this resource. The download link will remain active.</p>
-          </div>
-        </div>
-      `;
-
-      // Send email using centralized Resend
-      const result = await resend.emails.send({
-        from: emailConfig.fromName ? `${emailConfig.fromName} <${emailConfig.fromEmail}>` : emailConfig.fromEmail,
-        to: args.customerEmail,
-        replyTo: emailConfig.replyToEmail || emailConfig.fromEmail,
-        subject: personalizedSubject,
-        html: emailWithDownloadButton,
-      });
-
-      if (result.data?.id) {
-        return {
-          success: true,
-          emailId: result.data.id,
-        };
-      } else {
-        return {
-          success: false,
-          error: "Failed to send confirmation email",
-        };
-      }
-    } catch (error: any) {
-      console.error("Lead magnet confirmation email failed:", error);
-      return {
-        success: false,
-        error: error.message || "Failed to send confirmation email",
-      };
+      console.log(
+        `[Weekly Digest] Complete! Sent: ${sent}, Skipped: ${skipped}, Failed: ${failed}`
+      );
+      return null;
+    } catch (error) {
+      console.error("[Weekly Digest] Fatal error:", error);
+      return null;
     }
   },
 });
 
-// Send campaign email using centralized Resend
-export const sendCampaignEmail = action({
-  args: {
-    storeId: v.id("stores"),
-    to: v.string(),
-    subject: v.string(),
-    content: v.string(),
-    fromEmail: v.string(),
-    fromName: v.optional(v.string()),
-    replyToEmail: v.optional(v.string()),
-    customerName: v.optional(v.string()),
-  },
-  returns: v.object({
-    success: v.boolean(),
-    emailId: v.optional(v.string()),
-    error: v.optional(v.string()),
-  }),
-  handler: async (ctx, args) => {
-    try {
-      const resend = getResendClient();
-      
-      if (!resend) {
-        return {
-          success: false,
-          error: "Email service not configured",
-        };
-      }
-
-      // Replace personalization tokens
-      let personalizedContent = args.content;
-      if (args.customerName) {
-        personalizedContent = personalizedContent.replace(
-          /\{\{customer\.name\}\}/g, 
-          args.customerName
-        );
-      }
-
-      // Send email using centralized Resend
-      const result = await resend.emails.send({
-        from: args.fromName ? `${args.fromName} <${args.fromEmail}>` : args.fromEmail,
-        to: args.to,
-        replyTo: args.replyToEmail || args.fromEmail,
-        subject: args.subject,
-        html: personalizedContent,
-      });
-
-      if (result.data?.id) {
-        return {
-          success: true,
-          emailId: result.data.id,
-        };
-      } else {
-        return {
-          success: false,
-          error: "Failed to send email",
-        };
-      }
-    } catch (error: any) {
-      console.error("Campaign email failed:", error);
-      return {
-        success: false,
-        error: error.message || "Failed to send campaign email",
-      };
-    }
-  },
-});
-
-// Legacy functions for backwards compatibility (can be removed later)
-export const sendLeadMagnetEmail = action({
-  args: {
-    to: v.string(),
-    customerName: v.string(),
-    leadMagnetName: v.string(),
-    downloadUrl: v.string(),
-    storeName: v.string(),
-  },
-  returns: v.object({
-    success: v.boolean(),
-    emailId: v.optional(v.string()),
-    error: v.optional(v.string()),
-  }),
-  handler: async (ctx, args) => {
-    console.log("📧 Legacy lead magnet email - consider migrating to store-specific configuration");
-    return { success: false, error: "Please configure store-specific email settings" };
-  },
-});
-
-export const sendAdminNotification = action({
-  args: {
-    to: v.string(),
-    customerName: v.string(),
-    customerEmail: v.string(),
-    leadMagnetName: v.string(),
-    storeName: v.string(),
-  },
-  returns: v.object({
-    success: v.boolean(),
-    emailId: v.optional(v.string()),
-    error: v.optional(v.string()),
-  }),
-  handler: async (ctx, args) => {
-    console.log("📧 Legacy admin notification - consider migrating to store-specific configuration");
-    return { success: false, error: "Please configure store-specific email settings" };
-  },
-});
-
-export const sendWelcomeEmail = action({
-  args: {
-    to: v.string(),
-    name: v.string(),
-  },
-  returns: v.object({
-    success: v.boolean(),
-    emailId: v.optional(v.string()),
-    error: v.optional(v.string()),
-  }),
-  handler: async (ctx, args) => {
-    console.log("📧 Legacy welcome email - consider migrating to store-specific configuration");
-    return { success: false, error: "Please configure store-specific email settings" };
-  },
-});
-
-export const testEmailConfig = action({
-  args: {
-    testEmail: v.string(),
-  },
-  returns: v.object({
-    success: v.boolean(),
-    message: v.string(),
-  }),
-  handler: async (ctx, args) => {
-    return { 
-      success: false, 
-      message: "Please use store-specific email testing instead" 
-    };
-  },
-});
-
-// Send email campaign using store's Resend configuration
-export const sendCampaign = action({
-  args: { campaignId: v.id("emailCampaigns") },
-  returns: v.object({
-    success: v.boolean(),
-    message: v.string(),
-    sentCount: v.optional(v.number()),
-  }),
-  handler: async (ctx, args) => {
-    // TODO: Implement actual store-specific campaign sending once API is regenerated
-    console.log("📧 Store-specific campaign sending ready for implementation");
-    
-    return { 
-      success: true, 
-      message: "Campaign system ready - will implement store-specific Resend integration",
-      sentCount: 0,
-    };
-  },
-});
-
-// Send admin notification for new lead signup
-export const sendNewLeadAdminNotification = action({
-  args: {
-    storeId: v.id("stores"),
-    customerName: v.string(),
-    customerEmail: v.string(),
-    productName: v.string(),
-    source: v.optional(v.string()),
-  },
-  returns: v.object({
-    success: v.boolean(),
-    emailId: v.optional(v.string()),
-    error: v.optional(v.string()),
-  }),
-  handler: async (ctx, args) => {
-    try {
-      console.log("📧 Starting admin notification process for new lead:", args.customerEmail);
-      
-      const resend = getResendClient();
-      if (!resend) {
-        console.log("⚠️ RESEND_API_KEY not configured. Admin notification simulation mode.");
-        return {
-          success: true,
-          error: "Email service not configured - simulation mode",
-        };
-      }
-
-      // Get store information
-      const store = await ctx.runQuery((internal as any).stores.getStoreById, {
-        storeId: args.storeId,
-      });
-
-      if (!store) {
-        return {
-          success: false,
-          error: "Store not found",
-        };
-      }
-
-      // Check if admin notifications are enabled
-      const notificationSettings = store.emailConfig?.adminNotifications;
-      const isReturningUser = args.source?.includes("returning user");
-      
-      // Check if notifications are disabled globally
-      if (notificationSettings?.enabled === false) {
-        console.log("📧 Admin notifications disabled for store:", store.name);
-        return {
-          success: true,
-          error: "Admin notifications disabled",
-        };
-      }
-
-      // Check specific notification types
-      if (isReturningUser && notificationSettings?.emailOnReturningUser === false) {
-        console.log("📧 Returning user notifications disabled for store:", store.name);
-        return {
-          success: true,
-          error: "Returning user notifications disabled",
-        };
-      }
-
-      if (!isReturningUser && notificationSettings?.emailOnNewLead === false) {
-        console.log("📧 New lead notifications disabled for store:", store.name);
-        return {
-          success: true,
-          error: "New lead notifications disabled",
-        };
-      }
-
-      // Get admin user information
-      const adminUser = await ctx.runQuery((internal as any).users.getUserById, {
-        userId: store.userId,
-      });
-
-      if (!adminUser?.email) {
-        return {
-          success: false,
-          error: "Admin user email not found",
-        };
-      }
-
-      // Use store's email configuration if available, otherwise use defaults
-      const fromEmail = store.emailConfig?.fromEmail || 'noreply@ppr-academy.com';
-      const fromName = store.emailConfig?.fromName || store.name;
-      const replyToEmail = store.emailConfig?.replyToEmail || adminUser.email;
-
-      // Use custom notification email if specified, otherwise use admin's email
-      const notificationEmail = notificationSettings?.notificationEmail || adminUser.email;
-
-      // Build custom subject with prefix if specified
-      const subjectPrefix = notificationSettings?.customSubjectPrefix || '🎯';
-      const baseSubject = isReturningUser 
-        ? `Returning User: ${args.customerName} re-downloaded ${args.productName}`
-        : `New Lead: ${args.customerName} downloaded ${args.productName}`;
-      const subject = `${subjectPrefix} ${baseSubject}`;
-
-      // Include lead details based on preferences
-      const includeDetails = notificationSettings?.includeLeadDetails !== false; // Default to true
-
-      // Send admin notification email
-      const result = await resend.emails.send({
-        from: fromName ? `${fromName} <${fromEmail}>` : fromEmail,
-        to: notificationEmail,
-        replyTo: replyToEmail,
-        subject: subject,
-        html: getAdminNotificationEmailTemplate({
-          customerName: args.customerName,
-          customerEmail: args.customerEmail,
-          productName: args.productName,
-          source: args.source || "Lead Magnet",
-          storeName: store.name,
-          adminName: adminUser.name || adminUser.firstName || "Admin",
-          includeDetails: includeDetails,
-          isReturningUser: isReturningUser,
-        }),
-      });
-
-      console.log("✅ Admin notification email sent successfully:", result.data?.id);
-      return {
-        success: true,
-        emailId: result.data?.id,
-      };
-    } catch (error: any) {
-      console.error("❌ Failed to send admin notification:", error);
-      return {
-        success: false,
-        error: error.message || "Unknown error",
-      };
-    }
-  },
-});
-
-// Admin notification email template
-function getAdminNotificationEmailTemplate(data: {
-  customerName: string;
-  customerEmail: string;
-  productName: string;
-  source: string;
-  storeName: string;
-  adminName: string;
-  includeDetails?: boolean;
-  isReturningUser?: boolean;
-}) {
+// Helper function to compose digest HTML
+function composeDigestHTML(
+  user: { name: string; email: string },
+  data: any
+): string {
   return `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>New Lead: ${data.customerName}</title>
+  <title>Your Weekly Summary</title>
 </head>
 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: #22c55e; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
-    <h1 style="color: white; margin: 0; font-size: 24px;">🎯 New Lead Generated!</h1>
-  </div>
+  <h1 style="color: #2563eb;">Your Weekly Summary 📊</h1>
+  <p>Hi ${user.name},</p>
+  <p>Here's what happened in your learning journey this week:</p>
   
-  <div style="background: #f0fdf4; padding: 25px; border-radius: 0 0 8px 8px; border: 1px solid #bbf7d0;">
-    <h2 style="color: #14532d; margin-top: 0;">Hi ${data.adminName},</h2>
-    <p style="color: #374151; margin-bottom: 20px;">
-      ${data.isReturningUser 
-        ? `A previous customer has re-engaged with your <strong>${data.storeName}</strong> store!`
-        : `Great news! You have a new lead from your <strong>${data.storeName}</strong> store.`
-      }
-    </p>
-    
-    ${data.includeDetails !== false ? `
-    <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #22c55e;">
-      <h3 style="color: #14532d; margin-top: 0;">${data.isReturningUser ? 'Customer' : 'Lead'} Details:</h3>
-      <table style="width: 100%; border-collapse: collapse;">
-        <tr>
-          <td style="padding: 8px 0; font-weight: bold; color: #374151; width: 120px;">Name:</td>
-          <td style="padding: 8px 0; color: #1f2937;">${data.customerName}</td>
-        </tr>
-        <tr>
-          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Email:</td>
-          <td style="padding: 8px 0; color: #1f2937;"><a href="mailto:${data.customerEmail}" style="color: #2563eb; text-decoration: none;">${data.customerEmail}</a></td>
-        </tr>
-        <tr>
-          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Product:</td>
-          <td style="padding: 8px 0; color: #1f2937;">${data.productName}</td>
-        </tr>
-        <tr>
-          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Source:</td>
-          <td style="padding: 8px 0; color: #1f2937;">${data.source}</td>
-        </tr>
-        <tr>
-          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Time:</td>
-          <td style="padding: 8px 0; color: #1f2937;">${new Date().toLocaleString()}</td>
-        </tr>
-      </table>
-    </div>
-    ` : `
-    <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #22c55e; text-align: center;">
-      <p style="color: #374151; margin: 0;">
-        <strong>${data.customerName}</strong> ${data.isReturningUser ? 're-downloaded' : 'downloaded'} <strong>${data.productName}</strong>
-      </p>
-      <p style="color: #6b7280; font-size: 14px; margin: 10px 0 0 0;">
-        Check your dashboard for full details
-      </p>
-    </div>
-    `}</div>
-    
-    <div style="background: #eff6ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
-      <h3 style="color: #1d4ed8; margin-top: 0;">🚀 Next Steps:</h3>
-      <ul style="color: #374151; margin: 0; padding-left: 20px;">
-        <li>Follow up with a personalized email within 24 hours</li>
-        <li>Check your dashboard for more lead details</li>
-        <li>Consider adding them to your email sequence</li>
-      </ul>
-    </div>
-    
-    <div style="text-align: center; margin-top: 30px;">
-      <p style="color: #6b7280; font-size: 14px; margin: 0;">
-        This notification was sent from your ${data.storeName} store.
-      </p>
-    </div>
+  <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+    <h2 style="margin-top: 0;">Your Stats</h2>
+    <p><strong>Active Courses:</strong> ${data.stats.activeCourses}</p>
+    <p><strong>Certificates Earned:</strong> ${data.stats.completedThisWeek}</p>
+    <p><strong>Average Progress:</strong> ${Math.round(data.stats.totalProgress)}%</p>
   </div>
+
+  ${
+    data.courseProgress.length > 0
+      ? `
+  <h2>Courses In Progress</h2>
+  ${data.courseProgress
+    .map(
+      (course: any) => `
+    <div style="border-left: 4px solid #2563eb; padding-left: 15px; margin: 15px 0;">
+      <h3 style="margin: 0 0 5px 0;">${course.courseTitle}</h3>
+      <p style="margin: 0; color: #666;">Progress: ${course.progress}% (${course.completedLessons}/${course.totalLessons} lessons)</p>
+    </div>
+  `
+    )
+    .join("")}
+  `
+      : ""
+  }
+
+  ${
+    data.newCourses.length > 0
+      ? `
+  <h2>New Courses This Week</h2>
+  ${data.newCourses
+    .map(
+      (course: any) => `
+    <div style="margin: 15px 0; padding: 15px; border: 1px solid #e5e7eb; border-radius: 8px;">
+      <h3 style="margin: 0 0 10px 0;">${course.title}</h3>
+      <p style="margin: 0; color: #666;">${course.description || "No description"}</p>
+    </div>
+  `
+    )
+    .join("")}
+  `
+      : ""
+  }
+
+  ${
+    data.certificates.length > 0
+      ? `
+  <div style="background: #d1fae5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+    <h2 style="margin-top: 0; color: #065f46;">🎉 Congratulations!</h2>
+    <p>You earned ${data.certificates.length} certificate${data.certificates.length > 1 ? "s" : ""} this week!</p>
+  </div>
+  `
+      : ""
+  }
+
+  <p style="margin-top: 30px;">Keep up the great work! 🚀</p>
+  
+  <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
+  
+  <p style="font-size: 12px; color: #999;">
+    You're receiving this because you're subscribed to weekly digest emails.
+    <a href="#" style="color: #2563eb;">Manage preferences</a>
+  </p>
 </body>
 </html>
   `;
 }
 
-// Send workflow email using centralized Resend - optimized for automation
-export const sendWorkflowEmail = action({
-  args: {
-    storeId: v.id("stores"),
-    customerEmail: v.string(),
-    customerName: v.optional(v.string()),
-    subject: v.string(),
-    body: v.string(),
-    downloadUrl: v.optional(v.string()),
-    executionData: v.optional(v.any()),
-  },
-  returns: v.object({
-    success: v.boolean(),
-    emailId: v.optional(v.string()),
-    error: v.optional(v.string()),
-  }),
-  handler: async (ctx, args) => {
+// Helper function to compose digest text
+function composeDigestText(
+  user: { name: string; email: string },
+  data: any
+): string {
+  let text = `Your Weekly Summary\n\n`;
+  text += `Hi ${user.name},\n\n`;
+  text += `Here's what happened in your learning journey this week:\n\n`;
+  text += `Your Stats:\n`;
+  text += `- Active Courses: ${data.stats.activeCourses}\n`;
+  text += `- Certificates Earned: ${data.stats.completedThisWeek}\n`;
+  text += `- Average Progress: ${Math.round(data.stats.totalProgress)}%\n\n`;
+
+  if (data.courseProgress.length > 0) {
+    text += `Courses In Progress:\n`;
+    data.courseProgress.forEach((course: any) => {
+      text += `- ${course.courseTitle}: ${course.progress}% (${course.completedLessons}/${course.totalLessons} lessons)\n`;
+    });
+    text += `\n`;
+  }
+
+  if (data.newCourses.length > 0) {
+    text += `New Courses This Week:\n`;
+    data.newCourses.forEach((course: any) => {
+      text += `- ${course.title}\n`;
+    });
+    text += `\n`;
+  }
+
+  if (data.certificates.length > 0) {
+    text += `🎉 Congratulations! You earned ${data.certificates.length} certificate${data.certificates.length > 1 ? "s" : ""} this week!\n\n`;
+  }
+
+  text += `Keep up the great work! 🚀\n\n`;
+  text += `---\n`;
+  text += `You're receiving this because you're subscribed to weekly digest emails.`;
+
+  return text;
+}
+
+// ============================================================================
+// EMAIL STATUS SYNC ACTIONS
+// ============================================================================
+
+/**
+ * Sync email statuses with Resend API
+ * Backup for missed webhooks
+ */
+export const syncEmailStatuses = internalAction({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    console.log("[Email Sync] Starting email status sync...");
+
     try {
-      const resend = getResendClient();
-      
+      // Get emails that need syncing
+      const emailsToSync = await ctx.runQuery(
+        internal.emailQueries.getEmailsNeedingSync,
+        { limit: 50 }
+      );
+
+      if (emailsToSync.length === 0) {
+        console.log("[Email Sync] No emails need syncing");
+        return null;
+      }
+
+      console.log(`[Email Sync] Syncing ${emailsToSync.length} emails`);
+
+      // Get connection (assumes admin connection for now)
+      const connection = await ctx.runQuery(internal.emailQueries.getAdminConnectionInternal);
+
+      if (!connection) {
+        console.error("[Email Sync] No admin connection found");
+        return null;
+      }
+
+      const resend = getResendClient(connection.resendApiKey);
       if (!resend) {
-        return {
-          success: false,
-          error: "Email service not configured",
-        };
+        console.error("[Email Sync] Resend client not initialized");
+        return null;
       }
 
-      // Get store's email configuration
-      const emailConfig = await ctx.runQuery((internal as any).stores.getStoreEmailConfigInternal, {
-        storeId: args.storeId,
-      });
+      let updated = 0;
+      let failed = 0;
 
-      if (!emailConfig) {
-        return {
-          success: false,
-          error: "Store email configuration not found",
-        };
+      for (const emailLog of emailsToSync) {
+        try {
+          if (!emailLog.resendEmailId) continue;
+
+          // Fetch email status from Resend API
+          const emailInfo = await resend.emails.get(emailLog.resendEmailId);
+
+          if (emailInfo.error) {
+            failed++;
+            console.error(
+              `[Email Sync] Failed to fetch ${emailLog.resendEmailId}:`,
+              emailInfo.error
+            );
+            continue;
+          }
+
+          const data = emailInfo.data;
+
+          // Determine status from Resend response
+          let status: "sent" | "delivered" | "bounced" | "failed" = "sent";
+          let deliveredAt: number | undefined;
+          let bouncedAt: number | undefined;
+          let bounceReason: string | undefined;
+
+          // Resend email status mapping
+          if (data.last_event === "delivered") {
+            status = "delivered";
+            deliveredAt = data.created_at ? new Date(data.created_at).getTime() : Date.now();
+          } else if (data.last_event === "bounced") {
+            status = "bounced";
+            bouncedAt = data.created_at ? new Date(data.created_at).getTime() : Date.now();
+            bounceReason = "Email bounced";
+          } else if (data.last_event === "failed") {
+            status = "failed";
+          }
+
+          // Only update if status changed
+          if (status !== emailLog.status) {
+            await ctx.runMutation(internal.emailQueries.updateEmailStatusFromSync, {
+              emailLogId: emailLog._id,
+              status,
+              deliveredAt,
+              bouncedAt,
+              bounceReason,
+            });
+            updated++;
+          }
+        } catch (error: any) {
+          failed++;
+          console.error(`[Email Sync] Error syncing ${emailLog._id}:`, error);
+        }
+
+        // Small delay to respect API rate limits
+        await new Promise((resolve) => setTimeout(resolve, 100));
       }
 
-      // Enhanced personalization with more tokens
-      const customerName = args.customerName || "Customer";
-      const tokens = {
-        customer_name: customerName,
-        customer_email: args.customerEmail,
-        ...args.executionData, // Include any additional data from the workflow
-      };
-
-      // Replace personalization tokens in subject
-      let personalizedSubject = args.subject;
-      Object.entries(tokens).forEach(([key, value]) => {
-        const regex = new RegExp(`\\{\\{\\s*${key}[_\\s]*\\}\\}`, 'gi');
-        personalizedSubject = personalizedSubject.replace(regex, String(value || ''));
-      });
-
-      // Replace personalization tokens in body
-      let personalizedBody = args.body;
-      Object.entries(tokens).forEach(([key, value]) => {
-        const regex = new RegExp(`\\{\\{\\s*${key}[_\\s]*\\}\\}`, 'gi');
-        personalizedBody = personalizedBody.replace(regex, String(value || ''));
-      });
-
-      // Add download button if URL provided
-      const emailWithFormatting = args.downloadUrl ? `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          ${personalizedBody}
-          
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${args.downloadUrl}" 
-               style="display: inline-block; background: #6356FF; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
-              📥 Download Your Resource
-            </a>
-          </div>
-          
-          <div style="border-top: 1px solid #e5e7eb; margin-top: 30px; padding-top: 20px; font-size: 12px; color: #6b7280; text-align: center;">
-            <p>This email is part of an automated sequence. You're receiving this because of your interest in our content.</p>
-          </div>
-        </div>
-      ` : `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          ${personalizedBody}
-          
-          <div style="border-top: 1px solid #e5e7eb; margin-top: 30px; padding-top: 20px; font-size: 12px; color: #6b7280; text-align: center;">
-            <p>This email is part of an automated sequence. You're receiving this because of your interest in our content.</p>
-          </div>
-        </div>
-      `;
-
-      // Send email using centralized Resend
-      const result = await resend.emails.send({
-        from: emailConfig.fromName ? `${emailConfig.fromName} <${emailConfig.fromEmail}>` : emailConfig.fromEmail,
-        to: args.customerEmail,
-        replyTo: emailConfig.replyToEmail || emailConfig.fromEmail,
-        subject: personalizedSubject,
-        html: emailWithFormatting,
-      });
-
-      if (result.data?.id) {
-        return {
-          success: true,
-          emailId: result.data.id,
-        };
-      } else {
-        return {
-          success: false,
-          error: result.error?.message || "Failed to send email",
-        };
-      }
+      console.log(`[Email Sync] Complete! Updated: ${updated}, Failed: ${failed}`);
+      return null;
     } catch (error) {
-      console.error("Workflow email error:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error occurred",
-      };
+      console.error("[Email Sync] Fatal error:", error);
+      return null;
     }
   },
-}); 
+});

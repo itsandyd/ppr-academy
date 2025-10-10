@@ -33,10 +33,10 @@ export const getUserFromClerk = query({
 export const createOrUpdateUserFromClerk = mutation({
   args: {
     clerkId: v.string(),
-    email: v.optional(v.string()),
-    firstName: v.optional(v.string()),
-    lastName: v.optional(v.string()),
-    imageUrl: v.optional(v.string()),
+    email: v.union(v.string(), v.null()),
+    firstName: v.union(v.string(), v.null()),
+    lastName: v.union(v.string(), v.null()),
+    imageUrl: v.union(v.string(), v.null()),
   },
   returns: v.id("users"),
   handler: async (ctx, args) => {
@@ -49,25 +49,33 @@ export const createOrUpdateUserFromClerk = mutation({
 
     if (existingUser) {
       // Update existing user
+      const name = args.firstName && args.lastName 
+        ? `${args.firstName} ${args.lastName}` 
+        : args.firstName || args.lastName || args.email || "User";
+      
       await ctx.db.patch(existingUser._id, {
-        email: args.email,
-        firstName: args.firstName,
-        lastName: args.lastName,
-        imageUrl: args.imageUrl,
-        name: args.firstName && args.lastName ? `${args.firstName} ${args.lastName}` : args.firstName || args.lastName,
+        email: args.email || undefined,
+        firstName: args.firstName || undefined,
+        lastName: args.lastName || undefined,
+        imageUrl: args.imageUrl || undefined,
+        name,
       });
       console.log(`✅ Updated existing user: ${existingUser._id}`);
       return existingUser._id;
     }
 
     // Create new user
+    const name = args.firstName && args.lastName 
+      ? `${args.firstName} ${args.lastName}` 
+      : args.firstName || args.lastName || args.email || "User";
+    
     const userId = await ctx.db.insert("users", {
       clerkId: args.clerkId,
-      email: args.email,
-      firstName: args.firstName,
-      lastName: args.lastName,
-      imageUrl: args.imageUrl,
-      name: args.firstName && args.lastName ? `${args.firstName} ${args.lastName}` : args.firstName || args.lastName,
+      email: args.email || undefined,
+      firstName: args.firstName || undefined,
+      lastName: args.lastName || undefined,
+      imageUrl: args.imageUrl || undefined,
+      name,
       role: "SUBACCOUNT_USER", // Default role
       admin: false,
     });

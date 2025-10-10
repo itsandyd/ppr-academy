@@ -1,6 +1,7 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 import * as monetizationSchema from "./monetizationSchema";
+import * as emailSchema from "./emailSchema";
 
 export default defineSchema({
   // User Management
@@ -2014,4 +2015,42 @@ export default defineSchema({
     .index("by_type", ["type"])
     .index("by_reported_by", ["reportedBy"])
     .index("by_content_id", ["contentId"]),
+
+  // Resend Email System (New comprehensive system)
+  resendConnections: emailSchema.resendConnectionsTable
+    .index("by_type", ["type"])
+    .index("by_user", ["userId"])
+    .index("by_store", ["storeId"]),
+  
+  resendTemplates: emailSchema.resendTemplatesTable
+    .index("by_connection", ["connectionId"])
+    .index("by_type", ["type"])
+    .index("by_active", ["isActive"]),
+  
+  resendCampaigns: emailSchema.resendCampaignsTable
+    .index("by_connection", ["connectionId"])
+    .index("by_status", ["status"])
+    .index("by_target", ["targetAudience"]),
+  
+  resendAutomations: emailSchema.resendAutomationsTable
+    .index("by_connection", ["connectionId"])
+    .index("by_trigger", ["triggerType"])
+    .index("by_active", ["isActive"]),
+  
+  resendLogs: emailSchema.resendLogsTable
+    .index("by_connection", ["connectionId"])
+    .index("by_recipient", ["recipientEmail"])
+    .index("by_user", ["recipientUserId"])
+    .index("by_status", ["status"])
+    .index("by_campaign", ["campaignId"]),
+  
+  resendAudienceLists: emailSchema.resendAudienceListsTable
+    .index("by_connection", ["connectionId"]),
+  
+  resendPreferences: emailSchema.resendPreferencesTable
+    .index("by_user", ["userId"]),
+  
+  resendImportedContacts: emailSchema.resendImportedContactsTable
+    .index("by_connection", ["connectionId"])
+    .index("by_status", ["status"]),
 }); 
