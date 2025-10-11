@@ -180,12 +180,12 @@ export default function LibraryPage() {
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-              <Button size="lg" className="gap-2" onClick={() => window.location.href = '/marketplace'}>
+              <Button size="lg" className="gap-2" onClick={() => window.location.href = '/'}>
                 <BookOpen className="w-4 h-4" />
                 Browse Courses
               </Button>
-              <Button size="lg" variant="outline" className="gap-2" onClick={() => window.location.href = '/'}>
-                Explore Platform
+              <Button size="lg" variant="outline" className="gap-2" onClick={() => window.location.href = '/courses'}>
+                View All Courses
               </Button>
             </div>
           </div>
@@ -234,7 +234,11 @@ export default function LibraryPage() {
               <Play className="w-4 h-4 mr-2" />
               Continue Learning
             </Button>
-            <Button variant="ghost" className="text-white hover:bg-white/10">
+            <Button 
+              variant="ghost" 
+              className="text-white hover:bg-white/10"
+              onClick={() => window.location.href = '/'}
+            >
               <BookOpen className="w-4 h-4 mr-2" />
               Browse Courses
             </Button>
@@ -363,7 +367,7 @@ export default function LibraryPage() {
                   <p className="text-muted-foreground mb-4">
                     Start your learning journey by enrolling in a course.
                   </p>
-                  <Button>
+                  <Button onClick={() => window.location.href = '/'}>
                     <BookOpen className="w-4 h-4 mr-2" />
                     Browse Courses
                   </Button>
@@ -522,11 +526,22 @@ export default function LibraryPage() {
                 <Calendar className="w-4 h-4 mr-2" />
                 Schedule Study Time
               </Button>
-              <Button variant="outline" className="w-full justify-start">
+              <Button 
+                variant="outline" 
+                className="w-full justify-start"
+                onClick={() => window.location.href = '/'}
+              >
                 <BookOpen className="w-4 h-4 mr-2" />
                 Browse New Courses
               </Button>
-              <Button variant="outline" className="w-full justify-start">
+              <Button 
+                variant="outline" 
+                className="w-full justify-start"
+                onClick={() => {
+                  const certificatesTab = document.querySelector('[value="certificates"]') as HTMLElement;
+                  certificatesTab?.click();
+                }}
+              >
                 <Award className="w-4 h-4 mr-2" />
                 View Certificates
               </Button>

@@ -136,8 +136,8 @@ export function LibrarySidebar() {
   };
 
   return (
-    <Sidebar className="border-r border-border/50 bg-gradient-to-b from-background to-background/95">
-      <SidebarHeader className="border-b border-border/50 bg-card/50 backdrop-blur-sm">
+    <Sidebar className="border-r border-border/50 bg-white dark:bg-black">
+      <SidebarHeader className="border-b border-border/50 bg-white dark:bg-black backdrop-blur-sm">
         <motion.div 
           className="px-4 py-4"
           initial={{ opacity: 0, y: -10 }}
@@ -162,7 +162,7 @@ export function LibrarySidebar() {
           {/* Stats Info - More compact */}
           {userStats && (
             <motion.div 
-              className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-muted/30 border border-border/20 hover:bg-muted/50 transition-colors duration-200"
+              className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-900 border border-border/20 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors duration-200"
               whileHover={{ scale: 1.01 }}
               transition={{ type: "spring", stiffness: 400, damping: 25 }}
             >
@@ -182,7 +182,7 @@ export function LibrarySidebar() {
         </motion.div>
       </SidebarHeader>
 
-      <SidebarContent className="px-2 py-4 space-y-2">
+      <SidebarContent className="px-2 py-4 space-y-2 bg-white dark:bg-black">
         {navigationSections.map((section, sectionIndex) => (
           <motion.div
             key={section.label}
@@ -210,7 +210,7 @@ export function LibrarySidebar() {
                             group relative w-full transition-all duration-200 hover:scale-[1.02]
                             ${isActive 
                               ? 'bg-primary/10 text-primary border border-primary/20 shadow-sm' 
-                              : 'hover:bg-muted/70 hover:text-foreground'
+                              : 'hover:bg-gray-100 dark:hover:bg-gray-900 hover:text-foreground'
                             }
                           `}
                         >
@@ -230,7 +230,7 @@ export function LibrarySidebar() {
                               w-8 h-8 rounded-lg flex items-center justify-center mr-3 transition-all duration-200
                               ${isActive && item.gradient
                                 ? `bg-gradient-to-br ${item.gradient} text-white shadow-sm`
-                                : 'bg-muted/50 text-muted-foreground group-hover:bg-muted group-hover:text-foreground'
+                                : 'bg-gray-100 dark:bg-gray-900 text-muted-foreground group-hover:bg-gray-200 dark:group-hover:bg-gray-800 group-hover:text-foreground'
                               }
                             `}>
                               <Icon className="w-4 h-4" />
@@ -264,7 +264,7 @@ export function LibrarySidebar() {
         ))}
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-border/50 bg-card/30 backdrop-blur-sm">
+      <SidebarFooter className="border-t border-border/50 bg-white dark:bg-black backdrop-blur-sm">
         <div className="px-3 py-4 space-y-4">
           {/* Quick Actions */}
           <motion.div 
@@ -302,7 +302,7 @@ export function LibrarySidebar() {
 
           {/* User Account Section */}
           <motion.div 
-            className="flex items-center gap-3 p-2 rounded-lg bg-muted/30 border border-border/30"
+            className="flex items-center gap-3 p-2 rounded-lg bg-gray-100 dark:bg-gray-900 border border-border/30"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.3 }}
@@ -312,8 +312,8 @@ export function LibrarySidebar() {
                 appearance={{
                   elements: {
                     avatarBox: "w-8 h-8",
-                    userButtonPopoverCard: "shadow-lg border-border",
-                    userButtonPopoverActionButton: "text-foreground hover:bg-muted",
+                    userButtonPopoverCard: "shadow-lg border-border bg-white dark:bg-black",
+                    userButtonPopoverActionButton: "text-foreground hover:bg-gray-100 dark:hover:bg-gray-900",
                   }
                 }}
                 showName={false}

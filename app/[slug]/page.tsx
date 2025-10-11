@@ -4,7 +4,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { use } from "react";
 import { notFound } from "next/navigation";
-import { Loader2, Search, Filter, BookOpen, Play, Users, Star } from "lucide-react";
+import { Loader2, Search, Filter, BookOpen, Play, Users, Star, X, ExternalLink, Download, ShoppingCart } from "lucide-react";
 import { DesktopStorefront } from "./components/DesktopStorefront";
 import { MobileStorefront } from "./components/MobileStorefront";
 import { SubscriptionSection } from "./components/SubscriptionSection";
@@ -16,6 +16,13 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface StorefrontPageProps {
   params: Promise<{
@@ -38,6 +45,14 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedPriceRange, setSelectedPriceRange] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
+  
+  // Product modal state
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [productModalOpen, setProductModalOpen] = useState(false);
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasSubmittedEmail, setHasSubmittedEmail] = useState(false);
   
   useEffect(() => {
     const checkIsDesktop = () => {
@@ -202,18 +217,56 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
   const handleProductClick = (product: any) => {
     if (product.productType === "course") {
       router.push(`/courses/${product.slug}`);
-    } else if (product.downloadUrl) {
+    } else {
+      // Reset form state
+      setEmail("");
+      setName("");
+      setHasSubmittedEmail(false);
+      // Debug: Log product to check URL fields
+      console.log("🔍 Product clicked:", product.title);
+      console.log("📦 Full product data:", product);
+      console.log("📥 downloadUrl:", product.downloadUrl);
+      console.log("🔗 url:", product.url);
+      console.log("✅ Has downloadUrl:", !!product.downloadUrl);
+      console.log("✅ Has url:", !!product.url);
+      console.log("🔑 All product keys:", Object.keys(product));
+      // Open modal for digital products
+      setSelectedProduct(product);
+      setProductModalOpen(true);
+    }
+  };
+
+  const handleEmailSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !selectedProduct) return;
+
+    setIsSubmitting(true);
+    try {
+      // TODO: Submit to Convex to store lead/contact
+      console.log("Capturing lead:", { email, name, productId: selectedProduct._id, storeId: store?._id });
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      setHasSubmittedEmail(true);
+    } catch (error) {
+      console.error("Failed to capture email:", error);
+      alert("Something went wrong. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  const handleDownload = (product: any) => {
+    if (product.downloadUrl) {
       window.open(product.downloadUrl, '_blank');
     } else if (product.url) {
-      // For URL-based products (like links)
       window.open(product.url, '_blank');
-    } else if (product.price === 0) {
-      // Free products - might need special handling
-      alert("This is a free resource! Contact the creator for access details.");
-    } else {
-      // Paid products without direct URLs - redirect to a purchase/contact page
-      alert(`Interested in "${product.title}"? Contact ${displayName} for purchase details.`);
     }
+    // Don't close modal immediately
+    setTimeout(() => {
+      setProductModalOpen(false);
+    }, 1000);
   };
 
   const handleStartStorefront = () => {
@@ -651,6 +704,200 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
           />
         )}
       </div>
+
+      {/* Product Details Modal */}
+      <Dialog open={productModalOpen} onOpenChange={setProductModalOpen}>
+        <DialogContent className="max-w-2xl bg-white dark:bg-black">
+          {selectedProduct && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-2xl">{selectedProduct.title}</DialogTitle>
+                <DialogDescription>
+                  {selectedProduct.category}
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="space-y-6">
+                {/* Product Image */}
+                {selectedProduct.imageUrl && (
+                  <div className="relative h-64 rounded-lg overflow-hidden">
+                    <img
+                      src={selectedProduct.imageUrl}
+                      alt={selectedProduct.title}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+
+                {/* Price Badge */}
+                <div className="flex items-center gap-4">
+                  <Badge className="text-lg px-4 py-2">
+                    {selectedProduct.price === 0 ? "FREE" : `$${selectedProduct.price}`}
+                  </Badge>
+                  {selectedProduct.productType && (
+                    <Badge variant="outline">
+                      {selectedProduct.productType === "digitalProduct" ? "Digital Product" : selectedProduct.productType}
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Description */}
+                <div>
+                  <h3 className="font-semibold mb-2">About this product</h3>
+                  <p className="text-muted-foreground">
+                    {selectedProduct.description || "No description available."}
+                  </p>
+                </div>
+
+                {/* Opt-in Form or Action Buttons */}
+                {selectedProduct.price === 0 && !hasSubmittedEmail ? (
+                  /* Show opt-in form for free products */
+                  <div className="space-y-4">
+                    <div className="bg-gradient-to-r from-primary/10 to-primary/5 p-4 rounded-lg border border-primary/20">
+                      <h3 className="font-semibold mb-2">🎁 Get Free Access</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Enter your email to download this free resource instantly
+                      </p>
+                      <form onSubmit={handleEmailSubmit} className="space-y-3">
+                        <div>
+                          <label htmlFor="storefront-name" className="text-sm font-medium block mb-1">
+                            Name (optional)
+                          </label>
+                          <Input
+                            id="storefront-name"
+                            type="text"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            placeholder="Your name"
+                            className="bg-white dark:bg-black"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="storefront-email" className="text-sm font-medium block mb-1">
+                            Email <span className="text-red-500">*</span>
+                          </label>
+                          <Input
+                            id="storefront-email"
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="you@example.com"
+                            required
+                            className="bg-white dark:bg-black"
+                          />
+                        </div>
+                        <Button 
+                          type="submit"
+                          size="lg"
+                          className="w-full"
+                          disabled={isSubmitting || !email}
+                        >
+                          {isSubmitting ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Processing...
+                            </>
+                          ) : (
+                            <>
+                              <Download className="w-4 h-4 mr-2" />
+                              Get Free Access
+                            </>
+                          )}
+                        </Button>
+                      </form>
+                      <p className="text-xs text-muted-foreground text-center mt-3">
+                        🔒 We respect your privacy. Unsubscribe anytime.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  /* Show action buttons after email submission or for paid products */
+                  <div className="space-y-4">
+                    {hasSubmittedEmail && (
+                      <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+                        <p className="text-green-800 dark:text-green-200 text-sm font-medium">
+                          ✓ Email confirmed! Click below to access your download.
+                        </p>
+                      </div>
+                    )}
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      {(selectedProduct.downloadUrl || selectedProduct.url) ? (
+                        <>
+                          <Button 
+                            size="lg"
+                            className="flex-1"
+                            onClick={() => {
+                              console.log("Download button clicked for:", selectedProduct.title);
+                              console.log("downloadUrl:", selectedProduct.downloadUrl);
+                              console.log("url:", selectedProduct.url);
+                              handleDownload(selectedProduct);
+                            }}
+                          >
+                            {selectedProduct.downloadUrl ? (
+                              <>
+                                <Download className="w-4 h-4 mr-2" />
+                                {selectedProduct.buttonLabel || "Download Now"}
+                              </>
+                            ) : selectedProduct.url ? (
+                              <>
+                                <ExternalLink className="w-4 h-4 mr-2" />
+                                {selectedProduct.buttonLabel || "Visit Link"}
+                              </>
+                            ) : (
+                              <>
+                                <ExternalLink className="w-4 h-4 mr-2" />
+                                Access Product
+                              </>
+                            )}
+                          </Button>
+                          {selectedProduct.price > 0 && (
+                            <Button 
+                              variant="outline"
+                              size="lg"
+                              onClick={() => {
+                                alert(`To purchase "${selectedProduct.title}", please contact ${displayName} directly.`);
+                              }}
+                            >
+                              <ShoppingCart className="w-4 h-4 mr-2" />
+                              Purchase
+                            </Button>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-sm text-muted-foreground mb-2">
+                            ⚠️ Debug: No URL found for this product
+                          </p>
+                          <Button 
+                            size="lg"
+                            className="flex-1"
+                            onClick={() => {
+                              const message = selectedProduct.price === 0 
+                                ? `I'm interested in the free resource "${selectedProduct.title}".`
+                                : `I'm interested in purchasing "${selectedProduct.title}" for $${selectedProduct.price}.`;
+                              alert(`${message}\n\nPlease contact ${displayName} for more information.`);
+                              setProductModalOpen(false);
+                            }}
+                          >
+                            Contact {displayName}
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Additional Info */}
+                <div className="pt-4 border-t">
+                  <p className="text-sm text-muted-foreground">
+                    💡 This product is offered by <span className="font-semibold text-foreground">{displayName}</span>
+                  </p>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

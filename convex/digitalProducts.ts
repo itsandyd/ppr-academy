@@ -384,6 +384,10 @@ export const getAllPublishedProducts = query({
     price: v.number(),
     imageUrl: v.optional(v.string()),
     downloadUrl: v.optional(v.string()),
+    url: v.optional(v.string()), // Added URL field for redirects
+    buttonLabel: v.optional(v.string()), // Added button label
+    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"), v.literal("coaching"))), // Added product type
+    style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))), // Added style
     category: v.optional(v.string()),
     storeId: v.string(), // Store as string to match schema
     published: v.boolean(),
@@ -437,6 +441,10 @@ export const getAllPublishedProducts = query({
           price: product.price,
           imageUrl: product.imageUrl,
           downloadUrl: product.downloadUrl,
+          url: product.url, // ← Added URL field for redirects
+          buttonLabel: product.buttonLabel, // ← Added button label
+          productType: product.productType, // ← Added product type
+          style: product.style, // ← Added style
           category: product.productType,
           storeId: product.storeId,
           published: product.isPublished || false,

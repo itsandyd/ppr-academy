@@ -34,13 +34,13 @@ export function LibrarySidebarWrapper({ children }: LibrarySidebarWrapperProps) 
       <LibrarySidebar />
       <main className="flex-1 flex flex-col w-full">
         {/* Top Bar */}
-        <header className="flex h-16 shrink-0 items-center gap-4 px-4 border-b border-border bg-card">
+        <header className="flex h-16 shrink-0 items-center gap-4 px-4 border-b border-border bg-white dark:bg-black">
           {/* Mobile sidebar trigger */}
           <SidebarTrigger className="-ml-1 md:hidden" />
           
           {/* Page title */}
           <div className="flex-1">
-            <h1 className="text-lg font-semibold text-card-foreground">
+            <h1 className="text-lg font-semibold text-foreground">
               {getPageTitle()}
             </h1>
           </div>
@@ -51,7 +51,7 @@ export function LibrarySidebarWrapper({ children }: LibrarySidebarWrapperProps) 
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input 
                 placeholder="Search your library..." 
-                className="pl-10 bg-background"
+                className="pl-10 bg-white dark:bg-black"
               />
             </div>
           </div>
@@ -85,7 +85,7 @@ export function LibrarySidebarWrapper({ children }: LibrarySidebarWrapperProps) 
         </header>
 
         {/* Page Content */}
-        <div className="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full bg-background">
+        <div className="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full bg-white dark:bg-black">
           {children}
         </div>
       </main>
