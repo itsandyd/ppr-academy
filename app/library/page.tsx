@@ -3,7 +3,7 @@
 import { CourseCardEnhanced } from "@/components/ui/course-card-enhanced";
 import { CertificateCard } from "@/components/certificates/CertificateCard";
 import { useUser } from "@clerk/nextjs";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -26,18 +26,38 @@ import {
   ChevronRight,
   Loader2
 } from "lucide-react";
+import { useEffect } from "react";
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
 
 export default function LibraryPage() {
-  const { user } = useUser();
+  const { user, isLoaded: isUserLoaded } = useUser();
+  const createUser = useMutation(api.users.createOrUpdateUserFromClerk);
   
   // Get Convex user
   const convexUser = useQuery(
     api.users.getUserFromClerk,
     user?.id ? { clerkId: user.id } : "skip"
   );
+
+  // Auto-create user in Convex if they don't exist
+  useEffect(() => {
+    if (isUserLoaded && user && convexUser === null) {
+      console.log("🔄 Auto-creating user in Convex...");
+      createUser({
+        clerkId: user.id,
+        email: user.primaryEmailAddress?.emailAddress || null,
+        firstName: user.firstName || null,
+        lastName: user.lastName || null,
+        imageUrl: user.imageUrl || null,
+      }).then(() => {
+        console.log("✅ User auto-created successfully");
+      }).catch((error) => {
+        console.error("❌ Failed to auto-create user:", error);
+      });
+    }
+  }, [isUserLoaded, user, convexUser, createUser]);
 
   // Fetch user's enrolled courses
   const enrolledCourses = useQuery(
@@ -90,8 +110,11 @@ export default function LibraryPage() {
 
   const levelProgress = (userData.xp / userData.nextLevelXp) * 100;
 
-  // Loading state
-  const isLoading = enrolledCourses === undefined || userStats === undefined || recentActivity === undefined;
+  // Loading state - check if Clerk user is loaded and Convex user exists
+  const isLoadingUser = !isUserLoaded || (user && convexUser === undefined);
+  const isCreatingUser = isUserLoaded && user && convexUser === null; // User exists in Clerk but not in Convex (being created)
+  const isLoadingData = convexUser && (enrolledCourses === undefined || userStats === undefined || recentActivity === undefined);
+  const isLoading = isLoadingUser || isCreatingUser || isLoadingData;
   
   if (isLoading) {
     return (
@@ -114,8 +137,13 @@ export default function LibraryPage() {
             </Card>
           ))}
         </div>
-        <div className="flex items-center justify-center py-12">
+        <div className="flex flex-col items-center justify-center py-12 gap-4">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          {isCreatingUser && (
+            <p className="text-sm text-muted-foreground">
+              Setting up your library...
+            </p>
+          )}
         </div>
       </div>
     );
