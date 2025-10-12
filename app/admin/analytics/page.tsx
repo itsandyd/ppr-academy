@@ -3,6 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useUser } from "@clerk/nextjs";
 import {
   Users,
   BookOpen,
@@ -35,14 +36,37 @@ import {
 const COLORS = ['#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#ef4444'];
 
 export default function AdminAnalyticsPage() {
+  const { user } = useUser();
+
   // Fetch analytics data
-  const overview = useQuery(api.adminAnalytics.getPlatformOverview);
-  const revenueData = useQuery(api.adminAnalytics.getRevenueOverTime);
-  const topCourses = useQuery(api.adminAnalytics.getTopCourses, { limit: 5 });
-  const topCreators = useQuery(api.adminAnalytics.getTopCreators, { limit: 5 });
-  const userGrowth = useQuery(api.adminAnalytics.getUserGrowth);
-  const categoryDist = useQuery(api.adminAnalytics.getCategoryDistribution);
-  const recentActivity = useQuery(api.adminAnalytics.getRecentActivity);
+  const overview = useQuery(
+    api.adminAnalytics.getPlatformOverview,
+    user?.id ? { clerkId: user.id } : "skip"
+  );
+  const revenueData = useQuery(
+    api.adminAnalytics.getRevenueOverTime,
+    user?.id ? { clerkId: user.id } : "skip"
+  );
+  const topCourses = useQuery(
+    api.adminAnalytics.getTopCourses,
+    user?.id ? { clerkId: user.id, limit: 5 } : "skip"
+  );
+  const topCreators = useQuery(
+    api.adminAnalytics.getTopCreators,
+    user?.id ? { clerkId: user.id, limit: 5 } : "skip"
+  );
+  const userGrowth = useQuery(
+    api.adminAnalytics.getUserGrowth,
+    user?.id ? { clerkId: user.id } : "skip"
+  );
+  const categoryDist = useQuery(
+    api.adminAnalytics.getCategoryDistribution,
+    user?.id ? { clerkId: user.id } : "skip"
+  );
+  const recentActivity = useQuery(
+    api.adminAnalytics.getRecentActivity,
+    user?.id ? { clerkId: user.id } : "skip"
+  );
 
   if (!overview || !revenueData || !topCourses || !topCreators || !userGrowth || !categoryDist || !recentActivity) {
     return (
@@ -139,32 +163,42 @@ export default function AdminAnalyticsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">Platform Analytics</h1>
-        <p className="text-muted-foreground">
-          Comprehensive insights into platform performance and user behavior
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-4xl font-bold tracking-tight">Platform Analytics</h1>
+          <p className="text-muted-foreground mt-2 text-lg">
+            Comprehensive insights into platform performance and user behavior
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <p className="text-sm text-muted-foreground">Total Revenue</p>
+            <p className="text-2xl font-bold text-purple-600">
+              ${overview.totalRevenue.toLocaleString()}
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {metrics.map((metric) => (
-          <Card key={metric.title}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className={`p-2 rounded-lg ${metric.bgColor}`}>
-                  <metric.icon className={`w-5 h-5 ${metric.color}`} />
+          <Card key={metric.title} className="border-2 hover:shadow-lg transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-start justify-between mb-3">
+                <div className={`rounded-full p-3 ${metric.bgColor}`}>
+                  <metric.icon className={`w-6 h-6 ${metric.color}`} />
                 </div>
-                <div className="flex items-center gap-1 text-sm font-medium text-green-600">
-                  <ArrowUp className="w-4 h-4" />
+                <div className="flex items-center gap-1 text-xs font-semibold text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-full">
+                  <ArrowUp className="w-3 h-3" />
                   {metric.change}
                 </div>
               </div>
-              <div>
-                <p className="text-2xl font-bold mb-1">{metric.value}</p>
-                <p className="text-xs text-muted-foreground">{metric.title}</p>
+              <div className="space-y-1">
+                <p className="text-3xl font-bold tracking-tight">{metric.value}</p>
+                <p className="text-sm text-muted-foreground font-medium">{metric.title}</p>
               </div>
             </CardContent>
           </Card>
@@ -174,9 +208,9 @@ export default function AdminAnalyticsPage() {
       {/* Charts Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Revenue Over Time */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Revenue Trend (Last 30 Days)</CardTitle>
+        <Card className="border-2">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl font-bold">Revenue Trend (Last 30 Days)</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -206,9 +240,9 @@ export default function AdminAnalyticsPage() {
         </Card>
 
         {/* User Growth */}
-        <Card>
-          <CardHeader>
-            <CardTitle>User Growth (Last 30 Days)</CardTitle>
+        <Card className="border-2">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl font-bold">User Growth (Last 30 Days)</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -245,9 +279,9 @@ export default function AdminAnalyticsPage() {
       {/* Charts Row 2 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Category Distribution */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Course Categories</CardTitle>
+        <Card className="border-2">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl font-bold">Course Categories</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -273,25 +307,25 @@ export default function AdminAnalyticsPage() {
         </Card>
 
         {/* Top Courses */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Top Performing Courses</CardTitle>
+        <Card className="border-2">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl font-bold">Top Performing Courses</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-3">
               {topCourses.map((course, index) => (
-                <div key={course.courseId} className="flex items-center gap-3">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/20 flex items-center justify-center font-bold text-purple-600">
+                <div key={course.courseId} className="flex items-center gap-4 p-3 rounded-lg hover:bg-muted/50 transition-colors">
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center font-bold text-purple-600 text-lg">
                     {index + 1}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">{course.title}</p>
+                    <p className="font-semibold truncate">{course.title}</p>
                     <p className="text-xs text-muted-foreground">
                       {course.enrollments} enrollments · {course.views} views
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold text-green-600">
+                    <p className="font-bold text-green-600 text-lg">
                       ${course.revenue.toLocaleString()}
                     </p>
                     <p className="text-xs text-muted-foreground">
@@ -308,9 +342,9 @@ export default function AdminAnalyticsPage() {
       {/* Charts Row 3 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top Creators */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Top Creators by Revenue</CardTitle>
+        <Card className="border-2">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl font-bold">Top Creators by Revenue</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -327,23 +361,23 @@ export default function AdminAnalyticsPage() {
         </Card>
 
         {/* Recent Activity */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
+        <Card className="border-2">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl font-bold">Recent Activity</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3 max-h-[300px] overflow-y-auto">
+            <div className="space-y-1 max-h-[300px] overflow-y-auto">
               {recentActivity.slice(0, 10).map((activity, index) => (
-                <div key={index} className="flex items-start gap-3 text-sm">
+                <div key={index} className="flex items-start gap-3 text-sm p-2 rounded-lg hover:bg-muted/50 transition-colors">
                   <div 
-                    className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
+                    className={`w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0 ${
                       activity.type === "enrollment" ? "bg-green-500" :
                       activity.type === "course_published" ? "bg-blue-500" :
                       "bg-gray-500"
                     }`}
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="truncate">{activity.description}</p>
+                    <p className="truncate font-medium">{activity.description}</p>
                     <p className="text-xs text-muted-foreground">
                       {formatTimeAgo(activity.timestamp)}
                     </p>
