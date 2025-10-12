@@ -48,6 +48,18 @@ export default defineSchema({
   .index("by_clerkId", ["clerkId"])
   .index("by_discordId", ["discordId"]),
 
+  // Sync Metadata (for tracking sync operations)
+  syncMetadata: defineTable({
+    type: v.string(), // e.g., "clerk_sync"
+    lastSyncTime: v.number(),
+    totalClerkUsers: v.optional(v.number()),
+    totalConvexUsers: v.optional(v.number()),
+    usersAdded: v.optional(v.number()),
+    usersUpdated: v.optional(v.number()),
+    status: v.string(), // "completed", "failed", "in_progress"
+  })
+  .index("by_type", ["type"]),
+
   // Course Management
   courses: defineTable({
     userId: v.string(),

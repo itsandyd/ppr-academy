@@ -6,7 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useUser } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 import {
   Search,
   UserPlus,
@@ -15,18 +17,117 @@ import {
   Shield,
   Ban,
   CheckCircle,
+  Loader2,
+  Lock,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
+
+const USERS_PER_PAGE = 20;
 
 export default function UsersManagementPage() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [paginationCursor, setPaginationCursor] = useState<string | null>(null);
+  const [cursorHistory, setCursorHistory] = useState<(string | null)[]>([null]);
+  const [currentPage, setCurrentPage] = useState(0);
+  const { user, isLoaded } = useUser();
+  const router = useRouter();
   
-  // Fetch all users
-  const users = useQuery(api.users.getAllUsers) || [];
+  // Check if user is admin
+  const adminCheck = useQuery(
+    api.users.checkIsAdmin,
+    user?.id ? { clerkId: user.id } : "skip"
+  );
+  
+  // Fetch paginated users (only if admin)
+  const usersResult = useQuery(
+    api.users.getAllUsers,
+    user?.id && adminCheck?.isAdmin 
+      ? { 
+          clerkId: user.id,
+          paginationOpts: {
+            numItems: USERS_PER_PAGE,
+            cursor: paginationCursor,
+          }
+        } 
+      : "skip"
+  );
+
+  // Fetch user statistics
+  const userStats = useQuery(
+    api.users.getUserStats,
+    user?.id && adminCheck?.isAdmin ? { clerkId: user.id } : "skip"
+  );
+
+  const users = usersResult?.page || [];
+
+  // Redirect non-admin users
+  useEffect(() => {
+    if (isLoaded && !user) {
+      router.push("/sign-in?redirect_url=/admin/users");
+    } else if (adminCheck !== undefined && !adminCheck.isAdmin) {
+      router.push("/");
+    }
+  }, [isLoaded, user, adminCheck, router]);
+
+  // Show loading state
+  if (!isLoaded || adminCheck === undefined) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center space-y-4">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
+          <p className="text-muted-foreground">Loading users...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show access denied
+  if (!adminCheck.isAdmin) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Card className="max-w-md">
+          <CardContent className="pt-6">
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto">
+                <Lock className="w-8 h-8 text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
+                <p className="text-muted-foreground">
+                  You don't have permission to access user management.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   const filteredUsers = users.filter((user) =>
     user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.email?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Pagination handlers
+  const handleNextPage = () => {
+    if (usersResult && !usersResult.isDone) {
+      const newCursor = usersResult.continueCursor;
+      setCursorHistory([...cursorHistory, newCursor]);
+      setPaginationCursor(newCursor);
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const handlePreviousPage = () => {
+    if (currentPage > 0) {
+      const newHistory = cursorHistory.slice(0, -1);
+      setCursorHistory(newHistory);
+      setPaginationCursor(newHistory[newHistory.length - 1]);
+      setCurrentPage(currentPage - 1);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -48,30 +149,30 @@ export default function UsersManagementPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold">{users.length}</div>
+            <div className="text-2xl font-bold">{userStats?.total || 0}</div>
             <div className="text-sm text-muted-foreground">Total Users</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">
-              {users.filter(u => u.role === "creator").length}
+              {userStats?.creators || 0}
             </div>
-            <div className="text-sm text-muted-foreground">Creators</div>
+            <div className="text-sm text-muted-foreground">Owners & Admins</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">
-              {users.filter(u => u.role === "student").length}
+              {userStats?.students || 0}
             </div>
-            <div className="text-sm text-muted-foreground">Students</div>
+            <div className="text-sm text-muted-foreground">Users & Guests</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">
-              {users.filter(u => u.emailVerified).length}
+              {userStats?.verified || 0}
             </div>
             <div className="text-sm text-muted-foreground">Verified</div>
           </CardContent>
@@ -124,8 +225,15 @@ export default function UsersManagementPage() {
                 </div>
 
                 <div className="flex items-center gap-4">
-                  <Badge variant={user.role === "creator" ? "default" : "secondary"}>
-                    {user.role || "student"}
+                  <Badge variant={
+                    user.role === "AGENCY_OWNER" || user.role === "AGENCY_ADMIN" 
+                      ? "default" 
+                      : "secondary"
+                  }>
+                    {user.role === "AGENCY_OWNER" ? "Owner" :
+                     user.role === "AGENCY_ADMIN" ? "Admin" :
+                     user.role === "SUBACCOUNT_GUEST" ? "Guest" :
+                     "User"}
                   </Badge>
                   
                   {user.stripeConnectAccountId && (
@@ -145,6 +253,35 @@ export default function UsersManagementPage() {
               </div>
             )}
           </div>
+
+          {/* Pagination Controls */}
+          {!searchQuery && (
+            <div className="flex items-center justify-between pt-4 border-t">
+              <div className="text-sm text-muted-foreground">
+                Page {currentPage + 1} • Showing {filteredUsers.length} users
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePreviousPage}
+                  disabled={currentPage === 0}
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleNextPage}
+                  disabled={usersResult?.isDone}
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -12,13 +12,82 @@ import {
   Activity,
   Shield,
   AlertCircle,
+  Loader2,
+  Lock,
 } from "lucide-react";
+import { useUser } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function AdminDashboard() {
-  // Fetch platform-wide statistics
-  const overview = useQuery(api.adminAnalytics.getPlatformOverview);
-  const reportStats = useQuery(api.reports.getReportStats);
-  const recentActivity = useQuery(api.adminAnalytics.getRecentActivity);
+  const { user, isLoaded } = useUser();
+  const router = useRouter();
+  
+  // Check if user is admin
+  const adminCheck = useQuery(
+    api.users.checkIsAdmin,
+    user?.id ? { clerkId: user.id } : "skip"
+  );
+  
+  // Fetch platform-wide statistics (only if admin)
+  const overview = useQuery(
+    api.adminAnalytics.getPlatformOverview,
+    user?.id && adminCheck?.isAdmin ? { clerkId: user.id } : "skip"
+  );
+  const reportStats = useQuery(
+    api.reports.getReportStats,
+    user?.id && adminCheck?.isAdmin ? { clerkId: user.id } : "skip"
+  );
+  const recentActivity = useQuery(
+    api.adminAnalytics.getRecentActivity,
+    user?.id && adminCheck?.isAdmin ? { clerkId: user.id } : "skip"
+  );
+
+  // Redirect non-admin users
+  useEffect(() => {
+    if (isLoaded && !user) {
+      // Not signed in, redirect to sign-in page
+      router.push("/sign-in?redirect_url=/admin");
+    } else if (adminCheck !== undefined && !adminCheck.isAdmin) {
+      // Signed in but not admin, redirect to home
+      router.push("/");
+    }
+  }, [isLoaded, user, adminCheck, router]);
+
+  // Show loading state while checking authentication
+  if (!isLoaded || adminCheck === undefined) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center space-y-4">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
+          <p className="text-muted-foreground">Verifying access...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show access denied for non-admins
+  if (!adminCheck.isAdmin) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Card className="max-w-md">
+          <CardContent className="pt-6">
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto">
+                <Lock className="w-8 h-8 text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
+                <p className="text-muted-foreground">
+                  You don't have permission to access the admin dashboard.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
   
   const stats = {
     totalUsers: overview?.totalUsers || 0,

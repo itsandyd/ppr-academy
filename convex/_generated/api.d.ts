@@ -25,6 +25,7 @@ import type * as audioGenerationNode from "../audioGenerationNode.js";
 import type * as bundles from "../bundles.js";
 import type * as certificates from "../certificates.js";
 import type * as certificatesSchema from "../certificatesSchema.js";
+import type * as clerkSync from "../clerkSync.js";
 import type * as coachingDiscordActions from "../coachingDiscordActions.js";
 import type * as coachingProducts from "../coachingProducts.js";
 import type * as coachingSessionManager from "../coachingSessionManager.js";
@@ -96,6 +97,7 @@ declare const fullApi: ApiFromModules<{
   bundles: typeof bundles;
   certificates: typeof certificates;
   certificatesSchema: typeof certificatesSchema;
+  clerkSync: typeof clerkSync;
   coachingDiscordActions: typeof coachingDiscordActions;
   coachingProducts: typeof coachingProducts;
   coachingSessionManager: typeof coachingSessionManager;

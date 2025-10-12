@@ -92,7 +92,7 @@ export const processCampaign = internalAction({
         const batch = recipients.slice(i, i + batchSize);
 
         const results = await Promise.allSettled(
-          batch.map(async (recipient) => {
+          batch.map(async (recipient: any) => {
             try {
               const result = await resend.emails.send({
                 from: connection.fromName 
@@ -143,7 +143,7 @@ export const processCampaign = internalAction({
         );
 
         const successCount = results.filter(
-          (r) => r.status === "fulfilled" && (r.value as any).success
+          (r: any) => r.status === "fulfilled" && (r.value as any).success
         ).length;
         sentCount += successCount;
 

@@ -1,9 +1,28 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 
-// Get all reports by status
+// Helper function to verify admin access
+async function verifyAdmin(ctx: any, clerkId?: string) {
+  if (!clerkId) {
+    throw new Error("Unauthorized: Authentication required");
+  }
+
+  const user = await ctx.db
+    .query("users")
+    .withIndex("by_clerkId", (q: any) => q.eq("clerkId", clerkId))
+    .unique();
+
+  if (!user || user.admin !== true) {
+    throw new Error("Unauthorized: Admin access required");
+  }
+
+  return user;
+}
+
+// Get all reports by status (admin only)
 export const getReportsByStatus = query({
   args: {
+    clerkId: v.optional(v.string()),
     status: v.union(
       v.literal("pending"),
       v.literal("reviewed"),
@@ -13,6 +32,9 @@ export const getReportsByStatus = query({
   },
   returns: v.array(v.any()),
   handler: async (ctx, args) => {
+    // Verify admin access
+    await verifyAdmin(ctx, args.clerkId);
+    
     return await ctx.db
       .query("reports")
       .withIndex("by_status", (q) => q.eq("status", args.status))
@@ -21,18 +43,25 @@ export const getReportsByStatus = query({
   },
 });
 
-// Get all reports (for admin overview)
+// Get all reports (admin only)
 export const getAllReports = query({
-  args: {},
+  args: {
+    clerkId: v.optional(v.string()),
+  },
   returns: v.array(v.any()),
-  handler: async (ctx) => {
+  handler: async (ctx, args) => {
+    // Verify admin access
+    await verifyAdmin(ctx, args.clerkId);
+    
     return await ctx.db.query("reports").order("desc").collect();
   },
 });
 
-// Get report statistics
+// Get report statistics (admin only)
 export const getReportStats = query({
-  args: {},
+  args: {
+    clerkId: v.optional(v.string()),
+  },
   returns: v.object({
     pending: v.number(),
     reviewed: v.number(),
@@ -40,7 +69,10 @@ export const getReportStats = query({
     dismissed: v.number(),
     total: v.number(),
   }),
-  handler: async (ctx) => {
+  handler: async (ctx, args) => {
+    // Verify admin access
+    await verifyAdmin(ctx, args.clerkId);
+    
     const allReports = await ctx.db.query("reports").collect();
 
     return {
@@ -87,14 +119,18 @@ export const createReport = mutation({
   },
 });
 
-// Update report status to "reviewed"
+// Update report status to "reviewed" (admin only)
 export const markAsReviewed = mutation({
   args: {
+    clerkId: v.string(),
     reportId: v.id("reports"),
     reviewedBy: v.string(),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    // Verify admin access
+    await verifyAdmin(ctx, args.clerkId);
+    
     await ctx.db.patch(args.reportId, {
       status: "reviewed",
       reviewedBy: args.reviewedBy,
@@ -104,15 +140,19 @@ export const markAsReviewed = mutation({
   },
 });
 
-// Update report status to "resolved" (content removed)
+// Update report status to "resolved" (admin only)
 export const markAsResolved = mutation({
   args: {
+    clerkId: v.string(),
     reportId: v.id("reports"),
     reviewedBy: v.string(),
     resolution: v.optional(v.string()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    // Verify admin access
+    await verifyAdmin(ctx, args.clerkId);
+    
     await ctx.db.patch(args.reportId, {
       status: "resolved",
       reviewedBy: args.reviewedBy,
@@ -123,15 +163,19 @@ export const markAsResolved = mutation({
   },
 });
 
-// Update report status to "dismissed"
+// Update report status to "dismissed" (admin only)
 export const markAsDismissed = mutation({
   args: {
+    clerkId: v.string(),
     reportId: v.id("reports"),
     reviewedBy: v.string(),
     resolution: v.optional(v.string()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    // Verify admin access
+    await verifyAdmin(ctx, args.clerkId);
+    
     await ctx.db.patch(args.reportId, {
       status: "dismissed",
       reviewedBy: args.reviewedBy,
@@ -142,13 +186,17 @@ export const markAsDismissed = mutation({
   },
 });
 
-// Delete a report (admin only - use sparingly)
+// Delete a report (admin only)
 export const deleteReport = mutation({
   args: {
+    clerkId: v.string(),
     reportId: v.id("reports"),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    // Verify admin access
+    await verifyAdmin(ctx, args.clerkId);
+    
     await ctx.db.delete(args.reportId);
     return null;
   },

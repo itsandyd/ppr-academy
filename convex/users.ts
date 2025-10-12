@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { query, mutation, internalMutation, internalQuery } from "./_generated/server";
+import { paginationOptsValidator } from "convex/server";
 import { Doc, Id } from "./_generated/dataModel";
 
 // Get or create user from Clerk ID
@@ -170,11 +171,90 @@ export const deleteUser = mutation({
   },
 });
 
-// Get all users (admin only)
-export const getAllUsers = query({
+// Check if current user is admin
+export const checkIsAdmin = query({
+  args: { clerkId: v.string() },
+  returns: v.object({
+    isAdmin: v.boolean(),
+    user: v.union(v.any(), v.null()),
+  }),
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .unique();
+
+    if (!user) {
+      return { isAdmin: false, user: null };
+    }
+
+    return {
+      isAdmin: user.admin === true,
+      user,
+    };
+  },
+});
+
+// Internal query to get all users (use getAdminUsers for public access)
+const getAllUsersInternal = internalQuery({
   args: {},
   returns: v.array(v.any()),
   handler: async (ctx) => {
     return await ctx.db.query("users").collect();
+  },
+});
+
+// Get all users (admin only - with authorization and pagination)
+export const getAllUsers = query({
+  args: { 
+    clerkId: v.string(),
+    paginationOpts: paginationOptsValidator,
+  },
+  returns: v.any(),
+  handler: async (ctx, args) => {
+    // Verify admin status
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .unique();
+
+    if (!user || user.admin !== true) {
+      throw new Error("Unauthorized: Admin access required");
+    }
+
+    // Admin verified, return paginated users
+    return await ctx.db.query("users").order("desc").paginate(args.paginationOpts);
+  },
+});
+
+// Get user statistics (admin only)
+export const getUserStats = query({
+  args: { clerkId: v.string() },
+  returns: v.object({
+    total: v.number(),
+    creators: v.number(),
+    students: v.number(),
+    verified: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    // Verify admin status
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .unique();
+
+    if (!user || user.admin !== true) {
+      throw new Error("Unauthorized: Admin access required");
+    }
+
+    // Get all users for stats
+    const allUsers = await ctx.db.query("users").collect();
+    
+    return {
+      total: allUsers.length,
+      creators: allUsers.filter(u => u.role === "AGENCY_OWNER" || u.role === "AGENCY_ADMIN").length,
+      students: allUsers.filter(u => u.role === "SUBACCOUNT_USER" || u.role === "SUBACCOUNT_GUEST").length,
+      verified: allUsers.filter(u => u.emailVerified).length,
+    };
   },
 });

@@ -1,9 +1,29 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
 
+// Helper function to verify admin access
+async function verifyAdmin(ctx: any, clerkId?: string) {
+  if (!clerkId) {
+    throw new Error("Unauthorized: Authentication required");
+  }
+
+  const user = await ctx.db
+    .query("users")
+    .withIndex("by_clerkId", (q: any) => q.eq("clerkId", clerkId))
+    .unique();
+
+  if (!user || user.admin !== true) {
+    throw new Error("Unauthorized: Admin access required");
+  }
+
+  return user;
+}
+
 // Get platform-wide overview statistics
 export const getPlatformOverview = query({
-  args: {},
+  args: {
+    clerkId: v.optional(v.string()),
+  },
   returns: v.object({
     totalUsers: v.number(),
     totalCourses: v.number(),
@@ -14,7 +34,10 @@ export const getPlatformOverview = query({
     totalEnrollments: v.number(),
     totalStores: v.number(),
   }),
-  handler: async (ctx) => {
+  handler: async (ctx, args) => {
+    // Verify admin access
+    await verifyAdmin(ctx, args.clerkId);
+    
     // Fetch all data
     const users = await ctx.db.query("users").collect();
     const courses = await ctx.db.query("courses").collect();
@@ -46,12 +69,16 @@ export const getPlatformOverview = query({
 
 // Get revenue data over time (last 30 days)
 export const getRevenueOverTime = query({
-  args: {},
+  args: {
+    clerkId: v.optional(v.string()),
+  },
   returns: v.array(v.object({
     date: v.string(),
     revenue: v.number(),
   })),
-  handler: async (ctx) => {
+  handler: async (ctx, args) => {
+    // Verify admin access
+    await verifyAdmin(ctx, args.clerkId);
     // Get all course analytics
     const courseAnalytics = await ctx.db.query("courseAnalytics").collect();
     
@@ -79,6 +106,7 @@ export const getRevenueOverTime = query({
 // Get top performing courses
 export const getTopCourses = query({
   args: {
+    clerkId: v.optional(v.string()),
     limit: v.optional(v.number()),
   },
   returns: v.array(v.object({
@@ -90,6 +118,8 @@ export const getTopCourses = query({
     views: v.number(),
   })),
   handler: async (ctx, args) => {
+    // Verify admin access
+    await verifyAdmin(ctx, args.clerkId);
     const limit = args.limit || 10;
     const courseAnalytics = await ctx.db.query("courseAnalytics").collect();
     
@@ -120,6 +150,7 @@ export const getTopCourses = query({
 // Get top creators by revenue
 export const getTopCreators = query({
   args: {
+    clerkId: v.optional(v.string()),
     limit: v.optional(v.number()),
   },
   returns: v.array(v.object({
@@ -130,6 +161,8 @@ export const getTopCreators = query({
     totalEnrollments: v.number(),
   })),
   handler: async (ctx, args) => {
+    // Verify admin access
+    await verifyAdmin(ctx, args.clerkId);
     const limit = args.limit || 10;
     const courses = await ctx.db.query("courses").collect();
     const courseAnalytics = await ctx.db.query("courseAnalytics").collect();
@@ -181,13 +214,17 @@ export const getTopCreators = query({
 
 // Get user growth over time (last 30 days)
 export const getUserGrowth = query({
-  args: {},
+  args: {
+    clerkId: v.optional(v.string()),
+  },
   returns: v.array(v.object({
     date: v.string(),
     newUsers: v.number(),
     totalUsers: v.number(),
   })),
-  handler: async (ctx) => {
+  handler: async (ctx, args) => {
+    // Verify admin access
+    await verifyAdmin(ctx, args.clerkId);
     const users = await ctx.db.query("users").collect();
     
     // Group users by creation date
@@ -221,13 +258,17 @@ export const getUserGrowth = query({
 
 // Get category distribution
 export const getCategoryDistribution = query({
-  args: {},
+  args: {
+    clerkId: v.optional(v.string()),
+  },
   returns: v.array(v.object({
     category: v.string(),
     count: v.number(),
     revenue: v.number(),
   })),
-  handler: async (ctx) => {
+  handler: async (ctx, args) => {
+    // Verify admin access
+    await verifyAdmin(ctx, args.clerkId);
     const courses = await ctx.db.query("courses").collect();
     const courseAnalytics = await ctx.db.query("courseAnalytics").collect();
     
@@ -257,14 +298,18 @@ export const getCategoryDistribution = query({
 
 // Get recent activity (last 50 events)
 export const getRecentActivity = query({
-  args: {},
+  args: {
+    clerkId: v.optional(v.string()),
+  },
   returns: v.array(v.object({
     type: v.string(),
     description: v.string(),
     timestamp: v.number(),
     userId: v.optional(v.string()),
   })),
-  handler: async (ctx) => {
+  handler: async (ctx, args) => {
+    // Verify admin access
+    await verifyAdmin(ctx, args.clerkId);
     const activities = [];
     
     // Get recent enrollments
