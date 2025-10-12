@@ -330,3 +330,317 @@ export const resendImportedContactsTable = defineTable({
   updatedAt: v.number(),
 });
 
+// ============================================================================
+// ADVANCED FEATURES - ActiveCampaign-Level Capabilities
+// ============================================================================
+
+// Note: Workflow system (emailWorkflows, workflowExecutions) already exists in main schema
+// We're adding additional features here
+
+// Lead Scoring System
+export const leadScoresTable = defineTable({
+  userId: v.string(), // Clerk ID
+  
+  // Scoring
+  score: v.number(), // Current score (0-1000+)
+  grade: v.union(
+    v.literal("A"), // Hot leads (300+)
+    v.literal("B"), // Warm leads (200-299)
+    v.literal("C"), // Cold leads (100-199)
+    v.literal("D")  // Inactive (0-99)
+  ),
+  
+  // Score breakdown
+  emailEngagement: v.number(), // Points from email interactions
+  courseEngagement: v.number(), // Points from course activity
+  purchaseActivity: v.number(), // Points from purchases
+  
+  // Engagement tracking
+  lastActivity: v.number(),
+  totalEmailsOpened: v.number(),
+  totalEmailsClicked: v.number(),
+  totalPurchases: v.number(),
+  daysSinceLastActivity: v.number(),
+  
+  // Score history (last 10 changes)
+  scoreHistory: v.array(v.object({
+    score: v.number(),
+    reason: v.string(),
+    timestamp: v.number(),
+  })),
+  
+  // Decay tracking
+  lastDecayAt: v.number(),
+  
+  createdAt: v.number(),
+  updatedAt: v.number(),
+})
+  .index("by_userId", ["userId"])
+  .index("by_score", ["score"])
+  .index("by_grade", ["grade"]);
+
+// Dynamic Email Segments
+export const emailSegmentsTable = defineTable({
+  connectionId: v.optional(v.id("resendConnections")),
+  
+  // Segment details
+  name: v.string(),
+  description: v.string(),
+  
+  // Conditions (composite AND/OR logic)
+  conditions: v.array(v.object({
+    field: v.string(), // e.g., "leadScore.score", "lastActivity", "emailsOpened"
+    operator: v.union(
+      v.literal("equals"),
+      v.literal("not_equals"),
+      v.literal("greater_than"),
+      v.literal("less_than"),
+      v.literal("contains"),
+      v.literal("not_contains"),
+      v.literal("in"),
+      v.literal("not_in")
+    ),
+    value: v.any(),
+    logic: v.optional(v.union(v.literal("AND"), v.literal("OR"))),
+  })),
+  
+  // Segment type
+  isDynamic: v.boolean(), // Auto-update vs. static snapshot
+  
+  // Cache
+  memberCount: v.number(),
+  lastUpdated: v.number(),
+  cachedUserIds: v.optional(v.array(v.string())), // Cache for performance
+  
+  createdAt: v.number(),
+  updatedAt: v.number(),
+})
+  .index("by_name", ["name"])
+  .index("by_isDynamic", ["isDynamic"]);
+
+// A/B Testing Framework
+export const emailABTestsTable = defineTable({
+  campaignId: v.id("resendCampaigns"),
+  
+  // Test configuration
+  testType: v.union(
+    v.literal("subject"),
+    v.literal("content"),
+    v.literal("send_time"),
+    v.literal("from_name")
+  ),
+  
+  // Variants
+  variants: v.array(v.object({
+    id: v.string(),
+    name: v.string(),
+    value: v.string(), // The variant value (subject line, content, etc.)
+    percentage: v.number(), // % of sample size
+    sent: v.number(),
+    delivered: v.number(),
+    opened: v.number(),
+    clicked: v.number(),
+    conversions: v.number(),
+  })),
+  
+  // Test settings
+  sampleSize: v.number(), // Number of recipients in test
+  winnerMetric: v.union(
+    v.literal("open_rate"),
+    v.literal("click_rate"),
+    v.literal("conversion_rate")
+  ),
+  
+  // Results
+  status: v.union(
+    v.literal("draft"),
+    v.literal("running"),
+    v.literal("analyzing"),
+    v.literal("completed")
+  ),
+  winner: v.optional(v.string()), // Variant ID
+  winnerSentToRemaining: v.boolean(),
+  
+  // Statistical analysis
+  isStatisticallySignificant: v.optional(v.boolean()),
+  confidenceLevel: v.optional(v.number()), // 0-100%
+  
+  startedAt: v.optional(v.number()),
+  completedAt: v.optional(v.number()),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+})
+  .index("by_campaignId", ["campaignId"])
+  .index("by_status", ["status"]);
+
+// Send Time Optimization
+export const userEngagementPatternsTable = defineTable({
+  userId: v.string(), // Clerk ID
+  
+  // Engagement patterns
+  hourOfDay: v.array(v.number()), // 24 elements: engagement score per hour
+  dayOfWeek: v.array(v.number()), // 7 elements: engagement score per day
+  
+  // Best send time
+  bestSendTime: v.object({
+    hour: v.number(), // 0-23
+    day: v.number(), // 0-6 (Sunday=0)
+    score: v.number(), // Confidence score
+  }),
+  
+  // Timezone
+  timezone: v.optional(v.string()), // e.g., "America/New_York"
+  
+  // Tracking
+  totalEngagements: v.number(),
+  lastEngagement: v.number(),
+  
+  createdAt: v.number(),
+  updatedAt: v.number(),
+})
+  .index("by_userId", ["userId"]);
+
+// Email Health Metrics
+export const emailHealthMetricsTable = defineTable({
+  connectionId: v.optional(v.id("resendConnections")),
+  
+  // Time period
+  date: v.number(), // Date timestamp (start of day)
+  period: v.union(v.literal("daily"), v.literal("weekly"), v.literal("monthly")),
+  
+  // Health scores (0-100)
+  listHealthScore: v.number(), // Overall list health
+  engagementRate: v.number(), // % of active subscribers
+  deliverabilityScore: v.number(), // Based on bounces, complaints
+  
+  // Metrics
+  totalSubscribers: v.number(),
+  activeSubscribers: v.number(), // Engaged in last 30 days
+  inactiveSubscribers: v.number(),
+  bounceRate: v.number(),
+  spamComplaintRate: v.number(),
+  unsubscribeRate: v.number(),
+  
+  // Trends
+  subscriberGrowth: v.number(), // vs. previous period
+  engagementTrend: v.union(v.literal("up"), v.literal("down"), v.literal("stable")),
+  
+  // Recommendations
+  recommendations: v.array(v.object({
+    type: v.union(
+      v.literal("warning"),
+      v.literal("alert"),
+      v.literal("suggestion")
+    ),
+    message: v.string(),
+    priority: v.union(v.literal("high"), v.literal("medium"), v.literal("low")),
+  })),
+  
+  createdAt: v.number(),
+})
+  .index("by_date", ["date"])
+  .index("by_connectionId", ["connectionId"]);
+
+// Campaign Goals and Tracking
+export const campaignGoalsTable = defineTable({
+  campaignId: v.id("resendCampaigns"),
+  
+  // Goal definition
+  goalType: v.union(
+    v.literal("open_rate"),
+    v.literal("click_rate"),
+    v.literal("conversions"),
+    v.literal("revenue")
+  ),
+  goalName: v.string(),
+  
+  // Targets
+  target: v.number(),
+  targetUnit: v.string(), // "percentage", "count", "dollars"
+  
+  // Results
+  actual: v.number(),
+  achieved: v.boolean(),
+  achievedAt: v.optional(v.number()),
+  
+  // Revenue tracking (if applicable)
+  revenue: v.optional(v.number()),
+  conversions: v.optional(v.number()),
+  
+  createdAt: v.number(),
+  updatedAt: v.number(),
+})
+  .index("by_campaignId", ["campaignId"]);
+
+// Spam Score Checks (pre-send analysis)
+export const spamScoreChecksTable = defineTable({
+  campaignId: v.optional(v.id("resendCampaigns")),
+  templateId: v.optional(v.id("resendTemplates")),
+  
+  // Content being checked
+  subject: v.string(),
+  htmlContent: v.string(),
+  
+  // Overall score
+  spamScore: v.number(), // 0-10 (0=excellent, 10=spam)
+  riskLevel: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
+  
+  // Issues found
+  issues: v.array(v.object({
+    type: v.union(
+      v.literal("subject"),
+      v.literal("content"),
+      v.literal("links"),
+      v.literal("images"),
+      v.literal("authentication")
+    ),
+    severity: v.union(v.literal("warning"), v.literal("error")),
+    message: v.string(),
+    suggestion: v.optional(v.string()),
+  })),
+  
+  // Detailed checks
+  checks: v.object({
+    hasSpamWords: v.boolean(),
+    hasExcessiveCaps: v.boolean(),
+    hasExcessivePunctuation: v.boolean(),
+    hasBrokenLinks: v.boolean(),
+    hasUnsubscribeLink: v.boolean(),
+    imageToTextRatio: v.number(),
+    linkCount: v.number(),
+  }),
+  
+  checkedAt: v.number(),
+})
+  .index("by_campaignId", ["campaignId"]);
+
+// List Hygiene Tracking
+export const listHygieneActionsTable = defineTable({
+  connectionId: v.id("resendConnections"),
+  
+  // Action details
+  actionType: v.union(
+    v.literal("hard_bounce_removal"),
+    v.literal("soft_bounce_suppression"),
+    v.literal("complaint_removal"),
+    v.literal("inactive_removal"),
+    v.literal("duplicate_removal")
+  ),
+  
+  // What was done
+  affectedEmails: v.array(v.string()),
+  affectedCount: v.number(),
+  
+  // Reason
+  reason: v.string(),
+  
+  // Execution
+  status: v.union(v.literal("pending"), v.literal("completed"), v.literal("failed")),
+  executedBy: v.union(v.literal("automatic"), v.literal("manual")),
+  
+  executedAt: v.number(),
+  createdAt: v.number(),
+})
+  .index("by_connectionId", ["connectionId"])
+  .index("by_actionType", ["actionType"]);
+

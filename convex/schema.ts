@@ -2065,4 +2065,25 @@ export default defineSchema({
   resendImportedContacts: emailSchema.resendImportedContactsTable
     .index("by_connection", ["connectionId"])
     .index("by_status", ["status"]),
+
+  // Advanced Email Features (ActiveCampaign-Level)
+  // Note: emailWorkflows and workflowExecutions already exist above
+  
+  leadScores: emailSchema.leadScoresTable,
+  
+  emailSegments: emailSchema.emailSegmentsTable
+    .index("by_connection", ["connectionId"]),
+  
+  emailABTests: emailSchema.emailABTestsTable,
+  
+  userEngagementPatterns: emailSchema.userEngagementPatternsTable,
+  
+  emailHealthMetrics: emailSchema.emailHealthMetricsTable,
+  
+  campaignGoals: emailSchema.campaignGoalsTable,
+  
+  spamScoreChecks: emailSchema.spamScoreChecksTable
+    .index("by_template", ["templateId"]),
+  
+  listHygieneActions: emailSchema.listHygieneActionsTable,
 }); 

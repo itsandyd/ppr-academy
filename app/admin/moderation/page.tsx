@@ -34,8 +34,14 @@ export default function ContentModerationPage() {
   const { user } = useUser();
 
   // Fetch reports from Convex
-  const reports = useQuery(api.reports.getReportsByStatus, { status: activeTab }) || [];
-  const stats = useQuery(api.reports.getReportStats) || {
+  const reports = useQuery(
+    api.reports.getReportsByStatus, 
+    user?.id ? { status: activeTab, clerkId: user.id } : "skip"
+  ) || [];
+  const stats = useQuery(
+    api.reports.getReportStats,
+    user?.id ? { clerkId: user.id } : "skip"
+  ) || {
     pending: 0,
     reviewed: 0,
     resolved: 0,
@@ -56,10 +62,16 @@ export default function ContentModerationPage() {
   );
 
   const handleApprove = async (reportId: Id<"reports">) => {
+    if (!user?.id) {
+      toast.error("You must be logged in");
+      return;
+    }
+    
     try {
       await markAsResolved({
+        clerkId: user.id,
         reportId,
-        reviewedBy: user?.id || "admin",
+        reviewedBy: user.id,
         resolution: "Content removed by admin",
       });
       toast.success("Report approved and content removed");
@@ -69,10 +81,16 @@ export default function ContentModerationPage() {
   };
 
   const handleDismiss = async (reportId: Id<"reports">) => {
+    if (!user?.id) {
+      toast.error("You must be logged in");
+      return;
+    }
+    
     try {
       await markAsDismissed({
+        clerkId: user.id,
         reportId,
-        reviewedBy: user?.id || "admin",
+        reviewedBy: user.id,
         resolution: "Report dismissed - no action needed",
       });
       toast.info("Report dismissed");
@@ -82,10 +100,16 @@ export default function ContentModerationPage() {
   };
 
   const handleReview = async (reportId: Id<"reports">) => {
+    if (!user?.id) {
+      toast.error("You must be logged in");
+      return;
+    }
+    
     try {
       await markAsReviewed({
+        clerkId: user.id,
         reportId,
-        reviewedBy: user?.id || "admin",
+        reviewedBy: user.id,
       });
       toast.info("Report marked as under review");
     } catch (error) {
@@ -130,58 +154,81 @@ export default function ContentModerationPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">Content Moderation</h1>
-        <p className="text-muted-foreground">
-          Review and manage reported content and user behavior
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-4xl font-bold tracking-tight">Content Moderation</h1>
+          <p className="text-muted-foreground mt-2 text-lg">
+            Review and manage reported content and user behavior
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Badge variant="outline" className="px-3 py-1.5">
+            <AlertTriangle className="w-3.5 h-3.5 mr-1.5" />
+            {stats.pending} pending
+          </Badge>
+        </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-2xl font-bold text-red-600">{stats.pending}</div>
-                <div className="text-sm text-muted-foreground">Pending</div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="border-2 hover:shadow-lg transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-start justify-between">
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">Pending Review</p>
+                <p className="text-3xl font-bold tracking-tight text-red-600">{stats.pending}</p>
+                <p className="text-xs text-muted-foreground">requires attention</p>
               </div>
-              <AlertTriangle className="w-8 h-8 text-red-600 opacity-20" />
+              <div className="rounded-full bg-red-500/10 p-3">
+                <AlertTriangle className="w-6 h-6 text-red-500" />
+              </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-2xl font-bold text-orange-600">{stats.reviewed}</div>
-                <div className="text-sm text-muted-foreground">Under Review</div>
+
+        <Card className="border-2 hover:shadow-lg transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-start justify-between">
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">Under Review</p>
+                <p className="text-3xl font-bold tracking-tight text-orange-600">{stats.reviewed}</p>
+                <p className="text-xs text-muted-foreground">being processed</p>
               </div>
-              <Clock className="w-8 h-8 text-orange-600 opacity-20" />
+              <div className="rounded-full bg-orange-500/10 p-3">
+                <Clock className="w-6 h-6 text-orange-500" />
+              </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-2xl font-bold text-green-600">{stats.resolved}</div>
-                <div className="text-sm text-muted-foreground">Resolved</div>
+
+        <Card className="border-2 hover:shadow-lg transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-start justify-between">
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">Resolved</p>
+                <p className="text-3xl font-bold tracking-tight text-green-600">{stats.resolved}</p>
+                <p className="text-xs text-muted-foreground">action taken</p>
               </div>
-              <CheckCircle className="w-8 h-8 text-green-600 opacity-20" />
+              <div className="rounded-full bg-green-500/10 p-3">
+                <CheckCircle className="w-6 h-6 text-green-500" />
+              </div>
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-2xl font-bold text-gray-600">{stats.dismissed}</div>
-                <div className="text-sm text-muted-foreground">Dismissed</div>
+
+        <Card className="border-2 hover:shadow-lg transition-shadow">
+          <CardContent className="p-6">
+            <div className="flex items-start justify-between">
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">Dismissed</p>
+                <p className="text-3xl font-bold tracking-tight">{stats.dismissed}</p>
+                <p className="text-xs text-muted-foreground">no action needed</p>
               </div>
-              <XCircle className="w-8 h-8 text-gray-600 opacity-20" />
+              <div className="rounded-full bg-gray-500/10 p-3">
+                <XCircle className="w-6 h-6 text-gray-500" />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -189,108 +236,151 @@ export default function ContentModerationPage() {
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
         <Input
-          placeholder="Search reports..."
+          placeholder="Search by title, reason, or reporter..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
+          className="pl-11 h-12 text-base"
         />
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ReportStatus)}>
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="pending">
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ReportStatus)} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4 h-12 p-1">
+          <TabsTrigger value="pending" className="text-base gap-2">
+            <AlertTriangle className="w-4 h-4" />
             Pending ({stats.pending})
           </TabsTrigger>
-          <TabsTrigger value="reviewed">
+          <TabsTrigger value="reviewed" className="text-base gap-2">
+            <Clock className="w-4 h-4" />
             Reviewing ({stats.reviewed})
           </TabsTrigger>
-          <TabsTrigger value="resolved">
+          <TabsTrigger value="resolved" className="text-base gap-2">
+            <CheckCircle className="w-4 h-4" />
             Resolved ({stats.resolved})
           </TabsTrigger>
-          <TabsTrigger value="dismissed">
+          <TabsTrigger value="dismissed" className="text-base gap-2">
+            <XCircle className="w-4 h-4" />
             Dismissed ({stats.dismissed})
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value={activeTab} className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Reports ({filteredReports.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+        <TabsContent value={activeTab} className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight">
+                {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Reports
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                {filteredReports.length} report{filteredReports.length !== 1 ? 's' : ''} found
+              </p>
+            </div>
+          </div>
+
+          <Card className="border-2">
+            <CardContent className="p-0">
+              <div className="divide-y">
                 {filteredReports.length > 0 ? (
                   filteredReports.map((report) => (
                     <div
                       key={report._id}
-                      className="p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                      className="p-6 hover:bg-muted/30 transition-colors"
                     >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 space-y-2">
-                          <div className="flex items-center gap-2">
-                            {getReportTypeIcon(report.type)}
-                            <h3 className="font-semibold">{report.contentTitle}</h3>
-                            <Badge variant="outline" className="text-xs">
-                              {report.type}
-                            </Badge>
-                            {getStatusBadge(report.status)}
-                          </div>
+                      <div className="flex items-start justify-between gap-6">
+                        <div className="flex-1 space-y-4">
+                          {/* Header */}
+                          <div className="flex items-start gap-3">
+                            <div className="rounded-lg bg-muted p-2 mt-0.5">
+                              {getReportTypeIcon(report.type)}
+                            </div>
+                            <div className="flex-1 space-y-2">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h3 className="font-bold text-lg">{report.contentTitle}</h3>
+                                <Badge variant="outline" className="text-xs capitalize">
+                                  {report.type}
+                                </Badge>
+                                {getStatusBadge(report.status)}
+                              </div>
 
-                          <p className="text-sm text-muted-foreground">
-                            <span className="font-medium text-red-600">Reason:</span> {report.reason}
-                          </p>
+                              {/* Reason */}
+                              <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                                <Flag className="w-4 h-4 text-red-600 mt-0.5" />
+                                <div>
+                                  <p className="text-xs font-semibold text-red-600 uppercase tracking-wide mb-1">
+                                    Report Reason
+                                  </p>
+                                  <p className="text-sm text-red-600 dark:text-red-400">
+                                    {report.reason}
+                                  </p>
+                                </div>
+                              </div>
 
-                          <p className="text-sm text-muted-foreground italic line-clamp-2">
-                            "{report.contentPreview}"
-                          </p>
+                              {/* Content Preview */}
+                              {report.contentPreview && (
+                                <div className="p-3 rounded-lg bg-muted/50 border">
+                                  <p className="text-sm italic line-clamp-2 text-muted-foreground">
+                                    "{report.contentPreview}"
+                                  </p>
+                                </div>
+                              )}
 
-                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                            <span>
-                              Reported by: <span className="font-medium">{report.reporterName}</span>
-                            </span>
-                            {report.reportedUserName && (
-                              <span>
-                                Reported user: <span className="font-medium">{report.reportedUserName}</span>
-                              </span>
-                            )}
-                            <span>{formatTimeAgo(report.reportedAt)}</span>
+                              {/* Meta Info */}
+                              <div className="flex items-center flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground">
+                                <div className="flex items-center gap-1.5">
+                                  <User className="w-3.5 h-3.5" />
+                                  <span>Reported by:</span>
+                                  <span className="font-semibold text-foreground">{report.reporterName}</span>
+                                </div>
+                                {report.reportedUserName && (
+                                  <div className="flex items-center gap-1.5">
+                                    <AlertTriangle className="w-3.5 h-3.5" />
+                                    <span>Reported user:</span>
+                                    <span className="font-semibold text-foreground">{report.reportedUserName}</span>
+                                  </div>
+                                )}
+                                <div className="flex items-center gap-1.5">
+                                  <Clock className="w-3.5 h-3.5" />
+                                  {formatTimeAgo(report.reportedAt)}
+                                </div>
+                              </div>
+                            </div>
                           </div>
                         </div>
 
-                        <div className="flex flex-col gap-2">
-                          <Button variant="outline" size="sm">
-                            <Eye className="w-4 h-4 mr-1" />
+                        {/* Action Buttons */}
+                        <div className="flex flex-col gap-2 min-w-[120px]">
+                          <Button variant="outline" size="default" className="gap-2">
+                            <Eye className="w-4 h-4" />
                             View
                           </Button>
                           {report.status === "pending" && (
                             <>
                               <Button
                                 variant="outline"
-                                size="sm"
+                                size="default"
                                 onClick={() => handleReview(report._id)}
+                                className="gap-2"
                               >
-                                <Clock className="w-4 h-4 mr-1" />
+                                <Clock className="w-4 h-4" />
                                 Review
                               </Button>
                               <Button
                                 variant="destructive"
-                                size="sm"
+                                size="default"
                                 onClick={() => handleApprove(report._id)}
+                                className="gap-2"
                               >
-                                <Trash2 className="w-4 h-4 mr-1" />
+                                <Trash2 className="w-4 h-4" />
                                 Remove
                               </Button>
                               <Button
                                 variant="ghost"
-                                size="sm"
+                                size="default"
                                 onClick={() => handleDismiss(report._id)}
+                                className="gap-2"
                               >
-                                <XCircle className="w-4 h-4 mr-1" />
+                                <XCircle className="w-4 h-4" />
                                 Dismiss
                               </Button>
                             </>
@@ -299,18 +389,20 @@ export default function ContentModerationPage() {
                             <>
                               <Button
                                 variant="destructive"
-                                size="sm"
+                                size="default"
                                 onClick={() => handleApprove(report._id)}
+                                className="gap-2"
                               >
-                                <Trash2 className="w-4 h-4 mr-1" />
+                                <Trash2 className="w-4 h-4" />
                                 Remove
                               </Button>
                               <Button
                                 variant="ghost"
-                                size="sm"
+                                size="default"
                                 onClick={() => handleDismiss(report._id)}
+                                className="gap-2"
                               >
-                                <XCircle className="w-4 h-4 mr-1" />
+                                <XCircle className="w-4 h-4" />
                                 Dismiss
                               </Button>
                             </>
@@ -320,13 +412,17 @@ export default function ContentModerationPage() {
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <Flag className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>No {activeTab} reports found</p>
-                    <p className="text-sm">
+                  <div className="text-center py-16 px-6">
+                    <div className="rounded-full bg-muted w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                      <Flag className="w-8 h-8 text-muted-foreground" />
+                    </div>
+                    <h3 className="text-lg font-semibold mb-2">
+                      No {activeTab} reports
+                    </h3>
+                    <p className="text-sm text-muted-foreground max-w-sm mx-auto">
                       {searchQuery
-                        ? "Try adjusting your search"
-                        : `All ${activeTab} reports will appear here`}
+                        ? "Try adjusting your search terms to find what you're looking for"
+                        : `All ${activeTab} reports will appear here when available`}
                     </p>
                   </div>
                 )}
