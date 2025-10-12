@@ -63,6 +63,8 @@ import type * as marketplace from "../marketplace.js";
 import type * as monetizationSchema from "../monetizationSchema.js";
 import type * as monetizationUtils from "../monetizationUtils.js";
 import type * as musicShowcase from "../musicShowcase.js";
+import type * as notificationPreferences from "../notificationPreferences.js";
+import type * as notifications from "../notifications.js";
 import type * as paymentPlans from "../paymentPlans.js";
 import type * as qa from "../qa.js";
 import type * as qaSchema from "../qaSchema.js";
@@ -142,6 +144,8 @@ declare const fullApi: ApiFromModules<{
   monetizationSchema: typeof monetizationSchema;
   monetizationUtils: typeof monetizationUtils;
   musicShowcase: typeof musicShowcase;
+  notificationPreferences: typeof notificationPreferences;
+  notifications: typeof notifications;
   paymentPlans: typeof paymentPlans;
   qa: typeof qa;
   qaSchema: typeof qaSchema;

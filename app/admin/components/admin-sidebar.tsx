@@ -20,6 +20,7 @@ import {
   DollarSign,
   Activity,
   Mail,
+  Bell,
 } from "lucide-react";
 
 interface NavItem {
@@ -88,6 +89,12 @@ const navItems: NavItem[] = [
     href: "/admin/emails",
     icon: Mail,
     description: "Campaigns & automation",
+  },
+  {
+    title: "Notifications",
+    href: "/admin/notifications",
+    icon: Bell,
+    description: "User notifications",
   },
   {
     title: "AI Tools",

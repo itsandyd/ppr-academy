@@ -60,6 +60,66 @@ export default defineSchema({
   })
   .index("by_type", ["type"]),
 
+  // User Notifications
+  notifications: defineTable({
+    userId: v.string(), // Clerk ID of the recipient
+    title: v.string(),
+    message: v.string(),
+    type: v.union(
+      v.literal("info"),
+      v.literal("success"),
+      v.literal("warning"),
+      v.literal("error")
+    ),
+    read: v.boolean(),
+    readAt: v.optional(v.number()),
+    link: v.optional(v.string()),
+    actionLabel: v.optional(v.string()),
+    createdAt: v.number(),
+    emailSent: v.optional(v.boolean()),
+    emailSentAt: v.optional(v.number()),
+  })
+  .index("by_userId", ["userId"])
+  .index("by_createdAt", ["createdAt"]),
+
+  // User Notification Preferences
+  notificationPreferences: defineTable({
+    userId: v.string(), // Clerk ID
+    // Email notification preferences by category
+    emailNotifications: v.object({
+      announcements: v.boolean(),
+      courseUpdates: v.boolean(),
+      newContent: v.boolean(),
+      mentions: v.boolean(),
+      replies: v.boolean(),
+      purchases: v.boolean(),
+      earnings: v.boolean(),
+      systemAlerts: v.boolean(),
+      marketing: v.boolean(),
+    }),
+    // In-app notification preferences by category
+    inAppNotifications: v.object({
+      announcements: v.boolean(),
+      courseUpdates: v.boolean(),
+      newContent: v.boolean(),
+      mentions: v.boolean(),
+      replies: v.boolean(),
+      purchases: v.boolean(),
+      earnings: v.boolean(),
+      systemAlerts: v.boolean(),
+      marketing: v.boolean(),
+    }),
+    // Digest settings
+    emailDigest: v.union(
+      v.literal("realtime"),
+      v.literal("daily"),
+      v.literal("weekly"),
+      v.literal("never")
+    ),
+    updatedAt: v.number(),
+  })
+  .index("by_userId", ["userId"]),
+
   // Course Management
   courses: defineTable({
     userId: v.string(),
