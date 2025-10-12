@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertTriangle, Music, BookOpen, Users, Zap, Search, Filter, Package, Plus, Eye, DollarSign, TrendingUp } from "lucide-react";
+import { AlertTriangle, Music, BookOpen, Users, Zap, Search, Filter, Package, Plus, Eye, DollarSign, TrendingUp, Mail } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MusicOptionCard } from "../components/MusicOptionCard";
 import { musicOptions, groupedOptions, popularOptions } from "../components/music-options";
@@ -27,6 +27,9 @@ export default function ProductsPage() {
   const storeId = useValidStoreId();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("manage");
+  
+  // Debug logging
+  console.log("Current activeTab:", activeTab);
   const [searchTerm, setSearchTerm] = useState("");
 
   // Get user from Convex using Clerk ID
@@ -280,8 +283,7 @@ export default function ProductsPage() {
               </TabsTrigger>
             </TabsList>
 
-            <AnimatePresence mode="wait">
-              {activeTab === "manage" && (
+            {activeTab === "manage" && (
                 <TabsContent key="tab-manage" value="manage" className="space-y-8">
                   <motion.div
                     key="manage-content"
@@ -376,20 +378,134 @@ export default function ProductsPage() {
 
               {activeTab === "create" && (
                 <TabsContent key="tab-create" value="create" className="space-y-8">
-                  <motion.div
-                    key="create-content"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    className="text-center mb-8"
-                  >
+                  <div className="text-center mb-8">
+                    <div className="inline-flex items-center gap-2 bg-green-100 dark:bg-green-900/20 px-4 py-2 rounded-full mb-4">
+                      <Plus className="w-4 h-4 text-green-600" />
+                      <span className="text-sm font-medium text-green-700 dark:text-green-300">Create New Product</span>
+                    </div>
                     <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-4">
                       What are you creating today?
                     </h2>
                     <p className="text-xl text-slate-600 dark:text-slate-400 max-w-3xl mx-auto leading-relaxed">
                       Choose the perfect format for your music content — from sample packs and beats to courses and coaching sessions.
                     </p>
-                  </motion.div>
+                  </div>
+
+                  {/* Quick Create Buttons - Always Visible */}
+                  <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-6 mb-6">
+                    <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4 text-center">
+                      📦 Choose Your Product Type
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleOptionClick('ecourse')}>
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center">
+                          <BookOpen className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-slate-900 dark:text-slate-100">Music Course</h3>
+                          <p className="text-sm text-slate-600 dark:text-slate-400">Teach production, mixing, theory</p>
+                        </div>
+                      </div>
+                    </Card>
+                    
+                    <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleOptionClick('digital')}>
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-gradient-to-r from-slate-600 to-slate-800 rounded-lg flex items-center justify-center">
+                          <Package className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-slate-900 dark:text-slate-100">Digital Product</h3>
+                          <p className="text-sm text-slate-600 dark:text-slate-400">PDFs, guides, templates</p>
+                        </div>
+                      </div>
+                    </Card>
+
+                    <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleOptionClick('membership')}>
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-gradient-to-r from-violet-500 to-purple-500 rounded-lg flex items-center justify-center">
+                          <Users className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-slate-900 dark:text-slate-100">Subscription</h3>
+                          <p className="text-sm text-slate-600 dark:text-slate-400">Monthly membership</p>
+                        </div>
+                      </div>
+                    </Card>
+
+                    <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleOptionClick('emails')}>
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-lg flex items-center justify-center">
+                          <Mail className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-slate-900 dark:text-slate-100">Lead Magnet</h3>
+                          <p className="text-sm text-slate-600 dark:text-slate-400">Free content for emails</p>
+                        </div>
+                      </div>
+                    </Card>
+
+                    <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleOptionClick('sample-pack')}>
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
+                          <Music className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-slate-900 dark:text-slate-100">Sample Pack</h3>
+                          <p className="text-sm text-slate-600 dark:text-slate-400">Drums, loops, one-shots</p>
+                        </div>
+                      </div>
+                    </Card>
+
+                    <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleOptionClick('coaching')}>
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg flex items-center justify-center">
+                          <Users className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-slate-900 dark:text-slate-100">Coaching Call</h3>
+                          <p className="text-sm text-slate-600 dark:text-slate-400">1-on-1 sessions</p>
+                        </div>
+                      </div>
+                    </Card>
+
+                    <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleOptionClick('beat-lease')}>
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+                          <Music className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-slate-900 dark:text-slate-100">Beat Lease</h3>
+                          <p className="text-sm text-slate-600 dark:text-slate-400">License your beats</p>
+                        </div>
+                      </div>
+                    </Card>
+
+                    <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleOptionClick('preset-pack')}>
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center">
+                          <Package className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-slate-900 dark:text-slate-100">Preset Pack</h3>
+                          <p className="text-sm text-slate-600 dark:text-slate-400">Synth presets, effects</p>
+                        </div>
+                      </div>
+                    </Card>
+
+                    <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleOptionClick('webinar')}>
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center">
+                          <Users className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-slate-900 dark:text-slate-100">Live Workshop</h3>
+                          <p className="text-sm text-slate-600 dark:text-slate-400">Group sessions</p>
+                        </div>
+                      </div>
+                    </Card>
+                    </div>
+                  </div>
 
                   {/* Creation Category Tabs */}
                   <Tabs defaultValue="popular" className="w-full">
@@ -550,7 +666,6 @@ export default function ProductsPage() {
                   </Tabs>
                 </TabsContent>
               )}
-            </AnimatePresence>
           </Tabs>
         </motion.div>
 
