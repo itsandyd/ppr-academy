@@ -66,8 +66,8 @@ export const resendConnectionsTable = defineTable({
 
 // Resend email templates (reusable email designs)
 export const resendTemplatesTable = defineTable({
-  // Template ownership
-  connectionId: v.id("resendConnections"),
+  // Template ownership (optional for admin templates)
+  connectionId: v.optional(v.id("resendConnections")),
   
   // Template details
   name: v.string(),
@@ -101,8 +101,8 @@ export const resendTemplatesTable = defineTable({
 
 // Resend email campaigns (broadcast emails)
 export const resendCampaignsTable = defineTable({
-  // Campaign ownership
-  connectionId: v.id("resendConnections"),
+  // Campaign ownership (optional for admin campaigns)
+  connectionId: v.optional(v.id("resendConnections")),
   templateId: v.optional(v.id("resendTemplates")),
   
   // Campaign details
@@ -159,8 +159,8 @@ export const resendCampaignsTable = defineTable({
 
 // Resend email automation rules (trigger-based emails)
 export const resendAutomationsTable = defineTable({
-  // Automation ownership
-  connectionId: v.id("resendConnections"),
+  // Automation ownership (optional for admin automations)
+  connectionId: v.optional(v.id("resendConnections")),
   templateId: v.id("resendTemplates"),
   
   // Automation details

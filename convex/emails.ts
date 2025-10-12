@@ -30,25 +30,37 @@ export const processCampaign = internalAction({
     campaignId: v.id("resendCampaigns"),
   },
   handler: async (ctx, args) => {
+    console.log("=== STARTING CAMPAIGN PROCESSING ===");
+    console.log("Campaign ID:", args.campaignId);
+    
     try {
       const campaign = await ctx.runQuery(internal.emailQueries.getCampaignById, {
         campaignId: args.campaignId,
       });
 
       if (!campaign) {
+        console.error("❌ Campaign not found!");
         throw new Error("Campaign not found");
       }
+      console.log("✅ Campaign found:", campaign.name);
 
       // Update status to sending
       await ctx.runMutation(internal.emailQueries.updateCampaignStatus, {
         campaignId: args.campaignId,
         status: "sending",
       });
+      console.log("✅ Status updated to 'sending'");
 
       // Get recipients
       const recipients = await ctx.runQuery(internal.emailQueries.getCampaignRecipients, {
         campaignId: args.campaignId,
       });
+      console.log(`✅ Found ${recipients.length} recipients`);
+
+      if (recipients.length === 0) {
+        console.error("❌ No recipients found!");
+        throw new Error("No recipients found for this campaign");
+      }
 
       // Update recipient count
       await ctx.runMutation(internal.emailQueries.updateCampaignMetrics, {
@@ -58,85 +70,120 @@ export const processCampaign = internalAction({
 
       const resend = getResendClient();
       if (!resend) {
-        throw new Error("Resend not configured");
+        console.error("❌ Resend API key not configured!");
+        throw new Error("Resend not configured - RESEND_API_KEY environment variable is missing");
+      }
+      console.log("✅ Resend client initialized");
+
+      // Get connection for sender details (if this is a store campaign)
+      let connection = null;
+      if (campaign.connectionId) {
+        connection = await ctx.runQuery(internal.emailQueries.getConnectionById, {
+          connectionId: campaign.connectionId,
+        });
+
+        if (!connection) {
+          throw new Error("Connection not found");
+        }
       }
 
-      // Get connection for sender details
-      const connection = await ctx.runQuery(internal.emailQueries.getConnectionById, {
-        connectionId: campaign.connectionId,
-      });
-
-      if (!connection) {
-        throw new Error("Connection not found");
-      }
+      // Use connection settings or defaults for admin campaigns
+      const fromEmail = connection?.fromEmail || process.env.FROM_EMAIL || "noreply@yourdomain.com";
+      const fromName = connection?.fromName || process.env.FROM_NAME || "PPR Academy";
+      const replyToEmail = connection?.replyToEmail || process.env.REPLY_TO_EMAIL || fromEmail;
+      console.log(`📧 Email settings - From: ${fromName} <${fromEmail}>, ReplyTo: ${replyToEmail}`);
 
       // Get email content
       let htmlContent = campaign.htmlContent || "";
       let textContent = campaign.textContent || "";
 
       if (campaign.templateId) {
+        console.log("📄 Loading template:", campaign.templateId);
         const template = await ctx.runQuery(internal.emailQueries.getTemplateById, {
           templateId: campaign.templateId,
         });
         if (template) {
           htmlContent = template.htmlContent;
           textContent = template.textContent;
+          console.log("✅ Template loaded");
+        } else {
+          console.warn("⚠️ Template not found!");
         }
+      }
+
+      if (!htmlContent && !textContent) {
+        console.error("❌ No email content!");
+        throw new Error("Campaign has no email content");
       }
 
       // Send in batches of 50 to avoid rate limits
       const batchSize = 50;
       let sentCount = 0;
+      console.log(`📤 Starting to send emails in batches of ${batchSize}...`);
 
       for (let i = 0; i < recipients.length; i += batchSize) {
         const batch = recipients.slice(i, i + batchSize);
+        console.log(`📦 Processing batch ${Math.floor(i / batchSize) + 1} (${batch.length} emails)`);
 
         const results = await Promise.allSettled(
           batch.map(async (recipient: any) => {
             try {
+              console.log(`  → Sending to ${recipient.email}...`);
               const result = await resend.emails.send({
-                from: connection.fromName 
-                  ? `${connection.fromName} <${connection.fromEmail}>` 
-                  : connection.fromEmail,
+                from: fromName 
+                  ? `${fromName} <${fromEmail}>` 
+                  : fromEmail,
                 to: recipient.email,
                 subject: campaign.subject,
                 html: htmlContent,
                 text: textContent,
-                replyTo: connection.replyToEmail || connection.fromEmail,
+                replyTo: replyToEmail,
               });
 
-              // Log email send
-              await ctx.runMutation(internal.emailQueries.logEmail, {
-                connectionId: campaign.connectionId,
-                resendEmailId: result.data?.id,
-                recipientEmail: recipient.email,
-                recipientUserId: recipient.userId,
-                recipientName: recipient.name,
-                campaignId: args.campaignId,
-                templateId: campaign.templateId,
-                subject: campaign.subject,
-                fromEmail: connection.fromEmail,
-                fromName: connection.fromName || "",
-                status: result.error ? "failed" : "sent",
-                errorMessage: result.error?.message,
-              });
+              if (result.error) {
+                console.error(`  ❌ Failed to ${recipient.email}:`, result.error.message);
+              } else {
+                console.log(`  ✅ Sent to ${recipient.email} (ID: ${result.data?.id})`);
+              }
+
+              // Log email send (only if there's a connection)
+              if (campaign.connectionId) {
+                await ctx.runMutation(internal.emailQueries.logEmail, {
+                  connectionId: campaign.connectionId,
+                  resendEmailId: result.data?.id,
+                  recipientEmail: recipient.email,
+                  recipientUserId: recipient.userId,
+                  recipientName: recipient.name,
+                  campaignId: args.campaignId,
+                  templateId: campaign.templateId,
+                  subject: campaign.subject,
+                  fromEmail: fromEmail,
+                  fromName: fromName,
+                  status: result.error ? "failed" : "sent",
+                  errorMessage: result.error?.message,
+                });
+              }
 
               return { success: !result.error };
             } catch (error: any) {
-              // Log failed send
-              await ctx.runMutation(internal.emailQueries.logEmail, {
-                connectionId: campaign.connectionId,
-                recipientEmail: recipient.email,
-                recipientUserId: recipient.userId,
-                recipientName: recipient.name,
-                campaignId: args.campaignId,
-                templateId: campaign.templateId,
-                subject: campaign.subject,
-                fromEmail: connection.fromEmail,
-                fromName: connection.fromName || "",
-                status: "failed",
-                errorMessage: error.message,
-              });
+              console.error(`  ❌ Exception sending to ${recipient.email}:`, error.message);
+              
+              // Log failed send (only if there's a connection)
+              if (campaign.connectionId) {
+                await ctx.runMutation(internal.emailQueries.logEmail, {
+                  connectionId: campaign.connectionId,
+                  recipientEmail: recipient.email,
+                  recipientUserId: recipient.userId,
+                  recipientName: recipient.name,
+                  campaignId: args.campaignId,
+                  templateId: campaign.templateId,
+                  subject: campaign.subject,
+                  fromEmail: fromEmail,
+                  fromName: fromName,
+                  status: "failed",
+                  errorMessage: error.message,
+                });
+              }
               return { success: false };
             }
           })
@@ -146,6 +193,7 @@ export const processCampaign = internalAction({
           (r: any) => r.status === "fulfilled" && (r.value as any).success
         ).length;
         sentCount += successCount;
+        console.log(`  ✅ Batch complete: ${successCount}/${batch.length} successful`);
 
         // Update progress
         await ctx.runMutation(internal.emailQueries.updateCampaignMetrics, {
@@ -155,9 +203,12 @@ export const processCampaign = internalAction({
 
         // Delay between batches to respect rate limits
         if (i + batchSize < recipients.length) {
+          console.log("⏳ Waiting 1s before next batch...");
           await new Promise((resolve) => setTimeout(resolve, 1000));
         }
       }
+
+      console.log(`🎉 CAMPAIGN COMPLETE: ${sentCount}/${recipients.length} emails sent successfully`);
 
       // Mark campaign as sent
       await ctx.runMutation(internal.emailQueries.updateCampaignStatus, {
@@ -165,12 +216,74 @@ export const processCampaign = internalAction({
         status: "sent",
         sentAt: Date.now(),
       });
+      console.log("✅ Campaign status updated to 'sent'");
     } catch (error) {
-      console.error("Campaign processing failed:", error);
+      console.error("❌❌❌ CAMPAIGN PROCESSING FAILED ❌❌❌");
+      console.error("Error details:", error);
       await ctx.runMutation(internal.emailQueries.updateCampaignStatus, {
         campaignId: args.campaignId,
         status: "failed",
       });
+      throw error; // Re-throw to make sure the error is visible
+    }
+  },
+});
+
+/**
+ * Trigger campaign send (PUBLIC - callable from UI)
+ */
+export const sendCampaign = action({
+  args: {
+    campaignId: v.id("resendCampaigns"),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    try {
+      // Get campaign to check status
+      const campaign = await ctx.runQuery(internal.emailQueries.getCampaignById, {
+        campaignId: args.campaignId,
+      });
+
+      if (!campaign) {
+        return {
+          success: false,
+          message: "Campaign not found",
+        };
+      }
+
+      // Check if campaign is already sent or sending
+      if (campaign.status === "sent") {
+        return {
+          success: false,
+          message: "Campaign has already been sent",
+        };
+      }
+
+      if (campaign.status === "sending") {
+        return {
+          success: false,
+          message: "Campaign is already being sent",
+        };
+      }
+
+      // Trigger the internal processing action
+      await ctx.runAction(internal.emails.processCampaign, {
+        campaignId: args.campaignId,
+      });
+
+      return {
+        success: true,
+        message: "Campaign is being sent",
+      };
+    } catch (error: any) {
+      console.error("Failed to send campaign:", error);
+      return {
+        success: false,
+        message: error.message || "Failed to send campaign",
+      };
     }
   },
 });

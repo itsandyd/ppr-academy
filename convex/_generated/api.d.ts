@@ -17,6 +17,7 @@ import type * as accessControl from "../accessControl.js";
 import type * as adminAnalytics from "../adminAnalytics.js";
 import type * as adminSetup from "../adminSetup.js";
 import type * as affiliates from "../affiliates.js";
+import type * as aiEmailGenerator from "../aiEmailGenerator.js";
 import type * as analytics from "../analytics.js";
 import type * as analyticsSchema from "../analyticsSchema.js";
 import type * as analyticsTracking from "../analyticsTracking.js";
@@ -89,6 +90,7 @@ declare const fullApi: ApiFromModules<{
   adminAnalytics: typeof adminAnalytics;
   adminSetup: typeof adminSetup;
   affiliates: typeof affiliates;
+  aiEmailGenerator: typeof aiEmailGenerator;
   analytics: typeof analytics;
   analyticsSchema: typeof analyticsSchema;
   analyticsTracking: typeof analyticsTracking;

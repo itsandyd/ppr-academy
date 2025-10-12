@@ -4,11 +4,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
 import {
   Search,
   UserPlus,
@@ -21,6 +30,11 @@ import {
   Lock,
   ChevronLeft,
   ChevronRight,
+  Edit,
+  Eye,
+  Trash2,
+  UserCog,
+  Send,
 } from "lucide-react";
 
 const USERS_PER_PAGE = 20;
@@ -32,6 +46,7 @@ export default function UsersManagementPage() {
   const [currentPage, setCurrentPage] = useState(0);
   const { user, isLoaded } = useUser();
   const router = useRouter();
+  const { toast } = useToast();
   
   // Check if user is admin
   const adminCheck = useQuery(
@@ -126,6 +141,61 @@ export default function UsersManagementPage() {
       setCursorHistory(newHistory);
       setPaginationCursor(newHistory[newHistory.length - 1]);
       setCurrentPage(currentPage - 1);
+    }
+  };
+
+  // User action handlers
+  const handleViewProfile = (userId: string, userName: string) => {
+    toast({
+      title: "View Profile",
+      description: `Opening profile for ${userName}`,
+    });
+    // Navigate to user profile page
+    router.push(`/admin/users/${userId}`);
+  };
+
+  const handleEditUser = (userId: string, userName: string) => {
+    toast({
+      title: "Edit User",
+      description: `Opening editor for ${userName}`,
+    });
+    // Navigate to edit page or open modal
+    router.push(`/admin/users/${userId}/edit`);
+  };
+
+  const handleEmailUser = (userEmail: string, userName: string) => {
+    if (!userEmail) {
+      toast({
+        title: "No Email",
+        description: "This user doesn't have an email address",
+        variant: "destructive",
+      });
+      return;
+    }
+    // Open email client
+    window.location.href = `mailto:${userEmail}`;
+    toast({
+      title: "Opening Email",
+      description: `Composing email to ${userName}`,
+    });
+  };
+
+  const handleToggleAdmin = (userId: string, userName: string, isCurrentlyAdmin: boolean) => {
+    toast({
+      title: isCurrentlyAdmin ? "Remove Admin" : "Make Admin",
+      description: `This will ${isCurrentlyAdmin ? "remove admin access from" : "grant admin access to"} ${userName}`,
+    });
+    // TODO: Implement admin toggle mutation
+  };
+
+  const handleDeleteUser = (userId: string, userName: string) => {
+    if (confirm(`Are you sure you want to delete ${userName}? This action cannot be undone.`)) {
+      toast({
+        title: "Delete User",
+        description: `Deleting ${userName}...`,
+        variant: "destructive",
+      });
+      // TODO: Implement delete user mutation
     }
   };
 
@@ -240,9 +310,62 @@ export default function UsersManagementPage() {
                     <Badge variant="outline">Stripe Connected</Badge>
                   )}
 
-                  <Button variant="ghost" size="sm">
-                    <MoreVertical className="w-4 h-4" />
-                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="bg-white dark:bg-black">
+                        <MoreVertical className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="bg-white dark:bg-black">
+                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      
+                      <DropdownMenuItem
+                        onClick={() => handleViewProfile(user._id, user.name || "Unknown")}
+                        className="cursor-pointer"
+                      >
+                        <Eye className="w-4 h-4 mr-2" />
+                        View Profile
+                      </DropdownMenuItem>
+                      
+                      <DropdownMenuItem
+                        onClick={() => handleEditUser(user._id, user.name || "Unknown")}
+                        className="cursor-pointer"
+                      >
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit User
+                      </DropdownMenuItem>
+                      
+                      <DropdownMenuItem
+                        onClick={() => handleEmailUser(user.email || "", user.name || "Unknown")}
+                        className="cursor-pointer"
+                        disabled={!user.email}
+                      >
+                        <Send className="w-4 h-4 mr-2" />
+                        Email User
+                      </DropdownMenuItem>
+                      
+                      <DropdownMenuSeparator />
+                      
+                      <DropdownMenuItem
+                        onClick={() => handleToggleAdmin(user._id, user.name || "Unknown", user.admin || false)}
+                        className="cursor-pointer"
+                      >
+                        <UserCog className="w-4 h-4 mr-2" />
+                        {user.admin ? "Remove Admin" : "Make Admin"}
+                      </DropdownMenuItem>
+                      
+                      <DropdownMenuSeparator />
+                      
+                      <DropdownMenuItem
+                        onClick={() => handleDeleteUser(user._id, user.name || "Unknown")}
+                        className="cursor-pointer text-red-600 dark:text-red-400"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete User
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             ))}

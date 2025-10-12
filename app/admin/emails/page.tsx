@@ -9,7 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useQuery, useMutation } from "convex/react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useQuery, useMutation, useAction, useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
 import { useUser } from "@clerk/nextjs";
@@ -29,12 +31,13 @@ import {
   Plus,
   Zap,
   Calendar,
+  Search,
 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AdminEmailsPage() {
   const { user } = useUser();
-  const [isConnecting, setIsConnecting] = useState(false);
+  const convex = useConvex();
   const [isImporting, setIsImporting] = useState(false);
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [importStatus, setImportStatus] = useState<{
@@ -45,42 +48,25 @@ export default function AdminEmailsPage() {
     duplicates: number;
   } | null>(null);
 
-  // Fetch data
-  const connection = useQuery(api.emailQueries.getAdminConnection);
-  const analytics = connection
-    ? useQuery(api.emailQueries.getEmailAnalytics, {
-        connectionId: connection._id,
-        days: 30,
-      })
-    : undefined;
-  const campaigns = connection
-    ? useQuery(api.emailQueries.getCampaigns, { connectionId: connection._id })
-    : undefined;
-  const templates = connection
-    ? useQuery(api.emailQueries.getTemplates, { connectionId: connection._id })
-    : undefined;
-  const imports = connection
-    ? useQuery(api.emailQueries.getImports, {
-        connectionId: connection._id,
-        limit: 10,
-      })
-    : undefined;
-
+  // Simplified - no connection required, using env variables
+  const analytics = useQuery(api.emailQueries.getEmailAnalytics, { days: 30 });
+  const campaigns = useQuery(api.emailQueries.getCampaigns, {});
+  const templates = useQuery(api.emailQueries.getTemplates, {});
+  
+  // Fetch all users for targeting
+  const allUsers = useQuery(
+    api.users.getAllUsers,
+    user?.id ? { clerkId: user.id, paginationOpts: { numItems: 1000, cursor: null } } : "skip"
+  );
+  
   // Mutations
-  const connectResend = useMutation(api.emailQueries.connectAdminResend);
-  const startContactImport = useMutation(api.emailQueries.startContactImport);
-  const processContactBatch = useMutation(api.emailQueries.processContactBatch);
   const createTemplate = useMutation(api.emailQueries.createTemplate);
   const createCampaign = useMutation(api.emailQueries.createCampaign);
   const createAutomation = useMutation(api.emailQueries.createAutomation);
-
-  // Form state
-  const [formData, setFormData] = useState({
-    resendApiKey: "",
-    fromEmail: "",
-    fromName: "",
-    replyToEmail: "",
-  });
+  
+  // Actions
+  const sendCampaignAction = useAction(api.emails.sendCampaign);
+  const generateEmailTemplateAction = useAction(api.aiEmailGenerator.generateEmailTemplate);
 
   // Dialog state
   const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
@@ -95,15 +81,23 @@ export default function AdminEmailsPage() {
     htmlContent: "",
     textContent: "",
   });
+  
+  // AI generation state
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
 
   // Campaign form state
   const [campaignForm, setCampaignForm] = useState({
     name: "",
     subject: "",
     templateId: "",
-    audienceType: "all" as "all" | "enrolled" | "active",
+    audienceType: "all" as "all" | "enrolled" | "active" | "specific",
     scheduledFor: "",
+    selectedUserIds: [] as string[],
   });
+  
+  // User search state
+  const [userSearchQuery, setUserSearchQuery] = useState("");
 
   // Automation form state
   const [automationForm, setAutomationForm] = useState({
@@ -113,166 +107,15 @@ export default function AdminEmailsPage() {
     delayMinutes: 0,
   });
 
-  const handleConnect = async () => {
-    if (!user || !formData.resendApiKey || !formData.fromEmail || !formData.fromName) {
-      toast.error("Please fill all required fields");
-      return;
-    }
-
-    setIsConnecting(true);
-    try {
-      await connectResend({
-        ...formData,
-        userId: user.id,
-      });
-      toast.success("Resend connected successfully!");
-    } catch (error) {
-      toast.error("Failed to connect Resend");
-    } finally {
-      setIsConnecting(false);
-    }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.type !== "text/csv" && !file.name.endsWith(".csv")) {
-        toast.error("Please upload a CSV file");
-        return;
-      }
-      setCsvFile(file);
-    }
-  };
-
-  const parseCSV = (text: string): Array<{
-    email: string;
-    name?: string;
-    firstName?: string;
-    lastName?: string;
-  }> => {
-    const lines = text.split("\n").filter((line) => line.trim());
-    if (lines.length === 0) return [];
-
-    // Parse header
-    const header = lines[0].split(",").map((h) => h.trim().toLowerCase());
-    const emailIndex = header.findIndex((h) =>
-      h.includes("email") || h === "email"
-    );
-
-    if (emailIndex === -1) {
-      throw new Error("CSV must contain an 'email' column");
-    }
-
-    const nameIndex = header.findIndex((h) => h.includes("name"));
-    const firstNameIndex = header.findIndex((h) =>
-      h.includes("first") || h === "firstname"
-    );
-    const lastNameIndex = header.findIndex((h) =>
-      h.includes("last") || h === "lastname"
-    );
-
-    // Parse rows
-    const contacts = [];
-    for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(",").map((v) => v.trim());
-      const email = values[emailIndex]?.replace(/['"]/g, "");
-      if (!email) continue;
-
-      contacts.push({
-        email,
-        name: nameIndex >= 0 ? values[nameIndex]?.replace(/['"]/g, "") : undefined,
-        firstName:
-          firstNameIndex >= 0
-            ? values[firstNameIndex]?.replace(/['"]/g, "")
-            : undefined,
-        lastName:
-          lastNameIndex >= 0
-            ? values[lastNameIndex]?.replace(/['"]/g, "")
-            : undefined,
-      });
-    }
-
-    return contacts;
-  };
-
-  const handleImport = async () => {
-    if (!csvFile || !connection || !user) {
-      toast.error("Please select a CSV file");
-      return;
-    }
-
-    setIsImporting(true);
-    setImportStatus(null);
-
-    try {
-      // Read file
-      const text = await csvFile.text();
-      const contacts = parseCSV(text);
-
-      if (contacts.length === 0) {
-        toast.error("No valid contacts found in CSV");
-        return;
-      }
-
-      // Start import
-      const importId = await startContactImport({
-        connectionId: connection._id,
-        source: "csv",
-        fileName: csvFile.name,
-        totalContacts: contacts.length,
-        userId: user.id,
-      });
-
-      // Process in batches of 50
-      const batchSize = 50;
-      let processed = 0;
-      let totalSuccess = 0;
-      let totalErrors = 0;
-      let totalDuplicates = 0;
-
-      for (let i = 0; i < contacts.length; i += batchSize) {
-        const batch = contacts.slice(i, i + batchSize);
-        const result = await processContactBatch({
-          importId,
-          contacts: batch,
-        });
-
-        processed += batch.length;
-        totalSuccess += result.successCount;
-        totalErrors += result.errorCount;
-        totalDuplicates += result.duplicateCount;
-
-        setImportStatus({
-          total: contacts.length,
-          processed,
-          success: totalSuccess,
-          errors: totalErrors,
-          duplicates: totalDuplicates,
-        });
-      }
-
-      toast.success(
-        `Import complete! ${totalSuccess} contacts added, ${totalDuplicates} duplicates skipped, ${totalErrors} errors`
-      );
-      setCsvFile(null);
-    } catch (error: any) {
-      toast.error(`Import failed: ${error.message}`);
-    } finally {
-      setIsImporting(false);
-    }
-  };
 
   const handleCreateTemplate = async () => {
-    if (!connection || !templateForm.name || !templateForm.subject || !templateForm.htmlContent) {
+    if (!templateForm.name || !templateForm.subject || !templateForm.htmlContent) {
       toast.error("Please fill all required fields");
       return;
     }
 
     try {
-      await createTemplate({
-        connectionId: connection._id,
-        ...templateForm,
-      });
+      await createTemplate(templateForm);
       toast.success("Template created successfully!");
       setIsTemplateDialogOpen(false);
       setTemplateForm({
@@ -288,8 +131,14 @@ export default function AdminEmailsPage() {
   };
 
   const handleCreateCampaign = async () => {
-    if (!connection || !campaignForm.name || !campaignForm.subject || !campaignForm.templateId) {
+    if (!campaignForm.name || !campaignForm.subject || !campaignForm.templateId) {
       toast.error("Please fill all required fields");
+      return;
+    }
+
+    // Validate specific user selection
+    if (campaignForm.audienceType === "specific" && campaignForm.selectedUserIds.length === 0) {
+      toast.error("Please select at least one user");
       return;
     }
 
@@ -299,12 +148,12 @@ export default function AdminEmailsPage() {
         : undefined;
 
       await createCampaign({
-        connectionId: connection._id,
         name: campaignForm.name,
         subject: campaignForm.subject,
         templateId: campaignForm.templateId as any,
         audienceType: campaignForm.audienceType,
         scheduledFor,
+        specificUserIds: campaignForm.audienceType === "specific" ? campaignForm.selectedUserIds as any : undefined,
       });
 
       toast.success(scheduledFor ? "Campaign scheduled successfully!" : "Campaign created successfully!");
@@ -315,21 +164,22 @@ export default function AdminEmailsPage() {
         templateId: "",
         audienceType: "all",
         scheduledFor: "",
+        selectedUserIds: [],
       });
+      setUserSearchQuery(""); // Clear search when dialog closes
     } catch (error: any) {
       toast.error(`Failed to create campaign: ${error.message}`);
     }
   };
 
   const handleCreateAutomation = async () => {
-    if (!connection || !automationForm.name || !automationForm.templateId) {
+    if (!automationForm.name || !automationForm.templateId) {
       toast.error("Please fill all required fields");
       return;
     }
 
     try {
       await createAutomation({
-        connectionId: connection._id,
         name: automationForm.name,
         trigger: automationForm.trigger,
         templateId: automationForm.templateId as any,
@@ -349,6 +199,83 @@ export default function AdminEmailsPage() {
     }
   };
 
+  const handleSendCampaign = async (campaignId: string, campaignName: string) => {
+    if (!confirm(`Are you sure you want to send the campaign "${campaignName}"? This will send emails to all recipients.`)) {
+      return;
+    }
+
+    try {
+      const result = await sendCampaignAction({ campaignId: campaignId as any });
+      if (result.success) {
+        toast.success(result.message);
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error: any) {
+      toast.error(`Failed to send campaign: ${error.message}`);
+    }
+  };
+
+  const handleDebugCampaign = async (campaignId: string) => {
+    try {
+      const debug = await convex.query(api.emailQueries.debugCampaign, { campaignId: campaignId as any });
+      console.log("=== CAMPAIGN DEBUG INFO ===", debug);
+      
+      let message = `Campaign: ${debug.campaign.name}\n`;
+      message += `Status: ${debug.campaign.status}\n`;
+      message += `Recipients: ${debug.recipientCount}\n`;
+      message += `Resend API Key: ${debug.hasResendKey ? "✅ Configured" : "❌ NOT SET"}\n`;
+      message += `From Email: ${debug.fromEmail}\n`;
+      message += `From Name: ${debug.fromName}\n\n`;
+      
+      if (debug.recipients && debug.recipients.length > 0) {
+        message += `First 3 recipients:\n`;
+        debug.recipients.forEach((r: any, i: number) => {
+          message += `${i + 1}. ${r.name || "Unknown"} (${r.email})\n`;
+        });
+      }
+      
+      alert(message);
+      toast.info("Check console for full debug info");
+    } catch (error: any) {
+      console.error("Debug error:", error);
+      toast.error(`Debug failed: ${error.message}`);
+    }
+  };
+
+  const handleGenerateWithAI = async () => {
+    if (!aiPrompt.trim()) {
+      toast.error("Please enter a prompt to generate the template");
+      return;
+    }
+
+    setIsGeneratingAI(true);
+    try {
+      toast.info("🤖 AI is generating your email template...");
+      
+      const generated = await generateEmailTemplateAction({
+        prompt: aiPrompt,
+        templateType: templateForm.type !== "custom" ? templateForm.type : undefined,
+      });
+
+      setTemplateForm({
+        ...templateForm,
+        name: generated.name,
+        subject: generated.subject,
+        htmlContent: generated.htmlContent,
+        textContent: generated.textContent,
+      });
+
+      toast.success("✨ Template generated! Review and adjust as needed.");
+      setAiPrompt(""); // Clear the prompt
+    } catch (error: any) {
+      console.error("AI generation error:", error);
+      toast.error(`Failed to generate template: ${error.message}`);
+    } finally {
+      setIsGeneratingAI(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -359,82 +286,8 @@ export default function AdminEmailsPage() {
         </p>
       </div>
 
-      {!connection ? (
-        /* Setup Card */
-        <Card>
-          <CardHeader>
-            <CardTitle>Connect Resend</CardTitle>
-            <CardDescription>
-              Connect your Resend account to start sending email campaigns
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="apiKey">Resend API Key *</Label>
-              <Input
-                id="apiKey"
-                type="password"
-                placeholder="re_..."
-                value={formData.resendApiKey}
-                onChange={(e) =>
-                  setFormData({ ...formData, resendApiKey: e.target.value })
-                }
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="fromEmail">From Email *</Label>
-                <Input
-                  id="fromEmail"
-                  type="email"
-                  placeholder="noreply@example.com"
-                  value={formData.fromEmail}
-                  onChange={(e) =>
-                    setFormData({ ...formData, fromEmail: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="fromName">From Name *</Label>
-                <Input
-                  id="fromName"
-                  placeholder="PPR Academy"
-                  value={formData.fromName}
-                  onChange={(e) =>
-                    setFormData({ ...formData, fromName: e.target.value })
-                  }
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="replyTo">Reply-To Email (Optional)</Label>
-              <Input
-                id="replyTo"
-                type="email"
-                placeholder="support@example.com"
-                value={formData.replyToEmail}
-                onChange={(e) =>
-                  setFormData({ ...formData, replyToEmail: e.target.value })
-                }
-              />
-            </div>
-
-            <Button
-              onClick={handleConnect}
-              disabled={isConnecting}
-              className="w-full"
-            >
-              <Mail className="w-4 h-4 mr-2" />
-              {isConnecting ? "Connecting..." : "Connect Resend"}
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        /* Main Dashboard */
-        <>
+      {/* Main Dashboard */}
+      <>
           {/* Analytics Overview */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card>
@@ -496,12 +349,10 @@ export default function AdminEmailsPage() {
 
           {/* Tabs */}
           <Tabs defaultValue="campaigns">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
               <TabsTrigger value="templates">Templates</TabsTrigger>
               <TabsTrigger value="automations">Automations</TabsTrigger>
-              <TabsTrigger value="import">Import Contacts</TabsTrigger>
-              <TabsTrigger value="settings">Settings</TabsTrigger>
             </TabsList>
 
             {/* Campaigns Tab */}
@@ -573,9 +424,18 @@ export default function AdminEmailsPage() {
                         <Label htmlFor="campaign-audience">Audience</Label>
                         <Select
                           value={campaignForm.audienceType}
-                          onValueChange={(value: any) =>
-                            setCampaignForm({ ...campaignForm, audienceType: value })
-                          }
+                          onValueChange={(value: any) => {
+                            setCampaignForm({ 
+                              ...campaignForm, 
+                              audienceType: value,
+                              // Clear selected users when switching away from specific
+                              selectedUserIds: value === "specific" ? campaignForm.selectedUserIds : []
+                            });
+                            // Clear search when switching away from specific
+                            if (value !== "specific") {
+                              setUserSearchQuery("");
+                            }
+                          }}
                         >
                           <SelectTrigger id="campaign-audience">
                             <SelectValue />
@@ -584,9 +444,128 @@ export default function AdminEmailsPage() {
                             <SelectItem value="all">All Users</SelectItem>
                             <SelectItem value="enrolled">Enrolled Students</SelectItem>
                             <SelectItem value="active">Active Users (30 days)</SelectItem>
+                            <SelectItem value="specific">Specific Users</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
+
+                      {/* Show user selection when "specific" is selected */}
+                      {campaignForm.audienceType === "specific" && (() => {
+                        // Filter users based on search query
+                        const filteredUsers = allUsers?.page?.filter((user: any) => {
+                          if (!userSearchQuery) return true;
+                          const searchLower = userSearchQuery.toLowerCase();
+                          const name = (user.name || "").toLowerCase();
+                          const email = (user.email || "").toLowerCase();
+                          return name.includes(searchLower) || email.includes(searchLower);
+                        }) || [];
+
+                        return (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <Label>Select Users ({campaignForm.selectedUserIds.length} selected)</Label>
+                              <div className="flex gap-2">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    const allUserIds = filteredUsers.map((u: any) => u._id);
+                                    setCampaignForm({
+                                      ...campaignForm,
+                                      selectedUserIds: [...new Set([...campaignForm.selectedUserIds, ...allUserIds])]
+                                    });
+                                  }}
+                                >
+                                  Select All
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setCampaignForm({
+                                      ...campaignForm,
+                                      selectedUserIds: []
+                                    });
+                                  }}
+                                >
+                                  Deselect All
+                                </Button>
+                              </div>
+                            </div>
+                            
+                            {/* Search Input */}
+                            <div className="relative">
+                              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+                              <Input
+                                placeholder="Search by name or email..."
+                                value={userSearchQuery}
+                                onChange={(e) => setUserSearchQuery(e.target.value)}
+                                className="pl-9 pr-8"
+                              />
+                              {userSearchQuery && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                                  onClick={() => setUserSearchQuery("")}
+                                >
+                                  <XCircle className="w-4 h-4" />
+                                </Button>
+                              )}
+                            </div>
+
+                            <ScrollArea className="h-64 border rounded-md p-4 bg-white dark:bg-black">
+                              {filteredUsers.length > 0 ? (
+                                <div className="space-y-2">
+                                  {filteredUsers.map((user: any) => (
+                                    <div key={user._id} className="flex items-center space-x-2">
+                                      <Checkbox
+                                        id={`user-${user._id}`}
+                                        checked={campaignForm.selectedUserIds.includes(user._id)}
+                                        onCheckedChange={(checked) => {
+                                          if (checked) {
+                                            setCampaignForm({
+                                              ...campaignForm,
+                                              selectedUserIds: [...campaignForm.selectedUserIds, user._id]
+                                            });
+                                          } else {
+                                            setCampaignForm({
+                                              ...campaignForm,
+                                              selectedUserIds: campaignForm.selectedUserIds.filter(id => id !== user._id)
+                                            });
+                                          }
+                                        }}
+                                      />
+                                      <label
+                                        htmlFor={`user-${user._id}`}
+                                        className="text-sm cursor-pointer flex-1"
+                                      >
+                                        {user.name || user.email || "Unknown User"}
+                                        {user.email && (
+                                          <span className="text-muted-foreground ml-2">({user.email})</span>
+                                        )}
+                                      </label>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="text-center py-8 text-muted-foreground">
+                                  <Users className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                                  <p>No users found matching "{userSearchQuery}"</p>
+                                </div>
+                              )}
+                            </ScrollArea>
+                            {campaignForm.selectedUserIds.length === 0 && (
+                              <p className="text-xs text-red-500">
+                                Please select at least one user
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })()}
 
                       <div className="space-y-2">
                         <Label htmlFor="campaign-schedule">Schedule (Optional)</Label>
@@ -681,6 +660,41 @@ export default function AdminEmailsPage() {
                               </div>
                             </div>
                           </div>
+                          
+                          {/* Action Buttons */}
+                          <div className="flex flex-col gap-2">
+                            {(campaign.status === "draft" || campaign.status === "scheduled") && (
+                              <Button
+                                size="sm"
+                                onClick={() => handleSendCampaign(campaign._id, campaign.name)}
+                              >
+                                <Send className="w-4 h-4 mr-2" />
+                                Send Now
+                              </Button>
+                            )}
+                            {campaign.status === "sending" && (
+                              <Button size="sm" disabled>
+                                <Clock className="w-4 h-4 mr-2 animate-spin" />
+                                Sending...
+                              </Button>
+                            )}
+                            {campaign.status === "sent" && (
+                              <Badge variant="default" className="w-fit">
+                                <CheckCircle className="w-4 h-4 mr-2" />
+                                Sent
+                              </Badge>
+                            )}
+                            {(campaign.status === "draft" || campaign.status === "failed") && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleDebugCampaign(campaign._id)}
+                              >
+                                <AlertCircle className="w-4 h-4 mr-2" />
+                                Debug
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
@@ -704,7 +718,10 @@ export default function AdminEmailsPage() {
                 <h2 className="text-2xl font-semibold">Email Templates</h2>
                 <Dialog open={isTemplateDialogOpen} onOpenChange={setIsTemplateDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button>
+                    <Button onClick={() => {
+                      console.log("Button clicked, opening dialog");
+                      setIsTemplateDialogOpen(true);
+                    }}>
                       <Sparkles className="w-4 h-4 mr-2" />
                       New Template
                     </Button>
@@ -718,6 +735,49 @@ export default function AdminEmailsPage() {
                     </DialogHeader>
 
                     <div className="space-y-4">
+                      {/* AI Generation Section */}
+                      <Card className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 border-purple-200 dark:border-purple-800">
+                        <CardContent className="p-4">
+                          <div className="flex items-start gap-2 mb-3">
+                            <Sparkles className="w-5 h-5 text-purple-600 dark:text-purple-400 mt-0.5" />
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-sm mb-1">Generate with AI</h4>
+                              <p className="text-xs text-muted-foreground">
+                                Describe the email you want and AI will create it for you
+                              </p>
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Textarea
+                              placeholder="E.g., Create a welcome email for new students joining our music production course. Include a warm greeting, course overview, and next steps."
+                              value={aiPrompt}
+                              onChange={(e) => setAiPrompt(e.target.value)}
+                              className="min-h-[80px] text-sm"
+                              disabled={isGeneratingAI}
+                            />
+                            <Button
+                              onClick={handleGenerateWithAI}
+                              disabled={isGeneratingAI || !aiPrompt.trim()}
+                              className="w-full"
+                              variant="default"
+                            >
+                              {isGeneratingAI ? (
+                                <>
+                                  <Clock className="w-4 h-4 mr-2 animate-spin" />
+                                  Generating...
+                                </>
+                              ) : (
+                                <>
+                                  <Sparkles className="w-4 h-4 mr-2" />
+                                  Generate Template
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="template-name">Template Name *</Label>
@@ -968,196 +1028,8 @@ export default function AdminEmailsPage() {
                 </CardContent>
               </Card>
             </TabsContent>
-
-            {/* Import Contacts Tab */}
-            <TabsContent value="import" className="space-y-4">
-              <div>
-                <h2 className="text-2xl font-semibold mb-2">Import Contacts</h2>
-                <p className="text-muted-foreground mb-4">
-                  Upload a CSV file to import your existing email contacts
-                </p>
-              </div>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Upload CSV File</CardTitle>
-                  <CardDescription>
-                    Your CSV must include an &quot;email&quot; column. Optional columns: name, firstName, lastName
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* File Upload */}
-                  <div className="border-2 border-dashed rounded-lg p-8 text-center">
-                    <Upload className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <Label htmlFor="csv-upload" className="cursor-pointer">
-                      <div className="space-y-2">
-                        <p className="font-medium">
-                          {csvFile ? csvFile.name : "Choose a CSV file"}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          Click to browse or drag and drop
-                        </p>
-                      </div>
-                    </Label>
-                    <Input
-                      id="csv-upload"
-                      type="file"
-                      accept=".csv"
-                      className="hidden"
-                      onChange={handleFileChange}
-                      disabled={isImporting}
-                    />
-                  </div>
-
-                  {/* Import Progress */}
-                  {importStatus && (
-                    <Card className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="font-medium">Import Progress</p>
-                          <p className="text-sm text-muted-foreground">
-                            {importStatus.processed} / {importStatus.total}
-                          </p>
-                        </div>
-                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-3">
-                          <div
-                            className="bg-blue-600 h-2 rounded-full transition-all"
-                            style={{
-                              width: `${(importStatus.processed / importStatus.total) * 100}%`,
-                            }}
-                          />
-                        </div>
-                        <div className="grid grid-cols-3 gap-2 text-sm">
-                          <div className="flex items-center gap-1">
-                            <CheckCircle className="w-4 h-4 text-green-600" />
-                            <span>{importStatus.success} added</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <AlertCircle className="w-4 h-4 text-orange-600" />
-                            <span>{importStatus.duplicates} duplicates</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <XCircle className="w-4 h-4 text-red-600" />
-                            <span>{importStatus.errors} errors</span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {/* CSV Format Example */}
-                  <Card className="bg-muted">
-                    <CardContent className="p-4">
-                      <p className="font-medium mb-2 flex items-center gap-2">
-                        <FileText className="w-4 h-4" />
-                        CSV Format Example:
-                      </p>
-                      <pre className="text-xs bg-background p-3 rounded overflow-x-auto">
-                        {`email,name,firstName,lastName
-john@example.com,John Doe,John,Doe
-jane@example.com,Jane Smith,Jane,Smith`}
-                      </pre>
-                    </CardContent>
-                  </Card>
-
-                  {/* Import Button */}
-                  <Button
-                    onClick={handleImport}
-                    disabled={!csvFile || isImporting}
-                    className="w-full"
-                    size="lg"
-                  >
-                    <Upload className="w-4 h-4 mr-2" />
-                    {isImporting ? "Importing..." : "Import Contacts"}
-                  </Button>
-                </CardContent>
-              </Card>
-
-              {/* Recent Imports */}
-              {imports && imports.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Recent Imports</CardTitle>
-                    <CardDescription>Your contact import history</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {imports.map((imp) => (
-                        <div
-                          key={imp._id}
-                          className="flex items-center justify-between p-3 border rounded-lg"
-                        >
-                          <div className="flex-1">
-                            <p className="font-medium text-sm">{imp.fileName || "Unknown"}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {new Date(imp.createdAt).toLocaleDateString()} •{" "}
-                              {imp.successCount} imported, {imp.duplicateCount} duplicates,{" "}
-                              {imp.errorCount} errors
-                            </p>
-                          </div>
-                          <Badge
-                            variant={
-                              imp.status === "completed"
-                                ? "default"
-                                : imp.status === "processing"
-                                ? "secondary"
-                                : imp.status === "completed_with_errors"
-                                ? "outline"
-                                : "destructive"
-                            }
-                          >
-                            {imp.status}
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
-
-            {/* Settings Tab */}
-            <TabsContent value="settings" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Email Configuration</CardTitle>
-                  <CardDescription>
-                    Your current Resend settings
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-sm font-medium">From Email</Label>
-                      <p className="text-sm text-muted-foreground">
-                        {connection.fromEmail}
-                      </p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium">From Name</Label>
-                      <p className="text-sm text-muted-foreground">
-                        {connection.fromName}
-                      </p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium">Reply-To</Label>
-                      <p className="text-sm text-muted-foreground">
-                        {connection.replyToEmail || "Not set"}
-                      </p>
-                    </div>
-                    <div>
-                      <Label className="text-sm font-medium">Status</Label>
-                      <Badge variant={connection.isActive ? "default" : "destructive"}>
-                        {connection.isActive ? "Active" : "Inactive"}
-                      </Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
           </Tabs>
         </>
-      )}
     </div>
   );
 }

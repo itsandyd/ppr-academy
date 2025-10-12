@@ -6,10 +6,253 @@ import { internal } from "./_generated/api";
 // EMAIL MARKETING SYSTEM - Queries & Mutations (V8 Runtime)
 // ============================================================================
 
+// ============================================================================
+// ADMIN EMAIL SYSTEM (Simplified - uses environment variables)
+// ============================================================================
+
 /**
- * Create email template
+ * Get email analytics for admin (no connection required)
+ */
+export const getEmailAnalytics = query({
+  args: { days: v.optional(v.number()) },
+  returns: v.object({
+    totalSent: v.number(),
+    openRate: v.number(),
+    clickRate: v.number(),
+    bounceRate: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    // For now, return placeholder data
+    // TODO: Implement real analytics from email logs
+    return {
+      totalSent: 0,
+      openRate: 0,
+      clickRate: 0,
+      bounceRate: 0,
+    };
+  },
+});
+
+/**
+ * Get all campaigns (admin-wide)
+ */
+export const getCampaigns = query({
+  args: {},
+  returns: v.array(v.any()),
+  handler: async (ctx) => {
+    const campaigns = await ctx.db
+      .query("resendCampaigns")
+      .filter((q) => q.eq(q.field("connectionId"), undefined))
+      .collect();
+    return campaigns;
+  },
+});
+
+/**
+ * Debug campaign sending issues
+ */
+export const debugCampaign: any = query({
+  args: { campaignId: v.id("resendCampaigns") },
+  returns: v.any(),
+  handler: async (ctx, args): Promise<any> => {
+    const campaign = await ctx.db.get(args.campaignId);
+    if (!campaign) {
+      return { error: "Campaign not found" };
+    }
+
+    // Get recipients - explicit type annotation to avoid circular reference
+    const recipients: any = await ctx.runQuery(internal.emailQueries.getCampaignRecipients, {
+      campaignId: args.campaignId,
+    });
+
+    return {
+      campaign: {
+        name: campaign.name,
+        status: campaign.status,
+        targetAudience: campaign.targetAudience,
+        customRecipients: campaign.customRecipients,
+        templateId: campaign.templateId,
+      },
+      recipientCount: recipients.length,
+      recipients: recipients.slice(0, 3), // First 3 recipients
+      hasResendKey: !!process.env.RESEND_API_KEY,
+      fromEmail: process.env.FROM_EMAIL || "not set (will use default)",
+      fromName: process.env.FROM_NAME || "not set (will use default)",
+    };
+  },
+});
+
+/**
+ * Get all templates (admin-wide)
+ */
+export const getTemplates = query({
+  args: { activeOnly: v.optional(v.boolean()) },
+  returns: v.array(v.any()),
+  handler: async (ctx, args) => {
+    const templates = await ctx.db
+      .query("resendTemplates")
+      .filter((q) => q.eq(q.field("connectionId"), undefined))
+      .collect();
+    
+    if (args.activeOnly) {
+      return templates.filter((t) => t.isActive);
+    }
+    
+    return templates;
+  },
+});
+
+/**
+ * Create template (admin - no connection required)
  */
 export const createTemplate = mutation({
+  args: {
+    name: v.string(),
+    subject: v.string(),
+    type: v.union(
+      v.literal("welcome"),
+      v.literal("launch"),
+      v.literal("enrollment"),
+      v.literal("progress_reminder"),
+      v.literal("completion"),
+      v.literal("certificate"),
+      v.literal("new_course"),
+      v.literal("re_engagement"),
+      v.literal("weekly_digest"),
+      v.literal("custom")
+    ),
+    htmlContent: v.string(),
+    textContent: v.string(),
+  },
+  returns: v.id("resendTemplates"),
+  handler: async (ctx, args) => {
+    // Extract variables from HTML content
+    const variableRegex = /\{([^}]+)\}/g;
+    const variables = Array.from(args.htmlContent.matchAll(variableRegex))
+      .map(match => match[1])
+      .filter((v, i, arr) => arr.indexOf(v) === i); // unique
+
+    return await ctx.db.insert("resendTemplates", {
+      // connectionId omitted for admin templates
+      name: args.name,
+      subject: args.subject,
+      type: args.type,
+      htmlContent: args.htmlContent,
+      textContent: args.textContent,
+      variables,
+      isActive: true,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+/**
+ * Create campaign (admin - no connection required)
+ */
+export const createCampaign = mutation({
+  args: {
+    name: v.string(),
+    subject: v.string(),
+    templateId: v.optional(v.id("resendTemplates")),
+    audienceType: v.union(
+      v.literal("all"),
+      v.literal("enrolled"),
+      v.literal("active"),
+      v.literal("specific")
+    ),
+    scheduledFor: v.optional(v.number()),
+    specificUserIds: v.optional(v.array(v.id("users"))),
+  },
+  returns: v.id("resendCampaigns"),
+  handler: async (ctx, args) => {
+    const status = args.scheduledFor && args.scheduledFor > Date.now()
+      ? "scheduled"
+      : "draft";
+
+    // Map audienceType to targetAudience
+    let targetAudience: "all_users" | "course_students" | "store_students" | "inactive_users" | "completed_course" | "custom_list" = "all_users";
+    if (args.audienceType === "specific") {
+      targetAudience = "custom_list";
+    } else if (args.audienceType === "enrolled") {
+      targetAudience = "course_students";
+    } else if (args.audienceType === "active") {
+      targetAudience = "inactive_users";
+    }
+
+    return await ctx.db.insert("resendCampaigns", {
+      // connectionId omitted for admin campaigns
+      templateId: args.templateId,
+      name: args.name,
+      subject: args.subject,
+      targetAudience,
+      customRecipients: args.audienceType === "specific" ? args.specificUserIds : undefined,
+      status,
+      scheduledFor: args.scheduledFor,
+      sentCount: 0,
+      deliveredCount: 0,
+      openedCount: 0,
+      clickedCount: 0,
+      bouncedCount: 0,
+      recipientCount: 0,
+      complainedCount: 0,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+/**
+ * Create automation (admin - no connection required)
+ */
+export const createAutomation = mutation({
+  args: {
+    name: v.string(),
+    trigger: v.union(
+      v.literal("user_enrolled"),
+      v.literal("course_completed"),
+      v.literal("user_inactive"),
+      v.literal("certificate_issued"),
+      v.literal("user_registered")
+    ),
+    templateId: v.id("resendTemplates"),
+    delayMinutes: v.number(),
+  },
+  returns: v.id("resendAutomations"),
+  handler: async (ctx, args) => {
+    // Map trigger names to schema triggerType
+    const triggerTypeMap: Record<string, string> = {
+      "user_enrolled": "course_enrollment",
+      "course_completed": "course_completion",
+      "user_inactive": "inactivity",
+      "certificate_issued": "certificate_issued",
+      "user_registered": "user_signup",
+    };
+
+    return await ctx.db.insert("resendAutomations", {
+      // connectionId omitted for admin automations
+      name: args.name,
+      description: `Automated email: ${args.name}`,
+      triggerType: triggerTypeMap[args.trigger] as any,
+      templateId: args.templateId,
+      delayMinutes: args.delayMinutes,
+      isActive: true,
+      triggeredCount: 0,
+      sentCount: 0,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+// ============================================================================
+// STORE EMAIL SYSTEM (Original - requires connection)
+// ============================================================================
+
+/**
+ * Create email template for store
+ */
+export const createStoreTemplate = mutation({
   args: {
     connectionId: v.id("resendConnections"),
     name: v.string(),
@@ -47,9 +290,9 @@ export const createTemplate = mutation({
 });
 
 /**
- * Get templates for a connection
+ * Get templates for a store connection
  */
-export const getTemplates = query({
+export const getStoreTemplates = query({
   args: {
     connectionId: v.id("resendConnections"),
     activeOnly: v.optional(v.boolean()),
@@ -69,9 +312,9 @@ export const getTemplates = query({
 });
 
 /**
- * Create email campaign
+ * Create email campaign for store
  */
-export const createCampaign = mutation({
+export const createStoreCampaign = mutation({
   args: {
     connectionId: v.id("resendConnections"),
     name: v.string(),
@@ -120,9 +363,9 @@ export const createCampaign = mutation({
 });
 
 /**
- * Get campaigns for a connection
+ * Get campaigns for a store connection
  */
-export const getCampaigns = query({
+export const getStoreCampaigns = query({
   args: {
     connectionId: v.id("resendConnections"),
     status: v.optional(v.union(
@@ -186,13 +429,23 @@ export const getCampaignRecipients = internalQuery({
     const campaign = await ctx.db.get(args.campaignId);
     if (!campaign) return [];
 
-    // Custom recipients
+    // Custom recipients (specific users)
     if (campaign.targetAudience === "custom_list" && campaign.customRecipients) {
-      return campaign.customRecipients.map((email: string) => ({ 
-        email, 
-        userId: undefined, 
-        name: undefined 
-      }));
+      // customRecipients contains user IDs, so we need to look them up
+      const recipients: Array<{ email: string; userId: string | undefined; name: string | undefined }> = [];
+      for (const userId of campaign.customRecipients) {
+        // Type assertion: we know these are user IDs
+        const user = await ctx.db.get(userId as any);
+        // Type guard: check if this is actually a user document
+        if (user && "email" in user && user.email) {
+          recipients.push({
+            email: user.email,
+            userId: "clerkId" in user ? user.clerkId : undefined,
+            name: "name" in user ? user.name : undefined
+          });
+        }
+      }
+      return recipients;
     }
 
     const allUsers = await ctx.db.query("users").collect();
@@ -473,9 +726,9 @@ export const incrementCampaignMetric = internalMutation({
 // ============================================================================
 
 /**
- * Create automation rule
+ * Create automation rule for store
  */
-export const createAutomation = mutation({
+export const createStoreAutomation = mutation({
   args: {
     connectionId: v.id("resendConnections"),
     templateId: v.id("resendTemplates"),
@@ -575,9 +828,9 @@ export const getActiveAutomations = internalQuery({
 // ============================================================================
 
 /**
- * Get email analytics for a connection
+ * Get email analytics for a store connection
  */
-export const getEmailAnalytics = query({
+export const getStoreEmailAnalytics = query({
   args: {
     connectionId: v.id("resendConnections"),
     days: v.optional(v.number()),
