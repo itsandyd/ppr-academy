@@ -23,7 +23,7 @@ export const FinalCTA: FC<FinalCTAProps> = () => {
               <span className="block">journey today</span>
             </h2>
             <p className="text-xl text-white/80 max-w-2xl mx-auto leading-relaxed">
-              Join 15,000+ students and 500+ creators who are already building successful music careers through our platform. 
+              Join our growing community of music creators and students building successful careers through expert courses and digital products. 
               Start learning from industry professionals today.
             </p>
           </div>
@@ -74,24 +74,24 @@ export const FinalCTA: FC<FinalCTAProps> = () => {
             </div>
           </div>
 
-          {/* Social Proof Numbers */}
+          {/* Platform Benefits */}
           <div className="border-t border-white/20 pt-8 mt-8">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
               <div>
-                <div className="text-3xl font-bold text-white">500+</div>
-                <div className="text-sm text-white/60">Active Creators</div>
+                <div className="text-2xl font-bold text-white">Expert</div>
+                <div className="text-sm text-white/60">Quality Content</div>
               </div>
               <div>
-                <div className="text-3xl font-bold text-white">15,000+</div>
-                <div className="text-sm text-white/60">Students Learning</div>
+                <div className="text-2xl font-bold text-white">90%</div>
+                <div className="text-sm text-white/60">Creator Payout</div>
               </div>
               <div>
-                <div className="text-3xl font-bold text-white">4.9/5</div>
-                <div className="text-sm text-white/60">User Rating</div>
+                <div className="text-2xl font-bold text-white">Direct</div>
+                <div className="text-sm text-white/60">Creator Support</div>
               </div>
               <div>
-                <div className="text-3xl font-bold text-white">$5.2K</div>
-                <div className="text-sm text-white/60">Avg Creator Revenue</div>
+                <div className="text-2xl font-bold text-white">Instant</div>
+                <div className="text-sm text-white/60">Access</div>
               </div>
             </div>
           </div>

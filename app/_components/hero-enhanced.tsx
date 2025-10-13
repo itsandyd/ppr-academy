@@ -20,10 +20,10 @@ export const HeroEnhanced: FC<HeroProps> = () => {
   }, []);
 
   const stats = [
-    { icon: Users, label: "Active Students", value: "15,000+" },
-    { icon: Star, label: "Course Rating", value: "4.9/5" },
-    { icon: Award, label: "Certificates", value: "12,000+" },
-    { icon: TrendingUp, label: "Success Rate", value: "94%" },
+    { icon: Users, label: "Creator", value: "Platform" },
+    { icon: Star, label: "Quality", value: "Content" },
+    { icon: Award, label: "Expert", value: "Courses" },
+    { icon: TrendingUp, label: "Growing", value: "Community" },
   ];
 
   return (

@@ -82,7 +82,7 @@ export default function SectionedMarketplace() {
       />
 
       {/* 2. PLATFORM STATS */}
-      {platformStats && !isSearching && (
+      {platformStats && !isSearching && (stats.totalCreators > 0 || stats.totalCourses > 0 || stats.totalProducts > 0) && (
         <MarketplaceStats
           totalCreators={stats.totalCreators}
           totalCourses={stats.totalCourses}

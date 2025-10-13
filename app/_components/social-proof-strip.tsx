@@ -86,18 +86,18 @@ export const SocialProofStrip: FC<SocialProofStripProps> = () => {
           {/* Stats */}
           <div className="flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:space-x-12 text-center">
             <div>
-              <div className="text-2xl font-bold text-foreground">500+</div>
-              <div className="text-sm text-muted-foreground">Active Creators</div>
+              <div className="text-2xl font-bold text-foreground">Growing</div>
+              <div className="text-sm text-muted-foreground">Creator Community</div>
             </div>
             <div className="hidden md:block w-px h-8 bg-border"></div>
             <div>
-              <div className="text-2xl font-bold text-foreground">15,000+</div>
-              <div className="text-sm text-muted-foreground">Students Learning</div>
+              <div className="text-2xl font-bold text-foreground">Expert</div>
+              <div className="text-sm text-muted-foreground">Content Quality</div>
             </div>
             <div className="hidden md:block w-px h-8 bg-border"></div>
             <div>
-              <div className="text-2xl font-bold text-foreground">$5.2K</div>
-              <div className="text-sm text-muted-foreground">Avg Monthly Revenue</div>
+              <div className="text-2xl font-bold text-foreground">90%</div>
+              <div className="text-sm text-muted-foreground">Creator Payout</div>
             </div>
           </div>
         </div>

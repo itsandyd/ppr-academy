@@ -36,13 +36,13 @@ export const MarketplaceHero: FC<MarketplaceHeroProps> = ({
   }, []);
 
   return (
-    <section className="relative min-h-[70vh] bg-gradient-to-br from-[#99D8F5] via-[#1A1A3E] to-[#ED0F69] overflow-hidden">
+    <section className="relative min-h-[70vh] bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 overflow-hidden">
       {/* Animated Background Elements */}
       <div className="absolute inset-0">
-        <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute top-40 right-20 w-96 h-96 bg-chart-1/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute bottom-20 left-1/3 w-80 h-80 bg-accent/10 rounded-full blur-3xl animate-pulse delay-2000"></div>
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
+        <div className="absolute top-20 left-10 w-72 h-72 bg-blue-100/30 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute top-40 right-20 w-96 h-96 bg-purple-100/30 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute bottom-20 left-1/3 w-80 h-80 bg-pink-100/30 rounded-full blur-3xl animate-pulse delay-2000"></div>
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(148,163,184,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.03)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
       </div>
 
       <div className="relative z-10 container mx-auto px-4 py-20">
@@ -53,10 +53,16 @@ export const MarketplaceHero: FC<MarketplaceHeroProps> = ({
             animate={{ opacity: isVisible ? 1 : 0, scale: isVisible ? 1 : 0.8 }}
             transition={{ duration: 0.6, delay: 0.2 }}
           >
-            <Badge className="inline-flex items-center px-4 py-2 bg-white/10 border border-white/20 backdrop-blur-sm text-white hover:bg-white/20 transition-all">
-              <TrendingUp className="w-4 h-4 mr-2 text-chart-1" />
-              <span className="font-medium">{totalCreators}+ Creators • {totalCourses + totalProducts}+ Resources</span>
-            </Badge>
+            {(totalCreators > 0 || (totalCourses + totalProducts) > 0) && (
+              <Badge className="inline-flex items-center px-4 py-2 bg-white/80 border border-slate-200 backdrop-blur-sm text-slate-700 hover:bg-white/90 transition-all shadow-sm">
+                <TrendingUp className="w-4 h-4 mr-2 text-blue-600" />
+                <span className="font-medium">
+                  {totalCreators > 0 && `${totalCreators} Creator${totalCreators !== 1 ? 's' : ''}`}
+                  {(totalCreators > 0 && (totalCourses + totalProducts) > 0) && ' • '}
+                  {(totalCourses + totalProducts) > 0 && `${totalCourses + totalProducts} Resource${(totalCourses + totalProducts) !== 1 ? 's' : ''}`}
+                </span>
+              </Badge>
+            )}
           </motion.div>
 
           {/* Main Headline */}
@@ -67,16 +73,16 @@ export const MarketplaceHero: FC<MarketplaceHeroProps> = ({
             transition={{ duration: 0.8, delay: 0.4 }}
           >
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold leading-tight">
-              <span className="bg-gradient-to-r from-white via-purple-200 to-blue-200 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-800 bg-clip-text text-transparent">
                 Learn Production.
               </span>
               <br />
-              <span className="bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                 Sell Your Sound.
               </span>
             </h1>
 
-            <p className="text-xl md:text-2xl text-white/80 leading-relaxed max-w-3xl mx-auto">
+            <p className="text-xl md:text-2xl text-slate-600 leading-relaxed max-w-3xl mx-auto">
               Discover expert courses, premium sample packs, and digital tools—or start your own creator store.
             </p>
           </motion.div>
@@ -109,26 +115,34 @@ export const MarketplaceHero: FC<MarketplaceHeroProps> = ({
             </div>
           </motion.div>
 
-          {/* Quick Stats */}
-          <motion.div
-            className="flex flex-wrap justify-center gap-4 text-sm text-white/70"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: isVisible ? 1 : 0, y: isVisible ? 0 : 20 }}
-            transition={{ duration: 0.8, delay: 0.8 }}
-          >
-            <div className="flex items-center gap-2 px-4 py-2 bg-white/5 backdrop-blur-sm rounded-full border border-white/10">
-              <BookOpen className="w-4 h-4" />
-              <span>{totalCourses} Courses</span>
-            </div>
-            <div className="flex items-center gap-2 px-4 py-2 bg-white/5 backdrop-blur-sm rounded-full border border-white/10">
-              <Package className="w-4 h-4" />
-              <span>{totalProducts} Products</span>
-            </div>
-            <div className="flex items-center gap-2 px-4 py-2 bg-white/5 backdrop-blur-sm rounded-full border border-white/10">
-              <Users className="w-4 h-4" />
-              <span>{totalCreators}+ Creators</span>
-            </div>
-          </motion.div>
+          {/* Quick Stats - Only show if we have meaningful data */}
+          {(totalCourses > 0 || totalProducts > 0 || totalCreators > 0) && (
+            <motion.div
+              className="flex flex-wrap justify-center gap-4 text-sm text-slate-500"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: isVisible ? 1 : 0, y: isVisible ? 0 : 20 }}
+              transition={{ duration: 0.8, delay: 0.8 }}
+            >
+              {totalCourses > 0 && (
+                <div className="flex items-center gap-2 px-4 py-2 bg-white/60 backdrop-blur-sm rounded-full border border-slate-200 shadow-sm">
+                  <BookOpen className="w-4 h-4" />
+                  <span>{totalCourses} Course{totalCourses !== 1 ? 's' : ''}</span>
+                </div>
+              )}
+              {totalProducts > 0 && (
+                <div className="flex items-center gap-2 px-4 py-2 bg-white/60 backdrop-blur-sm rounded-full border border-slate-200 shadow-sm">
+                  <Package className="w-4 h-4" />
+                  <span>{totalProducts} Product{totalProducts !== 1 ? 's' : ''}</span>
+                </div>
+              )}
+              {totalCreators > 0 && (
+                <div className="flex items-center gap-2 px-4 py-2 bg-white/60 backdrop-blur-sm rounded-full border border-slate-200 shadow-sm">
+                  <Users className="w-4 h-4" />
+                  <span>{totalCreators} Creator{totalCreators !== 1 ? 's' : ''}</span>
+                </div>
+              )}
+            </motion.div>
+          )}
 
           {/* CTA Buttons */}
           <motion.div
@@ -141,7 +155,7 @@ export const MarketplaceHero: FC<MarketplaceHeroProps> = ({
               <Link href="/dashboard">
                 <Button
                   size="lg"
-                  className="bg-gradient-to-r from-primary to-chart-1 hover:from-primary/90 hover:to-chart-1/90 text-white font-semibold px-8 py-3 rounded-xl shadow-2xl shadow-primary/25 transition-all duration-300 hover:scale-105"
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold px-8 py-3 rounded-xl shadow-lg transition-all duration-300 hover:scale-105"
                 >
                   Go to Dashboard
                 </Button>
@@ -150,7 +164,7 @@ export const MarketplaceHero: FC<MarketplaceHeroProps> = ({
               <SignUpButton mode="modal">
                 <Button
                   size="lg"
-                  className="bg-gradient-to-r from-primary to-chart-1 hover:from-primary/90 hover:to-chart-1/90 text-white font-semibold px-8 py-3 rounded-xl shadow-2xl shadow-primary/25 transition-all duration-300 hover:scale-105"
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold px-8 py-3 rounded-xl shadow-lg transition-all duration-300 hover:scale-105"
                 >
                   Start for Free
                 </Button>
@@ -161,7 +175,7 @@ export const MarketplaceHero: FC<MarketplaceHeroProps> = ({
               <Button
                 variant="outline"
                 size="lg"
-                className="border-white/30 text-white hover:bg-white/10 backdrop-blur-sm px-8 py-3 rounded-xl transition-all duration-300 hover:scale-105"
+                className="border-slate-300 text-slate-700 hover:bg-slate-50 backdrop-blur-sm px-8 py-3 rounded-xl transition-all duration-300 hover:scale-105 shadow-sm"
               >
                 <Users className="mr-2 h-5 w-5" />
                 Become a Creator
@@ -171,16 +185,6 @@ export const MarketplaceHero: FC<MarketplaceHeroProps> = ({
         </div>
       </div>
 
-      {/* Bottom Wave */}
-      <div className="absolute bottom-0 left-0 w-full">
-        <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path
-            d="M0 120L1440 0V120H0Z"
-            fill="currentColor"
-            className="text-background"
-          />
-        </svg>
-      </div>
     </section>
   );
 };
