@@ -755,6 +755,7 @@ export default defineSchema({
       v.literal("chapter"), 
       v.literal("lesson"),
       v.literal("document"),
+      v.literal("note"),
       v.literal("custom")
     )),
     sourceId: v.optional(v.string()), // ID of the source (courseId, chapterId, etc.)
@@ -765,6 +766,129 @@ export default defineSchema({
     .index("by_sourceId", ["sourceId"])
     .index("by_user_category", ["userId", "category"])
     .index("by_user_sourceType", ["userId", "sourceType"]),
+
+  // Notes System - Notion-style note taking
+  noteFolders: defineTable({
+    name: v.string(),
+    userId: v.string(), // Clerk ID of the owner
+    storeId: v.string(), // Store context
+    parentId: v.optional(v.id("noteFolders")), // For nested folders
+    description: v.optional(v.string()),
+    color: v.optional(v.string()), // Hex color code for folder
+    icon: v.optional(v.string()), // Emoji or icon name
+    position: v.number(), // For ordering
+    isArchived: v.boolean(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_storeId", ["storeId"])
+    .index("by_parentId", ["parentId"])
+    .index("by_user_and_store", ["userId", "storeId"])
+    .index("by_user_and_parent", ["userId", "parentId"])
+    .index("by_archived", ["isArchived"]),
+
+  notes: defineTable({
+    title: v.string(),
+    content: v.string(), // Rich text HTML content
+    userId: v.string(), // Clerk ID of the author
+    storeId: v.string(), // Store context
+    folderId: v.optional(v.id("noteFolders")), // Parent folder
+    
+    // Content metadata
+    plainTextContent: v.optional(v.string()), // For search and RAG
+    wordCount: v.optional(v.number()),
+    readTimeMinutes: v.optional(v.number()),
+    
+    // Organization
+    tags: v.array(v.string()), // User-defined tags
+    category: v.optional(v.string()), // Course category context
+    priority: v.optional(v.union(
+      v.literal("low"),
+      v.literal("medium"), 
+      v.literal("high"),
+      v.literal("urgent")
+    )),
+    
+    // Status tracking
+    status: v.union(
+      v.literal("draft"),
+      v.literal("in_progress"),
+      v.literal("completed"),
+      v.literal("archived")
+    ),
+    
+    // AI and course generation
+    isProcessedForRAG: v.boolean(), // Whether embeddings were generated
+    linkedCourseId: v.optional(v.id("courses")), // If note was used to generate course
+    aiSummary: v.optional(v.string()), // AI-generated summary
+    
+    // Timestamps
+    lastEditedAt: v.number(),
+    lastViewedAt: v.optional(v.number()),
+    
+    // Collaboration
+    isShared: v.boolean(),
+    sharedWith: v.optional(v.array(v.string())), // Clerk IDs of collaborators
+    
+    // Template system
+    isTemplate: v.boolean(),
+    templateCategory: v.optional(v.string()),
+    
+    // Notion-like features
+    icon: v.optional(v.string()), // Emoji or icon
+    coverImage: v.optional(v.string()), // Cover image URL
+    
+    // Archival
+    isArchived: v.boolean(),
+    isFavorite: v.boolean(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_storeId", ["storeId"])
+    .index("by_folderId", ["folderId"])
+    .index("by_user_and_store", ["userId", "storeId"])
+    .index("by_user_and_folder", ["userId", "folderId"])
+    .index("by_status", ["status"])
+    .index("by_category", ["category"])
+    .index("by_lastEditedAt", ["lastEditedAt"])
+    .index("by_isTemplate", ["isTemplate"])
+    .index("by_isArchived", ["isArchived"])
+    .index("by_isFavorite", ["isFavorite"])
+    .index("by_linkedCourseId", ["linkedCourseId"])
+    .searchIndex("search_content", {
+      searchField: "plainTextContent",
+      filterFields: ["userId", "storeId", "status", "isArchived"]
+    }),
+
+  // Note Templates - Predefined note structures
+  noteTemplates: defineTable({
+    name: v.string(),
+    description: v.string(),
+    content: v.string(), // Template HTML content with placeholders
+    category: v.string(), // e.g., "Course Planning", "Research", "Meeting Notes"
+    tags: v.array(v.string()),
+    icon: v.optional(v.string()),
+    isPublic: v.boolean(), // Whether template is available to all users
+    createdBy: v.string(), // Clerk ID of creator
+    usageCount: v.number(), // Track popularity
+  })
+    .index("by_category", ["category"])
+    .index("by_isPublic", ["isPublic"])
+    .index("by_createdBy", ["createdBy"])
+    .index("by_usageCount", ["usageCount"]),
+
+  // Note Comments - For collaboration
+  noteComments: defineTable({
+    noteId: v.id("notes"),
+    authorId: v.string(), // Clerk ID
+    content: v.string(),
+    parentCommentId: v.optional(v.id("noteComments")), // For threaded comments
+    isResolved: v.boolean(),
+    resolvedBy: v.optional(v.string()), // Clerk ID
+    resolvedAt: v.optional(v.number()),
+  })
+    .index("by_noteId", ["noteId"])
+    .index("by_authorId", ["authorId"])
+    .index("by_parentCommentId", ["parentCommentId"])
+    .index("by_isResolved", ["isResolved"]),
 
   // Audio Files Storage
   audioFiles: defineTable({

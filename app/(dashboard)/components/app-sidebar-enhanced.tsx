@@ -24,7 +24,9 @@ import {
   Upload,
   Play,
   Palette,
-  Share2
+  Share2,
+  FileText,
+  PenTool
 } from "lucide-react";
 import { usePathname, useParams } from "next/navigation";
 import { useUser, UserButton, SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
@@ -101,6 +103,14 @@ export function AppSidebarEnhanced() {
     {
       label: "Create & Distribute",
       items: [
+        { 
+          icon: FileText, 
+          href: `/store/${storeId || 'setup'}/notes`, 
+          label: "Notes & Ideas",
+          badge: "AI",
+          isNew: true,
+          gradient: "from-violet-500 to-purple-500"
+        },
         { 
           icon: Package, 
           href: `/store/${storeId || 'setup'}/products`, 

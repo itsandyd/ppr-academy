@@ -15,6 +15,7 @@ export const searchSimilar: any = action({
       v.literal("chapter"), 
       v.literal("lesson"),
       v.literal("document"),
+      v.literal("note"),
       v.literal("custom")
     )),
     limit: v.optional(v.number()),
@@ -47,6 +48,7 @@ export const askQuestion: any = action({
       v.literal("chapter"), 
       v.literal("lesson"),
       v.literal("document"),
+      v.literal("note"),
       v.literal("custom")
     )),
     systemPrompt: v.optional(v.string()),

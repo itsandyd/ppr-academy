@@ -15,6 +15,7 @@ export const addContent = mutation({
       v.literal("chapter"), 
       v.literal("lesson"),
       v.literal("document"),
+      v.literal("note"),
       v.literal("custom")
     )),
     sourceId: v.optional(v.string()),
@@ -127,6 +128,7 @@ export const getEmbeddings = internalQuery({
       v.literal("chapter"), 
       v.literal("lesson"),
       v.literal("document"),
+      v.literal("note"),
       v.literal("custom")
     )),
   },
@@ -143,6 +145,7 @@ export const getEmbeddings = internalQuery({
       v.literal("chapter"), 
       v.literal("lesson"),
       v.literal("document"),
+      v.literal("note"),
       v.literal("custom")
     )),
     sourceId: v.optional(v.string()),

@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Copy, Home, BarChart3, Users, Package, Store, Settings, HelpCircle, User, Mail } from "lucide-react";
+import { Copy, Home, BarChart3, Users, Package, Store, Settings, HelpCircle, User, Mail, FileText } from "lucide-react";
 import { usePathname, useParams } from "next/navigation";
 import { useUser, UserButton, SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
@@ -50,6 +50,7 @@ export function AppSidebar() {
   const mainNavItems: NavItem[] = [
     { icon: Home, href: "/home", label: "Home" },
     { icon: BarChart3, href: "/analytics", label: "Analytics" },
+    { icon: FileText, href: `/store/${storeId || 'setup'}/notes`, label: "Notes" },
     { icon: Users, href: `/store/${storeId || 'setup'}/customers`, label: "Customers" },
     { icon: Mail, href: `/store/${storeId || 'setup'}/email-campaigns`, label: "Email Campaigns" },
     { icon: Package, href: `/store/${storeId || 'setup'}/products`, label: "Products" },
