@@ -12,6 +12,7 @@ import { Calendar, Clock, Instagram, Twitter, Facebook, Linkedin, TrendingUp, Pl
 import { useToast } from "@/hooks/use-toast";
 import { AccountManagementDialog } from "./account-management-dialog";
 import { PostComposer } from "./post-composer";
+import { AutomationManager } from "./automation-manager";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -168,6 +169,7 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
             Scheduled ({scheduledPosts?.length || 0})
           </TabsTrigger>
           <TabsTrigger value="published">Published</TabsTrigger>
+          <TabsTrigger value="automation">Automation</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
@@ -443,6 +445,11 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        {/* Automation Tab */}
+        <TabsContent value="automation">
+          <AutomationManager storeId={storeId} userId={userId} />
         </TabsContent>
 
         {/* Analytics Tab */}

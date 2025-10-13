@@ -1684,6 +1684,287 @@ export default defineSchema({
     .index("by_userId", ["userId"])
     .index("by_category", ["category"]),
 
+  // ============================================================================
+  // MANYCHAT-STYLE AUTOMATION SYSTEM
+  // ============================================================================
+
+  // Automation Flows - Define conversation flows and sequences
+  automationFlows: defineTable({
+    storeId: v.string(),
+    userId: v.string(),
+    
+    // Flow Info
+    name: v.string(),
+    description: v.optional(v.string()),
+    isActive: v.boolean(),
+    
+    // Trigger Configuration
+    triggerType: v.union(
+      v.literal("keyword"),          // Triggered by keyword in comments/messages
+      v.literal("comment"),          // Triggered by any comment
+      v.literal("dm"),              // Triggered by DM
+      v.literal("mention"),         // Triggered by mention
+      v.literal("hashtag"),         // Triggered by specific hashtag
+      v.literal("manual"),          // Manually triggered
+    ),
+    
+    // Trigger Conditions
+    triggerConditions: v.object({
+      keywords: v.optional(v.array(v.string())), // Keywords to match (case-insensitive)
+      platforms: v.array(v.union(
+        v.literal("instagram"),
+        v.literal("twitter"),
+        v.literal("facebook"),
+        v.literal("tiktok"),
+        v.literal("linkedin")
+      )),
+      matchType: v.union(
+        v.literal("exact"),           // Exact match
+        v.literal("contains"),        // Contains keyword
+        v.literal("starts_with"),     // Starts with keyword
+        v.literal("regex"),           // Regex match
+      ),
+      socialAccountIds: v.optional(v.array(v.id("socialAccounts"))), // Specific accounts
+    }),
+    
+    // Flow Definition (nodes and connections)
+    flowDefinition: v.object({
+      nodes: v.array(v.object({
+        id: v.string(),
+        type: v.union(
+          v.literal("trigger"),       // Starting point
+          v.literal("message"),       // Send message
+          v.literal("delay"),         // Wait/delay
+          v.literal("condition"),     // Conditional branching  
+          v.literal("resource"),      // Send resource/file
+          v.literal("tag"),           // Add user tag
+          v.literal("webhook"),       // Send webhook
+        ),
+        position: v.object({ x: v.number(), y: v.number() }),
+        data: v.object({
+          // Message node data
+          content: v.optional(v.string()),
+          mediaUrls: v.optional(v.array(v.string())),
+          
+          // Delay node data
+          delayMinutes: v.optional(v.number()),
+          
+          // Condition node data
+          conditionType: v.optional(v.union(
+            v.literal("keyword"),
+            v.literal("user_response"),
+            v.literal("time_based"),
+            v.literal("tag_based"),
+          )),
+          conditionValue: v.optional(v.string()),
+          
+          // Resource node data
+          resourceType: v.optional(v.union(
+            v.literal("link"),
+            v.literal("file"),
+            v.literal("course"),
+            v.literal("product"),
+          )),
+          resourceUrl: v.optional(v.string()),
+          resourceId: v.optional(v.string()),
+          
+          // Tag node data
+          tagName: v.optional(v.string()),
+          
+          // Webhook node data
+          webhookUrl: v.optional(v.string()),
+          webhookData: v.optional(v.any()),
+        }),
+      })),
+      connections: v.array(v.object({
+        from: v.string(), // Node ID
+        to: v.string(),   // Node ID
+        label: v.optional(v.string()), // Connection label (for conditions)
+      })),
+    }),
+    
+    // Analytics
+    totalTriggers: v.number(),
+    totalCompletions: v.number(),
+    lastTriggered: v.optional(v.number()),
+    
+    // Configuration
+    settings: v.object({
+      stopOnError: v.boolean(),
+      allowMultipleRuns: v.boolean(), // Can same user trigger multiple times?
+      timeoutMinutes: v.optional(v.number()), // Flow timeout
+    }),
+  })
+    .index("by_storeId", ["storeId"])
+    .index("by_userId", ["userId"])
+    .index("by_isActive", ["isActive"])
+    .index("by_triggerType", ["triggerType"])
+    .index("by_store_active", ["storeId", "isActive"]),
+
+  // User Automation States - Track user progress through flows
+  userAutomationStates: defineTable({
+    storeId: v.string(),
+    automationFlowId: v.id("automationFlows"),
+    
+    // User Identity (from social platforms)
+    platformUserId: v.string(),
+    platform: v.union(
+      v.literal("instagram"),
+      v.literal("twitter"),
+      v.literal("facebook"),
+      v.literal("tiktok"),
+      v.literal("linkedin")
+    ),
+    platformUsername: v.optional(v.string()),
+    
+    // Flow State
+    currentNodeId: v.optional(v.string()), // Current position in flow
+    status: v.union(
+      v.literal("active"),           // Currently in flow
+      v.literal("completed"),        // Flow completed
+      v.literal("paused"),           // Flow paused
+      v.literal("error"),            // Flow errored
+      v.literal("timeout"),          // Flow timed out
+    ),
+    
+    // Progress Tracking
+    startedAt: v.number(),
+    lastActivityAt: v.number(),
+    completedAt: v.optional(v.number()),
+    
+    // Flow Data
+    variables: v.optional(v.object({})), // Store user responses/data
+    tags: v.optional(v.array(v.string())), // User tags collected
+    
+    // Trigger Context
+    triggerContext: v.object({
+      triggerType: v.string(),
+      originalCommentId: v.optional(v.string()),
+      originalPostId: v.optional(v.string()),
+      triggerMessage: v.optional(v.string()),
+      socialAccountId: v.optional(v.id("socialAccounts")),
+    }),
+    
+    // Error Handling
+    errorMessage: v.optional(v.string()),
+    retryCount: v.number(),
+  })
+    .index("by_storeId", ["storeId"])
+    .index("by_automationFlowId", ["automationFlowId"])
+    .index("by_platformUser", ["platform", "platformUserId"])
+    .index("by_status", ["status"])
+    .index("by_store_platform_user", ["storeId", "platform", "platformUserId"])
+    .index("by_lastActivity", ["lastActivityAt"]),
+
+  // Automation Triggers - Track keyword/trigger events
+  automationTriggers: defineTable({
+    storeId: v.string(),
+    automationFlowId: v.id("automationFlows"),
+    userAutomationStateId: v.optional(v.id("userAutomationStates")),
+    
+    // Trigger Details
+    triggerType: v.string(),
+    keyword: v.optional(v.string()),
+    matchedText: v.string(),
+    
+    // Social Context
+    platform: v.union(
+      v.literal("instagram"),
+      v.literal("twitter"),
+      v.literal("facebook"),
+      v.literal("tiktok"),
+      v.literal("linkedin")
+    ),
+    socialAccountId: v.id("socialAccounts"),
+    platformUserId: v.string(),
+    platformUsername: v.optional(v.string()),
+    
+    // Content Context
+    commentId: v.optional(v.string()),
+    postId: v.optional(v.string()),
+    messageId: v.optional(v.string()),
+    fullContent: v.string(),
+    
+    // Processing
+    status: v.union(
+      v.literal("pending"),
+      v.literal("processing"), 
+      v.literal("completed"),
+      v.literal("failed"),
+      v.literal("ignored"),
+    ),
+    processedAt: v.optional(v.number()),
+    errorMessage: v.optional(v.string()),
+    
+    // Webhook data (if triggered by webhook)
+    webhookId: v.optional(v.id("socialWebhooks")),
+  })
+    .index("by_storeId", ["storeId"])
+    .index("by_automationFlowId", ["automationFlowId"])
+    .index("by_platform", ["platform"])
+    .index("by_status", ["status"])
+    .index("by_keyword", ["keyword"])
+    .index("by_platformUser", ["platform", "platformUserId"])
+    .index("by_store_status", ["storeId", "status"]),
+
+  // Automation Messages - Track messages sent through automation
+  automationMessages: defineTable({
+    storeId: v.string(),
+    automationFlowId: v.id("automationFlows"),
+    userAutomationStateId: v.id("userAutomationStates"),
+    nodeId: v.string(), // Flow node that sent this message
+    
+    // Message Content
+    messageType: v.union(
+      v.literal("dm"),              // Direct message
+      v.literal("comment_reply"),   // Reply to comment  
+      v.literal("story_reply"),     // Story reply
+    ),
+    content: v.string(),
+    mediaUrls: v.optional(v.array(v.string())),
+    
+    // Recipient Info
+    platform: v.union(
+      v.literal("instagram"),
+      v.literal("twitter"),
+      v.literal("facebook"),
+      v.literal("tiktok"),
+      v.literal("linkedin")
+    ),
+    platformUserId: v.string(),
+    platformUsername: v.optional(v.string()),
+    
+    // Delivery Status
+    status: v.union(
+      v.literal("pending"),
+      v.literal("sending"),
+      v.literal("sent"),
+      v.literal("delivered"),
+      v.literal("failed"),
+      v.literal("rate_limited"),
+    ),
+    sentAt: v.optional(v.number()),
+    deliveredAt: v.optional(v.number()),
+    errorMessage: v.optional(v.string()),
+    
+    // Platform Response
+    platformMessageId: v.optional(v.string()),
+    socialAccountId: v.id("socialAccounts"),
+    
+    // Retry Logic
+    retryCount: v.number(),
+    maxRetries: v.number(),
+    nextRetryAt: v.optional(v.number()),
+  })
+    .index("by_storeId", ["storeId"])
+    .index("by_automationFlowId", ["automationFlowId"])
+    .index("by_userState", ["userAutomationStateId"])
+    .index("by_status", ["status"])
+    .index("by_platform", ["platform"])
+    .index("by_platformUser", ["platform", "platformUserId"])
+    .index("by_sentAt", ["sentAt"])
+    .index("by_nextRetry", ["nextRetryAt"]),
+
   // Discord Integration
   discordIntegrations: defineTable({
     userId: v.string(), // Clerk user ID

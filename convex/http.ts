@@ -1,6 +1,7 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { internal } from "./_generated/api";
 
 const http = httpRouter();
 
@@ -115,6 +116,265 @@ http.route({
     }
   }),
 });
+
+/**
+ * Instagram Webhook Handler
+ * 
+ * Handles webhook events from Instagram for comments, messages, mentions
+ * POST /webhooks/instagram
+ */
+http.route({
+  path: "/webhooks/instagram",
+  method: "POST",
+  handler: httpAction(async (ctx, req) => {
+    try {
+      const body = await req.text();
+      const payload = JSON.parse(body);
+
+      console.log('📥 Instagram webhook received:', payload);
+
+      // Instagram webhook verification
+      const mode = new URL(req.url).searchParams.get("hub.mode");
+      const token = new URL(req.url).searchParams.get("hub.verify_token");
+      const challenge = new URL(req.url).searchParams.get("hub.challenge");
+
+      // Verification request
+      if (mode === "subscribe" && token === process.env.INSTAGRAM_VERIFY_TOKEN) {
+        return new Response(challenge, { status: 200 });
+      }
+
+      // Process webhook events
+      if (payload.object === "instagram") {
+        for (const entry of payload.entry || []) {
+          for (const change of entry.changes || []) {
+            await processInstagramWebhook(ctx, change, entry);
+          }
+        }
+      }
+
+      return new Response(JSON.stringify({ received: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      });
+
+    } catch (error) {
+      console.error("Instagram webhook error:", error);
+      return new Response(JSON.stringify({ error: "Processing failed" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+  }),
+});
+
+/**
+ * Facebook Webhook Handler
+ * 
+ * Handles webhook events from Facebook for comments, messages, mentions
+ * POST /webhooks/facebook
+ */
+http.route({
+  path: "/webhooks/facebook",
+  method: "POST",
+  handler: httpAction(async (ctx, req) => {
+    try {
+      const body = await req.text();
+      const payload = JSON.parse(body);
+
+      console.log('📥 Facebook webhook received:', payload);
+
+      // Facebook webhook verification
+      const mode = new URL(req.url).searchParams.get("hub.mode");
+      const token = new URL(req.url).searchParams.get("hub.verify_token");
+      const challenge = new URL(req.url).searchParams.get("hub.challenge");
+
+      // Verification request
+      if (mode === "subscribe" && token === process.env.FACEBOOK_VERIFY_TOKEN) {
+        return new Response(challenge, { status: 200 });
+      }
+
+      // Process webhook events
+      if (payload.object === "page") {
+        for (const entry of payload.entry || []) {
+          await processFacebookWebhook(ctx, entry);
+        }
+      }
+
+      return new Response(JSON.stringify({ received: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      });
+
+    } catch (error) {
+      console.error("Facebook webhook error:", error);
+      return new Response(JSON.stringify({ error: "Processing failed" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+  }),
+});
+
+/**
+ * Twitter Webhook Handler
+ * 
+ * Handles webhook events from Twitter for mentions, DMs, replies
+ * POST /webhooks/twitter
+ */
+http.route({
+  path: "/webhooks/twitter",
+  method: "POST",
+  handler: httpAction(async (ctx, req) => {
+    try {
+      const body = await req.text();
+      const payload = JSON.parse(body);
+
+      console.log('📥 Twitter webhook received:', payload);
+
+      // Process different Twitter events
+      if (payload.tweet_create_events) {
+        for (const tweet of payload.tweet_create_events) {
+          await processTwitterWebhook(ctx, tweet, "tweet");
+        }
+      }
+
+      if (payload.direct_message_events) {
+        for (const dm of payload.direct_message_events) {
+          await processTwitterWebhook(ctx, dm, "dm");
+        }
+      }
+
+      return new Response(JSON.stringify({ received: true }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" }
+      });
+
+    } catch (error) {
+      console.error("Twitter webhook error:", error);
+      return new Response(JSON.stringify({ error: "Processing failed" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+  }),
+});
+
+/**
+ * Process Instagram webhook events
+ */
+async function processInstagramWebhook(ctx: any, change: any, entry: any) {
+  const eventType = change.field;
+  let webhookEventType = "";
+  
+  switch (eventType) {
+    case "comments":
+      webhookEventType = "instagram.comment";
+      break;
+    case "messages":
+      webhookEventType = "instagram.message";
+      break;
+    case "mentions":
+      webhookEventType = "instagram.mention";
+      break;
+    default:
+      console.log(`Unhandled Instagram event: ${eventType}`);
+      return;
+  }
+
+  // Store webhook in database
+  const webhookId = await ctx.runMutation(internal.automation.createSocialWebhook, {
+    platform: "instagram",
+    eventType: webhookEventType,
+    payload: {
+      ...change.value,
+      entry: entry,
+    },
+    socialAccountId: undefined, // Will be determined during processing
+  });
+
+  // Process for automation triggers
+  await ctx.runAction(internal.automation.processSocialWebhookForAutomation, {
+    webhookId,
+  });
+}
+
+/**
+ * Process Facebook webhook events
+ */
+async function processFacebookWebhook(ctx: any, entry: any) {
+  // Process comments
+  if (entry.changes) {
+    for (const change of entry.changes) {
+      if (change.field === "feed" && change.value.item === "comment") {
+        const webhookId = await ctx.runMutation(internal.automation.createSocialWebhook, {
+          platform: "facebook",
+          eventType: "facebook.comment",
+          payload: {
+            ...change.value,
+            entry: entry,
+          },
+          socialAccountId: undefined,
+        });
+
+        await ctx.runAction(internal.automation.processSocialWebhookForAutomation, {
+          webhookId,
+        });
+      }
+    }
+  }
+
+  // Process messages
+  if (entry.messaging) {
+    for (const message of entry.messaging) {
+      if (message.message) {
+        const webhookId = await ctx.runMutation(internal.automation.createSocialWebhook, {
+          platform: "facebook",
+          eventType: "facebook.message",
+          payload: {
+            ...message,
+            entry: entry,
+          },
+          socialAccountId: undefined,
+        });
+
+        await ctx.runAction(internal.automation.processSocialWebhookForAutomation, {
+          webhookId,
+        });
+      }
+    }
+  }
+}
+
+/**
+ * Process Twitter webhook events
+ */
+async function processTwitterWebhook(ctx: any, event: any, type: string) {
+  let webhookEventType = "";
+  
+  if (type === "tweet") {
+    // Check if it's a mention or reply
+    if (event.in_reply_to_status_id) {
+      webhookEventType = "twitter.reply";
+    } else if (event.entities?.user_mentions?.length > 0) {
+      webhookEventType = "twitter.mention";
+    } else {
+      return; // Skip regular tweets
+    }
+  } else if (type === "dm") {
+    webhookEventType = "twitter.message";
+  }
+
+  const webhookId = await ctx.runMutation(internal.automation.createSocialWebhook, {
+    platform: "twitter",
+    eventType: webhookEventType,
+    payload: event,
+    socialAccountId: undefined,
+  });
+
+  await ctx.runAction(internal.automation.processSocialWebhookForAutomation, {
+    webhookId,
+  });
+}
 
 /**
  * Stripe Webhook Handler

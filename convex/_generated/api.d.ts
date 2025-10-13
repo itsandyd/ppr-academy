@@ -23,6 +23,7 @@ import type * as analyticsSchema from "../analyticsSchema.js";
 import type * as analyticsTracking from "../analyticsTracking.js";
 import type * as audioGeneration from "../audioGeneration.js";
 import type * as audioGenerationNode from "../audioGenerationNode.js";
+import type * as automation from "../automation.js";
 import type * as bundles from "../bundles.js";
 import type * as certificates from "../certificates.js";
 import type * as certificatesSchema from "../certificatesSchema.js";
@@ -107,6 +108,7 @@ declare const fullApi: ApiFromModules<{
   analyticsTracking: typeof analyticsTracking;
   audioGeneration: typeof audioGeneration;
   audioGenerationNode: typeof audioGenerationNode;
+  automation: typeof automation;
   bundles: typeof bundles;
   certificates: typeof certificates;
   certificatesSchema: typeof certificatesSchema;
