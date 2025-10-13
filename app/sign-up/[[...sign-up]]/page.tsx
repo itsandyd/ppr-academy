@@ -40,7 +40,7 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
         {/* Clerk Sign Up Component */}
         <div className="p-8">
         <SignUp 
-          fallbackRedirectUrl={params.redirect_url || "/dashboard"}
+          fallbackRedirectUrl={params.redirect_url || (isCreator ? "/home" : "/library")}
           appearance={{
               elements: {
                 rootBox: "w-full",
