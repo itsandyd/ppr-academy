@@ -669,42 +669,6 @@ export default function ProductsPage() {
           </Tabs>
         </motion.div>
 
-        {/* Quick Start Tips */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-          className="mt-16"
-        >
-          <Card className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/10 dark:to-pink-900/10 border-purple-200 dark:border-purple-800">
-            <CardContent className="p-8">
-              <div className="text-center">
-                <h3 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-4">
-                  💡 New to selling music online?
-                </h3>
-                <p className="text-slate-600 dark:text-slate-400 mb-6 max-w-2xl mx-auto">
-                  Start with a <strong>Sample Pack</strong> or <strong>Beat Lease</strong> — they're the most popular and easiest to get started with!
-                </p>
-                <div className="flex flex-wrap justify-center gap-4">
-                  <Button 
-                    onClick={() => handleOptionClick('sample-pack')}
-                    className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
-                  >
-                    <Music className="w-4 h-4 mr-2" />
-                    Start with Sample Pack
-                  </Button>
-                  <Button 
-                    onClick={() => handleOptionClick('beat-lease')}
-                    variant="outline"
-                    className="border-purple-200 hover:bg-purple-50 dark:border-purple-700 dark:hover:bg-purple-900/20"
-                  >
-                    Try Beat Licensing
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
       </div>
     </div>
   );
