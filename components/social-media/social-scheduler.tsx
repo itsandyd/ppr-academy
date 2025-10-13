@@ -8,10 +8,21 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, Instagram, Twitter, Facebook, Linkedin, TrendingUp, Plus } from "lucide-react";
+import { Calendar, Clock, Instagram, Twitter, Facebook, Linkedin, TrendingUp, Plus, Trash2, Edit3, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AccountManagementDialog } from "./account-management-dialog";
 import { PostComposer } from "./post-composer";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface SocialSchedulerProps {
   storeId: string;
@@ -25,6 +36,10 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
   const [showAccountDialog, setShowAccountDialog] = useState(false);
   const [showPostComposer, setShowPostComposer] = useState(false);
   const [editingPost, setEditingPost] = useState<any>(null);
+  const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
+
+  // Mutations
+  const deletePost = useMutation(api.socialMedia.deleteScheduledPost);
 
   // Fetch connected accounts
   const accounts = useQuery(api.socialMedia.getSocialAccounts, { storeId });
@@ -104,6 +119,31 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
       hour: "numeric",
       minute: "2-digit",
     });
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    try {
+      setDeletingPostId(postId);
+      
+      await deletePost({
+        postId: postId as Id<"scheduledPosts">,
+        userId,
+      });
+      
+      toast({
+        title: "Post Deleted",
+        description: "The scheduled post has been successfully deleted.",
+      });
+    } catch (error) {
+      console.error("Error deleting post:", error);
+      toast({
+        title: "Delete Failed", 
+        description: "Failed to delete the scheduled post. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingPostId(null);
+    }
   };
 
   return (
@@ -271,11 +311,61 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
                             setShowPostComposer(true);
                           }}
                         >
+                          <Edit3 className="mr-1 h-3 w-3" />
                           Edit
                         </Button>
-                        <Button variant="destructive" size="sm">
-                          Cancel
-                        </Button>
+                        
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button 
+                              variant="destructive" 
+                              size="sm"
+                              disabled={deletingPostId === post._id}
+                            >
+                              {deletingPostId === post._id ? (
+                                <>
+                                  <div className="mr-1 h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                  Deleting...
+                                </>
+                              ) : (
+                                <>
+                                  <Trash2 className="mr-1 h-3 w-3" />
+                                  Delete
+                                </>
+                              )}
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent className="bg-white dark:bg-black">
+                            <AlertDialogHeader>
+                              <AlertDialogTitle className="flex items-center gap-2">
+                                <AlertTriangle className="h-5 w-5 text-red-500" />
+                                Delete Scheduled Post
+                              </AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete this scheduled post? This action cannot be undone.
+                                <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                                  <p className="text-sm font-medium">Post Content:</p>
+                                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-3">
+                                    {post.content}
+                                  </p>
+                                  <p className="text-xs text-gray-500 mt-2">
+                                    Scheduled for: {formatDate(post.scheduledFor)}
+                                  </p>
+                                </div>
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Keep Post</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => handleDeletePost(post._id)}
+                                className="bg-red-600 hover:bg-red-700 text-white"
+                              >
+                                <Trash2 className="mr-1 h-3 w-3" />
+                                Delete Post
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </div>
                     </div>
                   </CardContent>
