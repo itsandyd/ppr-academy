@@ -36,8 +36,8 @@ export default function Footer() {
       { name: "API Docs", isComingSoon: true },
     ],
     legal: [
-      { name: "Privacy Policy", isComingSoon: true },
-      { name: "Terms of Service", isComingSoon: true },
+      { name: "Privacy Policy", href: "/privacy-policy", isComingSoon: false },
+      { name: "Terms of Service", href: "/terms-of-service", isComingSoon: false },
       { name: "Cookie Policy", isComingSoon: true },
       { name: "Licenses", isComingSoon: true },
     ],

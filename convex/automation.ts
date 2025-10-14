@@ -641,34 +641,19 @@ async function processCommentForTriggers(ctx: any, webhook: any, payload: any) {
     return;
   }
 
-  // CENTRALIZED ROUTING: Find which platform user owns the Instagram account that received this comment
-  const targetSocialAccount = await ctx.runQuery(internal.automation.findSocialAccountByWebhook, {
-    platform: webhook.platform,
-    webhookPayload: payload,
-  });
-
-  if (!targetSocialAccount) {
-    console.log("Could not identify target social account for comment trigger");
-    return;
-  }
-
-  console.log(`📍 Routing comment to user: ${targetSocialAccount.userId} (${targetSocialAccount.platformUsername})`);
-
-  // First, check if this is a response to a pending confirmation for this specific account owner
+  // First, check if this is a response to a pending confirmation
   await ctx.runAction(internal.automation.processUserResponse, {
     platform: webhook.platform,
     platformUserId: commenterUserId,
     responseText: commentText,
-    storeId: targetSocialAccount.storeId,
   });
 
-  // Then, find matching automation flows for the POST OWNER (not the commenter)
-  const flows = await ctx.runQuery(internal.automation.getActiveAutomationFlowsForUser, {
+  // For now, use the simpler approach - find all active flows for this platform
+  // TODO: Implement centralized routing once webhook is working
+  const flows = await ctx.runQuery(internal.automation.getActiveAutomationFlows, {
     platform: webhook.platform,
     triggerTypes: ["keyword", "comment"],
-    storeId: targetSocialAccount.storeId,
-    userId: targetSocialAccount.userId,
-    socialAccountId: targetSocialAccount._id,
+    socialAccountId: webhook.socialAccountId,
   });
 
   for (const flow of flows) {
@@ -681,7 +666,7 @@ async function processCommentForTriggers(ctx: any, webhook: any, payload: any) {
         keyword: getMatchedKeyword(flow, commentText),
         matchedText: commentText,
         platform: webhook.platform,
-        socialAccountId: targetSocialAccount._id, // POST OWNER's account
+        socialAccountId: webhook.socialAccountId, // POST OWNER's account
         platformUserId: commenterUserId, // COMMENTER's ID (who will receive the DM)
         platformUsername: commenterUsername, // COMMENTER's username
         commentId: payload.id,
@@ -703,34 +688,19 @@ async function processMessageForTriggers(ctx: any, webhook: any, payload: any) {
     return;
   }
 
-  // CENTRALIZED ROUTING: Find which platform user owns the Instagram account that received this message
-  const targetSocialAccount = await ctx.runQuery(internal.automation.findSocialAccountByWebhook, {
-    platform: webhook.platform,
-    webhookPayload: payload,
-  });
-
-  if (!targetSocialAccount) {
-    console.log("Could not identify target social account for message trigger");
-    return;
-  }
-
-  console.log(`📍 Routing message to user: ${targetSocialAccount.userId} (${targetSocialAccount.platformUsername})`);
-
   // First, check if this is a response to a pending confirmation
   await ctx.runAction(internal.automation.processUserResponse, {
     platform: webhook.platform,
     platformUserId: senderUserId,
     responseText: messageText,
-    storeId: targetSocialAccount.storeId,
   });
 
-  // Then, find matching automation flows for the ACCOUNT OWNER (not the sender)
-  const flows = await ctx.runQuery(internal.automation.getActiveAutomationFlowsForUser, {
+  // For now, use the simpler approach - find all active flows for this platform
+  // TODO: Implement centralized routing once webhook is working
+  const flows = await ctx.runQuery(internal.automation.getActiveAutomationFlows, {
     platform: webhook.platform,
     triggerTypes: ["keyword", "dm"],
-    storeId: targetSocialAccount.storeId,
-    userId: targetSocialAccount.userId,
-    socialAccountId: targetSocialAccount._id,
+    socialAccountId: webhook.socialAccountId,
   });
 
   for (const flow of flows) {
@@ -743,7 +713,7 @@ async function processMessageForTriggers(ctx: any, webhook: any, payload: any) {
         keyword: getMatchedKeyword(flow, messageText),
         matchedText: messageText,
         platform: webhook.platform,
-        socialAccountId: targetSocialAccount._id, // ACCOUNT OWNER's account
+        socialAccountId: webhook.socialAccountId, // ACCOUNT OWNER's account
         platformUserId: senderUserId, // SENDER's ID (who will receive the response)
         platformUsername: senderUsername, // SENDER's username
         messageId: payload.id,

@@ -118,30 +118,64 @@ http.route({
 });
 
 /**
- * Instagram Webhook Handler (GET for verification)
+ * Simple webhook test endpoint
  */
 http.route({
-  path: "/webhooks/instagram",
+  path: "/webhook-test",
+  method: "GET", 
+  handler: httpAction(async (ctx, req) => {
+    return new Response("Webhook test works!", { 
+      status: 200,
+      headers: { "Content-Type": "text/plain" }
+    });
+  }),
+});
+
+/**
+ * Instagram Webhook Verification (GET)
+ */
+http.route({
+  path: "/instagram-webhook",
   method: "GET",
   handler: httpAction(async (ctx, req) => {
-    const url = new URL(req.url);
-    const mode = url.searchParams.get("hub.mode");
-    const token = url.searchParams.get("hub.verify_token");
-    const challenge = url.searchParams.get("hub.challenge");
+    try {
+      const url = new URL(req.url);
+      const mode = url.searchParams.get("hub.mode");
+      const token = url.searchParams.get("hub.verify_token");
+      const challenge = url.searchParams.get("hub.challenge");
 
-    console.log('🔍 Instagram webhook verification:', { mode, token, challenge });
-
-    // Verification request
-    if (mode === "subscribe" && token === "ppr_automation_webhook_2024" && challenge) {
-      console.log('✅ Instagram webhook verification successful');
-      return new Response(challenge, { 
-        status: 200,
-        headers: { "Content-Type": "text/plain" }
+      console.log('🔍 Instagram webhook verification attempt:', { 
+        mode, 
+        token, 
+        challenge,
+        fullUrl: req.url 
       });
-    }
 
-    console.log('❌ Instagram webhook verification failed');
-    return new Response("Verification failed", { status: 403 });
+      // Verification request
+      if (mode === "subscribe") {
+        if (token === "ppr_automation_webhook_2024") {
+          if (challenge) {
+            console.log('✅ Instagram webhook verification SUCCESS');
+            return new Response(challenge, { 
+              status: 200,
+              headers: { "Content-Type": "text/plain" }
+            });
+          } else {
+            console.log('❌ No challenge provided');
+            return new Response("No challenge provided", { status: 400 });
+          }
+        } else {
+          console.log('❌ Token mismatch:', { received: token, expected: "ppr_automation_webhook_2024" });
+          return new Response("Token mismatch", { status: 403 });
+        }
+      } else {
+        console.log('❌ Invalid mode:', mode);
+        return new Response("Invalid mode", { status: 400 });
+      }
+    } catch (error) {
+      console.error('❌ Webhook verification error:', error);
+      return new Response("Internal error: " + String(error), { status: 500 });
+    }
   }),
 });
 
