@@ -63,6 +63,7 @@ import { useToast } from "@/hooks/use-toast";
 interface AutomationManagerProps {
   storeId: string;
   userId: string;
+  onSwitchToAccounts?: () => void;
 }
 
 interface FlowNode {
@@ -116,7 +117,7 @@ interface AutomationFlow {
   };
 }
 
-export function AutomationManager({ storeId, userId }: AutomationManagerProps) {
+export function AutomationManager({ storeId, userId, onSwitchToAccounts }: AutomationManagerProps) {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("flows");
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -493,11 +494,33 @@ export function AutomationManager({ storeId, userId }: AutomationManagerProps) {
           <p className="text-muted-foreground">
             Automate your social media interactions with keyword triggers and smart responses
           </p>
+          {socialAccounts && socialAccounts.length === 0 && (
+            <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                💡 <strong>Quick Start:</strong> Connect your Instagram account first, then create automation flows that will work on ALL your posts automatically!
+              </p>
+            </div>
+          )}
         </div>
-        <Button onClick={() => setShowCreateDialog(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Create Automation
-        </Button>
+        <div className="flex gap-2">
+          {socialAccounts && socialAccounts.length === 0 && (
+            <Button variant="outline" onClick={() => onSwitchToAccounts?.()}>
+              Connect Instagram First
+            </Button>
+          )}
+          <Button 
+            onClick={() => setShowCreateDialog(true)}
+            disabled={!socialAccounts || socialAccounts.length === 0}
+            title={
+              !socialAccounts || socialAccounts.length === 0 
+                ? "Connect a social media account first" 
+                : "Create new automation"
+            }
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Create Automation
+          </Button>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>

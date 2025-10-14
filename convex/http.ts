@@ -118,7 +118,35 @@ http.route({
 });
 
 /**
- * Instagram Webhook Handler
+ * Instagram Webhook Handler (GET for verification)
+ */
+http.route({
+  path: "/webhooks/instagram",
+  method: "GET",
+  handler: httpAction(async (ctx, req) => {
+    const url = new URL(req.url);
+    const mode = url.searchParams.get("hub.mode");
+    const token = url.searchParams.get("hub.verify_token");
+    const challenge = url.searchParams.get("hub.challenge");
+
+    console.log('🔍 Instagram webhook verification:', { mode, token, challenge });
+
+    // Verification request
+    if (mode === "subscribe" && token === "ppr_automation_webhook_2024" && challenge) {
+      console.log('✅ Instagram webhook verification successful');
+      return new Response(challenge, { 
+        status: 200,
+        headers: { "Content-Type": "text/plain" }
+      });
+    }
+
+    console.log('❌ Instagram webhook verification failed');
+    return new Response("Verification failed", { status: 403 });
+  }),
+});
+
+/**
+ * Instagram Webhook Handler (POST for events)
  * 
  * Handles webhook events from Instagram for comments, messages, mentions
  * POST /webhooks/instagram
@@ -132,16 +160,6 @@ http.route({
       const payload = JSON.parse(body);
 
       console.log('📥 Instagram webhook received:', payload);
-
-      // Instagram webhook verification
-      const mode = new URL(req.url).searchParams.get("hub.mode");
-      const token = new URL(req.url).searchParams.get("hub.verify_token");
-      const challenge = new URL(req.url).searchParams.get("hub.challenge");
-
-      // Verification request
-      if (mode === "subscribe" && token === process.env.INSTAGRAM_VERIFY_TOKEN) {
-        return new Response(challenge, { status: 200 });
-      }
 
       // Process webhook events
       if (payload.object === "instagram") {

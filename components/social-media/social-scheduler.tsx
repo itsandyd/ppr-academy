@@ -449,7 +449,11 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
 
         {/* Automation Tab */}
         <TabsContent value="automation">
-          <AutomationManager storeId={storeId} userId={userId} />
+          <AutomationManager 
+            storeId={storeId} 
+            userId={userId} 
+            onSwitchToAccounts={() => setActiveTab("accounts")}
+          />
         </TabsContent>
 
         {/* Analytics Tab */}

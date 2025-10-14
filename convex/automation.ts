@@ -579,18 +579,19 @@ export const processTrigger = internalAction({
       }
 
       // Create or update user automation state
+      // Note: platformUserId is the COMMENTER, socialAccountId is the POST OWNER's account
       const stateId = await ctx.runMutation(internal.automation.createOrUpdateUserState, {
         storeId: trigger.storeId,
         automationFlowId: trigger.automationFlowId,
         platform: trigger.platform,
-        platformUserId: trigger.platformUserId,
+        platformUserId: trigger.platformUserId, // COMMENTER who will receive DMs
         platformUsername: trigger.platformUsername,
         triggerContext: {
           triggerType: trigger.triggerType,
           originalCommentId: trigger.commentId,
           originalPostId: trigger.postId,
           triggerMessage: trigger.fullContent,
-          socialAccountId: trigger.socialAccountId,
+          socialAccountId: trigger.socialAccountId, // POST OWNER's account for sending DMs
         },
       });
 
@@ -632,31 +633,47 @@ export const processTrigger = internalAction({
 
 async function processCommentForTriggers(ctx: any, webhook: any, payload: any) {
   const commentText = payload.text || payload.message || payload.comment || "";
-  const platformUserId = payload.user?.id || payload.from?.id || "";
-  const platformUsername = payload.user?.username || payload.from?.username || "";
+  const commenterUserId = payload.user?.id || payload.from?.id || "";
+  const commenterUsername = payload.user?.username || payload.from?.username || "";
   
-  if (!commentText || !platformUserId) {
+  if (!commentText || !commenterUserId) {
     console.log("Insufficient comment data for trigger processing");
     return;
   }
 
-  // First, check if this is a response to a pending confirmation
-  await ctx.runAction(internal.automation.processUserResponse, {
+  // CENTRALIZED ROUTING: Find which platform user owns the Instagram account that received this comment
+  const targetSocialAccount = await ctx.runQuery(internal.automation.findSocialAccountByWebhook, {
     platform: webhook.platform,
-    platformUserId,
-    responseText: commentText,
+    webhookPayload: payload,
   });
 
-  // Then, find matching automation flows for new triggers
-  const flows = await ctx.runQuery(internal.automation.getActiveAutomationFlows, {
+  if (!targetSocialAccount) {
+    console.log("Could not identify target social account for comment trigger");
+    return;
+  }
+
+  console.log(`📍 Routing comment to user: ${targetSocialAccount.userId} (${targetSocialAccount.platformUsername})`);
+
+  // First, check if this is a response to a pending confirmation for this specific account owner
+  await ctx.runAction(internal.automation.processUserResponse, {
+    platform: webhook.platform,
+    platformUserId: commenterUserId,
+    responseText: commentText,
+    storeId: targetSocialAccount.storeId,
+  });
+
+  // Then, find matching automation flows for the POST OWNER (not the commenter)
+  const flows = await ctx.runQuery(internal.automation.getActiveAutomationFlowsForUser, {
     platform: webhook.platform,
     triggerTypes: ["keyword", "comment"],
-    socialAccountId: webhook.socialAccountId,
+    storeId: targetSocialAccount.storeId,
+    userId: targetSocialAccount.userId,
+    socialAccountId: targetSocialAccount._id,
   });
 
   for (const flow of flows) {
     if (await checkTriggerMatch(flow, commentText)) {
-      // Create trigger record
+      // Create trigger record - the COMMENTER triggered the POST OWNER's automation
       await ctx.runMutation(internal.automation.createAutomationTrigger, {
         storeId: flow.storeId,
         automationFlowId: flow._id,
@@ -664,9 +681,9 @@ async function processCommentForTriggers(ctx: any, webhook: any, payload: any) {
         keyword: getMatchedKeyword(flow, commentText),
         matchedText: commentText,
         platform: webhook.platform,
-        socialAccountId: webhook.socialAccountId,
-        platformUserId,
-        platformUsername,
+        socialAccountId: targetSocialAccount._id, // POST OWNER's account
+        platformUserId: commenterUserId, // COMMENTER's ID (who will receive the DM)
+        platformUsername: commenterUsername, // COMMENTER's username
         commentId: payload.id,
         postId: payload.post?.id || payload.media?.id,
         fullContent: commentText,
@@ -678,31 +695,47 @@ async function processCommentForTriggers(ctx: any, webhook: any, payload: any) {
 
 async function processMessageForTriggers(ctx: any, webhook: any, payload: any) {
   const messageText = payload.text || payload.message || "";
-  const platformUserId = payload.sender?.id || payload.from?.id || "";
-  const platformUsername = payload.sender?.username || payload.from?.username || "";
+  const senderUserId = payload.sender?.id || payload.from?.id || "";
+  const senderUsername = payload.sender?.username || payload.from?.username || "";
   
-  if (!messageText || !platformUserId) {
+  if (!messageText || !senderUserId) {
     console.log("Insufficient message data for trigger processing");
     return;
   }
 
+  // CENTRALIZED ROUTING: Find which platform user owns the Instagram account that received this message
+  const targetSocialAccount = await ctx.runQuery(internal.automation.findSocialAccountByWebhook, {
+    platform: webhook.platform,
+    webhookPayload: payload,
+  });
+
+  if (!targetSocialAccount) {
+    console.log("Could not identify target social account for message trigger");
+    return;
+  }
+
+  console.log(`📍 Routing message to user: ${targetSocialAccount.userId} (${targetSocialAccount.platformUsername})`);
+
   // First, check if this is a response to a pending confirmation
   await ctx.runAction(internal.automation.processUserResponse, {
     platform: webhook.platform,
-    platformUserId,
+    platformUserId: senderUserId,
     responseText: messageText,
+    storeId: targetSocialAccount.storeId,
   });
 
-  // Then, find matching automation flows for new triggers
-  const flows = await ctx.runQuery(internal.automation.getActiveAutomationFlows, {
+  // Then, find matching automation flows for the ACCOUNT OWNER (not the sender)
+  const flows = await ctx.runQuery(internal.automation.getActiveAutomationFlowsForUser, {
     platform: webhook.platform,
     triggerTypes: ["keyword", "dm"],
-    socialAccountId: webhook.socialAccountId,
+    storeId: targetSocialAccount.storeId,
+    userId: targetSocialAccount.userId,
+    socialAccountId: targetSocialAccount._id,
   });
 
   for (const flow of flows) {
     if (await checkTriggerMatch(flow, messageText)) {
-      // Create trigger record
+      // Create trigger record - the SENDER triggered the ACCOUNT OWNER's automation
       await ctx.runMutation(internal.automation.createAutomationTrigger, {
         storeId: flow.storeId,
         automationFlowId: flow._id,
@@ -710,9 +743,9 @@ async function processMessageForTriggers(ctx: any, webhook: any, payload: any) {
         keyword: getMatchedKeyword(flow, messageText),
         matchedText: messageText,
         platform: webhook.platform,
-        socialAccountId: webhook.socialAccountId,
-        platformUserId,
-        platformUsername,
+        socialAccountId: targetSocialAccount._id, // ACCOUNT OWNER's account
+        platformUserId: senderUserId, // SENDER's ID (who will receive the response)
+        platformUsername: senderUsername, // SENDER's username
         messageId: payload.id,
         fullContent: messageText,
         webhookId: webhook._id,
@@ -1874,11 +1907,23 @@ export const processUserResponse = internalAction({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    // Find any pending user states for this user across all stores
-    const pendingStates = await ctx.runQuery(internal.automation.getPendingUserStatesAnyStore, {
-      platform: args.platform,
-      platformUserId: args.platformUserId,
-    });
+    // Find any pending user states for this user
+    let pendingStates;
+    
+    if (args.storeId) {
+      // If we know the store, search within that store only (more efficient)
+      pendingStates = await ctx.runQuery(internal.automation.getPendingUserStates, {
+        platform: args.platform,
+        platformUserId: args.platformUserId,
+        storeId: args.storeId,
+      });
+    } else {
+      // Otherwise, search across all stores
+      pendingStates = await ctx.runQuery(internal.automation.getPendingUserStatesAnyStore, {
+        platform: args.platform,
+        platformUserId: args.platformUserId,
+      });
+    }
 
     for (const userState of pendingStates) {
       if (!userState.isPendingResponse || !userState.waitingNodeId) continue;
@@ -1951,6 +1996,121 @@ export const getPendingUserStates = internalQuery({
         )
       )
       .collect();
+  },
+});
+
+/**
+ * Find social account by webhook payload (CENTRALIZED ROUTING)
+ */
+export const findSocialAccountByWebhook = internalQuery({
+  args: {
+    platform: v.union(
+      v.literal("instagram"),
+      v.literal("twitter"),
+      v.literal("facebook"),
+      v.literal("tiktok"),
+      v.literal("linkedin")
+    ),
+    webhookPayload: v.any(),
+  },
+  returns: v.union(v.any(), v.null()),
+  handler: async (ctx, args) => {
+    // Extract platform-specific account identifiers from webhook payload
+    let targetAccountId = "";
+    
+    switch (args.platform) {
+      case "instagram":
+        // Instagram webhook includes the Instagram account ID that received the comment/message
+        targetAccountId = args.webhookPayload.recipient?.id || 
+                         args.webhookPayload.entry?.id ||
+                         args.webhookPayload.object_id ||
+                         args.webhookPayload.media?.owner?.id;
+        break;
+        
+      case "facebook":
+        // Facebook includes page ID
+        targetAccountId = args.webhookPayload.page?.id || 
+                         args.webhookPayload.recipient?.id ||
+                         args.webhookPayload.entry?.id;
+        break;
+        
+      case "twitter":
+        // Twitter includes the account that received the mention/DM
+        targetAccountId = args.webhookPayload.for_user_id || 
+                         args.webhookPayload.recipient?.id;
+        break;
+    }
+
+    if (!targetAccountId) {
+      console.error("Could not extract target account ID from webhook payload", args.webhookPayload);
+      return null;
+    }
+
+    console.log(`🔍 Looking for social account with ${args.platform} ID: ${targetAccountId}`);
+
+    // Find the social account in our database that matches this platform account ID
+    const socialAccount = await ctx.db
+      .query("socialAccounts")
+      .withIndex("by_platform", (q) => q.eq("platform", args.platform))
+      .filter((q) => q.eq(q.field("platformUserId"), targetAccountId))
+      .first();
+
+    if (socialAccount) {
+      console.log(`✅ Found matching account: ${socialAccount.platformUsername} → User: ${socialAccount.userId}`);
+    } else {
+      console.log(`❌ No matching social account found for ${args.platform} ID: ${targetAccountId}`);
+    }
+
+    return socialAccount;
+  },
+});
+
+/**
+ * Get active automation flows for specific user (CENTRALIZED ROUTING)
+ */
+export const getActiveAutomationFlowsForUser = internalQuery({
+  args: {
+    platform: v.union(
+      v.literal("instagram"),
+      v.literal("twitter"),
+      v.literal("facebook"),
+      v.literal("tiktok"),
+      v.literal("linkedin")
+    ),
+    triggerTypes: v.array(v.string()),
+    storeId: v.string(),
+    userId: v.string(),
+    socialAccountId: v.id("socialAccounts"),
+  },
+  returns: v.array(v.any()),
+  handler: async (ctx, args) => {
+    // Get active flows for this specific user
+    const userFlows = await ctx.db
+      .query("automationFlows")
+      .withIndex("by_store_active", (q) => q.eq("storeId", args.storeId).eq("isActive", true))
+      .filter((q) => q.eq(q.field("userId"), args.userId))
+      .collect();
+
+    // Filter by criteria
+    return userFlows.filter(flow => {
+      // Check if trigger type matches
+      if (!args.triggerTypes.includes(flow.triggerType)) {
+        return false;
+      }
+
+      // Check if platform is supported
+      if (!flow.triggerConditions.platforms.includes(args.platform)) {
+        return false;
+      }
+
+      // Check if specific social account is required
+      if (flow.triggerConditions.socialAccountIds && 
+          flow.triggerConditions.socialAccountIds.length > 0) {
+        return flow.triggerConditions.socialAccountIds.includes(args.socialAccountId);
+      }
+
+      return true;
+    });
   },
 });
 
