@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { ConvexHttpClient } from "convex/browser";
+import { api } from "@/convex/_generated/api";
+
+// Initialize Convex client
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 /**
  * Webhook handler for social media platform events
@@ -64,16 +69,57 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { platform: string } }
 ) {
-  const searchParams = request.nextUrl.searchParams;
-  const mode = searchParams.get('hub.mode');
-  const token = searchParams.get('hub.verify_token');
-  const challenge = searchParams.get('hub.challenge');
+  try {
+    const searchParams = request.nextUrl.searchParams;
+    const mode = searchParams.get('hub.mode');
+    const token = searchParams.get('hub.verify_token');
+    const challenge = searchParams.get('hub.challenge');
 
-  if (mode === 'subscribe' && token === process.env.WEBHOOK_VERIFY_TOKEN) {
-    return new NextResponse(challenge, { status: 200 });
+    console.log('🔍 Webhook verification attempt:', {
+      platform: params.platform,
+      mode,
+      token,
+      challenge,
+      expectedToken: process.env.WEBHOOK_VERIFY_TOKEN,
+    });
+
+    // Instagram/Facebook webhook verification
+    if (mode === 'subscribe') {
+      const expectedToken = process.env.WEBHOOK_VERIFY_TOKEN;
+      
+      if (!expectedToken) {
+        console.error('❌ WEBHOOK_VERIFY_TOKEN not set in environment variables');
+        return NextResponse.json({ 
+          error: 'Server configuration error - verify token not set' 
+        }, { status: 500 });
+      }
+
+      if (token === expectedToken && challenge) {
+        console.log('✅ Webhook verification successful');
+        return new NextResponse(challenge, { 
+          status: 200,
+          headers: { 'Content-Type': 'text/plain' }
+        });
+      } else {
+        console.error('❌ Token mismatch:', { received: token, expected: expectedToken });
+        return NextResponse.json({ 
+          error: 'Invalid verify token',
+          received: token,
+          expected: expectedToken ? 'SET' : 'NOT_SET'
+        }, { status: 403 });
+      }
+    }
+
+    console.error('❌ Invalid verification mode:', mode);
+    return NextResponse.json({ error: 'Invalid mode' }, { status: 403 });
+    
+  } catch (error) {
+    console.error('❌ Webhook verification error:', error);
+    return NextResponse.json({ 
+      error: 'Verification processing failed',
+      details: String(error)
+    }, { status: 500 });
   }
-
-  return NextResponse.json({ error: 'Verification failed' }, { status: 403 });
 }
 
 // ============================================================================
@@ -159,23 +205,68 @@ function verifyTikTokSignature(body: string, signature: string): boolean {
 // ============================================================================
 
 async function handleFacebookWebhook(payload: any) {
-  console.log('Facebook webhook received:', JSON.stringify(payload, null, 2));
+  console.log('📥 Facebook/Instagram webhook received:', JSON.stringify(payload, null, 2));
 
   if (payload.object === 'page' || payload.object === 'instagram') {
     for (const entry of payload.entry) {
-      // Handle different event types
+      // Handle Instagram comments
       if (entry.changes) {
         for (const change of entry.changes) {
-          console.log('Change event:', change.field, change.value);
+          console.log('📝 Change event:', change.field, change.value);
           
-          // Store webhook event in database
-          // TODO: Call Convex mutation to store webhook
+          // Process comments for automation triggers
+          if (change.field === 'comments' || (change.field === 'feed' && change.value?.item === 'comment')) {
+            try {
+              const webhookId = await convex.mutation(api.automation.createSocialWebhook, {
+                platform: payload.object === 'instagram' ? 'instagram' : 'facebook',
+                eventType: `${payload.object}.comment`,
+                payload: {
+                  ...change.value,
+                  entry: entry,
+                },
+                socialAccountId: undefined,
+              });
+
+              // Process for automation triggers
+              await convex.action(api.automation.processSocialWebhookForAutomation, {
+                webhookId,
+              });
+              
+              console.log('✅ Automation processing triggered for comment');
+            } catch (error) {
+              console.error('❌ Error processing comment for automation:', error);
+            }
+          }
         }
       }
 
+      // Handle Instagram/Facebook messages
       if (entry.messaging) {
         for (const message of entry.messaging) {
-          console.log('Message event:', message);
+          console.log('💬 Message event:', message);
+          
+          if (message.message) {
+            try {
+              const webhookId = await convex.mutation(api.automation.createSocialWebhook, {
+                platform: payload.object === 'instagram' ? 'instagram' : 'facebook',
+                eventType: `${payload.object}.message`,
+                payload: {
+                  ...message,
+                  entry: entry,
+                },
+                socialAccountId: undefined,
+              });
+
+              // Process for automation triggers
+              await convex.action(api.automation.processSocialWebhookForAutomation, {
+                webhookId,
+              });
+              
+              console.log('✅ Automation processing triggered for message');
+            } catch (error) {
+              console.error('❌ Error processing message for automation:', error);
+            }
+          }
         }
       }
     }

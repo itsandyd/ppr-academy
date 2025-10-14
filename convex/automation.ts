@@ -472,8 +472,31 @@ export const testAutomationTrigger = mutation({
       throw new Error("Automation flow not found or unauthorized");
     }
 
-    if (!flow.isActive) {
-      throw new Error("Flow is not active");
+    // Allow testing on inactive flows for development
+    // if (!flow.isActive) {
+    //   throw new Error("Flow is not active");
+    // }
+
+    // Get a real social account for testing, or use the first available one
+    let testSocialAccountId: Id<"socialAccounts">;
+    
+    if (flow.triggerConditions.socialAccountIds && flow.triggerConditions.socialAccountIds.length > 0) {
+      testSocialAccountId = flow.triggerConditions.socialAccountIds[0];
+    } else {
+      // Find any social account for this store and platform
+      const availableAccount = await ctx.db
+        .query("socialAccounts")
+        .withIndex("by_store_platform", (q) => 
+          q.eq("storeId", flow.storeId).eq("platform", args.testData.platform)
+        )
+        .filter((q) => q.eq(q.field("isConnected"), true))
+        .first();
+
+      if (!availableAccount) {
+        throw new Error(`No connected ${args.testData.platform} account found for testing. Please connect an account first.`);
+      }
+      
+      testSocialAccountId = availableAccount._id;
     }
 
     // Create test trigger
@@ -483,7 +506,7 @@ export const testAutomationTrigger = mutation({
       triggerType: "manual",
       matchedText: args.testData.content,
       platform: args.testData.platform,
-      socialAccountId: "" as Id<"socialAccounts">, // Test mode, no real account
+      socialAccountId: testSocialAccountId,
       platformUserId: args.testData.platformUserId,
       platformUsername: args.testData.platformUsername,
       fullContent: args.testData.content,
@@ -617,7 +640,14 @@ async function processCommentForTriggers(ctx: any, webhook: any, payload: any) {
     return;
   }
 
-  // Find matching automation flows
+  // First, check if this is a response to a pending confirmation
+  await ctx.runAction(internal.automation.processUserResponse, {
+    platform: webhook.platform,
+    platformUserId,
+    responseText: commentText,
+  });
+
+  // Then, find matching automation flows for new triggers
   const flows = await ctx.runQuery(internal.automation.getActiveAutomationFlows, {
     platform: webhook.platform,
     triggerTypes: ["keyword", "comment"],
@@ -656,7 +686,14 @@ async function processMessageForTriggers(ctx: any, webhook: any, payload: any) {
     return;
   }
 
-  // Find matching automation flows
+  // First, check if this is a response to a pending confirmation
+  await ctx.runAction(internal.automation.processUserResponse, {
+    platform: webhook.platform,
+    platformUserId,
+    responseText: messageText,
+  });
+
+  // Then, find matching automation flows for new triggers
   const flows = await ctx.runQuery(internal.automation.getActiveAutomationFlows, {
     platform: webhook.platform,
     triggerTypes: ["keyword", "dm"],
@@ -1313,22 +1350,37 @@ async function executeConditionNode(ctx: any, userStateId: Id<"userAutomationSta
   
   let conditionMet = false;
   
-  // For now, implement basic condition checking
-  // In a full implementation, you'd check user responses, tags, etc.
   switch (conditionType) {
+    case "user_response":
+      // For user_response conditions, we need to wait for actual user input
+      // This creates a pending state that will be resolved when user responds
+      await ctx.runMutation(internal.automation.setPendingUserResponse, {
+        userStateId,
+        expectedResponse: conditionValue, // "yes" or "no"
+        waitingNodeId: node.id,
+      });
+      return; // Don't continue flow, wait for user response
+      
     case "keyword":
-      // Check if user's last response contains keyword
-      conditionMet = false; // Placeholder - would check actual user response
+      // Check if user's last response contains keyword  
+      const lastResponse = await ctx.runQuery(internal.automation.getLastUserResponse, { userStateId });
+      conditionMet = lastResponse?.toLowerCase().includes(conditionValue?.toLowerCase()) || false;
       break;
+      
     case "tag_based":
       // Check if user has specific tag
       const userState = await ctx.runQuery(internal.automation.getUserState, { userStateId });
       conditionMet = userState?.tags?.includes(conditionValue) || false;
       break;
+      
     case "time_based":
-      // Check time-based conditions
-      conditionMet = true; // Placeholder
+      // Check time-based conditions (e.g., time since last activity)
+      const userStateForTime = await ctx.runQuery(internal.automation.getUserState, { userStateId });
+      const timeSinceActivity = Date.now() - userStateForTime.lastActivityAt;
+      const timeThreshold = parseInt(conditionValue) * 60 * 1000; // conditionValue in minutes
+      conditionMet = timeSinceActivity > timeThreshold;
       break;
+      
     default:
       conditionMet = true;
   }
@@ -1768,6 +1820,227 @@ async function sendFacebookMessage(message: any, account: any): Promise<boolean>
 // ============================================================================
 // WEBHOOK MANAGEMENT
 // ============================================================================
+
+/**
+ * Set pending user response state
+ */
+export const setPendingUserResponse = internalMutation({
+  args: {
+    userStateId: v.id("userAutomationStates"),
+    expectedResponse: v.string(),
+    waitingNodeId: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.userStateId, {
+      isPendingResponse: true,
+      expectedResponse: args.expectedResponse,
+      waitingNodeId: args.waitingNodeId,
+      lastActivityAt: Date.now(),
+    });
+    return null;
+  },
+});
+
+/**
+ * Get user's last response
+ */
+export const getLastUserResponse = internalQuery({
+  args: {
+    userStateId: v.id("userAutomationStates"),
+  },
+  returns: v.union(v.string(), v.null()),
+  handler: async (ctx, args) => {
+    const userState = await ctx.db.get(args.userStateId);
+    return userState?.lastUserResponse || null;
+  },
+});
+
+/**
+ * Process user response for pending flows
+ */
+export const processUserResponse = internalAction({
+  args: {
+    platform: v.union(
+      v.literal("instagram"),
+      v.literal("twitter"),
+      v.literal("facebook"),
+      v.literal("tiktok"),
+      v.literal("linkedin")
+    ),
+    platformUserId: v.string(),
+    responseText: v.string(),
+    storeId: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    // Find any pending user states for this user across all stores
+    const pendingStates = await ctx.runQuery(internal.automation.getPendingUserStatesAnyStore, {
+      platform: args.platform,
+      platformUserId: args.platformUserId,
+    });
+
+    for (const userState of pendingStates) {
+      if (!userState.isPendingResponse || !userState.waitingNodeId) continue;
+
+      // Update user state with response
+      await ctx.runMutation(internal.automation.updateUserResponse, {
+        userStateId: userState._id,
+        responseText: args.responseText,
+      });
+
+      // Check if response matches expected response
+      if (!userState.expectedResponse) continue; // Skip if no expected response
+      const responseMatch = checkResponseMatch(args.responseText, userState.expectedResponse);
+      
+      // Get the flow and continue execution
+      const flow = await ctx.runQuery(internal.automation.getAutomationFlowInternal, {
+        flowId: userState.automationFlowId,
+      });
+
+      if (flow && flow.isActive) {
+        // Find the waiting node and its connections
+        const waitingNode = flow.flowDefinition.nodes.find((n: any) => n.id === userState.waitingNodeId);
+        if (waitingNode) {
+          const connections = flow.flowDefinition.connections.filter((conn: any) => conn.from === waitingNode.id);
+          const targetConnection = connections.find((conn: any) => 
+            responseMatch ? 
+              (conn.label === "yes" || conn.label === "true") : 
+              (conn.label === "no" || conn.label === "false")
+          );
+
+          if (targetConnection) {
+            await executeFlowNode(ctx, userState._id, targetConnection.to, flow);
+          }
+        }
+      }
+    }
+
+    return null;
+  },
+});
+
+/**
+ * Get pending user states for specific store
+ */
+export const getPendingUserStates = internalQuery({
+  args: {
+    platform: v.union(
+      v.literal("instagram"),
+      v.literal("twitter"),
+      v.literal("facebook"),
+      v.literal("tiktok"),
+      v.literal("linkedin")
+    ),
+    platformUserId: v.string(),
+    storeId: v.string(),
+  },
+  returns: v.array(v.any()),
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("userAutomationStates")
+      .withIndex("by_store_platform_user", (q) => 
+        q.eq("storeId", args.storeId)
+         .eq("platform", args.platform)
+         .eq("platformUserId", args.platformUserId)
+      )
+      .filter((q) => 
+        q.and(
+          q.eq(q.field("status"), "active"),
+          q.eq(q.field("isPendingResponse"), true)
+        )
+      )
+      .collect();
+  },
+});
+
+/**
+ * Get pending user states across all stores
+ */
+export const getPendingUserStatesAnyStore = internalQuery({
+  args: {
+    platform: v.union(
+      v.literal("instagram"),
+      v.literal("twitter"),
+      v.literal("facebook"),
+      v.literal("tiktok"),
+      v.literal("linkedin")
+    ),
+    platformUserId: v.string(),
+  },
+  returns: v.array(v.any()),
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("userAutomationStates")
+      .withIndex("by_platformUser", (q) => 
+        q.eq("platform", args.platform)
+         .eq("platformUserId", args.platformUserId)
+      )
+      .filter((q) => 
+        q.and(
+          q.eq(q.field("status"), "active"),
+          q.eq(q.field("isPendingResponse"), true)
+        )
+      )
+      .collect();
+  },
+});
+
+/**
+ * Update user response
+ */
+export const updateUserResponse = internalMutation({
+  args: {
+    userStateId: v.id("userAutomationStates"),
+    responseText: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.userStateId, {
+      lastUserResponse: args.responseText,
+      isPendingResponse: false,
+      expectedResponse: undefined,
+      waitingNodeId: undefined,
+      lastActivityAt: Date.now(),
+    });
+    return null;
+  },
+});
+
+/**
+ * Check if user response matches expected response
+ */
+function checkResponseMatch(responseText: string, expectedResponse: string): boolean {
+  const normalizedResponse = responseText.toLowerCase().trim();
+  const normalizedExpected = expectedResponse.toLowerCase().trim();
+
+  // Handle "yes" responses
+  if (normalizedExpected === "yes") {
+    return normalizedResponse === "yes" || 
+           normalizedResponse === "y" || 
+           normalizedResponse === "yep" || 
+           normalizedResponse === "yeah" ||
+           normalizedResponse === "sure" ||
+           normalizedResponse === "ok" ||
+           normalizedResponse === "okay" ||
+           normalizedResponse === "👍" ||
+           normalizedResponse.includes("yes");
+  }
+
+  // Handle "no" responses  
+  if (normalizedExpected === "no") {
+    return normalizedResponse === "no" || 
+           normalizedResponse === "n" || 
+           normalizedResponse === "nope" || 
+           normalizedResponse === "nah" ||
+           normalizedResponse === "stop" ||
+           normalizedResponse === "👎" ||
+           normalizedResponse.includes("no");
+  }
+
+  // Default exact match
+  return normalizedResponse.includes(normalizedExpected);
+}
 
 /**
  * Create social webhook record

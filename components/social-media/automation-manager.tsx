@@ -132,6 +132,13 @@ export function AutomationManager({ storeId, userId }: AutomationManagerProps) {
     keywords: [""],
     platforms: ["instagram"] as ("instagram" | "twitter" | "facebook" | "tiktok" | "linkedin")[],
     matchType: "contains" as const,
+    firstMessage: "Thanks for your comment! Would you like me to send you the free resource?",
+    confirmationMessage: "Reply YES if you'd like me to send it to you, or NO to skip.",
+    yesMessage: "Perfect! Here's your resource:",
+    noMessage: "No problem! Feel free to reach out if you change your mind.",
+    resourceUrl: "",
+    resourceType: "link" as const,
+    useConfirmation: true,
   });
 
   // Mutations
@@ -195,31 +202,120 @@ export function AutomationManager({ storeId, userId }: AutomationManagerProps) {
         return;
       }
 
-      // Create a simple starter flow with trigger -> message nodes
-      const starterFlow = {
-        nodes: [
-          {
-            id: "trigger-1",
-            type: "trigger" as const,
-            position: { x: 100, y: 100 },
-            data: {},
+      if (!formData.firstMessage.trim()) {
+        toast({
+          title: "Message required",
+          description: "Please enter a DM message to send to users",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Create flow with confirmation pattern like ManyChat
+      const nodes = [
+        {
+          id: "trigger-1",
+          type: "trigger" as const,
+          position: { x: 100, y: 100 },
+          data: {},
+        },
+        {
+          id: "initial-message", 
+          type: "message" as const,
+          position: { x: 300, y: 100 },
+          data: {
+            content: formData.useConfirmation ? 
+              `${formData.firstMessage}\n\n${formData.confirmationMessage}` : 
+              formData.firstMessage,
           },
+        },
+      ];
+
+      const connections = [
+        {
+          from: "trigger-1",
+          to: "initial-message",
+        },
+      ];
+
+      if (formData.useConfirmation && formData.resourceUrl.trim()) {
+        // Add confirmation flow
+        nodes.push(
           {
-            id: "message-1", 
-            type: "message" as const,
-            position: { x: 300, y: 100 },
+            id: "wait-response",
+            type: "condition" as const,
+            position: { x: 500, y: 100 },
             data: {
-              content: "Thanks for your comment! I'll send you the resource shortly.",
+              conditionType: "user_response",
+              conditionValue: "yes",
             },
           },
-        ],
-        connections: [
           {
-            from: "trigger-1",
-            to: "message-1",
+            id: "yes-message",
+            type: "message" as const,
+            position: { x: 700, y: 50 },
+            data: {
+              content: formData.yesMessage,
+            },
           },
-        ],
-      };
+          {
+            id: "no-message",
+            type: "message" as const,
+            position: { x: 700, y: 150 },
+            data: {
+              content: formData.noMessage,
+            },
+          },
+          {
+            id: "resource-delivery",
+            type: "resource" as const,
+            position: { x: 900, y: 50 },
+            data: {
+              resourceType: formData.resourceType,
+              resourceUrl: formData.resourceUrl,
+            },
+          }
+        );
+
+        connections.push(
+          {
+            from: "initial-message",
+            to: "wait-response",
+          },
+          {
+            from: "wait-response",
+            to: "yes-message",
+            label: "yes",
+          },
+          {
+            from: "wait-response", 
+            to: "no-message",
+            label: "no",
+          },
+          {
+            from: "yes-message",
+            to: "resource-delivery",
+          }
+        );
+      } else if (formData.resourceUrl.trim()) {
+        // Simple flow without confirmation
+        nodes.push({
+          id: "resource-delivery",
+          type: "resource" as const,
+          position: { x: 500, y: 100 },
+          data: {
+            resourceType: formData.resourceType,
+            resourceUrl: formData.resourceUrl,
+          },
+        });
+        
+        connections.push({
+          from: "initial-message",
+          to: "resource-delivery",
+        });
+      }
+
+      const starterFlow = { nodes, connections };
 
       const flowId = await createAutomationFlow({
         storeId,
@@ -248,6 +344,13 @@ export function AutomationManager({ storeId, userId }: AutomationManagerProps) {
         keywords: [""],
         platforms: ["instagram"] as ("instagram" | "twitter" | "facebook" | "tiktok" | "linkedin")[],
         matchType: "contains" as const,
+        firstMessage: "Thanks for your comment! Would you like me to send you the free resource?",
+        confirmationMessage: "Reply YES if you'd like me to send it to you, or NO to skip.",
+        yesMessage: "Perfect! Here's your resource:",
+        noMessage: "No problem! Feel free to reach out if you change your mind.",
+        resourceUrl: "",
+        resourceType: "link" as const,
+        useConfirmation: true,
       });
 
     } catch (error) {
@@ -305,6 +408,20 @@ export function AutomationManager({ storeId, userId }: AutomationManagerProps) {
 
   const handleTestFlow = async (flow: AutomationFlow) => {
     try {
+      // Check if user has connected accounts for this platform
+      const hasConnectedAccount = socialAccounts?.some(
+        account => account.platform === flow.triggerConditions.platforms[0] && account.isConnected
+      );
+
+      if (!hasConnectedAccount) {
+        toast({
+          title: "No Connected Account",
+          description: `Please connect a ${flow.triggerConditions.platforms[0]} account before testing this automation.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
       await testAutomationTrigger({
         flowId: flow._id,
         userId,
@@ -317,14 +434,16 @@ export function AutomationManager({ storeId, userId }: AutomationManagerProps) {
       });
 
       toast({
-        title: "Test Triggered",
-        description: "The automation flow test has been triggered successfully.",
+        title: "🎉 Test Triggered Successfully!",
+        description: "Check your Convex logs to see the automation flow execution. In production, this would send a DM to the test user.",
       });
     } catch (error) {
       console.error("Error testing flow:", error);
       toast({
         title: "Test Failed",
-        description: "Failed to test automation flow. Please try again.",
+        description: String(error).includes("No connected") 
+          ? "Please connect a social media account first, then try testing again."
+          : "Failed to test automation flow. Please try again.",
         variant: "destructive",
       });
     }
@@ -485,6 +604,14 @@ export function AutomationManager({ storeId, userId }: AutomationManagerProps) {
                           variant="outline"
                           size="sm"
                           onClick={() => handleTestFlow(flow)}
+                          disabled={!socialAccounts?.some(
+                            account => flow.triggerConditions.platforms.includes(account.platform) && account.isConnected
+                          )}
+                          title={
+                            !socialAccounts?.some(
+                              account => flow.triggerConditions.platforms.includes(account.platform) && account.isConnected
+                            ) ? "Connect a social media account first to enable testing" : "Test this automation flow"
+                          }
                         >
                           <PlayCircle className="mr-1 h-3 w-3" />
                           Test
@@ -644,138 +771,391 @@ export function AutomationManager({ storeId, userId }: AutomationManagerProps) {
 
       {/* Create Automation Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="bg-white dark:bg-black max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Create New Automation Flow</DialogTitle>
-            <DialogDescription>
-              Set up a new automation to respond to social media interactions automatically.
+        <DialogContent className="bg-white dark:bg-black max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="pb-6">
+            <DialogTitle className="text-xl">Create New Automation Flow</DialogTitle>
+            <DialogDescription className="text-base">
+              Set up a ManyChat-style automation to convert social media comments into leads
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Flow Name *</Label>
-              <Input
-                id="name"
-                placeholder="e.g., Lead Magnet for Free Guide"
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              />
-            </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Left Column - Configuration */}
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Basic Setup</h3>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="name">Flow Name *</Label>
+                  <Input
+                    id="name"
+                    placeholder="e.g., Free Beat Pack Lead Magnet"
+                    value={formData.name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    className="text-base"
+                  />
+                </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                placeholder="Describe what this automation does..."
-                value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Trigger Type</Label>
-              <Select
-                value={formData.triggerType}
-                onValueChange={(value: any) => setFormData(prev => ({ ...prev, triggerType: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-white dark:bg-black">
-                  <SelectItem value="keyword">Keyword in Comments</SelectItem>
-                  <SelectItem value="comment">Any Comment</SelectItem>
-                  <SelectItem value="dm">Direct Message</SelectItem>
-                  <SelectItem value="mention">Mention</SelectItem>
-                  <SelectItem value="hashtag">Hashtag</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {formData.triggerType === "keyword" && (
-              <div className="space-y-2">
-                <Label>Keywords</Label>
-                {formData.keywords.map((keyword, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <Input
-                      placeholder="Enter keyword..."
-                      value={keyword}
-                      onChange={(e) => updateKeyword(index, e.target.value)}
-                    />
-                    {formData.keywords.length > 1 && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => removeKeyword(index)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-                <Button variant="outline" onClick={addKeywordField}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Keyword
-                </Button>
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    placeholder="Describe what this automation does..."
+                    value={formData.description}
+                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                    rows={2}
+                  />
+                </div>
               </div>
-            )}
 
-            <div className="space-y-2">
-              <Label>Match Type</Label>
-              <Select
-                value={formData.matchType}
-                onValueChange={(value: any) => setFormData(prev => ({ ...prev, matchType: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="bg-white dark:bg-black">
-                  <SelectItem value="contains">Contains keyword</SelectItem>
-                  <SelectItem value="exact">Exact match</SelectItem>
-                  <SelectItem value="starts_with">Starts with keyword</SelectItem>
-                  <SelectItem value="regex">Regular expression</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Trigger Settings</h3>
+                
+                <div className="space-y-2">
+                  <Label>Trigger Type</Label>
+                  <Select
+                    value={formData.triggerType}
+                    onValueChange={(value: any) => setFormData(prev => ({ ...prev, triggerType: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white dark:bg-black">
+                      <SelectItem value="keyword">Keyword in Comments</SelectItem>
+                      <SelectItem value="comment">Any Comment</SelectItem>
+                      <SelectItem value="dm">Direct Message</SelectItem>
+                      <SelectItem value="mention">Mention</SelectItem>
+                      <SelectItem value="hashtag">Hashtag</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            <div className="space-y-2">
-              <Label>Platforms</Label>
-              <div className="grid grid-cols-3 gap-2">
-                {["instagram", "twitter", "facebook", "linkedin", "tiktok"].map((platform) => (
-                  <div key={platform} className="flex items-center space-x-2">
+                {formData.triggerType === "keyword" && (
+                  <div className="space-y-3">
+                    <Label>Keywords</Label>
+                    <div className="space-y-2">
+                      {formData.keywords.map((keyword, index) => (
+                        <div key={index} className="flex items-center gap-2">
+                          <Input
+                            placeholder="Enter keyword..."
+                            value={keyword}
+                            onChange={(e) => updateKeyword(index, e.target.value)}
+                          />
+                          {formData.keywords.length > 1 && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => removeKeyword(index)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <Button variant="outline" size="sm" onClick={addKeywordField}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Keyword
+                    </Button>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label>Match Type</Label>
+                  <Select
+                    value={formData.matchType}
+                    onValueChange={(value: any) => setFormData(prev => ({ ...prev, matchType: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white dark:bg-black">
+                      <SelectItem value="contains">Contains keyword</SelectItem>
+                      <SelectItem value="exact">Exact match</SelectItem>
+                      <SelectItem value="starts_with">Starts with keyword</SelectItem>
+                      <SelectItem value="regex">Regular expression</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Target Platforms</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {["instagram", "twitter", "facebook", "linkedin", "tiktok"].map((platform) => (
+                      <div key={platform} className="flex items-center space-x-3 p-2 border rounded-lg">
+                        <input
+                          type="checkbox"
+                          id={platform}
+                          checked={formData.platforms.includes(platform as any)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setFormData(prev => ({
+                                ...prev,
+                                platforms: [...prev.platforms, platform as any]
+                              }));
+                            } else {
+                              setFormData(prev => ({
+                                ...prev,
+                                platforms: prev.platforms.filter(p => p !== platform)
+                              }));
+                            }
+                          }}
+                          className="w-4 h-4"
+                        />
+                        <Label htmlFor={platform} className="capitalize flex items-center gap-2">
+                          <span className="text-base">{getPlatformIcon(platform)}</span>
+                          <span>{platform}</span>
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Message Flow</h3>
+                
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-3 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
                     <input
                       type="checkbox"
-                      id={platform}
-                      checked={formData.platforms.includes(platform as any)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setFormData(prev => ({
-                            ...prev,
-                            platforms: [...prev.platforms, platform as any]
-                          }));
-                        } else {
-                          setFormData(prev => ({
-                            ...prev,
-                            platforms: prev.platforms.filter(p => p !== platform)
-                          }));
-                        }
-                      }}
+                      id="useConfirmation"
+                      checked={formData.useConfirmation}
+                      onChange={(e) => setFormData(prev => ({ ...prev, useConfirmation: e.target.checked }))}
+                      className="w-4 h-4"
                     />
-                    <Label htmlFor={platform} className="capitalize">
-                      {getPlatformIcon(platform)} {platform}
-                    </Label>
+                    <div>
+                      <Label htmlFor="useConfirmation" className="text-sm font-semibold">
+                        Use ManyChat-style confirmation ✨
+                      </Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Ask for permission before sending resources - improves engagement and compliance
+                      </p>
+                    </div>
                   </div>
-                ))}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="firstMessage">
+                    {formData.useConfirmation ? "Initial Request Message *" : "DM Message *"}
+                  </Label>
+                  <Textarea
+                    id="firstMessage"
+                    placeholder={formData.useConfirmation ? 
+                      "e.g., Thanks for your comment! Would you like the free guide?" : 
+                      "e.g., Thanks for your comment! Here's your free guide..."}
+                    value={formData.firstMessage}
+                    onChange={(e) => setFormData(prev => ({ ...prev, firstMessage: e.target.value }))}
+                    rows={2}
+                    className="text-base"
+                  />
+                </div>
+
+                {formData.useConfirmation && (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="confirmationMessage">Confirmation Prompt</Label>
+                      <Input
+                        id="confirmationMessage"
+                        placeholder="e.g., Reply YES to receive it, or NO to skip."
+                        value={formData.confirmationMessage}
+                        onChange={(e) => setFormData(prev => ({ ...prev, confirmationMessage: e.target.value }))}
+                        className="text-base"
+                      />
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="yesMessage">✅ YES Response Message</Label>
+                        <Textarea
+                          id="yesMessage"
+                          placeholder="e.g., Perfect! Here's your resource:"
+                          value={formData.yesMessage}
+                          onChange={(e) => setFormData(prev => ({ ...prev, yesMessage: e.target.value }))}
+                          rows={2}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="noMessage">❌ NO Response Message</Label>
+                        <Textarea
+                          id="noMessage"
+                          placeholder="e.g., No problem! Feel free to ask anytime."
+                          value={formData.noMessage}
+                          onChange={(e) => setFormData(prev => ({ ...prev, noMessage: e.target.value }))}
+                          rows={2}
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="resourceUrl">🔗 Resource Link (Optional)</Label>
+                  <Input
+                    id="resourceUrl"
+                    placeholder="e.g., https://yoursite.com/free-guide"
+                    value={formData.resourceUrl}
+                    onChange={(e) => setFormData(prev => ({ ...prev, resourceUrl: e.target.value }))}
+                    className="text-base"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    The resource that will be delivered to users who say YES
+                  </p>
+                </div>
+
+                {formData.resourceUrl && (
+                  <div className="space-y-2">
+                    <Label>Resource Type</Label>
+                    <Select
+                      value={formData.resourceType}
+                      onValueChange={(value: any) => setFormData(prev => ({ ...prev, resourceType: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white dark:bg-black">
+                        <SelectItem value="link">🌐 Link/Website</SelectItem>
+                        <SelectItem value="file">📁 File Download</SelectItem>
+                        <SelectItem value="course">🎓 Course Access</SelectItem>
+                        <SelectItem value="product">💎 Product/Service</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
+            </div>
+
+            {/* Right Column - Preview */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Live Preview</h3>
+              
+              {(formData.firstMessage || formData.resourceUrl) ? (
+                <div className="sticky top-4">
+                  <div className="border-2 rounded-xl p-4 bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-black">
+                    <div className="text-xs font-semibold text-muted-foreground mb-4 flex items-center gap-2">
+                      📱 Instagram DM Preview
+                    </div>
+                    
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      {/* User comment trigger */}
+                      <div className="flex justify-end">
+                        <div className="bg-blue-500 text-white px-4 py-2 rounded-2xl text-sm max-w-xs">
+                          💬 {formData.keywords[0] || "keyword"}
+                        </div>
+                      </div>
+                      
+                      {/* Bot initial message */}
+                      <div className="flex justify-start">
+                        <div className="bg-gray-100 dark:bg-gray-800 px-4 py-3 rounded-2xl text-sm max-w-xs">
+                          {formData.firstMessage}
+                          {formData.useConfirmation && formData.confirmationMessage && (
+                            <>
+                              <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+                                {formData.confirmationMessage}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {formData.useConfirmation && (
+                        <>
+                          {/* User YES response */}
+                          <div className="flex justify-end">
+                            <div className="bg-blue-500 text-white px-4 py-2 rounded-2xl text-sm max-w-xs">
+                              ✅ YES
+                            </div>
+                          </div>
+                          
+                          {/* Bot YES response */}
+                          <div className="flex justify-start">
+                            <div className="bg-gray-100 dark:bg-gray-800 px-4 py-3 rounded-2xl text-sm max-w-xs">
+                              {formData.yesMessage}
+                              {formData.resourceUrl && (
+                                <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+                                  <div className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
+                                    <span>🔗</span>
+                                    <span className="text-blue-600 dark:text-blue-400 text-xs font-medium truncate">
+                                      {formData.resourceUrl}
+                                    </span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Show NO path too */}
+                          <div className="border-t pt-3 mt-4">
+                            <div className="text-xs text-muted-foreground mb-2">If user says NO:</div>
+                            <div className="flex justify-end">
+                              <div className="bg-gray-400 text-white px-4 py-2 rounded-2xl text-sm max-w-xs">
+                                ❌ NO
+                              </div>
+                            </div>
+                            <div className="flex justify-start mt-2">
+                              <div className="bg-gray-100 dark:bg-gray-800 px-4 py-3 rounded-2xl text-sm max-w-xs">
+                                {formData.noMessage}
+                              </div>
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Direct resource delivery (no confirmation) */}
+                      {!formData.useConfirmation && formData.resourceUrl && (
+                        <div className="flex justify-start">
+                          <div className="bg-gray-100 dark:bg-gray-800 px-4 py-3 rounded-2xl text-sm max-w-xs">
+                            <div className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
+                              <span>🔗</span>
+                              <span className="text-blue-600 dark:text-blue-400 text-xs font-medium truncate">
+                                {formData.resourceUrl}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {formData.firstMessage && (
+                      <div className="mt-4 text-center">
+                        <p className="text-xs text-muted-foreground">
+                          💡 This is how your followers will see the conversation
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {!formData.firstMessage && (
+                    <div className="border-2 border-dashed rounded-xl p-8 text-center">
+                      <MessageSquare className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">
+                        Fill out the form to see your conversation preview
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="border-2 border-dashed rounded-xl p-8 text-center">
+                  <Bot className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">
+                    Configure your automation to see the live preview
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="pt-6 border-t">
             <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleCreateFlow}>
-              Create Flow
+            <Button 
+              onClick={handleCreateFlow}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <Bot className="mr-2 h-4 w-4" />
+              Create Automation
             </Button>
           </DialogFooter>
         </DialogContent>

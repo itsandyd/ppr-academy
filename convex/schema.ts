@@ -1835,6 +1835,10 @@ export default defineSchema({
     // Flow Data
     variables: v.optional(v.object({})), // Store user responses/data
     tags: v.optional(v.array(v.string())), // User tags collected
+    lastUserResponse: v.optional(v.string()), // User's last message/response
+    isPendingResponse: v.optional(v.boolean()), // Waiting for user response
+    expectedResponse: v.optional(v.string()), // What response we're waiting for ("yes", "no", etc.)
+    waitingNodeId: v.optional(v.string()), // Which node is waiting for response
     
     // Trigger Context
     triggerContext: v.object({
