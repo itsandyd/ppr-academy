@@ -37,6 +37,51 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { ImageCropEditor } from "./image-crop-editor";
 
+// Upload with progress tracking
+function uploadWithProgress(
+  url: string, 
+  file: File, 
+  onProgress: (progress: number) => void
+): Promise<Response> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    
+    // Track upload progress
+    xhr.upload.addEventListener('progress', (event) => {
+      if (event.lengthComputable) {
+        const progress = (event.loaded / event.total) * 100;
+        onProgress(progress);
+      }
+    });
+    
+    // Handle completion
+    xhr.addEventListener('load', () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        // Create a Response-like object
+        const response = {
+          ok: xhr.status >= 200 && xhr.status < 300,
+          status: xhr.status,
+          json: async () => JSON.parse(xhr.responseText),
+          text: async () => xhr.responseText,
+        } as Response;
+        resolve(response);
+      } else {
+        reject(new Error(`Upload failed with status ${xhr.status}`));
+      }
+    });
+    
+    // Handle errors
+    xhr.addEventListener('error', () => {
+      reject(new Error('Upload network error'));
+    });
+    
+    // Start upload
+    xhr.open('POST', url);
+    xhr.setRequestHeader('Content-Type', file.type);
+    xhr.send(file);
+  });
+}
+
 interface PostComposerProps {
   storeId: string;
   userId: string;
@@ -311,12 +356,15 @@ export function PostComposer({
         const uploadUrl = await generateUploadUrl();
         console.log('  - Upload URL received:', uploadUrl);
 
-        // Upload file
+        // Upload file with progress tracking
         console.log('  - Uploading to Convex storage...');
-        const result = await fetch(uploadUrl, {
-          method: "POST",
-          headers: { "Content-Type": mediaFile.file.type },
-          body: mediaFile.file,
+        const result = await uploadWithProgress(uploadUrl, mediaFile.file, (progress) => {
+          // Update progress state in real-time
+          setMediaFiles(prev => {
+            const newFiles = [...prev];
+            newFiles[i] = { ...newFiles[i], uploadProgress: progress };
+            return newFiles;
+          });
         });
 
         console.log('  - Upload response status:', result.status);
@@ -521,6 +569,23 @@ export function PostComposer({
             </DialogDescription>
           </DialogHeader>
 
+          {/* Global Upload Progress Indicator */}
+          {isSubmitting && mediaFiles.some(m => m.uploading) && (
+            <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                    Uploading media files...
+                  </div>
+                  <div className="text-xs text-blue-600 dark:text-blue-300">
+                    {mediaFiles.filter(m => m.storageId).length} of {mediaFiles.length} files uploaded
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-4 py-4">
             {/* Account Selection */}
             <div className="space-y-2">
@@ -676,6 +741,38 @@ export function PostComposer({
                         <VideoIcon className="h-4 w-4 text-white drop-shadow" />
                       )}
                     </div>
+
+                    {/* Upload Progress Overlay */}
+                    {media.uploading && (
+                      <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                        <div className="text-center">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mb-2"></div>
+                          <div className="text-white text-xs font-medium">
+                            {media.uploadProgress ? `${Math.round(media.uploadProgress)}%` : 'Uploading...'}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Upload Success Indicator */}
+                    {media.storageId && !media.uploading && (
+                      <div className="absolute top-1 left-1 bg-green-500 rounded-full p-1">
+                        <div className="h-2 w-2 bg-white rounded-full"></div>
+                      </div>
+                    )}
+
+                    {/* Upload Error Indicator */}
+                    {media.error && (
+                      <div className="absolute inset-0 bg-red-500/80 rounded-lg flex items-center justify-center">
+                        <div className="text-center text-white text-xs p-2">
+                          <AlertCircle className="h-4 w-4 mx-auto mb-1" />
+                          <div>Upload Failed</div>
+                          <div className="text-red-200 text-[10px] mt-1 truncate">
+                            {media.error}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
                 
@@ -696,7 +793,7 @@ export function PostComposer({
                 )}
               </div>
               <div className="text-xs text-muted-foreground space-y-1">
-                <p>Images: JPEG, PNG (max 8MB) • Videos: MP4, MOV (max 100MB)</p>
+                <p>Images: JPEG, PNG (max 25MB) • Videos: MP4, MOV (max 1GB)</p>
                 {platform === "instagram" && (
                   <p className="text-blue-600 dark:text-blue-400">
                     {postType === "story" && "📐 Stories: 9:16 ratio recommended (e.g., 1080x1920)"}
@@ -811,11 +908,19 @@ export function PostComposer({
             <Button
               onClick={handleSubmit}
               disabled={isSubmitting || !selectedAccountId || remainingChars < 0}
+              className="relative"
             >
-              {isSubmitting 
-                ? (postTiming === "now" ? "Publishing..." : (editPost ? "Updating..." : "Scheduling..."))
-                : (postTiming === "now" ? "Post Now" : (editPost ? "Update Post" : "Schedule Post"))
-              }
+              {isSubmitting && (
+                <div className="absolute left-3">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                </div>
+              )}
+              <span className={isSubmitting ? "ml-6" : ""}>
+                {isSubmitting 
+                  ? (postTiming === "now" ? "Publishing..." : (editPost ? "Updating..." : "Scheduling..."))
+                  : (postTiming === "now" ? "Post Now" : (editPost ? "Update Post" : "Schedule Post"))
+                }
+              </span>
             </Button>
           </DialogFooter>
 
