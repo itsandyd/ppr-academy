@@ -47,12 +47,12 @@ export async function GET(
 
     switch (platform) {
       case 'instagram':
-        tokenData = await exchangeFacebookCode(code, platform);
+        tokenData = await exchangeFacebookCode(code, platform, request.url);
         userData = await getInstagramBusinessData(tokenData.access_token);
         break;
       
       case 'facebook':
-        tokenData = await exchangeFacebookCode(code, platform);
+        tokenData = await exchangeFacebookCode(code, platform, request.url);
         userData = await getFacebookUserData(tokenData.access_token);
         break;
       
@@ -183,9 +183,11 @@ export async function GET(
 // TOKEN EXCHANGE FUNCTIONS
 // ============================================================================
 
-async function exchangeFacebookCode(code: string, platform: string) {
-  // Use the correct callback URL based on whether user connected via instagram or facebook
-  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/social/oauth/${platform}/callback`;
+async function exchangeFacebookCode(code: string, platform: string, requestUrl: string) {
+  // Use the exact same redirect URI that was used in the OAuth request
+  // Extract from the current request URL to ensure perfect matching
+  const url = new URL(requestUrl);
+  const redirectUri = `${url.origin}/api/social/oauth/${platform}/callback`;
   
   const params = new URLSearchParams({
     client_id: process.env.FACEBOOK_APP_ID!,
@@ -334,16 +336,41 @@ async function getInstagramBusinessData(accessToken: string) {
   
   for (const page of pagesData.data) {
     // Check if this page has an Instagram Business Account
+    console.log(`Checking Instagram connection for page: ${page.name} (${page.id})`);
+    
     const igResponse = await fetch(
       `https://graph.facebook.com/v18.0/${page.id}?fields=instagram_business_account{id,username,name,profile_picture_url}&access_token=${page.access_token}`
     );
     const igData = await igResponse.json();
+    
+    console.log(`Instagram API response for ${page.name}:`, igData);
     
     if (igData.instagram_business_account) {
       instagramAccounts.push({
         instagram: igData.instagram_business_account,
         page: page,
       });
+    } else {
+      // Try alternative API approach for Instagram Business Account
+      console.log(`No instagram_business_account found via page query. Trying alternative approach...`);
+      
+      try {
+        // Try getting Instagram accounts directly from user
+        const userIgResponse = await fetch(
+          `https://graph.facebook.com/v18.0/me?fields=accounts{instagram_business_account{id,username,name,profile_picture_url}}&access_token=${accessToken}`
+        );
+        const userIgData = await userIgResponse.json();
+        console.log('User Instagram accounts:', userIgData);
+        
+        // Also try page-level Instagram endpoint
+        const pageIgResponse = await fetch(
+          `https://graph.facebook.com/v18.0/${page.id}/instagram_accounts?access_token=${page.access_token}`
+        );
+        const pageIgData = await pageIgResponse.json();
+        console.log(`Page Instagram accounts for ${page.name}:`, pageIgData);
+      } catch (altError) {
+        console.log('Alternative Instagram query failed:', altError);
+      }
     }
   }
 
