@@ -204,7 +204,36 @@ async function exchangeFacebookCode(code: string, platform: string) {
     throw new Error(`Failed to exchange Facebook code: ${errorData}`);
   }
 
-  return await response.json();
+  const tokenData = await response.json();
+  console.log('Facebook token exchange successful:', { 
+    hasAccessToken: !!tokenData.access_token,
+    scope: tokenData.scope 
+  });
+
+  // For business OAuth, extract the client_business_id if present
+  if (tokenData.access_token) {
+    try {
+      // Get user info which includes business context
+      const userResponse = await fetch(
+        `https://graph.facebook.com/v18.0/me?access_token=${tokenData.access_token}&fields=id,name,business`
+      );
+      
+      if (userResponse.ok) {
+        const userData = await userResponse.json();
+        console.log('User business info:', userData);
+        
+        // Store business context if available
+        if (userData.business) {
+          tokenData.client_business_id = userData.business.id;
+          console.log('✅ Business ID found:', userData.business.id);
+        }
+      }
+    } catch (error) {
+      console.log('Note: Could not retrieve business context (not necessarily an error)');
+    }
+  }
+
+  return tokenData;
 }
 
 async function exchangeTwitterCode(code: string) {

@@ -123,7 +123,7 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
     const state = storeId;
 
     const authUrls: Record<string, string> = {
-      instagram: `https://www.facebook.com/v18.0/dialog/oauth?client_id=${process.env.NEXT_PUBLIC_FACEBOOK_APP_ID}&redirect_uri=${redirectUri}&state=${state}&scope=pages_manage_posts,pages_read_engagement,pages_show_list&auth_type=rerequest&display=popup&response_type=code`,
+      instagram: `https://www.facebook.com/v18.0/dialog/oauth?client_id=${process.env.NEXT_PUBLIC_FACEBOOK_APP_ID}&redirect_uri=${redirectUri}&state=${state}&scope=pages_manage_posts,pages_read_engagement,pages_show_list,business_management&auth_type=rerequest&display=popup&response_type=code`,
       twitter: `https://twitter.com/i/oauth2/authorize?client_id=${process.env.NEXT_PUBLIC_TWITTER_CLIENT_ID}&redirect_uri=${redirectUri}&state=${state}&scope=tweet.read tweet.write users.read offline.access&response_type=code&code_challenge=challenge&code_challenge_method=plain`,
       facebook: `https://www.facebook.com/v18.0/dialog/oauth?client_id=${process.env.NEXT_PUBLIC_FACEBOOK_APP_ID}&redirect_uri=${redirectUri}&state=${state}&scope=pages_read_engagement,pages_manage_posts,pages_show_list,business_management&auth_type=rerequest`,
       linkedin: `https://www.linkedin.com/oauth/v2/authorization?client_id=${process.env.NEXT_PUBLIC_LINKEDIN_CLIENT_ID}&redirect_uri=${redirectUri}&state=${state}&scope=r_liteprofile r_emailaddress w_member_social&response_type=code`,
