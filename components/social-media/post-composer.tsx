@@ -190,12 +190,12 @@ export function PostComposer({
         continue;
       }
 
-      // Validate file size
-      const maxSize = isImage ? 8 * 1024 * 1024 : 100 * 1024 * 1024; // 8MB for images, 100MB for videos
+      // Validate file size (Max Convex limits for professional content)
+      const maxSize = isImage ? 25 * 1024 * 1024 : 1000 * 1024 * 1024; // 25MB for images, 1GB for videos
       if (file.size > maxSize) {
         toast({
           title: "File too large",
-          description: `${isImage ? "Images" : "Videos"} must be under ${isImage ? "8MB" : "100MB"}`,
+          description: `${isImage ? "Images" : "Videos"} must be under ${isImage ? "25MB" : "1GB"}. This is the maximum supported by our storage system.`,
           variant: "destructive",
         });
         continue;

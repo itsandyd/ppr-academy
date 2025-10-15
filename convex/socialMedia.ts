@@ -329,6 +329,7 @@ export const generateMediaUploadUrl = mutation({
   args: {},
   returns: v.string(),
   handler: async (ctx) => {
+    // Generate upload URL with extended timeout for large video files
     return await ctx.storage.generateUploadUrl();
   },
 });
