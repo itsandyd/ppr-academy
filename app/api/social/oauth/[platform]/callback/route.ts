@@ -93,16 +93,89 @@ export async function GET(
       platformData: userData.platformData,
     });
 
-    return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL}/store/${storeId}/social?social_success=${platform}`
-    );
+    // Check if this is a popup OAuth flow
+    const isPopup = request.nextUrl.searchParams.get('display') === 'popup' || 
+                   request.headers.get('referer')?.includes('oauth_popup');
+
+    if (isPopup) {
+      // Return HTML that closes popup and notifies parent
+      const html = `
+        <!DOCTYPE html>
+        <html>
+          <head><title>OAuth Success</title></head>
+          <body>
+            <script>
+              if (window.opener) {
+                window.opener.postMessage({ 
+                  type: 'oauth_success', 
+                  platform: '${platform}',
+                  storeId: '${storeId}' 
+                }, '*');
+              }
+              window.close();
+            </script>
+            <div style="text-align: center; padding: 50px; font-family: sans-serif;">
+              <h2>✅ Connected Successfully!</h2>
+              <p>You can close this window.</p>
+            </div>
+          </body>
+        </html>
+      `;
+      
+      return new NextResponse(html, {
+        status: 200,
+        headers: { 'Content-Type': 'text/html' }
+      });
+    } else {
+      // Traditional redirect for non-popup flow
+      return NextResponse.redirect(
+        `${process.env.NEXT_PUBLIC_APP_URL}/store/${storeId}/social?social_success=${platform}`
+      );
+    }
   } catch (error: any) {
     console.error('OAuth callback error:', error);
     console.error('Error details:', error.message, error.stack);
     const storeId = request.nextUrl.searchParams.get('state');
-    return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL}/store/${storeId}/social?social_error=server_error`
-    );
+    
+    // Check if this is a popup OAuth flow
+    const isPopup = request.nextUrl.searchParams.get('display') === 'popup' || 
+                   request.headers.get('referer')?.includes('oauth_popup');
+
+    if (isPopup) {
+      // Return HTML that closes popup and notifies parent of error
+      const html = `
+        <!DOCTYPE html>
+        <html>
+          <head><title>OAuth Error</title></head>
+          <body>
+            <script>
+              if (window.opener) {
+                window.opener.postMessage({ 
+                  type: 'oauth_error', 
+                  error: '${error.message}',
+                  storeId: '${storeId}' 
+                }, '*');
+              }
+              window.close();
+            </script>
+            <div style="text-align: center; padding: 50px; font-family: sans-serif;">
+              <h2>❌ Connection Failed</h2>
+              <p>Please try again or contact support.</p>
+            </div>
+          </body>
+        </html>
+      `;
+      
+      return new NextResponse(html, {
+        status: 200,
+        headers: { 'Content-Type': 'text/html' }
+      });
+    } else {
+      // Traditional redirect for non-popup flow
+      return NextResponse.redirect(
+        `${process.env.NEXT_PUBLIC_APP_URL}/store/${storeId}/social?social_error=server_error`
+      );
+    }
   }
 }
 

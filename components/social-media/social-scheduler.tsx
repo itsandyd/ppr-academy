@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -38,6 +38,34 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
   const [showPostComposer, setShowPostComposer] = useState(false);
   const [editingPost, setEditingPost] = useState<any>(null);
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
+
+  // Listen for OAuth popup success/error messages
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data.type === 'oauth_success') {
+        toast({
+          title: "🎉 Connected Successfully!",
+          description: `${event.data.platform} account has been connected.`,
+          className: "bg-white dark:bg-black",
+        });
+        
+        // Refresh the page to show new connection
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else if (event.data.type === 'oauth_error') {
+        toast({
+          title: "Connection Failed",
+          description: `Failed to connect ${event.data.platform}: ${event.data.error}`,
+          variant: "destructive",
+          className: "bg-white dark:bg-black",
+        });
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [toast]);
 
   // Mutations
   const deletePost = useMutation(api.socialMedia.deleteScheduledPost);
@@ -95,7 +123,7 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
     const state = storeId;
 
     const authUrls: Record<string, string> = {
-      instagram: `https://www.facebook.com/v18.0/dialog/oauth?client_id=${process.env.NEXT_PUBLIC_FACEBOOK_APP_ID}&redirect_uri=${redirectUri}&state=${state}&scope=pages_manage_posts,pages_read_engagement,pages_show_list&auth_type=rerequest`,
+      instagram: `https://www.facebook.com/v18.0/dialog/oauth?client_id=${process.env.NEXT_PUBLIC_FACEBOOK_APP_ID}&redirect_uri=${redirectUri}&state=${state}&scope=pages_manage_posts,pages_read_engagement,pages_show_list&auth_type=rerequest&display=popup&response_type=code`,
       twitter: `https://twitter.com/i/oauth2/authorize?client_id=${process.env.NEXT_PUBLIC_TWITTER_CLIENT_ID}&redirect_uri=${redirectUri}&state=${state}&scope=tweet.read tweet.write users.read offline.access&response_type=code&code_challenge=challenge&code_challenge_method=plain`,
       facebook: `https://www.facebook.com/v18.0/dialog/oauth?client_id=${process.env.NEXT_PUBLIC_FACEBOOK_APP_ID}&redirect_uri=${redirectUri}&state=${state}&scope=pages_read_engagement,pages_manage_posts,pages_show_list,business_management&auth_type=rerequest`,
       linkedin: `https://www.linkedin.com/oauth/v2/authorization?client_id=${process.env.NEXT_PUBLIC_LINKEDIN_CLIENT_ID}&redirect_uri=${redirectUri}&state=${state}&scope=r_liteprofile r_emailaddress w_member_social&response_type=code`,
@@ -103,7 +131,30 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
     };
 
     if (authUrls[platform]) {
-      window.location.href = authUrls[platform];
+      // Open OAuth in popup window (like professional tools)
+      const popup = window.open(
+        authUrls[platform],
+        'oauth_popup',
+        'width=500,height=700,scrollbars=yes,resizable=yes'
+      );
+
+      // Listen for popup completion
+      const checkPopup = setInterval(() => {
+        if (popup?.closed) {
+          clearInterval(checkPopup);
+          // Refresh page data after OAuth completion
+          window.location.reload();
+        }
+      }, 1000);
+
+      // Handle popup blocking
+      if (!popup) {
+        toast({
+          title: "Popup blocked",
+          description: "Please allow popups and try again",
+          variant: "destructive",
+        });
+      }
     } else {
       toast({
         title: "Platform not supported",
