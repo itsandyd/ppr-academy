@@ -68,7 +68,7 @@ export function FormFieldWithHelp({
               </button>
             </HoverCardTrigger>
             <HoverCardContent 
-              className="w-96 bg-white dark:bg-black p-0 overflow-hidden"
+              className="w-96 bg-popover p-0 overflow-hidden"
               side="left"
             >
               {/* Header */}

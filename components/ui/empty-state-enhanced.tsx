@@ -136,7 +136,7 @@ export function EmptyStateEnhanced({
                 return (
                   <div
                     key={i}
-                    className="bg-white dark:bg-black rounded-lg p-4 text-left border border-border hover:border-purple-300 dark:hover:border-purple-700 transition-colors"
+                    className="bg-card rounded-lg p-4 text-left border border-border hover:border-purple-300 dark:hover:border-purple-700 transition-colors"
                   >
                     <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/20 rounded-lg flex items-center justify-center mb-3">
                       <TipIcon className="w-4 h-4 text-purple-600 dark:text-purple-400" />

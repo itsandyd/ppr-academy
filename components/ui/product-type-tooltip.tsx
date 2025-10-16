@@ -216,7 +216,7 @@ export function ProductTypeTooltip({
       </HoverCardTrigger>
       <HoverCardContent 
         side={side}
-        className="w-96 bg-white dark:bg-black p-0 overflow-hidden"
+        className="w-96 bg-popover p-0 overflow-hidden"
       >
         {/* Header */}
         <div className="bg-gradient-to-r from-purple-500 to-blue-500 p-4 text-white">
