@@ -35,7 +35,10 @@ import {
   Trash2,
   UserCog,
   Send,
+  Crown
 } from "lucide-react";
+import { BulkSelectionTable, userBulkActions } from "@/components/admin/bulk-selection-table";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const USERS_PER_PAGE = 20;
 
@@ -262,13 +265,83 @@ export default function UsersManagementPage() {
         </div>
       </div>
 
-      {/* Users Table */}
+      {/* Users Table with Bulk Selection */}
       <Card>
         <CardHeader>
           <CardTitle>All Users ({filteredUsers.length})</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <BulkSelectionTable
+            data={filteredUsers}
+            columns={[
+              {
+                key: "name",
+                label: "Name",
+                render: (user: any) => (
+                  <div className="flex items-center gap-3">
+                    <Avatar className="w-10 h-10">
+                      <AvatarImage src={user.imageUrl} />
+                      <AvatarFallback className="bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300">
+                        {user.name?.charAt(0).toUpperCase() || "?"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold">{user.name || "Unknown"}</span>
+                        {user.emailVerified && (
+                          <CheckCircle className="w-4 h-4 text-green-600" />
+                        )}
+                      </div>
+                      <div className="text-sm text-muted-foreground">{user.email || "No email"}</div>
+                    </div>
+                  </div>
+                )
+              },
+              {
+                key: "role",
+                label: "Role",
+                render: (user: any) => (
+                  <Badge variant={
+                    user.role === "AGENCY_OWNER" || user.role === "AGENCY_ADMIN" 
+                      ? "default" 
+                      : "secondary"
+                  }>
+                    {user.role === "AGENCY_OWNER" ? "Owner" :
+                     user.role === "AGENCY_ADMIN" ? "Admin" :
+                     user.role === "SUBACCOUNT_GUEST" ? "Guest" :
+                     "User"}
+                  </Badge>
+                )
+              },
+              {
+                key: "stripe",
+                label: "Payment Status",
+                render: (user: any) => (
+                  user.stripeConnectAccountId ? (
+                    <Badge variant="outline" className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300">
+                      Stripe Connected
+                    </Badge>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">Not connected</span>
+                  )
+                )
+              },
+              {
+                key: "joined",
+                label: "Joined",
+                render: (user: any) => (
+                  <span className="text-sm text-muted-foreground">
+                    {new Date(user._creationTime).toLocaleDateString()}
+                  </span>
+                )
+              }
+            ]}
+            bulkActions={userBulkActions}
+            getItemId={(user: any) => user._id}
+          />
+          
+          {/* Legacy individual user cards (hidden) */}
+          <div className="hidden">
             {filteredUsers.map((user) => (
               <div
                 key={user._id}

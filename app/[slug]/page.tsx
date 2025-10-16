@@ -8,6 +8,9 @@ import { Loader2, Search, Filter, BookOpen, Play, Users, Star, X, ExternalLink, 
 import { DesktopStorefront } from "./components/DesktopStorefront";
 import { MobileStorefront } from "./components/MobileStorefront";
 import { SubscriptionSection } from "./components/SubscriptionSection";
+import { CreatorsPicks } from "@/components/storefront/creators-picks";
+import { FollowCreatorCTA } from "@/components/storefront/follow-creator-cta";
+import { AnimatedFilterResults, AnimatedGridItem } from "@/components/ui/animated-filter-transitions";
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
@@ -372,9 +375,13 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
         </div>
       </div>
 
-      {/* Search and Filters */}
+      {/* Main Content with Sidebar */}
       <div className="container mx-auto px-4 py-6">
-        <div className="flex flex-col md:flex-row gap-4 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          {/* Main Content */}
+          <div className="lg:col-span-3">
+            {/* Search and Filters */}
+            <div className="flex flex-col md:flex-row gap-4 mb-8">
           {/* Search Input */}
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -452,9 +459,31 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
           )}
         </div>
 
-        {/* Enhanced Products Grid */}
+        {/* Creator's Picks Section - Featured Products */}
+        {allProducts.length >= 3 && !searchTerm && selectedCategory === "all" && (
+          <div className="mb-12">
+            <CreatorsPicks
+              products={allProducts.slice(0, 3).map(p => ({
+                id: p._id,
+                title: p.title,
+                description: p.description || "",
+                imageUrl: p.imageUrl,
+                price: p.price || 0,
+                slug: p.slug || p._id,
+                type: p.productType as "course" | "digital" | "bundle",
+                rating: 4.8,
+                students: 150,
+                reason: "This is one of my most popular products - students love the quality and practical value!"
+              }))}
+              creatorName={store.name}
+            />
+          </div>
+        )}
+
+        {/* Enhanced Products Grid with Animations */}
         {filteredProducts.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <AnimatedFilterResults filterKey={`${selectedCategory}-${selectedPriceRange}-${searchTerm}-${sortBy}`}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredProducts.map((product) => {
               const IconComponent = product.icon;
               return (
@@ -520,6 +549,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
               );
             })}
           </div>
+          </AnimatedFilterResults>
         ) : (
           /* No Results State */
           <div className="text-center py-12">
@@ -560,8 +590,37 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
             </div>
           </div>
         )}
+          </div>
+
+          {/* Sidebar */}
+          <div className="lg:col-span-1 space-y-6">
+            <FollowCreatorCTA
+              creatorName={store.name}
+              creatorSlug={store.slug}
+              creatorAvatar={avatarUrl}
+              followerCount={allProducts.length * 50} // Estimate
+              sticky={true}
+              onFollow={() => {
+                toast({
+                  title: "Following!",
+                  description: `You're now following ${store.name}`,
+                  className: "bg-white dark:bg-black",
+                });
+              }}
+              onNotify={() => {
+                toast({
+                  title: "Notifications Enabled",
+                  description: `You'll be notified of new releases from ${store.name}`,
+                  className: "bg-white dark:bg-black",
+                });
+              }}
+            />
+          </div>
+        </div>
+      </div>
 
         {/* Creator Call-to-Action Section */}
+        <div className="container mx-auto px-4 py-6">
         <div className="mt-16 relative overflow-hidden">
           {/* Background Pattern */}
           <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-blue-900/20 to-indigo-900/20 rounded-2xl"></div>

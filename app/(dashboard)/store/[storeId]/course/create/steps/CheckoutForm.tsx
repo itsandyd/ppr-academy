@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { ArrowLeft, ArrowRight, DollarSign, CreditCard, Save } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import { useCourseCreation } from "../context";
+import { FormFieldWithHelp, courseFieldHelp } from "@/components/ui/form-field-with-help";
 
 export function CheckoutForm() {
   const router = useRouter();
@@ -96,31 +97,17 @@ export function CheckoutForm() {
         </CardHeader>
         <CardContent className="px-4 sm:px-6 space-y-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="price" className="text-foreground text-sm font-medium flex items-center gap-1">
-                Course Price (USD) <span className="text-red-600">*</span>
-              </Label>
-              <Input
-                id="price"
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.price}
-                onChange={(e) => handleInputChange("price", e.target.value)}
-                onBlur={() => handleBlur("price")}
-                placeholder="99.00"
-                className={`mt-2 h-12 text-base ${
-                  getFieldError("price", formData.price)
-                    ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
-                    : ""
-                }`}
-              />
-              {getFieldError("price", formData.price) && (
-                <p className="text-sm text-red-600 font-medium">
-                  ⚠️ Price is required
-                </p>
-              )}
-            </div>
+            <FormFieldWithHelp
+              label="Course Price (USD)"
+              name="price"
+              type="number"
+              value={formData.price}
+              onChange={(value) => handleInputChange("price", value)}
+              placeholder="99.00"
+              required
+              help={courseFieldHelp.price}
+              error={getFieldError("price", formData.price) ? "Price is required" : undefined}
+            />
 
             <div>
               <Label htmlFor="original-price" className="text-foreground text-sm font-medium">Original Price (optional)</Label>

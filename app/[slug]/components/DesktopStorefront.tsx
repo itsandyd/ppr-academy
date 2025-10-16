@@ -87,13 +87,18 @@ export function DesktopStorefront({ store, user, products, displayName, initials
                 {initials}
               </AvatarFallback>
             </Avatar>
-            <div>
+            <div className="flex-1">
               <h1 className="text-4xl font-bold mb-2 text-background">{store.name}</h1>
-              <p className="text-background/80 text-lg">by {displayName} • @{store.slug}</p>
+              <p className="text-background/80 text-lg mb-3">by {displayName} • @{store.slug}</p>
+              {store.description && (
+                <p className="text-background/90 text-base max-w-2xl leading-relaxed">
+                  {store.description}
+                </p>
+              )}
             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center mt-8">
             <div className="bg-white/10 backdrop-blur rounded-lg p-4">
               <div className="text-2xl font-bold text-background">{products?.filter(p => p.isPublished).length || 0}</div>
               <div className="text-background/80 text-sm">Products & Courses</div>

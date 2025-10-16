@@ -2,6 +2,8 @@
 
 import { CourseCardEnhanced } from "@/components/ui/course-card-enhanced";
 import { CertificateCard } from "@/components/certificates/CertificateCard";
+import { NoCoursesEmptyState } from "@/components/ui/empty-state-enhanced";
+import { HeroFlourishes } from "@/components/ui/hero-flourishes";
 import { useUser } from "@clerk/nextjs";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -167,29 +169,8 @@ export default function LibraryPage() {
           </div>
         </div>
 
-        {/* Empty State */}
-        <Card className="p-12 text-center">
-          <div className="max-w-md mx-auto space-y-6">
-            <div className="w-24 h-24 mx-auto bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900/20 dark:to-blue-900/20 rounded-full flex items-center justify-center">
-              <BookOpen className="w-12 h-12 text-purple-600 dark:text-purple-400" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold mb-2">Your library is empty</h2>
-              <p className="text-muted-foreground">
-                You haven't enrolled in any courses yet. Browse the marketplace to find courses that match your interests!
-              </p>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-              <Button size="lg" className="gap-2" onClick={() => window.location.href = '/'}>
-                <BookOpen className="w-4 h-4" />
-                Browse Courses
-              </Button>
-              <Button size="lg" variant="outline" className="gap-2" onClick={() => window.location.href = '/courses'}>
-                View All Courses
-              </Button>
-            </div>
-          </div>
-        </Card>
+        {/* Enhanced Empty State */}
+        <NoCoursesEmptyState />
       </div>
     );
   }
@@ -198,6 +179,7 @@ export default function LibraryPage() {
     <div className="space-y-8">
       {/* Welcome Header */}
       <div className="bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 rounded-2xl p-8 text-white relative overflow-hidden">
+        <HeroFlourishes variant="music" />
         <div className="relative z-10">
           <div className="flex items-center justify-between mb-6">
             <div>

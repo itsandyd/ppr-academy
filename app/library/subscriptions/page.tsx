@@ -12,9 +12,10 @@ import { format } from "date-fns";
 export default function SubscriptionsPage() {
   const { user } = useUser();
   
-  const subscriptions = user
-    ? useQuery(api.subscriptions.getUserSubscriptions, { userId: user.id })
-    : null;
+  const subscriptions = useQuery(
+    api.subscriptions.getUserSubscriptions, 
+    user?.id ? { userId: user.id } : "skip"
+  );
 
   if (!user) {
     return (

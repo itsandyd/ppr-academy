@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { StripeConnectFlow } from "@/components/payments/stripe-connect-flow";
 import { 
   CreditCard, 
   DollarSign, 
@@ -229,50 +230,17 @@ export default function PayoutSettingsPage() {
         </CardHeader>
         <CardContent className="space-y-6">
           {!convexUser.stripeConnectAccountId ? (
-            /* No Stripe Account */
-            <div className="text-center py-8">
-              <div className="w-16 h-16 bg-blue-100 rounded-full mx-auto mb-4 flex items-center justify-center">
-                <CreditCard className="w-8 h-8 text-blue-600" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">Connect Your Stripe Account</h3>
-              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                To receive payments from course sales, you'll need to connect a Stripe account. 
-                This process takes just a few minutes and is completely secure.
-              </p>
-              
-              <Button 
-                onClick={handleCreateStripeAccount}
-                disabled={isLoading}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Setting up...
-                  </>
-                ) : (
-                  <>
-                    <CreditCard className="w-4 h-4 mr-2" />
-                    Connect Stripe Account
-                  </>
-                )}
-              </Button>
-              
-              <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-5 h-5 text-blue-600 mt-0.5" />
-                  <div className="text-left">
-                    <h4 className="font-medium text-blue-800 mb-1">What happens next?</h4>
-                    <ul className="text-sm text-blue-700 space-y-1">
-                      <li>• Secure redirect to Stripe's onboarding</li>
-                      <li>• Provide basic business information</li>
-                      <li>• Verify your identity and bank account</li>
-                      <li>• Start receiving payments within 24 hours</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </div>
+            /* Enhanced Stripe Connect Flow */
+            <StripeConnectFlow
+              currentStep={isLoading ? "connecting" : "not-started"}
+              onConnect={handleCreateStripeAccount}
+              stripeAccountId={convexUser.stripeConnectAccountId}
+              verificationStatus={
+                stripeAccountStatus?.chargesEnabled ? "verified" :
+                stripeAccountStatus?.detailsSubmitted ? "pending" :
+                "pending"
+              }
+            />
           ) : (
             /* Has Stripe Account */
             <div className="space-y-6">

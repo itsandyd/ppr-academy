@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useRouter, useParams } from "next/navigation";
 import { useCourseCreation } from "../context";
 import { CourseContentManager } from "../components/CourseContentManager";
+import { FormFieldWithHelp, courseFieldHelp } from "@/components/ui/form-field-with-help";
+import { FormErrorBanner } from "@/components/ui/form-error-banner";
 
 const categories = [
   "Hip-Hop Production",
@@ -81,64 +83,31 @@ function CourseBasicInfoCard() {
         </p>
       </div>
 
-      {/* Form Fields */}
+      {/* Form Fields - Enhanced with Inline Help */}
       <div className="space-y-8">
-        <div className="space-y-3">
-          <Label htmlFor="title" className="text-base font-semibold text-gray-900 flex items-center gap-1">
-            Course Title <span className="text-red-600">*</span>
-          </Label>
-          <Input
-            id="title"
-            placeholder="e.g., Mastering Hip-Hop Drums"
-            value={state.data?.title || ""}
-            onChange={(e) => handleInputChange("title", e.target.value)}
-            onBlur={() => handleBlur("title")}
-            className={`h-14 text-lg border-2 rounded-xl ${
-              getFieldError("title", state.data?.title)
-                ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
-                : "border-gray-200 focus:border-blue-500 focus:ring-blue-500/20"
-            }`}
-          />
-          {getFieldError("title", state.data?.title) && (
-            <p className="text-sm text-red-600 font-medium">
-              ⚠️ Course title is required
-            </p>
-          )}
-          {!getFieldError("title", state.data?.title) && (
-            <p className="text-sm text-gray-500">
-              Choose a clear, descriptive title that tells students exactly what they'll learn.
-            </p>
-          )}
-        </div>
+        <FormFieldWithHelp
+          label="Course Title"
+          name="title"
+          value={state.data?.title || ""}
+          onChange={(value) => handleInputChange("title", value)}
+          placeholder="e.g., Mastering Hip-Hop Drums"
+          required
+          help={courseFieldHelp.title}
+          error={getFieldError("title", state.data?.title) ? "Course title is required" : undefined}
+        />
 
-        <div className="space-y-3">
-          <Label htmlFor="description" className="text-base font-semibold text-gray-900 flex items-center gap-1">
-            Course Description <span className="text-red-600">*</span>
-          </Label>
-          <Textarea
-            id="description"
-            placeholder="Describe what students will learn in this course..."
-            value={state.data?.description || ""}
-            onChange={(e) => handleInputChange("description", e.target.value)}
-            onBlur={() => handleBlur("description")}
-            className={`min-h-[150px] text-base border-2 resize-none rounded-xl ${
-              getFieldError("description", state.data?.description)
-                ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
-                : "border-gray-200 focus:border-blue-500 focus:ring-blue-500/20"
-            }`}
-            rows={6}
-          />
-          {getFieldError("description", state.data?.description) && (
-            <p className="text-sm text-red-600 font-medium">
-              ⚠️ Course description is required
-            </p>
-          )}
-          {!getFieldError("description", state.data?.description) && (
-            <p className="text-sm text-gray-500">
-              Describe what students will learn and how it will benefit them. Be specific and compelling.
-            </p>
-          )}
-        </div>
+        <FormFieldWithHelp
+          label="Course Description"
+          name="description"
+          type="textarea"
+          value={state.data?.description || ""}
+          onChange={(value) => handleInputChange("description", value)}
+          placeholder="Describe what students will learn in this course..."
+          required
+          help={courseFieldHelp.description}
+          error={getFieldError("description", state.data?.description) ? "Course description is required" : undefined}
+          rows={6}
+        />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-3">

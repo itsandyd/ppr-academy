@@ -14,6 +14,7 @@ import type {
   FunctionReference,
 } from "convex/server";
 import type * as accessControl from "../accessControl.js";
+import type * as achievements from "../achievements.js";
 import type * as adminAnalytics from "../adminAnalytics.js";
 import type * as adminSetup from "../adminSetup.js";
 import type * as affiliates from "../affiliates.js";
@@ -59,6 +60,7 @@ import type * as embeddings from "../embeddings.js";
 import type * as files from "../files.js";
 import type * as http from "../http.js";
 import type * as leadSubmissions from "../leadSubmissions.js";
+import type * as leaderboards from "../leaderboards.js";
 import type * as library from "../library.js";
 import type * as marketplace from "../marketplace.js";
 import type * as monetizationSchema from "../monetizationSchema.js";
@@ -99,6 +101,7 @@ import type * as users from "../users.js";
  */
 declare const fullApi: ApiFromModules<{
   accessControl: typeof accessControl;
+  achievements: typeof achievements;
   adminAnalytics: typeof adminAnalytics;
   adminSetup: typeof adminSetup;
   affiliates: typeof affiliates;
@@ -144,6 +147,7 @@ declare const fullApi: ApiFromModules<{
   files: typeof files;
   http: typeof http;
   leadSubmissions: typeof leadSubmissions;
+  leaderboards: typeof leaderboards;
   library: typeof library;
   marketplace: typeof marketplace;
   monetizationSchema: typeof monetizationSchema;

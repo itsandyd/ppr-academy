@@ -2555,4 +2555,26 @@ export default defineSchema({
     .index("by_template", ["templateId"]),
   
   listHygieneActions: emailSchema.listHygieneActionsTable,
+
+  // Gamification - Achievements
+  userAchievements: defineTable({
+    userId: v.string(), // Clerk ID
+    achievementId: v.string(), // Achievement identifier
+    unlocked: v.boolean(),
+    unlockedAt: v.optional(v.number()), // Timestamp when unlocked
+    progress: v.optional(v.object({
+      current: v.number(),
+      target: v.number()
+    })),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_userId_and_achievementId", ["userId", "achievementId"]),
+
+  // Gamification - User XP
+  userXP: defineTable({
+    userId: v.string(), // Clerk ID
+    totalXP: v.number(),
+    lastXPGain: v.optional(v.number()), // Timestamp of last XP gain
+  })
+    .index("by_userId", ["userId"]),
 }); 

@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { EmptyStateEnhanced } from "@/components/ui/empty-state-enhanced";
 import { 
   Plus, 
   Search, 
@@ -356,26 +357,74 @@ export default function EmailCampaignsPage() {
         </CardHeader>
         <CardContent>
           {filteredCampaigns.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 bg-gray-100 rounded-lg mx-auto mb-4 flex items-center justify-center">
-                <Mail className="w-8 h-8 text-gray-400" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2">
-                {campaigns.length === 0 ? "No campaigns yet" : "No campaigns found"}
-              </h3>
-              <p className="text-gray-600 mb-6">
-                {campaigns.length === 0 
-                  ? "Create your first email campaign to start reaching your customers"
-                  : "Try adjusting your search terms or filters"
-                }
-              </p>
-              {campaigns.length === 0 && (
-                <Button onClick={() => router.push(`/store/${storeId}/email-campaigns/create`)}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Your First Campaign
+            campaigns.length === 0 ? (
+              <EmptyStateEnhanced
+                icon={Mail}
+                title="No email campaigns yet"
+                description="Start engaging your audience with targeted email campaigns. Build relationships, promote products, and drive sales."
+                showSuccessMetric={{
+                  label: "Average campaign open rate",
+                  value: "24.5%"
+                }}
+                actions={[
+                  {
+                    label: "Create Campaign",
+                    onClick: () => router.push(`/store/${storeId}/email-campaigns/create`),
+                    icon: Plus
+                  }
+                ]}
+                tips={[
+                  {
+                    icon: Mail,
+                    title: "Start with a Welcome Series",
+                    description: "Send 3-5 emails introducing new subscribers to your content and products."
+                  },
+                  {
+                    icon: Zap,
+                    title: "Automate with Workflows",
+                    description: "Set up automated email sequences triggered by user actions."
+                  },
+                  {
+                    icon: BarChart3,
+                    title: "Track Performance",
+                    description: "Monitor opens, clicks, and conversions to improve future campaigns."
+                  }
+                ]}
+                examples={[
+                  {
+                    title: "New Product Launch",
+                    description: "Announce your latest sample pack or course to your list",
+                    badge: "Popular"
+                  },
+                  {
+                    title: "Weekly Newsletter",
+                    description: "Share production tips, industry news, and exclusive offers",
+                    badge: "Recurring"
+                  },
+                  {
+                    title: "Cart Abandonment",
+                    description: "Remind users about products left in their cart",
+                    badge: "Automated"
+                  },
+                  {
+                    title: "Course Enrollment",
+                    description: "Welcome new students with onboarding content",
+                    badge: "Triggered"
+                  }
+                ]}
+              />
+            ) : (
+              <div className="text-center py-12">
+                <Search className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No campaigns found</h3>
+                <p className="text-muted-foreground mb-6">
+                  Try adjusting your search terms or filters
+                </p>
+                <Button variant="outline" onClick={() => setSearchTerm("")}>
+                  Clear Search
                 </Button>
-              )}
-            </div>
+              </div>
+            )
           ) : (
             <div className="space-y-4">
               {filteredCampaigns.map((campaign: any) => (

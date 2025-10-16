@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen, CreditCard, Settings, Sparkles, Clock, CheckCircle } from "lucide-react";
 import { Suspense } from "react";
+import { StepProgressIndicator, StepProgressCompact } from "@/components/ui/step-progress-indicator";
 
 // Step metadata for enhanced UI
 const stepMetadata = {
@@ -46,6 +47,32 @@ function CreateCourseContent() {
   const Icon = currentStepMeta.icon;
   const isCompleted = state.stepCompletion[step as keyof typeof state.stepCompletion];
 
+  // Prepare steps for progress indicator
+  const progressSteps = [
+    {
+      id: "course",
+      title: "Course Info",
+      description: "Basics & content",
+      icon: BookOpen
+    },
+    {
+      id: "checkout",
+      title: "Pricing",
+      description: "Payment setup",
+      icon: CreditCard
+    },
+    {
+      id: "options",
+      title: "Options",
+      description: "Settings & features",
+      icon: Settings
+    }
+  ];
+
+  const completedSteps = Object.entries(state.stepCompletion)
+    .filter(([_, completed]) => completed)
+    .map(([stepKey, _]) => stepKey);
+
   const renderStep = () => {
     switch (step) {
       case "checkout":
@@ -61,17 +88,38 @@ function CreateCourseContent() {
   };
 
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={step}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        transition={{ duration: 0.4, ease: "easeInOut" }}
-      >
-        {renderStep()}
-      </motion.div>
-    </AnimatePresence>
+    <div className="space-y-8">
+      {/* Progress Indicator - Desktop */}
+      <div className="hidden md:block">
+        <StepProgressIndicator
+          steps={progressSteps}
+          currentStep={step}
+          completedSteps={completedSteps}
+        />
+      </div>
+
+      {/* Progress Indicator - Mobile */}
+      <div className="md:hidden">
+        <StepProgressCompact
+          steps={progressSteps}
+          currentStep={step}
+          completedSteps={completedSteps}
+        />
+      </div>
+
+      {/* Step Content */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={step}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.4, ease: "easeInOut" }}
+        >
+          {renderStep()}
+        </motion.div>
+      </AnimatePresence>
+    </div>
   );
 }
 

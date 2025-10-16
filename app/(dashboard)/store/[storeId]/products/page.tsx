@@ -19,6 +19,7 @@ import { ProductsList } from "../../components/ProductsList";
 import { SamplesList } from "@/components/samples/SamplesList";
 import { CreditBalance } from "@/components/credits/CreditBalance";
 import { useToast } from "@/hooks/use-toast";
+import { ProductTypeSelector } from "@/components/products/product-type-selector";
 
 export default function ProductsPage() {
   const params = useParams();
@@ -391,121 +392,27 @@ export default function ProductsPage() {
                     </p>
                   </div>
 
-                  {/* Quick Create Buttons - Always Visible */}
-                  <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-6 mb-6">
-                    <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4 text-center">
-                      📦 Choose Your Product Type
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleOptionClick('ecourse')}>
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center">
-                          <BookOpen className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-slate-900 dark:text-slate-100">Music Course</h3>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">Teach production, mixing, theory</p>
-                        </div>
-                      </div>
-                    </Card>
-                    
-                    <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleOptionClick('digital')}>
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-gradient-to-r from-slate-600 to-slate-800 rounded-lg flex items-center justify-center">
-                          <Package className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-slate-900 dark:text-slate-100">Digital Product</h3>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">PDFs, guides, templates</p>
-                        </div>
-                      </div>
-                    </Card>
-
-                    <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleOptionClick('membership')}>
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-gradient-to-r from-violet-500 to-purple-500 rounded-lg flex items-center justify-center">
-                          <Users className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-slate-900 dark:text-slate-100">Subscription</h3>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">Monthly membership</p>
-                        </div>
-                      </div>
-                    </Card>
-
-                    <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleOptionClick('emails')}>
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-lg flex items-center justify-center">
-                          <Mail className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-slate-900 dark:text-slate-100">Lead Magnet</h3>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">Free content for emails</p>
-                        </div>
-                      </div>
-                    </Card>
-
-                    <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleOptionClick('sample-pack')}>
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-                          <Music className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-slate-900 dark:text-slate-100">Sample Pack</h3>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">Drums, loops, one-shots</p>
-                        </div>
-                      </div>
-                    </Card>
-
-                    <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleOptionClick('coaching')}>
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg flex items-center justify-center">
-                          <Users className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-slate-900 dark:text-slate-100">Coaching Call</h3>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">1-on-1 sessions</p>
-                        </div>
-                      </div>
-                    </Card>
-
-                    <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleOptionClick('beat-lease')}>
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
-                          <Music className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-slate-900 dark:text-slate-100">Beat Lease</h3>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">License your beats</p>
-                        </div>
-                      </div>
-                    </Card>
-
-                    <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleOptionClick('preset-pack')}>
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center">
-                          <Package className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-slate-900 dark:text-slate-100">Preset Pack</h3>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">Synth presets, effects</p>
-                        </div>
-                      </div>
-                    </Card>
-
-                    <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => handleOptionClick('webinar')}>
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center">
-                          <Users className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-slate-900 dark:text-slate-100">Live Workshop</h3>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">Group sessions</p>
-                        </div>
-                      </div>
-                    </Card>
-                    </div>
-                  </div>
+                  {/* Enhanced Product Type Selector with Tooltips */}
+                  <ProductTypeSelector 
+                    onSelect={(typeId) => {
+                      // Map ProductTypeSelector IDs to existing routes
+                      const typeRouteMap: Record<string, string> = {
+                        'samplePack': 'sample-pack',
+                        'presetPack': 'preset-pack',
+                        'musicCourse': 'ecourse',
+                        'coachingCall': 'coaching',
+                        'beatLease': 'beat-lease',
+                        'workshop': 'webinar',
+                        'leadMagnet': 'emails',
+                        'bundle': 'bundle'
+                      };
+                      
+                      const routeKey = typeRouteMap[typeId];
+                      if (routeKey) {
+                        handleOptionClick(routeKey);
+                      }
+                    }}
+                  />
 
                   {/* Creation Category Tabs */}
                   <Tabs defaultValue="popular" className="w-full">

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { EmptyStateEnhanced } from "@/components/ui/empty-state-enhanced";
 import { Calendar, Clock, Instagram, Twitter, Facebook, Linkedin, TrendingUp, Plus, Trash2, Edit3, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AccountManagementDialog } from "./account-management-dialog";
@@ -426,18 +427,62 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
               ))}
             </div>
           ) : (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No scheduled posts</h3>
-                <p className="text-muted-foreground text-center mb-4">
-                  Schedule your first post to get started
-                </p>
-                <Button onClick={() => setActiveTab("create")}>
-                  Schedule Post
-                </Button>
-              </CardContent>
-            </Card>
+            <EmptyStateEnhanced
+              icon={Calendar}
+              title="No scheduled posts yet"
+              description="Schedule posts across Instagram, Twitter, Facebook, and LinkedIn. Save time and maintain consistent presence."
+              showSuccessMetric={{
+                label: "Creators who post 3x/week",
+                value: "2.5x more followers"
+              }}
+              actions={[
+                {
+                  label: "Schedule Post",
+                  onClick: () => setActiveTab("create"),
+                  icon: Plus
+                }
+              ]}
+              tips={[
+                {
+                  icon: Calendar,
+                  title: "Plan Ahead",
+                  description: "Schedule a week's worth of content in one sitting for consistency."
+                },
+                {
+                  icon: TrendingUp,
+                  title: "Best Times to Post",
+                  description: "Post when your audience is most active: weekdays 10am-2pm."
+                },
+                {
+                  icon: Instagram,
+                  title: "Cross-Platform",
+                  description: "Reuse content across platforms to maximize reach with minimal effort."
+                }
+              ]}
+              examples={[
+                {
+                  title: "New Product Announcement",
+                  description: "Share when you release a new sample pack or course",
+                  badge: "High Impact"
+                },
+                {
+                  title: "Behind the Scenes",
+                  description: "Show your production process to build connection",
+                  badge: "Engaging"
+                },
+                {
+                  title: "Tutorial Snippets",
+                  description: "Share quick tips from your courses as teasers",
+                  badge: "Value-Add"
+                },
+                {
+                  title: "User Testimonials",
+                  description: "Showcase reviews and success stories",
+                  badge: "Social Proof"
+                }
+              ]}
+              variant="default"
+            />
           )}
         </TabsContent>
 

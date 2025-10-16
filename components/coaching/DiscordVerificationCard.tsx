@@ -101,7 +101,8 @@ export function DiscordVerificationCard({ onVerificationChange }: DiscordVerific
           <Button
             onClick={() => {
               // TODO: Get invite link from store's Discord guild
-              window.open("https://discord.gg/your-invite-code", "_blank");
+              const { discordConfig } = require("@/lib/discord-config");
+              window.open(discordConfig.inviteUrl, "_blank");
             }}
             className="bg-[#5865F2] hover:bg-[#4752C4] text-white"
           >

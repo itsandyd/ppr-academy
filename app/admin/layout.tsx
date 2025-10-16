@@ -4,6 +4,8 @@ import { useState } from "react";
 import { AdminSidebar } from "./components/admin-sidebar";
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AdminCommandPalette } from "@/components/admin/admin-command-palette";
+import { RealTimeAlerts, useMockAlerts } from "@/components/admin/real-time-alerts";
 
 export default function AdminLayout({
   children,
@@ -11,9 +13,13 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const alerts = useMockAlerts();
 
   return (
     <div className="flex min-h-screen">
+      {/* Real-Time Alerts */}
+      <RealTimeAlerts alerts={alerts} position="top-right" />
+
       {/* Mobile menu button */}
       <div className="fixed top-4 left-4 z-50 lg:hidden">
         <Button
@@ -43,6 +49,11 @@ export default function AdminLayout({
 
       {/* Main content */}
       <main className="flex-1 p-4 sm:p-6 lg:p-8 lg:ml-64 pt-16 lg:pt-8">
+        {/* Command Palette */}
+        <div className="mb-6 flex justify-end">
+          <AdminCommandPalette />
+        </div>
+        
         {children}
       </main>
     </div>

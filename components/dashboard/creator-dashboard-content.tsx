@@ -10,7 +10,16 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StoreSetupWizard } from "./store-setup-wizard";
+import { StoreSetupWizardEnhanced } from "./store-setup-wizard-enhanced";
+import { PostSetupGuidance } from "./post-setup-guidance";
+import { GettingStartedModal } from "@/components/onboarding/getting-started-modal";
 import { DiscordConnectionCard } from "@/components/discord/DiscordConnectionCard";
+import { DiscordStatsWidget } from "@/components/discord/discord-stats-widget";
+import { discordConfig } from "@/lib/discord-config";
+import { NoProductsEmptyState } from "@/components/ui/empty-state-enhanced";
+import { OnboardingHints, creatorOnboardingHints } from "@/components/onboarding/onboarding-hints";
+import { MetricCardEnhanced } from "@/components/ui/metric-card-enhanced";
+import { AchievementCard, creatorAchievements } from "@/components/gamification/achievement-system";
 import { 
   Music, 
   TrendingUp, 
@@ -179,13 +188,13 @@ export function CreatorDashboardContent() {
     );
   }
 
-  // Show store setup wizard if user has no stores
+  // Show enhanced store setup wizard if user has no stores
   if (user?.id && stores !== undefined && stores.length === 0) {
     return (
-      <StoreSetupWizard 
-        onStoreCreated={() => {
-          // Refresh the page or navigate to dashboard
-          window.location.reload();
+      <StoreSetupWizardEnhanced 
+        onStoreCreated={(storeId) => {
+          // Navigate to new store's products page
+          window.location.href = `/store/${storeId}/products`;
         }} 
       />
     );
@@ -213,6 +222,12 @@ export function CreatorDashboardContent() {
 
   return (
     <div className="space-y-8">
+      {/* Getting Started Modal for Brand New Users */}
+      <GettingStartedModal 
+        userType="creator"
+        onComplete={() => console.log("Onboarding completed")}
+      />
+
       {/* Welcome Header */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -232,6 +247,31 @@ export function CreatorDashboardContent() {
             </p>
           </div>
         </div>
+      </motion.div>
+
+      {/* Post-Setup Guidance (for new stores) */}
+      {products.length === 0 && storeId && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.03 }}
+        >
+          <PostSetupGuidance storeId={storeId} />
+        </motion.div>
+      )}
+
+      {/* Onboarding Hints */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+      >
+        <OnboardingHints 
+          hints={creatorOnboardingHints}
+          storageKey="creator-dashboard-hints"
+          autoRotate={true}
+          rotateInterval={15000}
+        />
       </motion.div>
 
       {/* Quick Actions */}
@@ -269,72 +309,67 @@ export function CreatorDashboardContent() {
         </div>
       </motion.div>
 
-      {/* Metrics Overview */}
+      {/* Metrics Overview - Enhanced */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
       >
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Releases</p>
-                <p className="text-2xl font-bold text-foreground">{metrics.totalReleases}</p>
-                <p className="text-xs text-muted-foreground">3 live</p>
-              </div>
-              <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/20 rounded-lg flex items-center justify-center">
-                <Music className="w-4 h-4 text-purple-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <MetricCardEnhanced
+          title="Total Releases"
+          value={metrics.totalReleases}
+          subtitle={`${metrics.totalReleases} live`}
+          icon={Music}
+          variant="purple"
+          trend={{
+            value: 12,
+            label: "vs last month",
+            direction: "up"
+          }}
+          sparklineData={[2, 3, 3, 5, 6, 8, 10]}
+        />
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Downloads</p>
-                <p className="text-2xl font-bold text-foreground">{metrics.totalDownloads}</p>
-                <p className="text-xs text-muted-foreground">All time</p>
-              </div>
-              <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
-                <Download className="w-4 h-4 text-blue-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <MetricCardEnhanced
+          title="Total Downloads"
+          value={metrics.totalDownloads}
+          subtitle="All time"
+          icon={Download}
+          variant="blue"
+          trend={{
+            value: 8,
+            label: "vs last month",
+            direction: "up"
+          }}
+          sparklineData={[10, 15, 12, 20, 25, 30, 35]}
+        />
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Revenue</p>
-                <p className="text-2xl font-bold text-foreground">${metrics.totalRevenue}</p>
-                <p className="text-xs text-muted-foreground">Lifetime earnings</p>
-              </div>
-              <div className="w-8 h-8 bg-green-100 dark:bg-green-900/20 rounded-lg flex items-center justify-center">
-                <DollarSign className="w-4 h-4 text-green-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <MetricCardEnhanced
+          title="Revenue"
+          value={`$${metrics.totalRevenue}`}
+          subtitle="Lifetime earnings"
+          icon={DollarSign}
+          variant="green"
+          trend={{
+            value: 15,
+            label: "vs last month",
+            direction: "up"
+          }}
+          sparklineData={[100, 150, 120, 200, 250, 300, 350]}
+        />
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Avg Rating</p>
-                <p className="text-2xl font-bold text-foreground">{metrics.avgRating}</p>
-                <p className="text-xs text-muted-foreground">0 reviews</p>
-              </div>
-              <div className="w-8 h-8 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg flex items-center justify-center">
-                <Star className="w-4 h-4 text-yellow-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <MetricCardEnhanced
+          title="Avg Rating"
+          value={metrics.avgRating}
+          subtitle="0 reviews"
+          icon={Star}
+          variant="orange"
+          trend={{
+            value: 0,
+            label: "No change",
+            direction: "neutral"
+          }}
+        />
       </motion.div>
 
       {/* Data Summary for Verification */}
@@ -418,14 +453,39 @@ export function CreatorDashboardContent() {
         </div>
       </motion.div>
 
-      {/* Discord Community */}
+      {/* Achievements Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.33 }}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">Your Achievements</h2>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/achievements">View All</Link>
+          </Button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {creatorAchievements.slice(0, 3).map((achievement) => (
+            <AchievementCard
+              key={achievement.id}
+              achievement={{
+                ...achievement,
+                unlocked: achievement.id === 'first-product' // Demo: First achievement unlocked
+              }}
+            />
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Discord Community with Live Stats */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.35 }}
       >
         <h2 className="text-lg font-semibold mb-4">Community</h2>
-        <DiscordConnectionCard />
+        <DiscordStatsWidget inviteUrl={discordConfig.inviteUrl} />
       </motion.div>
 
       {/* Recent Products */}
@@ -487,31 +547,7 @@ export function CreatorDashboardContent() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
         >
-          <Card className="text-center py-12">
-            <CardContent>
-              <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Music className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-lg font-semibold text-foreground mb-2">Ready to share your music?</h3>
-              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                Start by uploading your first sample pack, preset collection, or creating a music production course.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Button asChild>
-                  <Link href={`/store/${storeId || 'setup'}/products`}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Create Product
-                  </Link>
-                </Button>
-                <Button variant="outline" asChild>
-                  <Link href={`/store/${storeId || 'setup'}/course/create`}>
-                    <Play className="w-4 h-4 mr-2" />
-                    Start Course
-                  </Link>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <NoProductsEmptyState storeId={storeId} />
         </motion.div>
       )}
     </div>
