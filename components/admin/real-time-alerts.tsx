@@ -50,26 +50,23 @@ export function RealTimeAlerts({
   const [alerts, setAlerts] = useState<SystemAlert[]>(initialAlerts);
   const [muted, setMuted] = useState(false);
 
-  // Simulate real-time alerts (replace with actual WebSocket/Convex subscription)
-  useEffect(() => {
-    // Example: Add mock alert every 30 seconds
-    const interval = setInterval(() => {
-      if (Math.random() > 0.7 && !muted) {
-        const mockAlert: SystemAlert = {
-          id: Date.now().toString(),
-          type: "info",
-          severity: "low",
-          title: "New User Signup",
-          message: "A new user just joined the platform",
-          timestamp: new Date(),
-          source: "Auth System"
-        };
-        setAlerts(prev => [mockAlert, ...prev].slice(0, 10));
-      }
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, [muted]);
+  // TODO: Connect to real Convex subscriptions for live alerts
+  // Example: Subscribe to new enrollments, purchases, errors, etc.
+  // useEffect(() => {
+  //   const subscription = subscribeToSystemEvents((event) => {
+  //     const alert: SystemAlert = {
+  //       id: event.id,
+  //       type: event.type,
+  //       severity: event.severity,
+  //       title: event.title,
+  //       message: event.message,
+  //       timestamp: new Date(event.timestamp),
+  //       source: event.source
+  //     };
+  //     setAlerts(prev => [alert, ...prev].slice(0, 10));
+  //   });
+  //   return () => subscription.unsubscribe();
+  // }, []);
 
   const removeAlert = (id: string) => {
     setAlerts(prev => prev.filter(a => a.id !== id));
@@ -233,46 +230,51 @@ export function RealTimeAlerts({
   );
 }
 
-// Mock alert generator for testing
+// Mock alert generator for testing (DISABLED - showing empty by default)
 export function useMockAlerts() {
   const [alerts, setAlerts] = useState<SystemAlert[]>([]);
 
-  useEffect(() => {
-    // Add initial test alerts
-    setAlerts([
-      {
-        id: "1",
-        type: "error",
-        severity: "high",
-        title: "Payment Failed",
-        message: "Stripe webhook error for order #1234",
-        timestamp: new Date(),
-        source: "Payment System",
-        action: {
-          label: "View Details",
-          onClick: () => console.log("View payment error")
-        }
-      },
-      {
-        id: "2",
-        type: "warning",
-        severity: "medium",
-        title: "Low Email Credits",
-        message: "Only 50 email credits remaining",
-        timestamp: new Date(),
-        source: "Email Service"
-      },
-      {
-        id: "3",
-        type: "info",
-        severity: "low",
-        title: "New Feature Available",
-        message: "Advanced analytics dashboard is now live",
-        timestamp: new Date(),
-        source: "Platform Updates"
-      }
-    ]);
-  }, []);
+  // Disabled mock alerts - uncomment to see demo alerts
+  // useEffect(() => {
+  //   setAlerts([
+  //     {
+  //       id: "1",
+  //       type: "info",
+  //       severity: "low",
+  //       title: "Demo Alert",
+  //       message: "This is a demo alert. Connect to Convex for real alerts.",
+  //       timestamp: new Date(),
+  //       source: "Demo System"
+  //     }
+  //   ]);
+  // }, []);
+
+  return alerts;
+}
+
+// Real alert generator (connect to Convex)
+export function useRealTimeAlerts() {
+  const [alerts, setAlerts] = useState<SystemAlert[]>([]);
+
+  // TODO: Replace with Convex subscription
+  // Example:
+  // const newEnrollments = useQuery(api.enrollments.getRecentEnrollments, { limit: 5 });
+  // const newPurchases = useQuery(api.purchases.getRecentPurchases, { limit: 5 });
+  // 
+  // useEffect(() => {
+  //   if (newEnrollments) {
+  //     const enrollmentAlerts = newEnrollments.map(e => ({
+  //       id: e._id,
+  //       type: "success" as const,
+  //       severity: "low" as const,
+  //       title: "New Enrollment",
+  //       message: `${e.studentName} enrolled in ${e.courseName}`,
+  //       timestamp: new Date(e._creationTime),
+  //       source: "Enrollments"
+  //     }));
+  //     setAlerts(prev => [...enrollmentAlerts, ...prev].slice(0, 10));
+  //   }
+  // }, [newEnrollments]);
 
   return alerts;
 }

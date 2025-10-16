@@ -58,9 +58,9 @@ export function FollowCreatorCTA({
         sticky && "sticky top-20 z-40",
         className
       )}
-    >
-      <Card className="bg-gradient-to-r from-purple-500 to-blue-500 text-white border-0 shadow-2xl overflow-hidden">
-        <div className="relative p-6">
+      >
+        <Card className="bg-gradient-to-r from-purple-500 to-blue-500 text-white border-0 shadow-2xl overflow-hidden backdrop-blur-none">
+          <div className="relative p-6 bg-gradient-to-r from-purple-500 to-blue-500">
           {/* Background Pattern */}
           <div className="absolute inset-0 opacity-10">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white rounded-full -translate-y-16 translate-x-16"></div>

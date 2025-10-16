@@ -13,12 +13,12 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const alerts = useMockAlerts();
+  const alerts = useMockAlerts(); // Empty by default - connect to Convex for real alerts
 
   return (
     <div className="flex min-h-screen">
-      {/* Real-Time Alerts */}
-      <RealTimeAlerts alerts={alerts} position="top-right" />
+      {/* Real-Time Alerts - Only shows when there are actual alerts */}
+      {alerts.length > 0 && <RealTimeAlerts alerts={alerts} position="top-right" />}
 
       {/* Mobile menu button */}
       <div className="fixed top-4 left-4 z-50 lg:hidden">
