@@ -25,6 +25,8 @@ export function LibrarySidebarWrapper({ children }: LibrarySidebarWrapperProps) 
     if (pathname === "/library/bundles") return "Bundles";
     if (pathname === "/library/progress") return "Progress";
     if (pathname === "/library/recent") return "Recent Activity";
+    if (pathname === "/library/share") return "Share Your Track";
+    if (pathname === "/library/showcase") return "My Showcase";
     if (pathname.startsWith("/library/courses/")) return "Course Player";
     return "Library";
   };

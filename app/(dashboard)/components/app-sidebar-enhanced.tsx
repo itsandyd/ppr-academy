@@ -26,7 +26,9 @@ import {
   Palette,
   Share2,
   FileText,
-  PenTool
+  PenTool,
+  List,
+  Inbox
 } from "lucide-react";
 import { usePathname, useParams } from "next/navigation";
 import { useUser, UserButton, SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
@@ -119,17 +121,18 @@ export function AppSidebarEnhanced() {
           gradient: "from-purple-500 to-pink-500"
         },
         { 
-          icon: Music, 
-          href: `/music/showcase`, 
-          label: "Music Showcase",
-          badge: "Beta",
-          gradient: "from-blue-500 to-indigo-500"
+          icon: List, 
+          href: `/home/playlists`, 
+          label: "Playlists",
+          gradient: "from-purple-500 to-blue-500",
+          isNew: true
         },
         { 
-          icon: Upload, 
-          href: `/music/add`, 
-          label: "Add Track",
-          gradient: "from-green-500 to-teal-500"
+          icon: Inbox, 
+          href: `/home/submissions`, 
+          label: "Submissions",
+          gradient: "from-orange-500 to-amber-500",
+          isNew: true
         },
       ]
     },

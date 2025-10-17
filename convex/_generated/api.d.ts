@@ -40,6 +40,7 @@ import type * as crons from "../crons.js";
 import type * as customers from "../customers.js";
 import type * as debug from "../debug.js";
 import type * as debugFix from "../debugFix.js";
+import type * as devSeeders from "../devSeeders.js";
 import type * as digitalProducts from "../digitalProducts.js";
 import type * as discord from "../discord.js";
 import type * as discordInternal from "../discordInternal.js";
@@ -130,6 +131,7 @@ declare const fullApi: ApiFromModules<{
   customers: typeof customers;
   debug: typeof debug;
   debugFix: typeof debugFix;
+  devSeeders: typeof devSeeders;
   digitalProducts: typeof digitalProducts;
   discord: typeof discord;
   discordInternal: typeof discordInternal;

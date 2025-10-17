@@ -18,6 +18,8 @@ import { FormFieldWithHelp, courseFieldHelp } from "@/components/ui/form-field-w
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 
+type Provider = "youtube" | "soundcloud" | "spotify" | null;
+
 export default function ShareTrackPage() {
   const { user } = useUser();
   const router = useRouter();
@@ -25,6 +27,8 @@ export default function ShareTrackPage() {
   const [sourceType, setSourceType] = useState<"upload" | "url">("url");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [createdTrackId, setCreatedTrackId] = useState<string | null>(null);
+  const [detectedProvider, setDetectedProvider] = useState<Provider>(null);
+  const [urlError, setUrlError] = useState("");
   
   const [trackData, setTrackData] = useState({
     title: "",
@@ -37,11 +41,80 @@ export default function ShareTrackPage() {
 
   const createTrack = useMutation(api.tracks.createTrack);
 
+  // Detect provider from URL
+  const detectProvider = (url: string): Provider => {
+    if (!url) return null;
+    
+    const lowerUrl = url.toLowerCase();
+    
+    if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) {
+      return 'youtube';
+    }
+    if (lowerUrl.includes('soundcloud.com')) {
+      return 'soundcloud';
+    }
+    if (lowerUrl.includes('spotify.com')) {
+      return 'spotify';
+    }
+    
+    return null;
+  };
+
+  // Handle URL change with validation
+  const handleUrlChange = (url: string) => {
+    setTrackData(prev => ({ ...prev, sourceUrl: url }));
+    
+    if (url.trim()) {
+      const provider = detectProvider(url);
+      setDetectedProvider(provider);
+      
+      if (provider) {
+        setUrlError("");
+      } else {
+        setUrlError("Please paste a YouTube, SoundCloud, or Spotify link");
+      }
+    } else {
+      setDetectedProvider(null);
+      setUrlError("");
+    }
+  };
+
   const handleSubmit = async () => {
-    if (!user?.id || !trackData.title || !trackData.sourceUrl) {
+    // Validation
+    if (!user?.id) {
       toast({
-        title: "Missing Information",
-        description: "Please fill in all required fields",
+        title: "Not Signed In",
+        description: "Please sign in to share tracks",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!trackData.title.trim()) {
+      toast({
+        title: "Missing Title",
+        description: "Please enter a track title",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (sourceType === "url") {
+      if (!trackData.sourceUrl.trim()) {
+        setUrlError("Track URL is required");
+        return;
+      }
+
+      if (!detectedProvider) {
+        setUrlError("Please paste a valid YouTube, SoundCloud, or Spotify link");
+        return;
+      }
+    }
+
+    if (!trackData.genre) {
+      toast({
+        title: "Missing Genre",
+        description: "Please select a genre",
         variant: "destructive",
       });
       return;
@@ -50,13 +123,13 @@ export default function ShareTrackPage() {
     try {
       const trackId = await createTrack({
         userId: user.id,
-        title: trackData.title,
-        artist: trackData.artist || user.fullName || "Unknown Artist",
+        title: trackData.title.trim(),
+        artist: trackData.artist.trim() || user.fullName || "Unknown Artist",
         genre: trackData.genre || undefined,
         mood: trackData.mood || undefined,
-        description: trackData.description || undefined,
-        sourceType,
-        sourceUrl: sourceType === "url" ? trackData.sourceUrl : undefined,
+        description: trackData.description.trim() || undefined,
+        sourceType: detectedProvider!, // Use detected provider
+        sourceUrl: sourceType === "url" ? trackData.sourceUrl.trim() : undefined,
         isPublic: true,
       });
 
@@ -122,28 +195,54 @@ export default function ShareTrackPage() {
               </TabsList>
 
               <TabsContent value="url" className="space-y-4 mt-4">
-                <FormFieldWithHelp
-                  label="Track URL"
-                  name="sourceUrl"
-                  type="url"
-                  value={trackData.sourceUrl}
-                  onChange={(v) => setTrackData(prev => ({ ...prev, sourceUrl: v }))}
-                  placeholder="https://youtube.com/watch?v=... or soundcloud.com/..."
-                  required
-                  help={{
-                    description: "Paste a link from YouTube, SoundCloud, or Spotify. Your track will be embedded from the platform.",
-                    examples: [
-                      "https://youtube.com/watch?v=dQw4w9WgXcQ",
-                      "https://soundcloud.com/artist/track-name",
-                      "https://open.spotify.com/track/..."
-                    ],
-                    bestPractices: [
-                      "Make sure the track is set to public on the platform",
-                      "YouTube videos will show the video player",
-                      "SoundCloud embeds work best for audio-only"
-                    ]
-                  }}
-                />
+                <div>
+                  <FormFieldWithHelp
+                    label="Track URL"
+                    name="sourceUrl"
+                    type="url"
+                    value={trackData.sourceUrl}
+                    onChange={handleUrlChange}
+                    placeholder="https://youtube.com/watch?v=... or soundcloud.com/..."
+                    required
+                    error={urlError}
+                    help={{
+                      description: "Paste a link from YouTube, SoundCloud, or Spotify. Your track will be embedded from the platform.",
+                      examples: [
+                        "https://youtube.com/watch?v=dQw4w9WgXcQ",
+                        "https://soundcloud.com/artist/track-name",
+                        "https://open.spotify.com/track/..."
+                      ],
+                      bestPractices: [
+                        "Make sure the track is set to public on the platform",
+                        "YouTube videos will show the video player",
+                        "SoundCloud embeds work best for audio-only"
+                      ]
+                    }}
+                  />
+                  
+                  {/* Provider Badge */}
+                  {detectedProvider && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <Badge className="bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800">
+                        <CheckCircle2 className="w-3 h-3 mr-1" />
+                        {detectedProvider === 'youtube' && '▶️ YouTube'}
+                        {detectedProvider === 'soundcloud' && '🔊 SoundCloud'}
+                        {detectedProvider === 'spotify' && '🎵 Spotify'}
+                        {' detected'}
+                      </Badge>
+                      <span className="text-xs text-green-600 dark:text-green-400">
+                        Ready to publish!
+                      </span>
+                    </div>
+                  )}
+
+                  {/* URL Error */}
+                  {trackData.sourceUrl && !detectedProvider && (
+                    <div className="mt-2 text-sm text-red-600 dark:text-red-400">
+                      ⚠️ URL not recognized. Please use a link from YouTube, SoundCloud, or Spotify.
+                    </div>
+                  )}
+                </div>
               </TabsContent>
 
               <TabsContent value="upload" className="space-y-4 mt-4">
@@ -244,7 +343,11 @@ export default function ShareTrackPage() {
               onClick={handleSubmit} 
               className="flex-1" 
               size="lg"
-              disabled={!trackData.title || !trackData.sourceUrl}
+              disabled={
+                !trackData.title.trim() || 
+                (sourceType === "url" && (!trackData.sourceUrl.trim() || !detectedProvider)) ||
+                !trackData.genre
+              }
             >
               <Music className="w-4 h-4 mr-2" />
               Publish to Showcase

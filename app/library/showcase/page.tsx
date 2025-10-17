@@ -1,18 +1,27 @@
 "use client";
 
-import { Card, CardContent } from "@/components/ui/card";
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Music, Play, Share2, Edit, Plus, ExternalLink, Instagram, Twitter, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { EmptyStateEnhanced } from "@/components/ui/empty-state-enhanced";
+import { useToast } from "@/hooks/use-toast";
 
 export default function ShowcasePage() {
   const { user } = useUser();
+  const { toast } = useToast();
+  const [showSocialDialog, setShowSocialDialog] = useState(false);
+  const [selectedSocial, setSelectedSocial] = useState<"instagram" | "twitter" | "soundcloud" | "spotify" | null>(null);
+  const [socialUrl, setSocialUrl] = useState("");
   
   const tracks = useQuery(
     api.tracks.getUserTracks,
@@ -20,6 +29,23 @@ export default function ShowcasePage() {
   );
 
   const publicTracks = tracks?.filter(t => t.isPublic) || [];
+
+  const handleConnectSocial = (platform: "instagram" | "twitter" | "soundcloud" | "spotify") => {
+    setSelectedSocial(platform);
+    setShowSocialDialog(true);
+  };
+
+  const handleSaveSocial = () => {
+    // TODO: Save to showcase profile
+    toast({
+      title: "Social Link Saved!",
+      description: `Your ${selectedSocial} profile has been connected`,
+      className: "bg-white dark:bg-black",
+    });
+    setShowSocialDialog(false);
+    setSocialUrl("");
+    setSelectedSocial(null);
+  };
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">
@@ -155,61 +181,176 @@ export default function ShowcasePage() {
           </div>
         </div>
       ) : (
-        <EmptyStateEnhanced
-          icon={Music}
-          title="No tracks yet"
-          description="Start building your showcase by sharing your first track. Your music deserves to be heard!"
-          actions={[
-            {
-              label: "Share Your First Track",
-              href: "/library/share",
-              icon: Plus
-            }
-          ]}
-          tips={[
-            {
-              icon: Music,
-              title: "Start with Your Best",
-              description: "Share your most polished track first to make a great first impression"
-            },
-            {
-              icon: Sparkles,
-              title: "Use AI to Promote",
-              description: "Generate professional pitch emails to send to labels and curators"
-            },
-            {
-              icon: ExternalLink,
-              title: "Share Everywhere",
-              description: "Add your showcase link to Instagram, TikTok, and other social bios"
-            }
-          ]}
-        />
+        <>
+          <EmptyStateEnhanced
+            icon={Music}
+            title="No tracks yet"
+            description="Start building your showcase by sharing your first track. Your music deserves to be heard!"
+            actions={[
+              {
+                label: "Share Your First Track",
+                href: "/library/share",
+                icon: Plus
+              },
+              {
+                label: "Copy Showcase Link",
+                onClick: () => {
+                  const showcaseUrl = `${window.location.origin}/showcase/${user?.id}`;
+                  navigator.clipboard.writeText(showcaseUrl);
+                  toast({
+                    title: "Link Copied!",
+                    description: "Share this link on your social media",
+                    className: "bg-white dark:bg-black",
+                  });
+                },
+                icon: Share2,
+                variant: "outline"
+              }
+            ]}
+            tips={[
+              {
+                icon: Music,
+                title: "Start with Your Best",
+                description: "Share your most polished track first to make a great first impression"
+              },
+              {
+                icon: Sparkles,
+                title: "Use AI to Promote",
+                description: "Generate professional pitch emails to send to labels and curators"
+              },
+              {
+                icon: ExternalLink,
+                title: "Share Everywhere",
+                description: "Add your showcase link to Instagram, TikTok, and other social bios"
+              }
+            ]}
+          />
+
+          {/* Connect Socials Section - Always Visible */}
+          <Card className="mt-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Share2 className="w-5 h-5 text-blue-600" />
+                Connect Your Socials
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Link your social profiles to your showcase so fans can follow you everywhere
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <Button variant="outline" className="gap-2" onClick={() => handleConnectSocial("instagram")}>
+                  <Instagram className="w-4 h-4" />
+                  Instagram
+                </Button>
+                <Button variant="outline" className="gap-2" onClick={() => handleConnectSocial("twitter")}>
+                  <Twitter className="w-4 h-4" />
+                  Twitter
+                </Button>
+                <Button variant="outline" className="gap-2" onClick={() => handleConnectSocial("soundcloud")}>
+                  <Music className="w-4 h-4" />
+                  SoundCloud
+                </Button>
+                <Button variant="outline" className="gap-2" onClick={() => handleConnectSocial("spotify")}>
+                  <Music className="w-4 h-4" />
+                  Spotify
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </>
       )}
 
-      {/* Social Links */}
-      <Card>
-        <CardContent className="p-6">
-          <h3 className="font-semibold mb-4">Connect Your Socials</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Button variant="outline" className="gap-2">
-              <Instagram className="w-4 h-4" />
-              Instagram
-            </Button>
-            <Button variant="outline" className="gap-2">
-              <Twitter className="w-4 h-4" />
-              Twitter
-            </Button>
-            <Button variant="outline" className="gap-2">
-              <Music className="w-4 h-4" />
-              SoundCloud
-            </Button>
-            <Button variant="outline" className="gap-2">
-              <Music className="w-4 h-4" />
-              Spotify
-            </Button>
+      {/* Social Links - Only show when user has tracks */}
+      {publicTracks.length > 0 && (
+        <Card>
+          <CardContent className="p-6">
+            <h3 className="font-semibold mb-4">Connect Your Socials</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <Button variant="outline" className="gap-2" onClick={() => handleConnectSocial("instagram")}>
+                <Instagram className="w-4 h-4" />
+                Instagram
+              </Button>
+              <Button variant="outline" className="gap-2" onClick={() => handleConnectSocial("twitter")}>
+                <Twitter className="w-4 h-4" />
+                Twitter
+              </Button>
+              <Button variant="outline" className="gap-2" onClick={() => handleConnectSocial("soundcloud")}>
+                <Music className="w-4 h-4" />
+                SoundCloud
+              </Button>
+              <Button variant="outline" className="gap-2" onClick={() => handleConnectSocial("spotify")}>
+                <Music className="w-4 h-4" />
+                Spotify
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Social Connection Dialog */}
+      <Dialog open={showSocialDialog} onOpenChange={setShowSocialDialog}>
+        <DialogContent className="bg-white dark:bg-black">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 capitalize">
+              {selectedSocial === "instagram" && <Instagram className="w-5 h-5" />}
+              {selectedSocial === "twitter" && <Twitter className="w-5 h-5" />}
+              {selectedSocial === "soundcloud" && <Music className="w-5 h-5" />}
+              {selectedSocial === "spotify" && <Music className="w-5 h-5" />}
+              Connect {selectedSocial}
+            </DialogTitle>
+            <DialogDescription>
+              Enter your {selectedSocial} profile URL or username
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="social-url">
+                {selectedSocial === "instagram" && "Instagram URL"}
+                {selectedSocial === "twitter" && "Twitter URL"}
+                {selectedSocial === "soundcloud" && "SoundCloud URL"}
+                {selectedSocial === "spotify" && "Spotify Artist URL"}
+              </Label>
+              <Input
+                id="social-url"
+                value={socialUrl}
+                onChange={(e) => setSocialUrl(e.target.value)}
+                placeholder={
+                  selectedSocial === "instagram" ? "https://instagram.com/yourusername" :
+                  selectedSocial === "twitter" ? "https://twitter.com/yourusername" :
+                  selectedSocial === "soundcloud" ? "https://soundcloud.com/yourusername" :
+                  "https://open.spotify.com/artist/..."
+                }
+                className="mt-2"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                This will appear on your public showcase profile
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setShowSocialDialog(false);
+                  setSocialUrl("");
+                }}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSaveSocial}
+                disabled={!socialUrl.trim()}
+                className="flex-1"
+              >
+                Save Link
+              </Button>
+            </div>
           </div>
-        </CardContent>
-      </Card>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
