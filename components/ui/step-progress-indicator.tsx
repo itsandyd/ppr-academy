@@ -27,8 +27,8 @@ export function StepProgressIndicator({
   const currentIndex = steps.findIndex(s => s.id === currentStep);
 
   return (
-    <div className={cn("w-full", className)}>
-      <div className="flex items-center justify-between relative">
+    <div className={cn("w-full flex justify-center", className)}>
+      <div className="flex items-center justify-center gap-4 sm:gap-8 relative px-4">
         {steps.map((step, index) => {
           const Icon = step.icon;
           const isCompleted = completedSteps.includes(step.id);
@@ -37,7 +37,7 @@ export function StepProgressIndicator({
           const isLast = index === steps.length - 1;
 
           return (
-            <div key={step.id} className="flex items-center flex-1">
+            <div key={step.id} className="flex items-center">
               {/* Step Circle */}
               <div className="relative flex flex-col items-center">
                 <div
@@ -97,7 +97,7 @@ export function StepProgressIndicator({
 
               {/* Connecting Line */}
               {!isLast && (
-                <div className="flex-1 h-0.5 mx-2 relative">
+                <div className="w-12 sm:w-20 h-0.5 mx-2 relative">
                   <div className="absolute inset-0 bg-slate-200 dark:bg-slate-800" />
                   <div
                     className={cn(

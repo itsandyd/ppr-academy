@@ -93,9 +93,16 @@ export function StoreSetupWizardEnhanced({ onStoreCreated }: StoreSetupWizardEnh
         name: formData.storeName.trim(),
         slug: formData.storeSlug.trim() || undefined,
         userId: user.id,
-        description: formData.description.trim() || undefined,
-        logoUrl: formData.logoUrl || undefined,
       });
+      
+      // TODO: Update store with description and logo after creation
+      // if (formData.description || formData.logoUrl) {
+      //   await updateStore({
+      //     storeId,
+      //     description: formData.description.trim() || undefined,
+      //     logoUrl: formData.logoUrl || undefined,
+      //   });
+      // }
 
       setCreatedStoreId(storeId);
       
@@ -229,15 +236,17 @@ export function StoreSetupWizardEnhanced({ onStoreCreated }: StoreSetupWizardEnh
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-3xl"
+        className="w-full max-w-3xl mx-auto"
       >
         {/* Progress Indicator */}
-        <div className="mb-8">
-          <StepProgressIndicator
-            steps={steps}
-            currentStep={steps[currentStep].id}
-            completedSteps={steps.slice(0, currentStep).map(s => s.id)}
-          />
+        <div className="mb-12 pb-8 border-b border-border flex justify-center">
+          <div className="w-full max-w-2xl">
+            <StepProgressIndicator
+              steps={steps}
+              currentStep={steps[currentStep].id}
+              completedSteps={steps.slice(0, currentStep).map(s => s.id)}
+            />
+          </div>
         </div>
 
         <AnimatePresence mode="wait">
@@ -248,6 +257,7 @@ export function StoreSetupWizardEnhanced({ onStoreCreated }: StoreSetupWizardEnh
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
+              className="mt-8"
             >
               <Card>
                 <CardHeader>
@@ -340,6 +350,7 @@ export function StoreSetupWizardEnhanced({ onStoreCreated }: StoreSetupWizardEnh
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
+              className="mt-8"
             >
               <Card>
                 <CardHeader>
@@ -429,6 +440,7 @@ export function StoreSetupWizardEnhanced({ onStoreCreated }: StoreSetupWizardEnh
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
+              className="mt-8"
             >
               <Card>
                 <CardHeader>
@@ -504,6 +516,7 @@ export function StoreSetupWizardEnhanced({ onStoreCreated }: StoreSetupWizardEnh
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
+              className="mt-8"
             >
               <Card>
                 <CardHeader>

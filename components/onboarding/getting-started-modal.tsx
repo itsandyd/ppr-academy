@@ -31,6 +31,16 @@ interface GettingStartedModalProps {
   storageKey?: string;
 }
 
+interface StepData {
+  title: string;
+  description: string;
+  icon: any;
+  gradient: string;
+  actions?: any[];
+  quickPicks?: any[];
+  tips?: string[];
+}
+
 export function GettingStartedModal({
   userType = "creator",
   onComplete,
@@ -59,7 +69,7 @@ export function GettingStartedModal({
     setIsOpen(false);
   };
 
-  const creatorSteps = [
+  const creatorSteps: StepData[] = [
     {
       title: "Welcome to PausePlayRepeat! 🎵",
       description: "Let's get you started on your creator journey",
@@ -130,7 +140,7 @@ export function GettingStartedModal({
     }
   ];
 
-  const studentSteps = [
+  const studentSteps: StepData[] = [
     {
       title: "Welcome to Your Learning Hub! 📚",
       description: "Start your music production journey",
@@ -169,7 +179,7 @@ export function GettingStartedModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="max-w-2xl bg-white dark:bg-black p-0 overflow-hidden">
+      <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto bg-white dark:bg-black p-0">
         {/* Progress Bar */}
         <div className="h-1 bg-slate-200 dark:bg-slate-800">
           <div 
@@ -184,7 +194,7 @@ export function GettingStartedModal({
         </DialogTitle>
 
         {/* Content */}
-        <div className="p-8">
+        <div className="p-4 sm:p-8">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentStep}
@@ -194,32 +204,32 @@ export function GettingStartedModal({
               transition={{ duration: 0.3 }}
             >
               {/* Header */}
-              <div className="text-center mb-8">
+              <div className="text-center mb-6 sm:mb-8">
                 <div className={cn(
-                  "w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r flex items-center justify-center",
+                  "w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 rounded-full bg-gradient-to-r flex items-center justify-center",
                   currentStepData.gradient
                 )}>
-                  <Icon className="w-8 h-8 text-white" />
+                  <Icon className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
                 </div>
-                <h2 className="text-2xl font-bold mb-2">{currentStepData.title}</h2>
-                <p className="text-muted-foreground">{currentStepData.description}</p>
+                <h2 className="text-xl sm:text-2xl font-bold mb-2">{currentStepData.title}</h2>
+                <p className="text-sm sm:text-base text-muted-foreground px-2">{currentStepData.description}</p>
               </div>
 
               {/* Actions Grid */}
               {currentStepData.actions && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
                   {currentStepData.actions.map((action, i) => {
                     const ActionIcon = action.icon;
                     return (
                       <Card key={i} className="hover:shadow-lg transition-all cursor-pointer group">
-                        <CardContent className="p-6 text-center">
+                        <CardContent className="p-4 sm:p-6 text-center">
                           <div className={cn(
-                            "w-12 h-12 mx-auto mb-3 rounded-lg bg-gradient-to-r flex items-center justify-center group-hover:scale-110 transition-transform",
+                            "w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-2 sm:mb-3 rounded-lg bg-gradient-to-r flex items-center justify-center group-hover:scale-110 transition-transform",
                             action.color
                           )}>
-                            <ActionIcon className="w-6 h-6 text-white" />
+                            <ActionIcon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                           </div>
-                          <h3 className="font-semibold mb-1 text-sm">{action.title}</h3>
+                          <h3 className="font-semibold mb-1 text-xs sm:text-sm">{action.title}</h3>
                           <p className="text-xs text-muted-foreground">{action.description}</p>
                         </CardContent>
                       </Card>
@@ -231,7 +241,7 @@ export function GettingStartedModal({
               {/* Quick Picks */}
               {currentStepData.quickPicks && (
                 <div className="space-y-3 mb-8">
-                  {currentStepData.quickPicks.map((pick) => (
+                  {currentStepData.quickPicks.map((pick: any) => (
                     <Card 
                       key={pick.id} 
                       className="hover:border-primary transition-all cursor-pointer"
@@ -265,7 +275,7 @@ export function GettingStartedModal({
               {/* Tips List */}
               {currentStepData.tips && (
                 <div className="space-y-3 mb-8">
-                  {currentStepData.tips.map((tip, i) => (
+                  {currentStepData.tips.map((tip: string, i: number) => (
                     <div key={i} className="flex items-start gap-3">
                       <div className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/20 flex items-center justify-center flex-shrink-0 mt-0.5">
                         <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400" />
