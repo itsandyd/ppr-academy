@@ -2577,4 +2577,189 @@ export default defineSchema({
     lastXPGain: v.optional(v.number()), // Timestamp of last XP gain
   })
     .index("by_userId", ["userId"]),
+
+  // Music Sharing - User Uploaded Tracks
+  userTracks: defineTable({
+    userId: v.string(), // Clerk ID
+    title: v.string(),
+    artist: v.optional(v.string()),
+    genre: v.optional(v.string()),
+    mood: v.optional(v.string()),
+    description: v.optional(v.string()),
+    coverUrl: v.optional(v.string()),
+    
+    // Track source
+    sourceType: v.union(
+      v.literal("upload"),
+      v.literal("youtube"),
+      v.literal("soundcloud"),
+      v.literal("spotify")
+    ),
+    sourceUrl: v.optional(v.string()), // For URLs
+    storageId: v.optional(v.id("_storage")), // For uploads
+    
+    // Metadata
+    duration: v.optional(v.number()),
+    releaseDate: v.optional(v.number()),
+    tags: v.optional(v.array(v.string())),
+    
+    // Stats
+    plays: v.number(),
+    likes: v.number(),
+    shares: v.number(),
+    
+    // Visibility
+    isPublic: v.boolean(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_isPublic", ["isPublic"])
+    .index("by_genre", ["genre"]),
+
+  // Music Sharing - Showcase Profiles
+  showcaseProfiles: defineTable({
+    userId: v.string(), // Clerk ID
+    displayName: v.string(),
+    bio: v.optional(v.string()),
+    avatarUrl: v.optional(v.string()),
+    coverUrl: v.optional(v.string()),
+    
+    // Social links
+    instagram: v.optional(v.string()),
+    twitter: v.optional(v.string()),
+    youtube: v.optional(v.string()),
+    spotify: v.optional(v.string()),
+    soundcloud: v.optional(v.string()),
+    
+    // Settings
+    isPublic: v.boolean(),
+    customSlug: v.optional(v.string()),
+    
+    // Stats
+    totalPlays: v.number(),
+    totalFollowers: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_customSlug", ["customSlug"])
+    .index("by_isPublic", ["isPublic"]),
+
+  // Curator Playlists - For submission system
+  curatorPlaylists: defineTable({
+    creatorId: v.string(), // Clerk ID
+    name: v.string(),
+    description: v.optional(v.string()),
+    coverUrl: v.optional(v.string()),
+    
+    // Organization
+    tags: v.optional(v.array(v.string())),
+    genres: v.optional(v.array(v.string())),
+    
+    // Visibility
+    isPublic: v.boolean(),
+    customSlug: v.optional(v.string()),
+    
+    // Submissions
+    acceptsSubmissions: v.boolean(),
+    submissionRules: v.optional(v.object({
+      allowedGenres: v.optional(v.array(v.string())),
+      maxLengthSeconds: v.optional(v.number()),
+      requiresMessage: v.boolean(),
+      guidelines: v.optional(v.string()),
+    })),
+    submissionPricing: v.object({
+      isFree: v.boolean(),
+      price: v.optional(v.number()),
+      currency: v.string(),
+    }),
+    submissionSLA: v.optional(v.number()), // Days to review
+    
+    // Stats
+    trackCount: v.number(),
+    totalPlays: v.number(),
+    totalSubmissions: v.number(),
+  })
+    .index("by_creatorId", ["creatorId"])
+    .index("by_isPublic", ["isPublic"])
+    .index("by_acceptsSubmissions", ["acceptsSubmissions"]),
+
+  // Curator Playlist Tracks - Join table for new submission system
+  curatorPlaylistTracks: defineTable({
+    playlistId: v.id("curatorPlaylists"),
+    trackId: v.id("userTracks"),
+    addedBy: v.string(), // Clerk ID of curator
+    position: v.number(), // For ordering
+    addedAt: v.number(),
+    featuredAt: v.optional(v.number()),
+    notes: v.optional(v.string()),
+  })
+    .index("by_playlistId", ["playlistId"])
+    .index("by_trackId", ["trackId"])
+    .index("by_playlistId_and_position", ["playlistId", "position"]),
+
+  // Track Submissions - Track submissions to curator playlists
+  trackSubmissions: defineTable({
+    submitterId: v.string(), // Clerk ID
+    creatorId: v.string(), // Playlist owner
+    trackId: v.id("userTracks"),
+    playlistId: v.optional(v.id("curatorPlaylists")), // Target playlist
+    
+    // Submission details
+    message: v.optional(v.string()),
+    submissionFee: v.number(),
+    paymentId: v.optional(v.string()), // Stripe payment ID
+    paymentStatus: v.optional(v.union(
+      v.literal("pending"),
+      v.literal("paid"),
+      v.literal("refunded")
+    )),
+    
+    // Status
+    status: v.union(
+      v.literal("inbox"),
+      v.literal("reviewed"),
+      v.literal("accepted"),
+      v.literal("declined")
+    ),
+    
+    // Decision
+    decidedAt: v.optional(v.number()),
+    decisionNotes: v.optional(v.string()),
+    feedback: v.optional(v.string()),
+    addedToPlaylistId: v.optional(v.id("curatorPlaylists")),
+  })
+    .index("by_submitterId", ["submitterId"])
+    .index("by_creatorId", ["creatorId"])
+    .index("by_status", ["status"])
+    .index("by_creatorId_and_status", ["creatorId", "status"])
+    .index("by_trackId", ["trackId"]),
+
+  // AI Outreach Drafts
+  aiOutreachDrafts: defineTable({
+    userId: v.string(), // Clerk ID
+    trackId: v.id("userTracks"),
+    
+    // Target
+    targetType: v.union(
+      v.literal("labels"),
+      v.literal("playlists"),
+      v.literal("blogs"),
+      v.literal("ar"),
+      v.literal("generic")
+    ),
+    
+    // Generated content
+    subject: v.string(),
+    emailBody: v.string(),
+    dmScript: v.optional(v.string()),
+    followUpSuggestions: v.optional(v.array(v.string())),
+    
+    // Settings
+    tone: v.string(), // professional, casual, enthusiastic
+    style: v.optional(v.string()),
+    
+    // Metadata
+    generatedAt: v.number(),
+    exported: v.boolean(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_trackId", ["trackId"]),
 }); 

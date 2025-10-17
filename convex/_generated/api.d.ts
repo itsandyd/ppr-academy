@@ -72,6 +72,7 @@ import type * as notesToCourse from "../notesToCourse.js";
 import type * as notificationPreferences from "../notificationPreferences.js";
 import type * as notifications from "../notifications.js";
 import type * as paymentPlans from "../paymentPlans.js";
+import type * as playlists from "../playlists.js";
 import type * as qa from "../qa.js";
 import type * as qaSchema from "../qaSchema.js";
 import type * as quizzes from "../quizzes.js";
@@ -87,7 +88,9 @@ import type * as sendTimeOptimization from "../sendTimeOptimization.js";
 import type * as socialMedia from "../socialMedia.js";
 import type * as socialMediaActions from "../socialMediaActions.js";
 import type * as stores from "../stores.js";
+import type * as submissions from "../submissions.js";
 import type * as subscriptions from "../subscriptions.js";
+import type * as tracks from "../tracks.js";
 import type * as userLibrary from "../userLibrary.js";
 import type * as users from "../users.js";
 
@@ -159,6 +162,7 @@ declare const fullApi: ApiFromModules<{
   notificationPreferences: typeof notificationPreferences;
   notifications: typeof notifications;
   paymentPlans: typeof paymentPlans;
+  playlists: typeof playlists;
   qa: typeof qa;
   qaSchema: typeof qaSchema;
   quizzes: typeof quizzes;
@@ -174,7 +178,9 @@ declare const fullApi: ApiFromModules<{
   socialMedia: typeof socialMedia;
   socialMediaActions: typeof socialMediaActions;
   stores: typeof stores;
+  submissions: typeof submissions;
   subscriptions: typeof subscriptions;
+  tracks: typeof tracks;
   userLibrary: typeof userLibrary;
   users: typeof users;
 }>;

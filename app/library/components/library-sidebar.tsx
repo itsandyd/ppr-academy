@@ -17,7 +17,10 @@ import {
   Play,
   Heart,
   Library as LibraryIcon,
-  CreditCard
+  CreditCard,
+  Upload,
+  Eye,
+  Sparkles
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useUser, UserButton, SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
@@ -96,6 +99,25 @@ export function LibrarySidebar() {
           href: "/library/subscriptions", 
           label: "Subscriptions",
           gradient: "from-yellow-500 to-orange-500"
+        },
+      ]
+    },
+    {
+      label: "Share & Showcase",
+      items: [
+        { 
+          icon: Upload, 
+          href: "/library/share", 
+          label: "Share Your Track",
+          gradient: "from-purple-500 to-pink-500",
+          isNew: true
+        },
+        { 
+          icon: Music, 
+          href: "/library/showcase", 
+          label: "My Showcase",
+          gradient: "from-blue-500 to-indigo-500",
+          isNew: true
         },
       ]
     },
