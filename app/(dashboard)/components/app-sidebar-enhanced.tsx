@@ -26,9 +26,7 @@ import {
   Palette,
   Share2,
   FileText,
-  PenTool,
-  List,
-  Inbox
+  PenTool
 } from "lucide-react";
 import { usePathname, useParams } from "next/navigation";
 import { useUser, UserButton, SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
@@ -132,20 +130,6 @@ export function AppSidebarEnhanced() {
           href: `/music/add`, 
           label: "Add Track",
           gradient: "from-green-500 to-teal-500"
-        },
-        { 
-          icon: List, 
-          href: `/home/playlists`, 
-          label: "Playlists",
-          gradient: "from-purple-500 to-blue-500",
-          isNew: true
-        },
-        { 
-          icon: Inbox, 
-          href: `/home/submissions`, 
-          label: "Submissions",
-          gradient: "from-orange-500 to-amber-500",
-          isNew: true
         },
       ]
     },
