@@ -705,6 +705,53 @@ export const createCourseEnrollment = mutation({
       });
     }
 
+    // Create or update customer record for this purchase
+    try {
+      const storeId = course.storeId || course.userId;
+      
+      // Get user info for customer record
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", args.userId))
+        .unique();
+      
+      if (user && storeId) {
+        // Check if customer already exists
+        const existingCustomer = await ctx.db
+          .query("customers")
+          .withIndex("by_email_and_store", (q) => 
+            q.eq("email", user.email || "").eq("storeId", storeId)
+          )
+          .unique();
+
+        if (existingCustomer) {
+          // Update existing customer
+          await ctx.db.patch(existingCustomer._id, {
+            type: "paying",
+            totalSpent: (existingCustomer.totalSpent || 0) + args.amount,
+            lastActivity: Date.now(),
+            status: "active",
+          });
+        } else {
+          // Create new customer record
+          await ctx.db.insert("customers", {
+            name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email || "Unknown",
+            email: user.email || args.userId,
+            storeId: storeId,
+            adminUserId: course.userId,
+            type: "paying",
+            status: "active",
+            totalSpent: args.amount,
+            lastActivity: Date.now(),
+            source: course.title || "Course Purchase",
+          });
+        }
+      }
+    } catch (error) {
+      // Log error but don't fail the enrollment
+      console.error("Failed to create/update customer record:", error);
+    }
+
     return purchaseId;
   },
 });

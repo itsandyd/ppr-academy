@@ -15,6 +15,8 @@ export interface CourseData {
   title?: string;
   description?: string;
   category?: string;
+  subcategory?: string;
+  tags?: string[];
   skillLevel?: string;
   thumbnail?: string;
   
@@ -152,7 +154,7 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
     switch (step) {
       case "course":
         // Course step now includes both basic info (formerly thumbnail) and modules
-        const hasBasicInfo = !!(data.title && data.description && data.category && data.skillLevel);
+        const hasBasicInfo = !!(data.title && data.description && data.category && data.subcategory && data.skillLevel);
         const hasModules = !!(data.modules && data.modules.length > 0 && 
                            data.modules.some(module => 
                              module.lessons.length > 0 && 
@@ -242,7 +244,7 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
   };
 
   const saveCourse = async () => {
-    if (state.isSaving || !convexUser?._id || !storeId) return;
+    if (state.isSaving || !convexUser?.clerkId || !storeId) return;
     
     setState(prev => ({ ...prev, isSaving: true }));
     
@@ -283,7 +285,7 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
         };
 
         const result = await createCourseMutation({
-          userId: convexUser._id,
+          userId: convexUser.clerkId,
           storeId,
           data: requiredData,
         });
@@ -322,7 +324,7 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
   };
 
   const createCourse = async () => {
-    if (!convexUser?._id || !storeId) {
+    if (!convexUser?.clerkId || !storeId) {
       return {
         success: false,
         error: "User not found or invalid store. Please try again.",
@@ -377,7 +379,7 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
       } else {
         // Create new course
         const result = await createCourseMutation({
-          userId: convexUser._id,
+          userId: convexUser.clerkId,
           storeId,
           data: requiredData,
         });
@@ -401,14 +403,14 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
   };
 
   const togglePublished = async () => {
-    if (!state.courseId || !convexUser?._id) {
+    if (!state.courseId || !convexUser?.clerkId) {
       return { success: false };
     }
 
     try {
       const result = await togglePublishedMutation({
         courseId: state.courseId,
-        userId: convexUser._id,
+        userId: convexUser.clerkId,
       });
 
       if (result.success) {

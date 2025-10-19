@@ -64,6 +64,7 @@ import type * as leadSubmissions from "../leadSubmissions.js";
 import type * as leaderboards from "../leaderboards.js";
 import type * as library from "../library.js";
 import type * as marketplace from "../marketplace.js";
+import type * as migrations_backfillCustomers from "../migrations/backfillCustomers.js";
 import type * as monetizationSchema from "../monetizationSchema.js";
 import type * as monetizationUtils from "../monetizationUtils.js";
 import type * as musicShowcase from "../musicShowcase.js";
@@ -155,6 +156,7 @@ declare const fullApi: ApiFromModules<{
   leaderboards: typeof leaderboards;
   library: typeof library;
   marketplace: typeof marketplace;
+  "migrations/backfillCustomers": typeof migrations_backfillCustomers;
   monetizationSchema: typeof monetizationSchema;
   monetizationUtils: typeof monetizationUtils;
   musicShowcase: typeof musicShowcase;

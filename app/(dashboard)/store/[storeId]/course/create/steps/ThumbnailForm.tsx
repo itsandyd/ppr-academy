@@ -6,33 +6,90 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Upload, X, ArrowRight, Save, Sparkles, Loader2 } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import { useCourseCreation } from "../context";
 
-const categories = [
-  "Hip-Hop Production",
-  "Electronic Music",
-  "Mixing & Mastering", 
-  "Sound Design",
-  "Music Theory",
-  "Pop Production",
-  "Rock Production",
-  "DAWs",
-  "Trap Production",
-  "House Music",
-  "Techno Production",
-  "Vocal Production",
-  "Jazz Production",
-  "R&B Production",
-  "Ambient Music",
-  "Drum Programming",
-  "Synthesis",
-  "Sampling",
-  "Audio Engineering",
-  "Live Performance"
-];
+const categoryGroups = {
+  "DAWs & Software": [
+    "Ableton Live",
+    "FL Studio",
+    "Logic Pro",
+    "Pro Tools",
+    "Cubase",
+    "Studio One",
+    "Reason",
+    "Bitwig",
+    "Reaper",
+  ],
+  "Genre Production": [
+    "Hip-Hop & Trap",
+    "Lo-Fi & Chill Beats",
+    "R&B & Soul",
+    "Pop & Top 40",
+    "Electronic & EDM",
+    "House & Deep House",
+    "Techno & Minimal",
+    "Drum & Bass",
+    "Dubstep & Bass Music",
+    "Afrobeats & Amapiano",
+    "Latin & Reggaeton",
+    "Rock & Alternative",
+    "Jazz & Neo-Soul",
+    "Ambient & Downtempo",
+    "Film & Game Scoring",
+  ],
+  "Production Skills": [
+    "Mixing",
+    "Mastering",
+    "Sound Design",
+    "Synthesis",
+    "Sampling & Chopping",
+    "Drum Programming",
+    "Melody & Chord Writing",
+    "Arrangement & Structure",
+    "Vocal Recording & Editing",
+    "Vocal Mixing & Effects",
+    "Recording Techniques",
+    "Audio Engineering",
+  ],
+  "Music Fundamentals": [
+    "Music Theory",
+    "Ear Training",
+    "Rhythm & Timing",
+    "Scales & Modes",
+    "Chord Progressions",
+  ],
+  "Specific Tools": [
+    "Serum",
+    "Vital",
+    "Omnisphere",
+    "Kontakt & Sampling",
+    "Native Instruments",
+    "Waves Plugins",
+    "FabFilter",
+    "Izotope",
+    "Auto-Tune & Melodyne",
+  ],
+  "Career & Business": [
+    "Email Marketing & Funnels",
+    "Marketing & Social Media",
+    "Fanbase & Community Building",
+    "Release Strategy & Distribution",
+    "Playlist Pitching & Promotion",
+    "Artist Branding & Identity",
+    "Music Business Fundamentals",
+    "Monetization & Revenue Streams",
+    "Copyright & Licensing",
+    "Live Performance & DJing",
+  ],
+  "Other": [
+    "Workflow & Productivity",
+    "General Production",
+    "Other",
+  ],
+};
 
 const skillLevels = [
   "Beginner",
@@ -193,10 +250,23 @@ export function ThumbnailForm() {
                 <SelectTrigger className="mt-2">
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
-                <SelectContent>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                  ))}
+                <SelectContent className="bg-white dark:bg-black max-h-[600px] w-full sm:w-[600px] md:w-[800px] lg:w-[900px]">
+                  <div className="columns-1 sm:columns-2 lg:columns-3 gap-4 sm:gap-6 p-3 sm:p-4">
+                    {Object.entries(categoryGroups).map(([groupName, categories]) => (
+                      <SelectGroup key={groupName} className="space-y-2 break-inside-avoid mb-4 sm:mb-6">
+                        <SelectLabel className="text-xs font-bold text-foreground uppercase tracking-wide px-2 py-1 bg-muted/50 rounded">
+                          {groupName}
+                        </SelectLabel>
+                        <div className="space-y-0.5">
+                          {categories.map((category) => (
+                            <SelectItem key={category} value={category} className="text-sm py-2 pl-4 cursor-pointer">
+                              {category}
+                            </SelectItem>
+                          ))}
+                        </div>
+                      </SelectGroup>
+                    ))}
+                  </div>
                 </SelectContent>
               </Select>
             </div>
@@ -207,7 +277,7 @@ export function ThumbnailForm() {
                 <SelectTrigger className="mt-2">
                   <SelectValue placeholder="Select level" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white dark:bg-black">
                   {skillLevels.map((level) => (
                     <SelectItem key={level} value={level}>{level}</SelectItem>
                   ))}

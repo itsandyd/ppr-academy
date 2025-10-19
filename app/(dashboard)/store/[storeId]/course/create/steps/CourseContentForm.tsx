@@ -7,35 +7,93 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRouter, useParams } from "next/navigation";
 import { useCourseCreation } from "../context";
 import { CourseContentManager } from "../components/CourseContentManager";
 import { FormFieldWithHelp, courseFieldHelp } from "@/components/ui/form-field-with-help";
 import { FormErrorBanner } from "@/components/ui/form-error-banner";
+import { CategorySelector } from "@/components/course/category-selector";
 
-const categories = [
-  "Hip-Hop Production",
-  "Electronic Music",
-  "Mixing & Mastering", 
-  "Sound Design",
-  "Music Theory",
-  "Pop Production",
-  "Rock Production",
-  "DAWs",
-  "Trap Production",
-  "House Music",
-  "Techno Production",
-  "Vocal Production",
-  "Jazz Production",
-  "R&B Production",
-  "Ambient Music",
-  "Drum Programming",
-  "Synthesis",
-  "Sampling",
-  "Audio Engineering",
-  "Live Performance"
-];
+const categoryGroups = {
+  "DAWs & Software": [
+    "Ableton Live",
+    "FL Studio",
+    "Logic Pro",
+    "Pro Tools",
+    "Cubase",
+    "Studio One",
+    "Reason",
+    "Bitwig",
+    "Reaper",
+  ],
+  "Genre Production": [
+    "Hip-Hop & Trap",
+    "Lo-Fi & Chill Beats",
+    "R&B & Soul",
+    "Pop & Top 40",
+    "Electronic & EDM",
+    "House & Deep House",
+    "Techno & Minimal",
+    "Drum & Bass",
+    "Dubstep & Bass Music",
+    "Afrobeats & Amapiano",
+    "Latin & Reggaeton",
+    "Rock & Alternative",
+    "Jazz & Neo-Soul",
+    "Ambient & Downtempo",
+    "Film & Game Scoring",
+  ],
+  "Production Skills": [
+    "Mixing",
+    "Mastering",
+    "Sound Design",
+    "Synthesis",
+    "Sampling & Chopping",
+    "Drum Programming",
+    "Melody & Chord Writing",
+    "Arrangement & Structure",
+    "Vocal Recording & Editing",
+    "Vocal Mixing & Effects",
+    "Recording Techniques",
+    "Audio Engineering",
+  ],
+  "Music Fundamentals": [
+    "Music Theory",
+    "Ear Training",
+    "Rhythm & Timing",
+    "Scales & Modes",
+    "Chord Progressions",
+  ],
+  "Specific Tools": [
+    "Serum",
+    "Vital",
+    "Omnisphere",
+    "Kontakt & Sampling",
+    "Native Instruments",
+    "Waves Plugins",
+    "FabFilter",
+    "Izotope",
+    "Auto-Tune & Melodyne",
+  ],
+  "Career & Business": [
+    "Email Marketing & Funnels",
+    "Marketing & Social Media",
+    "Fanbase & Community Building",
+    "Release Strategy & Distribution",
+    "Playlist Pitching & Promotion",
+    "Artist Branding & Identity",
+    "Music Business Fundamentals",
+    "Monetization & Revenue Streams",
+    "Copyright & Licensing",
+    "Live Performance & DJing",
+  ],
+  "Other": [
+    "Workflow & Productivity",
+    "General Production",
+    "Other",
+  ],
+};
 
 const skillLevels = [
   "Beginner",
@@ -109,49 +167,35 @@ function CourseBasicInfoCard() {
           rows={6}
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-3">
-            <Label htmlFor="category" className="text-base font-semibold text-gray-900 flex items-center gap-1">
-              Category <span className="text-red-600">*</span>
-            </Label>
-            <Select 
-              value={state.data?.category || ""} 
-              onValueChange={(value) => {
-                handleInputChange("category", value);
-                setTouched(prev => ({ ...prev, category: true }));
-              }}
-            >
-              <SelectTrigger className={`h-14 border-2 rounded-xl text-base ${
-                getFieldError("category", state.data?.category)
-                  ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
-                  : "border-gray-200 focus:border-blue-500 focus:ring-blue-500/20"
-              }`}>
-                <SelectValue placeholder="Choose a category" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((category) => (
-                  <SelectItem key={category} value={category} className="text-base py-3">
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {getFieldError("category", state.data?.category) && (
-              <p className="text-sm text-red-600 font-medium">
-                ⚠️ Category is required
-              </p>
-            )}
-            {!getFieldError("category", state.data?.category) && (
-              <p className="text-sm text-gray-500">
-                Help students find your course by selecting the most relevant category.
-              </p>
-            )}
-          </div>
+        {/* Category, Subcategory & Tags - New Hierarchical System */}
+        <CategorySelector
+          category={state.data?.category}
+          subcategory={state.data?.subcategory}
+          tags={state.data?.tags || []}
+          title={state.data?.title}
+          description={state.data?.description}
+          onCategoryChange={(value) => {
+            handleInputChange("category", value);
+            setTouched(prev => ({ ...prev, category: true }));
+          }}
+          onSubcategoryChange={(value) => {
+            handleInputChange("subcategory", value);
+            setTouched(prev => ({ ...prev, subcategory: true }));
+          }}
+          onTagsChange={(value) => {
+            handleInputChange("tags", value);
+          }}
+          errors={{
+            category: getFieldError("category", state.data?.category),
+            subcategory: getFieldError("subcategory", state.data?.subcategory),
+          }}
+        />
 
-          <div className="space-y-3">
-            <Label htmlFor="skillLevel" className="text-base font-semibold text-gray-900 flex items-center gap-1">
-              Skill Level <span className="text-red-600">*</span>
-            </Label>
+        {/* Skill Level */}
+        <div className="space-y-3">
+          <Label htmlFor="skillLevel" className="text-base font-semibold text-gray-900 flex items-center gap-1">
+            Skill Level <span className="text-red-600">*</span>
+          </Label>
             <Select 
               value={state.data?.skillLevel || ""} 
               onValueChange={(value) => {
@@ -166,7 +210,7 @@ function CourseBasicInfoCard() {
               }`}>
                 <SelectValue placeholder="Select skill level" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white dark:bg-black">
                 {skillLevels.map((level) => (
                   <SelectItem key={level} value={level} className="text-base py-3">
                     {level}
@@ -184,7 +228,6 @@ function CourseBasicInfoCard() {
                 Set expectations by indicating the required skill level for your course.
               </p>
             )}
-          </div>
         </div>
       </div>
     </div>

@@ -132,8 +132,10 @@ export default defineSchema({
     isPublished: v.optional(v.boolean()),
     courseCategoryId: v.optional(v.string()),
     slug: v.optional(v.string()),
-    // Additional fields for course creation form
-    category: v.optional(v.string()),
+    // Hierarchical categorization (Category → Subcategory → Tags)
+    category: v.optional(v.string()), // Top-level category (e.g., "daw", "business", "genre")
+    subcategory: v.optional(v.string()), // Specific subcategory (e.g., "Ableton Live", "Email Marketing & Funnels")
+    tags: v.optional(v.array(v.string())), // 2-5 tags for search and discovery
     skillLevel: v.optional(v.string()),
     checkoutHeadline: v.optional(v.string()),
     checkoutDescription: v.optional(v.string()),
@@ -153,9 +155,11 @@ export default defineSchema({
   .index("by_slug", ["slug"])
   .index("by_categoryId", ["courseCategoryId"])
   .index("by_userId", ["userId"])
-  .index("by_storeId", ["storeId"]) // Add index for storeId filtering
+  .index("by_storeId", ["storeId"])
   .index("by_published", ["isPublished"])
-  .index("by_instructor_published", ["instructorId", "isPublished"]),
+  .index("by_instructor_published", ["instructorId", "isPublished"])
+  .index("by_category", ["category"]) // New index for category filtering
+  .index("by_category_subcategory", ["category", "subcategory"]), // New index for precise filtering
 
   courseCategories: defineTable({
     name: v.string(),

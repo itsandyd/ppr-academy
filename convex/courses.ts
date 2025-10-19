@@ -324,6 +324,8 @@ export const createCourseWithData = mutation({
       title: v.string(),
       description: v.optional(v.string()),
       category: v.optional(v.string()),
+      subcategory: v.optional(v.string()),
+      tags: v.optional(v.array(v.string())),
       skillLevel: v.optional(v.string()),
       thumbnail: v.optional(v.string()),
       price: v.string(),
@@ -355,8 +357,10 @@ export const createCourseWithData = mutation({
         price: parseFloat(data.price),
         imageUrl: data.thumbnail || undefined,
         isPublished: false, // Always start as unpublished
-        // Additional fields from the form
+        // Hierarchical categorization
         category: data.category,
+        subcategory: data.subcategory,
+        tags: data.tags,
         skillLevel: data.skillLevel,
         checkoutHeadline: data.checkoutHeadline,
       });
