@@ -188,7 +188,7 @@ export default function SectionedMarketplace() {
       )}
 
       {/* 9. FOOTER (always show) */}
-      {/* <Footer /> */}
+      <Footer />
     </div>
   );
 }
