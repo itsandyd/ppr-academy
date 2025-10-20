@@ -458,10 +458,13 @@ export const savePosts = mutation({
           caption: post.caption,
           media: post.media,
           mediaType: post.mediaType,
+          timestamp: Date.now(),
         });
       }
 
-      return { status: 200, message: "Posts attached" };
+      console.log(`✅ Attached ${args.posts.length} posts to automation ${args.automationId}`);
+      
+      return { status: 200, message: `${args.posts.length} post${args.posts.length > 1 ? 's' : ''} attached successfully` };
     } catch (error) {
       console.error("Error saving posts:", error);
       return { status: 500, message: "Failed to save posts" };

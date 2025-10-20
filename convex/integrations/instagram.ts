@@ -116,7 +116,7 @@ export const handleOAuthCallback = action({
 /**
  * Get user's Instagram posts (for attaching to comment automations)
  */
-export const getUserPosts: any = action({
+export const getUserPosts = action({
   args: {
     userId: v.id("users"),
   },
@@ -124,7 +124,7 @@ export const getUserPosts: any = action({
     status: v.number(),
     data: v.any(),
   }),
-  handler: async (ctx, args): Promise<{ status: number; data: any }> => {
+  handler: async (ctx, args) => {
     try {
       // Get user's Instagram integration
       const integration: any = await ctx.runQuery(internal.integrations.internal.getIntegration, {

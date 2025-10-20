@@ -29,6 +29,7 @@ import {
   ChevronLeft,
 } from "lucide-react";
 import { toast } from "sonner";
+import { InstagramPostSelector } from "./components/instagram-post-selector";
 
 interface AutomationPageProps {
   params: Promise<{
@@ -575,7 +576,7 @@ export default function AutomationBuilderPage({ params }: AutomationPageProps) {
         </Card>
 
         {/* STEP 3: Post Attachment (for comment triggers) */}
-        {hasCommentTrigger && (
+        {hasCommentTrigger && automation?.user && (
           <Card>
             <CardHeader>
               <div className="flex items-center gap-3">
@@ -592,22 +593,11 @@ export default function AutomationBuilderPage({ params }: AutomationPageProps) {
             </CardHeader>
 
             <CardContent>
-              <div className="bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                  <div className="text-sm flex-1">
-                    <p className="font-semibold text-yellow-900 dark:text-yellow-100 mb-1">
-                      Fetch Instagram Posts
-                    </p>
-                    <p className="text-yellow-700 dark:text-yellow-300 mb-3">
-                      Posts will load here once Instagram is connected. You'll be able to select which posts trigger this automation.
-                    </p>
-                    <p className="text-xs text-yellow-600 dark:text-yellow-400">
-                      💡 Coming soon: Post selector with live preview
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <InstagramPostSelector
+                userId={automation.user._id}
+                automationId={id as Id<"automations">}
+                selectedPostIds={automation.posts?.map((p: any) => p.postId) || []}
+              />
             </CardContent>
           </Card>
         )}
