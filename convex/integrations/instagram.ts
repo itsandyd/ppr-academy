@@ -7,10 +7,12 @@ import { internal, api } from "../_generated/api";
 /**
  * Handle Instagram OAuth callback
  * Exchange code for long-lived access token
+ * PUBLIC action - called from client-side callback page
  */
-export const handleOAuthCallback = internalAction({
+export const handleOAuthCallback = action({
   args: {
     code: v.string(),
+    userId: v.optional(v.id("users")), // Optional: if we have userId from client
   },
   returns: v.null(),
   handler: async (ctx, args) => {

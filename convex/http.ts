@@ -67,47 +67,10 @@ http.route({
 });
 
 /**
- * Instagram OAuth Callback
- * Receives OAuth code after user connects Instagram
+ * Instagram OAuth Callback - Removed
+ * Now handled by Next.js route: /app/auth/instagram/callback/page.tsx
+ * This allows us to use Clerk auth context on the client side
  */
-http.route({
-  path: "/auth/instagram/callback",
-  method: "GET",
-  handler: httpAction(async (ctx, request) => {
-    const url = new URL(request.url);
-    const code = url.searchParams.get("code");
-    const error = url.searchParams.get("error");
-
-    if (error) {
-      console.error("Instagram OAuth error:", error);
-      return Response.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/integrations?error=${error}`
-      );
-    }
-
-    if (!code) {
-      return Response.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/integrations?error=no_code`
-      );
-    }
-
-    try {
-      // Exchange code for access token
-      await ctx.runAction(internal.integrations.instagram.handleOAuthCallback, {
-        code,
-      });
-
-      return Response.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/integrations?success=true`
-      );
-    } catch (error) {
-      console.error("OAuth callback error:", error);
-      return Response.redirect(
-        `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/integrations?error=auth_failed`
-      );
-    }
-  }),
-});
 
 // Stripe webhook for subscription payments
 http.route({

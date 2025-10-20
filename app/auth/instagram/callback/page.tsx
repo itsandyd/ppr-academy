@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useAction } from "convex/react";
+import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useUser } from "@clerk/nextjs";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,10 +12,17 @@ import { Button } from "@/components/ui/button";
 export default function InstagramCallbackPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useUser();
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState("");
 
   const handleOAuthCallback = useAction(api.integrations.instagram.handleOAuthCallback);
+
+  // Get user's Convex user record
+  const convexUser = useQuery(
+    api.users.getUserFromClerk,
+    user?.id ? { clerkId: user.id } : "skip"
+  );
 
   useEffect(() => {
     const processCallback = async () => {
@@ -35,19 +43,28 @@ export default function InstagramCallbackPage() {
         return;
       }
 
+      // Wait for user data
+      if (!convexUser) {
+        console.log("⏳ Waiting for user data...");
+        return;
+      }
+
       try {
         console.log("🔄 Processing Instagram OAuth callback...");
         
         // Exchange code for access token
-        await handleOAuthCallback({ code });
+        await handleOAuthCallback({ 
+          code,
+          userId: convexUser._id,
+        });
         
         setStatus("success");
         console.log("✅ Instagram connected successfully!");
         
         // Redirect after 2 seconds
         setTimeout(() => {
-          // TODO: Get actual storeId from user context
-          router.push("/dashboard/social?success=instagram");
+          // Redirect to social page
+          router.push(`/dashboard?success=instagram`);
         }, 2000);
       } catch (error: any) {
         console.error("❌ OAuth callback error:", error);
@@ -57,7 +74,7 @@ export default function InstagramCallbackPage() {
     };
 
     processCallback();
-  }, [searchParams, handleOAuthCallback, router]);
+  }, [searchParams, handleOAuthCallback, router, convexUser]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
