@@ -22,9 +22,20 @@ export const handleOAuthCallback = action({
 
       console.log("🔄 Step 1: Exchange Facebook code for access token...");
 
+      // Construct redirect URI (must be absolute)
+      // Use environment variable or fallback to production URL
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://academy.pauseplayrepeat.com";
+      const redirectUri = `${baseUrl}/auth/instagram/callback`;
+      
+      console.log("🔗 Using redirect URI:", redirectUri);
+
       // Step 1: Exchange code for Facebook access token
       const tokenResponse = await fetch(
-        `https://graph.facebook.com/v21.0/oauth/access_token?client_id=${process.env.FACEBOOK_APP_ID || process.env.INSTAGRAM_CLIENT_ID}&client_secret=${process.env.FACEBOOK_APP_SECRET || process.env.INSTAGRAM_CLIENT_SECRET}&redirect_uri=${process.env.NEXT_PUBLIC_APP_URL}/auth/instagram/callback&code=${cleanCode}`
+        `https://graph.facebook.com/v21.0/oauth/access_token?` +
+        `client_id=${process.env.FACEBOOK_APP_ID || process.env.INSTAGRAM_CLIENT_ID}` +
+        `&client_secret=${process.env.FACEBOOK_APP_SECRET || process.env.INSTAGRAM_CLIENT_SECRET}` +
+        `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+        `&code=${cleanCode}`
       );
 
       const tokenData = await tokenResponse.json();
