@@ -63,8 +63,14 @@ export default function InstagramCallbackPage() {
         
         // Redirect after 2 seconds
         setTimeout(() => {
-          // Redirect to social page
-          router.push(`/dashboard?success=instagram`);
+          // Try to get storeId from sessionStorage or redirect to general dashboard
+          const lastStoreId = sessionStorage.getItem("lastStoreId");
+          if (lastStoreId) {
+            router.push(`/store/${lastStoreId}/social?success=instagram`);
+          } else {
+            // Fallback: redirect to dashboard, user can navigate to their store
+            router.push(`/?success=instagram`);
+          }
         }, 2000);
       } catch (error: any) {
         console.error("❌ OAuth callback error:", error);

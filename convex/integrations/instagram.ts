@@ -91,14 +91,19 @@ export const handleOAuthCallback = action({
       const expiresAt = Date.now() + (60 * 24 * 60 * 60 * 1000); // Set to 60 days for safety
 
       // Step 6: Save integration to database
+      if (!args.userId) {
+        throw new Error("User ID is required to save integration");
+      }
+
       await ctx.runMutation(internal.integrations.internal.saveIntegration, {
         token: pageAccessToken, // Use page access token (not user token)
         expiresAt,
         instagramId: accountData.id,
         username: accountData.username,
+        userId: args.userId,
       });
 
-      console.log("✅ Instagram integration saved");
+      console.log("✅ Instagram integration saved for user:", args.userId);
       
       return null;
     } catch (error) {

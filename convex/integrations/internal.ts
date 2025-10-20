@@ -10,16 +10,42 @@ export const saveIntegration = internalMutation({
     expiresAt: v.number(),
     instagramId: v.string(),
     username: v.string(),
+    userId: v.id("users"),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    // TODO: Get current user from Clerk
-    // For now, this is a placeholder - you'll need to pass userId
+    // Check if integration already exists for this user
+    const existing = await ctx.db
+      .query("integrations")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .first();
+
+    if (existing) {
+      // Update existing integration
+      await ctx.db.patch(existing._id, {
+        token: args.token,
+        expiresAt: args.expiresAt,
+        instagramId: args.instagramId,
+        username: args.username,
+        isActive: true,
+        lastVerified: Date.now(),
+      });
+      console.log("✅ Instagram integration updated");
+    } else {
+      // Create new integration
+      await ctx.db.insert("integrations", {
+        userId: args.userId,
+        name: "INSTAGRAM",
+        token: args.token,
+        expiresAt: args.expiresAt,
+        instagramId: args.instagramId,
+        username: args.username,
+        isActive: true,
+        lastVerified: Date.now(),
+      });
+      console.log("✅ Instagram integration created");
+    }
     
-    // Check if integration already exists
-    // If exists, update. If not, create.
-    
-    console.log("✅ Instagram integration saved (TODO: implement full logic)");
     return null;
   },
 });

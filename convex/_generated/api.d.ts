@@ -63,6 +63,7 @@ import type * as files from "../files.js";
 import type * as http from "../http.js";
 import type * as integrations_instagram from "../integrations/instagram.js";
 import type * as integrations_internal from "../integrations/internal.js";
+import type * as integrations_queries from "../integrations/queries.js";
 import type * as leadSubmissions from "../leadSubmissions.js";
 import type * as leaderboards from "../leaderboards.js";
 import type * as library from "../library.js";
@@ -160,6 +161,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   "integrations/instagram": typeof integrations_instagram;
   "integrations/internal": typeof integrations_internal;
+  "integrations/queries": typeof integrations_queries;
   leadSubmissions: typeof leadSubmissions;
   leaderboards: typeof leaderboards;
   library: typeof library;

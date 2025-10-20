@@ -31,6 +31,12 @@ export function InstagramAutomations({ storeId, userId }: InstagramAutomationsPr
   const router = useRouter();
   const [creatingAutomation, setCreatingAutomation] = useState(false);
 
+  // Get Convex user
+  const convexUser = useQuery(
+    api.users.getUserFromClerk,
+    { clerkId: userId }
+  );
+
   // Fetch user's automations
   const automations = useQuery(
     api.automations.getUserAutomations,
@@ -38,8 +44,12 @@ export function InstagramAutomations({ storeId, userId }: InstagramAutomationsPr
   );
 
   // Check Instagram connection
-  // TODO: Create query to check if Instagram is connected
-  const isInstagramConnected = false;
+  const instagramStatus = useQuery(
+    api.integrations.queries.isInstagramConnected,
+    convexUser?._id ? { userId: convexUser._id } : "skip"
+  );
+
+  const isInstagramConnected = instagramStatus?.connected || false;
 
   // Create automation mutation
   const createAutomation = useMutation(api.automations.createAutomation);
@@ -74,6 +84,9 @@ export function InstagramAutomations({ storeId, userId }: InstagramAutomationsPr
       return;
     }
 
+    // Store storeId for redirect after OAuth
+    sessionStorage.setItem("lastStoreId", storeId);
+
     // Use Facebook Login with Instagram permissions
     const scopes = [
       'instagram_basic',
@@ -93,7 +106,7 @@ export function InstagramAutomations({ storeId, userId }: InstagramAutomationsPr
   };
 
   // Loading state
-  if (automations === undefined) {
+  if (automations === undefined || instagramStatus === undefined || convexUser === undefined) {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
