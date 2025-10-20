@@ -25,14 +25,27 @@ interface CreatorsPicksProps {
   products: CreatorsPickProduct[];
   creatorName: string;
   className?: string;
+  onProductClick?: (product: any) => void;
+  allProductsData?: any[];
 }
 
 export function CreatorsPicks({ 
   products, 
   creatorName,
-  className 
+  className,
+  onProductClick,
+  allProductsData = []
 }: CreatorsPicksProps) {
   if (!products || products.length === 0) return null;
+
+  const handleClick = (productId: string) => {
+    if (onProductClick && allProductsData) {
+      const fullProduct = allProductsData.find(p => p._id === productId);
+      if (fullProduct) {
+        onProductClick(fullProduct);
+      }
+    }
+  };
 
   return (
     <div className={cn("space-y-6", className)}>
@@ -138,10 +151,8 @@ export function CreatorsPicks({
                       {product.price === 0 ? "Free" : `$${product.price}`}
                     </span>
                   </div>
-                  <Button asChild>
-                    <Link href={`/courses/${product.slug}`}>
-                      View Details
-                    </Link>
+                  <Button onClick={() => handleClick(product.id)}>
+                    {product.type === "course" ? "View Course" : "Get Access"}
                   </Button>
                 </div>
               </CardContent>
@@ -157,9 +168,20 @@ export function CreatorsPicks({
 export function CreatorsPicksCompact({ 
   products, 
   creatorName,
-  className 
+  className,
+  onProductClick,
+  allProductsData = []
 }: CreatorsPicksProps) {
   if (!products || products.length === 0) return null;
+
+  const handleClick = (productId: string) => {
+    if (onProductClick && allProductsData) {
+      const fullProduct = allProductsData.find(p => p._id === productId);
+      if (fullProduct) {
+        onProductClick(fullProduct);
+      }
+    }
+  };
 
   return (
     <Card className={cn("bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/10 dark:to-orange-900/10 border-amber-200 dark:border-amber-800", className)}>
@@ -171,12 +193,12 @@ export function CreatorsPicksCompact({
 
         <div className="space-y-3">
           {products.slice(0, 3).map((product) => (
-            <Link 
+            <button
               key={product.id}
-              href={`/courses/${product.slug}`}
-              className="block group"
+              onClick={() => handleClick(product.id)}
+              className="block group w-full text-left"
             >
-              <div className="flex items-center gap-3 p-3 bg-white dark:bg-black rounded-lg border border-slate-200 dark:border-slate-800 hover:border-amber-300 dark:hover:border-amber-700 transition-colors">
+              <div className="flex items-center gap-3 p-3 bg-white dark:bg-black rounded-lg border border-slate-200 dark:border-slate-800 hover:border-amber-300 dark:hover:border-amber-700 transition-colors cursor-pointer">
                 {product.imageUrl && (
                   <img
                     src={product.imageUrl}
@@ -193,7 +215,7 @@ export function CreatorsPicksCompact({
                   </p>
                 </div>
               </div>
-            </Link>
+            </button>
           ))}
         </div>
 

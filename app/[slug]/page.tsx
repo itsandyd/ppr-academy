@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -103,6 +104,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
     // Digital Products (preserve existing productType or default to "digitalProduct")
     ...(products || []).map(product => ({
       ...product,
+      slug: (product as any).slug || product._id,
       productType: product.productType || "digitalProduct",
       category: (product as any).category || "Digital Product",
       icon: Play,
@@ -112,6 +114,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
     // Courses (add course-specific properties)
     ...(courses || []).map(course => ({
       ...course,
+      slug: course.slug || course._id,
       productType: "course",
       category: course.category || "Course",
       style: undefined, // Courses don't have style
@@ -476,6 +479,8 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
                 reason: "This is one of my most popular products - students love the quality and practical value!"
               }))}
               creatorName={store.name}
+              onProductClick={handleProductClick}
+              allProductsData={allProducts}
             />
           </div>
         )}
@@ -601,18 +606,10 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
               followerCount={allProducts.length * 50} // Estimate
               sticky={true}
               onFollow={() => {
-                toast({
-                  title: "Following!",
-                  description: `You're now following ${store.name}`,
-                  className: "bg-white dark:bg-black",
-                });
+                toast.success(`You're now following ${store.name}`);
               }}
               onNotify={() => {
-                toast({
-                  title: "Notifications Enabled",
-                  description: `You'll be notified of new releases from ${store.name}`,
-                  className: "bg-white dark:bg-black",
-                });
+                toast.success(`You'll be notified of new releases from ${store.name}`);
               }}
             />
           </div>
