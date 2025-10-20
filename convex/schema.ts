@@ -2766,4 +2766,163 @@ export default defineSchema({
   })
     .index("by_userId", ["userId"])
     .index("by_trackId", ["trackId"]),
+
+  // ============================================================================
+  // INSTAGRAM DM AUTOMATION - SLIDE-STYLE SYSTEM
+  // ============================================================================
+
+  // Instagram Integrations - OAuth connections
+  integrations: defineTable({
+    userId: v.id("users"),
+    name: v.union(v.literal("INSTAGRAM"), v.literal("FACEBOOK")),
+    
+    // OAuth Tokens
+    token: v.string(), // Access token
+    expiresAt: v.optional(v.number()), // Token expiry (60 days for Instagram)
+    
+    // Instagram-specific data
+    instagramId: v.optional(v.string()), // Instagram Business Account ID
+    username: v.optional(v.string()),
+    profilePicture: v.optional(v.string()),
+    
+    // Facebook Page (required for Instagram Business API)
+    facebookPageId: v.optional(v.string()),
+    facebookPageAccessToken: v.optional(v.string()),
+    
+    // Status
+    isActive: v.boolean(),
+    lastVerified: v.optional(v.number()),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_name", ["name"])
+    .index("by_instagramId", ["instagramId"]),
+
+  // Automations - Main automation container
+  automations: defineTable({
+    userId: v.id("users"),
+    storeId: v.optional(v.id("stores")),
+    
+    // Basic Info
+    name: v.string(),
+    active: v.boolean(),
+    
+    // Stats (for analytics dashboard)
+    totalTriggers: v.optional(v.number()),
+    totalResponses: v.optional(v.number()),
+    lastTriggered: v.optional(v.number()),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_storeId", ["storeId"])
+    .index("by_active", ["active"])
+    .index("by_user_active", ["userId", "active"]),
+
+  // Triggers - When to fire automation
+  triggers: defineTable({
+    automationId: v.id("automations"),
+    type: v.union(
+      v.literal("COMMENT"),  // Triggered by Instagram comment
+      v.literal("DM")         // Triggered by Instagram DM
+    ),
+  })
+    .index("by_automationId", ["automationId"])
+    .index("by_type", ["type"]),
+
+  // Keywords - Trigger keywords for automations
+  keywords: defineTable({
+    automationId: v.id("automations"),
+    word: v.string(), // Stored lowercase for case-insensitive matching
+  })
+    .index("by_automationId", ["automationId"])
+    .index("by_word", ["word"]) // Critical for webhook keyword matching
+    .searchIndex("search_keywords", {
+      searchField: "word",
+    }),
+
+  // Listeners - What action to take when triggered
+  listeners: defineTable({
+    automationId: v.id("automations"),
+    listener: v.union(
+      v.literal("MESSAGE"),    // Send single message
+      v.literal("SMART_AI")     // AI chatbot conversation
+    ),
+    
+    // Message content
+    prompt: v.string(), // For SMART_AI: OpenAI system prompt. For MESSAGE: the message to send
+    commentReply: v.optional(v.string()), // Optional reply to comment
+    
+    // Analytics counters
+    dmCount: v.optional(v.number()),
+    commentCount: v.optional(v.number()),
+  })
+    .index("by_automationId", ["automationId"])
+    .index("by_listener", ["listener"]),
+
+  // Posts - Instagram posts attached to comment automations
+  posts: defineTable({
+    automationId: v.id("automations"),
+    
+    // Instagram post data
+    postId: v.string(), // Instagram media ID
+    caption: v.optional(v.string()),
+    media: v.string(), // Media URL
+    mediaType: v.union(
+      v.literal("IMAGE"),
+      v.literal("VIDEO"),
+      v.literal("CAROUSEL_ALBUM")
+    ),
+    
+    // Metadata
+    timestamp: v.optional(v.number()),
+    permalink: v.optional(v.string()),
+  })
+    .index("by_automationId", ["automationId"])
+    .index("by_postId", ["postId"]), // Critical for webhook post matching
+
+  // Chat History - Conversation history for Smart AI
+  chatHistory: defineTable({
+    automationId: v.id("automations"),
+    
+    // Instagram user identity
+    senderId: v.string(), // Instagram user ID who sent message
+    receiverId: v.string(), // Business Instagram account ID
+    
+    // Message
+    message: v.string(),
+    role: v.union(v.literal("user"), v.literal("assistant")),
+    
+    // Context
+    conversationId: v.optional(v.string()), // Group messages by conversation
+  })
+    .index("by_automationId", ["automationId"])
+    .index("by_senderId", ["senderId"])
+    .index("by_automationId_and_sender", ["automationId", "senderId"])
+    .index("by_conversationId", ["conversationId"]),
+
+  // User Subscriptions - For Smart AI feature paywall
+  userSubscriptions: defineTable({
+    userId: v.id("users"),
+    plan: v.union(v.literal("FREE"), v.literal("PRO")),
+    
+    // Stripe info
+    stripeCustomerId: v.optional(v.string()),
+    stripeSubscriptionId: v.optional(v.string()),
+    stripePriceId: v.optional(v.string()),
+    
+    // Billing
+    currentPeriodStart: v.optional(v.number()),
+    currentPeriodEnd: v.optional(v.number()),
+    cancelAtPeriodEnd: v.optional(v.boolean()),
+    
+    // Status
+    status: v.optional(v.union(
+      v.literal("active"),
+      v.literal("canceled"),
+      v.literal("past_due"),
+      v.literal("trialing")
+    )),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_plan", ["plan"])
+    .index("by_stripeCustomerId", ["stripeCustomerId"])
+    .index("by_stripeSubscriptionId", ["stripeSubscriptionId"]),
 }); 

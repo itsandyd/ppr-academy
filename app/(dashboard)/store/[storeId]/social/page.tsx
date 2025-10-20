@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { SocialScheduler } from "@/components/social-media/social-scheduler";
+import { SocialMediaTabs } from "./components/social-media-tabs";
 
 interface SocialPageProps {
   params: Promise<{
@@ -20,7 +20,7 @@ export default async function SocialMediaPage({ params }: SocialPageProps) {
 
   return (
     <div className="flex-1 space-y-4 p-8 pt-6">
-      <SocialScheduler storeId={storeId} userId={userId} />
+      <SocialMediaTabs storeId={storeId} userId={userId} />
     </div>
   );
 }

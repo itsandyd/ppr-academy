@@ -25,6 +25,7 @@ import type * as analyticsTracking from "../analyticsTracking.js";
 import type * as audioGeneration from "../audioGeneration.js";
 import type * as audioGenerationNode from "../audioGenerationNode.js";
 import type * as automation from "../automation.js";
+import type * as automations from "../automations.js";
 import type * as bundles from "../bundles.js";
 import type * as certificates from "../certificates.js";
 import type * as certificatesSchema from "../certificatesSchema.js";
@@ -60,6 +61,8 @@ import type * as embeddingActions from "../embeddingActions.js";
 import type * as embeddings from "../embeddings.js";
 import type * as files from "../files.js";
 import type * as http from "../http.js";
+import type * as integrations_instagram from "../integrations/instagram.js";
+import type * as integrations_internal from "../integrations/internal.js";
 import type * as leadSubmissions from "../leadSubmissions.js";
 import type * as leaderboards from "../leaderboards.js";
 import type * as library from "../library.js";
@@ -95,6 +98,8 @@ import type * as subscriptions from "../subscriptions.js";
 import type * as tracks from "../tracks.js";
 import type * as userLibrary from "../userLibrary.js";
 import type * as users from "../users.js";
+import type * as webhooks_instagram from "../webhooks/instagram.js";
+import type * as webhooks_stripe from "../webhooks/stripe.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -117,6 +122,7 @@ declare const fullApi: ApiFromModules<{
   audioGeneration: typeof audioGeneration;
   audioGenerationNode: typeof audioGenerationNode;
   automation: typeof automation;
+  automations: typeof automations;
   bundles: typeof bundles;
   certificates: typeof certificates;
   certificatesSchema: typeof certificatesSchema;
@@ -152,6 +158,8 @@ declare const fullApi: ApiFromModules<{
   embeddings: typeof embeddings;
   files: typeof files;
   http: typeof http;
+  "integrations/instagram": typeof integrations_instagram;
+  "integrations/internal": typeof integrations_internal;
   leadSubmissions: typeof leadSubmissions;
   leaderboards: typeof leaderboards;
   library: typeof library;
@@ -187,6 +195,8 @@ declare const fullApi: ApiFromModules<{
   tracks: typeof tracks;
   userLibrary: typeof userLibrary;
   users: typeof users;
+  "webhooks/instagram": typeof webhooks_instagram;
+  "webhooks/stripe": typeof webhooks_stripe;
 }>;
 export declare const api: FilterApi<
   typeof fullApi,

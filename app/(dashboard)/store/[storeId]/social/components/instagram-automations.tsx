@@ -1,0 +1,453 @@
+"use client";
+
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Zap,
+  MessageSquare,
+  Sparkles,
+  Play,
+  Pause,
+  BarChart3,
+  Plus,
+  Settings,
+  Instagram,
+  AlertCircle,
+} from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+
+interface InstagramAutomationsProps {
+  storeId: string;
+  userId: string;
+}
+
+export function InstagramAutomations({ storeId, userId }: InstagramAutomationsProps) {
+  const router = useRouter();
+  const [creatingAutomation, setCreatingAutomation] = useState(false);
+
+  // Fetch user's automations
+  const automations = useQuery(
+    api.automations.getUserAutomations,
+    { clerkId: userId }
+  );
+
+  // Check Instagram connection
+  // TODO: Create query to check if Instagram is connected
+  const isInstagramConnected = false;
+
+  // Create automation mutation
+  const createAutomation = useMutation(api.automations.createAutomation);
+
+  const handleCreateAutomation = async () => {
+    setCreatingAutomation(true);
+    try {
+      const result = await createAutomation({
+        clerkId: userId,
+        name: "Untitled Automation",
+      });
+
+      if (result.status === 201 && result.data) {
+        router.push(`/store/${storeId}/social/automation/${result.data._id}`);
+      }
+    } catch (error) {
+      console.error("Failed to create automation:", error);
+      toast.error("Failed to create automation");
+    } finally {
+      setCreatingAutomation(false);
+    }
+  };
+
+  const handleConnectInstagram = () => {
+    // For Instagram Business API, use Facebook Login (not Instagram OAuth)
+    const clientId = process.env.NEXT_PUBLIC_FACEBOOK_APP_ID || process.env.NEXT_PUBLIC_INSTAGRAM_CLIENT_ID;
+    const redirectUri = `${window.location.origin}/auth/instagram/callback`;
+    
+    if (!clientId) {
+      toast.error("Facebook App ID not configured. Add NEXT_PUBLIC_FACEBOOK_APP_ID to your .env file.");
+      console.error("Missing NEXT_PUBLIC_FACEBOOK_APP_ID");
+      return;
+    }
+
+    // Use Facebook Login with Instagram permissions
+    const scopes = [
+      'instagram_basic',
+      'instagram_content_publish',
+      'instagram_manage_comments',
+      'instagram_manage_messages',
+      'pages_show_list',
+      'pages_read_engagement',
+      'pages_manage_metadata'
+    ].join(',');
+
+    // Use Facebook OAuth (not Instagram OAuth)
+    const oauthUrl = `https://www.facebook.com/v21.0/dialog/oauth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&response_type=code&state=instagram`;
+
+    console.log("🔗 Redirecting to Facebook Login (for Instagram permissions):", oauthUrl);
+    window.location.href = oauthUrl;
+  };
+
+  // Loading state
+  if (automations === undefined) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-10 w-64" />
+          <Skeleton className="h-10 w-40" />
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}>
+              <CardHeader>
+                <Skeleton className="h-4 w-24" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-16" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Card key={i}>
+              <CardHeader>
+                <Skeleton className="h-6 w-3/4" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-20 w-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // Instagram not connected state
+  if (!isInstagramConnected) {
+    return (
+      <Card className="border-2 border-dashed">
+        <CardContent className="pt-12 pb-12">
+          <div className="text-center max-w-2xl mx-auto">
+            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900 dark:to-pink-900 flex items-center justify-center">
+              <Instagram className="w-10 h-10 text-purple-600" />
+            </div>
+            
+            <h3 className="text-2xl font-bold mb-3">Connect Instagram to Get Started</h3>
+            <p className="text-muted-foreground mb-6">
+              Automate your Instagram DMs and comments to capture leads and drive sales. Connect your Instagram Business account to enable automations.
+            </p>
+
+            <Button
+              size="lg"
+              onClick={handleConnectInstagram}
+              className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 hover:from-purple-700 hover:via-pink-700 hover:to-orange-700 text-white px-8 gap-2 mb-8"
+            >
+              <Instagram className="w-5 h-5" />
+              Connect Instagram Account
+            </Button>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+              <div className="bg-white dark:bg-black border border-border rounded-lg p-6 text-left">
+                <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center mb-4">
+                  🎵
+                </div>
+                <h4 className="font-semibold mb-2">Sample Pack Delivery</h4>
+                <p className="text-sm text-muted-foreground">
+                  Comment "STEMS" → Auto-send download link via DM
+                </p>
+              </div>
+
+              <div className="bg-white dark:bg-black border border-border rounded-lg p-6 text-left">
+                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center mb-4">
+                  🎓
+                </div>
+                <h4 className="font-semibold mb-2">Course Enrollment</h4>
+                <p className="text-sm text-muted-foreground">
+                  DM "LEARN" → Smart AI guides them to checkout
+                </p>
+              </div>
+
+              <div className="bg-white dark:bg-black border border-border rounded-lg p-6 text-left">
+                <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900 rounded-lg flex items-center justify-center mb-4">
+                  💎
+                </div>
+                <h4 className="font-semibold mb-2">Coaching Upsell</h4>
+                <p className="text-sm text-muted-foreground">
+                  Comment "FEEDBACK" → Offer 1-on-1 booking
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-8 bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+              <div className="flex items-start gap-3 text-left">
+                <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-semibold text-yellow-900 dark:text-yellow-100 mb-1">
+                    Requirements
+                  </p>
+                  <ul className="text-yellow-700 dark:text-yellow-300 space-y-1">
+                    <li>• Instagram Business or Creator account</li>
+                    <li>• Account linked to a Facebook Page</li>
+                    <li>• Public account (not private)</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold mb-1">Instagram Automations</h2>
+          <p className="text-muted-foreground text-sm">
+            Automate your Instagram DMs and comments to capture leads
+          </p>
+        </div>
+
+        <Button
+          size="lg"
+          onClick={handleCreateAutomation}
+          disabled={creatingAutomation}
+          className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          {creatingAutomation ? "Creating..." : "New Automation"}
+        </Button>
+      </div>
+
+      {/* Stats Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm text-muted-foreground font-normal">
+              Total Automations
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{automations?.length || 0}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm text-muted-foreground font-normal">
+              Active
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-green-600">
+              {automations?.filter((a: any) => a.active).length || 0}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm text-muted-foreground font-normal">
+              Total Triggers
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">
+              {automations?.reduce((sum: number, a: any) => sum + (a.totalTriggers || 0), 0) || 0}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm text-muted-foreground font-normal">
+              DMs Sent
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-blue-600">
+              {automations?.reduce((sum: number, a: any) => sum + (a.totalResponses || 0), 0) || 0}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Automations Grid */}
+      {automations && automations.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {automations.map((automation: any) => (
+            <Card
+              key={automation._id}
+              className="hover:shadow-lg transition-shadow cursor-pointer group"
+              onClick={() => router.push(`/store/${storeId}/social/automation/${automation._id}`)}
+            >
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <CardTitle className="text-xl group-hover:text-primary transition-colors">
+                    {automation.name}
+                  </CardTitle>
+                  <Badge
+                    variant={automation.active ? "default" : "secondary"}
+                    className={automation.active ? "bg-green-600" : ""}
+                  >
+                    {automation.active ? (
+                      <>
+                        <Play className="w-3 h-3 mr-1" />
+                        Active
+                      </>
+                    ) : (
+                      <>
+                        <Pause className="w-3 h-3 mr-1" />
+                        Inactive
+                      </>
+                    )}
+                  </Badge>
+                </div>
+              </CardHeader>
+
+              <CardContent className="space-y-4">
+                {/* Trigger Type */}
+                {automation.trigger && (
+                  <div className="flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-yellow-600" />
+                    <span className="text-sm text-muted-foreground">
+                      Trigger: {automation.trigger.type}
+                    </span>
+                  </div>
+                )}
+
+                {/* Keywords */}
+                {automation.keywords && automation.keywords.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {automation.keywords.slice(0, 3).map((kw: any) => (
+                      <Badge
+                        key={kw._id}
+                        variant="outline"
+                        className="bg-gradient-to-r from-purple-100 to-blue-100 dark:from-purple-900 dark:to-blue-900"
+                      >
+                        {kw.word}
+                      </Badge>
+                    ))}
+                    {automation.keywords.length > 3 && (
+                      <Badge variant="outline">
+                        +{automation.keywords.length - 3} more
+                      </Badge>
+                    )}
+                  </div>
+                )}
+
+                {/* Listener Type */}
+                {automation.listener && (
+                  <div className="flex items-center gap-2">
+                    {automation.listener.listener === "SMART_AI" ? (
+                      <>
+                        <Sparkles className="w-4 h-4 text-purple-600" />
+                        <Badge className="bg-gradient-to-r from-purple-600 to-blue-600">
+                          🤖 Smart AI
+                        </Badge>
+                      </>
+                    ) : (
+                      <>
+                        <MessageSquare className="w-4 h-4 text-blue-600" />
+                        <Badge variant="secondary">💬 Message</Badge>
+                      </>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+
+              <CardFooter className="border-t pt-4">
+                <div className="flex items-center justify-between w-full text-sm text-muted-foreground">
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <BarChart3 className="w-4 h-4 inline mr-1" />
+                      {automation.totalTriggers || 0} triggers
+                    </div>
+                    <div>
+                      💬 {automation.totalResponses || 0} sent
+                    </div>
+                  </div>
+                  
+                  <Button variant="ghost" size="sm" className="gap-2">
+                    <Settings className="w-4 h-4" />
+                    Edit
+                  </Button>
+                </div>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        /* Empty State */
+        <Card className="border-2 border-dashed">
+          <CardContent className="pt-12 pb-12">
+            <div className="text-center max-w-2xl mx-auto">
+              <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900 dark:to-blue-900 flex items-center justify-center">
+                <Zap className="w-10 h-10 text-purple-600" />
+              </div>
+              
+              <h3 className="text-2xl font-bold mb-3">No automations yet</h3>
+              <p className="text-muted-foreground mb-6">
+                Create your first automation to start capturing leads and driving sales on Instagram
+              </p>
+              
+              <Button
+                size="lg"
+                onClick={handleCreateAutomation}
+                disabled={creatingAutomation}
+                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 mb-8"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Create Your First Automation
+              </Button>
+
+              {/* Example Use Cases */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+                <div className="bg-white dark:bg-black border border-border rounded-lg p-6">
+                  <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center mb-4">
+                    🎵
+                  </div>
+                  <h4 className="font-semibold mb-2">Sample Pack Delivery</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Comment "STEMS" → Auto-send download link via DM
+                  </p>
+                </div>
+
+                <div className="bg-white dark:bg-black border border-border rounded-lg p-6">
+                  <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center mb-4">
+                    🎓
+                  </div>
+                  <h4 className="font-semibold mb-2">Course Enrollment</h4>
+                  <p className="text-sm text-muted-foreground">
+                    DM "LEARN" → Smart AI guides them to course checkout
+                  </p>
+                </div>
+
+                <div className="bg-white dark:bg-black border border-border rounded-lg p-6">
+                  <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900 rounded-lg flex items-center justify-center mb-4">
+                    💎
+                  </div>
+                  <h4 className="font-semibold mb-2">Coaching Upsell</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Comment "FEEDBACK" → Offer 1-on-1 session booking
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
