@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -74,8 +74,8 @@ export default function AdminEmailMonitoringPage() {
   const resolveAlert = useMutation(api.adminEmailMonitoring?.resolveAlert);
   
   // Actions
-  const syncDomainsFromResend = useMutation(api.resendDomainSync?.syncDomainsFromResend as any);
-  const verifyDomain = useMutation(api.resendDomainSync?.verifyDomainInResend as any);
+  const syncDomainsFromResend = useAction(api.resendDomainSync?.syncDomainsFromResend);
+  const verifyDomain = useAction(api.resendDomainSync?.verifyDomainInResend);
   
   const handleAddDomain = async () => {
     if (!newDomainName.trim()) {
