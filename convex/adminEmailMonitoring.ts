@@ -505,6 +505,34 @@ export const updateDomainStatus = mutation({
 });
 
 /**
+ * Delete email domain
+ */
+export const deleteEmailDomain = mutation({
+  args: {
+    domainId: v.id("emailDomains"),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    // Check if domain has any analytics data
+    const hasAnalytics = await ctx.db
+      .query("emailDomainAnalytics")
+      .filter(q => q.eq(q.field("domainId"), args.domainId))
+      .first();
+    
+    if (hasAnalytics) {
+      throw new Error(
+        "Cannot delete domain with existing analytics data. " +
+        "Please archive or export the data first."
+      );
+    }
+    
+    // Delete the domain
+    await ctx.db.delete(args.domainId);
+    return null;
+  },
+});
+
+/**
  * Create alert for domain issue
  */
 export const createDomainAlert = mutation({

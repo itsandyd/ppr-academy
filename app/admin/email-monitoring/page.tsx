@@ -72,6 +72,7 @@ export default function AdminEmailMonitoringPage() {
   const addDomain = useMutation(api.adminEmailMonitoring?.addEmailDomain);
   const updateDomainStatus = useMutation(api.adminEmailMonitoring?.updateDomainStatus);
   const resolveAlert = useMutation(api.adminEmailMonitoring?.resolveAlert);
+  const deleteDomain = useMutation(api.adminEmailMonitoring?.deleteEmailDomain);
   
   // Actions
   const syncDomainsFromResend = useAction(api.resendDomainSync?.syncDomainsFromResend);
@@ -648,10 +649,40 @@ export default function AdminEmailMonitoringPage() {
       <Dialog open={!!selectedDomainId} onOpenChange={(open) => !open && setSelectedDomainId(null)}>
         <DialogContent className="bg-white dark:bg-black max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Domain Details</DialogTitle>
-            <DialogDescription>
-              Comprehensive analytics and health metrics for this domain
-            </DialogDescription>
+            <div className="flex items-start justify-between">
+              <div>
+                <DialogTitle>Domain Details</DialogTitle>
+                <DialogDescription>
+                  Comprehensive analytics and health metrics for this domain
+                </DialogDescription>
+              </div>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={async () => {
+                  if (!selectedDomainId) return;
+                  
+                  if (confirm("Are you sure you want to delete this domain? This cannot be undone.")) {
+                    try {
+                      await deleteDomain({ domainId: selectedDomainId });
+                      toast({
+                        title: "Domain Deleted",
+                        description: "The domain has been removed successfully",
+                      });
+                      setSelectedDomainId(null);
+                    } catch (error) {
+                      toast({
+                        title: "Cannot Delete",
+                        description: error instanceof Error ? error.message : "Failed to delete domain",
+                        variant: "destructive",
+                      });
+                    }
+                  }
+                }}
+              >
+                Delete Domain
+              </Button>
+            </div>
           </DialogHeader>
           
           {domainDetails && (
