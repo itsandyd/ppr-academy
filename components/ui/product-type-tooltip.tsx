@@ -18,7 +18,12 @@ import {
   Info,
   Clock,
   TrendingUp,
-  Zap
+  Zap,
+  Disc3,
+  FileAudio,
+  Mic2,
+  Radio,
+  BookOpen
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -172,6 +177,94 @@ export const productTypes: Record<string, ProductTypeInfo> = {
       "Create unique bundle artwork",
       "Offer time-limited bundle deals"
     ]
+  },
+  projectFile: {
+    id: "project-file",
+    name: "DAW Project File",
+    icon: FileAudio,
+    description: "Full production sessions from your DAW (Ableton, FL Studio, Logic) for students to learn from.",
+    examples: ["Trap Beat Breakdown", "Deep House Project", "Mix Template", "Sound Design Session"],
+    typicalPrice: "$20 - $100",
+    timeToCreate: "1-2 hours to organize",
+    difficulty: "Easy",
+    bestFor: "Producers willing to share their workflow",
+    tips: [
+      "Clean up project file before sharing",
+      "Include all samples and presets used",
+      "Add notes explaining your process",
+      "Specify DAW version compatibility",
+      "Consider offering multi-DAW versions"
+    ]
+  },
+  midiPack: {
+    id: "midi-pack",
+    name: "MIDI Pack",
+    icon: Disc3,
+    description: "Collections of MIDI files with melodies, chord progressions, and patterns ready to use.",
+    examples: ["Trap Melody Pack", "Chord Progressions Bundle", "Piano MIDI Collection", "Guitar Patterns"],
+    typicalPrice: "$10 - $35",
+    timeToCreate: "2-4 hours",
+    difficulty: "Easy",
+    bestFor: "Melody makers and music theory enthusiasts",
+    tips: [
+      "Include 30-50 MIDI files minimum",
+      "Organize by key and BPM",
+      "Provide both loops and one-shots",
+      "Include MIDI to audio demo previews"
+    ]
+  },
+  mixingTemplate: {
+    id: "mixing-template",
+    name: "Mixing Template",
+    icon: Radio,
+    description: "Pre-configured mixing sessions with effect chains, routing, and professional settings.",
+    examples: ["Vocal Chain Template", "Mastering Chain", "Drum Bus Processing", "Mix Bus Setup"],
+    typicalPrice: "$15 - $60",
+    timeToCreate: "3-5 hours",
+    difficulty: "Medium",
+    bestFor: "Mixing engineers with signature sound",
+    tips: [
+      "Include preset files for all plugins used",
+      "Document each processing step",
+      "Provide before/after audio examples",
+      "List required plugins clearly"
+    ]
+  },
+  masterclass: {
+    id: "masterclass",
+    name: "Masterclass",
+    icon: Mic2,
+    description: "Premium in-depth workshop or webinar covering advanced techniques over multiple sessions.",
+    examples: ["Sound Design Masterclass", "Mixing & Mastering Intensive", "Genre Production Series"],
+    typicalPrice: "$100 - $500",
+    timeToCreate: "15-30 hours",
+    difficulty: "Advanced",
+    bestFor: "Expert producers with proven track record",
+    tips: [
+      "Include 4-8 hours of content minimum",
+      "Provide downloadable project files",
+      "Offer live Q&A sessions",
+      "Create private community for attendees",
+      "Issue completion certificate"
+    ]
+  },
+  membership: {
+    id: "membership",
+    name: "Membership",
+    icon: BookOpen,
+    description: "Monthly subscription giving ongoing access to exclusive content, samples, and community.",
+    examples: ["Sample of the Month Club", "Production Tips Membership", "VIP Discord Access"],
+    typicalPrice: "$10 - $50/month",
+    timeToCreate: "Ongoing content creation",
+    difficulty: "Advanced",
+    bestFor: "Creators who can produce regular content",
+    tips: [
+      "Provide consistent monthly value",
+      "Create exclusive member-only content",
+      "Build community engagement",
+      "Offer annual discount (2-3 months free)",
+      "Have content calendar planned"
+    ]
   }
 };
 
@@ -216,7 +309,11 @@ export function ProductTypeTooltip({
       </HoverCardTrigger>
       <HoverCardContent 
         side={side}
-        className="w-96 bg-popover p-0 overflow-hidden"
+        align="center"
+        className="w-[90vw] max-w-sm md:w-96 bg-white dark:bg-black p-0 overflow-hidden border-2 z-50"
+        sideOffset={5}
+        alignOffset={0}
+        avoidCollisions={true}
       >
         {/* Header */}
         <div className="bg-gradient-to-r from-purple-500 to-blue-500 p-4 text-white">
@@ -234,50 +331,50 @@ export function ProductTypeTooltip({
         </div>
 
         {/* Content */}
-        <div className="p-4 space-y-4">
+        <div className="p-3 md:p-4 space-y-3 md:space-y-4 max-h-[60vh] md:max-h-none overflow-y-auto">
           {/* Description */}
-          <p className="text-sm text-muted-foreground leading-relaxed">
+          <p className="text-xs md:text-sm text-muted-foreground leading-relaxed">
             {productType.description}
           </p>
 
           {/* Quick Stats */}
           <div className="grid grid-cols-2 gap-2">
-            <div className="flex items-center gap-2 text-xs">
-              <DollarSign className="w-3.5 h-3.5 text-green-600" />
-              <div>
+            <div className="flex items-start gap-1.5 md:gap-2">
+              <DollarSign className="w-3 h-3 md:w-3.5 md:h-3.5 text-green-600 flex-shrink-0 mt-0.5" />
+              <div className="text-[10px] md:text-xs">
                 <div className="text-muted-foreground">Typical Price</div>
-                <div className="font-medium">{productType.typicalPrice}</div>
+                <div className="font-medium text-foreground">{productType.typicalPrice}</div>
               </div>
             </div>
-            <div className="flex items-center gap-2 text-xs">
-              <Clock className="w-3.5 h-3.5 text-blue-600" />
-              <div>
+            <div className="flex items-start gap-1.5 md:gap-2">
+              <Clock className="w-3 h-3 md:w-3.5 md:h-3.5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <div className="text-[10px] md:text-xs">
                 <div className="text-muted-foreground">Time to Create</div>
-                <div className="font-medium">{productType.timeToCreate}</div>
+                <div className="font-medium text-foreground">{productType.timeToCreate}</div>
               </div>
             </div>
           </div>
 
           {/* Best For */}
           <div>
-            <div className="flex items-center gap-1.5 text-xs font-medium mb-1.5">
-              <TrendingUp className="w-3.5 h-3.5 text-purple-600" />
+            <div className="flex items-center gap-1.5 text-[10px] md:text-xs font-medium mb-1.5">
+              <TrendingUp className="w-3 h-3 md:w-3.5 md:h-3.5 text-purple-600" />
               Best For
             </div>
-            <p className="text-sm text-muted-foreground bg-purple-50 dark:bg-purple-900/10 rounded-lg p-2">
+            <p className="text-xs md:text-sm text-muted-foreground bg-purple-50 dark:bg-purple-900/10 rounded-lg p-2">
               {productType.bestFor}
             </p>
           </div>
 
           {/* Examples */}
           <div>
-            <div className="flex items-center gap-1.5 text-xs font-medium mb-1.5">
-              <Zap className="w-3.5 h-3.5 text-yellow-600" />
+            <div className="flex items-center gap-1.5 text-[10px] md:text-xs font-medium mb-1.5">
+              <Zap className="w-3 h-3 md:w-3.5 md:h-3.5 text-yellow-600" />
               Examples
             </div>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-1">
               {productType.examples.map((example, i) => (
-                <Badge key={i} variant="secondary" className="text-xs">
+                <Badge key={i} variant="secondary" className="text-[10px] md:text-xs">
                   {example}
                 </Badge>
               ))}
@@ -286,17 +383,22 @@ export function ProductTypeTooltip({
 
           {/* Pro Tips */}
           <div>
-            <div className="flex items-center gap-1.5 text-xs font-medium mb-2">
-              <Info className="w-3.5 h-3.5 text-blue-600" />
+            <div className="flex items-center gap-1.5 text-[10px] md:text-xs font-medium mb-2">
+              <Info className="w-3 h-3 md:w-3.5 md:h-3.5 text-blue-600" />
               Pro Tips
             </div>
-            <ul className="space-y-1.5">
-              {productType.tips.map((tip, i) => (
-                <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
-                  <span className="text-blue-600 mt-0.5">•</span>
+            <ul className="space-y-1 md:space-y-1.5">
+              {productType.tips.slice(0, 3).map((tip, i) => (
+                <li key={i} className="text-[10px] md:text-xs text-muted-foreground flex items-start gap-2">
+                  <span className="text-blue-600 mt-0.5 flex-shrink-0">•</span>
                   <span>{tip}</span>
                 </li>
               ))}
+              {productType.tips.length > 3 && (
+                <li className="text-[10px] md:text-xs text-muted-foreground italic">
+                  +{productType.tips.length - 3} more tips...
+                </li>
+              )}
             </ul>
           </div>
         </div>
