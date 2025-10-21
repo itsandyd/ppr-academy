@@ -143,7 +143,8 @@ export const getUserPosts = action({
       const accessToken = integration.token;
 
       // Fetch posts from Instagram Graph API using the Business Account ID
-      const url = `https://graph.facebook.com/v21.0/${instagramId}/media?fields=id,caption,media_url,media_type,timestamp,permalink&limit=10&access_token=${accessToken}`;
+      // Note: For videos, media_url returns the video file. We need thumbnail_url for display.
+      const url = `https://graph.facebook.com/v21.0/${instagramId}/media?fields=id,caption,media_url,thumbnail_url,media_type,timestamp,permalink&limit=10&access_token=${accessToken}`;
       
       console.log("📡 Fetching Instagram posts from:", url.replace(accessToken, "***"));
 

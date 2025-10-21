@@ -16,6 +16,7 @@ interface InstagramPost {
   id: string;
   caption?: string;
   media_url: string;
+  thumbnail_url?: string; // For videos
   media_type: "IMAGE" | "VIDEO" | "CAROUSEL_ALBUM";
   timestamp?: string;
   permalink?: string;
@@ -80,6 +81,7 @@ export function InstagramPostSelector({
           id: post.id,
           caption: post.caption,
           media_url: post.media_url,
+          thumbnail_url: post.thumbnail_url, // For videos
           media_type: post.media_type,
           timestamp: post.timestamp,
           permalink: post.permalink,
@@ -279,7 +281,10 @@ export function InstagramPostSelector({
               {/* Media Preview */}
               <div className="aspect-square relative bg-gray-100 dark:bg-gray-900">
                 <Image
-                  src={post.media_url}
+                  src={post.media_type === "VIDEO" && post.thumbnail_url 
+                    ? post.thumbnail_url 
+                    : post.media_url
+                  }
                   alt={post.caption || "Instagram post"}
                   fill
                   className={`
