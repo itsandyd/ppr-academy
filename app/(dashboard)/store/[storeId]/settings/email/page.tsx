@@ -60,7 +60,7 @@ export default function EmailSettingsPage() {
   useEffect(() => {
     if (store) {
       // Always suggest the correct format based on current slug
-      const suggestedEmail = `${store.slug.toLowerCase()}@pauseplayrepeat.com`;
+      const suggestedEmail = `${store.slug.toLowerCase()}@mail.pauseplayrepeat.com`;
       const suggestedReplyTo = "support@pauseplayrepeat.com";
       
       if (emailConfig) {
@@ -230,7 +230,7 @@ export default function EmailSettingsPage() {
                 Professional Email Setup
               </h3>
               <p className="text-blue-800 dark:text-blue-200 text-sm mb-2">
-                Your store gets a professional email address: <strong>{store?.slug}@pauseplayrepeat.com</strong>
+                Your store gets a professional email address: <strong>{store?.slug.toLowerCase()}@mail.pauseplayrepeat.com</strong>
               </p>
               <p className="text-blue-800 dark:text-blue-200 text-sm">
                 <strong>How replies work:</strong> Customer replies go to <code className="bg-blue-100 dark:bg-blue-900 px-1 py-0.5 rounded">support@pauseplayrepeat.com</code>, 
@@ -259,15 +259,15 @@ export default function EmailSettingsPage() {
               <Input
                 id="fromEmail"
                 type="email"
-                placeholder={`${store?.slug}@pauseplayrepeat.com`}
+                placeholder={`${store?.slug.toLowerCase()}@mail.pauseplayrepeat.com`}
                 value={fromEmail}
                 onChange={(e) => setFromEmail(e.target.value)}
                 className="w-full"
               />
               <p className="text-sm text-muted-foreground">
-                ✅ Recommended: <code className="bg-muted px-1 py-0.5 rounded text-xs">{store?.slug.toLowerCase()}@pauseplayrepeat.com</code> (already verified)
+                ✅ Recommended: <code className="bg-muted px-1 py-0.5 rounded text-xs">{store?.slug.toLowerCase()}@mail.pauseplayrepeat.com</code> (verified subdomain)
               </p>
-              {fromEmail && fromEmail !== `${store?.slug.toLowerCase()}@pauseplayrepeat.com` && (
+              {fromEmail && fromEmail !== `${store?.slug.toLowerCase()}@mail.pauseplayrepeat.com` && (
                 <p className="text-sm text-yellow-600">
                   ⚠️ You're using a different email. Update to the recommended format above for consistency.
                 </p>
