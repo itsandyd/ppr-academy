@@ -16,6 +16,7 @@ import type {
 import type * as accessControl from "../accessControl.js";
 import type * as achievements from "../achievements.js";
 import type * as adminAnalytics from "../adminAnalytics.js";
+import type * as adminEmailMonitoring from "../adminEmailMonitoring.js";
 import type * as adminSetup from "../adminSetup.js";
 import type * as affiliates from "../affiliates.js";
 import type * as aiEmailGenerator from "../aiEmailGenerator.js";
@@ -49,6 +50,7 @@ import type * as discordPublic from "../discordPublic.js";
 import type * as discordSchema from "../discordSchema.js";
 import type * as emailABTesting from "../emailABTesting.js";
 import type * as emailCampaigns from "../emailCampaigns.js";
+import type * as emailDomainSchema from "../emailDomainSchema.js";
 import type * as emailHealthMonitoring from "../emailHealthMonitoring.js";
 import type * as emailLeadScoring from "../emailLeadScoring.js";
 import type * as emailQueries from "../emailQueries.js";
@@ -114,6 +116,7 @@ declare const fullApi: ApiFromModules<{
   accessControl: typeof accessControl;
   achievements: typeof achievements;
   adminAnalytics: typeof adminAnalytics;
+  adminEmailMonitoring: typeof adminEmailMonitoring;
   adminSetup: typeof adminSetup;
   affiliates: typeof affiliates;
   aiEmailGenerator: typeof aiEmailGenerator;
@@ -147,6 +150,7 @@ declare const fullApi: ApiFromModules<{
   discordSchema: typeof discordSchema;
   emailABTesting: typeof emailABTesting;
   emailCampaigns: typeof emailCampaigns;
+  emailDomainSchema: typeof emailDomainSchema;
   emailHealthMonitoring: typeof emailHealthMonitoring;
   emailLeadScoring: typeof emailLeadScoring;
   emailQueries: typeof emailQueries;

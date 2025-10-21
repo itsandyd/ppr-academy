@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 
@@ -39,6 +40,7 @@ export default function CreateCampaignPage() {
   const [subject, setSubject] = useState("");
   const [content, setContent] = useState("");
   const [fromEmail, setFromEmail] = useState("");
+  const [fromName, setFromName] = useState("");
   const [replyToEmail, setReplyToEmail] = useState("");
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
   const [isCreating, setIsCreating] = useState(false);
@@ -48,6 +50,21 @@ export default function CreateCampaignPage() {
     api.customers?.getCustomersForStore,
     storeId ? { storeId } : "skip"
   ) || [];
+  
+  // Fetch store's email configuration
+  const emailConfig = useQuery(
+    api.stores?.getEmailConfig,
+    storeId ? { storeId: storeId as any } : "skip"
+  );
+  
+  // Auto-populate email fields from store config
+  useEffect(() => {
+    if (emailConfig) {
+      setFromEmail(emailConfig.fromEmail || "");
+      setFromName(emailConfig.fromName || "");
+      setReplyToEmail(emailConfig.replyToEmail || "");
+    }
+  }, [emailConfig]);
 
   const createCampaign = useMutation((api as any).emailCampaigns?.createCampaign);
   const addRecipients = useMutation((api as any).emailCampaigns?.addRecipients);
@@ -219,25 +236,56 @@ export default function CreateCampaignPage() {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="fromEmail">From Email</Label>
+                      <Label htmlFor="fromName">From Name</Label>
+                      <Input
+                        id="fromName"
+                        placeholder="Your Store Name"
+                        value={fromName}
+                        onChange={(e) => setFromName(e.target.value)}
+                      />
+                      {!emailConfig?.isConfigured && (
+                        <p className="text-xs text-muted-foreground">
+                          💡 <Link href={`/store/${storeId}/settings/email`} className="text-primary hover:underline">
+                            Configure your email settings
+                          </Link> to auto-fill this
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="fromEmail">
+                        From Email
+                        {emailConfig?.isConfigured && (
+                          <Badge variant="success" className="ml-2 text-xs">Verified</Badge>
+                        )}
+                      </Label>
                       <Input
                         id="fromEmail"
                         type="email"
                         placeholder="noreply@yourdomain.com"
                         value={fromEmail}
                         onChange={(e) => setFromEmail(e.target.value)}
+                        readOnly={emailConfig?.isConfigured}
+                        className={emailConfig?.isConfigured ? "bg-muted cursor-not-allowed" : ""}
                       />
+                      {!emailConfig?.isConfigured && (
+                        <p className="text-xs text-yellow-600">
+                          ⚠️ Unverified emails may not deliver. <Link href={`/store/${storeId}/settings/email`} className="text-primary hover:underline">
+                            Configure now
+                          </Link>
+                        </p>
+                      )}
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="replyToEmail">Reply-to Email (Optional)</Label>
-                      <Input
-                        id="replyToEmail"
-                        type="email"
-                        placeholder="support@yourdomain.com"
-                        value={replyToEmail}
-                        onChange={(e) => setReplyToEmail(e.target.value)}
-                      />
-                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="replyToEmail">Reply-to Email (Optional)</Label>
+                    <Input
+                      id="replyToEmail"
+                      type="email"
+                      placeholder="support@yourdomain.com"
+                      value={replyToEmail}
+                      onChange={(e) => setReplyToEmail(e.target.value)}
+                    />
                   </div>
                 </CardContent>
               </Card>

@@ -21,6 +21,7 @@ import {
   Activity,
   Mail,
   Bell,
+  Server,
 } from "lucide-react";
 
 interface NavItem {
@@ -89,6 +90,12 @@ const navItems: NavItem[] = [
     href: "/admin/emails",
     icon: Mail,
     description: "Campaigns & automation",
+  },
+  {
+    title: "Email Monitoring",
+    href: "/admin/email-monitoring",
+    icon: Server,
+    description: "Domain health & deliverability",
   },
   {
     title: "Notifications",

@@ -46,18 +46,36 @@ export default function EmailSettingsPage() {
     api.stores?.getEmailConfig,
     storeId ? { storeId: storeId as any } : "skip"
   );
+  
+  // Get store details for auto-generating email
+  const store = useQuery(
+    api.stores?.getStoreById,
+    storeId ? { storeId: storeId as any } : "skip"
+  );
 
   const updateEmailConfig = useMutation(api.stores?.updateEmailConfig);
   const testEmailConfig = useAction((api as any).emails.testStoreEmailConfig);
 
-  // Load existing configuration
+  // Load existing configuration OR auto-generate defaults
   useEffect(() => {
-    if (emailConfig) {
-      setFromEmail(emailConfig.fromEmail || "");
-      setFromName(emailConfig.fromName || "");
-      setReplyToEmail(emailConfig.replyToEmail || "");
+    if (store) {
+      // Always suggest the correct format based on current slug
+      const suggestedEmail = `${store.slug.toLowerCase()}@pauseplayrepeat.com`;
+      const suggestedReplyTo = "support@pauseplayrepeat.com";
+      
+      if (emailConfig) {
+        // Load existing config
+        setFromEmail(emailConfig.fromEmail || suggestedEmail);
+        setFromName(emailConfig.fromName || store.name);
+        setReplyToEmail(emailConfig.replyToEmail || suggestedReplyTo);
+      } else {
+        // Auto-generate for new stores
+        setFromEmail(suggestedEmail);
+        setFromName(store.name);
+        setReplyToEmail(suggestedReplyTo);
+      }
     }
-  }, [emailConfig]);
+  }, [emailConfig, store]);
 
   const handleSaveConfig = async () => {
     if (!fromEmail.trim()) {
@@ -203,18 +221,20 @@ export default function EmailSettingsPage() {
       </div>
 
       {/* Info Banner */}
-      <Card className="border-blue-200 bg-blue-50">
+      <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950 dark:border-blue-800">
         <CardContent className="pt-6">
           <div className="flex items-start gap-3">
             <Info className="w-5 h-5 text-blue-600 mt-0.5" />
             <div>
-              <h3 className="font-semibold text-blue-900 mb-1">
-                Email Service Information
+              <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                Professional Email Setup
               </h3>
-              <p className="text-blue-800 text-sm">
-                Email sending is handled centrally by our platform. You only need to configure 
-                your sender information (from email, name, reply-to) to start sending campaigns 
-                to your customers.
+              <p className="text-blue-800 dark:text-blue-200 text-sm mb-2">
+                Your store gets a professional email address: <strong>{store?.slug}@pauseplayrepeat.com</strong>
+              </p>
+              <p className="text-blue-800 dark:text-blue-200 text-sm">
+                <strong>How replies work:</strong> Customer replies go to <code className="bg-blue-100 dark:bg-blue-900 px-1 py-0.5 rounded">support@pauseplayrepeat.com</code>, 
+                and we'll forward them to you. This keeps your personal email private and lets us filter spam.
               </p>
             </div>
           </div>
@@ -232,18 +252,26 @@ export default function EmailSettingsPage() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="fromEmail">From Email Address *</Label>
+              <Label htmlFor="fromEmail">
+                From Email Address *
+                <Badge variant="success" className="ml-2">Verified</Badge>
+              </Label>
               <Input
                 id="fromEmail"
                 type="email"
-                placeholder="noreply@yourdomain.com"
+                placeholder={`${store?.slug}@pauseplayrepeat.com`}
                 value={fromEmail}
                 onChange={(e) => setFromEmail(e.target.value)}
                 className="w-full"
               />
-              <p className="text-sm text-gray-600">
-                The email address campaigns will be sent from
+              <p className="text-sm text-muted-foreground">
+                ✅ Recommended: <code className="bg-muted px-1 py-0.5 rounded text-xs">{store?.slug.toLowerCase()}@pauseplayrepeat.com</code> (already verified)
               </p>
+              {fromEmail && fromEmail !== `${store?.slug.toLowerCase()}@pauseplayrepeat.com` && (
+                <p className="text-sm text-yellow-600">
+                  ⚠️ You're using a different email. Update to the recommended format above for consistency.
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -256,24 +284,27 @@ export default function EmailSettingsPage() {
                 onChange={(e) => setFromName(e.target.value)}
                 className="w-full"
               />
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-muted-foreground">
                 The name that appears in your customers' inbox
               </p>
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="replyToEmail">Reply-To Email</Label>
+            <Label htmlFor="replyToEmail">
+              Reply-To Email
+              <Badge variant="outline" className="ml-2">Recommended</Badge>
+            </Label>
             <Input
               id="replyToEmail"
               type="email"
-              placeholder="support@yourdomain.com"
+              placeholder="support@pauseplayrepeat.com"
               value={replyToEmail}
               onChange={(e) => setReplyToEmail(e.target.value)}
               className="w-full"
             />
-            <p className="text-sm text-gray-600">
-              Where customer replies will be sent (optional)
+            <p className="text-sm text-muted-foreground">
+              💡 We recommend <code className="bg-muted px-1 py-0.5 rounded text-xs">support@pauseplayrepeat.com</code> - we'll forward replies to you
             </p>
           </div>
 

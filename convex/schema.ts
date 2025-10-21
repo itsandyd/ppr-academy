@@ -2,6 +2,7 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 import * as monetizationSchema from "./monetizationSchema";
 import * as emailSchema from "./emailSchema";
+import { emailDomainTables } from "./emailDomainSchema";
 
 export default defineSchema({
   // User Management
@@ -2925,4 +2926,9 @@ export default defineSchema({
     .index("by_plan", ["plan"])
     .index("by_stripeCustomerId", ["stripeCustomerId"])
     .index("by_stripeSubscriptionId", ["stripeSubscriptionId"]),
+  
+  // ============================================
+  // EMAIL DOMAIN MONITORING TABLES
+  // ============================================
+  ...emailDomainTables,
 }); 
