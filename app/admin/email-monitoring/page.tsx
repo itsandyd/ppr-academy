@@ -73,6 +73,10 @@ export default function AdminEmailMonitoringPage() {
   const updateDomainStatus = useMutation(api.adminEmailMonitoring?.updateDomainStatus);
   const resolveAlert = useMutation(api.adminEmailMonitoring?.resolveAlert);
   
+  // Actions
+  const syncDomainsFromResend = useMutation(api.resendDomainSync?.syncDomainsFromResend as any);
+  const verifyDomain = useMutation(api.resendDomainSync?.verifyDomainInResend as any);
+  
   const handleAddDomain = async () => {
     if (!newDomainName.trim()) {
       toast({
@@ -148,9 +152,27 @@ export default function AdminEmailMonitoringPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={async () => {
+              try {
+                const result = await syncDomainsFromResend();
+                toast({
+                  title: "Sync Complete!",
+                  description: `Synced ${result.synced} domains. Added ${result.added}, Updated ${result.updated}`,
+                });
+              } catch (error) {
+                toast({
+                  title: "Sync Failed",
+                  description: error instanceof Error ? error.message : "Failed to sync domains",
+                  variant: "destructive",
+                });
+              }
+            }}
+          >
             <RefreshCw className="w-4 h-4 mr-2" />
-            Refresh
+            Sync from Resend
           </Button>
           <Button size="sm" onClick={() => setIsAddDomainOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
@@ -447,7 +469,10 @@ export default function AdminEmailMonitoringPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => setSelectedDomainId(domain._id)}
+                            onClick={() => {
+                              setSelectedDomainId(domain._id);
+                              // Details will show in a dialog below
+                            }}
                           >
                             Details
                           </Button>
@@ -618,6 +643,187 @@ export default function AdminEmailMonitoringPage() {
           </Card>
         </TabsContent>
       </Tabs>
+      
+      {/* Domain Details Dialog */}
+      <Dialog open={!!selectedDomainId} onOpenChange={(open) => !open && setSelectedDomainId(null)}>
+        <DialogContent className="bg-white dark:bg-black max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Domain Details</DialogTitle>
+            <DialogDescription>
+              Comprehensive analytics and health metrics for this domain
+            </DialogDescription>
+          </DialogHeader>
+          
+          {domainDetails && (
+            <div className="space-y-6 py-4">
+              {/* Domain Info */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Domain Information</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Domain:</span>
+                    <span className="font-medium">{domainDetails.domain.domain}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Type:</span>
+                    <Badge variant="outline">{domainDetails.domain.type}</Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Status:</span>
+                    <Badge variant={domainDetails.domain.status === "active" ? "success" : "secondary"}>
+                      {domainDetails.domain.status}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Reputation:</span>
+                    {getStatusBadge(domainDetails.domain.reputation.status)}
+                  </div>
+                </CardContent>
+              </Card>
+              
+              {/* Today's Stats */}
+              {domainDetails.analytics.today && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Today's Performance</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold">{formatNumber(domainDetails.analytics.today.totalSent)}</div>
+                        <div className="text-xs text-muted-foreground">Sent</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-green-600">
+                          {formatPercent(domainDetails.analytics.today.deliveryRate)}
+                        </div>
+                        <div className="text-xs text-muted-foreground">Delivery Rate</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold">{formatPercent(domainDetails.analytics.today.openRate)}</div>
+                        <div className="text-xs text-muted-foreground">Open Rate</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-yellow-600">
+                          {formatPercent(domainDetails.analytics.today.bounceRate)}
+                        </div>
+                        <div className="text-xs text-muted-foreground">Bounce Rate</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              
+              {/* 30-Day Stats */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Last 30 Days</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="text-center">
+                      <div className="text-xl font-bold">{formatNumber(domainDetails.analytics.last30Days.totalSent)}</div>
+                      <div className="text-xs text-muted-foreground">Total Sent</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xl font-bold">{formatPercent(domainDetails.analytics.last30Days.avgDeliveryRate)}</div>
+                      <div className="text-xs text-muted-foreground">Avg Delivery</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xl font-bold">{formatPercent(domainDetails.analytics.last30Days.avgOpenRate)}</div>
+                      <div className="text-xs text-muted-foreground">Avg Open Rate</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              {/* Top Creators */}
+              {domainDetails.topCreators && domainDetails.topCreators.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Top Senders Today</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Store</TableHead>
+                          <TableHead className="text-right">Sent</TableHead>
+                          <TableHead className="text-right">Bounce Rate</TableHead>
+                          <TableHead className="text-right">Open Rate</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {domainDetails.topCreators.map((creator) => (
+                          <TableRow key={creator.storeId}>
+                            <TableCell className="font-medium">{creator.storeName}</TableCell>
+                            <TableCell className="text-right">{formatNumber(creator.sent)}</TableCell>
+                            <TableCell className="text-right">
+                              <span className={creator.bounceRate > 5 ? "text-red-600" : ""}>
+                                {formatPercent(creator.bounceRate)}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-right">{formatPercent(creator.openRate)}</TableCell>
+                            <TableCell>
+                              <Badge variant={creator.status === "active" ? "success" : "destructive"}>
+                                {creator.status}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              )}
+              
+              {/* Active Alerts */}
+              {domainDetails.alerts && domainDetails.alerts.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Active Alerts</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {domainDetails.alerts.map((alert: any) => (
+                        <div 
+                          key={alert._id}
+                          className={`p-3 rounded-lg border ${
+                            alert.severity === "critical" 
+                              ? "bg-red-50 border-red-200" 
+                              : alert.severity === "warning"
+                                ? "bg-yellow-50 border-yellow-200"
+                                : "bg-blue-50 border-blue-200"
+                          }`}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <div className="font-medium">{alert.message}</div>
+                              {alert.details && (
+                                <div className="text-sm text-muted-foreground mt-1">{alert.details}</div>
+                              )}
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => resolveAlert({ alertId: alert._id })}
+                            >
+                              Resolve
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
       
       {/* Add Domain Dialog */}
       <Dialog open={isAddDomainOpen} onOpenChange={setIsAddDomainOpen}>

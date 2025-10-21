@@ -90,6 +90,8 @@ import type * as rag from "../rag.js";
 import type * as ragActions from "../ragActions.js";
 import type * as recommendations from "../recommendations.js";
 import type * as reports from "../reports.js";
+import type * as resendDomainHelpers from "../resendDomainHelpers.js";
+import type * as resendDomainSync from "../resendDomainSync.js";
 import type * as samplePacks from "../samplePacks.js";
 import type * as samples from "../samples.js";
 import type * as seedCreditPackages from "../seedCreditPackages.js";
@@ -191,6 +193,8 @@ declare const fullApi: ApiFromModules<{
   ragActions: typeof ragActions;
   recommendations: typeof recommendations;
   reports: typeof reports;
+  resendDomainHelpers: typeof resendDomainHelpers;
+  resendDomainSync: typeof resendDomainSync;
   samplePacks: typeof samplePacks;
   samples: typeof samples;
   seedCreditPackages: typeof seedCreditPackages;
