@@ -63,9 +63,10 @@ export default function AdminEmailMonitoringPage() {
   const overview = useQuery(api.adminEmailMonitoring?.getPlatformOverview);
   const domains = useQuery(api.adminEmailMonitoring?.listEmailDomains);
   const flaggedCreators = useQuery(api.adminEmailMonitoring?.getFlaggedCreators);
-  const domainDetails = selectedDomainId 
-    ? useQuery(api.adminEmailMonitoring?.getDomainDetails, { domainId: selectedDomainId })
-    : undefined;
+  const domainDetails = useQuery(
+    api.adminEmailMonitoring?.getDomainDetails,
+    selectedDomainId ? { domainId: selectedDomainId } : "skip"
+  );
   
   // Mutations
   const addDomain = useMutation(api.adminEmailMonitoring?.addEmailDomain);

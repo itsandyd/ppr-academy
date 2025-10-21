@@ -174,6 +174,7 @@ export const listEmailDomains = query({
     reputation: v.object({
       score: v.number(),
       status: v.string(),
+      lastUpdated: v.number(),
     }),
     todayStats: v.optional(v.object({
       sent: v.number(),
