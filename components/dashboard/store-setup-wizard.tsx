@@ -286,8 +286,8 @@ export function StoreSetupWizard({ onStoreCreated }: StoreSetupWizardProps) {
                   <div>
                     <Label htmlFor="storeSlug">Store URL</Label>
                     <div className="flex items-center mt-1">
-                      <span className="text-sm text-muted-foreground bg-muted px-3 py-2 rounded-l-md border border-r-0">
-                        ppracademy.com/store/
+                      <span className="text-sm text-muted-foreground bg-muted px-3 py-2 rounded-l-md border border-r-0 whitespace-nowrap">
+                        {process.env.NEXT_PUBLIC_APP_URL?.replace(/^https?:\/\//, '') || 'academy.pauseplayrepeat.com'}/
                       </span>
                       <Input
                         id="storeSlug"

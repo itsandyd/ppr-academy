@@ -26,7 +26,9 @@ import {
   ArrowLeft,
   Crown,
   Rocket,
-  Target
+  Target,
+  Copy,
+  Check
 } from "lucide-react";
 import { StepProgressIndicator } from "@/components/ui/step-progress-indicator";
 import { ProductTypeSelector } from "@/components/products/product-type-selector";
@@ -41,6 +43,7 @@ export function StoreSetupWizardEnhanced({ onStoreCreated }: StoreSetupWizardEnh
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [createdStoreId, setCreatedStoreId] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   
   const [formData, setFormData] = useState({
     storeName: "",
@@ -51,6 +54,21 @@ export function StoreSetupWizardEnhanced({ onStoreCreated }: StoreSetupWizardEnh
   });
 
   const createStore = useMutation(api.stores.createStore);
+
+  // Get the base URL from environment
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://academy.pauseplayrepeat.com';
+  const displayDomain = baseUrl.replace(/^https?:\/\//, '');
+
+  const copyStoreUrl = () => {
+    const fullUrl = `${baseUrl}/${formData.storeSlug}`;
+    navigator.clipboard.writeText(fullUrl);
+    setCopied(true);
+    toast({
+      title: "Copied!",
+      description: "Store URL copied to clipboard",
+    });
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const steps = [
     { id: "welcome", title: "Welcome", icon: Sparkles },
@@ -160,10 +178,30 @@ export function StoreSetupWizardEnhanced({ onStoreCreated }: StoreSetupWizardEnh
               </p>
 
               <div className="bg-white dark:bg-black rounded-lg p-6 mb-8 max-w-md mx-auto">
-                <p className="text-sm text-muted-foreground mb-2">Your Store URL:</p>
-                <p className="font-mono text-sm text-foreground break-all">
-                  ppracademy.com/{formData.storeSlug}
-                </p>
+                <p className="text-sm text-muted-foreground mb-3">Your Store URL:</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-mono text-sm text-foreground break-all flex-1">
+                    {displayDomain}/{formData.storeSlug}
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={copyStoreUrl}
+                    className="flex-shrink-0"
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="w-4 h-4 mr-1" />
+                        Copied
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4 mr-1" />
+                        Copy
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
 
               <div className="space-y-3">
@@ -377,17 +415,19 @@ export function StoreSetupWizardEnhanced({ onStoreCreated }: StoreSetupWizardEnh
 
                     <div>
                       <Label htmlFor="storeSlug">Store URL</Label>
-                      <div className="flex items-center mt-1">
-                        <span className="text-sm text-muted-foreground bg-muted px-4 py-3 rounded-l-md border border-r-0 h-12">
-                          ppracademy.com/
-                        </span>
-                        <Input
-                          id="storeSlug"
-                          value={formData.storeSlug}
-                          onChange={(e) => setFormData(prev => ({ ...prev, storeSlug: e.target.value }))}
-                          className="rounded-l-none h-12"
-                          placeholder="your-store-name"
-                        />
+                      <div className="flex items-center gap-2 mt-1">
+                        <div className="flex items-center flex-1">
+                          <span className="text-sm text-muted-foreground bg-muted px-4 py-3 rounded-l-md border border-r-0 h-12 whitespace-nowrap">
+                            {process.env.NEXT_PUBLIC_APP_URL?.replace(/^https?:\/\//, '') || 'academy.pauseplayrepeat.com'}/
+                          </span>
+                          <Input
+                            id="storeSlug"
+                            value={formData.storeSlug}
+                            onChange={(e) => setFormData(prev => ({ ...prev, storeSlug: e.target.value }))}
+                            className="rounded-l-none h-12"
+                            placeholder="your-store-name"
+                          />
+                        </div>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
                         This will be your unique store URL
