@@ -53,4 +53,14 @@ crons.interval(
   internal.emails.syncEmailStatuses
 );
 
+/**
+ * Daily email analytics rollup
+ * Runs daily at midnight UTC to aggregate yesterday's metrics
+ */
+crons.interval(
+  "daily-email-analytics-rollup",
+  { hours: 24 },
+  internal.emailAnalyticsRollup.dailyAnalyticsRollup
+);
+
 export default crons;
