@@ -1,6 +1,6 @@
 "use node";
 
-import { action, internalAction } from "./_generated/server";
+import { action, internalAction, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { Resend } from "resend";
 import { internal } from "./_generated/api";
@@ -918,3 +918,102 @@ export const syncEmailStatuses = internalAction({
     }
   },
 });
+
+/**
+ * Test email configuration by sending a test email
+ */
+export const testStoreEmailConfig = action({
+  args: {
+    storeId: v.id("stores"),
+    testEmail: v.string(),
+    fromEmail: v.string(),
+    fromName: v.optional(v.string()),
+    replyToEmail: v.optional(v.string()),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    try {
+      const resend = getResendClient();
+      if (!resend) {
+        return {
+          success: false,
+          message: "Email service not configured. Please contact support.",
+        };
+      }
+      
+      // Send test email
+      const result = await resend.emails.send({
+        from: args.fromName ? `${args.fromName} <${args.fromEmail}>` : args.fromEmail,
+        to: args.testEmail,
+        replyTo: args.replyToEmail || args.fromEmail,
+        subject: "✅ Email Configuration Test - Success!",
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <h1 style="color: #10b981; margin: 0;">🎉 Email Setup Complete!</h1>
+            </div>
+            
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+              <h2 style="color: #059669; margin: 0 0 10px 0;">Configuration Test Successful</h2>
+              <p style="color: #047857; margin: 0;">Your email configuration is working perfectly!</p>
+            </div>
+            
+            <div style="background: #f8fafc; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+              <h3 style="margin: 0 0 15px 0;">Verified Settings:</h3>
+              <ul style="margin: 0; padding-left: 20px;">
+                <li><strong>From Email:</strong> ${args.fromEmail}</li>
+                ${args.fromName ? `<li><strong>From Name:</strong> ${args.fromName}</li>` : ''}
+                ${args.replyToEmail ? `<li><strong>Reply-to:</strong> ${args.replyToEmail}</li>` : ''}
+              </ul>
+            </div>
+            
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 20px;">
+              <p style="color: #1e40af; margin: 0;">
+                Your store can now send professional email campaigns to your customers.
+              </p>
+            </div>
+            
+            <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+              <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                This test email was sent from your store's email configuration.
+              </p>
+            </div>
+          </div>
+        `,
+      });
+
+      if (result.data?.id) {
+        return {
+          success: true,
+          message: "Test email sent successfully! Check your inbox.",
+        };
+      } else {
+        return {
+          success: false,
+          message: "Failed to send test email. Please check your configuration.",
+        };
+      }
+    } catch (error: any) {
+      console.error("Email test failed:", error);
+      
+      let errorMessage = "Failed to send test email. ";
+      
+      if (error.message?.includes("from") || error.message?.includes("sender")) {
+        errorMessage += "Please verify your 'from' email address is from a verified domain in Resend.";
+      } else if (error.message?.includes("domain")) {
+        errorMessage += "Please verify your domain is configured in Resend.";
+      } else {
+        errorMessage += `Error: ${error.message}`;
+      }
+
+      return {
+        success: false,
+        message: errorMessage,
+      };
+    }
+  },
+});
+
