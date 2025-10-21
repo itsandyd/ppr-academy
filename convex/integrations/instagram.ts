@@ -132,29 +132,45 @@ export const getUserPosts = action({
       });
 
       if (!integration) {
+        console.error("❌ No integration found for user:", args.userId);
         return { status: 404, data: { error: "No Instagram integration found" } };
       }
 
-      // Fetch posts from Instagram
-      const response: any = await fetch(
-        `https://graph.instagram.com/me/media?fields=id,caption,media_url,media_type,timestamp&limit=10&access_token=${integration.token}`
-      );
+      console.log("✅ Integration found. Instagram ID:", integration.instagramId);
+
+      // Use Instagram Business Account ID to fetch media
+      const instagramId = integration.instagramId;
+      const accessToken = integration.token;
+
+      // Fetch posts from Instagram Graph API using the Business Account ID
+      const url = `https://graph.facebook.com/v21.0/${instagramId}/media?fields=id,caption,media_url,media_type,timestamp,permalink&limit=10&access_token=${accessToken}`;
+      
+      console.log("📡 Fetching Instagram posts from:", url.replace(accessToken, "***"));
+
+      const response = await fetch(url);
 
       if (!response.ok) {
-        throw new Error("Failed to fetch Instagram posts");
+        const errorData = await response.json();
+        console.error("❌ Instagram API error:", errorData);
+        return { 
+          status: response.status, 
+          data: { error: errorData.error?.message || "Failed to fetch posts" } 
+        };
       }
 
-      const data: any = await response.json();
+      const data = await response.json();
+
+      console.log("✅ Instagram posts fetched:", data.data?.length || 0);
 
       return {
         status: 200,
         data: data.data || [],
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ Get posts error:", error);
       return {
         status: 500,
-        data: { error: "Failed to fetch posts" },
+        data: { error: error.message || "Failed to fetch posts" },
       };
     }
   },

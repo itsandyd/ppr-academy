@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { InstagramDebug } from "./instagram-debug";
 
 interface InstagramAutomationsProps {
   storeId: string;
@@ -222,6 +223,9 @@ export function InstagramAutomations({ storeId, userId }: InstagramAutomationsPr
 
   return (
     <div className="space-y-6">
+      {/* Debug Info (remove after testing) */}
+      <InstagramDebug userId={userId} />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

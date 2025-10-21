@@ -62,9 +62,19 @@ export function InstagramPostSelector({
   const loadPosts = async () => {
     setLoading(true);
     try {
+      console.log("📡 Fetching Instagram posts for user:", userId);
       const result = await fetchPosts({ userId });
       
+      console.log("📥 Fetch result:", result);
+      
       if (result.status === 200 && result.data) {
+        // Check if data is an array
+        if (!Array.isArray(result.data)) {
+          console.error("❌ API returned non-array data:", result.data);
+          toast.error("Invalid response from Instagram API");
+          return;
+        }
+
         // Transform Instagram API response to our format
         const transformedPosts = result.data.map((post: any) => ({
           id: post.id,
@@ -77,14 +87,21 @@ export function InstagramPostSelector({
         
         setPosts(transformedPosts);
         console.log("✅ Loaded Instagram posts:", transformedPosts.length);
+        
+        if (transformedPosts.length === 0) {
+          toast.info("No posts found on your Instagram account");
+        }
       } else if (result.status === 404) {
+        console.error("❌ Instagram not connected");
         toast.error("Instagram not connected. Please reconnect your account.");
       } else {
-        toast.error("Failed to fetch Instagram posts");
+        const errorMsg = result.data?.error || "Failed to fetch Instagram posts";
+        console.error("❌ Fetch posts error:", errorMsg);
+        toast.error(errorMsg);
       }
-    } catch (error) {
-      console.error("Error fetching posts:", error);
-      toast.error("Failed to load Instagram posts");
+    } catch (error: any) {
+      console.error("❌ Error fetching posts:", error);
+      toast.error(error.message || "Failed to load Instagram posts");
     } finally {
       setLoading(false);
     }
