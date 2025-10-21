@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle2, Image as ImageIcon, Video, Layers, RefreshCw } from "lucide-react";
+import { CheckCircle2, Image as ImageIcon, Video, Layers, RefreshCw, Play } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
 
@@ -169,11 +169,23 @@ export function InstagramPostSelector({
   const getMediaTypeBadge = (type: string) => {
     switch (type) {
       case "VIDEO":
-        return <Badge variant="secondary" className="gap-1"><Video className="w-3 h-3" /> Video</Badge>;
+        return (
+          <Badge className="gap-1 bg-red-600 text-white border-0">
+            <Video className="w-3 h-3" /> Video
+          </Badge>
+        );
       case "CAROUSEL_ALBUM":
-        return <Badge variant="secondary" className="gap-1"><Layers className="w-3 h-3" /> Carousel</Badge>;
+        return (
+          <Badge className="gap-1 bg-blue-600 text-white border-0">
+            <Layers className="w-3 h-3" /> Carousel
+          </Badge>
+        );
       default:
-        return <Badge variant="secondary" className="gap-1"><ImageIcon className="w-3 h-3" /> Image</Badge>;
+        return (
+          <Badge className="gap-1 bg-green-600 text-white border-0">
+            <ImageIcon className="w-3 h-3" /> Image
+          </Badge>
+        );
     }
   };
 
@@ -276,6 +288,15 @@ export function InstagramPostSelector({
                   `}
                   sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
                 />
+
+                {/* Video Overlay (for VIDEO and CAROUSEL) */}
+                {(post.media_type === "VIDEO" || post.media_type === "CAROUSEL_ALBUM") && !isSelected && (
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-[2px]">
+                    <div className="w-14 h-14 bg-white/95 rounded-full flex items-center justify-center shadow-lg">
+                      <Play className="w-7 h-7 text-gray-900 ml-0.5" fill="currentColor" />
+                    </div>
+                  </div>
+                )}
 
                 {/* Selection Indicator */}
                 {isSelected && (
