@@ -5,6 +5,8 @@ import { useParams } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
+
+export const dynamic = 'force-dynamic';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -154,7 +156,8 @@ export default function CreatorInboxPage() {
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Read
               </CardTitle>
-            </CardContent>
+            </CardHeader>
+            <CardContent>
               <div className="text-2xl font-bold text-gray-600">{stats.read}</div>
             </CardContent>
           </Card>
