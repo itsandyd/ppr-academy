@@ -78,9 +78,9 @@ export function LessonDialog({ moduleTitle, onLessonAdd, onLessonEdit, existingL
         )}
       </DialogTrigger>
       
-      <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
+      <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto bg-white dark:bg-black border border-border">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+          <DialogTitle className="flex items-center gap-2 text-foreground">
             <Play className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             {isEditing ? `Edit Lesson in "${moduleTitle}"` : `Add Lesson to "${moduleTitle}"`}
           </DialogTitle>
@@ -89,7 +89,7 @@ export function LessonDialog({ moduleTitle, onLessonAdd, onLessonEdit, existingL
         <div className="space-y-4 sm:space-y-6 py-4">
           {/* Lesson Title */}
           <div className="space-y-2">
-            <Label htmlFor="lesson-title" className="text-gray-700 dark:text-gray-300">Lesson Title *</Label>
+            <Label htmlFor="lesson-title" className="text-foreground">Lesson Title *</Label>
             <Input
               id="lesson-title"
               placeholder="e.g., EQ3 Overview and Controls"
@@ -97,14 +97,14 @@ export function LessonDialog({ moduleTitle, onLessonAdd, onLessonEdit, existingL
               onChange={(e) => setLessonData(prev => ({ ...prev, title: e.target.value }))}
               className="h-10 sm:h-12"
             />
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+            <p className="text-xs text-muted-foreground">
               {isEditing ? `Editing Lesson ${editData?.orderIndex} in ${moduleTitle}` : `This will be Lesson ${existingLessons.length + 1} in ${moduleTitle}`}
             </p>
           </div>
 
           {/* Lesson Description */}
           <div className="space-y-2">
-            <Label htmlFor="lesson-description" className="text-gray-700 dark:text-gray-300">Lesson Description</Label>
+            <Label htmlFor="lesson-description" className="text-foreground">Lesson Description</Label>
             <Textarea
               id="lesson-description"
               placeholder="Describe what students will learn in this lesson..."
@@ -113,7 +113,7 @@ export function LessonDialog({ moduleTitle, onLessonAdd, onLessonEdit, existingL
               rows={3}
               className="resize-none min-h-[72px] sm:min-h-[96px]"
             />
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+            <p className="text-xs text-muted-foreground">
               Optional: Provide a brief overview of the lesson content
             </p>
           </div>
@@ -138,7 +138,7 @@ export function LessonDialog({ moduleTitle, onLessonAdd, onLessonEdit, existingL
         </div>
 
         {/* Dialog Actions */}
-        <div className="flex flex-col sm:flex-row items-center gap-3 justify-end pt-4 sm:pt-6 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex flex-col sm:flex-row items-center gap-3 justify-end pt-4 sm:pt-6 border-t border-border">
           <Button 
             variant="outline" 
             onClick={handleCancel}

@@ -116,7 +116,7 @@ function LayoutContent({ children }: CourseCreateLayoutProps) {
                 <div className="h-64 sm:h-96 bg-muted rounded"></div>
               </div>
             </div>
-            <div className="hidden lg:block w-[356px] h-[678px] bg-gray-200 rounded-3xl animate-pulse" />
+            <div className="hidden lg:block w-[356px] h-[678px] bg-muted rounded-3xl animate-pulse" />
           </div>
         </div>
       </div>
@@ -130,7 +130,7 @@ function LayoutContent({ children }: CourseCreateLayoutProps) {
   return (
     <div className="min-h-screen">
       {/* Top Navigation Bar */}
-      <div className="bg-white/80 backdrop-blur-lg border-b border-gray-200/50 sticky top-0 z-40">
+      <div className="bg-card/80 backdrop-blur-lg border-b border-border/50 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">
@@ -138,17 +138,17 @@ function LayoutContent({ children }: CourseCreateLayoutProps) {
                 <BookOpen className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-gray-900">Course Creation</h1>
-                <p className="text-xs text-gray-500">Step {Object.keys(steps).findIndex(s => s === currentStep) + 1} of {steps.length}</p>
+                <h1 className="text-lg font-bold text-foreground">Course Creation</h1>
+                <p className="text-xs text-muted-foreground">Step {Object.keys(steps).findIndex(s => s === currentStep) + 1} of {steps.length}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-gray-100 rounded-full">
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-muted rounded-full">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-xs text-gray-600">Auto-saving</span>
+                <span className="text-xs text-muted-foreground">Auto-saving</span>
               </div>
               <Progress value={progressPercentage} className="w-24 h-2" />
-              <span className="text-sm font-medium text-gray-700">{Math.round(progressPercentage)}%</span>
+              <span className="text-sm font-medium text-foreground">{Math.round(progressPercentage)}%</span>
             </div>
           </div>
         </div>
@@ -165,7 +165,7 @@ function LayoutContent({ children }: CourseCreateLayoutProps) {
               className="mb-8"
             >
               <div className="flex items-center justify-center mb-6">
-                <div className="flex items-center bg-white rounded-full p-2 shadow-lg border border-gray-200">
+                <div className="flex items-center bg-card rounded-full p-2 shadow-lg border border-border">
                   {steps.map((step, index) => {
                     const Icon = step.icon;
                     const isActive = currentStep === step.id;
@@ -182,8 +182,8 @@ function LayoutContent({ children }: CourseCreateLayoutProps) {
                             isActive 
                               ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg"
                               : isComplete || isPrevious
-                              ? "bg-green-100 text-green-700 hover:bg-green-200"
-                              : "bg-gray-100 text-gray-400 hover:bg-gray-200"
+                              ? "bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800"
+                              : "bg-muted text-muted-foreground hover:bg-muted/80"
                           }`}
                         >
                           <Icon className="w-5 h-5" />
@@ -195,7 +195,7 @@ function LayoutContent({ children }: CourseCreateLayoutProps) {
                         </motion.button>
                         {index < steps.length - 1 && (
                           <div className={`w-8 h-0.5 mx-2 ${
-                            isPrevious || isComplete ? "bg-green-300" : "bg-gray-200"
+                            isPrevious || isComplete ? "bg-green-300 dark:bg-green-700" : "bg-border"
                           }`} />
                         )}
                       </div>
@@ -206,15 +206,15 @@ function LayoutContent({ children }: CourseCreateLayoutProps) {
 
               {/* Current Step Info */}
               <div className="text-center">
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-sm border border-gray-200 mb-4">
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-card rounded-full shadow-sm border border-border mb-4">
                   <div className={`p-2 rounded-lg bg-gradient-to-r ${steps.find(s => s.id === currentStep)?.color} text-white`}>
                     {React.createElement(steps.find(s => s.id === currentStep)?.icon || BookOpen, { className: "w-4 h-4" })}
                   </div>
-                  <span className="font-semibold text-gray-900">
+                  <span className="font-semibold text-foreground">
                     {steps.find(s => s.id === currentStep)?.label}
                   </span>
                 </div>
-                <p className="text-gray-600 max-w-md mx-auto">
+                <p className="text-muted-foreground max-w-md mx-auto">
                   {steps.find(s => s.id === currentStep)?.description}
                 </p>
               </div>
@@ -229,7 +229,7 @@ function LayoutContent({ children }: CourseCreateLayoutProps) {
               transition={{ duration: 0.4, ease: "easeInOut" }}
               className="mb-8"
             >
-              <div className="bg-white rounded-2xl shadow-xl border border-gray-200/50 overflow-hidden">
+              <div className="bg-card rounded-2xl shadow-xl border border-border/50 overflow-hidden">
                 <div className="p-8 lg:p-12">
                   {children}
                 </div>
@@ -241,24 +241,24 @@ function LayoutContent({ children }: CourseCreateLayoutProps) {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="bg-white rounded-2xl shadow-lg border border-gray-200/50 p-6"
+              className="bg-card rounded-2xl shadow-lg border border-border/50 p-6"
             >
               <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                   {state.lastSaved && (
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                       Saved {state.lastSaved.toLocaleTimeString()}
                     </div>
                   )}
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-500">Progress:</span>
+                    <span className="text-sm text-muted-foreground">Progress:</span>
                     <div className="flex gap-1">
                       {steps.map((_, index) => (
                         <div
                           key={index}
                           className={`w-2 h-2 rounded-full ${
-                            index < completedSteps ? "bg-green-500" : "bg-gray-200"
+                            index < completedSteps ? "bg-green-500" : "bg-muted-foreground/30"
                           }`}
                         />
                       ))}
@@ -271,7 +271,7 @@ function LayoutContent({ children }: CourseCreateLayoutProps) {
                     variant="outline" 
                     onClick={handleSaveDraft}
                     disabled={state.isSaving}
-                    className="h-12 px-6 rounded-xl border-gray-200 hover:border-gray-300 hover:shadow-md transition-all"
+                    className="h-12 px-6 rounded-xl hover:shadow-md transition-all"
                   >
                     <Save className="w-4 h-4 mr-2" />
                     {state.isSaving ? "Saving..." : "Save Draft"}
@@ -283,7 +283,7 @@ function LayoutContent({ children }: CourseCreateLayoutProps) {
                     className={`h-12 px-8 rounded-xl font-semibold transition-all ${
                       canPublish()
                         ? "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl"
-                        : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                        : "bg-muted text-muted-foreground cursor-not-allowed"
                     }`}
                   >
                     {canPublish() ? (
@@ -311,11 +311,11 @@ function LayoutContent({ children }: CourseCreateLayoutProps) {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.3 }}
-                className="bg-white rounded-2xl shadow-lg border border-gray-200/50 p-3"
+                className="bg-card rounded-2xl shadow-lg border border-border/50 p-3"
               >
                 <div className="flex items-center gap-2 mb-3">
-                  <Smartphone className="w-5 h-5 text-gray-600" />
-                  <h3 className="font-semibold text-gray-900">Live Preview</h3>
+                  <Smartphone className="w-5 h-5 text-muted-foreground" />
+                  <h3 className="font-semibold text-foreground">Live Preview</h3>
                 </div>
                 <div className="hidden lg:block flex justify-center -mx-1">
                   <PhonePreview 
@@ -368,9 +368,9 @@ function LayoutContent({ children }: CourseCreateLayoutProps) {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.4 }}
-                className="rounded-2xl p-6 border border-blue-200/50"
+                className="bg-card rounded-2xl p-6 border border-border/50"
               >
-                <h3 className="font-semibold text-gray-900 mb-4">Your Progress</h3>
+                <h3 className="font-semibold text-foreground mb-4">Your Progress</h3>
                 <div className="space-y-3">
                   {steps.map((step, index) => {
                     const isComplete = state.stepCompletion[step.id as keyof typeof state.stepCompletion];
@@ -384,13 +384,13 @@ function LayoutContent({ children }: CourseCreateLayoutProps) {
                             ? "bg-green-500 text-white" 
                             : isActive 
                             ? `bg-gradient-to-r ${step.color} text-white`
-                            : "bg-gray-200 text-gray-400"
+                            : "bg-muted text-muted-foreground"
                         }`}>
                           <Icon className="w-4 h-4" />
                         </div>
                         <div className="flex-1">
                           <p className={`text-sm font-medium ${
-                            isActive ? "text-gray-900" : "text-gray-600"
+                            isActive ? "text-foreground" : "text-muted-foreground"
                           }`}>
                             {step.label}
                           </p>

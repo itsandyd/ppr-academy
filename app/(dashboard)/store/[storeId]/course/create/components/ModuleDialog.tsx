@@ -77,9 +77,9 @@ export function ModuleDialog({ onModuleAdd, onModuleEdit, existingModules, editD
         )}
       </DialogTrigger>
       
-      <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
+      <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto bg-white dark:bg-black border border-border">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+          <DialogTitle className="flex items-center gap-2 text-foreground">
             <BookOpen className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
             {isEditing ? "Edit Module" : "Add New Module"}
           </DialogTitle>

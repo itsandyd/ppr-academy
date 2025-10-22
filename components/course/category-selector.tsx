@@ -79,7 +79,7 @@ export function CategorySelector({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Category */}
         <div className="space-y-3">
-          <Label htmlFor="category" className="text-base font-semibold text-gray-900 flex items-center gap-1">
+          <Label htmlFor="category" className="text-base font-semibold text-foreground flex items-center gap-1">
             Category <span className="text-red-600">*</span>
           </Label>
           <Select value={category} onValueChange={handleCategoryChange}>
@@ -87,7 +87,7 @@ export function CategorySelector({
               className={`h-14 border-2 rounded-xl text-base ${
                 errors?.category
                   ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
-                  : "border-gray-200 focus:border-blue-500 focus:ring-blue-500/20"
+                  : "border-border focus:border-primary focus:ring-primary/20"
               }`}
             >
               <SelectValue placeholder="Choose primary category" />
@@ -106,7 +106,7 @@ export function CategorySelector({
             </p>
           )}
           {!errors?.category && (
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted-foreground">
               Select the broad area your course belongs to
             </p>
           )}
@@ -114,7 +114,7 @@ export function CategorySelector({
 
         {/* Subcategory */}
         <div className="space-y-3">
-          <Label htmlFor="subcategory" className="text-base font-semibold text-gray-900 flex items-center gap-1">
+          <Label htmlFor="subcategory" className="text-base font-semibold text-foreground flex items-center gap-1">
             Subcategory <span className="text-red-600">*</span>
           </Label>
           <Select 
@@ -126,7 +126,7 @@ export function CategorySelector({
               className={`h-14 border-2 rounded-xl text-base ${
                 errors?.subcategory
                   ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
-                  : "border-gray-200 focus:border-blue-500 focus:ring-blue-500/20"
+                  : "border-border focus:border-primary focus:ring-primary/20"
               } ${!category ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               <SelectValue placeholder={category ? "Choose specific topic" : "Select category first"} />
@@ -145,7 +145,7 @@ export function CategorySelector({
             </p>
           )}
           {!errors?.subcategory && category && (
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted-foreground">
               Be specific to help students find your course
             </p>
           )}
@@ -154,7 +154,7 @@ export function CategorySelector({
 
       {/* Tags */}
       <div className="space-y-3">
-        <Label htmlFor="tags" className="text-base font-semibold text-gray-900">
+        <Label htmlFor="tags" className="text-base font-semibold text-foreground">
           Tags (2-5 recommended)
         </Label>
         
@@ -168,7 +168,7 @@ export function CategorySelector({
             onChange={(e) => setTagInput(e.target.value)}
             onKeyDown={handleTagInputKeyDown}
             disabled={tags.length >= 5}
-            className="h-12 border-2 border-gray-200 rounded-xl text-base focus:border-blue-500 focus:ring-blue-500/20"
+            className="h-12 border-2 border-border rounded-xl text-base focus:border-primary focus:ring-primary/20"
           />
         </div>
 

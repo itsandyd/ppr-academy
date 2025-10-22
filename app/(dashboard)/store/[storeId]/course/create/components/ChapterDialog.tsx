@@ -517,9 +517,9 @@ export function ChapterDialog({
         )}
       </DialogTrigger>
       
-      <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
+      <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto bg-white dark:bg-black border border-border">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100 text-sm sm:text-base">
+          <DialogTitle className="flex items-center gap-2 text-foreground text-sm sm:text-base">
             <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600 dark:text-purple-400" />
             {isEditing ? `Edit Chapter in "${lessonTitle}"` : `Add Chapter to "${lessonTitle}"`}
           </DialogTitle>
@@ -612,15 +612,15 @@ export function ChapterDialog({
                   if (!preview) return null;
                   
                   return (
-                    <div className="bg-white dark:bg-gray-800 p-3 rounded border">
+                    <div className="bg-card p-3 rounded border border-border">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Clean Text Preview</span>
-                        <div className="flex gap-4 text-xs text-gray-500">
+                        <span className="text-sm font-medium text-foreground">Clean Text Preview</span>
+                        <div className="flex gap-4 text-xs text-muted-foreground">
                           <span>{preview.validation.wordCount} words</span>
                           <span>~{preview.estimatedDuration} min audio</span>
                         </div>
                       </div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400 max-h-20 overflow-y-auto">
+                      <div className="text-sm text-muted-foreground max-h-20 overflow-y-auto">
                         {preview.cleanedText.slice(0, 200)}
                         {preview.cleanedText.length > 200 && "..."}
                       </div>
@@ -742,7 +742,7 @@ export function ChapterDialog({
             )}
 
             {!chapterData.content.trim() && (
-              <div className="text-center py-4 text-gray-500 dark:text-gray-400">
+              <div className="text-center py-4 text-muted-foreground">
                 <Volume2 className="w-8 h-8 mx-auto mb-2 opacity-50" />
                 <p className="text-sm">Add chapter content to enable AI generation</p>
               </div>
@@ -757,7 +757,7 @@ export function ChapterDialog({
                 Chapter {existingChapters.length + 1}: {chapterData.title || "Chapter Title"}
               </div>
               {chapterData.content && (
-                <div className="text-purple-600 bg-white p-2 sm:p-3 rounded border max-h-24 sm:max-h-32 overflow-y-auto prose prose-sm">
+                <div className="text-purple-600 dark:text-purple-400 bg-card p-2 sm:p-3 rounded border border-border max-h-24 sm:max-h-32 overflow-y-auto prose prose-sm">
                   <div dangerouslySetInnerHTML={{ 
                     __html: chapterData.content.length > 200 
                       ? chapterData.content.slice(0, 200) + "..." 

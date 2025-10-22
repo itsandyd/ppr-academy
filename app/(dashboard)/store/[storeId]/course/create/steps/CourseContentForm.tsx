@@ -108,10 +108,11 @@ function CourseBasicInfoCard() {
     title: false,
     description: false,
     category: false,
+    subcategory: false,
     skillLevel: false,
   });
   
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: string | string[]) => {
     const newData = { ...state.data, [field]: value };
     console.log("🔄 CourseBasicInfoCard updating context with:", { step: "course", data: { [field]: value } });
     updateData("course", { [field]: value });
@@ -129,14 +130,14 @@ function CourseBasicInfoCard() {
     <div className="space-y-8">
       {/* Header */}
       <div className="text-center">
-        <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-50 to-purple-50 rounded-full text-blue-700 font-medium mb-4 border border-blue-200">
+        <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 rounded-full text-blue-700 dark:text-blue-300 font-medium mb-4 border border-blue-200 dark:border-blue-800">
           <Sparkles className="w-4 h-4" />
           Course Information
         </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+        <h2 className="text-2xl font-bold text-foreground mb-2">
           Tell us about your course
         </h2>
-        <p className="text-gray-600 max-w-2xl mx-auto">
+        <p className="text-muted-foreground max-w-2xl mx-auto">
           All fields marked with <span className="text-red-600 font-bold">*</span> are required before you can publish your course.
         </p>
       </div>
@@ -193,7 +194,7 @@ function CourseBasicInfoCard() {
 
         {/* Skill Level */}
         <div className="space-y-3">
-          <Label htmlFor="skillLevel" className="text-base font-semibold text-gray-900 flex items-center gap-1">
+          <Label htmlFor="skillLevel" className="text-base font-semibold text-foreground flex items-center gap-1">
             Skill Level <span className="text-red-600">*</span>
           </Label>
             <Select 
@@ -206,7 +207,7 @@ function CourseBasicInfoCard() {
               <SelectTrigger className={`h-14 border-2 rounded-xl text-base ${
                 getFieldError("skillLevel", state.data?.skillLevel)
                   ? "border-red-500 focus:border-red-500 focus:ring-red-500/20"
-                  : "border-gray-200 focus:border-blue-500 focus:ring-blue-500/20"
+                  : "border-border focus:border-primary focus:ring-primary/20"
               }`}>
                 <SelectValue placeholder="Select skill level" />
               </SelectTrigger>
@@ -224,7 +225,7 @@ function CourseBasicInfoCard() {
               </p>
             )}
             {!getFieldError("skillLevel", state.data?.skillLevel) && (
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-muted-foreground">
                 Set expectations by indicating the required skill level for your course.
               </p>
             )}
@@ -315,14 +316,14 @@ function CourseThumbnailCard() {
     <div className="space-y-8">
       {/* Header */}
       <div className="text-center">
-        <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-50 to-pink-50 rounded-full text-purple-700 font-medium mb-4 border border-purple-200">
+        <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950 rounded-full text-purple-700 dark:text-purple-300 font-medium mb-4 border border-purple-200 dark:border-purple-800">
           <Upload className="w-4 h-4" />
           Course Thumbnail
         </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+        <h2 className="text-2xl font-bold text-foreground mb-2">
           Add a compelling thumbnail
         </h2>
-        <p className="text-gray-600 max-w-2xl mx-auto">
+        <p className="text-muted-foreground max-w-2xl mx-auto">
           A great thumbnail helps students discover your course. You can upload your own or generate one with AI.
         </p>
       </div>
