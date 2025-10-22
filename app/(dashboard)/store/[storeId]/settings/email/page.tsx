@@ -61,18 +61,18 @@ export default function EmailSettingsPage() {
     if (store) {
       // Always suggest the correct format based on current slug
       const suggestedEmail = `${store.slug.toLowerCase()}@mail.pauseplayrepeat.com`;
-      const suggestedReplyTo = "support@pauseplayrepeat.com";
+      const lockedReplyTo = "inbox@pauseplayrepeat.com"; // Locked for centralized inbox
       
       if (emailConfig) {
         // Load existing config
         setFromEmail(emailConfig.fromEmail || suggestedEmail);
         setFromName(emailConfig.fromName || store.name);
-        setReplyToEmail(emailConfig.replyToEmail || suggestedReplyTo);
+        setReplyToEmail(lockedReplyTo); // Always use locked inbox
       } else {
         // Auto-generate for new stores
         setFromEmail(suggestedEmail);
         setFromName(store.name);
-        setReplyToEmail(suggestedReplyTo);
+        setReplyToEmail(lockedReplyTo);
       }
     }
   }, [emailConfig, store]);
@@ -233,8 +233,8 @@ export default function EmailSettingsPage() {
                 Your store gets a professional email address: <strong>{store?.slug.toLowerCase()}@mail.pauseplayrepeat.com</strong>
               </p>
               <p className="text-blue-800 dark:text-blue-200 text-sm">
-                <strong>How replies work:</strong> Customer replies go to <code className="bg-blue-100 dark:bg-blue-900 px-1 py-0.5 rounded">support@pauseplayrepeat.com</code>, 
-                and we'll forward them to you. This keeps your personal email private and lets us filter spam.
+                <strong>How replies work:</strong> Customer replies go to <code className="bg-blue-100 dark:bg-blue-900 px-1 py-0.5 rounded">inbox@pauseplayrepeat.com</code>. 
+                You'll see all customer replies in your Creator Dashboard → Inbox tab. No email forwarding needed!
               </p>
             </div>
           </div>
@@ -293,18 +293,17 @@ export default function EmailSettingsPage() {
           <div className="space-y-2">
             <Label htmlFor="replyToEmail">
               Reply-To Email
-              <Badge variant="outline" className="ml-2">Recommended</Badge>
+              <Badge className="ml-2 bg-purple-100 text-purple-800">Centralized Inbox</Badge>
             </Label>
             <Input
               id="replyToEmail"
               type="email"
-              placeholder="support@pauseplayrepeat.com"
-              value={replyToEmail}
-              onChange={(e) => setReplyToEmail(e.target.value)}
-              className="w-full"
+              value="inbox@pauseplayrepeat.com"
+              readOnly
+              className="w-full bg-muted cursor-not-allowed"
             />
             <p className="text-sm text-muted-foreground">
-              💡 We recommend <code className="bg-muted px-1 py-0.5 rounded text-xs">support@pauseplayrepeat.com</code> - we'll forward replies to you
+              🔒 Locked to platform inbox. View customer replies in Dashboard → Inbox tab.
             </p>
           </div>
 

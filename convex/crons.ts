@@ -63,4 +63,14 @@ crons.interval(
   internal.emailAnalyticsRollup.dailyAnalyticsRollup
 );
 
+/**
+ * Fetch inbox replies (backup for webhooks)
+ * Runs every hour to catch any missed emails
+ */
+crons.interval(
+  "fetch-inbox-replies",
+  { hours: 1 },
+  internal.inboxSync.fetchInboxReplies
+);
+
 export default crons;

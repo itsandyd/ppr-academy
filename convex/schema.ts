@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import * as monetizationSchema from "./monetizationSchema";
 import * as emailSchema from "./emailSchema";
 import { emailDomainTables } from "./emailDomainSchema";
+import { emailRepliesTables } from "./emailRepliesSchema";
 
 export default defineSchema({
   // User Management
@@ -2931,4 +2932,9 @@ export default defineSchema({
   // EMAIL DOMAIN MONITORING TABLES
   // ============================================
   ...emailDomainTables,
+  
+  // ============================================
+  // EMAIL REPLIES SYSTEM (INBOX)
+  // ============================================
+  ...emailRepliesTables,
 }); 
