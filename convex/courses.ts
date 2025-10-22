@@ -481,6 +481,7 @@ export const updateCourseWithModules = mutation({
       imageUrl: v.optional(v.string()),
       price: v.optional(v.number()),
       category: v.optional(v.string()),
+      subcategory: v.optional(v.string()),
       skillLevel: v.optional(v.string()),
       checkoutHeadline: v.optional(v.string()),
       checkoutDescription: v.optional(v.string()),

@@ -154,7 +154,14 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
     switch (step) {
       case "course":
         // Course step now includes both basic info (formerly thumbnail) and modules
-        const hasBasicInfo = !!(data.title && data.description && data.category && data.subcategory && data.skillLevel);
+        // Subcategory is REQUIRED for course completion
+        const hasBasicInfo = !!(
+          data.title && 
+          data.description && 
+          data.category && 
+          data.subcategory &&  // Required!
+          data.skillLevel
+        );
         const hasModules = !!(data.modules && data.modules.length > 0 && 
                            data.modules.some(module => 
                              module.lessons.length > 0 && 
@@ -260,6 +267,7 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
             imageUrl: state.data.thumbnail,
             price: state.data.price ? parseFloat(state.data.price) : undefined,
             category: state.data.category,
+            subcategory: state.data.subcategory,
             skillLevel: state.data.skillLevel,
             checkoutHeadline: state.data.checkoutHeadline,
             checkoutDescription: state.data.checkoutDescription,
@@ -279,6 +287,7 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
           checkoutHeadline: state.data.checkoutHeadline || "Get this course",
           price: state.data.price || "0",
           category: state.data.category,
+          subcategory: state.data.subcategory,
           skillLevel: state.data.skillLevel,
           thumbnail: state.data.thumbnail,
           modules: state.data.modules,
@@ -345,6 +354,7 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
         checkoutHeadline: state.data.checkoutHeadline!,
         price: state.data.price!,
         category: state.data.category,
+        subcategory: state.data.subcategory,
         skillLevel: state.data.skillLevel,
         thumbnail: state.data.thumbnail,
         modules: state.data.modules,
@@ -361,6 +371,7 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
             checkoutHeadline: requiredData.checkoutHeadline,
             price: parseFloat(requiredData.price),
             category: requiredData.category,
+            subcategory: requiredData.subcategory,
             skillLevel: requiredData.skillLevel,
             imageUrl: requiredData.thumbnail,
           },
