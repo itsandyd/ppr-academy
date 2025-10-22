@@ -724,14 +724,22 @@ export const createCourseEnrollment = mutation({
           )
           .unique();
 
+        // Determine customer type: "lead" for free courses, "paying" for paid courses
+        const customerType = args.amount > 0 ? "paying" : "lead";
+
         if (existingCustomer) {
-          // Update existing customer
-          await ctx.db.patch(existingCustomer._id, {
-            type: "paying",
-            totalSpent: (existingCustomer.totalSpent || 0) + args.amount,
+          // Update existing customer - only upgrade type if they're making a paid purchase
+          const updates: any = {
             lastActivity: Date.now(),
             status: "active",
-          });
+          };
+          
+          if (args.amount > 0) {
+            updates.type = "paying";
+            updates.totalSpent = (existingCustomer.totalSpent || 0) + args.amount;
+          }
+          
+          await ctx.db.patch(existingCustomer._id, updates);
         } else {
           // Create new customer record
           await ctx.db.insert("customers", {
@@ -739,11 +747,11 @@ export const createCourseEnrollment = mutation({
             email: user.email || args.userId,
             storeId: storeId,
             adminUserId: course.userId,
-            type: "paying",
+            type: customerType,
             status: "active",
             totalSpent: args.amount,
             lastActivity: Date.now(),
-            source: course.title || "Course Purchase",
+            source: course.title || "Course Enrollment",
           });
         }
       }

@@ -17,7 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Gift, ShoppingCart, Crown, Users, DollarSign } from 'lucide-react';
+import { Plus, Search, Gift, ShoppingCart, Crown, Users, DollarSign, GraduationCap, Package } from 'lucide-react';
 import { formatDistanceToNow } from "date-fns";
 
 const filters = [
@@ -311,6 +311,33 @@ export default function CustomersPage() {
                         <p className="text-xs text-gray-500">
                           {customer.source} • {formatDistanceToNow(new Date(customer._creationTime))} ago
                         </p>
+                        {/* Show enrolled courses and purchased products */}
+                        {(customer.enrolledCourses && customer.enrolledCourses.length > 0) || 
+                         (customer.purchasedProducts && customer.purchasedProducts.length > 0) ? (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {customer.enrolledCourses && customer.enrolledCourses.map((course: any, index: number) => (
+                              <Badge 
+                                key={`${course.courseId}-${course.enrolledAt}-${index}`}
+                                variant="outline" 
+                                className="bg-blue-50 text-blue-700 border-blue-200 text-xs"
+                              >
+                                <GraduationCap className="w-3 h-3 mr-1" />
+                                {course.courseTitle}
+                                {course.progress > 0 && ` (${course.progress}%)`}
+                              </Badge>
+                            ))}
+                            {customer.purchasedProducts && customer.purchasedProducts.map((product: any, index: number) => (
+                              <Badge 
+                                key={`${product.productId}-${product.purchasedAt}-${index}`}
+                                variant="outline" 
+                                className="bg-purple-50 text-purple-700 border-purple-200 text-xs"
+                              >
+                                <Package className="w-3 h-3 mr-1" />
+                                {product.productTitle}
+                              </Badge>
+                            ))}
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
@@ -320,6 +347,11 @@ export default function CustomersPage() {
                           {customer.type === "lead" ? "Lead" : 
                            customer.type === "paying" ? "Customer" : "Subscriber"}
                         </p>
+                        {customer.enrolledCourses && customer.enrolledCourses.length > 0 && (
+                          <p className="text-xs text-blue-600 mt-1">
+                            {customer.enrolledCourses.length} course{customer.enrolledCourses.length > 1 ? 's' : ''}
+                          </p>
+                        )}
                       </div>
                       <div className="flex items-center gap-1">
                         {getCustomerIcon(customer.type)}

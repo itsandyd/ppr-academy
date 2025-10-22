@@ -252,6 +252,55 @@ export const createSubscription = mutation({
       currentStudents: plan.currentStudents + 1,
     });
 
+    // Create or update customer record for this subscription
+    try {
+      // Get user info
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", args.userId))
+        .unique();
+      
+      if (user) {
+        const userEmail = user.email || args.userId;
+        
+        // Check if customer already exists
+        const existingCustomer = await ctx.db
+          .query("customers")
+          .withIndex("by_email_and_store", (q) => 
+            q.eq("email", userEmail).eq("storeId", plan.storeId)
+          )
+          .unique();
+
+        if (existingCustomer) {
+          // Update existing customer to subscription type
+          await ctx.db.patch(existingCustomer._id, {
+            type: "subscription",
+            lastActivity: Date.now(),
+            status: "active",
+          });
+        } else {
+          // Get store to find creator/admin user ID
+          const store = await ctx.db.get(plan.storeId);
+          
+          // Create new customer record
+          await ctx.db.insert("customers", {
+            name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || userEmail,
+            email: userEmail,
+            storeId: plan.storeId,
+            adminUserId: store?.userId || plan.storeId,
+            type: "subscription",
+            status: "active",
+            totalSpent: isTrial ? 0 : amount,
+            lastActivity: Date.now(),
+            source: plan.name || "Subscription",
+          });
+        }
+      }
+    } catch (error) {
+      // Log error but don't fail the subscription creation
+      console.error("Failed to create/update customer record for subscription:", error);
+    }
+
     return { success: true, subscriptionId };
   },
 });

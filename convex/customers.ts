@@ -75,7 +75,7 @@ export const getCustomersForAdmin = query({
   },
 });
 
-// Get customers by store
+// Get customers by store with enrollment details
 export const getCustomersForStore = query({
   args: { storeId: v.string() },
   returns: v.array(v.object({
@@ -91,13 +91,130 @@ export const getCustomersForStore = query({
     lastActivity: v.optional(v.number()),
     source: v.optional(v.string()),
     notes: v.optional(v.string()),
+    enrolledCourses: v.optional(v.array(v.object({
+      courseId: v.id("courses"),
+      courseTitle: v.string(),
+      enrolledAt: v.number(),
+      progress: v.optional(v.number()),
+    }))),
+    purchasedProducts: v.optional(v.array(v.object({
+      productId: v.id("digitalProducts"),
+      productTitle: v.string(),
+      purchasedAt: v.number(),
+    }))),
   })),
   handler: async (ctx, args) => {
-    return await ctx.db
+    const customers = await ctx.db
       .query("customers")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .order("desc")
       .collect();
+
+    // Enrich customers with enrollment and purchase details
+    const enrichedCustomers = await Promise.all(
+      customers.map(async (customer) => {
+        // Get user by email to find their purchases
+        const user = await ctx.db
+          .query("users")
+          .withIndex("by_email", (q) => q.eq("email", customer.email))
+          .first();
+
+        if (!user || !user.clerkId) {
+          return { ...customer, enrolledCourses: [], purchasedProducts: [] };
+        }
+
+        // Get course enrollments
+        const coursePurchases = await ctx.db
+          .query("purchases")
+          .withIndex("by_userId", (q) => q.eq("userId", user.clerkId!))
+          .filter((q) => 
+            q.and(
+              q.eq(q.field("productType"), "course"),
+              q.eq(q.field("status"), "completed")
+            )
+          )
+          .collect();
+
+        // Deduplicate courses (in case user has multiple purchases for same course)
+        const uniqueCourseMap = new Map();
+        for (const purchase of coursePurchases) {
+          if (purchase.courseId && !uniqueCourseMap.has(purchase.courseId)) {
+            uniqueCourseMap.set(purchase.courseId, purchase);
+          }
+        }
+        
+        const uniqueCoursePurchases = Array.from(uniqueCourseMap.values());
+
+        const enrolledCourses = (await Promise.all(
+          uniqueCoursePurchases
+            .filter(p => p.courseId)
+            .map(async (purchase) => {
+              const course = await ctx.db.get(purchase.courseId!);
+              if (!course || !('title' in course)) return null;
+
+              // Get progress
+              const enrollment = await ctx.db
+                .query("enrollments")
+                .withIndex("by_user_course", (q) => 
+                  q.eq("userId", user.clerkId!).eq("courseId", purchase.courseId!)
+                )
+                .unique();
+
+              return {
+                courseId: purchase.courseId!,
+                courseTitle: course.title,
+                enrolledAt: purchase._creationTime,
+                progress: enrollment?.progress || 0,
+              };
+            })
+        )).filter(Boolean);
+
+        // Get digital product purchases
+        const productPurchases = await ctx.db
+          .query("purchases")
+          .withIndex("by_userId", (q) => q.eq("userId", user.clerkId!))
+          .filter((q) => 
+            q.and(
+              q.eq(q.field("productType"), "digitalProduct"),
+              q.eq(q.field("status"), "completed")
+            )
+          )
+          .collect();
+
+        // Deduplicate products
+        const uniqueProductMap = new Map();
+        for (const purchase of productPurchases) {
+          if (purchase.productId && !uniqueProductMap.has(purchase.productId)) {
+            uniqueProductMap.set(purchase.productId, purchase);
+          }
+        }
+        
+        const uniqueProductPurchases = Array.from(uniqueProductMap.values());
+
+        const purchasedProducts = (await Promise.all(
+          uniqueProductPurchases
+            .filter(p => p.productId)
+            .map(async (purchase) => {
+              const product = await ctx.db.get(purchase.productId!);
+              if (!product || !('title' in product)) return null;
+
+              return {
+                productId: purchase.productId!,
+                productTitle: product.title,
+                purchasedAt: purchase._creationTime,
+              };
+            })
+        )).filter(Boolean);
+
+        return {
+          ...customer,
+          enrolledCourses: enrolledCourses as any[],
+          purchasedProducts: purchasedProducts as any[],
+        };
+      })
+    );
+
+    return enrichedCustomers;
   },
 });
 
@@ -246,22 +363,42 @@ export const getCustomerStats = query({
       .filter(q => q.eq(q.field("status"), "completed"))
       .collect();
 
-    const subscriptions = await ctx.db
-      .query("subscriptions")
-      .withIndex("by_adminUserId", (q) => q.eq("adminUserId", args.adminUserId))
+    // Use the newer membershipSubscriptions table instead of legacy subscriptions
+    const membershipSubscriptions = await ctx.db
+      .query("membershipSubscriptions")
       .filter(q => q.eq(q.field("status"), "active"))
       .collect();
+
+    // Filter membership subscriptions by matching storeId to adminUserId
+    const stores = await ctx.db
+      .query("stores")
+      .withIndex("by_userId", (q) => q.eq("userId", args.adminUserId))
+      .collect();
+    
+    const storeIds = stores.map(s => s._id);
+    const relevantSubscriptions = membershipSubscriptions.filter(sub => 
+      storeIds.includes(sub.storeId)
+    );
 
     const totalCustomers = customers.length;
     const leads = customers.filter(c => c.type === "lead").length;
     const payingCustomers = customers.filter(c => c.type === "paying").length;
     const subscriptionCustomers = customers.filter(c => c.type === "subscription").length;
     
-    const totalRevenue = purchases.reduce((sum, p) => sum + p.amount, 0) +
-                        subscriptions.reduce((sum, s) => sum + s.amount, 0);
+    // Calculate total revenue from purchases
+    const purchaseRevenue = purchases.reduce((sum, p) => sum + p.amount, 0);
+    
+    // Calculate subscription revenue from membership subscriptions
+    const subscriptionRevenue = relevantSubscriptions.reduce((sum, s) => sum + (s.amountPaid || 0), 0);
+    
+    // Alternative: Sum up totalSpent from all customers (more accurate)
+    const totalRevenueFromCustomers = customers.reduce((sum, c) => sum + (c.totalSpent || 0), 0);
+    
+    // Use the customer-based revenue as it's more accurate and comprehensive
+    const totalRevenue = totalRevenueFromCustomers;
     
     const averageOrderValue = purchases.length > 0 ? 
-      purchases.reduce((sum, p) => sum + p.amount, 0) / purchases.length : 0;
+      purchaseRevenue / purchases.length : 0;
 
     return {
       totalCustomers,
