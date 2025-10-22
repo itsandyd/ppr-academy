@@ -185,7 +185,7 @@ export function ProductsList({ products, storeId }: ProductsListProps) {
   // Handle copy course link
   const handleCopyLink = (slug?: string, courseId?: string) => {
     const baseUrl = window.location.origin;
-    const url = slug ? `${baseUrl}/${slug}` : `${baseUrl}/courses/${courseId}`;
+    const url = slug ? `${baseUrl}/courses/${slug}` : `${baseUrl}/courses/${courseId}`;
     navigator.clipboard.writeText(url);
     toast({
       title: "Link copied!",
@@ -507,9 +507,9 @@ export function ProductsList({ products, storeId }: ProductsListProps) {
                                 </DropdownMenuItem>
                                 {course.slug && (
                                   <DropdownMenuItem asChild>
-                                    <Link href={`/${course.slug}`} target="_blank">
+                                    <Link href={`/courses/${course.slug}${!course.isPublished ? '?preview=true' : ''}`} target="_blank">
                                       <ExternalLink className="h-4 w-4 mr-2" />
-                                      View Live
+                                      {course.isPublished ? 'View Live' : 'Preview'}
                                     </Link>
                                   </DropdownMenuItem>
                                 )}
@@ -581,9 +581,9 @@ export function ProductsList({ products, storeId }: ProductsListProps) {
                                 asChild
                                 className="flex-1"
                               >
-                                <Link href={`/${course.slug}`} target="_blank">
+                                <Link href={`/courses/${course.slug}${!course.isPublished ? '?preview=true' : ''}`} target="_blank">
                                   <ExternalLink className="w-3 h-3 mr-1" />
-                                  View
+                                  {course.isPublished ? 'View' : 'Preview'}
                                 </Link>
                               </Button>
                             )}
@@ -717,9 +717,9 @@ export function ProductsList({ products, storeId }: ProductsListProps) {
                               
                               {course.slug && (
                                 <Button variant="outline" size="sm" asChild className="h-8">
-                                  <Link href={`/${course.slug}`} target="_blank">
+                                  <Link href={`/courses/${course.slug}${!course.isPublished ? '?preview=true' : ''}`} target="_blank">
                                     <ExternalLink className="h-3 w-3 mr-1" />
-                                    View Live
+                                    {course.isPublished ? 'View Live' : 'Preview'}
                                   </Link>
                                 </Button>
                               )}

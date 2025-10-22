@@ -48,9 +48,26 @@ export default function PublicCoursePage() {
     );
   }
 
-  // Course not found
+  // Course not found - show helpful debug info
   if (course === null) {
-    notFound();
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-8">
+        <div className="max-w-md text-center space-y-4">
+          <h1 className="text-2xl font-bold text-foreground">Course Not Found</h1>
+          <p className="text-muted-foreground">
+            No course found with slug: <code className="bg-muted px-2 py-1 rounded">{courseSlug}</code>
+          </p>
+          <div className="text-sm text-muted-foreground space-y-2">
+            <p>Common issues:</p>
+            <ul className="text-left space-y-1">
+              <li>• Course might not be published (try adding <code className="bg-muted px-1">?preview=true</code>)</li>
+              <li>• Slug might be different (check your dashboard)</li>
+              <li>• Course might not be created yet</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   // Store not found
@@ -74,7 +91,7 @@ export default function PublicCoursePage() {
     <div className="relative">
       {/* Preview Banner */}
       {isPreview && isOwner && !course.isPublished && (
-        <div className="fixed top-0 left-0 right-0 z-50 bg-amber-500 text-white px-4 py-3 shadow-lg">
+        <div className="fixed top-0 left-0 right-0 z-50 bg-amber-500 dark:bg-amber-600 text-white px-4 py-3 shadow-lg">
           <div className="max-w-6xl mx-auto flex items-center justify-center gap-2 text-sm font-medium">
             <Eye className="w-4 h-4" />
             <span>Preview Mode - This course is not published yet. Only you can see this page.</span>

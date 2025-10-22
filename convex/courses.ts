@@ -77,6 +77,8 @@ export const getCourseBySlug = query({
       // Stripe integration fields
       stripeProductId: v.optional(v.string()),
       stripePriceId: v.optional(v.string()),
+      // Modules data
+      modules: v.optional(v.any()),
     }),
     v.null()
   ),
@@ -90,6 +92,35 @@ export const getCourseBySlug = query({
       return null;
     }
 
+    // Fetch course modules if they exist
+    const modules = await ctx.db
+      .query("courseModules")
+      .filter(q => q.eq(q.field("courseId"), course._id))
+      .order("asc")
+      .collect();
+
+    // Build modules structure with lessons
+    const modulesWithLessons = await Promise.all(
+      modules.map(async (module) => {
+        const lessons = await ctx.db
+          .query("courseLessons")
+          .filter(q => q.eq(q.field("moduleId"), module._id))
+          .order("asc")
+          .collect();
+
+        return {
+          title: module.title,
+          description: module.description,
+          orderIndex: module.position,
+          lessons: lessons.map(lesson => ({
+            title: lesson.title,
+            description: lesson.description,
+            orderIndex: lesson.position,
+          })),
+        };
+      })
+    );
+
     return {
       _id: course._id,
       _creationTime: course._creationTime,
@@ -102,7 +133,7 @@ export const getCourseBySlug = query({
       isPublished: course.isPublished,
       courseCategoryId: course.courseCategoryId,
       slug: course.slug,
-      storeId: course.storeId, // Add missing storeId field
+      storeId: course.storeId,
       category: course.category,
       skillLevel: course.skillLevel,
       checkoutHeadline: course.checkoutHeadline,
@@ -114,6 +145,7 @@ export const getCourseBySlug = query({
       acceptsStripe: course.acceptsStripe,
       stripeProductId: course.stripeProductId,
       stripePriceId: course.stripePriceId,
+      modules: modulesWithLessons.length > 0 ? modulesWithLessons : undefined,
     };
   },
 });

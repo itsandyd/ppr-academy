@@ -36,11 +36,11 @@ interface Course {
   userId: string;
   modules?: Array<{
     title: string;
-    description: string;
+    description?: string;
     orderIndex: number;
     lessons: Array<{
       title: string;
-      description: string;
+      description?: string;
       orderIndex: number;
     }>;
   }>;
@@ -89,7 +89,7 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Hero Section */}
-      <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-white overflow-hidden">
+      <div className="bg-gradient-to-r from-primary to-purple-600 text-white overflow-hidden">
         <div className="max-w-6xl mx-auto px-3 sm:px-4 lg:px-6 py-8 sm:py-12 lg:py-16">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 items-center">
             {/* Left: Course Info */}
@@ -132,11 +132,11 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
 
               {/* CTA */}
               <div className="flex flex-col gap-4 w-full">
-                <Button 
-                  size="lg"
-                  onClick={handleEnrollClick}
-                  className="bg-white text-emerald-600 hover:bg-white/90 text-sm sm:text-base lg:text-lg px-4 sm:px-6 lg:px-8 py-3 sm:py-4 h-auto w-full max-w-xs mx-auto sm:mx-0 sm:max-w-none sm:w-auto"
-                >
+              <Button 
+                size="lg"
+                onClick={handleEnrollClick}
+                className="bg-white text-gray-900 hover:bg-white/90 hover:shadow-xl font-semibold text-sm sm:text-base lg:text-lg px-4 sm:px-6 lg:px-8 py-3 sm:py-4 h-auto w-full max-w-xs mx-auto sm:mx-0 sm:max-w-none sm:w-auto"
+              >
                   <span className="truncate">
                     {course.price && course.price > 0 ? (
                       <>Enroll Now - ${course.price}</>
@@ -177,9 +177,9 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
               </div>
               
               {/* Floating Stats - Hidden on mobile to prevent overflow */}
-              <div className="hidden lg:block absolute -bottom-4 -right-4 xl:-bottom-6 xl:-right-6 bg-white rounded-xl p-3 xl:p-4 shadow-2xl">
+              <div className="hidden lg:block absolute -bottom-4 -right-4 xl:-bottom-6 xl:-right-6 bg-card rounded-xl p-3 xl:p-4 shadow-2xl border border-border">
                 <div className="text-center">
-                  <div className="text-xl xl:text-2xl font-bold text-emerald-600">{totalLessons}</div>
+                  <div className="text-xl xl:text-2xl font-bold text-primary">{totalLessons}</div>
                   <div className="text-xs xl:text-sm text-muted-foreground">Lessons</div>
                 </div>
               </div>
@@ -189,7 +189,7 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
       </div>
 
       {/* What You'll Learn Section */}
-      <div className="py-12 sm:py-16 bg-white overflow-hidden">
+      <div className="py-12 sm:py-16 bg-background overflow-hidden">
         <div className="max-w-6xl mx-auto px-3 sm:px-4 lg:px-6">
           <div className="text-center mb-8 sm:mb-12">
             <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-foreground mb-4 break-words">What You'll Learn</h2>
@@ -198,55 +198,51 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
             </p>
           </div>
 
-          {/* Course Modules */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
-            {course.modules?.map((module) => (
-              <Card key={module.orderIndex} className="border-emerald-200 hover:shadow-lg transition-shadow min-w-0">
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-base sm:text-lg lg:text-xl text-emerald-800 flex items-start gap-3">
-                    <div className="w-7 h-7 sm:w-8 sm:h-8 bg-emerald-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                      <span className="text-emerald-600 font-bold text-xs sm:text-sm">{module.orderIndex}</span>
-                    </div>
-                    <span className="leading-tight break-words min-w-0">{module.title}</span>
-                  </CardTitle>
-                  <p className="text-muted-foreground text-xs sm:text-sm lg:text-base break-words">{module.description}</p>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 sm:space-y-3">
-                    {module.lessons.map((lesson) => (
-                      <div key={lesson.orderIndex} className="flex items-start gap-2 sm:gap-3 p-2 sm:p-3 bg-emerald-50 rounded-lg min-w-0">
-                        <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-                        <div className="min-w-0 flex-1">
-                          <h4 className="font-medium text-xs sm:text-sm lg:text-base text-emerald-800 leading-snug break-words">
-                            {lesson.title}
-                          </h4>
-                          {lesson.description && (
-                            <p className="text-xs sm:text-sm text-emerald-600 mt-1 leading-relaxed break-words">
-                              {lesson.description}
-                            </p>
-                          )}
-                        </div>
+          {/* Course Modules - Masonry Grid */}
+          <div className="columns-1 md:columns-2 lg:columns-3 gap-6">
+            {course.modules?.map((module, idx) => (
+              <div key={module.orderIndex} className="break-inside-avoid mb-6">
+                <Card className="border-border bg-card/50 hover:bg-card transition-colors">
+                  <CardContent className="p-5">
+                    {/* Module Header */}
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
+                        <span className="text-white font-bold text-sm">{idx + 1}</span>
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-foreground leading-tight">{module.title}</h3>
+                        <p className="text-xs text-muted-foreground">{module.lessons.length} lessons</p>
+                      </div>
+                    </div>
+                    
+                    {/* Lessons List */}
+                    <div className="space-y-2.5">
+                      {module.lessons.map((lesson) => (
+                        <div key={lesson.orderIndex} className="flex items-start gap-2.5 text-sm">
+                          <CheckCircle className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                          <span className="text-foreground/90 leading-snug">{lesson.title}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             ))}
           </div>
         </div>
       </div>
 
       {/* Benefits Section */}
-      <div className="py-12 sm:py-16 bg-emerald-50 overflow-hidden">
+      <div className="py-12 sm:py-16 bg-muted/20 overflow-hidden">
         <div className="max-w-6xl mx-auto px-3 sm:px-4 lg:px-6">
           <div className="text-center mb-8 sm:mb-12">
             <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-foreground mb-4 break-words">Why Choose This Course?</h2>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-            <Card className="text-center p-6 sm:p-8 border-emerald-200">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Target className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-600" />
+            <Card className="text-center p-6 sm:p-8 border-border">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Target className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
               </div>
               <h3 className="text-lg sm:text-xl font-bold text-foreground mb-3">Practical Learning</h3>
               <p className="text-muted-foreground text-sm sm:text-base">
@@ -254,9 +250,9 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
               </p>
             </Card>
 
-            <Card className="text-center p-6 sm:p-8 border-emerald-200">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Zap className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-600" />
+            <Card className="text-center p-6 sm:p-8 border-border">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Zap className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
               </div>
               <h3 className="text-lg sm:text-xl font-bold text-foreground mb-3">Instant Access</h3>
               <p className="text-muted-foreground text-sm sm:text-base">
@@ -264,9 +260,9 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
               </p>
             </Card>
 
-            <Card className="text-center p-6 sm:p-8 border-emerald-200 sm:col-span-2 lg:col-span-1">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-600" />
+            <Card className="text-center p-6 sm:p-8 border-border sm:col-span-2 lg:col-span-1">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
               </div>
               <h3 className="text-lg sm:text-xl font-bold text-foreground mb-3">Level Up Skills</h3>
               <p className="text-muted-foreground text-sm sm:text-base">
@@ -278,24 +274,24 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
       </div>
 
       {/* Instructor Section */}
-      <div className="py-12 sm:py-16 bg-white overflow-hidden">
+      <div className="py-12 sm:py-16 bg-card overflow-hidden">
         <div className="max-w-4xl mx-auto px-3 sm:px-4 lg:px-6">
           <div className="text-center mb-8 sm:mb-12">
             <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-foreground mb-4 break-words">Meet Your Instructor</h2>
           </div>
 
-          <Card className="p-4 sm:p-6 lg:p-8 border-emerald-200 min-w-0">
+          <Card className="p-4 sm:p-6 lg:p-8 border-border min-w-0">
             <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
               <Avatar className="w-14 h-14 sm:w-16 sm:h-16 lg:w-20 lg:h-20 mx-auto sm:mx-0 flex-shrink-0">
                 <AvatarImage src={creator?.imageUrl} alt={creatorName} />
-                <AvatarFallback className="text-base sm:text-lg lg:text-xl font-bold bg-emerald-100 text-emerald-600">
+                <AvatarFallback className="text-base sm:text-lg lg:text-xl font-bold bg-primary/10 text-primary">
                   {creatorInitials}
                 </AvatarFallback>
               </Avatar>
               
               <div className="flex-1 text-center sm:text-left min-w-0">
                 <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground mb-2 break-words">{creatorName}</h3>
-                <p className="text-emerald-600 font-medium mb-4 text-xs sm:text-sm lg:text-base break-words">Course Creator • {store.name}</p>
+                <p className="text-primary font-medium mb-4 text-xs sm:text-sm lg:text-base break-words">Course Creator • {store.name}</p>
                 
                 {creator?.bio ? (
                   <p className="text-muted-foreground leading-relaxed mb-4 sm:mb-6 text-xs sm:text-sm lg:text-base break-words">
@@ -310,16 +306,16 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
 
                 <div className="flex flex-col gap-3 sm:gap-2 lg:gap-0 lg:flex-row items-center justify-center sm:justify-start lg:gap-4 xl:gap-6">
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <Users className="w-3 h-3 sm:w-4 sm:h-4 text-emerald-600 flex-shrink-0" />
-                    <span className="text-xs sm:text-sm font-medium whitespace-nowrap">1000+ Students</span>
+                    <Users className="w-3 h-3 sm:w-4 sm:h-4 text-primary flex-shrink-0" />
+                    <span className="text-xs sm:text-sm font-medium text-foreground whitespace-nowrap">1000+ Students</span>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <Award className="w-3 h-3 sm:w-4 sm:h-4 text-emerald-600 flex-shrink-0" />
-                    <span className="text-xs sm:text-sm font-medium whitespace-nowrap">Expert Instructor</span>
+                    <Award className="w-3 h-3 sm:w-4 sm:h-4 text-primary flex-shrink-0" />
+                    <span className="text-xs sm:text-sm font-medium text-foreground whitespace-nowrap">Expert Instructor</span>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <Star className="w-3 h-3 sm:w-4 sm:h-4 text-emerald-600 fill-current flex-shrink-0" />
-                    <span className="text-xs sm:text-sm font-medium whitespace-nowrap">4.9 Rating</span>
+                    <Star className="w-3 h-3 sm:w-4 sm:h-4 text-primary fill-current flex-shrink-0" />
+                    <span className="text-xs sm:text-sm font-medium text-foreground whitespace-nowrap">4.9 Rating</span>
                   </div>
                 </div>
               </div>
@@ -329,7 +325,7 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
       </div>
 
       {/* CTA Section */}
-      <div className="py-12 sm:py-16 bg-gradient-to-r from-emerald-600 to-teal-600 text-white overflow-hidden">
+      <div className="py-12 sm:py-16 bg-gradient-to-r from-primary to-purple-600 text-white overflow-hidden">
         <div className="max-w-4xl mx-auto px-3 sm:px-4 lg:px-6 text-center">
           <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold mb-4 break-words">Ready to Start Learning?</h2>
           <p className="text-sm sm:text-base lg:text-lg xl:text-xl text-white/90 mb-6 sm:mb-8 max-w-2xl mx-auto break-words">
@@ -340,7 +336,7 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
             <Button 
               size="lg"
               onClick={handleEnrollClick}
-              className="bg-white text-emerald-600 hover:bg-white/90 text-base sm:text-lg lg:text-xl px-6 sm:px-8 lg:px-12 py-3 sm:py-4 lg:py-6 h-auto w-full max-w-xs sm:max-w-sm"
+              className="bg-white text-gray-900 hover:bg-white/90 hover:shadow-2xl font-bold text-base sm:text-lg lg:text-xl px-6 sm:px-8 lg:px-12 py-3 sm:py-4 lg:py-6 h-auto w-full max-w-xs sm:max-w-sm"
             >
               <span className="truncate">
                 {course.price && course.price > 0 ? (
@@ -392,7 +388,7 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
             <div className="flex items-center gap-4">
               <Avatar className="w-10 h-10 flex-shrink-0">
                 <AvatarImage src={creator?.imageUrl} alt={creatorName} />
-                <AvatarFallback className="bg-emerald-100 text-emerald-600">
+                <AvatarFallback className="bg-primary/10 text-primary">
                   {creatorInitials}
                 </AvatarFallback>
               </Avatar>
@@ -402,7 +398,7 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
               </div>
             </div>
             
-            <Link href={`/${store.slug}`} className="text-xs sm:text-sm text-emerald-600 hover:text-emerald-700 font-medium">
+            <Link href={`/${store.slug}`} className="text-xs sm:text-sm text-primary hover:text-primary/80 font-medium">
               View All Products →
             </Link>
           </div>

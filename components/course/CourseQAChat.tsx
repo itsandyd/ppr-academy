@@ -18,6 +18,7 @@ import {
   Maximize2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import ReactMarkdown from 'react-markdown';
 
 interface Message {
   id: string;
@@ -134,7 +135,7 @@ Always:
         <Button
           onClick={() => setIsOpen(true)}
           size="lg"
-          className="rounded-full w-14 h-14 bg-emerald-600 hover:bg-emerald-700 shadow-lg hover:shadow-xl transition-all duration-200"
+          className="rounded-full w-14 h-14 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
         >
           <MessageCircle className="w-6 h-6" />
         </Button>
@@ -145,10 +146,10 @@ Always:
   return (
     <div className="fixed bottom-6 right-6 z-50">
       <Card className={cn(
-        "w-80 sm:w-96 transition-all duration-200 shadow-xl bg-white border",
+        "w-80 sm:w-96 transition-all duration-200 shadow-xl bg-card border-border",
         isMinimized ? "h-16" : "h-96"
       )}>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 py-3 bg-emerald-600 text-white rounded-t-lg">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-t-xl">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <Bot className="w-4 h-4" />
             Course Assistant
@@ -186,20 +187,38 @@ Always:
                   )}
                 >
                   {message.type === 'assistant' && (
-                    <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                      <Bot className="w-4 h-4 text-emerald-600" />
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900 dark:to-purple-900 flex items-center justify-center flex-shrink-0">
+                      <Bot className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                     </div>
                   )}
                   
                   <div className={cn(
                     "rounded-lg px-3 py-2 max-w-[85%]",
                     message.type === 'user' 
-                      ? "bg-emerald-600 text-white ml-auto" 
-                      : "bg-muted text-muted-foreground"
+                      ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white ml-auto" 
+                      : "bg-card border border-border text-foreground"
                   )}>
-                    <p className="text-sm whitespace-pre-wrap break-words">
-                      {message.content}
-                    </p>
+                    <div className={cn(
+                      "text-sm prose prose-sm max-w-none",
+                      message.type === 'user' ? "prose-invert" : "dark:prose-invert"
+                    )}>
+                      <ReactMarkdown
+                        components={{
+                          p: ({node, ...props}) => <p className="mb-2 last:mb-0 leading-relaxed" {...props} />,
+                          ul: ({node, ...props}) => <ul className="list-disc ml-4 mb-2 space-y-1" {...props} />,
+                          ol: ({node, ...props}) => <ol className="list-decimal ml-4 mb-2 space-y-1" {...props} />,
+                          li: ({node, ...props}) => <li className="text-sm leading-relaxed" {...props} />,
+                          strong: ({node, ...props}) => <strong className="font-bold" {...props} />,
+                          em: ({node, ...props}) => <em className="italic" {...props} />,
+                          code: ({node, ...props}) => <code className={cn(
+                            "px-1.5 py-0.5 rounded text-xs font-mono",
+                            message.type === 'user' ? "bg-white/20" : "bg-muted"
+                          )} {...props} />,
+                        }}
+                      >
+                        {message.content}
+                      </ReactMarkdown>
+                    </div>
                     
                     {message.sources && message.sources.length > 0 && (
                       <div className="mt-2 pt-2 border-t border-border space-y-1">
@@ -229,13 +248,13 @@ Always:
               
               {isLoading && (
                 <div className="flex gap-3 justify-start">
-                  <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                    <Bot className="w-4 h-4 text-emerald-600" />
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900 dark:to-purple-900 flex items-center justify-center flex-shrink-0">
+                    <Bot className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                   </div>
                   <div className="bg-muted rounded-lg px-3 py-2">
                     <div className="flex items-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
-                      <span className="text-sm text-muted-foreground">Thinking...</span>
+                      <Loader2 className="w-4 h-4 animate-spin text-blue-600 dark:text-blue-400" />
+                      <span className="text-sm text-foreground">Thinking...</span>
                     </div>
                   </div>
                 </div>
@@ -258,7 +277,7 @@ Always:
                   type="submit" 
                   size="sm" 
                   disabled={!inputValue.trim() || isLoading}
-                  className="bg-emerald-600 hover:bg-emerald-700"
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
                 >
                   <Send className="w-4 h-4" />
                 </Button>
