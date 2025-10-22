@@ -15,7 +15,7 @@ export default async function NotesPage({
   }
 
   return (
-    <div className="h-screen overflow-hidden">
+    <div className="h-[calc(100vh-9rem)] -m-4 md:-m-8 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800/50">
       <NotesDashboard 
         userId={userId} 
         storeId={resolvedParams.storeId} 

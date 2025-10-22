@@ -143,10 +143,10 @@ export function NotesSidebar({
     return (
       <div key={folder._id}>
         <div
-          className={cn(
-            "flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 group",
-            selectedFolderId === folder._id && "bg-gray-100 dark:bg-gray-800",
-          )}
+        className={cn(
+          "flex items-center gap-2 px-2 py-2 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800/50 group transition-colors",
+          selectedFolderId === folder._id && "bg-blue-50 dark:bg-blue-950/30 border-l-2 border-blue-500",
+        )}
           style={{ paddingLeft: `${8 + level * 16}px` }}
         >
           {hasChildren && (
@@ -176,7 +176,7 @@ export function NotesSidebar({
             ) : (
               <Folder className="h-4 w-4 text-gray-600 dark:text-gray-400" />
             )}
-            <span className="text-sm font-medium truncate">{folder.name}</span>
+            <span className="text-sm font-medium truncate text-gray-900 dark:text-gray-100">{folder.name}</span>
             {folderNotes.length > 0 && (
               <Badge variant="secondary" className="text-xs">
                 {folderNotes.length}
@@ -194,24 +194,24 @@ export function NotesSidebar({
                 <MoreHorizontal className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onCreateNote(folder._id)}>
-                <FileText className="h-4 w-4 mr-2" />
-                New Note
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onCreateFolder(folder._id)}>
-                <Folder className="h-4 w-4 mr-2" />
-                New Folder
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem 
-                onClick={() => onDeleteFolder(folder._id)}
-                className="text-red-600 dark:text-red-400"
-              >
-                <Archive className="h-4 w-4 mr-2" />
-                Archive Folder
-              </DropdownMenuItem>
-            </DropdownMenuContent>
+          <DropdownMenuContent align="end" className="bg-white dark:bg-[#1e1e1e]">
+            <DropdownMenuItem onClick={() => onCreateNote(folder._id)}>
+              <FileText className="h-4 w-4 mr-2" />
+              New Note
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onCreateFolder(folder._id)}>
+              <Folder className="h-4 w-4 mr-2" />
+              New Folder
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem 
+              onClick={() => onDeleteFolder(folder._id)}
+              className="text-red-600 dark:text-red-400"
+            >
+              <Archive className="h-4 w-4 mr-2" />
+              Archive Folder
+            </DropdownMenuItem>
+          </DropdownMenuContent>
           </DropdownMenu>
         </div>
 
@@ -230,8 +230,8 @@ export function NotesSidebar({
       <div
         key={note._id}
         className={cn(
-          "flex items-center gap-2 px-2 py-1.5 rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-900 group",
-          selectedNoteId === note._id && "bg-blue-50 dark:bg-blue-950 border-r-2 border-blue-500",
+          "flex items-center gap-2 px-2 py-2 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800/50 group transition-colors",
+          selectedNoteId === note._id && "bg-blue-50 dark:bg-blue-950/30 border-l-2 border-blue-500",
         )}
         style={{ paddingLeft: `${16 + level * 16}px` }}
         onClick={() => onNoteSelect(note._id)}
@@ -240,8 +240,8 @@ export function NotesSidebar({
           <span className="text-sm">{note.icon || '📝'}</span>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium truncate">{note.title}</span>
-              {note.isFavorite && <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />}
+              <span className="text-sm font-medium truncate text-gray-900 dark:text-gray-100">{note.title}</span>
+              {note.isFavorite && <Star className="h-3 w-3 text-yellow-500 dark:text-yellow-400 fill-yellow-500 dark:fill-yellow-400 flex-shrink-0" />}
             </div>
             
             <div className="flex items-center gap-2 mt-1">
@@ -258,22 +258,6 @@ export function NotesSidebar({
                 </span>
               )}
             </div>
-
-            {note.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-1">
-                {note.tags.slice(0, 2).map(tag => (
-                  <Badge key={tag} variant="outline" className="text-xs">
-                    <Hash className="h-2 w-2 mr-1" />
-                    {tag}
-                  </Badge>
-                ))}
-                {note.tags.length > 2 && (
-                  <Badge variant="outline" className="text-xs">
-                    +{note.tags.length - 2}
-                  </Badge>
-                )}
-              </div>
-            )}
           </div>
         </div>
 
@@ -287,7 +271,7 @@ export function NotesSidebar({
               <MoreHorizontal className="h-3 w-3" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="bg-white dark:bg-[#1e1e1e]">
             <DropdownMenuItem>
               <FileText className="h-4 w-4 mr-2" />
               Edit Note
@@ -315,11 +299,11 @@ export function NotesSidebar({
   const filteredNotes = filterNotes(notes);
 
   return (
-    <div className={cn("h-full flex flex-col bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800", className)}>
+    <div className={cn("h-full flex flex-col", className)}>
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-800">
+      <div className="p-4 border-b border-gray-200 dark:border-gray-800/50 flex-shrink-0">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Notes</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Notes</h2>
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -327,7 +311,7 @@ export function NotesSidebar({
                 <Plus className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent>
+            <DropdownMenuContent className="bg-white dark:bg-[#1e1e1e]">
               <DropdownMenuItem onClick={() => onCreateNote()}>
                 <FileText className="h-4 w-4 mr-2" />
                 New Note
@@ -372,13 +356,13 @@ export function NotesSidebar({
         </div>
       </div>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto p-2">
+      {/* Content - Scrollable list */}
+      <div className="flex-1 overflow-y-auto p-3 min-h-0">
         {searchQuery ? (
           // Search Results
           <div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 px-2">
-              {filteredNotes.length} results for "{searchQuery}"
+            <div className="text-xs text-gray-600 dark:text-gray-400 mb-2 px-2 font-medium">
+              {filteredNotes.length} result{filteredNotes.length !== 1 ? 's' : ''} for "{searchQuery}"
             </div>
             {filteredNotes.map(note => renderNote(note))}
           </div>
@@ -386,12 +370,12 @@ export function NotesSidebar({
           // Folder Tree
           <div className="space-y-1">
             {/* Quick Access */}
-            <div className="mb-4">
+            <div className="mb-3">
               <Button
                 variant={!selectedFolderId ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => onFolderSelect(null)}
-                className="w-full justify-start"
+                className="w-full justify-start text-sm"
               >
                 <FileText className="h-4 w-4 mr-2" />
                 All Notes

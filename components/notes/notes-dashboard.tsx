@@ -48,6 +48,7 @@ import {
   Settings
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatDistanceToNow } from 'date-fns';
 
 interface NotesDashboardProps {
   userId: string;
@@ -63,6 +64,8 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
   const [isGeneratingCourse, setIsGeneratingCourse] = useState(false);
   const [showCourseDialog, setShowCourseDialog] = useState(false);
   const [showFolderDialog, setShowFolderDialog] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [courseFormData, setCourseFormData] = useState({
     title: '',
     description: '',
@@ -87,13 +90,13 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
   const folders = useQuery(api.notes.getFoldersByUser, {
     userId,
     storeId,
-    parentId: selectedFolderId ? selectedFolderId as Id<"noteFolders"> : undefined,
+    parentId: selectedFolderId ? (selectedFolderId as Id<"noteFolders">) : undefined,
   }) ?? [];
 
-  const notesQuery = useQuery(api.notes.getNotesByUser, {
+  const notesQuery = useQuery((api.notes as any).getNotesByUser, {
     userId,
     storeId,
-    folderId: selectedFolderId ? selectedFolderId as Id<"noteFolders"> : undefined,
+    folderId: selectedFolderId ? (selectedFolderId as Id<"noteFolders">) : undefined,
     paginationOpts: { numItems: 50, cursor: null },
   });
 
@@ -109,7 +112,7 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
   const deleteNote = useMutation(api.notes.deleteNote);
   const createFolder = useMutation(api.notes.createFolder);
   const deleteFolder = useMutation(api.notes.deleteFolder);
-  const generateCourseFromNotes = useMutation(api.notesToCourse.generateCourseFromNotes);
+  const generateCourseFromNotes = useMutation((api as any).notesToCourse.generateCourseFromNotes);
 
   // Handlers
   const handleNoteSelect = useCallback((noteId: string) => {
@@ -163,12 +166,13 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
     }
   }, [createFolder, userId, storeId]);
 
-  const handleSaveNote = useCallback(async () => {
+  const handleSaveNote = useCallback(async (showToast = true) => {
     if (!selectedNoteId) {
       await handleCreateNote(selectedFolderId || undefined);
       return;
     }
 
+    setIsSaving(true);
     try {
       await updateNote({
         noteId: selectedNoteId as Id<"notes">,
@@ -179,16 +183,22 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
         status: currentNote.status,
       });
       
-      toast({
-        title: "Note Saved",
-        description: "Your note has been saved successfully.",
-      });
+      setLastSaved(new Date());
+      
+      if (showToast) {
+        toast({
+          title: "Note Saved",
+          description: "Your note has been saved successfully.",
+        });
+      }
     } catch (error) {
       toast({
         title: "Error",
         description: "Failed to save note.",
         variant: "destructive",
       });
+    } finally {
+      setIsSaving(false);
     }
   }, [selectedNoteId, currentNote, updateNote, handleCreateNote, selectedFolderId]);
 
@@ -277,15 +287,51 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
     }
   }, [selectedNote]);
 
+  // Auto-save functionality - debounced save after 2 seconds of no typing
+  useEffect(() => {
+    if (!selectedNoteId || !selectedNote) return;
+
+    // Check if content has actually changed
+    const hasChanges = 
+      currentNote.title !== selectedNote.title ||
+      currentNote.content !== selectedNote.content ||
+      JSON.stringify(currentNote.tags) !== JSON.stringify(selectedNote.tags) ||
+      currentNote.priority !== selectedNote.priority ||
+      currentNote.status !== selectedNote.status;
+
+    if (!hasChanges) return;
+
+    const autoSaveTimer = setTimeout(async () => {
+      setIsSaving(true);
+      try {
+        await updateNote({
+          noteId: selectedNoteId as Id<"notes">,
+          title: currentNote.title,
+          content: currentNote.content,
+          tags: currentNote.tags,
+          priority: currentNote.priority,
+          status: currentNote.status,
+        });
+        setLastSaved(new Date());
+      } catch (error) {
+        console.error('Auto-save failed:', error);
+      } finally {
+        setIsSaving(false);
+      }
+    }, 2000); // Auto-save after 2 seconds of inactivity
+
+    return () => clearTimeout(autoSaveTimer);
+  }, [selectedNoteId, selectedNote, currentNote, updateNote]);
+
   return (
-    <div className="h-screen flex">
-      {/* Sidebar */}
-      <div className="w-80 flex-shrink-0">
+    <div className="h-full w-full flex bg-white dark:bg-[#1a1a1a] overflow-hidden">
+      {/* Sidebar - Balanced width */}
+      <div className="w-72 flex-shrink-0 bg-gray-50 dark:bg-[#1e1e1e] border-r border-gray-200 dark:border-gray-800/50 flex flex-col">
         <NotesSidebar
           folders={folders}
           notes={notes}
-          selectedNoteId={selectedNoteId}
-          selectedFolderId={selectedFolderId}
+          selectedNoteId={selectedNoteId ?? undefined}
+          selectedFolderId={selectedFolderId ?? undefined}
           onNoteSelect={handleNoteSelect}
           onFolderSelect={setSelectedFolderId}
           onCreateNote={handleCreateNote}
@@ -298,24 +344,38 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
-        {/* Header */}
-        <div className="h-16 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-6">
-          <div className="flex items-center gap-4">
-            <h1 className="text-xl font-semibold">
+      <div className="flex-1 flex flex-col bg-white dark:bg-[#1a1a1a] min-w-0">
+        {/* Header - Clean and spacious */}
+        <div className="h-16 border-b border-gray-200 dark:border-gray-800/50 flex items-center justify-between px-6 bg-white dark:bg-[#1e1e1e]/50 backdrop-blur-sm flex-shrink-0">
+          <div className="flex items-center gap-4 min-w-0">
+            <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 truncate">
               {selectedNoteId ? currentNote.title : 'Notes'}
             </h1>
             
             {selectedNote && (
-              <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="text-xs">
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <Badge 
+                  variant="secondary" 
+                  className="text-xs bg-gray-100 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700/50"
+                >
                   {selectedNote.status}
                 </Badge>
                 {selectedNote.wordCount && (
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
                     {selectedNote.wordCount} words
                   </span>
                 )}
+                {/* Auto-save indicator - Enhanced visibility */}
+                {isSaving ? (
+                  <span className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1 font-medium">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Saving...
+                  </span>
+                ) : lastSaved ? (
+                  <span className="text-xs text-green-600 dark:text-green-400 font-medium">
+                    ✓ Saved {formatDistanceToNow(lastSaved)} ago
+                  </span>
+                ) : null}
               </div>
             )}
           </div>
@@ -335,13 +395,13 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
                       Generate Course
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-lg bg-white dark:bg-black">
+                  <DialogContent className="sm:max-w-lg bg-white dark:bg-[#1e1e1e] border-gray-200 dark:border-gray-800">
                     <DialogHeader>
-                      <DialogTitle className="flex items-center gap-2">
-                        <Brain className="h-5 w-5" />
+                      <DialogTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
+                        <Brain className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                         Generate Course from Notes
                       </DialogTitle>
-                      <DialogDescription>
+                      <DialogDescription className="text-gray-600 dark:text-gray-400">
                         Create a structured course from your selected {selectedNotesForCourse.size} notes using AI.
                       </DialogDescription>
                     </DialogHeader>
@@ -380,7 +440,7 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
                             <SelectTrigger>
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="bg-white dark:bg-black">
+                            <SelectContent className="bg-white dark:bg-[#1e1e1e] border-gray-200 dark:border-gray-800">
                               <SelectItem value="beginner">Beginner</SelectItem>
                               <SelectItem value="intermediate">Intermediate</SelectItem>
                               <SelectItem value="advanced">Advanced</SelectItem>
@@ -399,7 +459,7 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
                             <SelectTrigger>
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="bg-white dark:bg-black">
+                            <SelectContent className="bg-white dark:bg-[#1e1e1e] border-gray-200 dark:border-gray-800">
                               <SelectItem value="3">3 Modules</SelectItem>
                               <SelectItem value="4">4 Modules</SelectItem>
                               <SelectItem value="5">5 Modules</SelectItem>
@@ -466,7 +526,7 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
             </Button>
 
             {selectedNoteId && (
-              <Button onClick={handleSaveNote} className="gap-2">
+              <Button onClick={() => handleSaveNote(true)} className="gap-2">
                 <Save className="h-4 w-4" />
                 Save
               </Button>
@@ -474,10 +534,10 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
           </div>
         </div>
 
-        {/* Content Area */}
-        <div className="flex-1 overflow-hidden">
+        {/* Content Area - Optimized editor */}
+        <div className="flex-1 overflow-auto">
           {selectedNoteId && selectedNote ? (
-            <div className="h-full">
+            <div className="h-full w-full">
               <NotionEditor
                 content={currentNote.content}
                 onChange={(content) => setCurrentNote(prev => ({ ...prev, content }))}
@@ -486,15 +546,17 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
                 icon={currentNote.icon}
                 onIconChange={(icon) => setCurrentNote(prev => ({ ...prev, icon }))}
                 placeholder="Start writing your ideas..."
-                className="h-full"
+                className="h-full border-none rounded-none shadow-none"
               />
             </div>
           ) : (
-            // Welcome Screen
-            <div className="h-full flex items-center justify-center bg-gray-50 dark:bg-gray-950">
-              <div className="text-center space-y-6 max-w-md">
+            // Welcome Screen - Enhanced dark mode
+            <div className="h-full flex items-center justify-center bg-gray-50/50 dark:bg-[#1a1a1a]">
+              <div className="text-center space-y-6 max-w-md px-4">
                 <div className="space-y-2">
-                  <FileText className="h-16 w-16 mx-auto text-gray-400" />
+                  <div className="mx-auto w-20 h-20 bg-gradient-to-br from-purple-500/10 to-blue-500/10 dark:from-purple-500/20 dark:to-blue-500/20 rounded-2xl flex items-center justify-center mb-4">
+                    <FileText className="h-10 w-10 text-purple-600 dark:text-purple-400" />
+                  </div>
                   <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
                     Welcome to Your Notes
                   </h2>
@@ -514,21 +576,21 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
                   </div>
                 </div>
                 
-                <div className="pt-6 border-t border-gray-200 dark:border-gray-800">
+                <div className="pt-6 border-t border-gray-200 dark:border-gray-800/50">
                   <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-3">
                     AI-Powered Features
                   </h3>
                   <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
                     <div className="flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-blue-500" />
+                      <Sparkles className="h-4 w-4 text-blue-500 dark:text-blue-400" />
                       Generate courses from your notes
                     </div>
                     <div className="flex items-center gap-2">
-                      <Brain className="h-4 w-4 text-purple-500" />
+                      <Brain className="h-4 w-4 text-purple-500 dark:text-purple-400" />
                       AI-powered content suggestions
                     </div>
                     <div className="flex items-center gap-2">
-                      <BookOpen className="h-4 w-4 text-green-500" />
+                      <BookOpen className="h-4 w-4 text-green-500 dark:text-green-400" />
                       Automatic content organization
                     </div>
                   </div>

@@ -105,7 +105,7 @@ export function NotionEditor({
     editable,
     editorProps: {
       attributes: {
-        class: 'focus:outline-none prose prose-sm sm:prose lg:prose-lg xl:prose-xl max-w-none px-8 py-4 min-h-[300px]',
+        class: 'focus:outline-none prose prose-lg max-w-none px-8 py-6 min-h-full dark:prose-invert prose-headings:text-gray-900 dark:prose-headings:text-gray-100 prose-p:text-gray-700 dark:prose-p:text-gray-300 prose-a:text-blue-600 dark:prose-a:text-blue-400 prose-strong:text-gray-900 dark:prose-strong:text-gray-100 prose-code:text-purple-600 dark:prose-code:text-purple-400 prose-pre:bg-gray-100 dark:prose-pre:bg-gray-900 prose-pre:text-gray-800 dark:prose-pre:text-gray-200',
       },
     },
   });
@@ -160,27 +160,34 @@ export function NotionEditor({
     setLocalTitle(title);
   }, [title]);
 
+  // Update editor content when the content prop changes (e.g., when selecting a different note)
+  useEffect(() => {
+    if (editor && content !== editor.getHTML()) {
+      editor.commands.setContent(content);
+    }
+  }, [editor, content]);
+
   if (!editor) {
     return null;
   }
 
   return (
-    <div className={cn("w-full bg-white dark:bg-black border border-gray-200 dark:border-gray-800 rounded-lg", className)}>
+    <div className={cn("w-full h-full bg-white dark:bg-[#1e1e1e] border border-gray-200 dark:border-gray-800/50 rounded-lg shadow-sm dark:shadow-none flex flex-col", className)}>
       {/* Header with icon and title */}
-      <div className="flex items-center gap-3 px-8 py-6 border-b border-gray-100 dark:border-gray-800">
+      <div className="flex items-center gap-3 px-8 py-5 border-b border-gray-100 dark:border-gray-800/50 bg-gray-50/50 dark:bg-[#1a1a1a]/50 flex-shrink-0">
         <div className="relative">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => editable && setShowEmojiPicker(!showEmojiPicker)}
-            className="text-2xl p-1 h-auto hover:bg-gray-100 dark:hover:bg-gray-800"
+            className="text-2xl p-1 h-auto hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-colors"
             disabled={!editable}
           >
             {icon}
           </Button>
           
           {showEmojiPicker && editable && (
-            <div className="absolute top-full left-0 mt-2 p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
+            <div className="absolute top-full left-0 mt-2 p-3 bg-white dark:bg-[#1e1e1e] border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg dark:shadow-2xl z-50">
               <div className="grid grid-cols-5 gap-1">
                 {EMOJI_LIST.map((emoji) => (
                   <Button
@@ -207,7 +214,7 @@ export function NotionEditor({
           onChange={(e) => setLocalTitle(e.target.value)}
           onKeyDown={handleTitleKeyDown}
           onBlur={handleTitleBlur}
-          className="flex-1 text-3xl font-bold bg-transparent border-none outline-none placeholder-gray-400 dark:placeholder-gray-600"
+          className="flex-1 text-3xl font-bold bg-transparent border-none outline-none placeholder-gray-400 dark:placeholder-gray-600 text-gray-900 dark:text-gray-100"
           placeholder="Untitled"
           disabled={!editable}
         />
@@ -215,13 +222,16 @@ export function NotionEditor({
 
       {/* Toolbar */}
       {editable && (
-        <div className="flex items-center gap-1 px-4 py-2 border-b border-gray-100 dark:border-gray-800 overflow-x-auto">
+        <div className="flex items-center gap-1 px-4 py-2 border-b border-gray-100 dark:border-gray-800/50 overflow-x-auto bg-gray-50/30 dark:bg-[#1a1a1a]/30 flex-shrink-0">
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-            className={editor.isActive('heading', { level: 1 }) ? 'bg-gray-200 dark:bg-gray-700' : ''}
+            className={cn(
+              "hover:bg-gray-100 dark:hover:bg-gray-800/50",
+              editor.isActive('heading', { level: 1 }) && 'bg-gray-200 dark:bg-gray-700/50 text-blue-600 dark:text-blue-400'
+            )}
           >
             <Heading1 className="w-4 h-4" />
           </Button>
@@ -231,7 +241,10 @@ export function NotionEditor({
             variant="ghost"
             size="sm"
             onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-            className={editor.isActive('heading', { level: 2 }) ? 'bg-gray-200 dark:bg-gray-700' : ''}
+            className={cn(
+              "hover:bg-gray-100 dark:hover:bg-gray-800/50",
+              editor.isActive('heading', { level: 2 }) && 'bg-gray-200 dark:bg-gray-700/50 text-blue-600 dark:text-blue-400'
+            )}
           >
             <Heading2 className="w-4 h-4" />
           </Button>
@@ -241,19 +254,25 @@ export function NotionEditor({
             variant="ghost"
             size="sm"
             onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-            className={editor.isActive('heading', { level: 3 }) ? 'bg-gray-200 dark:bg-gray-700' : ''}
+            className={cn(
+              "hover:bg-gray-100 dark:hover:bg-gray-800/50",
+              editor.isActive('heading', { level: 3 }) && 'bg-gray-200 dark:bg-gray-700/50 text-blue-600 dark:text-blue-400'
+            )}
           >
             <Heading3 className="w-4 h-4" />
           </Button>
 
-          <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
+          <div className="w-px h-6 bg-gray-300 dark:bg-gray-700/50 mx-1" />
 
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={() => editor.chain().focus().toggleBold().run()}
-            className={editor.isActive('bold') ? 'bg-gray-200 dark:bg-gray-700' : ''}
+            className={cn(
+              "hover:bg-gray-100 dark:hover:bg-gray-800/50",
+              editor.isActive('bold') && 'bg-gray-200 dark:bg-gray-700/50 text-blue-600 dark:text-blue-400'
+            )}
           >
             <Bold className="w-4 h-4" />
           </Button>
@@ -263,7 +282,10 @@ export function NotionEditor({
             variant="ghost"
             size="sm"
             onClick={() => editor.chain().focus().toggleItalic().run()}
-            className={editor.isActive('italic') ? 'bg-gray-200 dark:bg-gray-700' : ''}
+            className={cn(
+              "hover:bg-gray-100 dark:hover:bg-gray-800/50",
+              editor.isActive('italic') && 'bg-gray-200 dark:bg-gray-700/50 text-blue-600 dark:text-blue-400'
+            )}
           >
             <Italic className="w-4 h-4" />
           </Button>
@@ -273,7 +295,10 @@ export function NotionEditor({
             variant="ghost"
             size="sm"
             onClick={() => editor.chain().focus().toggleHighlight().run()}
-            className={editor.isActive('highlight') ? 'bg-gray-200 dark:bg-gray-700' : ''}
+            className={cn(
+              "hover:bg-gray-100 dark:hover:bg-gray-800/50",
+              editor.isActive('highlight') && 'bg-gray-200 dark:bg-gray-700/50 text-yellow-600 dark:text-yellow-400'
+            )}
           >
             <Palette className="w-4 h-4" />
           </Button>
@@ -283,12 +308,15 @@ export function NotionEditor({
             variant="ghost"
             size="sm"
             onClick={() => editor.chain().focus().toggleCode().run()}
-            className={editor.isActive('code') ? 'bg-gray-200 dark:bg-gray-700' : ''}
+            className={cn(
+              "hover:bg-gray-100 dark:hover:bg-gray-800/50",
+              editor.isActive('code') && 'bg-gray-200 dark:bg-gray-700/50 text-purple-600 dark:text-purple-400'
+            )}
           >
             <Code className="w-4 h-4" />
           </Button>
 
-          <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
+          <div className="w-px h-6 bg-gray-300 dark:bg-gray-700/50 mx-1" />
 
           <Button
             type="button"
@@ -371,11 +399,11 @@ export function NotionEditor({
         </div>
       )}
 
-      {/* Editor Content */}
-      <div className="relative">
+      {/* Editor Content - Expanded to fill space */}
+      <div className="relative flex-1 overflow-auto">
         <EditorContent 
           editor={editor} 
-          className="min-h-[400px]"
+          className="h-full"
         />
         
         {/* Floating add button for empty lines */}
