@@ -52,7 +52,7 @@ export function AppSidebar() {
     { icon: BarChart3, href: "/analytics", label: "Analytics" },
     { icon: FileText, href: `/store/${storeId || 'setup'}/notes`, label: "Notes" },
     { icon: Users, href: `/store/${storeId || 'setup'}/customers`, label: "Customers" },
-    { icon: Mail, href: `/store/${storeId || 'setup'}/email-campaigns`, label: "Email Campaigns" },
+    { icon: Mail, href: `/store/${storeId || 'setup'}/email-campaigns`, label: "Campaigns" },
     { icon: Inbox, href: `/store/${storeId || 'setup'}/inbox`, label: "Inbox" },
     { icon: Package, href: `/store/${storeId || 'setup'}/products`, label: "Products" },
     { icon: Store, href: "/store", label: "Store" },

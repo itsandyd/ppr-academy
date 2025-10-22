@@ -155,9 +155,7 @@ export function AppSidebarEnhanced() {
         { 
           icon: MessageSquare, 
           href: `/store/${storeId || 'setup'}/inbox`, 
-          label: "Customer Inbox",
-          badge: "New",
-          isNew: true,
+          label: "Inbox",
           gradient: "from-pink-500 to-rose-500"
         },
         { 
