@@ -28,7 +28,8 @@ import {
   FileText,
   PenTool,
   List,
-  Inbox
+  Inbox,
+  MessageSquare
 } from "lucide-react";
 import { usePathname, useParams } from "next/navigation";
 import { useUser, UserButton, SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
@@ -150,6 +151,14 @@ export function AppSidebarEnhanced() {
           href: `/store/${storeId || 'setup'}/email-campaigns`, 
           label: "Email Campaigns",
           gradient: "from-indigo-500 to-purple-500"
+        },
+        { 
+          icon: MessageSquare, 
+          href: `/store/${storeId || 'setup'}/inbox`, 
+          label: "Customer Inbox",
+          badge: "New",
+          isNew: true,
+          gradient: "from-pink-500 to-rose-500"
         },
         { 
           icon: Share2, 

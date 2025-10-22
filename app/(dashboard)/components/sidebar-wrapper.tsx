@@ -24,6 +24,7 @@ export function SidebarWrapper({ children }: SidebarWrapperProps) {
       if (pathname.includes("/products")) return "Products";
       if (pathname.includes("/customers")) return "Customers";
       if (pathname.includes("/email-campaigns")) return "Email Campaigns";
+      if (pathname.includes("/inbox")) return "Customer Inbox";
       if (pathname.includes("/social")) return "Social Media";
       if (pathname.includes("/automations")) return "Automations";
       if (pathname.includes("/options")) return "Settings";
