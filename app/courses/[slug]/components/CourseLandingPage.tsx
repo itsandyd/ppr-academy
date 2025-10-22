@@ -87,9 +87,9 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
   };
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
+    <div className="min-h-screen bg-white dark:bg-slate-950 overflow-x-hidden">
       {/* Hero Section */}
-      <div className="bg-gradient-to-r from-primary to-purple-600 text-white overflow-hidden">
+      <div className="bg-gradient-to-r from-[#99D8F5] to-purple-600 text-white overflow-hidden">
         <div className="max-w-6xl mx-auto px-3 sm:px-4 lg:px-6 py-8 sm:py-12 lg:py-16">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 items-center">
             {/* Left: Course Info */}
@@ -105,7 +105,7 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
               </div>
 
               {/* Course Title */}
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold leading-tight break-words">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold text-white leading-tight break-words">
                 {course.title}
               </h1>
 
@@ -118,15 +118,15 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
               <div className="flex items-center gap-4 sm:gap-6 lg:gap-8 flex-wrap">
                 <div className="flex items-center gap-2">
                   <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-white/80 flex-shrink-0" />
-                  <span className="font-medium text-sm sm:text-base">{totalModules} Modules</span>
+                  <span className="font-medium text-white text-sm sm:text-base">{totalModules} Modules</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Play className="w-4 h-4 sm:w-5 sm:h-5 text-white/80 flex-shrink-0" />
-                  <span className="font-medium text-sm sm:text-base">{totalLessons} Lessons</span>
+                  <span className="font-medium text-white text-sm sm:text-base">{totalLessons} Lessons</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-white/80 flex-shrink-0" />
-                  <span className="font-medium text-sm sm:text-base">~{estimatedHours} Hours</span>
+                  <span className="font-medium text-white text-sm sm:text-base">~{estimatedHours} Hours</span>
                 </div>
               </div>
 
@@ -155,7 +155,7 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
                     <Star className="w-3 h-3 sm:w-4 sm:h-4 fill-current flex-shrink-0" />
                     <Star className="w-3 h-3 sm:w-4 sm:h-4 fill-current flex-shrink-0" />
                   </div>
-                  <p className="text-xs sm:text-sm">Join thousands of students</p>
+                  <p className="text-xs sm:text-sm text-white">Join thousands of students</p>
                 </div>
               </div>
             </div>
@@ -189,11 +189,11 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
       </div>
 
       {/* What You'll Learn Section */}
-      <div className="py-12 sm:py-16 bg-background overflow-hidden">
+      <div className="py-12 sm:py-16 bg-slate-50 dark:bg-slate-900 overflow-hidden">
         <div className="max-w-6xl mx-auto px-3 sm:px-4 lg:px-6">
           <div className="text-center mb-8 sm:mb-12">
-            <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-foreground mb-4 break-words">What You'll Learn</h2>
-            <p className="text-sm sm:text-base lg:text-lg xl:text-xl text-muted-foreground max-w-3xl mx-auto break-words">
+            <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-slate-900 dark:text-white mb-4 break-words">What You'll Learn</h2>
+            <p className="text-sm sm:text-base lg:text-lg xl:text-xl text-slate-600 dark:text-slate-300 max-w-3xl mx-auto break-words">
               This comprehensive course covers everything you need to know, with hands-on examples and real-world applications.
             </p>
           </div>
@@ -202,16 +202,16 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
           <div className="columns-1 md:columns-2 lg:columns-3 gap-6">
             {course.modules?.map((module, idx) => (
               <div key={module.orderIndex} className="break-inside-avoid mb-6">
-                <Card className="border-border bg-card/50 hover:bg-card transition-colors">
+                <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:shadow-md transition-all">
                   <CardContent className="p-5">
                     {/* Module Header */}
                     <div className="flex items-center gap-3 mb-4">
-                      <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
+                      <div className="w-8 h-8 bg-[#2563eb] rounded-lg flex items-center justify-center flex-shrink-0">
                         <span className="text-white font-bold text-sm">{idx + 1}</span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-foreground leading-tight">{module.title}</h3>
-                        <p className="text-xs text-muted-foreground">{module.lessons.length} lessons</p>
+                        <h3 className="font-bold text-slate-900 dark:text-white leading-tight">{module.title}</h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{module.lessons.length} lessons</p>
                       </div>
                     </div>
                     
@@ -220,7 +220,7 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
                       {module.lessons.map((lesson) => (
                         <div key={lesson.orderIndex} className="flex items-start gap-2.5 text-sm">
                           <CheckCircle className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                          <span className="text-foreground/90 leading-snug">{lesson.title}</span>
+                          <span className="text-slate-700 dark:text-slate-300 leading-snug">{lesson.title}</span>
                         </div>
                       ))}
                     </div>
@@ -233,29 +233,29 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
       </div>
 
       {/* Benefits Section */}
-      <div className="py-12 sm:py-16 bg-muted/20 overflow-hidden">
+      <div className="py-12 sm:py-16 bg-white dark:bg-slate-950 overflow-hidden">
         <div className="max-w-6xl mx-auto px-3 sm:px-4 lg:px-6">
           <div className="text-center mb-8 sm:mb-12">
-            <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-foreground mb-4 break-words">Why Choose This Course?</h2>
+            <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-slate-900 dark:text-white mb-4 break-words">Why Choose This Course?</h2>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-            <Card className="text-center p-6 sm:p-8 border-border">
+            <Card className="text-center p-6 sm:p-8 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:shadow-lg transition-shadow">
               <div className="w-12 h-12 sm:w-16 sm:h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Target className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
               </div>
-              <h3 className="text-lg sm:text-xl font-bold text-foreground mb-3">Practical Learning</h3>
-              <p className="text-muted-foreground text-sm sm:text-base">
+              <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-3">Practical Learning</h3>
+              <p className="text-slate-600 dark:text-slate-300 text-sm sm:text-base">
                 Learn by doing with hands-on exercises and real-world examples that you can apply immediately.
               </p>
             </Card>
 
-            <Card className="text-center p-6 sm:p-8 border-border">
+            <Card className="text-center p-6 sm:p-8 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:shadow-lg transition-shadow">
               <div className="w-12 h-12 sm:w-16 sm:h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Zap className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
               </div>
-              <h3 className="text-lg sm:text-xl font-bold text-foreground mb-3">Instant Access</h3>
-              <p className="text-muted-foreground text-sm sm:text-base">
+              <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-3">Instant Access</h3>
+              <p className="text-slate-600 dark:text-slate-300 text-sm sm:text-base">
                 Start learning immediately after enrollment. All content is available right away with lifetime access.
               </p>
             </Card>
@@ -264,8 +264,8 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
               <div className="w-12 h-12 sm:w-16 sm:h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
                 <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
               </div>
-              <h3 className="text-lg sm:text-xl font-bold text-foreground mb-3">Level Up Skills</h3>
-              <p className="text-muted-foreground text-sm sm:text-base">
+              <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-3">Level Up Skills</h3>
+              <p className="text-slate-600 dark:text-slate-300 text-sm sm:text-base">
                 Transform your abilities with expert techniques and insider knowledge from industry professionals.
               </p>
             </Card>
@@ -274,13 +274,13 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
       </div>
 
       {/* Instructor Section */}
-      <div className="py-12 sm:py-16 bg-card overflow-hidden">
+      <div className="py-12 sm:py-16 bg-slate-50 dark:bg-slate-900 overflow-hidden">
         <div className="max-w-4xl mx-auto px-3 sm:px-4 lg:px-6">
           <div className="text-center mb-8 sm:mb-12">
-            <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-foreground mb-4 break-words">Meet Your Instructor</h2>
+            <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-slate-900 dark:text-white mb-4 break-words">Meet Your Instructor</h2>
           </div>
 
-          <Card className="p-4 sm:p-6 lg:p-8 border-border min-w-0">
+          <Card className="p-4 sm:p-6 lg:p-8 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 min-w-0">
             <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
               <Avatar className="w-14 h-14 sm:w-16 sm:h-16 lg:w-20 lg:h-20 mx-auto sm:mx-0 flex-shrink-0">
                 <AvatarImage src={creator?.imageUrl} alt={creatorName} />
@@ -290,15 +290,15 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
               </Avatar>
               
               <div className="flex-1 text-center sm:text-left min-w-0">
-                <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground mb-2 break-words">{creatorName}</h3>
+                <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-900 dark:text-white mb-2 break-words">{creatorName}</h3>
                 <p className="text-primary font-medium mb-4 text-xs sm:text-sm lg:text-base break-words">Course Creator • {store.name}</p>
                 
                 {creator?.bio ? (
-                  <p className="text-muted-foreground leading-relaxed mb-4 sm:mb-6 text-xs sm:text-sm lg:text-base break-words">
+                  <p className="text-slate-600 dark:text-slate-300 leading-relaxed mb-4 sm:mb-6 text-xs sm:text-sm lg:text-base break-words">
                     {creator.bio}
                   </p>
                 ) : (
-                  <p className="text-muted-foreground leading-relaxed mb-4 sm:mb-6 text-xs sm:text-sm lg:text-base break-words">
+                  <p className="text-slate-600 dark:text-slate-300 leading-relaxed mb-4 sm:mb-6 text-xs sm:text-sm lg:text-base break-words">
                     Passionate educator and industry expert dedicated to helping students master their craft through practical, 
                     hands-on learning experiences.
                   </p>
@@ -307,15 +307,15 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
                 <div className="flex flex-col gap-3 sm:gap-2 lg:gap-0 lg:flex-row items-center justify-center sm:justify-start lg:gap-4 xl:gap-6">
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <Users className="w-3 h-3 sm:w-4 sm:h-4 text-primary flex-shrink-0" />
-                    <span className="text-xs sm:text-sm font-medium text-foreground whitespace-nowrap">1000+ Students</span>
+                    <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">1000+ Students</span>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <Award className="w-3 h-3 sm:w-4 sm:h-4 text-primary flex-shrink-0" />
-                    <span className="text-xs sm:text-sm font-medium text-foreground whitespace-nowrap">Expert Instructor</span>
+                    <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">Expert Instructor</span>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <Star className="w-3 h-3 sm:w-4 sm:h-4 text-primary fill-current flex-shrink-0" />
-                    <span className="text-xs sm:text-sm font-medium text-foreground whitespace-nowrap">4.9 Rating</span>
+                    <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">4.9 Rating</span>
                   </div>
                 </div>
               </div>
@@ -325,9 +325,9 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
       </div>
 
       {/* CTA Section */}
-      <div className="py-12 sm:py-16 bg-gradient-to-r from-primary to-purple-600 text-white overflow-hidden">
+      <div className="py-12 sm:py-16 bg-gradient-to-r from-[#99d8f5] to-purple-600 text-white overflow-hidden">
         <div className="max-w-4xl mx-auto px-3 sm:px-4 lg:px-6 text-center">
-          <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold mb-4 break-words">Ready to Start Learning?</h2>
+          <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-white mb-4 break-words">Ready to Start Learning?</h2>
           <p className="text-sm sm:text-base lg:text-lg xl:text-xl text-white/90 mb-6 sm:mb-8 max-w-2xl mx-auto break-words">
             Join thousands of students who have transformed their skills with this comprehensive course.
           </p>
@@ -351,11 +351,11 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
             <div className="text-center space-y-2">
               <div className="flex items-center justify-center gap-2">
                 <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                <span className="text-sm">30-day money-back guarantee</span>
+                <span className="text-sm text-white">30-day money-back guarantee</span>
               </div>
               <div className="flex items-center justify-center gap-2">
                 <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                <span className="text-sm">Lifetime access included</span>
+                <span className="text-sm text-white">Lifetime access included</span>
               </div>
             </div>
           </div>
@@ -365,15 +365,15 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
             <p className="text-white/80 mb-4 text-sm sm:text-base">Trusted by creators worldwide</p>
             <div className="flex items-center justify-center gap-6 sm:gap-8">
               <div className="text-center">
-                <div className="text-xl sm:text-2xl font-bold">1,000+</div>
+                <div className="text-xl sm:text-2xl font-bold text-white">1,000+</div>
                 <div className="text-xs sm:text-sm text-white/80">Students</div>
               </div>
               <div className="text-center">
-                <div className="text-xl sm:text-2xl font-bold">4.9</div>
+                <div className="text-xl sm:text-2xl font-bold text-white">4.9</div>
                 <div className="text-xs sm:text-sm text-white/80">Rating</div>
               </div>
               <div className="text-center">
-                <div className="text-xl sm:text-2xl font-bold">98%</div>
+                <div className="text-xl sm:text-2xl font-bold text-white">98%</div>
                 <div className="text-xs sm:text-sm text-white/80">Completion</div>
               </div>
             </div>
@@ -382,7 +382,7 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
       </div>
 
       {/* Footer */}
-      <div className="py-6 sm:py-8 bg-muted/30">
+      <div className="py-6 sm:py-8 bg-slate-100 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-4">
@@ -393,8 +393,8 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
                 </AvatarFallback>
               </Avatar>
               <div className="text-center sm:text-left">
-                <p className="font-medium text-foreground text-sm sm:text-base">{store.name}</p>
-                <p className="text-xs sm:text-sm text-muted-foreground">by {creatorName}</p>
+                <p className="font-medium text-slate-900 dark:text-white text-sm sm:text-base">{store.name}</p>
+                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">by {creatorName}</p>
               </div>
             </div>
             
