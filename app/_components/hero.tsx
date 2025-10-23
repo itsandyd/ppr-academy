@@ -12,12 +12,12 @@ export const Hero: FC<HeroProps> = () => {
   const { isSignedIn } = useAuth();
   
   return (
-    <section className="relative bg-gradient-to-b from-[#6356FF] to-[#5273FF] overflow-hidden">
+    <section className="relative bg-gradient-to-b from-chart-1 to-chart-2 overflow-hidden">
       <div className="mx-auto w-full max-w-[1140px] px-6 py-24 md:py-32">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           {/* Left Column - Text Content */}
-          <div className="text-white space-y-8">
-            <div className="inline-flex items-center px-4 py-2 rounded-full bg-white/10 border border-white/20 backdrop-blur-sm mb-8">
+          <div className="text-primary-foreground space-y-8">
+            <div className="inline-flex items-center px-4 py-2 rounded-full bg-primary-foreground/10 border border-primary-foreground/20 backdrop-blur-sm mb-8">
               <Zap className="w-4 h-4 mr-2" />
               <span className="text-sm font-medium">500+ Creators • 15,000+ Students</span>
             </div>
@@ -28,10 +28,10 @@ export const Hero: FC<HeroProps> = () => {
                 <span className="block">Build Your Music Career</span>
               </h1>
               
-              <div className="text-xl text-white/80 leading-relaxed max-w-lg space-y-2">
-                <div>• Browse <span className="font-semibold text-white">500+ creator stores</span> with courses & coaching</div>
-                <div>• Subscribe to your <span className="font-semibold text-white">favorite producers</span> for ongoing content</div>
-                <div>• Get <span className="font-semibold text-white">personalized mentorship</span> from industry pros</div>
+              <div className="text-xl text-primary-foreground/80 leading-relaxed max-w-lg space-y-2">
+                <div>• Browse <span className="font-semibold text-primary-foreground">500+ creator stores</span> with courses & coaching</div>
+                <div>• Subscribe to your <span className="font-semibold text-primary-foreground">favorite producers</span> for ongoing content</div>
+                <div>• Get <span className="font-semibold text-primary-foreground">personalized mentorship</span> from industry pros</div>
               </div>
             </div>
 
@@ -41,7 +41,7 @@ export const Hero: FC<HeroProps> = () => {
                   <Button 
                     variant="default" 
                     size="lg" 
-                    className="rounded-xl bg-white text-[#6356FF] hover:bg-white/90 font-semibold shadow-lg shadow-black/5"
+                    className="rounded-xl bg-background text-chart-1 hover:bg-background/90 font-semibold shadow-lg shadow-black/5"
                   >
                     Go to Dashboard
                     <ArrowRight className="ml-2 h-4 w-4" />
@@ -52,7 +52,7 @@ export const Hero: FC<HeroProps> = () => {
                   <Button 
                     variant="default" 
                     size="lg" 
-                    className="rounded-xl bg-white text-[#6356FF] hover:bg-white/90 font-semibold shadow-lg shadow-black/5"
+                    className="rounded-xl bg-background text-chart-1 hover:bg-background/90 font-semibold shadow-lg shadow-black/5"
                   >
                     Join the Platform
                     <ArrowRight className="ml-2 h-4 w-4" />
@@ -63,7 +63,7 @@ export const Hero: FC<HeroProps> = () => {
                 <Button 
                   variant="ghost" 
                   size="lg" 
-                  className="rounded-xl text-white border-white/20 hover:bg-white/10"
+                  className="rounded-xl text-primary-foreground border-primary-foreground/20 hover:bg-primary-foreground/10"
                 >
                   <Play className="mr-2 h-4 w-4" />
                   Browse Creators
@@ -71,7 +71,7 @@ export const Hero: FC<HeroProps> = () => {
               </Link>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 text-sm text-white/60">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 text-sm text-primary-foreground/60">
               <div className="flex items-center space-x-2">
                 <CheckCircle className="w-4 h-4 flex-shrink-0" />
                 <span>Free to browse creators</span>

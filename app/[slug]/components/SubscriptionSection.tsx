@@ -131,7 +131,7 @@ export function SubscriptionSection({ storeId, storeName }: SubscriptionSectionP
                     >
                       Yearly
                       {savings > 0 && (
-                        <span className="ml-1 text-green-600">(-{savings}%)</span>
+                        <span className="ml-1 text-primary">(-{savings}%)</span>
                       )}
                     </button>
                   </div>

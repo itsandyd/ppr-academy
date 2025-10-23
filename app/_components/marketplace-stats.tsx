@@ -22,25 +22,25 @@ export const MarketplaceStats: FC<MarketplaceStatsProps> = ({
       icon: Users,
       label: "Active Creators",
       value: `${totalCreators}+`,
-      color: "from-purple-500 to-purple-600",
+      color: "from-chart-3 to-chart-4",
     },
     {
       icon: BookOpen,
       label: "Courses Available",
       value: `${totalCourses}+`,
-      color: "from-green-500 to-green-600",
+      color: "from-chart-1 to-chart-2",
     },
     {
       icon: Package,
       label: "Digital Products",
       value: `${totalProducts}+`,
-      color: "from-blue-500 to-blue-600",
+      color: "from-chart-2 to-chart-3",
     },
     {
       icon: GraduationCap,
       label: "Students Learning",
       value: `${totalStudents}+`,
-      color: "from-orange-500 to-orange-600",
+      color: "from-chart-4 to-chart-5",
     },
   ];
 
@@ -59,7 +59,7 @@ export const MarketplaceStats: FC<MarketplaceStatsProps> = ({
             >
               <div className="flex justify-center">
                 <div className={`w-14 h-14 bg-gradient-to-br ${stat.color} rounded-2xl flex items-center justify-center shadow-lg`}>
-                  <stat.icon className="w-7 h-7 text-white" />
+                  <stat.icon className="w-7 h-7 text-primary-foreground" />
                 </div>
               </div>
               <div>

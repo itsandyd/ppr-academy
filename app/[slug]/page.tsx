@@ -354,10 +354,10 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
   return (
     <div className="min-h-screen bg-background">
       {/* Enhanced Header */}
-      <div className="border-b bg-white shadow-sm">
+      <div className="border-b bg-card shadow-sm">
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-white font-bold text-xl">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-primary-foreground font-bold text-xl">
               {avatarUrl ? (
                 <img src={avatarUrl} alt={displayName} className="w-full h-full rounded-full object-cover" />
               ) : (
@@ -369,7 +369,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
               <p className="text-muted-foreground">{store.name}</p>
             </div>
             <div className="hidden md:flex items-center gap-2">
-              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+              <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
                 <Star className="w-3 h-3 mr-1 fill-current" />
                 {allProducts.length} Products
               </Badge>
@@ -494,7 +494,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
               return (
                 <Card key={product._id} className="overflow-hidden hover:shadow-lg transition-shadow duration-200 group">
                   {/* Product Image */}
-                  <div className="relative h-48 bg-gradient-to-br from-gray-100 to-gray-200">
+                  <div className="relative h-48 bg-gradient-to-br from-muted to-muted/80">
                     {product.imageUrl ? (
                       <img
                         src={product.imageUrl}
@@ -503,7 +503,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <IconComponent className="w-12 h-12 text-gray-400" />
+                        <IconComponent className="w-12 h-12 text-muted-foreground" />
                       </div>
                     )}
                     {/* Product Type Badge */}
@@ -514,7 +514,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
                        product.productType}
                     </Badge>
                     {/* Price Badge */}
-                    <Badge className="absolute top-3 right-3 bg-white text-gray-900 font-semibold">
+                    <Badge className="absolute top-3 right-3 bg-card text-card-foreground font-semibold border border-border">
                       {product.price === 0 ? "FREE" : `$${product.price}`}
                     </Badge>
                   </div>
@@ -558,8 +558,8 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
         ) : (
           /* No Results State */
           <div className="text-center py-12">
-            <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
-              <Search className="w-8 h-8 text-gray-400" />
+            <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
+              <Search className="w-8 h-8 text-muted-foreground" />
             </div>
             <h3 className="text-lg font-semibold mb-2">No products found</h3>
             <p className="text-muted-foreground mb-4">
@@ -620,7 +620,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
         <div className="container mx-auto px-4 py-6">
         <div className="mt-16 relative overflow-hidden">
           {/* Background Pattern */}
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-blue-900/20 to-indigo-900/20 rounded-2xl"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-chart-1/20 via-chart-4/20 to-chart-3/20 rounded-2xl"></div>
           <div className="absolute inset-0 opacity-30" style={{
             backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
           }}></div>
@@ -629,10 +629,10 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
             <div className="max-w-4xl mx-auto text-center">
               {/* Main Headline */}
               <div className="mb-6">
-                <Badge className="mb-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white border-none px-4 py-2">
+                <Badge className="mb-4 bg-gradient-to-r from-chart-1 to-chart-4 text-primary-foreground border-none px-4 py-2">
                   🎵 For Music Creators
                 </Badge>
-                <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 bg-clip-text text-transparent mb-4">
+                <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-chart-1 via-chart-2 to-chart-3 bg-clip-text text-transparent mb-4">
                   Ready to Build Your Own Music Storefront?
                 </h2>
                 <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
@@ -642,25 +642,25 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
 
               {/* Value Propositions */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-                  <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-blue-500 rounded-lg flex items-center justify-center mx-auto mb-4">
-                    <BookOpen className="w-6 h-6 text-white" />
+                <div className="bg-card/10 backdrop-blur-sm rounded-xl p-6 border border-border">
+                  <div className="w-12 h-12 bg-gradient-to-br from-chart-1 to-chart-2 rounded-lg flex items-center justify-center mx-auto mb-4">
+                    <BookOpen className="w-6 h-6 text-primary-foreground" />
                   </div>
                   <h3 className="font-semibold text-lg mb-2">Sell Everything</h3>
                   <p className="text-sm text-muted-foreground">Sample packs, presets, project files, coaching sessions, and music promotion services - all in one place.</p>
                 </div>
 
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center mx-auto mb-4">
-                    <Users className="w-6 h-6 text-white" />
+                <div className="bg-card/10 backdrop-blur-sm rounded-xl p-6 border border-border">
+                  <div className="w-12 h-12 bg-gradient-to-br from-chart-2 to-chart-3 rounded-lg flex items-center justify-center mx-auto mb-4">
+                    <Users className="w-6 h-6 text-primary-foreground" />
                   </div>
                   <h3 className="font-semibold text-lg mb-2">Your Brand</h3>
                   <p className="text-sm text-muted-foreground">Custom storefront that matches your style. Perfect for Instagram, TikTok, and social media link-in-bio.</p>
                 </div>
 
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
-                  <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center mx-auto mb-4">
-                    <Play className="w-6 h-6 text-white" />
+                <div className="bg-card/10 backdrop-blur-sm rounded-xl p-6 border border-border">
+                  <div className="w-12 h-12 bg-gradient-to-br from-chart-3 to-chart-1 rounded-lg flex items-center justify-center mx-auto mb-4">
+                    <Play className="w-6 h-6 text-primary-foreground" />
                   </div>
                   <h3 className="font-semibold text-lg mb-2">Easy Setup</h3>
                   <p className="text-sm text-muted-foreground">Get started in minutes. No coding required. Upload your content and start selling immediately.</p>
@@ -674,7 +674,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
                     {Array.from({ length: 5 }).map((_, i) => (
                       <div
                         key={i}
-                        className="w-8 h-8 bg-gradient-to-br from-purple-400 to-blue-400 rounded-full border-2 border-white flex items-center justify-center text-white text-xs font-bold"
+                        className="w-8 h-8 bg-gradient-to-br from-chart-1 to-chart-3 rounded-full border-2 border-background flex items-center justify-center text-primary-foreground text-xs font-bold"
                       >
                         {String.fromCharCode(65 + i)}
                       </div>
@@ -684,7 +684,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
                     <span className="font-semibold text-foreground">2,500+</span> creators already earning
                   </div>
                 </div>
-                <div className="flex items-center justify-center gap-1 text-yellow-400">
+                <div className="flex items-center justify-center gap-1 text-chart-5">
                   {Array.from({ length: 5 }).map((_, i) => (
                     <Star key={i} className="w-4 h-4 fill-current" />
                   ))}
@@ -696,7 +696,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 <Button 
                   size="lg" 
-                  className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-3 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+                  className="bg-gradient-to-r from-chart-1 to-chart-2 hover:opacity-90 text-primary-foreground px-8 py-3 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
                   onClick={handleStartStorefront}
                 >
                   Start Your Storefront Free
@@ -704,7 +704,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
                 <Button 
                   variant="outline" 
                   size="lg"
-                  className="border-2 border-purple-600/30 text-purple-600 hover:bg-purple-600/10 px-8 py-3 text-lg font-semibold"
+                  className="border-2 border-primary/30 text-primary hover:bg-primary/10 px-8 py-3 text-lg font-semibold"
                   onClick={handleSeeExamples}
                 >
                   See Examples
@@ -714,15 +714,15 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
               {/* Additional Info */}
               <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-6 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <div className="w-2 h-2 bg-primary rounded-full"></div>
                   <span>No setup fees</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <div className="w-2 h-2 bg-primary rounded-full"></div>
                   <span>Cancel anytime</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                  <div className="w-2 h-2 bg-primary rounded-full"></div>
                   <span>14-day free trial</span>
                 </div>
               </div>
@@ -870,8 +870,8 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
                   /* Show action buttons after email submission or for paid products */
                   <div className="space-y-4">
                     {hasSubmittedEmail && (
-                      <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-                        <p className="text-green-800 dark:text-green-200 text-sm font-medium">
+                      <div className="bg-primary/10 border border-primary/20 rounded-lg p-4">
+                        <p className="text-primary text-sm font-medium">
                           ✓ Email confirmed! Click below to access your download.
                         </p>
                       </div>

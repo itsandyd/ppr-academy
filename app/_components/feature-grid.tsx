@@ -44,8 +44,8 @@ export const FeatureGrid: FC<FeatureGridProps> = () => {
           {features.map((feature, index) => (
             <Card key={index} className="p-6 bg-background border-border shadow-lg shadow-black/5 hover:shadow-xl transition-shadow duration-300">
               <div className="space-y-4">
-                <div className="w-12 h-12 bg-gradient-to-b from-[#6356FF] to-[#5273FF] rounded-xl flex items-center justify-center">
-                  <feature.icon className="w-6 h-6 text-white" />
+                <div className="w-12 h-12 bg-gradient-to-b from-primary to-chart-1 rounded-xl flex items-center justify-center">
+                  <feature.icon className="w-6 h-6 text-primary-foreground" />
                 </div>
                 <div className="space-y-2">
                   <h3 className="text-lg font-semibold text-foreground">

@@ -87,9 +87,9 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-950 overflow-x-hidden">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Hero Section */}
-      <div className="bg-gradient-to-r from-[#99D8F5] to-purple-600 text-white overflow-hidden">
+      <div className="bg-gradient-to-r from-chart-1 to-chart-4 text-primary-foreground overflow-hidden">
         <div className="max-w-6xl mx-auto px-3 sm:px-4 lg:px-6 py-8 sm:py-12 lg:py-16">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 items-center">
             {/* Left: Course Info */}
@@ -135,7 +135,7 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
               <Button 
                 size="lg"
                 onClick={handleEnrollClick}
-                className="bg-white text-gray-900 hover:bg-white/90 hover:shadow-xl font-semibold text-sm sm:text-base lg:text-lg px-4 sm:px-6 lg:px-8 py-3 sm:py-4 h-auto w-full max-w-xs mx-auto sm:mx-0 sm:max-w-none sm:w-auto"
+                className="bg-background text-foreground hover:bg-background/90 hover:shadow-xl font-semibold text-sm sm:text-base lg:text-lg px-4 sm:px-6 lg:px-8 py-3 sm:py-4 h-auto w-full max-w-xs mx-auto sm:mx-0 sm:max-w-none sm:w-auto"
               >
                   <span className="truncate">
                     {course.price && course.price > 0 ? (
@@ -189,11 +189,11 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
       </div>
 
       {/* What You'll Learn Section */}
-      <div className="py-12 sm:py-16 bg-slate-50 dark:bg-slate-900 overflow-hidden">
+      <div className="py-12 sm:py-16 bg-muted/30 overflow-hidden">
         <div className="max-w-6xl mx-auto px-3 sm:px-4 lg:px-6">
           <div className="text-center mb-8 sm:mb-12">
-            <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-slate-900 dark:text-white mb-4 break-words">What You'll Learn</h2>
-            <p className="text-sm sm:text-base lg:text-lg xl:text-xl text-slate-600 dark:text-slate-300 max-w-3xl mx-auto break-words">
+            <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-foreground mb-4 break-words">What You'll Learn</h2>
+            <p className="text-sm sm:text-base lg:text-lg xl:text-xl text-muted-foreground max-w-3xl mx-auto break-words">
               This comprehensive course covers everything you need to know, with hands-on examples and real-world applications.
             </p>
           </div>
@@ -202,16 +202,16 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
           <div className="columns-1 md:columns-2 lg:columns-3 gap-6">
             {course.modules?.map((module, idx) => (
               <div key={module.orderIndex} className="break-inside-avoid mb-6">
-                <Card className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:shadow-md transition-all">
+                <Card className="border-border bg-card hover:shadow-md transition-all">
                   <CardContent className="p-5">
                     {/* Module Header */}
                     <div className="flex items-center gap-3 mb-4">
-                      <div className="w-8 h-8 bg-[#2563eb] rounded-lg flex items-center justify-center flex-shrink-0">
-                        <span className="text-white font-bold text-sm">{idx + 1}</span>
+                      <div className="w-8 h-8 bg-chart-1 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <span className="text-primary-foreground font-bold text-sm">{idx + 1}</span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-slate-900 dark:text-white leading-tight">{module.title}</h3>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">{module.lessons.length} lessons</p>
+                        <h3 className="font-bold text-foreground leading-tight">{module.title}</h3>
+                        <p className="text-xs text-muted-foreground">{module.lessons.length} lessons</p>
                       </div>
                     </div>
                     
@@ -220,7 +220,7 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
                       {module.lessons.map((lesson) => (
                         <div key={lesson.orderIndex} className="flex items-start gap-2.5 text-sm">
                           <CheckCircle className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                          <span className="text-slate-700 dark:text-slate-300 leading-snug">{lesson.title}</span>
+                          <span className="text-foreground/90 leading-snug">{lesson.title}</span>
                         </div>
                       ))}
                     </div>
@@ -233,39 +233,39 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
       </div>
 
       {/* Benefits Section */}
-      <div className="py-12 sm:py-16 bg-white dark:bg-slate-950 overflow-hidden">
+      <div className="py-12 sm:py-16 bg-background overflow-hidden">
         <div className="max-w-6xl mx-auto px-3 sm:px-4 lg:px-6">
           <div className="text-center mb-8 sm:mb-12">
-            <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-slate-900 dark:text-white mb-4 break-words">Why Choose This Course?</h2>
+            <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-foreground mb-4 break-words">Why Choose This Course?</h2>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-            <Card className="text-center p-6 sm:p-8 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:shadow-lg transition-shadow">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Target className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
+            <Card className="text-center p-6 sm:p-8 border-border bg-card hover:shadow-lg transition-shadow">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-chart-1/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Target className="w-6 h-6 sm:w-8 sm:h-8 text-chart-1" />
               </div>
-              <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-3">Practical Learning</h3>
-              <p className="text-slate-600 dark:text-slate-300 text-sm sm:text-base">
+              <h3 className="text-lg sm:text-xl font-bold text-foreground mb-3">Practical Learning</h3>
+              <p className="text-muted-foreground text-sm sm:text-base">
                 Learn by doing with hands-on exercises and real-world examples that you can apply immediately.
               </p>
             </Card>
 
-            <Card className="text-center p-6 sm:p-8 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:shadow-lg transition-shadow">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Zap className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
+            <Card className="text-center p-6 sm:p-8 border-border bg-card hover:shadow-lg transition-shadow">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-chart-2/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Zap className="w-6 h-6 sm:w-8 sm:h-8 text-chart-2" />
               </div>
-              <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-3">Instant Access</h3>
-              <p className="text-slate-600 dark:text-slate-300 text-sm sm:text-base">
+              <h3 className="text-lg sm:text-xl font-bold text-foreground mb-3">Instant Access</h3>
+              <p className="text-muted-foreground text-sm sm:text-base">
                 Start learning immediately after enrollment. All content is available right away with lifetime access.
               </p>
             </Card>
 
-            <Card className="text-center p-6 sm:p-8 border-border sm:col-span-2 lg:col-span-1">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
+            <Card className="text-center p-6 sm:p-8 border-border bg-card sm:col-span-2 lg:col-span-1">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-chart-3/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-chart-3" />
               </div>
-              <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mb-3">Level Up Skills</h3>
-              <p className="text-slate-600 dark:text-slate-300 text-sm sm:text-base">
+              <h3 className="text-lg sm:text-xl font-bold text-foreground mb-3">Level Up Skills</h3>
+              <p className="text-muted-foreground text-sm sm:text-base">
                 Transform your abilities with expert techniques and insider knowledge from industry professionals.
               </p>
             </Card>
@@ -325,10 +325,10 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
       </div>
 
       {/* CTA Section */}
-      <div className="py-12 sm:py-16 bg-gradient-to-r from-[#99d8f5] to-purple-600 text-white overflow-hidden">
+      <div className="py-12 sm:py-16 bg-gradient-to-r from-chart-1 to-chart-4 text-primary-foreground overflow-hidden">
         <div className="max-w-4xl mx-auto px-3 sm:px-4 lg:px-6 text-center">
-          <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-white mb-4 break-words">Ready to Start Learning?</h2>
-          <p className="text-sm sm:text-base lg:text-lg xl:text-xl text-white/90 mb-6 sm:mb-8 max-w-2xl mx-auto break-words">
+          <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-primary-foreground mb-4 break-words">Ready to Start Learning?</h2>
+          <p className="text-sm sm:text-base lg:text-lg xl:text-xl text-primary-foreground/90 mb-6 sm:mb-8 max-w-2xl mx-auto break-words">
             Join thousands of students who have transformed their skills with this comprehensive course.
           </p>
 

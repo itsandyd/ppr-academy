@@ -81,9 +81,9 @@ export function DesktopStorefront({ store, user, products, displayName, initials
       <div className="bg-gradient-to-r from-primary to-primary/90">
         <div className="max-w-6xl mx-auto px-6 py-12">
           <div className="flex items-center gap-6 mb-8">
-            <Avatar className="w-16 h-16 border-4 border-white/20">
+            <Avatar className="w-16 h-16 border-4 border-primary-foreground/20">
               <AvatarImage src={avatarUrl} alt={`${displayName}'s profile`} />
-              <AvatarFallback className="text-xl font-bold bg-white/20 text-foreground">
+              <AvatarFallback className="text-xl font-bold bg-primary-foreground/20 text-foreground">
                 {initials}
               </AvatarFallback>
             </Avatar>
@@ -99,15 +99,15 @@ export function DesktopStorefront({ store, user, products, displayName, initials
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center mt-8">
-            <div className="bg-white/10 backdrop-blur rounded-lg p-4">
+            <div className="bg-primary-foreground/10 backdrop-blur rounded-lg p-4">
               <div className="text-2xl font-bold text-background">{products?.filter(p => p.isPublished).length || 0}</div>
               <div className="text-background/80 text-sm">Products & Courses</div>
             </div>
-            <div className="bg-white/10 backdrop-blur rounded-lg p-4">
+            <div className="bg-primary-foreground/10 backdrop-blur rounded-lg p-4">
               <div className="text-2xl font-bold text-background">{products?.filter(p => p.price === 0 && p.isPublished).length || 0}</div>
               <div className="text-background/80 text-sm">Free Resources</div>
             </div>
-            <div className="bg-white/10 backdrop-blur rounded-lg p-4">
+            <div className="bg-primary-foreground/10 backdrop-blur rounded-lg p-4">
               <div className="text-2xl font-bold text-background">🎓</div>
               <div className="text-background/80 text-sm">Learn & Grow</div>
             </div>
@@ -191,13 +191,13 @@ export function DesktopStorefront({ store, user, products, displayName, initials
             {products?.filter(p => p.productType === "course" && p.price === 0 && p.isPublished).map((course) => (
               <Card 
                 key={course._id} 
-                className="group p-6 border border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer"
+                className="group p-6 border border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer"
                 onClick={() => {
                   window.location.href = `/courses/${course.slug}`;
                 }}
               >
                 {/* Image */}
-                <div className="w-full h-48 bg-emerald-100 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
+                <div className="w-full h-48 bg-primary/10 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
                   {course.imageUrl ? (
                     <img 
                       src={course.imageUrl} 
@@ -206,8 +206,8 @@ export function DesktopStorefront({ store, user, products, displayName, initials
                     />
                   ) : (
                     <div className="text-center">
-                      <GraduationCap className="w-16 h-16 text-emerald-600 mx-auto mb-2" />
-                      <span className="text-sm text-emerald-600 font-medium">Free Course</span>
+                      <GraduationCap className="w-16 h-16 text-primary mx-auto mb-2" />
+                      <span className="text-sm text-primary font-medium">Free Course</span>
                     </div>
                   )}
                 </div>
@@ -215,22 +215,22 @@ export function DesktopStorefront({ store, user, products, displayName, initials
                 {/* Content */}
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
-                    <Badge className="bg-emerald-100 text-emerald-800 text-xs border-emerald-200 font-semibold">
+                    <Badge className="bg-primary/10 text-primary text-xs border-primary/20 font-semibold">
                       FREE COURSE
                     </Badge>
                     <Badge variant="secondary" className="text-xs">
                       {course.category || "Course"}
                     </Badge>
                   </div>
-                  <h3 className="font-bold text-lg text-emerald-800 line-clamp-2">
+                  <h3 className="font-bold text-lg text-primary line-clamp-2">
                     {course.title}
                   </h3>
-                  <p className="text-emerald-700 text-sm line-clamp-3 leading-relaxed">
+                  <p className="text-primary/80 text-sm line-clamp-3 leading-relaxed">
                     {course.description || "Comprehensive course content"}
                   </p>
                   <div className="flex items-center justify-between pt-2">
-                    <span className="text-xs text-emerald-600 font-medium">Click to enroll</span>
-                    <GraduationCap className="w-5 h-5 text-emerald-600 group-hover:scale-110 transition-transform duration-200" />
+                    <span className="text-xs text-primary font-medium">Click to enroll</span>
+                    <GraduationCap className="w-5 h-5 text-primary group-hover:scale-110 transition-transform duration-200" />
                   </div>
                 </div>
               </Card>
@@ -240,13 +240,13 @@ export function DesktopStorefront({ store, user, products, displayName, initials
             {products?.filter(p => p.productType === "course" && p.price > 0 && p.isPublished).map((course) => (
               <Card 
                 key={course._id} 
-                className="group p-6 border border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer"
+                className="group p-6 border border-primary/20 bg-gradient-to-r from-primary/5 to-accent/10 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer"
                 onClick={() => {
                   window.location.href = `/courses/${course.slug}`;
                 }}
               >
                 {/* Image */}
-                <div className="w-full h-48 bg-emerald-100 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
+                <div className="w-full h-48 bg-primary/10 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
                   {course.imageUrl ? (
                     <img 
                       src={course.imageUrl} 
@@ -255,8 +255,8 @@ export function DesktopStorefront({ store, user, products, displayName, initials
                     />
                   ) : (
                     <div className="text-center">
-                      <GraduationCap className="w-16 h-16 text-emerald-600 mx-auto mb-2" />
-                      <span className="text-sm text-emerald-600 font-medium">Course</span>
+                      <GraduationCap className="w-16 h-16 text-primary mx-auto mb-2" />
+                      <span className="text-sm text-primary font-medium">Course</span>
                     </div>
                   )}
                 </div>
@@ -264,22 +264,22 @@ export function DesktopStorefront({ store, user, products, displayName, initials
                 {/* Content */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 font-semibold">
+                    <Badge className="bg-primary/10 text-primary border-primary/20 font-semibold">
                       ${course.price}
                     </Badge>
                     <Badge variant="secondary" className="text-xs">
                       {course.category || "Course"}
                     </Badge>
                   </div>
-                  <h3 className="font-bold text-lg text-emerald-800 line-clamp-2">
+                  <h3 className="font-bold text-lg text-primary line-clamp-2">
                     {course.title}
                   </h3>
-                  <p className="text-emerald-700 text-sm line-clamp-3 leading-relaxed">
+                  <p className="text-primary/80 text-sm line-clamp-3 leading-relaxed">
                     {course.description || "Comprehensive course content"}
                   </p>
                   <div className="flex items-center justify-between pt-2">
-                    <span className="text-xs text-emerald-600 font-medium">Click to enroll</span>
-                    <GraduationCap className="w-5 h-5 text-emerald-600 group-hover:scale-110 transition-transform duration-200" />
+                    <span className="text-xs text-primary font-medium">Click to enroll</span>
+                    <GraduationCap className="w-5 h-5 text-primary group-hover:scale-110 transition-transform duration-200" />
                   </div>
                 </div>
               </Card>
@@ -289,34 +289,34 @@ export function DesktopStorefront({ store, user, products, displayName, initials
             {products?.filter(p => p.productType === "urlMedia" && p.isPublished).map((urlMedia) => {
               const getMediaIcon = (mediaType?: string) => {
                 switch (mediaType) {
-                  case "youtube": return <Youtube className="w-16 h-16 text-red-600" />;
-                  case "spotify": return <Music className="w-16 h-16 text-green-600" />;
-                  default: return <Link className="w-16 h-16 text-blue-600" />;
+                  case "youtube": return <Youtube className="w-16 h-16 text-secondary" />;
+                  case "spotify": return <Music className="w-16 h-16 text-primary" />;
+                  default: return <Link className="w-16 h-16 text-accent" />;
                 }
               };
 
               const getMediaBadge = (mediaType?: string) => {
                 switch (mediaType) {
-                  case "youtube": return <Badge className="bg-red-100 text-red-800">YouTube</Badge>;
-                  case "spotify": return <Badge className="bg-green-100 text-green-800">Spotify</Badge>;
-                  default: return <Badge className="bg-blue-100 text-blue-800">Link</Badge>;
+                  case "youtube": return <Badge className="bg-secondary/10 text-secondary">YouTube</Badge>;
+                  case "spotify": return <Badge className="bg-primary/10 text-primary">Spotify</Badge>;
+                  default: return <Badge className="bg-accent/10 text-accent">Link</Badge>;
                 }
               };
 
               return (
                 <Card 
                   key={urlMedia._id} 
-                  className="group p-6 border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer"
+                  className="group p-6 border border-accent/20 bg-gradient-to-r from-accent/5 to-accent/10 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer"
                   onClick={() => {
                     // Open URL in new tab
                     window.open(urlMedia.url, '_blank', 'noopener,noreferrer');
                   }}
                 >
                   {/* Media Display */}
-                  <div className="w-full h-48 bg-blue-100 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
+                  <div className="w-full h-48 bg-accent/10 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
                     <div className="text-center">
                       {getMediaIcon(urlMedia.mediaType)}
-                      <span className="text-sm text-blue-600 font-medium mt-2 block">
+                      <span className="text-sm text-accent font-medium mt-2 block">
                         {urlMedia.mediaType === "youtube" ? "Video Content" : 
                          urlMedia.mediaType === "spotify" ? "Music Content" : "External Link"}
                       </span>
@@ -329,15 +329,15 @@ export function DesktopStorefront({ store, user, products, displayName, initials
                       {getMediaBadge(urlMedia.mediaType)}
                       <Badge variant="secondary" className="text-xs">FREE</Badge>
                     </div>
-                    <h3 className="font-bold text-lg text-blue-800 line-clamp-2">
+                    <h3 className="font-bold text-lg text-accent line-clamp-2">
                       {urlMedia.title}
                     </h3>
-                    <p className="text-blue-700 text-sm line-clamp-3 leading-relaxed">
+                    <p className="text-accent/80 text-sm line-clamp-3 leading-relaxed">
                       {urlMedia.description || "Click to visit this link"}
                     </p>
                     <div className="flex items-center justify-between pt-2">
-                      <span className="text-xs text-blue-600 font-medium">Click to open</span>
-                      <ExternalLink className="w-5 h-5 text-blue-600 group-hover:scale-110 transition-transform duration-200" />
+                      <span className="text-xs text-accent font-medium">Click to open</span>
+                      <ExternalLink className="w-5 h-5 text-accent group-hover:scale-110 transition-transform duration-200" />
                     </div>
                   </div>
                 </Card>
@@ -358,7 +358,7 @@ export function DesktopStorefront({ store, user, products, displayName, initials
                 }}
               >
                 {/* Image */}
-                <div className="w-full h-48 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
+                <div className="w-full h-48 bg-gradient-to-br from-accent/5 to-accent/10 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
                   {product.imageUrl ? (
                     <img 
                       src={product.imageUrl} 
@@ -367,8 +367,8 @@ export function DesktopStorefront({ store, user, products, displayName, initials
                     />
                   ) : (
                     <div className="text-center">
-                      <Store className="w-16 h-16 text-blue-600 mx-auto mb-2" />
-                      <span className="text-sm text-blue-600 font-medium">Digital Product</span>
+                      <Store className="w-16 h-16 text-accent mx-auto mb-2" />
+                      <span className="text-sm text-accent font-medium">Digital Product</span>
                     </div>
                   )}
                 </div>
@@ -483,7 +483,7 @@ export function DesktopStorefront({ store, user, products, displayName, initials
                   }}
                 >
                 {/* Image */}
-                <div className="w-full h-48 bg-gradient-to-br from-blue-50 to-indigo-100 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
+                <div className="w-full h-48 bg-gradient-to-br from-accent/5 to-accent/10 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
                   {product.imageUrl ? (
                     <img 
                       src={product.imageUrl} 
@@ -492,8 +492,8 @@ export function DesktopStorefront({ store, user, products, displayName, initials
                     />
                   ) : (
                     <div className="text-center">
-                      <Store className="w-16 h-16 text-blue-600 mx-auto mb-2" />
-                      <span className="text-sm text-blue-600 font-medium">Digital Product</span>
+                      <Store className="w-16 h-16 text-accent mx-auto mb-2" />
+                      <span className="text-sm text-accent font-medium">Digital Product</span>
                     </div>
                   )}
                 </div>

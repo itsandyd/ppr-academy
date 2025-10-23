@@ -68,12 +68,12 @@ export const HowItWorks: FC<HowItWorksProps> = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
           >
-            <Card className="p-8 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-green-200 dark:border-green-900/50">
+            <Card className="p-8 bg-gradient-to-br from-chart-1/5 to-chart-3/5 border-chart-1/20">
               <div className="space-y-6">
                 {/* Header */}
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center shadow-lg">
-                    <Play className="w-6 h-6 text-white" />
+                  <div className="w-12 h-12 bg-gradient-to-br from-chart-1 to-chart-2 rounded-xl flex items-center justify-center shadow-lg">
+                    <Play className="w-6 h-6 text-primary-foreground" />
                   </div>
                   <div>
                     <h3 className="text-2xl font-bold text-foreground">For Students</h3>
@@ -86,7 +86,7 @@ export const HowItWorks: FC<HowItWorksProps> = () => {
                   {studentSteps.map((step, index) => (
                     <div key={index} className="flex items-start gap-4">
                       <div className="flex-shrink-0 w-10 h-10 bg-background rounded-lg flex items-center justify-center shadow-sm">
-                        <step.icon className="w-5 h-5 text-green-600 dark:text-green-400" />
+                        <step.icon className="w-5 h-5 text-chart-1" />
                       </div>
                       <div className="flex-1">
                         <h4 className="font-semibold text-foreground mb-1">
@@ -102,7 +102,7 @@ export const HowItWorks: FC<HowItWorksProps> = () => {
 
                 {/* CTA */}
                 <Link href="/courses">
-                  <Button className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg shadow-green-500/25">
+                  <Button className="w-full bg-gradient-to-r from-chart-1 to-chart-2 hover:opacity-90 text-primary-foreground shadow-lg shadow-chart-1/25">
                     Browse Courses
                     <CheckCircle className="ml-2 w-4 h-4" />
                   </Button>
@@ -118,12 +118,12 @@ export const HowItWorks: FC<HowItWorksProps> = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
           >
-            <Card className="p-8 bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 border-purple-200 dark:border-purple-900/50">
+            <Card className="p-8 bg-gradient-to-br from-chart-3/5 to-chart-5/5 border-chart-3/20">
               <div className="space-y-6">
                 {/* Header */}
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-primary to-chart-1 rounded-xl flex items-center justify-center shadow-lg">
-                    <Store className="w-6 h-6 text-white" />
+                  <div className="w-12 h-12 bg-gradient-to-br from-chart-3 to-chart-4 rounded-xl flex items-center justify-center shadow-lg">
+                    <Store className="w-6 h-6 text-primary-foreground" />
                   </div>
                   <div>
                     <h3 className="text-2xl font-bold text-foreground">For Creators</h3>
@@ -136,7 +136,7 @@ export const HowItWorks: FC<HowItWorksProps> = () => {
                   {creatorSteps.map((step, index) => (
                     <div key={index} className="flex items-start gap-4">
                       <div className="flex-shrink-0 w-10 h-10 bg-background rounded-lg flex items-center justify-center shadow-sm">
-                        <step.icon className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                        <step.icon className="w-5 h-5 text-chart-3" />
                       </div>
                       <div className="flex-1">
                         <h4 className="font-semibold text-foreground mb-1">
@@ -152,7 +152,7 @@ export const HowItWorks: FC<HowItWorksProps> = () => {
 
                 {/* CTA */}
                 <Link href="/sign-up?intent=creator">
-                  <Button className="w-full bg-gradient-to-r from-primary to-chart-1 hover:from-primary/90 hover:to-chart-1/90 text-white shadow-lg shadow-primary/25">
+                  <Button className="w-full bg-gradient-to-r from-chart-3 to-chart-4 hover:opacity-90 text-primary-foreground shadow-lg shadow-chart-3/25">
                     Start Creating Free
                     <CheckCircle className="ml-2 w-4 h-4" />
                   </Button>

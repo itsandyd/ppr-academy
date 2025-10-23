@@ -289,8 +289,8 @@ export const MarketplaceGrid: FC<MarketplaceGridProps> = ({
                   /* Show action buttons after email submission or for paid products */
                   <div className="space-y-4">
                     {hasSubmittedEmail && (
-                      <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-                        <p className="text-green-800 dark:text-green-200 text-sm font-medium">
+                      <div className="bg-chart-1/10 border border-chart-1/20 rounded-lg p-4">
+                        <p className="text-chart-1 text-sm font-medium">
                           ✓ Email confirmed! Click below to access your download.
                         </p>
                       </div>
@@ -379,10 +379,10 @@ const ContentCard: FC<{ item: ContentItem; index: number; onClick: () => void }>
     : Package;
     
   const badgeColor = item.contentType === "course" 
-    ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" 
+    ? "bg-chart-1/10 text-chart-1 dark:bg-chart-1/20 dark:text-chart-1" 
     : item.contentType === "sample-pack"
-    ? "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400"
-    : "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400";
+    ? "bg-chart-5/10 text-chart-5 dark:bg-chart-5/20 dark:text-chart-5"
+    : "bg-chart-3/10 text-chart-3 dark:bg-chart-3/20 dark:text-chart-3";
 
   const badgeLabel = item.contentType === "course"
     ? "Course"
@@ -401,7 +401,7 @@ const ContentCard: FC<{ item: ContentItem; index: number; onClick: () => void }>
         onClick={onClick}
       >
         {/* Thumbnail */}
-        <div className="relative h-52 bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 overflow-hidden">
+        <div className="relative h-52 bg-gradient-to-br from-muted to-muted/80 overflow-hidden">
           {(item.thumbnail || item.imageUrl) ? (
             <Image
               src={item.thumbnail || item.imageUrl || ""}
@@ -425,14 +425,14 @@ const ContentCard: FC<{ item: ContentItem; index: number; onClick: () => void }>
           </Badge>
 
           {/* Price Badge */}
-          <Badge className="absolute top-3 right-3 bg-white dark:bg-black text-foreground font-bold shadow-lg">
+          <Badge className="absolute top-3 right-3 bg-card dark:bg-card text-foreground font-bold shadow-lg border border-border">
             {item.price === 0 ? "FREE" : `$${item.price.toFixed(2)}`}
           </Badge>
 
           {/* Rating (if available) */}
           {item.rating && (
-            <Badge className="absolute bottom-3 right-3 bg-yellow-500/90 text-white font-semibold">
-              <Star className="w-3 h-3 mr-1 fill-white" />
+            <Badge className="absolute bottom-3 right-3 bg-chart-5/90 text-primary-foreground font-semibold">
+              <Star className="w-3 h-3 mr-1 fill-primary-foreground" />
               {item.rating.toFixed(1)}
             </Badge>
           )}
@@ -441,7 +441,7 @@ const ContentCard: FC<{ item: ContentItem; index: number; onClick: () => void }>
         {/* Content */}
         <CardContent className="p-5 space-y-3">
           {/* Title */}
-          <h3 className="font-semibold text-lg line-clamp-2 text-foreground group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+          <h3 className="font-semibold text-lg line-clamp-2 text-foreground group-hover:text-chart-1 transition-colors">
             {item.title}
           </h3>
 
@@ -458,7 +458,7 @@ const ContentCard: FC<{ item: ContentItem; index: number; onClick: () => void }>
             <div className="flex items-center gap-2">
               <Avatar className="w-7 h-7 border border-border">
                 <AvatarImage src={item.creatorAvatar || "/placeholder-avatar.jpg"} />
-                <AvatarFallback className="text-xs bg-gradient-to-r from-purple-500 to-blue-500 text-white">
+                <AvatarFallback className="text-xs bg-gradient-to-r from-chart-1 to-chart-2 text-primary-foreground">
                   {item.creatorName?.charAt(0) || "C"}
                 </AvatarFallback>
               </Avatar>
