@@ -23,7 +23,8 @@ import {
   BarChart3,
   MessageCircle,
   Star,
-  ArrowRight
+  ArrowRight,
+  ChevronDown
 } from "lucide-react";
 import Link from "next/link";
 import { SignUpButton, useAuth } from "@clerk/nextjs";
@@ -280,35 +281,38 @@ export default function SectionedMarketplace() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.7, delay: 0.3 }}
             >
-              <div className="relative mx-auto w-full rounded-2xl shadow-2xl lg:max-w-xl overflow-hidden backdrop-blur-md border border-border bg-card/50 p-8">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-gradient-to-br from-chart-1/20 to-chart-2/20 rounded-xl p-6 border border-chart-1/20">
-                    <div className="w-12 h-12 bg-chart-1 rounded-lg flex items-center justify-center mb-3">
-                      <BookOpen className="w-6 h-6 text-primary-foreground" />
+              <div className="relative mx-auto w-full rounded-2xl shadow-2xl lg:max-w-xl overflow-hidden backdrop-blur-md border border-border bg-gradient-to-br from-chart-1/10 to-chart-4/10">
+                <div className="aspect-video bg-gradient-to-br from-chart-1/20 to-chart-4/20 flex items-center justify-center p-12 relative overflow-hidden">
+                  {/* Overlay Text */}
+                  <div className="relative z-10 text-center space-y-4">
+                    <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-chart-1 to-chart-2 rounded-2xl shadow-xl mb-4">
+                      <Music className="w-10 h-10 text-primary-foreground" />
                     </div>
-                    <div className="text-2xl font-bold text-foreground">{stats.totalCourses}</div>
-                    <div className="text-sm text-muted-foreground">Courses</div>
+                    <h3 className="text-2xl font-bold text-foreground">
+                      WHERE MUSIC CREATORS &
+                      <span className="block">STUDENTS CONNECT</span>
+                    </h3>
+                    <div className="flex items-center justify-center gap-6 pt-4">
+                      <div className="text-center">
+                        <div className="text-3xl font-bold bg-gradient-to-r from-chart-1 to-chart-2 bg-clip-text text-transparent">{stats.totalCourses}+</div>
+                        <div className="text-xs text-muted-foreground">Courses</div>
+                      </div>
+                      <div className="w-px h-12 bg-border"></div>
+                      <div className="text-center">
+                        <div className="text-3xl font-bold bg-gradient-to-r from-chart-3 to-chart-4 bg-clip-text text-transparent">{stats.totalProducts}+</div>
+                        <div className="text-xs text-muted-foreground">Products</div>
+                      </div>
+                      <div className="w-px h-12 bg-border"></div>
+                      <div className="text-center">
+                        <div className="text-3xl font-bold bg-gradient-to-r from-chart-4 to-chart-5 bg-clip-text text-transparent">{stats.totalCreators}+</div>
+                        <div className="text-xs text-muted-foreground">Creators</div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="bg-gradient-to-br from-chart-3/20 to-chart-4/20 rounded-xl p-6 border border-chart-3/20">
-                    <div className="w-12 h-12 bg-chart-3 rounded-lg flex items-center justify-center mb-3">
-                      <Package className="w-6 h-6 text-primary-foreground" />
-                    </div>
-                    <div className="text-2xl font-bold text-foreground">{stats.totalProducts}</div>
-                    <div className="text-sm text-muted-foreground">Products</div>
-                  </div>
-                  <div className="bg-gradient-to-br from-chart-4/20 to-chart-5/20 rounded-xl p-6 border border-chart-4/20">
-                    <div className="w-12 h-12 bg-chart-4 rounded-lg flex items-center justify-center mb-3">
-                      <Users className="w-6 h-6 text-primary-foreground" />
-                    </div>
-                    <div className="text-2xl font-bold text-foreground">{stats.totalCreators}+</div>
-                    <div className="text-sm text-muted-foreground">Creators</div>
-                  </div>
-                  <div className="bg-gradient-to-br from-chart-2/20 to-chart-3/20 rounded-xl p-6 border border-chart-2/20">
-                    <div className="w-12 h-12 bg-chart-2 rounded-lg flex items-center justify-center mb-3">
-                      <TrendingUp className="w-6 h-6 text-primary-foreground" />
-                    </div>
-                    <div className="text-2xl font-bold text-foreground">{stats.totalStudents || '2k'}+</div>
-                    <div className="text-sm text-muted-foreground">Students</div>
+                  
+                  {/* Background Pattern */}
+                  <div className="absolute inset-0 opacity-5">
+                    <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiMwMDAiIGZpbGwtb3BhY2l0eT0iMSI+PHBhdGggZD0iTTM2IDM0di00aC0ydjRoLTR2Mmg0djRoMnYtNGg0di0yaC00em0wLTMwVjBoLTJ2NGgtNHYyaDR2NGgyVjZoNFY0aC00ek02IDM0di00SDR2NEgwdjJoNHY0aDJ2LTRoNHYtMkg2ek02IDRWMEg0djRIMHYyaDR2NGgyVjZoNFY0SDZ6Ii8+PC9nPjwvZz48L3N2Zz4=')]"></div>
                   </div>
                 </div>
               </div>
@@ -502,10 +506,171 @@ export default function SectionedMarketplace() {
         </div>
       </section>
 
-      {/* Content Showcase - Only if not searching */}
+      {/* Testimonials Section */}
+      <section id="testimonials" className="relative py-24 z-10">
+        <div className="absolute inset-0 bg-card/50 backdrop-blur-sm"></div>
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+          <motion.div 
+            className="text-center"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+          >
+            <h2 className="text-base text-chart-1 font-semibold tracking-wide uppercase">Testimonials</h2>
+            <p className="mt-2 text-3xl leading-8 font-bold tracking-tight sm:text-4xl bg-clip-text text-transparent bg-gradient-to-r from-chart-1 to-chart-4">
+              What our community says
+            </p>
+            <p className="mt-4 max-w-2xl text-xl text-muted-foreground mx-auto">
+              Join thousands of artists and students who are already transforming their music careers
+            </p>
+          </motion.div>
+
+          <div className="mt-16 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+            {[
+              {
+                content: "PPR Academy completely transformed my approach to music production. I've learned more in 3 months than I did in years of trial and error.",
+                author: "Alex Rivera",
+                role: "Electronic Music Producer"
+              },
+              {
+                content: "As a creator, this platform lets me focus on what I do best - teaching. The tools handle everything else seamlessly.",
+                author: "Samantha Wright",
+                role: "Course Creator"
+              },
+              {
+                content: "The quality of courses and sample packs here is unmatched. Every purchase has been worth it and helped me level up my skills.",
+                author: "Marcus Johnson",
+                role: "Hip-Hop Producer"
+              }
+            ].map((testimonial, index) => (
+              <motion.div 
+                key={index}
+                className="transform transition-all duration-500 hover:-translate-y-2"
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+                viewport={{ once: true }}
+                style={index === 1 ? { transform: 'translateY(2rem)' } : {}}
+              >
+                <Card className="h-full bg-card border-border backdrop-blur-sm p-6">
+                  <div className="flex items-start gap-1 mb-4">
+                    {[...Array(5)].map((_, i) => (
+                      <Star key={i} className="w-5 h-5 fill-chart-5 text-chart-5" />
+                    ))}
+                  </div>
+                  <p className="text-foreground mb-6 leading-relaxed">"{testimonial.content}"</p>
+                  <div className="border-t border-border pt-4">
+                    <p className="font-semibold text-foreground">{testimonial.author}</p>
+                    <p className="text-sm text-muted-foreground">{testimonial.role}</p>
+                  </div>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+
+          <motion.div 
+            className="mt-16 text-center"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+            viewport={{ once: true }}
+          >
+            <div className="inline-flex items-center space-x-2 bg-chart-1/10 px-5 py-3 rounded-full text-chart-1 text-sm border border-chart-1/20 backdrop-blur-sm">
+              <TrendingUp className="h-4 w-4 mr-2" />
+              <span>Join {stats.totalCreators || '2,500'}+ music professionals using PPR Academy</span>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section id="faq" className="relative py-24 z-10">
+        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm"></div>
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+          <motion.div 
+            className="text-center mb-12 relative"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+          >
+            <h2 className="text-base text-chart-1 font-semibold tracking-wide uppercase">FAQ</h2>
+            <p className="mt-2 text-3xl leading-8 font-bold tracking-tight sm:text-4xl bg-clip-text text-transparent bg-gradient-to-r from-chart-1 to-chart-4">
+              Frequently asked questions
+            </p>
+            <p className="mt-4 max-w-2xl text-xl text-muted-foreground mx-auto">
+              Everything you need to know about PPR Academy
+            </p>
+          </motion.div>
+
+          <motion.div
+            className="max-w-3xl mx-auto space-y-4"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            viewport={{ once: true }}
+          >
+            {[
+              {
+                question: "What is PPR Academy?",
+                answer: "PPR Academy is a marketplace platform connecting music creators with students. Creators can sell courses, sample packs, and digital products, while students can access high-quality educational content."
+              },
+              {
+                question: "How much does it cost to use PPR Academy?",
+                answer: "It's free to browse and discover creators. Individual courses and products have their own pricing. Creators keep 90% of their sales revenue."
+              },
+              {
+                question: "How does the 90% creator payout work?",
+                answer: "We believe in empowering creators. When you sell content, you keep 90% of the sale price. We only take a 10% platform fee to maintain and improve the service."
+              },
+              {
+                question: "Is it a course? How do I get automated?",
+                answer: "PPR Academy offers both individual courses and creator storefronts. You can enroll in courses for structured learning or subscribe to your favorite creators for ongoing content."
+              },
+              {
+                question: "Can I integrate SoundPitch with my existing workflow?",
+                answer: "Yes! PPR Academy is designed to complement your existing workflow. Access your content library anywhere and integrate with your production tools seamlessly."
+              },
+              {
+                question: "How do I join as a verified creator?",
+                answer: "Sign up and create your creator profile. Once you've added your first course or product, you can start selling immediately. We review all content to ensure quality."
+              }
+            ].map((faq, index) => (
+              <Card key={index} className="bg-card/50 border-border backdrop-blur-sm">
+                <button className="w-full text-left p-6 hover:bg-card/70 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-foreground pr-8">{faq.question}</h3>
+                    <ChevronDown className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                  </div>
+                </button>
+              </Card>
+            ))}
+          </motion.div>
+
+          <motion.div 
+            className="mt-16 text-center"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            viewport={{ once: true }}
+          >
+            <p className="text-muted-foreground mb-6">
+              Still have questions?
+            </p>
+            <Button className="px-8 py-6 rounded-xl text-base transition-all duration-300 hover:shadow-lg hover:shadow-chart-1/20 hover:scale-105 hover:-translate-y-1">
+              Contact Support
+            </Button>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Content Showcase - After FAQ */}
       {!isSearching && allContent.length > 0 && (
         <section className="relative py-24 z-10">
-          <div className="absolute inset-0 bg-card/30 backdrop-blur-sm"></div>
+          <div className="absolute inset-0 bg-background"></div>
           
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
             <motion.div 
@@ -543,18 +708,18 @@ export default function SectionedMarketplace() {
         </section>
       )}
 
-      {/* Final CTA */}
-      <section className="relative py-24 z-10">
-        <div className="absolute inset-0 backdrop-blur-sm bg-gradient-to-b from-chart-1 to-chart-4"></div>
+      {/* Final Gradient CTA Section */}
+      <section className="relative py-32 z-10">
+        <div className="absolute inset-0 backdrop-blur-sm bg-gradient-to-br from-chart-1 via-chart-2 to-chart-4"></div>
         
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute -top-24 -right-24 w-64 h-64 rounded-full filter blur-3xl bg-primary-foreground"></div>
-          <div className="absolute bottom-0 left-0 w-80 h-80 rounded-full filter blur-3xl bg-primary-foreground"></div>
+        <div className="absolute inset-0 opacity-20">
+          <div className="absolute top-0 right-0 w-96 h-96 rounded-full filter blur-3xl bg-primary-foreground"></div>
+          <div className="absolute bottom-0 left-0 w-96 h-96 rounded-full filter blur-3xl bg-primary-foreground"></div>
         </div>
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <motion.div 
-            className="text-center space-y-8"
+            className="text-center space-y-10"
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
@@ -562,16 +727,37 @@ export default function SectionedMarketplace() {
           >
             <div className="space-y-4">
               <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-primary-foreground leading-tight">
-                Transform your music
-                <span className="block">journey today</span>
+                Ready to transform your
+                <span className="block">music career?</span>
               </h2>
               <p className="text-xl text-primary-foreground/80 max-w-2xl mx-auto leading-relaxed">
-                Join our growing community building successful careers through expert courses and digital products.
+                Join PPR Academy today and start building your skills or sharing your knowledge with the world. Start for free.
               </p>
             </div>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              {isSignedIn ? (
+              {!isSignedIn ? (
+                <>
+                  <SignUpButton mode="modal">
+                    <Button 
+                      size="lg" 
+                      className="w-full sm:w-auto rounded-xl bg-background text-chart-1 hover:bg-background/90 font-bold px-12 py-6 text-xl shadow-2xl transition-all duration-300 hover:scale-105"
+                    >
+                      Get Started Free
+                      <ArrowRight className="ml-2 w-5 h-5" />
+                    </Button>
+                  </SignUpButton>
+                  <Link href="/sign-in">
+                    <Button 
+                      variant="outline"
+                      size="lg" 
+                      className="w-full sm:w-auto rounded-xl border-primary-foreground/40 text-primary-foreground hover:bg-primary-foreground/10 font-semibold px-12 py-6 text-xl shadow-lg transition-all duration-300 hover:scale-105"
+                    >
+                      Sign In
+                    </Button>
+                  </Link>
+                </>
+              ) : (
                 <Link href="/dashboard">
                   <Button 
                     size="lg" 
@@ -581,53 +767,43 @@ export default function SectionedMarketplace() {
                     <ArrowRight className="ml-2 w-5 h-5" />
                   </Button>
                 </Link>
-              ) : (
-                <SignUpButton mode="modal">
-                  <Button 
-                    size="lg" 
-                    className="rounded-xl bg-background text-chart-1 hover:bg-background/90 font-bold px-12 py-6 text-xl shadow-2xl transition-all duration-300 hover:scale-105"
-                  >
-                    Get Started Free
-                    <ArrowRight className="ml-2 w-5 h-5" />
-                  </Button>
-                </SignUpButton>
               )}
             </div>
 
             {/* Trust Indicators */}
-            <div className="flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:space-x-8 text-primary-foreground/60 text-sm">
+            <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-4 text-primary-foreground/60 text-sm pt-6">
               <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-primary-foreground rounded-full"></div>
+                <CheckCircle className="w-4 h-4" />
                 <span>Free to browse</span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-primary-foreground rounded-full"></div>
+                <CheckCircle className="w-4 h-4" />
                 <span>90% creator payout</span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-primary-foreground rounded-full"></div>
+                <CheckCircle className="w-4 h-4" />
                 <span>Money-back guarantee</span>
               </div>
               <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-primary-foreground rounded-full"></div>
-                <span>Instant access</span>
+                <CheckCircle className="w-4 h-4" />
+                <span>Start instantly</span>
               </div>
             </div>
 
-            {/* Platform Benefits */}
-            <div className="border-t border-primary-foreground/20 pt-8 mt-8">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+            {/* Platform Stats */}
+            <div className="border-t border-primary-foreground/20 pt-8 mt-10">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
                 <div>
                   <div className="text-2xl font-bold text-primary-foreground">Expert</div>
-                  <div className="text-sm text-primary-foreground/60">Quality Content</div>
+                  <div className="text-sm text-primary-foreground/60">Quality Creators</div>
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-primary-foreground">90%</div>
-                  <div className="text-sm text-primary-foreground/60">Creator Payout</div>
+                  <div className="text-sm text-primary-foreground/60">Revenue Share</div>
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-primary-foreground">Direct</div>
-                  <div className="text-sm text-primary-foreground/60">Creator Support</div>
+                  <div className="text-sm text-primary-foreground/60">Support</div>
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-primary-foreground">Instant</div>
@@ -639,8 +815,10 @@ export default function SectionedMarketplace() {
         </div>
       </section>
 
+
       {/* Footer */}
       <Footer />
     </div>
   );
 }
+
