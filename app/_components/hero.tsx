@@ -2,7 +2,7 @@
 
 import { FC } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Play, Zap, CheckCircle } from "lucide-react";
+import { ArrowRight, Play, Zap, CheckCircle, BookOpen, Store } from "lucide-react";
 import { SignUpButton, useAuth } from "@clerk/nextjs";
 import Link from "next/link";
 
@@ -37,38 +37,52 @@ export const Hero: FC<HeroProps> = () => {
 
             <div className="flex flex-col sm:flex-row gap-4">
               {isSignedIn ? (
-                <Link href="/home">
-                  <Button 
-                    variant="default" 
-                    size="lg" 
-                    className="rounded-xl bg-background text-chart-1 hover:bg-background/90 font-semibold shadow-lg shadow-black/5"
-                  >
-                    Go to Dashboard
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
+                <>
+                  <Link href="/library">
+                    <Button 
+                      variant="default" 
+                      size="lg" 
+                      className="rounded-xl bg-background text-chart-1 hover:bg-background/90 font-semibold shadow-lg shadow-black/5"
+                    >
+                      <BookOpen className="mr-2 h-4 w-4" />
+                      Student Library
+                    </Button>
+                  </Link>
+                  <Link href="/home">
+                    <Button 
+                      variant="ghost" 
+                      size="lg" 
+                      className="rounded-xl text-primary-foreground border-primary-foreground/20 hover:bg-primary-foreground/10"
+                    >
+                      <Store className="mr-2 h-4 w-4" />
+                      Creator Studio
+                    </Button>
+                  </Link>
+                </>
               ) : (
-                <SignUpButton mode="modal">
-                  <Button 
-                    variant="default" 
-                    size="lg" 
-                    className="rounded-xl bg-background text-chart-1 hover:bg-background/90 font-semibold shadow-lg shadow-black/5"
-                  >
-                    Join the Platform
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </SignUpButton>
+                <>
+                  <SignUpButton mode="modal">
+                    <Button 
+                      variant="default" 
+                      size="lg" 
+                      className="rounded-xl bg-background text-chart-1 hover:bg-background/90 font-semibold shadow-lg shadow-black/5"
+                    >
+                      Join the Platform
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </SignUpButton>
+                  <Link href="/courses">
+                    <Button 
+                      variant="ghost" 
+                      size="lg" 
+                      className="rounded-xl text-primary-foreground border-primary-foreground/20 hover:bg-primary-foreground/10"
+                    >
+                      <Play className="mr-2 h-4 w-4" />
+                      Browse Creators
+                    </Button>
+                  </Link>
+                </>
               )}
-              <Link href="/courses">
-                <Button 
-                  variant="ghost" 
-                  size="lg" 
-                  className="rounded-xl text-primary-foreground border-primary-foreground/20 hover:bg-primary-foreground/10"
-                >
-                  <Play className="mr-2 h-4 w-4" />
-                  Browse Creators
-                </Button>
-              </Link>
             </div>
 
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 text-sm text-primary-foreground/60">

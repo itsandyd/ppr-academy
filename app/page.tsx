@@ -219,10 +219,10 @@ export default function SectionedMarketplace() {
                 >
                   <div className="space-y-2">
                     {isSignedIn ? (
-                      <Link href="/dashboard">
+                      <Link href="/library">
                         <Button className="w-full py-6 text-base shadow-md shadow-chart-1/20 hover:shadow-lg hover:scale-105 hover:-translate-y-1 transition-all duration-300 bg-gradient-to-r from-chart-1 to-chart-1/80 text-primary-foreground border-2 border-chart-1/40">
                           <BookOpen className="mr-2 h-5 w-5" />
-                          Browse Content
+                          Go to Library
                         </Button>
                       </Link>
                     ) : (
@@ -236,7 +236,7 @@ export default function SectionedMarketplace() {
                     <p className="text-xs text-muted-foreground mt-2">Learn from expert creators</p>
                   </div>
                   <div className="space-y-2">
-                    <Link href={isSignedIn ? "/dashboard" : "/sign-up?intent=creator"}>
+                    <Link href={isSignedIn ? "/home" : "/sign-up?intent=creator"}>
                       <Button variant="outline" className="w-full py-6 text-base hover:scale-105 hover:-translate-y-1 transition-all duration-300 border-2 border-chart-1/40 bg-background/80 hover:bg-background/90 hover:shadow-lg">
                         <Store className="mr-2 h-5 w-5" />
                         For Creators
@@ -758,15 +758,27 @@ export default function SectionedMarketplace() {
                   </Link>
                 </>
               ) : (
-                <Link href="/dashboard">
-                  <Button 
-                    size="lg" 
-                    className="rounded-xl bg-background text-chart-1 hover:bg-background/90 font-bold px-12 py-6 text-xl shadow-2xl transition-all duration-300 hover:scale-105"
-                  >
-                    Go to Dashboard
-                    <ArrowRight className="ml-2 w-5 h-5" />
-                  </Button>
-                </Link>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                  <Link href="/library">
+                    <Button 
+                      size="lg" 
+                      className="w-full sm:w-auto rounded-xl bg-background text-chart-1 hover:bg-background/90 font-bold px-12 py-6 text-xl shadow-2xl transition-all duration-300 hover:scale-105"
+                    >
+                      <BookOpen className="mr-2 w-5 h-5" />
+                      Student Library
+                    </Button>
+                  </Link>
+                  <Link href="/home">
+                    <Button 
+                      variant="outline"
+                      size="lg" 
+                      className="w-full sm:w-auto rounded-xl border-primary-foreground/40 text-primary-foreground hover:bg-primary-foreground/10 font-semibold px-12 py-6 text-xl shadow-lg transition-all duration-300 hover:scale-105"
+                    >
+                      <Store className="mr-2 w-5 h-5" />
+                      Creator Studio
+                    </Button>
+                  </Link>
+                </div>
               )}
             </div>
 

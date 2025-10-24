@@ -158,12 +158,12 @@ export default function LibraryPage() {
     return (
       <div className="space-y-8">
         {/* Welcome Header */}
-        <div className="bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 rounded-2xl p-8 text-white relative overflow-hidden">
+        <div className="bg-gradient-to-r from-chart-1 to-chart-4 rounded-2xl p-8 text-primary-foreground relative overflow-hidden">
           <div className="relative z-10">
             <h1 className="text-3xl font-bold mb-2">
               Welcome to Your Library! 👋
             </h1>
-            <p className="text-white/80">
+            <p className="text-primary-foreground/80">
               Start your learning journey by exploring courses
             </p>
           </div>
@@ -178,7 +178,7 @@ export default function LibraryPage() {
   return (
     <div className="space-y-8">
       {/* Welcome Header */}
-      <div className="bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 rounded-2xl p-8 text-white relative overflow-hidden">
+      <div className="bg-gradient-to-r from-chart-1 to-chart-4 rounded-2xl p-8 text-primary-foreground relative overflow-hidden">
         <HeroFlourishes variant="music" />
         <div className="relative z-10">
           <div className="flex items-center justify-between mb-6">
@@ -186,12 +186,12 @@ export default function LibraryPage() {
               <h1 className="text-3xl font-bold mb-2">
                 Welcome back, {userData.name}! 👋
               </h1>
-              <p className="text-white/80">
+              <p className="text-primary-foreground/80">
                 Ready to continue your music production journey?
               </p>
             </div>
             <div className="hidden md:flex items-center gap-4">
-              <Avatar className="w-16 h-16 border-2 border-white/20">
+              <Avatar className="w-16 h-16 border-2 border-primary-foreground/20">
                 <AvatarImage src={userData.avatar} />
                 <AvatarFallback className="text-2xl">
                   {userData.name.charAt(0)}
@@ -201,24 +201,24 @@ export default function LibraryPage() {
           </div>
           
           {/* Level Progress */}
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 mb-6">
+          <div className="bg-primary-foreground/10 backdrop-blur-sm rounded-xl p-4 mb-6">
             <div className="flex items-center justify-between mb-2">
               <span className="font-medium">{userData.level}</span>
-              <span className="text-sm text-white/80">
+              <span className="text-sm text-primary-foreground/80">
                 {userData.xp} / {userData.nextLevelXp} XP
               </span>
             </div>
-            <Progress value={levelProgress} className="h-2 bg-white/20" />
+            <Progress value={levelProgress} className="h-2 bg-primary-foreground/20" />
           </div>
 
           <div className="flex flex-wrap gap-4">
-            <Button className="bg-white/20 hover:bg-white/30 border border-white/30 backdrop-blur-sm text-white">
+            <Button className="bg-primary-foreground/20 hover:bg-primary-foreground/30 border border-primary-foreground/30 backdrop-blur-sm text-primary-foreground">
               <Play className="w-4 h-4 mr-2" />
               Continue Learning
             </Button>
             <Button 
               variant="ghost" 
-              className="text-white hover:bg-white/10"
+              className="text-primary-foreground hover:bg-primary-foreground/10"
               onClick={() => window.location.href = '/'}
             >
               <BookOpen className="w-4 h-4 mr-2" />
@@ -229,8 +229,8 @@ export default function LibraryPage() {
         
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full -translate-y-32 translate-x-32"></div>
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white rounded-full translate-y-24 -translate-x-24"></div>
+          <div className="absolute top-0 right-0 w-64 h-64 bg-primary-foreground rounded-full -translate-y-32 translate-x-32"></div>
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-primary-foreground rounded-full translate-y-24 -translate-x-24"></div>
         </div>
       </div>
 
@@ -245,7 +245,7 @@ export default function LibraryPage() {
                 </p>
                 <p className="text-2xl font-bold">{stats.coursesEnrolled}</p>
               </div>
-              <BookOpen className="w-8 h-8 text-blue-500" />
+              <BookOpen className="w-8 h-8 text-chart-1" />
             </div>
           </CardContent>
         </Card>
@@ -259,7 +259,7 @@ export default function LibraryPage() {
                 </p>
                 <p className="text-2xl font-bold">{stats.coursesCompleted}</p>
               </div>
-              <Award className="w-8 h-8 text-green-500" />
+              <Award className="w-8 h-8 text-chart-2" />
             </div>
           </CardContent>
         </Card>
@@ -273,7 +273,7 @@ export default function LibraryPage() {
                 </p>
                 <p className="text-2xl font-bold">{stats.totalHoursLearned}</p>
               </div>
-              <Clock className="w-8 h-8 text-orange-500" />
+              <Clock className="w-8 h-8 text-chart-5" />
             </div>
           </CardContent>
         </Card>
@@ -287,7 +287,7 @@ export default function LibraryPage() {
                 </p>
                 <p className="text-2xl font-bold">{stats.currentStreak}</p>
               </div>
-              <TrendingUp className="w-8 h-8 text-purple-500" />
+              <TrendingUp className="w-8 h-8 text-chart-4" />
             </div>
           </CardContent>
         </Card>
@@ -432,7 +432,7 @@ export default function LibraryPage() {
           <Card>
             <CardHeader className="pb-4">
               <CardTitle className="text-lg flex items-center gap-2">
-                <Target className="w-5 h-5 text-purple-500" />
+                <Target className="w-5 h-5 text-chart-4" />
                 Next Milestone
               </CardTitle>
             </CardHeader>
@@ -463,7 +463,7 @@ export default function LibraryPage() {
           <Card>
             <CardHeader className="pb-4">
               <CardTitle className="text-lg flex items-center gap-2">
-                <Clock className="w-5 h-5 text-blue-500" />
+                <Clock className="w-5 h-5 text-chart-1" />
                 Recent Activity
               </CardTitle>
             </CardHeader>
@@ -472,13 +472,13 @@ export default function LibraryPage() {
                 <div className="space-y-4">
                   {recentActivity.map((activity: any) => (
                     <div key={activity.id} className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center flex-shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-chart-1 to-chart-2 flex items-center justify-center flex-shrink-0">
                         {activity.type === "completed_lesson" ? (
-                          <Award className="w-4 h-4 text-white" />
+                          <Award className="w-4 h-4 text-primary-foreground" />
                         ) : activity.type === "started_course" ? (
-                          <Play className="w-4 h-4 text-white" />
+                          <Play className="w-4 h-4 text-primary-foreground" />
                         ) : (
-                          <Award className="w-4 h-4 text-white" />
+                          <Award className="w-4 h-4 text-primary-foreground" />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
