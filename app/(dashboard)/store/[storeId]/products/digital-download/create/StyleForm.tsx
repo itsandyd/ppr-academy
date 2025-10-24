@@ -51,9 +51,11 @@ export function StyleForm() {
   // Convex mutations and queries
   const createProduct = useMutation(api.digitalProducts.createProduct);
   const updateProduct = useMutation(api.digitalProducts.updateProduct);
+  // Only query if productId is valid (starts with 'k' for Convex IDs)
+  const isValidProductId = productId && productId.startsWith("k");
   const existingProduct = useQuery(
     api.digitalProducts.getProductById,
-    productId ? { productId: productId as any } : "skip"
+    isValidProductId ? { productId: productId as any } : "skip"
   );
   
   // Initialize form with existing product data or URL params

@@ -13,12 +13,20 @@ export default function EditProductPage() {
   const productId = params.productId as string;
 
   // Fetch the product to determine its type
+  // Skip if productId is "new" or doesn't look like a Convex ID
+  const isValidProductId = productId && productId !== "new" && productId.startsWith("k");
   const product = useQuery(
     api.digitalProducts.getProductById,
-    productId ? { productId: productId as any } : "skip"
+    isValidProductId ? { productId: productId as any } : "skip"
   );
 
   useEffect(() => {
+    // If productId is "new", redirect to product creation page
+    if (productId === "new") {
+      router.push(`/store/${storeId}/products`);
+      return;
+    }
+
     if (product) {
       // Determine product type and redirect to appropriate creation flow
       if (product.price === 0 && product.style === "card") {
@@ -31,8 +39,8 @@ export default function EditProductPage() {
     }
   }, [product, router, storeId, productId]);
 
-  // Show loading state while we determine the product type
-  if (product === undefined) {
+  // Show loading state while we determine the product type (but not for "new")
+  if (productId !== "new" && product === undefined) {
     return (
       <div className="max-w-7xl mx-auto px-8 pt-10 pb-24">
         <div className="space-y-6">

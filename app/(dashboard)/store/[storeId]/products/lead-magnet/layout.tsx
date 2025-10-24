@@ -72,9 +72,11 @@ export default function WizardLayout({ children }: WizardLayoutProps) {
   );
 
   // Fetch specific product if in edit mode
+  // Only query if editProductId is valid (starts with 'k' for Convex IDs)
+  const isValidEditProductId = editProductId && editProductId.startsWith("k");
   const editProduct = useQuery(
     api.digitalProducts.getProductById,
-    editProductId ? { productId: editProductId as any } : "skip"
+    isValidEditProductId ? { productId: editProductId as any } : "skip"
   );
 
   // Load existing lead magnet data on mount
