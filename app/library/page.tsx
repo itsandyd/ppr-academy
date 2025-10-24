@@ -120,8 +120,8 @@ export default function LibraryPage() {
   
   if (isLoading) {
     return (
-      <div className="space-y-8">
-        <Card className="p-8">
+      <div className="space-y-6 md:space-y-8">
+        <Card className="p-6 md:p-8">
           <div className="flex items-center gap-4">
             <Skeleton className="w-16 h-16 rounded-full" />
             <div className="flex-1">
@@ -130,10 +130,10 @@ export default function LibraryPage() {
             </div>
           </div>
         </Card>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
           {[1, 2, 3, 4].map((i) => (
             <Card key={i}>
-              <CardContent className="p-6">
+              <CardContent className="p-4 md:p-6">
                 <Skeleton className="h-20" />
               </CardContent>
             </Card>
@@ -156,9 +156,9 @@ export default function LibraryPage() {
   
   if (hasNoCourses) {
     return (
-      <div className="space-y-8">
+      <div className="space-y-6 md:space-y-8">
         {/* Welcome Header */}
-        <div className="bg-gradient-to-r from-chart-1 to-chart-4 rounded-2xl p-8 text-primary-foreground relative overflow-hidden">
+        <div className="bg-gradient-to-r from-chart-1 to-chart-4 rounded-2xl p-6 md:p-8 text-primary-foreground relative overflow-hidden">
           <div className="relative z-10">
             <h1 className="text-3xl font-bold mb-2">
               Welcome to Your Library! 👋
@@ -176,9 +176,9 @@ export default function LibraryPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 md:space-y-8">
       {/* Welcome Header */}
-      <div className="bg-gradient-to-r from-chart-1 to-chart-4 rounded-2xl p-8 text-primary-foreground relative overflow-hidden">
+      <div className="bg-gradient-to-r from-chart-1 to-chart-4 rounded-2xl p-6 md:p-8 text-primary-foreground relative overflow-hidden">
         <HeroFlourishes variant="music" />
         <div className="relative z-10">
           <div className="flex items-center justify-between mb-6">
@@ -235,9 +235,9 @@ export default function LibraryPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
         <Card className="hover:shadow-lg transition-shadow">
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">
@@ -251,7 +251,7 @@ export default function LibraryPage() {
         </Card>
 
         <Card className="hover:shadow-lg transition-shadow">
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">
@@ -265,7 +265,7 @@ export default function LibraryPage() {
         </Card>
 
         <Card className="hover:shadow-lg transition-shadow">
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">
@@ -279,7 +279,7 @@ export default function LibraryPage() {
         </Card>
 
         <Card className="hover:shadow-lg transition-shadow">
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">
@@ -293,9 +293,9 @@ export default function LibraryPage() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 md:gap-8">
         {/* Main Content */}
-        <div className="lg:col-span-3 space-y-8">
+        <div className="lg:col-span-3 space-y-6 md:space-y-8">
           {/* Content Tabs */}
           <Tabs defaultValue="continue" className="w-full">
             <TabsList className="grid w-full max-w-2xl grid-cols-4">
@@ -310,7 +310,7 @@ export default function LibraryPage() {
 
             <TabsContent value="continue" className="space-y-6">
               {enrolledCourses && enrolledCourses.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
                   {enrolledCourses.map((course: any) => (
                     <CourseCardEnhanced
                       key={course._id}
@@ -427,7 +427,7 @@ export default function LibraryPage() {
         </div>
 
         {/* Sidebar */}
-        <div className="space-y-6">
+        <div className="space-y-4 md:space-y-6">
           {/* Next Milestone */}
           <Card>
             <CardHeader className="pb-4">

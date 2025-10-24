@@ -76,9 +76,9 @@ export const CourseCardEnhanced: FC<CourseCardProps> = ({
     : (slug ? `/courses/${slug}` : `/courses/${id}`);
   
   const skillLevelColors = {
-    Beginner: "bg-green-100 text-green-800 border-green-200",
-    Intermediate: "bg-blue-100 text-blue-800 border-blue-200", 
-    Advanced: "bg-purple-100 text-purple-800 border-purple-200",
+    Beginner: "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border-green-200 dark:border-green-800",
+    Intermediate: "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800", 
+    Advanced: "bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border-purple-200 dark:border-purple-800",
   };
 
   if (variant === "compact") {
@@ -163,7 +163,7 @@ export const CourseCardEnhanced: FC<CourseCardProps> = ({
   if (variant === "featured") {
     return (
       <Card className={cn(
-        "group hover:shadow-2xl transition-all duration-500 border-0 bg-gradient-to-br from-white via-white to-gray-50/50 overflow-hidden",
+        "group hover:shadow-2xl transition-all duration-500 overflow-hidden",
         className
       )}>
         <div className="relative">
@@ -210,14 +210,14 @@ export const CourseCardEnhanced: FC<CourseCardProps> = ({
               <Button
                 size="sm"
                 variant="secondary"
-                className="w-8 h-8 p-0 rounded-full bg-white/90 hover:bg-white"
+                className="w-8 h-8 p-0 rounded-full bg-white/90 dark:bg-black/90 hover:bg-white dark:hover:bg-black"
               >
                 <Heart className={cn("w-4 h-4", isFavorited && "fill-red-500 text-red-500")} />
               </Button>
               <Button
                 size="sm"
                 variant="secondary"
-                className="w-8 h-8 p-0 rounded-full bg-white/90 hover:bg-white"
+                className="w-8 h-8 p-0 rounded-full bg-white/90 dark:bg-black/90 hover:bg-white dark:hover:bg-black"
               >
                 <Share2 className="w-4 h-4" />
               </Button>
@@ -312,7 +312,7 @@ export const CourseCardEnhanced: FC<CourseCardProps> = ({
             <div className="flex items-center justify-between">
               <div className="text-2xl font-bold">
                 {price === 0 ? (
-                  <span className="text-green-600">Free</span>
+                  <span className="text-green-600 dark:text-green-400">Free</span>
                 ) : price ? (
                   <span>${price}</span>
                 ) : null}
@@ -334,7 +334,7 @@ export const CourseCardEnhanced: FC<CourseCardProps> = ({
   // Default variant
   return (
     <Card className={cn(
-      "group hover:shadow-xl transition-all duration-300 overflow-hidden border-0 bg-white",
+      "group hover:shadow-xl transition-all duration-300 overflow-hidden",
       className
     )}>
       <div className="relative">
@@ -368,7 +368,7 @@ export const CourseCardEnhanced: FC<CourseCardProps> = ({
           <Button
             size="sm"
             variant="secondary"
-            className="absolute top-3 right-3 w-8 h-8 p-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 hover:bg-white"
+            className="absolute top-3 right-3 w-8 h-8 p-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 dark:bg-black/90 hover:bg-white dark:hover:bg-black"
           >
             <Heart className={cn("w-4 h-4", isFavorited && "fill-red-500 text-red-500")} />
           </Button>
@@ -451,7 +451,7 @@ export const CourseCardEnhanced: FC<CourseCardProps> = ({
           <div className="flex items-center justify-between">
             <div className="text-xl font-bold">
               {price === 0 ? (
-                <span className="text-green-600">Free</span>
+                <span className="text-green-600 dark:text-green-400">Free</span>
               ) : price ? (
                 <span>${price}</span>
               ) : null}
