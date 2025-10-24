@@ -73,7 +73,7 @@ export function PostAnswerForm({
 
   if (!user) {
     return (
-      <Card>
+      <Card className="bg-card border-border">
         <CardContent className="pt-6">
           <p className="text-center text-muted-foreground">
             Please sign in to post answers
@@ -84,10 +84,10 @@ export function PostAnswerForm({
   }
 
   return (
-    <Card>
+    <Card className="bg-card border-border">
       <CardHeader>
-        <CardTitle className="text-lg">Your Answer</CardTitle>
-        <CardDescription>
+        <CardTitle className="text-lg text-foreground">Your Answer</CardTitle>
+        <CardDescription className="text-muted-foreground">
           {isInstructor
             ? "Share your expertise to help this student"
             : "Help answer this question"}
@@ -103,7 +103,7 @@ export function PostAnswerForm({
               disabled={isSubmitting}
               rows={6}
               maxLength={2000}
-              className={!content.trim() && content !== "" ? "border-red-500" : ""}
+              className={`bg-background text-foreground ${!content.trim() && content !== "" ? "border-red-500 dark:border-red-400" : ""}`}
             />
             <p className="text-xs text-muted-foreground mt-1">
               {content.length}/2000 characters

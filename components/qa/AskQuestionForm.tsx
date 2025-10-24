@@ -80,7 +80,7 @@ export function AskQuestionForm({
 
   if (!user) {
     return (
-      <Card>
+      <Card className="bg-card border-border">
         <CardContent className="pt-6">
           <p className="text-center text-muted-foreground">
             Please sign in to ask questions
@@ -91,21 +91,21 @@ export function AskQuestionForm({
   }
 
   return (
-    <Card>
+    <Card className="bg-card border-border">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 text-foreground">
           <MessageSquarePlus className="w-5 h-5" />
           Ask a Question
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-muted-foreground">
           Get help from instructors and other students
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="question-title" className="text-sm font-medium mb-2 block">
-              Question Title <span className="text-red-500">*</span>
+            <label htmlFor="question-title" className="text-sm font-medium mb-2 block text-foreground">
+              Question Title <span className="text-red-500 dark:text-red-400">*</span>
             </label>
             <Input
               id="question-title"
@@ -114,7 +114,7 @@ export function AskQuestionForm({
               onChange={(e) => setTitle(e.target.value)}
               disabled={isSubmitting}
               maxLength={200}
-              className={!title.trim() && title !== "" ? "border-red-500" : ""}
+              className={`bg-background text-foreground ${!title.trim() && title !== "" ? "border-red-500 dark:border-red-400" : ""}`}
             />
             <p className="text-xs text-muted-foreground mt-1">
               {title.length}/200 characters
@@ -122,8 +122,8 @@ export function AskQuestionForm({
           </div>
 
           <div>
-            <label htmlFor="question-content" className="text-sm font-medium mb-2 block">
-              Question Details <span className="text-red-500">*</span>
+            <label htmlFor="question-content" className="text-sm font-medium mb-2 block text-foreground">
+              Question Details <span className="text-red-500 dark:text-red-400">*</span>
             </label>
             <Textarea
               id="question-content"
@@ -133,7 +133,7 @@ export function AskQuestionForm({
               disabled={isSubmitting}
               rows={6}
               maxLength={2000}
-              className={!content.trim() && content !== "" ? "border-red-500" : ""}
+              className={`bg-background text-foreground ${!content.trim() && content !== "" ? "border-red-500 dark:border-red-400" : ""}`}
             />
             <p className="text-xs text-muted-foreground mt-1">
               {content.length}/2000 characters

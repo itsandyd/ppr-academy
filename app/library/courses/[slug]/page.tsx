@@ -218,22 +218,22 @@ export default function CoursePlayerPage() {
   const overallProgress = totalChapters > 0 ? Math.round((completedChapters / totalChapters) * 100) : 0;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       {/* Mobile Header */}
-      <div className="lg:hidden bg-card border-b border-border p-4 mb-4 rounded-lg">
+      <div className="lg:hidden bg-card border border-border rounded-lg p-4 mb-4 shadow-sm">
         <div className="flex items-center justify-between">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-            className="flex items-center space-x-2"
+            className="flex items-center gap-2 hover:bg-muted"
           >
             <Book className="w-4 h-4" />
-            <span className="font-medium">Course Menu</span>
+            <span className="font-semibold">Course Menu</span>
           </Button>
-          <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-            <Progress value={overallProgress} className="w-16 h-2" />
-            <span>{overallProgress}%</span>
+          <div className="flex items-center gap-2.5 text-sm">
+            <Progress value={overallProgress} className="w-20 h-2" />
+            <span className="font-semibold text-foreground min-w-[3ch]">{overallProgress}%</span>
           </div>
         </div>
       </div>
@@ -246,20 +246,20 @@ export default function CoursePlayerPage() {
         />
       )}
 
-      <div className="flex h-[calc(100vh-120px)] lg:gap-6">
+      <div className="flex lg:h-[calc(100vh-120px)] lg:gap-6">
         {/* Course Outline Sidebar */}
-        <div className={`fixed lg:static top-0 bottom-0 lg:inset-y-0 left-0 z-50 w-80 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden transition-transform duration-300 lg:translate-x-0 shadow-xl lg:shadow-none flex flex-col ${
+        <div className={`fixed lg:static top-0 bottom-0 lg:inset-y-0 left-0 z-50 w-80 bg-card rounded-lg border border-border overflow-hidden transition-transform duration-300 lg:translate-x-0 shadow-xl lg:shadow-none flex flex-col ${
           mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}>
-          <div className="flex-shrink-0 p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+          <div className="flex-shrink-0 p-4 border-b border-border bg-card/50">
             {/* Mobile Close Button */}
             <div className="lg:hidden flex justify-between items-center mb-4">
-              <h2 className="font-semibold text-gray-900 dark:text-gray-100">Course Content</h2>
+              <h2 className="font-semibold text-foreground">Course Content</h2>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setMobileSidebarOpen(false)}
-                className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"
+                className="text-muted-foreground hover:text-foreground"
               >
                 ✕
               </Button>
@@ -268,77 +268,81 @@ export default function CoursePlayerPage() {
             <div className="space-y-4">
               {/* Course Title & Progress */}
               <div className="space-y-3">
-                <h2 className="font-bold text-base text-gray-900 dark:text-gray-100 line-clamp-2 hidden lg:block leading-tight">
+                <h2 className="font-bold text-base text-foreground line-clamp-2 hidden lg:block leading-tight">
                   {courseData?.title}
                 </h2>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
-                    <span>Progress</span>
-                    <span className="font-medium">{overallProgress}%</span>
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground font-medium">Progress</span>
+                    <span className="font-semibold text-foreground">{overallProgress}%</span>
                   </div>
-                  <Progress value={overallProgress} className="h-2" />
+                  <Progress value={overallProgress} className="h-2.5" />
                 </div>
               </div>
 
               {/* Course Home Button */}
-              <Button asChild variant="ghost" size="sm" className="w-full justify-start">
+              <Button asChild variant="ghost" size="sm" className="w-full justify-start hover:bg-muted">
                 <Link href="/library/courses">
                   <Home className="w-4 h-4 mr-2" />
-                  Course Home
+                  <span className="font-medium">Course Home</span>
                 </Link>
               </Button>
             </div>
           </div>
 
-          <ScrollArea className="flex-1 bg-white dark:bg-gray-900 h-0 min-h-0">
-            <div className="p-4 space-y-6 pb-8">
+          <ScrollArea className="flex-1 bg-card h-0 min-h-0">
+            <div className="p-4 space-y-5 pb-8">
               {/* Course Modules */}
               {courseData.modules?.map((module, moduleIndex) => (
                 <div key={module._id} className="space-y-3">
                   {/* Module Header */}
-                  <div className="flex items-center justify-between py-2 px-3 bg-gray-100 dark:bg-gray-800 rounded-lg">
-                    <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100">
+                  <div className="flex items-center justify-between py-2.5 px-4 bg-muted/80 rounded-lg border border-border/50">
+                    <h3 className="font-semibold text-sm text-foreground">
                       Module {moduleIndex + 1}: {module.title}
                     </h3>
-                    <Badge variant="secondary" className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
+                    <Badge variant="secondary" className="text-xs font-medium">
                       {module.lessons?.reduce((acc, lesson) => acc + (lesson.chapters?.length || 0), 0) || 0}
                     </Badge>
                   </div>
 
                   {/* Lessons */}
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {module.lessons?.map((lesson, lessonIndex) => (
-                      <div key={lesson._id} className="pl-3">
-                        <h4 className="font-medium text-xs text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">
+                      <div key={lesson._id} className="pl-2">
+                        <h4 className="font-semibold text-xs text-muted-foreground mb-2.5 uppercase tracking-wider px-2">
                           Lesson {lessonIndex + 1}: {lesson.title}
                         </h4>
                         
                         {/* Chapters */}
-                        <div className="space-y-2 pl-2">
+                        <div className="space-y-1.5">
                           {lesson.chapters?.map((chapter, chapterIndex) => (
                             <button
                               key={chapter._id}
                               onClick={() => setSelectedChapter(chapter._id)}
-                              className={`w-full text-left p-3 rounded-lg border transition-all duration-200 ${
+                              className={`w-full text-left p-3 rounded-md border transition-all duration-200 ${
                                 selectedChapter === chapter._id
-                                  ? "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700 text-blue-700 dark:text-blue-300 shadow-sm"
-                                  : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-900 dark:text-gray-100 hover:border-gray-300 dark:hover:border-gray-600"
+                                  ? "bg-primary/10 border-primary/50 text-foreground shadow-sm ring-1 ring-primary/20"
+                                  : "bg-card border-border hover:bg-muted/50 text-foreground hover:border-border/80"
                               }`}
                             >
-                              <div className="flex items-start space-x-3">
+                              <div className="flex items-start gap-3">
                                 <div className="flex-shrink-0 mt-0.5">
                                   {chapter.isCompleted ? (
                                     <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
+                                  ) : selectedChapter === chapter._id ? (
+                                    <PlayCircle className="w-4 h-4 text-primary fill-primary/20" />
                                   ) : (
-                                    <PlayCircle className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                                    <PlayCircle className="w-4 h-4 text-muted-foreground" />
                                   )}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <div className="text-sm font-medium leading-snug">
+                                  <div className={`text-sm font-medium leading-snug ${
+                                    selectedChapter === chapter._id ? 'text-foreground' : ''
+                                  }`}>
                                     {chapterIndex + 1}. {chapter.title}
                                   </div>
                                   {chapter.timeSpent && (
-                                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center">
+                                    <div className="text-xs text-muted-foreground mt-1 flex items-center">
                                       <Clock className="w-3 h-3 mr-1" />
                                       {Math.round(chapter.timeSpent / 60)}m watched
                                     </div>
@@ -358,58 +362,50 @@ export default function CoursePlayerPage() {
         </div>
 
         {/* Lesson Canvas */}
-        <div className="flex-1 bg-card rounded-lg border border-border overflow-hidden">
+        <div className="flex-1 bg-card rounded-lg border border-border overflow-y-auto scroll-smooth">
           {currentChapter ? (
-            <div className="h-full flex flex-col">
+            <div className="flex flex-col">
               {/* Chapter Header */}
-              <div className={`p-4 lg:p-8 border-b border-border ${!currentChapter.videoUrl && !currentChapter.audioUrl ? 'flex-1' : 'h-60 lg:h-80'}`}>
-                <div className="max-w-4xl mx-auto h-full flex flex-col justify-center">
-                  <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-4">
-                    <span>{currentModule?.title}</span>
-                    <ChevronRight className="w-4 h-4" />
-                    <span>{currentLesson?.title}</span>
+              <div className="p-6 lg:p-8 border-b border-border bg-gradient-to-b from-muted/30 to-transparent">
+                <div className="max-w-4xl mx-auto flex flex-col justify-center">
+                  <div className="flex items-center flex-wrap gap-2 text-sm text-muted-foreground mb-3 font-medium">
+                    <span className="truncate">{currentModule?.title}</span>
+                    <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span className="truncate">{currentLesson?.title}</span>
                   </div>
-                  <h1 className="text-xl lg:text-3xl font-bold text-primary mb-4 lg:mb-6">
+                  <h1 className="text-2xl lg:text-3xl font-bold text-foreground mb-4 lg:mb-6 leading-tight">
                     {currentChapter.title}
                   </h1>
                   {currentChapter.description && (
-                    <>
-                      {!currentChapter.videoUrl && !currentChapter.audioUrl ? (
-                        <div className="flex-1 max-w-3xl overflow-y-auto">
-                          <div className="prose prose-base lg:prose-lg max-w-none text-muted-foreground pr-4">
-                            <div dangerouslySetInnerHTML={{ __html: currentChapter.description }} />
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="prose prose-base lg:prose-lg max-w-3xl text-muted-foreground line-clamp-3 lg:line-clamp-4">
-                          <div dangerouslySetInnerHTML={{ __html: currentChapter.description }} />
-                        </div>
-                      )}
-                    </>
+                    <div className="prose prose-base lg:prose-lg dark:prose-invert max-w-3xl prose-headings:text-foreground prose-p:text-muted-foreground prose-strong:text-foreground prose-a:text-primary prose-a:no-underline hover:prose-a:underline">
+                      <div dangerouslySetInnerHTML={{ __html: currentChapter.description }} />
+                    </div>
                   )}
                 </div>
               </div>
 
               {/* Chapter Content */}
-              <div className="flex-1 flex flex-col">
+              <div className="flex flex-col">
                 {/* Video/Audio Player */}
                 {(currentChapter.videoUrl || currentChapter.audioUrl || currentChapter.generatedAudioUrl || currentChapter.generatedVideoUrl) && (
-                  <div className="p-4 lg:p-6">
+                  <div className="p-6 lg:p-8">
                     <div className="max-w-4xl mx-auto space-y-4">
                       {/* Video Player (prioritize generated video, then original video) */}
                       {(currentChapter.generatedVideoUrl || currentChapter.videoUrl) && (
-                        <div className="aspect-video bg-black rounded-lg overflow-hidden">
-                          <video
-                            controls
-                            className="w-full h-full"
-                            src={currentChapter.generatedVideoUrl || currentChapter.videoUrl}
-                            poster={courseData.imageUrl}
-                          >
-                            Your browser does not support the video tag.
-                          </video>
+                        <div className="space-y-2">
+                          <div className="aspect-video bg-black rounded-lg overflow-hidden shadow-lg">
+                            <video
+                              controls
+                              className="w-full h-full"
+                              src={currentChapter.generatedVideoUrl || currentChapter.videoUrl}
+                              poster={courseData.imageUrl}
+                            >
+                              Your browser does not support the video tag.
+                            </video>
+                          </div>
                           {currentChapter.generatedVideoUrl && (
-                            <div className="mt-2 text-xs text-blue-600 dark:text-blue-400 text-center">
-                              🤖 AI-Generated Video
+                            <div className="text-xs text-primary text-center flex items-center justify-center gap-1">
+                              <span>🤖</span> AI-Generated Video
                             </div>
                           )}
                         </div>
@@ -449,37 +445,36 @@ export default function CoursePlayerPage() {
                 )}
 
                 {/* Chapter Actions */}
-                <div className="mt-auto p-4 lg:p-6 border-t border-border">
-                  <div className="max-w-4xl mx-auto flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
+                <div className="p-6 lg:p-8 border-t border-border bg-muted/40">
+                  <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
                       {!currentChapter.isCompleted && (
                         <Button
                           onClick={() => handleChapterComplete(currentChapter._id)}
-                          className="flex items-center space-x-2"
+                          className="flex items-center gap-2 shadow-sm"
+                          size="default"
                         >
                           <CheckCircle className="w-4 h-4" />
-                          <span>Mark as Complete</span>
+                          <span className="font-medium">Mark as Complete</span>
                         </Button>
                       )}
                       {currentChapter.isCompleted && (
-                        <div className="flex items-center space-x-2 text-green-600">
+                        <div className="flex items-center gap-2 text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/30 px-4 py-2 rounded-lg border border-green-200 dark:border-green-800">
                           <CheckCircle className="w-4 h-4" />
-                          <span className="text-sm font-medium">Completed</span>
+                          <span className="text-sm font-semibold">Completed</span>
                         </div>
                       )}
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      {currentChapter.lastAccessedAt && (
-                        <span>
-                          Last accessed {formatDistanceToNow(new Date(currentChapter.lastAccessedAt))} ago
-                        </span>
-                      )}
-                    </div>
+                    {currentChapter.lastAccessedAt && (
+                      <div className="text-xs text-muted-foreground font-medium">
+                        Last accessed {formatDistanceToNow(new Date(currentChapter.lastAccessedAt))} ago
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 {/* Q&A Section */}
-                <div className="p-4 lg:p-6 border-t border-border bg-muted/30">
+                <div className="p-6 lg:p-8 border-t border-border bg-muted/30">
                   <div className="max-w-4xl mx-auto">
                     <LessonQASection
                       courseId={courseData._id}
@@ -497,45 +492,81 @@ export default function CoursePlayerPage() {
               </div>
 
               {/* Navigation Footer */}
-              <div className="border-t border-border p-3 lg:p-4 mt-auto">
-                <div className="max-w-4xl mx-auto flex items-center justify-between gap-2">
+              <div className="border-t border-border bg-card/95 backdrop-blur-sm sticky bottom-0 z-10 shadow-lg">
+                {/* Mobile Navigation - Stacked */}
+                <div className="lg:hidden p-3 space-y-2">
+                  {previousChapter && (
+                    <Button
+                      variant="outline"
+                      onClick={() => setSelectedChapter(previousChapter._id)}
+                      className="w-full justify-start gap-3 h-auto py-3 px-4"
+                    >
+                      <ChevronLeft className="w-4 h-4 flex-shrink-0" />
+                      <div className="text-left min-w-0 flex-1">
+                        <div className="text-xs text-muted-foreground font-medium">Previous</div>
+                        <div className="font-semibold text-sm truncate">{previousChapter.title}</div>
+                      </div>
+                    </Button>
+                  )}
+                  {nextChapter ? (
+                    <Button
+                      onClick={() => setSelectedChapter(nextChapter._id)}
+                      className="w-full justify-between gap-3 h-auto py-3 px-4"
+                    >
+                      <div className="text-left min-w-0 flex-1">
+                        <div className="text-xs opacity-90 font-medium">Next</div>
+                        <div className="font-semibold text-sm truncate">{nextChapter.title}</div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 flex-shrink-0" />
+                    </Button>
+                  ) : (
+                    <Button variant="default" asChild className="w-full py-3">
+                      <Link href="/library/courses" className="flex items-center justify-center gap-2">
+                        <CheckCircle className="w-4 h-4" />
+                        <span className="font-semibold">Course Complete</span>
+                      </Link>
+                    </Button>
+                  )}
+                </div>
+
+                {/* Desktop Navigation - Side by Side */}
+                <div className="hidden lg:flex max-w-4xl mx-auto items-center justify-between gap-3 p-6">
                   {previousChapter ? (
                     <Button
                       variant="outline"
                       onClick={() => setSelectedChapter(previousChapter._id)}
-                      className="flex items-center space-x-2 flex-1 lg:flex-none"
-                      size="sm"
+                      className="flex items-center gap-3 flex-initial min-w-[240px] h-auto py-3 px-4 border-border hover:bg-muted/50 transition-colors"
                     >
-                      <ChevronLeft className="w-4 h-4" />
-                      <div className="text-left hidden lg:block">
-                        <div className="text-xs text-muted-foreground">Previous Chapter</div>
-                        <div className="font-medium">{previousChapter.title}</div>
+                      <ChevronLeft className="w-5 h-5 flex-shrink-0 text-muted-foreground" />
+                      <div className="text-left min-w-0 flex-1">
+                        <div className="text-xs font-medium text-muted-foreground mb-0.5">Previous</div>
+                        <div className="font-semibold truncate text-sm text-foreground">{previousChapter.title}</div>
                       </div>
-                      <span className="lg:hidden text-sm">Previous</span>
                     </Button>
                   ) : (
-                    <div />
+                    <div className="flex-initial min-w-[240px]" />
                   )}
 
                   {nextChapter ? (
                     <Button
                       onClick={() => setSelectedChapter(nextChapter._id)}
-                      className="flex items-center space-x-2 flex-1 lg:flex-none"
-                      size="sm"
+                      className="flex items-center gap-3 flex-initial min-w-[240px] h-auto py-3 px-4 shadow-md hover:shadow-lg transition-all"
                     >
-                      <div className="text-right hidden lg:block">
-                        <div className="text-xs opacity-75">Next Chapter</div>
-                        <div className="font-medium">{nextChapter.title}</div>
+                      <div className="text-right min-w-0 flex-1">
+                        <div className="text-xs font-medium opacity-90 mb-0.5">Next</div>
+                        <div className="font-semibold truncate text-sm">{nextChapter.title}</div>
                       </div>
-                      <span className="lg:hidden text-sm">Next</span>
-                      <ChevronRight className="w-4 h-4" />
+                      <ChevronRight className="w-5 h-5 flex-shrink-0" />
                     </Button>
                   ) : (
-                    <Button variant="outline" asChild size="sm" className="flex-1 lg:flex-none">
-                      <Link href="/library/courses">
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        <span className="hidden lg:inline">Course Complete</span>
-                        <span className="lg:hidden">Complete</span>
+                    <Button 
+                      variant="default" 
+                      asChild 
+                      className="flex-initial min-w-[240px] h-auto py-3 px-4 shadow-md"
+                    >
+                      <Link href="/library/courses" className="flex items-center justify-center gap-2">
+                        <CheckCircle className="w-5 h-5" />
+                        <span className="font-semibold">Course Complete</span>
                       </Link>
                     </Button>
                   )}
@@ -544,13 +575,13 @@ export default function CoursePlayerPage() {
             </div>
           ) : (
             /* Course Overview */
-            <div className="p-8 text-center">
+            <div className="p-6 lg:p-8 text-center">
               <Book className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-foreground mb-2">Welcome to {courseData.title}</h2>
-              <p className="text-muted-foreground mb-6">
+              <h2 className="text-2xl lg:text-3xl font-bold text-foreground mb-2">Welcome to {courseData.title}</h2>
+              <p className="text-muted-foreground mb-8">
                 Select a chapter from the sidebar to begin your learning journey.
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-w-4xl mx-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 max-w-4xl mx-auto">
                 {courseData.modules?.slice(0, 3).map((module, index) => (
                   <Card key={module._id} className="text-left">
                     <CardHeader className="pb-3">

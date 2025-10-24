@@ -88,7 +88,7 @@ export function QuestionCard({ question, onClick, showFullContent = false }: Que
 
   return (
     <Card 
-      className={`hover:shadow-md transition-shadow ${onClick ? "cursor-pointer" : ""}`}
+      className={`hover:shadow-md transition-shadow bg-card border-border ${onClick ? "cursor-pointer" : ""}`}
       onClick={onClick}
     >
       <CardHeader className="pb-3">
@@ -96,19 +96,19 @@ export function QuestionCard({ question, onClick, showFullContent = false }: Que
           <div className="flex items-start gap-3 flex-1 min-w-0">
             <Avatar className="w-10 h-10 flex-shrink-0">
               <AvatarImage src={question.authorAvatar} alt={question.authorName} />
-              <AvatarFallback>{question.authorName[0]?.toUpperCase()}</AvatarFallback>
+              <AvatarFallback className="bg-muted text-foreground">{question.authorName[0]?.toUpperCase()}</AvatarFallback>
             </Avatar>
             
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <span className="font-medium text-sm truncate">{question.authorName}</span>
+                <span className="font-medium text-sm truncate text-foreground">{question.authorName}</span>
                 <span className="text-xs text-muted-foreground flex items-center gap-1">
                   <Clock className="w-3 h-3" />
                   {formatDistanceToNow(question.createdAt, { addSuffix: true })}
                 </span>
               </div>
               
-              <h3 className="font-semibold text-lg leading-tight mb-2">
+              <h3 className="font-semibold text-lg leading-tight mb-2 text-foreground">
                 {question.title}
               </h3>
               

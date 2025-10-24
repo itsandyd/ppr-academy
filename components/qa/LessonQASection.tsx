@@ -125,20 +125,20 @@ export function LessonQASection({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold flex items-center gap-2">
+        <h2 className="text-2xl font-bold flex items-center gap-2 text-foreground">
           <MessageSquare className="w-6 h-6" />
           Questions & Answers
         </h2>
       </div>
 
       <Tabs value={sortBy} onValueChange={(v) => setSortBy(v as any)} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 max-w-md">
+        <TabsList className="grid w-full grid-cols-3 max-w-md bg-muted">
           <TabsTrigger value="recent">Recent</TabsTrigger>
           <TabsTrigger value="votes">Most Voted</TabsTrigger>
           <TabsTrigger value="unanswered">Unanswered</TabsTrigger>
         </TabsList>
 
-        <TabsContent value={sortBy} className="space-y-6 mt-6">
+        <TabsContent value={sortBy} className="space-y-6 mt-6 focus-visible:outline-none focus-visible:ring-0">
           {/* Ask Question Form */}
           <AskQuestionForm
             courseId={courseId}

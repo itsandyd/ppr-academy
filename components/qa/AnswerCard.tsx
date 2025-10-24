@@ -110,7 +110,7 @@ export function AnswerCard({ answer, questionAuthorId, onAccept }: AnswerCardPro
   const canAccept = user?.id === questionAuthorId && !answer.isAccepted;
 
   return (
-    <Card className={answer.isAccepted ? "border-green-500 border-2" : ""}>
+    <Card className={`bg-card border-border ${answer.isAccepted ? "border-green-500 dark:border-green-600 border-2" : ""}`}>
       <CardContent className="pt-6">
         <div className="flex gap-4">
           {/* Voting Column */}
@@ -124,7 +124,7 @@ export function AnswerCard({ answer, questionAuthorId, onAccept }: AnswerCardPro
             >
               <ThumbsUp className={`w-5 h-5 ${isUpvoted ? "fill-current" : ""}`} />
             </Button>
-            <span className="text-lg font-bold">{answer.upvotes}</span>
+            <span className="text-lg font-bold text-foreground">{answer.upvotes}</span>
             <Button
               variant="ghost"
               size="sm"
@@ -137,7 +137,7 @@ export function AnswerCard({ answer, questionAuthorId, onAccept }: AnswerCardPro
             
             {answer.isAccepted && (
               <div className="mt-2">
-                <CheckCircle2 className="w-6 h-6 text-green-600" />
+                <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />
               </div>
             )}
           </div>
@@ -148,11 +148,11 @@ export function AnswerCard({ answer, questionAuthorId, onAccept }: AnswerCardPro
               <div className="flex items-center gap-2">
                 <Avatar className="w-8 h-8">
                   <AvatarImage src={answer.authorAvatar} alt={answer.authorName} />
-                  <AvatarFallback>{answer.authorName[0]?.toUpperCase()}</AvatarFallback>
+                  <AvatarFallback className="bg-muted text-foreground">{answer.authorName[0]?.toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-sm">{answer.authorName}</span>
+                    <span className="font-medium text-sm text-foreground">{answer.authorName}</span>
                     {answer.isInstructor && (
                       <Badge variant="secondary" className="text-xs">
                         <Award className="w-3 h-3 mr-1" />
@@ -160,7 +160,7 @@ export function AnswerCard({ answer, questionAuthorId, onAccept }: AnswerCardPro
                       </Badge>
                     )}
                     {answer.isAccepted && (
-                      <Badge variant="default" className="bg-green-600 text-xs">
+                      <Badge variant="default" className="bg-green-600 dark:bg-green-700 text-xs">
                         <CheckCircle2 className="w-3 h-3 mr-1" />
                         Best Answer
                       </Badge>
