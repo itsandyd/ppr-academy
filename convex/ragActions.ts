@@ -5,7 +5,7 @@ import { v } from "convex/values";
 import { api, internal } from "./_generated/api";
 
 // Search for similar content using vector similarity (Node.js action)
-export const searchSimilar: any = action({
+export const searchSimilar = action({
   args: {
     query: v.string(),
     userId: v.optional(v.string()),
@@ -38,7 +38,7 @@ export const searchSimilar: any = action({
 });
 
 // RAG-powered Q&A (Node.js action)
-export const askQuestion: any = action({
+export const askQuestion = action({
   args: {
     question: v.string(),
     userId: v.optional(v.string()),
