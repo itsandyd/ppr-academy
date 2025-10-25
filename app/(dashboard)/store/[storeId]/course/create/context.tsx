@@ -194,6 +194,8 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
         thumbnail: existingCourse.imageUrl || "",
         price: existingCourse.price?.toString() || "",
         category: existingCourse.category || "",
+        subcategory: existingCourse.subcategory || "",
+        tags: existingCourse.tags || [],
         skillLevel: existingCourse.skillLevel || "",
         checkoutHeadline: existingCourse.checkoutHeadline || "",
         checkoutDescription: existingCourse.checkoutDescription || "",
