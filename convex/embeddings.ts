@@ -12,6 +12,8 @@ export const getAllCourses = internalQuery({
     description: v.optional(v.string()),
     userId: v.string(),
     category: v.optional(v.string()),
+    subcategory: v.optional(v.string()),
+    tags: v.optional(v.array(v.string())),
     skillLevel: v.optional(v.string()),
     isPublished: v.optional(v.boolean()),
     storeId: v.optional(v.string()),
