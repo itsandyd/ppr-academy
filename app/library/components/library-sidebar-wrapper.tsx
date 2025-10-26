@@ -10,6 +10,9 @@ import { Bell, Search, Settings, X, CheckCheck, Package, Users, BarChart3, BookO
 import { Input } from "@/components/ui/input";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { useUser } from "@clerk/nextjs";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,27 +34,51 @@ interface LibrarySidebarWrapperProps {
 
 export function LibrarySidebarWrapper({ children }: LibrarySidebarWrapperProps) {
   const pathname = usePathname();
+  const { user } = useUser();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [notifications, setNotifications] = useState([
-    { id: 1, title: "New course update", message: "The Ultimate Guide to Mixing added 3 new lessons", time: "10 min ago", read: false },
-    { id: 2, title: "Coaching reminder", message: "Your coaching session starts in 1 hour", time: "50 min ago", read: false },
-  ]);
+  const [selectedNotification, setSelectedNotification] = useState<any>(null);
+  const [notificationDialogOpen, setNotificationDialogOpen] = useState(false);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  // Get real notifications from Convex
+  const notifications = useQuery(
+    api.notifications.getUserNotifications,
+    user?.id ? { userId: user.id, limit: 10 } : "skip"
+  );
 
-  const markAsRead = (id: number) => {
-    setNotifications(notifications.map(n => 
-      n.id === id ? { ...n, read: true } : n
-    ));
+  const unreadCount = useQuery(
+    api.notifications.getUnreadCount,
+    user?.id ? { userId: user.id } : "skip"
+  );
+
+  const markAsReadMutation = useMutation(api.notifications.markAsRead);
+  const markAllAsReadMutation = useMutation(api.notifications.markAllAsRead);
+
+  const markAsRead = async (notificationId: any) => {
+    if (!user?.id) return;
+    await markAsReadMutation({
+      notificationId,
+      userId: user.id,
+    });
   };
 
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, read: true })));
+  const markAllAsRead = async () => {
+    if (!user?.id) return;
+    await markAllAsReadMutation({
+      userId: user.id,
+    });
   };
 
-  const deleteNotification = (id: number) => {
-    setNotifications(notifications.filter(n => n.id !== id));
+  // Helper to format time ago
+  const formatTimeAgo = (timestamp: number) => {
+    const seconds = Math.floor((Date.now() - timestamp) / 1000);
+    if (seconds < 60) return "Just now";
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes} min ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    const days = Math.floor(hours / 24);
+    return `${days} day${days > 1 ? 's' : ''} ago`;
   };
   
   // Get page title based on current route
@@ -116,7 +143,7 @@ export function LibrarySidebarWrapper({ children }: LibrarySidebarWrapperProps) 
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative">
                   <Bell className="w-4 h-4" />
-                  {unreadCount > 0 && (
+                  {(unreadCount !== undefined && unreadCount > 0) && (
                     <Badge 
                       variant="destructive" 
                       className="absolute -top-1 -right-1 w-5 h-5 p-0 text-xs flex items-center justify-center"
@@ -129,7 +156,7 @@ export function LibrarySidebarWrapper({ children }: LibrarySidebarWrapperProps) 
               <DropdownMenuContent align="end" className="w-80 bg-white dark:bg-black">
                 <div className="flex items-center justify-between px-4 py-3">
                   <DropdownMenuLabel className="p-0">Notifications</DropdownMenuLabel>
-                  {unreadCount > 0 && (
+                  {(unreadCount !== undefined && unreadCount > 0) && (
                     <Button 
                       variant="ghost" 
                       size="sm" 
@@ -142,40 +169,65 @@ export function LibrarySidebarWrapper({ children }: LibrarySidebarWrapperProps) 
                   )}
                 </div>
                 <DropdownMenuSeparator />
-                {notifications.length === 0 ? (
+                {!notifications || notifications.length === 0 ? (
                   <div className="px-4 py-8 text-center text-sm text-muted-foreground">
                     No notifications
                   </div>
                 ) : (
                   <>
-                    {notifications.map((notification) => (
+                    {notifications.map((notification: any) => (
                       <DropdownMenuItem 
-                        key={notification.id}
+                        key={notification._id}
                         className={`px-4 py-3 cursor-pointer ${!notification.read ? 'bg-primary/5' : ''}`}
-                        onClick={() => markAsRead(notification.id)}
+                        onClick={() => {
+                          markAsRead(notification._id);
+                          setSelectedNotification(notification);
+                          setNotificationDialogOpen(true);
+                        }}
                       >
                         <div className="flex items-start gap-3 w-full">
+                          {/* Sender Avatar */}
+                          {notification.senderAvatar ? (
+                            <img
+                              src={notification.senderAvatar}
+                              alt={notification.senderName || "Sender"}
+                              className="w-8 h-8 rounded-full object-cover shrink-0"
+                            />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                              <Bell className="w-4 h-4 text-primary" />
+                            </div>
+                          )}
+                          
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              <p className="text-sm font-medium text-foreground">{notification.title}</p>
-                              {!notification.read && (
-                                <div className="w-2 h-2 bg-primary rounded-full"></div>
+                            {/* Sender Name - Always show */}
+                            <div className="flex items-center gap-1.5 mb-0.5">
+                              <p className="text-xs font-medium text-muted-foreground">
+                                {notification.senderType === "platform" && "🏢 "}
+                                {notification.senderType === "creator" && "👤 "}
+                                {notification.senderName || "System"}
+                              </p>
+                              {notification.senderType === "creator" && (
+                                <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
+                                  Creator
+                                </Badge>
                               )}
                             </div>
-                            <p className="text-xs text-muted-foreground line-clamp-1">{notification.message}</p>
-                            <p className="text-xs text-muted-foreground mt-1">{notification.time}</p>
+                            
+                            {/* Title with unread indicator */}
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="text-sm font-medium text-foreground line-clamp-1">{notification.title}</p>
+                              {!notification.read && (
+                                <div className="w-2 h-2 bg-primary rounded-full shrink-0"></div>
+                              )}
+                            </div>
+                            
+                            {/* Message preview */}
+                            <p className="text-xs text-muted-foreground line-clamp-2 whitespace-pre-wrap">{notification.message}</p>
+                            
+                            {/* Time */}
+                            <p className="text-xs text-muted-foreground mt-1">{formatTimeAgo(notification.createdAt)}</p>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 shrink-0"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteNotification(notification.id);
-                            }}
-                          >
-                            <X className="w-3 h-3" />
-                          </Button>
                         </div>
                       </DropdownMenuItem>
                     ))}
@@ -194,6 +246,97 @@ export function LibrarySidebarWrapper({ children }: LibrarySidebarWrapperProps) 
             </Button>
           </div>
         </header>
+
+        {/* Notification Detail Dialog */}
+        <Dialog open={notificationDialogOpen} onOpenChange={setNotificationDialogOpen}>
+          <DialogContent className="bg-white dark:bg-black max-w-2xl">
+            {selectedNotification && (
+              <>
+                {/* Debug: Log notification data */}
+                {console.log("📧 Library Notification Dialog Data:", {
+                  senderType: selectedNotification.senderType,
+                  senderId: selectedNotification.senderId,
+                  senderName: selectedNotification.senderName,
+                  senderAvatar: selectedNotification.senderAvatar,
+                  title: selectedNotification.title,
+                  fullNotification: selectedNotification,
+                })}
+                <DialogHeader>
+                  <div className="flex items-start gap-3 mb-4">
+                    {/* Sender Avatar */}
+                    {selectedNotification.senderAvatar ? (
+                      <img
+                        src={selectedNotification.senderAvatar}
+                        alt={selectedNotification.senderName || "Sender"}
+                        className="w-12 h-12 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Bell className="w-6 h-6 text-primary" />
+                      </div>
+                    )}
+                    
+                    <div className="flex-1">
+                      {/* Sender Info - Always show */}
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="text-sm font-medium text-muted-foreground">
+                          {selectedNotification.senderName || "Notification"}
+                        </p>
+                        {selectedNotification.senderType === "platform" && (
+                          <Badge variant="secondary" className="text-xs">
+                            🏢 Platform
+                          </Badge>
+                        )}
+                        {selectedNotification.senderType === "creator" && (
+                          <Badge variant="secondary" className="text-xs">
+                            👤 Creator
+                          </Badge>
+                        )}
+                        {!selectedNotification.senderType && (
+                          <Badge variant="outline" className="text-xs">
+                            System
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      {/* Title */}
+                      <DialogTitle className="text-xl font-bold">{selectedNotification.title}</DialogTitle>
+                      
+                      {/* Time */}
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {formatTimeAgo(selectedNotification.createdAt)}
+                      </p>
+                    </div>
+                  </div>
+                </DialogHeader>
+                
+                {/* Full Message */}
+                <div className="space-y-4">
+                  <div className="prose prose-sm dark:prose-invert max-w-none">
+                    <p className="text-foreground whitespace-pre-wrap leading-relaxed">
+                      {selectedNotification.message}
+                    </p>
+                  </div>
+                  
+                  {/* Action Button */}
+                  {selectedNotification.link && selectedNotification.actionLabel && (
+                    <div className="pt-4 border-t border-border">
+                      <Button
+                        onClick={() => {
+                          window.location.href = selectedNotification.link;
+                          setNotificationDialogOpen(false);
+                        }}
+                        className="w-full"
+                      >
+                        {selectedNotification.actionLabel}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
 
         {/* Page Content */}
         <div className="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full bg-white dark:bg-black">

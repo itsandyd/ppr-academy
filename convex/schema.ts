@@ -80,9 +80,46 @@ export default defineSchema({
     createdAt: v.number(),
     emailSent: v.optional(v.boolean()),
     emailSentAt: v.optional(v.number()),
+    // Sender information
+    senderType: v.optional(v.union(
+      v.literal("platform"), // From PPR Academy platform/admin
+      v.literal("creator"),  // From a course creator
+      v.literal("system")    // System-generated
+    )),
+    senderId: v.optional(v.string()), // Clerk ID of sender (if creator)
+    senderName: v.optional(v.string()),
+    senderAvatar: v.optional(v.string()),
   })
   .index("by_userId", ["userId"])
   .index("by_createdAt", ["createdAt"]),
+
+  // Course Update Notifications (sent by course creators to enrolled students)
+  courseNotifications: defineTable({
+    courseId: v.id("courses"),
+    creatorId: v.string(), // Clerk ID of course creator
+    title: v.string(),
+    message: v.string(),
+    // What changed since last notification
+    changes: v.object({
+      newModules: v.number(),
+      newLessons: v.number(),
+      newChapters: v.number(),
+      updatedContent: v.boolean(),
+      modulesList: v.optional(v.array(v.string())), // List of new/updated module titles
+    }),
+    // Snapshot of course state when notification was sent
+    courseSnapshot: v.object({
+      totalModules: v.number(),
+      totalLessons: v.number(),
+      totalChapters: v.number(),
+    }),
+    sentAt: v.number(),
+    recipientCount: v.number(), // How many students received this
+    emailSent: v.optional(v.boolean()),
+  })
+  .index("by_courseId", ["courseId"])
+  .index("by_creatorId", ["creatorId"])
+  .index("by_sentAt", ["sentAt"]),
 
   // User Notification Preferences
   notificationPreferences: defineTable({

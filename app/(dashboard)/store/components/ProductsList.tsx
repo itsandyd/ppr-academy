@@ -33,6 +33,7 @@ import {
   SortDesc,
   Sparkles,
   Users,
+  Bell,
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useMemo } from "react";
@@ -500,6 +501,12 @@ export function ProductsList({ products, storeId }: ProductsListProps) {
                                 <DropdownMenuItem onClick={() => toggleCoursePublish(course._id, course.isPublished || false, course.title, course.userId || "")}>
                                   <Eye className="h-4 w-4 mr-2" />
                                   {course.isPublished ? "Unpublish" : "Publish"}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem asChild>
+                                  <Link href={`/store/${storeId}/course/${course._id}/notifications`}>
+                                    <Bell className="h-4 w-4 mr-2" />
+                                    Send Update
+                                  </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleCopyLink(course.slug, course._id)}>
                                   <Copy className="h-4 w-4 mr-2" />

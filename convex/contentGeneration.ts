@@ -404,37 +404,59 @@ export const generateLandingPageCopy = action({
         .join('\n\n');
 
       // Build the prompt
-      const systemPrompt: string = `You are an expert copywriter specializing in online course marketing. Your goal is to create compelling, benefit-driven landing page copy that converts visitors into students.
+      const systemPrompt: string = `You're a course creator writing your own sales page. Write naturally, like you're explaining your course to someone at a coffee shop.
 
-Write in a way that:
-1. Focuses on transformation and outcomes, not just features
-2. Speaks directly to the target audience's pain points
-3. Creates urgency without being pushy
-4. Is specific and tangible, avoiding generic claims
-5. Matches the teaching style and tone of the course content`;
+CRITICAL RULES:
+- Write like a real human having a conversation
+- NO marketing buzzwords ("unlock", "transform", "game-changing", "revolutionary")
+- NO corporate speak or jargon
+- Be specific and honest about what's inside
+- Talk about actual content, not vague promises
+- Sound authentic and genuine, not salesy
+- Use "you" and "I" like a real conversation
 
-      const userPrompt: string = `Create compelling landing page copy for this course:
+Think: "I'll show you exactly how I mix 808s" NOT "Unlock the secrets to transformative bass production"`;
 
-COURSE DETAILS:
-- Title: ${course.title}
-- Description: ${course.description || "No description provided"}
-- Category: ${course.category}${course.subcategory ? ` > ${course.subcategory}` : ""}
-- Skill Level: ${course.skillLevel}
-- Price: $${course.price || 0}
-- Total Content: ${modules.length} modules, ${totalLessons} lessons, ${totalChapters} chapters
+      const userPrompt: string = `Write landing page copy for your course. Write it like YOU created this course and are genuinely proud of it.
 
-COURSE STRUCTURE:
+COURSE: ${course.title}
+DESCRIPTION: ${course.description || ""}
+CATEGORY: ${course.category}${course.subcategory ? ` > ${course.subcategory}` : ""}
+LEVEL: ${course.skillLevel}
+PRICE: $${course.price || 0}
+
+WHAT'S INSIDE:
 ${chapterSummary}
 
-Generate landing page copy with these elements:
+Write natural, conversational landing page copy:
 
-1. HEADLINE (10-15 words): Powerful, benefit-driven headline that stops scrolling
-2. SUBHEADLINE (20-30 words): Expands on headline, addresses pain point and desired outcome
-3. KEY BENEFITS (4-6 points): Specific transformations students will experience
-4. WHO IS THIS FOR (4-5 points): Specific descriptions of ideal students
-5. WHAT YOU WILL LEARN (6-8 points): Concrete skills/knowledge from the course content
-6. TRANSFORMATION STATEMENT (30-50 words): Paint the "after" picture - where they'll be after completing
-7. URGENCY STATEMENT (20-30 words): Gentle urgency without being pushy
+1. HEADLINE (8-12 words): Natural headline about what they'll learn
+   - Not: "Transform Your Life With This Revolutionary Course!"
+   - Yes: "Learn Professional Mixing Techniques From Start to Finish"
+
+2. SUBHEADLINE (15-25 words): Natural expansion
+   - Not: "Unlock your potential and discover transformative techniques"
+   - Yes: "I'll show you the exact EQ, compression, and spatial techniques I use on every mix"
+
+3. KEY BENEFITS (4-6 points): What they actually get
+   - Not: "Achieve transformative results"
+   - Yes: "Mix tracks that sound good on any speaker system"
+
+4. WHO IS THIS FOR (4-5 points): Real descriptions
+   - Not: "Ambitious go-getters ready to transform"
+   - Yes: "Producers who know the basics but their mixes sound muddy"
+
+5. WHAT YOU WILL LEARN (6-8 points): Actual skills from course content
+   - Not: "Master the fundamentals of excellence"
+   - Yes: "How to use surgical EQ to fix frequency masking"
+
+6. TRANSFORMATION STATEMENT (25-40 words): Natural "after" picture
+   - Not: "You'll unlock unlimited potential and transform your journey"
+   - Yes: "After this course, you'll have the skills to deliver pro-quality mixes that you're proud to show clients"
+
+7. URGENCY STATEMENT (15-25 words): Gentle, honest reason to join now
+   - Not: "Limited time only! Don't miss this life-changing opportunity!"
+   - Yes: "I'm actively updating this course based on student feedback. Join now to get all future updates free"
 
 Format as JSON:
 {
@@ -453,8 +475,8 @@ Format as JSON:
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-        temperature: 0.8,
-        max_tokens: 2000,
+        temperature: 0.9, // Higher for more natural, human-like variation
+        max_tokens: 1500, // Concise = more human
         response_format: { type: "json_object" },
       });
 

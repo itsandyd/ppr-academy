@@ -43,7 +43,34 @@ export const getUserNotifications = query({
     userId: v.string(), // Clerk ID
     limit: v.optional(v.number()),
   },
-  returns: v.array(v.any()),
+  returns: v.array(v.object({
+    _id: v.id("notifications"),
+    _creationTime: v.number(),
+    userId: v.string(),
+    title: v.string(),
+    message: v.string(),
+    type: v.union(
+      v.literal("info"),
+      v.literal("success"),
+      v.literal("warning"),
+      v.literal("error")
+    ),
+    read: v.boolean(),
+    readAt: v.optional(v.number()),
+    link: v.optional(v.string()),
+    actionLabel: v.optional(v.string()),
+    createdAt: v.number(),
+    emailSent: v.optional(v.boolean()),
+    emailSentAt: v.optional(v.number()),
+    senderType: v.optional(v.union(
+      v.literal("platform"),
+      v.literal("creator"),
+      v.literal("system")
+    )),
+    senderId: v.optional(v.string()),
+    senderName: v.optional(v.string()),
+    senderAvatar: v.optional(v.string()),
+  })),
   handler: async (ctx, args) => {
     const limit = args.limit || 50;
     
