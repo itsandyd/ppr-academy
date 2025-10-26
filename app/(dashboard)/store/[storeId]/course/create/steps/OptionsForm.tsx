@@ -11,11 +11,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Check, Settings, Share, Award, MessageSquare, Save } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import { useCourseCreation } from "../context";
+import { LandingPageCopyGenerator } from "../components/LandingPageCopyGenerator";
+import { useUser } from "@clerk/nextjs";
 
 export function OptionsForm() {
   const router = useRouter();
   const params = useParams();
   const storeId = params.storeId as string;
+  const { user } = useUser();
   
   const { state, updateData, saveCourse, createCourse, canPublish, validateStep } = useCourseCreation();
 
@@ -403,6 +406,18 @@ export function OptionsForm() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Landing Page Copy Generator */}
+      {user && (
+        <LandingPageCopyGenerator
+          courseId={state.courseId}
+          userId={user.id}
+          onCopyGenerated={(copy) => {
+            // Optionally save the copy to the course data
+            updateData("options", { landingPageCopy: copy });
+          }}
+        />
+      )}
 
       {/* Navigation */}
       <div className="pt-6 border-t border-border space-y-4">

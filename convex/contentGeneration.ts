@@ -338,6 +338,143 @@ Format as JSON with this structure:
   },
 });
 
+// Generate landing page copy from course structure
+export const generateLandingPageCopy = action({
+  args: {
+    courseId: v.id("courses"),
+    userId: v.string(),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    copy: v.optional(v.object({
+      headline: v.string(),
+      subheadline: v.string(),
+      keyBenefits: v.array(v.string()),
+      whoIsThisFor: v.array(v.string()),
+      whatYouWillLearn: v.array(v.string()),
+      transformationStatement: v.string(),
+      urgencyStatement: v.string(),
+    })),
+    error: v.optional(v.string()),
+  }),
+  handler: async (ctx, args): Promise<{
+    success: boolean;
+    copy?: {
+      headline: string;
+      subheadline: string;
+      keyBenefits: string[];
+      whoIsThisFor: string[];
+      whatYouWillLearn: string[];
+      transformationStatement: string;
+      urgencyStatement: string;
+    };
+    error?: string;
+  }> => {
+    try {
+      // Get the full course with all modules, lessons, and chapters
+      const course: any = await ctx.runQuery(api.courses.getCourseForEdit, {
+        courseId: args.courseId,
+        userId: args.userId,
+      });
+
+      if (!course) {
+        return {
+          success: false,
+          error: "Course not found or you don't have permission to access it.",
+        };
+      }
+
+      // Build comprehensive content summary
+      const modules = course.modules || [];
+      const totalLessons = modules.reduce((acc: number, m: any) => acc + (m.lessons?.length || 0), 0);
+      const totalChapters = modules.reduce((acc: number, m: any) => 
+        acc + m.lessons?.reduce((lessAcc: number, l: any) => lessAcc + (l.chapters?.length || 0), 0) || 0, 0);
+
+      // Extract all chapter titles and content for context
+      const chapterSummary: string = modules
+        .map((module: any, mIdx: number) => {
+          const lessonsText = module.lessons?.map((lesson: any, lIdx: number) => {
+            const chaptersText = lesson.chapters?.map((chapter: any) => 
+              `      - ${chapter.title}`
+            ).join('\n') || '';
+            return `    ${lesson.title}\n${chaptersText}`;
+          }).join('\n') || '';
+          return `  Module ${mIdx + 1}: ${module.title}\n${lessonsText}`;
+        })
+        .join('\n\n');
+
+      // Build the prompt
+      const systemPrompt: string = `You are an expert copywriter specializing in online course marketing. Your goal is to create compelling, benefit-driven landing page copy that converts visitors into students.
+
+Write in a way that:
+1. Focuses on transformation and outcomes, not just features
+2. Speaks directly to the target audience's pain points
+3. Creates urgency without being pushy
+4. Is specific and tangible, avoiding generic claims
+5. Matches the teaching style and tone of the course content`;
+
+      const userPrompt: string = `Create compelling landing page copy for this course:
+
+COURSE DETAILS:
+- Title: ${course.title}
+- Description: ${course.description || "No description provided"}
+- Category: ${course.category}${course.subcategory ? ` > ${course.subcategory}` : ""}
+- Skill Level: ${course.skillLevel}
+- Price: $${course.price || 0}
+- Total Content: ${modules.length} modules, ${totalLessons} lessons, ${totalChapters} chapters
+
+COURSE STRUCTURE:
+${chapterSummary}
+
+Generate landing page copy with these elements:
+
+1. HEADLINE (10-15 words): Powerful, benefit-driven headline that stops scrolling
+2. SUBHEADLINE (20-30 words): Expands on headline, addresses pain point and desired outcome
+3. KEY BENEFITS (4-6 points): Specific transformations students will experience
+4. WHO IS THIS FOR (4-5 points): Specific descriptions of ideal students
+5. WHAT YOU WILL LEARN (6-8 points): Concrete skills/knowledge from the course content
+6. TRANSFORMATION STATEMENT (30-50 words): Paint the "after" picture - where they'll be after completing
+7. URGENCY STATEMENT (20-30 words): Gentle urgency without being pushy
+
+Format as JSON:
+{
+  "headline": "...",
+  "subheadline": "...",
+  "keyBenefits": ["...", "..."],
+  "whoIsThisFor": ["...", "..."],
+  "whatYouWillLearn": ["...", "..."],
+  "transformationStatement": "...",
+  "urgencyStatement": "..."
+}`;
+
+      const completion: OpenAI.Chat.Completions.ChatCompletion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.8,
+        max_tokens: 2000,
+        response_format: { type: "json_object" },
+      });
+
+      const copy: any = JSON.parse(completion.choices[0].message.content || "{}");
+
+      return {
+        success: true,
+        copy,
+      };
+
+    } catch (error) {
+      console.error("Error generating landing page copy:", error);
+      return {
+        success: false,
+        error: `Failed to generate landing page copy: ${error}`,
+      };
+    }
+  },
+});
+
 // Helper function to extract main points
 function extractMainPoints(script: string): string[] {
   const points: string[] = [];
