@@ -122,6 +122,13 @@ export function AppSidebarEnhanced() {
           gradient: "from-purple-500 to-pink-500"
         },
         { 
+          icon: Music, 
+          href: `/store/${storeId || 'setup'}/packs`, 
+          label: "Sample Packs",
+          gradient: "from-pink-500 to-rose-500",
+          isNew: true
+        },
+        { 
           icon: List, 
           href: `/home/playlists`, 
           label: "Playlists",

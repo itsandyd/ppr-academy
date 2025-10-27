@@ -23,6 +23,7 @@ import {
   Package,
   Users,
   Video,
+  Music,
   TrendingUp,
   Grid3x3,
   List,
@@ -203,14 +204,14 @@ export default function MarketplacePage() {
                   <Tabs value={contentType} onValueChange={(v: any) => setContentType(v)}>
                     <TabsList className="grid w-full grid-cols-2 bg-white dark:bg-black">
                       <TabsTrigger value="all" className="text-xs">
-                        All ({contentTypeCounts.all})
+                        All
                       </TabsTrigger>
                       <TabsTrigger value="courses" className="text-xs">
                         <BookOpen className="w-3 h-3 mr-1" />
                         Courses
                       </TabsTrigger>
                     </TabsList>
-                    <TabsList className="grid w-full grid-cols-2 mt-2 bg-white dark:bg-black">
+                    <TabsList className="grid w-full grid-cols-3 mt-2 bg-white dark:bg-black">
                       <TabsTrigger value="products" className="text-xs">
                         <Package className="w-3 h-3 mr-1" />
                         Products
@@ -218,6 +219,12 @@ export default function MarketplacePage() {
                       <TabsTrigger value="coaching" className="text-xs">
                         <Video className="w-3 h-3 mr-1" />
                         Coaching
+                      </TabsTrigger>
+                      <TabsTrigger value="sample-packs" className="text-xs" asChild>
+                        <Link href="/marketplace/samples">
+                          <Music className="w-3 h-3 mr-1" />
+                          Samples
+                        </Link>
                       </TabsTrigger>
                     </TabsList>
                   </Tabs>

@@ -1422,6 +1422,7 @@ export default defineSchema({
     // Stats
     downloads: v.number(),
     favorites: v.number(),
+    revenue: v.number(), // Total credits earned from this pack
     
     // License
     licenseType: v.union(
