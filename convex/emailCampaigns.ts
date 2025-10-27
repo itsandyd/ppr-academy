@@ -11,11 +11,13 @@ export const createCampaign = mutation({
     name: v.string(),
     subject: v.string(),
     content: v.string(),
+    previewText: v.optional(v.string()),
     storeId: v.string(),
     adminUserId: v.string(),
     fromEmail: v.string(),
     replyToEmail: v.optional(v.string()),
     tags: v.optional(v.array(v.string())),
+    templateId: v.optional(v.string()), // Track which template was used
   },
   returns: v.id("emailCampaigns"),
   handler: async (ctx, args) => {
@@ -23,12 +25,14 @@ export const createCampaign = mutation({
       name: args.name,
       subject: args.subject,
       content: args.content,
+      previewText: args.previewText,
       storeId: args.storeId,
       adminUserId: args.adminUserId,
       status: "draft",
       fromEmail: args.fromEmail,
       replyToEmail: args.replyToEmail,
       tags: args.tags,
+      templateId: args.templateId,
     });
 
     return campaignId;
@@ -81,6 +85,7 @@ export const getCampaigns = query({
     name: v.string(),
     subject: v.string(),
     content: v.string(),
+    previewText: v.optional(v.string()),
     storeId: v.string(),
     adminUserId: v.string(),
     status: v.union(
@@ -99,6 +104,7 @@ export const getCampaigns = query({
     fromEmail: v.string(),
     replyToEmail: v.optional(v.string()),
     tags: v.optional(v.array(v.string())),
+    templateId: v.optional(v.string()),
   })),
   handler: async (ctx, args) => {
     let query = ctx.db

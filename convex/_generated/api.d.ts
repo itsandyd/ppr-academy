@@ -63,6 +63,7 @@ import type * as emailRepliesSchema from "../emailRepliesSchema.js";
 import type * as emailSchema from "../emailSchema.js";
 import type * as emailSegmentation from "../emailSegmentation.js";
 import type * as emailSpamScoring from "../emailSpamScoring.js";
+import type * as emailTemplates from "../emailTemplates.js";
 import type * as emailWorkflows from "../emailWorkflows.js";
 import type * as emails from "../emails.js";
 import type * as embeddingActions from "../embeddingActions.js";
@@ -176,6 +177,7 @@ declare const fullApi: ApiFromModules<{
   emailSchema: typeof emailSchema;
   emailSegmentation: typeof emailSegmentation;
   emailSpamScoring: typeof emailSpamScoring;
+  emailTemplates: typeof emailTemplates;
   emailWorkflows: typeof emailWorkflows;
   emails: typeof emails;
   embeddingActions: typeof embeddingActions;

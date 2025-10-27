@@ -35,15 +35,24 @@ export default function CreateCampaignPage() {
   const storeId = params.storeId as string;
   const { toast } = useToast();
 
+  // Get template ID from URL if present
+  const [searchParams, setSearchParams] = useState<URLSearchParams | null>(null);
+  useEffect(() => {
+    setSearchParams(new URLSearchParams(window.location.search));
+  }, []);
+  const templateId = searchParams?.get('template');
+
   // Form state
   const [campaignName, setCampaignName] = useState("");
   const [subject, setSubject] = useState("");
   const [content, setContent] = useState("");
+  const [previewText, setPreviewText] = useState("");
   const [fromEmail, setFromEmail] = useState("");
   const [fromName, setFromName] = useState("");
   const [replyToEmail, setReplyToEmail] = useState("");
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
   const [isCreating, setIsCreating] = useState(false);
+  const [isLoadingTemplate, setIsLoadingTemplate] = useState(false);
 
   // Fetch customers for recipient selection
   const customers = useQuery(
@@ -56,6 +65,12 @@ export default function CreateCampaignPage() {
     api.stores?.getEmailConfig,
     storeId ? { storeId: storeId as any } : "skip"
   );
+
+  // Fetch template if template ID provided
+  const template = useQuery(
+    api.emailTemplates?.getCampaignTemplateById,
+    templateId ? { templateId } : "skip"
+  );
   
   // Auto-populate email fields from store config
   useEffect(() => {
@@ -65,6 +80,22 @@ export default function CreateCampaignPage() {
       setReplyToEmail(emailConfig.replyToEmail || "");
     }
   }, [emailConfig]);
+
+  // Load template data when template is fetched
+  useEffect(() => {
+    if (template && !isLoadingTemplate) {
+      setIsLoadingTemplate(true);
+      setCampaignName(template.name);
+      setSubject(template.subject);
+      setPreviewText(template.previewText || "");
+      setContent(template.body);
+      
+      toast({
+        title: "Template Loaded!",
+        description: `Using "${template.name}" template. Customize the content below.`,
+      });
+    }
+  }, [template]);
 
   const createCampaign = useMutation((api as any).emailCampaigns?.createCampaign);
   const addRecipients = useMutation((api as any).emailCampaigns?.addRecipients);
@@ -117,15 +148,21 @@ export default function CreateCampaignPage() {
 
     setIsCreating(true);
     try {
+      // Extract tags from template if available
+      const tags = template?.tags || [];
+      
       // Create the campaign
       const campaignId = await createCampaign({
         name: campaignName,
         subject: subject,
         content: content,
+        previewText: previewText || undefined,
         storeId: storeId,
         adminUserId: user?.id || "",
         fromEmail: fromEmail,
         replyToEmail: replyToEmail || undefined,
+        tags: tags.length > 0 ? tags : undefined,
+        templateId: templateId || undefined,
       });
 
       // Add recipients
@@ -170,9 +207,9 @@ export default function CreateCampaignPage() {
 
   const getCustomerBadge = (customer: any) => {
     const typeConfig = {
-      lead: { color: "bg-green-100 text-green-800", label: "Lead" },
-      paying: { color: "bg-blue-100 text-blue-800", label: "Customer" },
-      subscription: { color: "bg-purple-100 text-purple-800", label: "Subscriber" },
+      lead: { color: "bg-chart-2/10 text-chart-2", label: "Lead" },
+      paying: { color: "bg-chart-1/10 text-chart-1", label: "Customer" },
+      subscription: { color: "bg-chart-3/10 text-chart-3", label: "Subscriber" },
     };
 
     const config = typeConfig[customer.type as keyof typeof typeConfig] || typeConfig.lead;
@@ -196,16 +233,46 @@ export default function CreateCampaignPage() {
           Back to Campaigns
         </Button>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Create Email Campaign</h1>
-          <p className="text-gray-600 mt-2">Design and send marketing emails to your customers</p>
+          <h1 className="text-3xl font-bold">Create Email Campaign</h1>
+          <p className="text-muted-foreground mt-2">Design and send marketing emails to your customers</p>
         </div>
       </div>
+
+      {/* Template Badge */}
+      {template && (
+        <Card className="border-chart-1/20 bg-chart-1/10">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Mail className="w-5 h-5 text-chart-1" />
+                <div>
+                  <p className="font-medium">Using Template: {template.name}</p>
+                  <p className="text-sm text-muted-foreground">{template.description}</p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  router.push(`/store/${storeId}/email-campaigns/create`);
+                  setCampaignName("");
+                  setSubject("");
+                  setContent("");
+                  setPreviewText("");
+                }}
+              >
+                Clear Template
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           <Tabs defaultValue="compose" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-2 bg-white dark:bg-black">
               <TabsTrigger value="compose" className="flex items-center gap-2">
                 <Mail className="w-4 h-4" />
                 Compose
@@ -268,8 +335,8 @@ export default function CreateCampaignPage() {
                         className={emailConfig?.isConfigured ? "bg-muted cursor-not-allowed" : ""}
                       />
                       {!emailConfig?.isConfigured && (
-                        <p className="text-xs text-yellow-600">
-                          ⚠️ Unverified emails may not deliver. <Link href={`/store/${storeId}/settings/email`} className="text-primary hover:underline">
+                        <p className="text-xs text-chart-5">
+                          ⚠️ Unverified emails may not deliver. <Link href={`/store/${storeId}/settings/email`} className="text-chart-1 hover:underline">
                             Configure now
                           </Link>
                         </p>
@@ -304,6 +371,21 @@ export default function CreateCampaignPage() {
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
                     />
+                    {template && (
+                      <p className="text-xs text-muted-foreground">
+                        💡 Replace variables like {'{{productName}}'} with actual values
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="previewText">Preview Text (Optional)</Label>
+                    <Input
+                      id="previewText"
+                      placeholder="This appears in the inbox preview..."
+                      value={previewText}
+                      onChange={(e) => setPreviewText(e.target.value)}
+                    />
                   </div>
 
                   <div className="space-y-2">
@@ -315,8 +397,8 @@ export default function CreateCampaignPage() {
                       onChange={(e) => setContent(e.target.value)}
                       className="min-h-[300px]"
                     />
-                    <p className="text-sm text-gray-500">
-                      💡 Tip: You can use HTML tags for formatting (bold, links, etc.)
+                    <p className="text-sm text-muted-foreground">
+                      💡 Tip: {template ? "Replace {{variables}} with your actual content" : "You can use HTML tags for formatting (bold, links, etc.)"}
                     </p>
                   </div>
                 </CardContent>
@@ -329,7 +411,7 @@ export default function CreateCampaignPage() {
                   <div className="flex items-center justify-between">
                     <CardTitle>Select Recipients</CardTitle>
                     <div className="flex items-center gap-4">
-                      <span className="text-sm text-gray-600">
+                      <span className="text-sm text-muted-foreground">
                         {selectedCustomers.length} of {customers.length} selected
                       </span>
                       <Button
@@ -345,9 +427,9 @@ export default function CreateCampaignPage() {
                 <CardContent>
                   {customers.length === 0 ? (
                     <div className="text-center py-12">
-                      <User className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                      <User className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                       <h3 className="text-lg font-semibold mb-2">No customers found</h3>
-                      <p className="text-gray-600">
+                      <p className="text-muted-foreground">
                         You need customers in your database before you can send campaigns.
                       </p>
                     </div>
@@ -356,7 +438,7 @@ export default function CreateCampaignPage() {
                       {customers.map((customer: any) => (
                         <div
                           key={customer._id}
-                          className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50"
+                          className="flex items-center gap-3 p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors"
                         >
                           <Checkbox
                             checked={selectedCustomers.includes(customer._id)}
@@ -367,8 +449,8 @@ export default function CreateCampaignPage() {
                               <span className="font-medium">{customer.name}</span>
                               {getCustomerBadge(customer)}
                             </div>
-                            <p className="text-sm text-gray-600">{customer.email}</p>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-sm text-muted-foreground">{customer.email}</p>
+                            <p className="text-xs text-muted-foreground">
                               {customer.source} • Joined {new Date(customer._creationTime).toLocaleDateString()}
                             </p>
                           </div>
@@ -393,10 +475,10 @@ export default function CreateCampaignPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="border rounded-lg p-4 bg-gray-50 space-y-3">
-                <div className="border-b pb-2">
-                  <p className="text-sm text-gray-600">From: {fromEmail || "your-email@domain.com"}</p>
-                  <p className="text-sm text-gray-600">
+              <div className="border border-border rounded-lg p-4 bg-muted/30 space-y-3">
+                <div className="border-b border-border pb-2">
+                  <p className="text-sm text-muted-foreground">From: {fromEmail || "your-email@domain.com"}</p>
+                  <p className="text-sm text-muted-foreground">
                     To: {selectedCustomers.length} recipient{selectedCustomers.length !== 1 ? 's' : ''}
                   </p>
                   <p className="font-medium">{subject || "Your email subject..."}</p>
@@ -405,7 +487,7 @@ export default function CreateCampaignPage() {
                   {content ? (
                     <div dangerouslySetInnerHTML={{ __html: content }} />
                   ) : (
-                    <p className="text-gray-500 italic">Your email content will appear here...</p>
+                    <p className="text-muted-foreground italic">Your email content will appear here...</p>
                   )}
                 </div>
               </div>
@@ -419,23 +501,23 @@ export default function CreateCampaignPage() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-gray-600">Recipients:</span>
+                <span className="text-muted-foreground">Recipients:</span>
                 <span className="font-medium">{selectedCustomers.length}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Leads:</span>
+                <span className="text-muted-foreground">Leads:</span>
                 <span className="font-medium">
                   {customers.filter((c: any) => selectedCustomers.includes(c._id) && c.type === 'lead').length}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Customers:</span>
+                <span className="text-muted-foreground">Customers:</span>
                 <span className="font-medium">
                   {customers.filter((c: any) => selectedCustomers.includes(c._id) && c.type === 'paying').length}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Subscribers:</span>
+                <span className="text-muted-foreground">Subscribers:</span>
                 <span className="font-medium">
                   {customers.filter((c: any) => selectedCustomers.includes(c._id) && c.type === 'subscription').length}
                 </span>
@@ -454,7 +536,7 @@ export default function CreateCampaignPage() {
               {isCreating ? "Creating Campaign..." : "Create Campaign"}
             </Button>
             
-            <p className="text-xs text-gray-500 text-center">
+            <p className="text-xs text-muted-foreground text-center">
               Campaign will be saved as draft. You can send it later from the campaigns list.
             </p>
           </div>

@@ -724,6 +724,7 @@ export default defineSchema({
     name: v.string(),
     subject: v.string(),
     content: v.string(), // HTML content
+    previewText: v.optional(v.string()), // Email preview text
     storeId: v.string(),
     adminUserId: v.string(),
     status: v.union(
@@ -742,6 +743,7 @@ export default defineSchema({
     fromEmail: v.string(),
     replyToEmail: v.optional(v.string()),
     tags: v.optional(v.array(v.string())),
+    templateId: v.optional(v.string()), // Template used to create this campaign
   })
     .index("by_storeId", ["storeId"])
     .index("by_adminUserId", ["adminUserId"])
