@@ -92,10 +92,13 @@ export default function CourseNotificationsPage() {
     }
   };
 
-  const handleSendNotification = async () => {
-    if (!user || !courseId || !editedCopy || !changes) return;
+  const handleSendNotification = async (customCopy?: any) => {
+    if (!user || !courseId) return;
+    
+    const copyToSend = customCopy || editedCopy;
+    if (!copyToSend) return;
 
-    const studentCount = changes.enrolledStudentCount;
+    const studentCount = changes?.enrolledStudentCount || 0;
     
     if (studentCount === 0) {
       alert("⚠️ No enrolled students yet. Add students to the course first before sending notifications.");
@@ -112,10 +115,10 @@ export default function CourseNotificationsPage() {
       const result = await sendNotification({
         courseId,
         userId: user.id,
-        title: editedCopy.title,
-        message: editedCopy.message,
-        emailSubject: editedCopy.emailSubject,
-        emailPreview: editedCopy.emailPreview,
+        title: copyToSend.title,
+        message: copyToSend.message,
+        emailSubject: copyToSend.emailSubject || copyToSend.title,
+        emailPreview: copyToSend.emailPreview || copyToSend.message.substring(0, 100),
         sendEmail,
       });
 
@@ -133,6 +136,19 @@ export default function CourseNotificationsPage() {
     } finally {
       setIsSending(false);
     }
+  };
+
+  const handleResendNotification = async (notification: any) => {
+    if (!confirm(`Resend this notification to currently enrolled students?\n\n"${notification.title}"`)) {
+      return;
+    }
+
+    await handleSendNotification({
+      title: notification.title,
+      message: notification.message,
+      emailSubject: notification.title,
+      emailPreview: notification.message.substring(0, 100),
+    });
   };
 
   if (!user) {
@@ -538,21 +554,33 @@ export default function CourseNotificationsPage() {
               {notificationHistory.map((notification) => (
                 <div
                   key={notification._id}
-                  className="p-4 border rounded-lg space-y-3"
+                  className="p-4 border rounded-lg space-y-3 hover:border-primary/50 transition-colors"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
                       <h3 className="font-semibold text-foreground">{notification.title}</h3>
-                      <p className="text-sm text-muted-foreground mt-1">
+                      <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">
                         {notification.message}
                       </p>
                     </div>
-                    {notification.emailSent && (
-                      <Badge variant="secondary" className="shrink-0">
-                        <Mail className="mr-1 h-3 w-3" />
-                        Email
-                      </Badge>
-                    )}
+                    <div className="flex flex-col gap-2 shrink-0">
+                      {notification.emailSent && (
+                        <Badge variant="secondary" className="w-fit">
+                          <Mail className="mr-1 h-3 w-3" />
+                          Email
+                        </Badge>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleResendNotification(notification)}
+                        disabled={isSending}
+                        className="gap-1"
+                      >
+                        <Send className="h-3 w-3" />
+                        Resend
+                      </Button>
+                    </div>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
