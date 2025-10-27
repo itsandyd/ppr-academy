@@ -42,8 +42,11 @@ export default function GenerateSamplesPage() {
   const [genre, setGenre] = useState("electronic");
   const [category, setCategory] = useState<"fx" | "drums" | "bass" | "synth" | "vocals" | "melody" | "loops" | "one-shots">("fx");
   const [tags, setTags] = useState("");
-  const [creditPrice, setCreditPrice] = useState(10);
+  const [creditPrice, setCreditPrice] = useState(3);
   const [licenseType, setLicenseType] = useState<"royalty-free" | "exclusive" | "commercial">("royalty-free");
+  const [selectedStoreId, setSelectedStoreId] = useState<string>("");
+  const [bpm, setBpm] = useState<number | undefined>(undefined);
+  const [key, setKey] = useState<string>("");
   
   // Get user's store
   const convexUser = useQuery(
@@ -53,12 +56,13 @@ export default function GenerateSamplesPage() {
   
   const userStores = useQuery(
     api.stores.getUserStores,
-    convexUser?._id ? { userId: convexUser._id } : "skip"
+    clerkUser?.id ? { userId: clerkUser.id } : "skip"
   );
   
   const createStore = useMutation(api.stores.createStore);
+  const createSample = useMutation(api.samples.createSample);
   
-  const storeId = userStores?.[0]?._id;
+  const storeId = selectedStoreId || userStores?.[0]?._id;
   
   // Auto-create a store if user doesn't have one
   const ensureStore = async () => {
@@ -156,22 +160,30 @@ export default function GenerateSamplesPage() {
       return;
     }
     
-    if (!convexUser || !generatedAudio) {
+    if (!generatedAudio) {
       toast({
         title: "Missing information",
-        description: "User or audio data missing. Please try regenerating.",
+        description: "Audio data missing. Please try regenerating.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!selectedStoreId && (!userStores || userStores.length === 0)) {
+      toast({
+        title: "No store selected",
+        description: "Please select a store to publish to.",
         variant: "destructive",
       });
       return;
     }
     
-    // Ensure user has a store (create if needed)
-    const finalStoreId = await ensureStore();
+    const finalStoreId = selectedStoreId || userStores?.[0]?._id;
     
     if (!finalStoreId) {
       toast({
-        title: "Store creation failed",
-        description: "Could not create or find your store. Please try again.",
+        title: "Store not found",
+        description: "Please select a valid store.",
         variant: "destructive",
       });
       return;
@@ -184,16 +196,33 @@ export default function GenerateSamplesPage() {
         throw new Error("Audio not properly uploaded. Please regenerate.");
       }
       
-      const result = await saveSampleToMarketplace({
-        userId: convexUser._id,
+      // Create sample directly in marketplace
+      const sampleId = await createSample({
         storeId: finalStoreId,
-        storageId: generatedAudio.storageId as any,
-        audioUrl: generatedAudio.audioUrl,
         title,
-        description: generatedAudio.description,
+        description: generatedAudio.description || title,
+        storageId: generatedAudio.storageId as any,
+        fileUrl: generatedAudio.audioUrl,
+        fileName: `${title}.${generatedAudio.format || "mp3"}`,
+        fileSize: generatedAudio.fileSize || 0,
         duration,
         format: generatedAudio.format || "mp3",
-        fileSize: generatedAudio.fileSize || 0,
+        bpm,
+        key,
+        genre,
+        subGenre: undefined,
+        tags: tags.split(",").map(t => t.trim()).filter(Boolean),
+        category,
+        creditPrice,
+        licenseType,
+        licenseTerms: "Standard royalty-free license for music production",
+        waveformData: undefined,
+      });
+      
+      setGeneratedSample({
+        _id: sampleId,
+        title,
+        description: generatedAudio.description || title,
         genre,
         category,
         tags: tags.split(",").map(t => t.trim()).filter(Boolean),
@@ -201,19 +230,21 @@ export default function GenerateSamplesPage() {
         licenseType,
       });
       
-      setGeneratedSample(result);
+      const storeName = userStores?.find(s => s._id === finalStoreId)?.name || "your store";
       
       toast({
         title: "🎉 Sample published!",
-        description: `"${title}" is now available in your marketplace.`,
+        description: `"${title}" is now available in ${storeName}'s marketplace.`,
       });
       
-      // Reset everything
+      // Reset generation form
       setStep("generate");
       setDescription("");
       setTitle("");
       setTags("");
       setGeneratedAudio(null);
+      setBpm(undefined);
+      setKey("");
       
     } catch (error: any) {
       console.error("Save error:", error);
@@ -374,6 +405,35 @@ export default function GenerateSamplesPage() {
                     </div>
                   )}
                 </div>
+
+                {/* Store Selection */}
+                <div className="space-y-2">
+                  <Label htmlFor="store">Assign to Store *</Label>
+                  <Select 
+                    value={selectedStoreId || (userStores?.[0]?._id || "")} 
+                    onValueChange={setSelectedStoreId}
+                    disabled={isSaving}
+                  >
+                    <SelectTrigger className="bg-white dark:bg-black">
+                      <SelectValue placeholder="Select a store" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white dark:bg-black">
+                      {userStores?.map((store) => (
+                        <SelectItem key={store._id} value={store._id}>
+                          {store.name}
+                        </SelectItem>
+                      ))}
+                      {(!userStores || userStores.length === 0) && (
+                        <SelectItem value="none" disabled>
+                          No stores available
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    This sample will be added to the selected store's marketplace
+                  </p>
+                </div>
                 
                 {/* Title */}
                 <div className="space-y-2">
@@ -431,11 +491,39 @@ export default function GenerateSamplesPage() {
                     disabled={isSaving}
                   />
                 </div>
+
+                {/* BPM & Key (optional music metadata) */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="bpm">BPM (optional)</Label>
+                    <Input
+                      id="bpm"
+                      type="number"
+                      min={20}
+                      max={300}
+                      placeholder="e.g., 120"
+                      value={bpm || ""}
+                      onChange={(e) => setBpm(e.target.value ? parseInt(e.target.value) : undefined)}
+                      disabled={isSaving}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="key">Key (optional)</Label>
+                    <Input
+                      id="key"
+                      placeholder="e.g., C minor"
+                      value={key}
+                      onChange={(e) => setKey(e.target.value)}
+                      disabled={isSaving}
+                    />
+                  </div>
+                </div>
                 
                 {/* Price & License */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="price">Credit Price</Label>
+                    <Label htmlFor="price">Credit Price *</Label>
                     <Input
                       id="price"
                       type="number"
@@ -444,15 +532,18 @@ export default function GenerateSamplesPage() {
                       onChange={(e) => setCreditPrice(parseInt(e.target.value))}
                       disabled={isSaving}
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Recommended: 1-5 credits for samples
+                    </p>
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="license">License Type</Label>
+                    <Label htmlFor="license">License Type *</Label>
                     <Select value={licenseType} onValueChange={(v: any) => setLicenseType(v)} disabled={isSaving}>
-                      <SelectTrigger>
+                      <SelectTrigger className="bg-white dark:bg-black">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-white dark:bg-black">
                         <SelectItem value="royalty-free">Royalty-Free</SelectItem>
                         <SelectItem value="commercial">Commercial</SelectItem>
                         <SelectItem value="exclusive">Exclusive</SelectItem>
@@ -547,23 +638,32 @@ export default function GenerateSamplesPage() {
                     </div>
                   </div>
                   
-                  <div className="flex gap-3">
+                  <div className="grid grid-cols-2 gap-3">
                     <Button
                       variant="outline"
-                      onClick={() => router.push(`/store/${storeId}/products`)}
-                      className="flex-1"
+                      onClick={() => router.push(`/store/${storeId}/packs`)}
+                      className="w-full"
+                    >
+                      <Package className="h-4 w-4 mr-2" />
+                      View in Packs
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => router.push(`/marketplace/samples`)}
+                      className="w-full"
                     >
                       <Music className="h-4 w-4 mr-2" />
-                      View in Store
-                    </Button>
-                    <Button
-                      onClick={() => setGeneratedSample(null)}
-                      variant="outline"
-                      className="flex-1"
-                    >
-                      Create Another
+                      View in Marketplace
                     </Button>
                   </div>
+                  <Button
+                    onClick={() => setGeneratedSample(null)}
+                    variant="default"
+                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600"
+                  >
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Create Another Sample
+                  </Button>
                 </div>
               ) : (
                 <div className="text-center py-12">
