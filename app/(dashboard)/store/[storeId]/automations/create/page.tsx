@@ -90,6 +90,7 @@ export default function CreateAutomationPage() {
   }, [template]);
 
   const createWorkflow = useMutation(api.emailWorkflows?.createWorkflow);
+  const updateWorkflow = useMutation(api.emailWorkflows?.updateWorkflow);
 
   const addEmail = () => {
     setEmails([
@@ -145,31 +146,61 @@ export default function CreateAutomationPage() {
 
     setIsCreating(true);
     try {
-      await createWorkflow({
+      // Create basic workflow
+      const workflowId = await createWorkflow({
         name: workflowName,
         description,
         storeId,
         userId: user?.id || "",
-        trigger: {
-          type: triggerType as any,
-          conditions: {},
+      });
+
+      // Convert email sequence to nodes and edges for visual builder
+      const nodes = [
+        // Trigger node
+        {
+          id: "trigger-1",
+          type: "trigger" as const,
+          position: { x: 100, y: 100 },
+          data: {
+            label: triggerType.replace(/_/g, " ").replace(/\b\w/g, (l: string) => l.toUpperCase()),
+            triggerType,
+          },
         },
-        steps: emails.map((email, index) => ({
+        // Email nodes
+        ...emails.map((email, index) => ({
           id: email.id,
           type: "email" as const,
-          delay: email.delay,
-          config: {
+          position: { x: 100, y: 200 + (index * 150) },
+          data: {
+            label: email.subject || `Email ${index + 1}`,
             subject: email.subject,
             content: email.content,
-            fromName: user?.fullName || "",
-            fromEmail: user?.primaryEmailAddress?.emailAddress || "",
+            delay: email.delay,
           },
         })),
+      ];
+
+      // Connect nodes with edges
+      const edges = emails.map((email, index) => ({
+        id: `edge-${index}`,
+        source: index === 0 ? "trigger-1" : emails[index - 1].id,
+        target: email.id,
+      }));
+
+      // Update workflow with nodes and edges
+      await updateWorkflow({
+        workflowId,
+        trigger: {
+          type: triggerType as any,
+          config: {},
+        },
+        nodes,
+        edges,
       });
 
       toast({
         title: "Automation Created!",
-        description: "Your email automation has been created successfully",
+        description: "Your email automation has been created successfully. Activate it from the campaigns page.",
       });
 
       router.push(`/store/${storeId}/email-campaigns`);

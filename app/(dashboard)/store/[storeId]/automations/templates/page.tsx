@@ -35,15 +35,35 @@ export default function AutomationTemplatesPage() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
+  const [selectedFunnelStage, setSelectedFunnelStage] = useState<string | undefined>();
 
   // Queries
   const templates = useQuery(api.emailTemplates.getAutomationTemplates, {
     category: selectedCategory as any,
+    funnelStage: selectedFunnelStage as any,
   }) || [];
 
   const categories = useQuery(api.emailTemplates.getTemplateCategories, {
     type: "automation",
   }) || [];
+
+  const funnelStages = useQuery(api.emailTemplates.getFunnelStages, {
+    type: "automation",
+  }) || [];
+
+  // Helper to get friendly stage label
+  const getStageFriendlyName = (stage: string) => {
+    const stageMap: Record<string, string> = {
+      "TOFU": "Attract New Audience",
+      "MOFU": "Build Interest",
+      "BOFU": "Drive Sales",
+      "POST-PURCHASE": "After Purchase",
+      "RE-ENGAGEMENT": "Win Back Inactive",
+      "FULL-FUNNEL": "Complete Journey",
+      "NURTURE": "Stay Connected",
+    };
+    return stageMap[stage] || stage;
+  };
 
   // Filter templates by search
   const filteredTemplates = templates.filter((template: any) =>
@@ -76,8 +96,8 @@ export default function AutomationTemplatesPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-4">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex flex-wrap gap-4">
+        <div className="relative flex-1 min-w-[300px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
           <Input
             placeholder="Search automation templates..."
@@ -88,14 +108,31 @@ export default function AutomationTemplatesPage() {
         </div>
 
         <Select
+          value={selectedFunnelStage || "all"}
+          onValueChange={(v) => setSelectedFunnelStage(v === "all" ? undefined : v)}
+        >
+          <SelectTrigger className="w-[240px] bg-white dark:bg-black">
+            <SelectValue placeholder="Filter by Goal" />
+          </SelectTrigger>
+          <SelectContent className="bg-white dark:bg-black">
+            <SelectItem value="all">All Goals</SelectItem>
+            {funnelStages.map((stage: any) => (
+              <SelectItem key={stage.value} value={stage.value}>
+                {stage.label} ({stage.count})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
           value={selectedCategory || "all"}
           onValueChange={(v) => setSelectedCategory(v === "all" ? undefined : v)}
         >
           <SelectTrigger className="w-[200px] bg-white dark:bg-black">
-            <SelectValue placeholder="All Categories" />
+            <SelectValue placeholder="All Product Types" />
           </SelectTrigger>
           <SelectContent className="bg-white dark:bg-black">
-            <SelectItem value="all">All Categories</SelectItem>
+            <SelectItem value="all">All Product Types</SelectItem>
             {categories.map((cat: any) => (
               <SelectItem key={cat.value} value={cat.value}>
                 {cat.label} ({cat.count})
@@ -116,10 +153,17 @@ export default function AutomationTemplatesPage() {
           >
             <Card className="h-full hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-border bg-card">
               <CardHeader>
-                <div className="flex items-start justify-between mb-2">
-                  <Badge className="bg-chart-3/10 text-chart-3 border-chart-3/20">
-                    {template.category}
-                  </Badge>
+                <div className="flex items-start justify-between mb-2 flex-wrap gap-2">
+                  <div className="flex gap-2 flex-wrap">
+                    {template.funnelStage && (
+                      <Badge className="bg-chart-2/10 text-chart-2 border-chart-2/20 text-xs">
+                        {getStageFriendlyName(template.funnelStage)}
+                      </Badge>
+                    )}
+                    <Badge className="bg-chart-3/10 text-chart-3 border-chart-3/20 text-xs">
+                      {template.category.replace(/-/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}
+                    </Badge>
+                  </div>
                   {template.popular && (
                     <Badge className="bg-chart-5/10 text-chart-5 border-chart-5/20">
                       <Star className="w-3 h-3 mr-1 fill-current" />
