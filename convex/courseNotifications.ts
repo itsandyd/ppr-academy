@@ -227,7 +227,8 @@ export const sendCourseUpdateEmails = internalAction({
 
         // If Resend is configured, send email
         if (resendApiKey) {
-          const fromEmail = process.env.RESEND_FROM_EMAIL || "updates@pauseplayrepeat.com";
+          // Use verified sending domain
+          const fromEmail = process.env.RESEND_FROM_EMAIL || "PPR Academy <no-reply@mail.pauseplayrepeat.com>";
 
           const response = await fetch("https://api.resend.com/emails", {
             method: "POST",
@@ -244,6 +245,17 @@ export const sendCourseUpdateEmails = internalAction({
                 args.emailBody,
                 args.courseSlug
               ),
+              // Add headers to improve deliverability
+              headers: {
+                "X-Entity-Ref-ID": `course-update-${Date.now()}`,
+              },
+              // Add tags for tracking
+              tags: [
+                {
+                  name: "category",
+                  value: "course-update"
+                }
+              ],
             }),
           });
 
@@ -279,43 +291,99 @@ function generateCourseUpdateEmailHTML(
 ): string {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://academy.pauseplayrepeat.com";
 
+  // Escape HTML in message to prevent injection
+  const escapeHtml = (text: string) => {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;')
+      .replace(/\n/g, '<br>');
+  };
+
   return `
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${subject}</title>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>${escapeHtml(subject)}</title>
+  <!--[if mso]>
+  <style type="text/css">
+    body, table, td {font-family: Arial, Helvetica, sans-serif !important;}
+  </style>
+  <![endif]-->
 </head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; border-radius: 12px 12px 0 0; text-align: center;">
-    <h1 style="margin: 0; color: white; font-size: 24px; font-weight: bold;">
-      ${subject}
-    </h1>
-  </div>
-  
-  <div style="background-color: #ffffff; padding: 40px 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
-    <p style="margin: 0 0 20px 0; font-size: 16px; color: #374151; white-space: pre-wrap;">
-      ${message}
-    </p>
-    
-    <div style="text-align: center; margin: 30px 0;">
-      <a href="${appUrl}/courses/${courseSlug}" 
-         style="display: inline-block; background-color: #667eea; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
-        View Course
-      </a>
-    </div>
-    
-    <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #9ca3af; font-size: 14px;">
-      <p style="margin: 0 0 10px 0;">You received this because you're enrolled in this course.</p>
-      <p style="margin: 0;">
-        <a href="${appUrl}/settings/notifications" 
-           style="color: #667eea; text-decoration: none;">
-          Manage your notification preferences
-        </a>
-      </p>
-    </div>
-  </div>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f9fafb;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f9fafb;">
+    <tr>
+      <td style="padding: 40px 20px;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+          
+          <!-- Header -->
+          <tr>
+            <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600; line-height: 1.3;">
+                ${escapeHtml(subject)}
+              </h1>
+            </td>
+          </tr>
+          
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px 30px;">
+              <p style="margin: 0 0 20px 0; font-size: 16px; color: #1f2937; line-height: 1.6;">
+                ${escapeHtml(message)}
+              </p>
+              
+              <!-- CTA Button -->
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td style="text-align: center; padding: 20px 0;">
+                    <a href="${appUrl}/courses/${courseSlug}" 
+                       style="display: inline-block; background-color: #667eea; color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                      View Course
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 30px; background-color: #f9fafb; border-top: 1px solid #e5e7eb;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                <tr>
+                  <td style="text-align: center;">
+                    <p style="margin: 0 0 10px 0; font-size: 14px; color: #6b7280;">
+                      You're receiving this because you're enrolled in this course.
+                    </p>
+                    <p style="margin: 0; font-size: 14px;">
+                      <a href="${appUrl}/settings/notifications" 
+                         style="color: #667eea; text-decoration: none; font-weight: 500;">
+                        Manage notification preferences
+                      </a>
+                      &nbsp;|&nbsp;
+                      <a href="${appUrl}/courses/${courseSlug}" 
+                         style="color: #667eea; text-decoration: none; font-weight: 500;">
+                        View course
+                      </a>
+                    </p>
+                    <p style="margin: 15px 0 0 0; font-size: 12px; color: #9ca3af;">
+                      PPR Academy &copy; ${new Date().getFullYear()}
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>
   `.trim();
