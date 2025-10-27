@@ -834,6 +834,335 @@ P.S. - Bundle available until {{expirationDate}}. After that, back to individual
   },
 
   // ========================================================================
+  // DIRECT RESPONSE MARKETING
+  // ========================================================================
+
+  {
+    id: "dr-sample-pack-scarcity",
+    name: "⚡ Sample Pack - Scarcity DR",
+    description: "Direct response: Limited quantity, FOMO-driven sample pack sale",
+    category: "promotion",
+    funnelStage: "BOFU",
+    subject: "ONLY {{unitsLeft}} LEFT: {{packName}} selling out fast",
+    previewText: "{{soldCount}} already sold - don't miss out",
+    body: `{{firstName}} -
+
+{{packName}} is almost gone.
+
+**{{unitsLeft}} packs left** (started with {{totalUnits}})
+
+{{soldCount}} producers grabbed theirs in the last {{timeframe}}.
+
+Here's why:
+
+**PROBLEM:** You're spending hours digging through trash sample packs trying to find ONE usable sound.
+
+**REALITY:** Most sample packs are recycled garbage. Same sounds everyone else has.
+
+**SOLUTION:** {{packName}}
+
+• {{sampleCount}} 100% original samples
+• Zero recycled sounds
+• {{genre}} only - no filler
+• Used in {{creditedTracks}} released tracks
+• {{keyBenefit}}
+
+**Price: {{creditPrice}} credits**
+
+But here's the thing:
+
+Once these {{unitsLeft}} packs are gone, I'm pulling it down. No restock. Done.
+
+[Get It Before It's Gone →]({{packLink}})
+
+**BONUSES** if you order in the next {{bonusDeadline}}:
+✓ {{bonus1}}
+✓ {{bonus2}}
+
+This won't be here tomorrow.
+
+{{creatorName}}
+
+P.S. - Still thinking? {{testimonialName}} said: "{{testimonial}}" 
+
+P.P.S. - Seriously, {{unitsLeft}} left. Check the page - there's a live counter.`,
+    tags: ["direct-response", "scarcity", "sample-pack", "urgency"],
+    useCase: "High-pressure sales, limited releases, maximize urgency",
+    estimatedOpenRate: "38-48%",
+    popular: true,
+  },
+
+  {
+    id: "dr-course-pain-agitate",
+    name: "🎯 Course - Problem/Agitate/Solution DR",
+    description: "Direct response: Hit pain points, build urgency for course",
+    category: "courses",
+    funnelStage: "BOFU",
+    subject: "Still struggling with {{painPoint}}? (Read this)",
+    previewText: "The real reason your {{skillArea}} isn't improving",
+    body: `{{firstName}},
+
+Let me guess:
+
+You've watched {{hoursWasted}} hours of YouTube tutorials.
+
+You've tried {{thingsTried}}.
+
+But you're STILL struggling with {{painPoint}}.
+
+**Am I right?**
+
+Here's why nothing's working:
+
+{{reasonForFailure}}
+
+I know because I was stuck in the exact same place for {{yearsStuck}} years.
+
+**What changed?**
+
+I figured out {{bigInsight}}.
+
+Everything I learned is inside **{{courseName}}**.
+
+**Here's What You Get:**
+• {{module1}} - {{module1Benefit}}
+• {{module2}} - {{module2Benefit}}
+• {{module3}} - {{module3Benefit}}
+• {{module4}} - {{module4Benefit}}
+
+**Plus {{bonusCount}} bonuses:**
+{{bonusList}}
+
+**The Investment:** {{price}} credits
+
+**The Alternative:** Keep struggling for another {{yearsProjection}} years.
+
+Your call.
+
+[Stop Struggling, Start Progressing →]({{enrollLink}})
+
+**Enrollment closes:** {{deadline}}
+
+After that, you're on your own.
+
+{{creatorName}}
+
+P.S. - 30-day guarantee. If it doesn't help, full refund. You risk nothing.
+
+P.P.S. - {{currentStudents}} producers already enrolled. See what they're saying [here]({{testimonialsLink}}).`,
+    tags: ["direct-response", "pain-agitate", "course", "conversion"],
+    useCase: "Overcome objections, drive course enrollment, high-intent buyers",
+    estimatedOpenRate: "35-45%",
+    popular: true,
+  },
+
+  {
+    id: "dr-coaching-transformation",
+    name: "💎 Coaching - Before/After DR",
+    description: "Direct response: Show dramatic transformations from coaching",
+    category: "coaching",
+    funnelStage: "BOFU",
+    subject: "{{clientName}}'s track went from {{before}} to {{after}} ({{timeframe}})",
+    previewText: "See the exact process + book your transformation",
+    body: `{{firstName}},
+
+{{timeframe}} ago, {{clientName}} sent me this:
+
+[{{beforeAudio}}]({{beforeLink}})
+
+Struggled with {{problem1}}, {{problem2}}, and {{problem3}}.
+
+Today:
+
+[{{afterAudio}}]({{afterLink}})
+
+Just got {{achievement}}.
+
+**What happened in between?**
+
+{{sessionsCount}} coaching sessions.
+
+**Here's what we fixed:**
+
+Session 1: {{fix1}}
+Session 2: {{fix2}}
+Session 3: {{fix3}}
+
+**The difference?**
+Listen to the before/after. That's {{timeframe}} of focused work.
+
+**Same process available for you:**
+
+• {{sessionDuration}}-min sessions
+• Review YOUR actual projects
+• Fix YOUR specific problems
+• Get YOUR tracks to the next level
+
+**Investment:** {{packagePrice}} credits ({{sessionsIncluded}} sessions)
+
+{{spotsLeft}} spots this month.
+
+[Book Your Transformation →]({{bookingLink}})
+
+**NOT CONVINCED?**
+
+{{testimonial1Name}}: "{{testimonial1}}"
+{{testimonial2Name}}: "{{testimonial2}}"
+
+Results speak.
+
+{{creatorName}}
+
+P.S. - If you're not seeing improvement after session 1, full refund. I'm that confident.
+
+P.P.S. - Spots fill in {{avgFillTime}}. If you see this, book now.`,
+    tags: ["direct-response", "coaching", "transformation", "proof"],
+    useCase: "Sell high-ticket coaching, show proof, overcome skepticism",
+    estimatedOpenRate: "40-50%",
+    popular: true,
+  },
+
+  {
+    id: "dr-bundle-value-stack",
+    name: "📦 Bundle - Value Stack DR",
+    description: "Direct response: Stack value, show massive savings",
+    category: "promotion",
+    funnelStage: "BOFU",
+    subject: "${{totalValue}} worth for {{bundlePrice}} credits? ({{hoursLeft}}h left)",
+    previewText: "Everything you need in one bundle - save {{savingsPercent}}%",
+    body: `{{firstName}},
+
+Putting together everything you need to {{goal}}.
+
+**THE {{bundleName}} BUNDLE**
+
+Here's what's included:
+
+**1. {{product1}}** ({{product1Price}} credits)
+→ {{product1Benefit}}
+
+**2. {{product2}}** ({{product2Price}} credits)  
+→ {{product2Benefit}}
+
+**3. {{product3}}** ({{product3Price}} credits)
+→ {{product3Benefit}}
+
+**4. {{product4}}** ({{product4Price}} credits)
+→ {{product4Benefit}}
+
+**TOTAL VALUE:** {{totalValue}} credits
+
+**TODAY'S PRICE:** {{bundlePrice}} credits
+
+**YOU SAVE:** {{savingsAmount}} credits ({{savingsPercent}}%)
+
+**BONUSES** (if you order in next {{bonusDeadline}}):
+✓ {{bonus1}} ({{bonus1Value}} value)
+✓ {{bonus2}} ({{bonus2Value}} value)
+✓ {{bonus3}} ({{bonus3Value}} value)
+
+**TOTAL PACKAGE VALUE:** {{totalWithBonuses}} credits
+**YOU PAY:** {{bundlePrice}} credits
+
+**That's {{finalSavingsPercent}}% off.**
+
+[Get The Complete Bundle →]({{bundleLink}})
+
+**Bundle goes away in {{hoursLeft}} hours.**
+
+After that:
+- No more bundle
+- Products sold separately
+- You pay {{totalValue}} credits
+- Bonuses disappear
+
+**Why I'm doing this:**
+
+{{bundleRationale}}
+
+**GUARANTEE:**
+30 days. If you don't use it, full refund.
+
+{{creatorName}}
+
+P.S. - {{alreadyBought}} producers grabbed this already. Don't be last.
+
+P.P.S. - Can't afford {{bundlePrice}}? Start with {{product1}} [here]({{individualLink}}). But you'll end up buying the rest anyway (trust me).`,
+    tags: ["direct-response", "bundle", "value-stack", "conversion"],
+    useCase: "Maximize order value, create irresistible offers",
+    estimatedOpenRate: "42-52%",
+    popular: true,
+  },
+
+  {
+    id: "dr-credit-sale-fomo",
+    name: "💳 Credit Sale - FOMO DR",
+    description: "Direct response: Credit sale with stacking bonuses and urgency",
+    category: "promotion",
+    funnelStage: "MOFU",
+    subject: "{{bonusPercent}}% BONUS credits ends in {{hoursLeft}}h (rare sale)",
+    previewText: "Stock up now - won't see this again for {{monthsUntilNext}} months",
+    body: `{{firstName}} -
+
+Credit sale. Rare.
+
+**Buy {{baseCredits}} credits, get {{bonusCredits}} FREE**
+
+That's {{totalCredits}} credits for \$\{\{price\}\}.
+
+**We run this {{saleFrequency}}.**
+Last one was {{monthsSinceLastSale}} months ago.
+Next one won't be until {{nextSaleMonth}}.
+
+**What you can do with {{totalCredits}} credits:**
+
+Sample Packs:
+• {{examplePacks}} packs ({{packsDescription}})
+
+Courses:
+• {{exampleCourses}} courses ({{coursesDescription}})
+
+Coaching:
+• {{exampleSessions}} coaching sessions
+
+**Or mix and match.**
+
+**BONUSES** (if you buy in next {{bonusHours}}h):
+✓ {{bonus1}}
+✓ {{bonus2}}
+
+[Get {{bonusPercent}}% Bonus Credits →]({{purchaseLink}})
+
+**Sale ends:** {{exactEndTime}}
+
+**FAQ:**
+
+Q: Do credits expire?
+A: Never.
+
+Q: Can I use them on anything?
+A: Yes. Any product, any time.
+
+Q: Is this the cheapest credits get?
+A: Yes. Regular price is \\$\\{\\{regularPricePerCredit\\}\\}/credit.
+
+**MATH:**
+Regular: \\$\\{\\{regularTotal\\}\\} for {{totalCredits}} credits
+Today: \\$\\{\\{price\\}\\} for {{totalCredits}} credits
+**You save: \\$\\{\\{dollarSavings\\}\\}**
+
+Stock up now or pay more later.
+
+{{creatorName}}
+
+P.S. - {{customersPurchased}} people bought already. Sale inventory: {{percentRemaining}}% left.`,
+    tags: ["direct-response", "credits", "fomo", "urgency"],
+    useCase: "Drive credit purchases, create buying events",
+    estimatedOpenRate: "36-46%",
+    popular: true,
+  },
+
+  // ========================================================================
   // ENGAGEMENT & COMMUNITY
   // ========================================================================
 

@@ -65,9 +65,11 @@ export default function CreateCampaignPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [isLoadingTemplate, setIsLoadingTemplate] = useState(false);
   
-  // Product attachment
+  // Product attachment & AI options
   const [selectedProductId, setSelectedProductId] = useState<string | undefined>();
   const [isGeneratingCopy, setIsGeneratingCopy] = useState(false);
+  const [emailStyle, setEmailStyle] = useState<string>("casual-producer");
+  const [copyLength, setCopyLength] = useState<string>("medium");
 
   // Fetch customers for recipient selection
   const customers = useQuery(
@@ -143,20 +145,34 @@ export default function CreateCampaignPage() {
 
   // Generate email copy from product + template
   const handleGenerateCopy = async () => {
-    if (!selectedProduct || !template) {
+    if (!selectedProduct) {
       toast({
         title: "Missing Information",
-        description: "Please select a product and template first",
+        description: "Please select a product first",
         variant: "destructive",
       });
       return;
     }
 
+    // Define tone based on style selection
+    const toneMap: Record<string, string> = {
+      "casual-producer": "casual and authentic like a music producer talking to another producer. Use producer slang, be real, no corporate BS",
+      "direct-response": "direct response marketing style - problem-agitate-solution framework, scarcity, urgency, strong CTAs, benefit-focused",
+      "storytelling": "storytelling style - personal anecdotes, journey narrative, emotional connection, relatable struggles",
+      "educational": "educational and helpful - teach first, sell second, value-focused, tips and insights",
+      "hype": "enthusiastic and energetic - build excitement, use FOMO, create buzz, celebration energy",
+    };
+
+    const selectedTone = toneMap[emailStyle] || toneMap["casual-producer"];
+
     setIsGeneratingCopy(true);
     try {
+      const baseTemplate = template ? template.body : `Write a compelling email about {{productName}}.\n\nInclude benefits, features, and a clear call to action.`;
+      const baseSubject = template ? template.subject : `New: {{productName}}`;
+
       const result = await generateCopy({
-        templateBody: template.body,
-        templateSubject: template.subject,
+        templateBody: baseTemplate,
+        templateSubject: baseSubject,
         productInfo: {
           name: selectedProduct.displayName,
           type: selectedProduct.productType,
@@ -170,7 +186,7 @@ export default function CreateCampaignPage() {
           moduleCount: (selectedProduct as any).moduleCount,
         },
         creatorName: fromName || user?.fullName || "Creator",
-        tone: "casual",
+        tone: selectedTone,
       });
 
       setSubject(result.subject);
@@ -383,16 +399,17 @@ export default function CreateCampaignPage() {
             </TabsList>
 
             <TabsContent value="compose" className="space-y-6">
-              {/* Product Attachment (AI Copy Generation) */}
-              {template && (
-                <Card className="border-chart-1/20 bg-gradient-to-br from-chart-1/5 to-chart-2/5">
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Sparkles className="w-5 h-5 text-chart-1" />
-                      AI Email Generator
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
+              {/* AI Email Generator */}
+              <Card className="border-chart-1/20 bg-gradient-to-br from-chart-1/5 to-chart-2/5">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-chart-1" />
+                    AI Email Generator
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Product Selection */}
                     <div className="space-y-2">
                       <Label htmlFor="product">Select Product to Promote</Label>
                       <Select
@@ -403,7 +420,7 @@ export default function CreateCampaignPage() {
                           <SelectValue placeholder="Choose a product..." />
                         </SelectTrigger>
                         <SelectContent className="bg-white dark:bg-black">
-                          <SelectItem value="none">No product (manual writing)</SelectItem>
+                          <SelectItem value="none">No product (write from scratch)</SelectItem>
                           {allProducts.length > 0 && (
                             <>
                               <SelectItem disabled value="divider-courses">
@@ -436,45 +453,99 @@ export default function CreateCampaignPage() {
                       </Select>
                     </div>
 
-                    {selectedProduct && (
-                      <div className="p-4 bg-muted/50 rounded-lg border border-border">
-                        <div className="flex items-start gap-3">
-                          <Package className="w-5 h-5 text-chart-1 mt-0.5" />
-                          <div className="flex-1">
-                            <div className="font-medium">{selectedProduct.displayName}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {selectedProduct.productType.replace(/-/g, ' ')}
-                              {selectedProduct.creditPrice && ` • ${selectedProduct.creditPrice} credits`}
+                    {/* Email Style */}
+                    <div className="space-y-2">
+                      <Label htmlFor="style">Email Style</Label>
+                      <Select value={emailStyle} onValueChange={setEmailStyle}>
+                        <SelectTrigger className="bg-white dark:bg-black">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white dark:bg-black">
+                          <SelectItem value="casual-producer">
+                            <div>
+                              <div className="font-medium">Casual Producer</div>
+                              <div className="text-xs text-muted-foreground">Authentic, real talk</div>
                             </div>
+                          </SelectItem>
+                          <SelectItem value="direct-response">
+                            <div>
+                              <div className="font-medium">Direct Response 🎯</div>
+                              <div className="text-xs text-muted-foreground">Urgency, scarcity, strong CTAs</div>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="storytelling">
+                            <div>
+                              <div className="font-medium">Storytelling</div>
+                              <div className="text-xs text-muted-foreground">Personal journey, relatable</div>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="educational">
+                            <div>
+                              <div className="font-medium">Educational</div>
+                              <div className="text-xs text-muted-foreground">Value-first, teach then sell</div>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="hype">
+                            <div>
+                              <div className="font-medium">Hype & Energy 🔥</div>
+                              <div className="text-xs text-muted-foreground">Excitement, FOMO, buzz</div>
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {selectedProduct && (
+                    <div className="p-4 bg-muted/50 rounded-lg border border-border">
+                      <div className="flex items-start gap-3">
+                        <Package className="w-5 h-5 text-chart-1 mt-0.5" />
+                        <div className="flex-1">
+                          <div className="font-medium">{selectedProduct.displayName}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {selectedProduct.productType.replace(/-/g, ' ')}
+                            {selectedProduct.creditPrice && ` • ${selectedProduct.creditPrice} credits`}
                           </div>
+                          {selectedProduct.description && (
+                            <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                              {selectedProduct.description}
+                            </p>
+                          )}
                         </div>
                       </div>
-                    )}
+                    </div>
+                  )}
 
-                    <Button
-                      onClick={handleGenerateCopy}
-                      disabled={isGeneratingCopy || !selectedProduct}
-                      className="w-full bg-gradient-to-r from-chart-1 to-chart-2 hover:from-chart-1/90 hover:to-chart-2/90"
-                      size="lg"
-                    >
-                      {isGeneratingCopy ? (
-                        <>
-                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                          Generating Email...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-5 h-5 mr-2" />
-                          Generate Email with AI
-                        </>
-                      )}
-                    </Button>
+                  <Button
+                    onClick={handleGenerateCopy}
+                    disabled={isGeneratingCopy || !selectedProduct}
+                    className="w-full bg-gradient-to-r from-chart-1 to-chart-2 hover:from-chart-1/90 hover:to-chart-2/90"
+                    size="lg"
+                  >
+                    {isGeneratingCopy ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        Generating {emailStyle.replace(/-/g, ' ')} Email...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-5 h-5 mr-2" />
+                        Generate Email with AI
+                      </>
+                    )}
+                  </Button>
+                  {!template && (
                     <p className="text-xs text-center text-muted-foreground">
-                      AI will replace all template variables with your product information
+                      💡 Tip: Select a template first for better results, or AI will create from scratch
                     </p>
-                  </CardContent>
-                </Card>
-              )}
+                  )}
+                  {template && (
+                    <p className="text-xs text-center text-muted-foreground">
+                      AI will customize the "{template.name}" template with your product info
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
 
               {/* Campaign Details */}
               <Card>
@@ -511,10 +582,10 @@ export default function CreateCampaignPage() {
                       )}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="fromEmail">
+                      <Label htmlFor="fromEmail" className="flex items-center">
                         From Email
                         {emailConfig?.isConfigured && (
-                          <Badge variant="success" className="ml-2 text-xs">Verified</Badge>
+                          <Badge className="ml-2 text-xs bg-chart-2/10 text-chart-2 border-chart-2/20">Verified</Badge>
                         )}
                       </Label>
                       <Input
