@@ -244,7 +244,7 @@ export default function SamplesMarketplacePage() {
             </TabsTrigger>
           </TabsList>
 
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Filters Sidebar */}
           <aside className="lg:col-span-1">
             <Card className="bg-card border-border sticky top-4">
@@ -431,6 +431,7 @@ export default function SamplesMarketplacePage() {
               )}
             </TabsContent>
           </div>
+        </div>
         </Tabs>
       </div>
 
