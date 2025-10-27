@@ -16,6 +16,38 @@ import {
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 
+// Helper functions
+function getTransactionIcon(type: string) {
+  switch (type) {
+    case "purchase":
+      return <ArrowDown className="w-5 h-5 text-chart-1" />;
+    case "earn":
+      return <ArrowUp className="w-5 h-5 text-chart-2" />;
+    case "spend":
+      return <ArrowDown className="w-5 h-5 text-chart-4" />;
+    case "bonus":
+      return <Gift className="w-5 h-5 text-chart-5" />;
+    case "refund":
+      return <RefreshCw className="w-5 h-5 text-chart-3" />;
+    default:
+      return <Package className="w-5 h-5 text-muted-foreground" />;
+  }
+}
+
+function getTransactionColor(type: string) {
+  switch (type) {
+    case "purchase":
+    case "earn":
+    case "bonus":
+    case "refund":
+      return "text-chart-1";
+    case "spend":
+      return "text-chart-4";
+    default:
+      return "text-foreground";
+  }
+}
+
 export default function CreditHistoryPage() {
   const router = useRouter();
   
@@ -24,37 +56,6 @@ export default function CreditHistoryPage() {
   });
 
   const userCredits = useQuery(api.credits.getUserCredits);
-
-  const getTransactionIcon = (type: string) => {
-    switch (type) {
-      case "purchase":
-        return <ArrowDown className="w-5 h-5 text-chart-1" />;
-      case "earn":
-        return <ArrowUp className="w-5 h-5 text-chart-2" />;
-      case "spend":
-        return <ArrowDown className="w-5 h-5 text-chart-4" />;
-      case "bonus":
-        return <Gift className="w-5 h-5 text-chart-5" />;
-      case "refund":
-        return <RefreshCw className="w-5 h-5 text-chart-3" />;
-      default:
-        return <Package className="w-5 h-5 text-muted-foreground" />;
-    }
-  };
-
-  const getTransactionColor = (type: string) => {
-    switch (type) {
-      case "purchase":
-      case "earn":
-      case "bonus":
-      case "refund":
-        return "text-chart-1";
-      case "spend":
-        return "text-chart-4";
-      default:
-        return "text-foreground";
-    }
-  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -105,7 +106,7 @@ export default function CreditHistoryPage() {
         )}
 
         {/* Transactions */}
-        <div className="space-y-3">
+        <section className="space-y-3">
           {transactions && transactions.transactions.length > 0 ? (
             transactions.transactions.map((transaction: any, index: number) => (
               <motion.div
