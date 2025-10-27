@@ -239,8 +239,12 @@ export function SidebarWrapper({ children }: SidebarWrapperProps) {
                       </DropdownMenuItem>
                     ))}
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem className="justify-center text-sm text-primary cursor-pointer">
-                      View all notifications
+                    <DropdownMenuItem 
+                      className="justify-center text-sm text-primary cursor-pointer"
+                      onClick={() => window.location.href = '/settings/notifications'}
+                    >
+                      <Settings className="mr-2 h-3 w-3" />
+                      Notification Settings
                     </DropdownMenuItem>
                   </>
                 )}

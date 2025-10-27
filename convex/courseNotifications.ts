@@ -2,7 +2,7 @@
 
 import { action, internalAction } from "./_generated/server";
 import { v } from "convex/values";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import OpenAI from "openai";
 
 const openai = new OpenAI({
@@ -179,14 +179,144 @@ export const sendCourseUpdateEmails = internalAction({
     emailBody: v.string(),
     courseSlug: v.string(),
   },
-  returns: v.null(),
-  handler: async (ctx, args): Promise<null> => {
-    // TODO: Integrate with your email system (Resend/ActiveCampaign)
-    console.log(`📧 Sending course update emails to ${args.studentIds.length} students`);
-    console.log(`Subject: ${args.emailSubject}`);
-    console.log(`Preview: ${args.emailPreview}`);
-    
-    // For now, just log - you can implement actual email sending later
-    return null;
+  returns: v.object({
+    sent: v.number(),
+    skipped: v.number(),
+    failed: v.number(),
+  }),
+  handler: async (ctx, args): Promise<{
+    sent: number;
+    skipped: number;
+    failed: number;
+  }> => {
+    const resendApiKey = process.env.RESEND_API_KEY;
+    let sent = 0;
+    let skipped = 0;
+    let failed = 0;
+
+    console.log(`📧 Processing course update emails for ${args.studentIds.length} students`);
+
+    for (const studentId of args.studentIds) {
+      try {
+        // Check if user has email notifications enabled for course updates
+        const shouldSend: boolean = await ctx.runQuery(
+          internal.notificationPreferences.shouldSendEmailInternal,
+          {
+            userId: studentId,
+            category: "courseUpdates",
+          }
+        );
+
+        if (!shouldSend) {
+          console.log(`⏭️ Skipping email for ${studentId} - course update emails disabled`);
+          skipped++;
+          continue;
+        }
+
+        // Get user email
+        const user: any = await ctx.runQuery(
+          api.users.getUserFromClerk,
+          { clerkId: studentId }
+        );
+
+        if (!user?.email) {
+          console.log(`⚠️ No email found for user ${studentId}`);
+          skipped++;
+          continue;
+        }
+
+        // If Resend is configured, send email
+        if (resendApiKey) {
+          const fromEmail = process.env.RESEND_FROM_EMAIL || "updates@pauseplayrepeat.com";
+
+          const response = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${resendApiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              from: fromEmail,
+              to: user.email,
+              subject: args.emailSubject,
+              html: generateCourseUpdateEmailHTML(
+                args.emailSubject,
+                args.emailBody,
+                args.courseSlug
+              ),
+            }),
+          });
+
+          if (response.ok) {
+            console.log(`✅ Email sent to ${user.email}`);
+            sent++;
+          } else {
+            const error = await response.text();
+            console.error(`❌ Failed to send email to ${user.email}:`, error);
+            failed++;
+          }
+        } else {
+          console.log(`📧 Would send to ${user.email}: ${args.emailSubject}`);
+          sent++;
+        }
+      } catch (error) {
+        console.error(`Error processing email for ${studentId}:`, error);
+        failed++;
+      }
+    }
+
+    console.log(`📊 Email summary: ${sent} sent, ${skipped} skipped (preferences), ${failed} failed`);
+
+    return { sent, skipped, failed };
   },
 });
+
+// Helper to generate course update email HTML
+function generateCourseUpdateEmailHTML(
+  subject: string,
+  message: string,
+  courseSlug: string
+): string {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://academy.pauseplayrepeat.com";
+
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject}</title>
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; border-radius: 12px 12px 0 0; text-align: center;">
+    <h1 style="margin: 0; color: white; font-size: 24px; font-weight: bold;">
+      ${subject}
+    </h1>
+  </div>
+  
+  <div style="background-color: #ffffff; padding: 40px 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
+    <p style="margin: 0 0 20px 0; font-size: 16px; color: #374151; white-space: pre-wrap;">
+      ${message}
+    </p>
+    
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${appUrl}/courses/${courseSlug}" 
+         style="display: inline-block; background-color: #667eea; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+        View Course
+      </a>
+    </div>
+    
+    <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #9ca3af; font-size: 14px;">
+      <p style="margin: 0 0 10px 0;">You received this because you're enrolled in this course.</p>
+      <p style="margin: 0;">
+        <a href="${appUrl}/settings/notifications" 
+           style="color: #667eea; text-decoration: none;">
+          Manage your notification preferences
+        </a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>
+  `.trim();
+}
