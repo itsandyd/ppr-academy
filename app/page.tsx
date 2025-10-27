@@ -218,31 +218,31 @@ export default function SectionedMarketplace() {
                   transition={{ duration: 0.5, delay: 0.4 }}
                 >
                   <div className="space-y-2">
+                    <Link href="/marketplace">
+                      <Button className="w-full py-6 text-base shadow-md shadow-chart-1/20 hover:shadow-lg hover:scale-105 hover:-translate-y-1 transition-all duration-300 bg-gradient-to-r from-chart-1 to-chart-1/80 text-primary-foreground border-2 border-chart-1/40">
+                        <Search className="mr-2 h-5 w-5" />
+                        Browse Marketplace
+                      </Button>
+                    </Link>
+                    <p className="text-xs text-muted-foreground mt-2">Explore courses, products & coaching</p>
+                  </div>
+                  <div className="space-y-2">
                     {isSignedIn ? (
                       <Link href="/library">
-                        <Button className="w-full py-6 text-base shadow-md shadow-chart-1/20 hover:shadow-lg hover:scale-105 hover:-translate-y-1 transition-all duration-300 bg-gradient-to-r from-chart-1 to-chart-1/80 text-primary-foreground border-2 border-chart-1/40">
+                        <Button variant="outline" className="w-full py-6 text-base hover:scale-105 hover:-translate-y-1 transition-all duration-300 border-2 border-chart-1/40 bg-background/80 hover:bg-background/90 hover:shadow-lg">
                           <BookOpen className="mr-2 h-5 w-5" />
-                          Go to Library
+                          My Library
                         </Button>
                       </Link>
                     ) : (
-                      <Link href="/sign-in">
-                        <Button className="w-full py-6 text-base shadow-md shadow-chart-1/20 hover:shadow-lg hover:scale-105 hover:-translate-y-1 transition-all duration-300 bg-gradient-to-r from-chart-1 to-chart-1/80 text-primary-foreground border-2 border-chart-1/40">
-                          <BookOpen className="mr-2 h-5 w-5" />
-                          For Students
+                      <Link href={isSignedIn ? "/home" : "/sign-up?intent=creator"}>
+                        <Button variant="outline" className="w-full py-6 text-base hover:scale-105 hover:-translate-y-1 transition-all duration-300 border-2 border-chart-1/40 bg-background/80 hover:bg-background/90 hover:shadow-lg">
+                          <Store className="mr-2 h-5 w-5" />
+                          For Creators
                         </Button>
                       </Link>
                     )}
-                    <p className="text-xs text-muted-foreground mt-2">Learn from expert creators</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Link href={isSignedIn ? "/home" : "/sign-up?intent=creator"}>
-                      <Button variant="outline" className="w-full py-6 text-base hover:scale-105 hover:-translate-y-1 transition-all duration-300 border-2 border-chart-1/40 bg-background/80 hover:bg-background/90 hover:shadow-lg">
-                        <Store className="mr-2 h-5 w-5" />
-                        For Creators
-                      </Button>
-                    </Link>
-                    <p className="text-xs text-muted-foreground mt-2">Build your creator business</p>
+                    <p className="text-xs text-muted-foreground mt-2">{isSignedIn ? "Access your content" : "Build your creator business"}</p>
                   </div>
                 </motion.div>
                 

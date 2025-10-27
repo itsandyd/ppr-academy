@@ -7,10 +7,12 @@ const storeValidator = v.object({
   _id: v.id("stores"),
   _creationTime: v.number(),
   name: v.string(),
-  slug: v.optional(v.string()),
+  slug: v.string(),
   description: v.optional(v.string()),
   userId: v.string(),
   avatar: v.optional(v.string()),
+  logoUrl: v.optional(v.string()),
+  bannerImage: v.optional(v.string()),
   bio: v.optional(v.string()),
   socialLinks: v.optional(v.object({
     website: v.optional(v.string()),

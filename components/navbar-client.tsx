@@ -63,6 +63,8 @@ const BROWSE_SECTION: DropdownSection = {
   label: "Browse",
   icon: Search,
   items: [
+    { href: "/marketplace", label: "Marketplace", icon: Briefcase, description: "Browse all content" },
+    { href: "/marketplace/creators", label: "Creators", icon: Users, description: "Discover talented creators" },
     { href: "/courses", label: "Courses", icon: BookOpen, description: "Explore all courses" },
     { href: "/coaching", label: "Find Coaches", icon: Users, description: "Book 1-on-1 coaching sessions" },
   ],

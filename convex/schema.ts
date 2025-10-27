@@ -263,6 +263,8 @@ export default defineSchema({
     description: v.optional(v.string()),
     userId: v.string(),
     avatar: v.optional(v.string()),
+    logoUrl: v.optional(v.string()), // Store logo URL
+    bannerImage: v.optional(v.string()), // Store banner image
     bio: v.optional(v.string()),
     socialLinks: v.optional(v.object({
       website: v.optional(v.string()),
@@ -385,6 +387,7 @@ export default defineSchema({
     storeId: v.string(),
     userId: v.string(),
     isPublished: v.optional(v.boolean()),
+    category: v.optional(v.string()), // Product category for filtering
     buttonLabel: v.optional(v.string()),
     style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))),
     // URL/Media specific fields
