@@ -166,8 +166,8 @@ export default function CreditHistoryPage() {
               </Button>
             </Card>
           )}
-        </div>
-      </section>
+        </section>
+      </div>
     </div>
   );
 }
