@@ -28,14 +28,17 @@ export default function WorkflowBuilderPage({ params }: WorkflowBuilderPageProps
     });
   }, [params]);
 
-  // Get the specific workflow (always call hooks)
+  // Check if this is a special route (create, templates, etc.)
+  const isSpecialRoute = workflowId === "create" || workflowId === "templates";
+
+  // Get the specific workflow (skip if special route or no workflowId)
   const workflow = useQuery(
     api.emailWorkflows.getWorkflow,
-    workflowId ? { workflowId: workflowId as any } : "skip"
+    workflowId && !isSpecialRoute ? { workflowId: workflowId as any } : "skip"
   );
 
   // Conditional rendering after all hooks
-  if (!storeId || !workflowId) {
+  if (!storeId || !workflowId || isSpecialRoute) {
     return (
       <div className="max-w-7xl mx-auto py-10 md:py-16">
         <div className="flex flex-col gap-8">
