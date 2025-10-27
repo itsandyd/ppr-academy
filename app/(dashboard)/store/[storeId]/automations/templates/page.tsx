@@ -79,19 +79,27 @@ export default function AutomationTemplatesPage() {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
+      <div className="space-y-4 mb-8">
         <Button
           variant="ghost"
-          size="icon"
           onClick={() => router.back()}
+          className="flex items-center gap-2 -ml-3 text-muted-foreground hover:text-foreground"
         >
-          <ArrowLeft className="w-5 h-5" />
+          <ArrowLeft className="w-4 h-4" />
+          Back
         </Button>
-        <div>
-          <h1 className="text-3xl font-bold">Automation Templates</h1>
-          <p className="text-muted-foreground mt-1">
-            Pre-built email sequences for common workflows
-          </p>
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-gradient-to-br from-chart-3/20 to-chart-4/20 rounded-xl">
+            <Zap className="w-8 h-8 text-chart-3" />
+          </div>
+          <div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-chart-3 to-chart-4 bg-clip-text text-transparent">
+              Automation Templates
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Pre-built email sequences for common workflows
+            </p>
+          </div>
         </div>
       </div>
 

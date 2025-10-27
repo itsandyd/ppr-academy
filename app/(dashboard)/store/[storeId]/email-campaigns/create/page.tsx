@@ -17,6 +17,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { 
   Mail, 
   Users, 
@@ -24,9 +31,13 @@ import {
   Send,
   Eye,
   Save,
-  User
+  User,
+  Package,
+  Sparkles,
+  Loader2
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAction } from "convex/react";
 
 export default function CreateCampaignPage() {
   const { user } = useUser();
@@ -53,6 +64,10 @@ export default function CreateCampaignPage() {
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [isLoadingTemplate, setIsLoadingTemplate] = useState(false);
+  
+  // Product attachment
+  const [selectedProductId, setSelectedProductId] = useState<string | undefined>();
+  const [isGeneratingCopy, setIsGeneratingCopy] = useState(false);
 
   // Fetch customers for recipient selection
   const customers = useQuery(
@@ -71,6 +86,31 @@ export default function CreateCampaignPage() {
     api.emailTemplates?.getCampaignTemplateById,
     templateId ? { templateId } : "skip"
   );
+
+  // Fetch products for attachment
+  const courses = useQuery(
+    api.courses?.getCoursesByStore,
+    storeId ? { storeId } : "skip"
+  ) || [];
+
+  const products = useQuery(
+    api.digitalProducts?.getProductsByStore,
+    storeId ? { storeId } : "skip"
+  ) || [];
+
+  const samplePacks = useQuery(
+    api.samplePacks?.getPacksByStore,
+    storeId ? { storeId } : "skip"
+  ) || [];
+
+  // Combine all products
+  const allProducts = [
+    ...courses.map((c: any) => ({ ...c, productType: 'course', displayName: c.title })),
+    ...products.map((p: any) => ({ ...p, productType: 'digital-product', displayName: p.title })),
+    ...samplePacks.map((sp: any) => ({ ...sp, productType: 'sample-pack', displayName: sp.name })),
+  ];
+
+  const selectedProduct = allProducts.find((p: any) => p._id === selectedProductId);
   
   // Auto-populate email fields from store config
   useEffect(() => {
@@ -99,6 +139,58 @@ export default function CreateCampaignPage() {
 
   const createCampaign = useMutation((api as any).emailCampaigns?.createCampaign);
   const addRecipients = useMutation((api as any).emailCampaigns?.addRecipients);
+  const generateCopy = useAction(api.emailCopyGenerator?.generateEmailCopy);
+
+  // Generate email copy from product + template
+  const handleGenerateCopy = async () => {
+    if (!selectedProduct || !template) {
+      toast({
+        title: "Missing Information",
+        description: "Please select a product and template first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsGeneratingCopy(true);
+    try {
+      const result = await generateCopy({
+        templateBody: template.body,
+        templateSubject: template.subject,
+        productInfo: {
+          name: selectedProduct.displayName,
+          type: selectedProduct.productType,
+          description: selectedProduct.description,
+          price: selectedProduct.price,
+          creditPrice: selectedProduct.creditPrice,
+          features: selectedProduct.tags || selectedProduct.categories,
+          sampleCount: selectedProduct.totalSamples,
+          genres: selectedProduct.genres,
+          duration: selectedProduct.duration,
+          moduleCount: (selectedProduct as any).moduleCount,
+        },
+        creatorName: fromName || user?.fullName || "Creator",
+        tone: "casual",
+      });
+
+      setSubject(result.subject);
+      setContent(result.body);
+      setPreviewText(result.previewText);
+
+      toast({
+        title: "✨ Email Copy Generated!",
+        description: "AI has customized the template with your product info. Review and edit as needed.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Generation Failed",
+        description: error.message || "Failed to generate copy. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingCopy(false);
+    }
+  };
 
   const handleCreateCampaign = async () => {
     if (!campaignName.trim()) {
@@ -223,18 +315,25 @@ export default function CreateCampaignPage() {
   return (
     <div className="max-w-7xl mx-auto px-8 pt-10 pb-24 space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="space-y-4">
         <Button
-          variant="outline"
+          variant="ghost"
           onClick={() => router.push(`/store/${storeId}/email-campaigns`)}
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 -ml-3 text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Campaigns
         </Button>
-        <div>
-          <h1 className="text-3xl font-bold">Create Email Campaign</h1>
-          <p className="text-muted-foreground mt-2">Design and send marketing emails to your customers</p>
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-gradient-to-br from-chart-1/20 to-chart-2/20 rounded-xl">
+            <Mail className="w-8 h-8 text-chart-1" />
+          </div>
+          <div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-chart-1 to-chart-4 bg-clip-text text-transparent">
+              Create Email Campaign
+            </h1>
+            <p className="text-muted-foreground mt-1">Design and send marketing emails to your customers</p>
+          </div>
         </div>
       </div>
 
@@ -284,6 +383,99 @@ export default function CreateCampaignPage() {
             </TabsList>
 
             <TabsContent value="compose" className="space-y-6">
+              {/* Product Attachment (AI Copy Generation) */}
+              {template && (
+                <Card className="border-chart-1/20 bg-gradient-to-br from-chart-1/5 to-chart-2/5">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-chart-1" />
+                      AI Email Generator
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="product">Select Product to Promote</Label>
+                      <Select
+                        value={selectedProductId || "none"}
+                        onValueChange={(v) => setSelectedProductId(v === "none" ? undefined : v)}
+                      >
+                        <SelectTrigger className="bg-white dark:bg-black">
+                          <SelectValue placeholder="Choose a product..." />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white dark:bg-black">
+                          <SelectItem value="none">No product (manual writing)</SelectItem>
+                          {allProducts.length > 0 && (
+                            <>
+                              <SelectItem disabled value="divider-courses">
+                                <span className="font-semibold text-xs">COURSES</span>
+                              </SelectItem>
+                              {allProducts.filter((p: any) => p.productType === 'course').map((p: any) => (
+                                <SelectItem key={p._id} value={p._id}>
+                                  {p.displayName}
+                                </SelectItem>
+                              ))}
+                              <SelectItem disabled value="divider-packs">
+                                <span className="font-semibold text-xs">SAMPLE PACKS</span>
+                              </SelectItem>
+                              {allProducts.filter((p: any) => p.productType === 'sample-pack').map((p: any) => (
+                                <SelectItem key={p._id} value={p._id}>
+                                  {p.displayName}
+                                </SelectItem>
+                              ))}
+                              <SelectItem disabled value="divider-products">
+                                <span className="font-semibold text-xs">PRODUCTS</span>
+                              </SelectItem>
+                              {allProducts.filter((p: any) => p.productType === 'digital-product').map((p: any) => (
+                                <SelectItem key={p._id} value={p._id}>
+                                  {p.displayName}
+                                </SelectItem>
+                              ))}
+                            </>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {selectedProduct && (
+                      <div className="p-4 bg-muted/50 rounded-lg border border-border">
+                        <div className="flex items-start gap-3">
+                          <Package className="w-5 h-5 text-chart-1 mt-0.5" />
+                          <div className="flex-1">
+                            <div className="font-medium">{selectedProduct.displayName}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {selectedProduct.productType.replace(/-/g, ' ')}
+                              {selectedProduct.creditPrice && ` • ${selectedProduct.creditPrice} credits`}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <Button
+                      onClick={handleGenerateCopy}
+                      disabled={isGeneratingCopy || !selectedProduct}
+                      className="w-full bg-gradient-to-r from-chart-1 to-chart-2 hover:from-chart-1/90 hover:to-chart-2/90"
+                      size="lg"
+                    >
+                      {isGeneratingCopy ? (
+                        <>
+                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                          Generating Email...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-5 h-5 mr-2" />
+                          Generate Email with AI
+                        </>
+                      )}
+                    </Button>
+                    <p className="text-xs text-center text-muted-foreground">
+                      AI will replace all template variables with your product information
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Campaign Details */}
               <Card>
                 <CardHeader>

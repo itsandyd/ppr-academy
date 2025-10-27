@@ -55,6 +55,7 @@ import type * as discordSchema from "../discordSchema.js";
 import type * as emailABTesting from "../emailABTesting.js";
 import type * as emailAnalyticsRollup from "../emailAnalyticsRollup.js";
 import type * as emailCampaigns from "../emailCampaigns.js";
+import type * as emailCopyGenerator from "../emailCopyGenerator.js";
 import type * as emailDomainSchema from "../emailDomainSchema.js";
 import type * as emailHealthMonitoring from "../emailHealthMonitoring.js";
 import type * as emailLeadScoring from "../emailLeadScoring.js";
@@ -169,6 +170,7 @@ declare const fullApi: ApiFromModules<{
   emailABTesting: typeof emailABTesting;
   emailAnalyticsRollup: typeof emailAnalyticsRollup;
   emailCampaigns: typeof emailCampaigns;
+  emailCopyGenerator: typeof emailCopyGenerator;
   emailDomainSchema: typeof emailDomainSchema;
   emailHealthMonitoring: typeof emailHealthMonitoring;
   emailLeadScoring: typeof emailLeadScoring;

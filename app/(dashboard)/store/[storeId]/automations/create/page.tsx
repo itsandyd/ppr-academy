@@ -219,19 +219,27 @@ export default function CreateAutomationPage() {
   return (
     <div className="max-w-7xl mx-auto px-8 pt-10 pb-24 space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="space-y-4">
         <Button
-          variant="outline"
+          variant="ghost"
           onClick={() => router.back()}
+          className="flex items-center gap-2 -ml-3 text-muted-foreground hover:text-foreground"
         >
-          <ArrowLeft className="w-4 h-4 mr-2" />
+          <ArrowLeft className="w-4 h-4" />
           Back
         </Button>
-        <div>
-          <h1 className="text-3xl font-bold">Create Email Automation</h1>
-          <p className="text-muted-foreground mt-2">
-            Build an automated email sequence
-          </p>
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-gradient-to-br from-chart-3/20 to-chart-4/20 rounded-xl">
+            <Zap className="w-8 h-8 text-chart-3" />
+          </div>
+          <div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-chart-3 to-chart-4 bg-clip-text text-transparent">
+              Create Email Automation
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Build an automated email sequence
+            </p>
+          </div>
         </div>
       </div>
 
