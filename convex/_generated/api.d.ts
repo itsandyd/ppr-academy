@@ -118,6 +118,7 @@ import type * as subscriptions from "../subscriptions.js";
 import type * as tracks from "../tracks.js";
 import type * as userLibrary from "../userLibrary.js";
 import type * as users from "../users.js";
+import type * as vercelDomainManager from "../vercelDomainManager.js";
 import type * as webhooks_instagram from "../webhooks/instagram.js";
 import type * as webhooks_stripe from "../webhooks/stripe.js";
 
@@ -235,6 +236,7 @@ declare const fullApi: ApiFromModules<{
   tracks: typeof tracks;
   userLibrary: typeof userLibrary;
   users: typeof users;
+  vercelDomainManager: typeof vercelDomainManager;
   "webhooks/instagram": typeof webhooks_instagram;
   "webhooks/stripe": typeof webhooks_stripe;
 }>;

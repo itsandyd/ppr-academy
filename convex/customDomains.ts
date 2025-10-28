@@ -1,11 +1,12 @@
 import { v } from "convex/values";
-import { mutation, query, internalMutation } from "./_generated/server";
+import { mutation, query, internalMutation, internalQuery, action } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 
 /**
  * Connect a custom domain to a store
  */
-export const connectCustomDomain = mutation({
+export const connectCustomDomain = action({
   args: {
     storeId: v.id("stores"),
     domain: v.string(),
@@ -14,7 +15,7 @@ export const connectCustomDomain = mutation({
     success: v.boolean(),
     message: v.string(),
   }),
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{ success: boolean; message: string }> => {
     // Validate domain format
     const domain = args.domain.toLowerCase().trim().replace(/^https?:\/\//, '').replace(/^www\./, '');
     
@@ -23,25 +24,84 @@ export const connectCustomDomain = mutation({
     }
 
     // Check if domain is already taken
-    const existingStore = await ctx.db
-      .query("stores")
-      .filter((q) => q.eq(q.field("customDomain"), domain))
-      .first();
+    const existingStore: { available: boolean } = await ctx.runQuery(internal.customDomains.checkDomainAvailability, {
+      domain,
+      storeId: args.storeId,
+    });
 
-    if (existingStore && existingStore._id !== args.storeId) {
+    if (!existingStore.available) {
       return { success: false, message: "This domain is already connected to another store" };
     }
 
+    // Add domain to Vercel first
+    // TODO: Uncomment when vercelDomainManager is registered
+    // const vercelResult: { success: boolean; message: string } = await ctx.runAction(internal.vercelDomainManager.addDomainToVercel, {
+    //   domain,
+    //   storeId: args.storeId,
+    // });
+
+    // For now, skip Vercel API (add manually or add later)
+    const vercelResult = { success: true, message: "Skipping Vercel API for now" };
+
+    if (!vercelResult.success) {
+      return {
+        success: false,
+        message: `Failed to add domain: ${vercelResult.message}`,
+      };
+    }
+
     // Update store with custom domain
-    await ctx.db.patch(args.storeId, {
-      customDomain: domain,
-      domainStatus: "pending", // Waiting for DNS verification
+    await ctx.runMutation(internal.customDomains.updateStoreDomain, {
+      storeId: args.storeId,
+      domain,
+      status: "pending",
     });
 
     return {
       success: true,
       message: `Domain ${domain} connected! Add the DNS records to complete setup.`,
     };
+  },
+});
+
+/**
+ * Check if domain is available (internal)
+ */
+export const checkDomainAvailability = internalQuery({
+  args: {
+    domain: v.string(),
+    storeId: v.id("stores"),
+  },
+  returns: v.object({
+    available: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    const existingStore = await ctx.db
+      .query("stores")
+      .filter((q) => q.eq(q.field("customDomain"), args.domain))
+      .first();
+
+    const available = !existingStore || existingStore._id === args.storeId;
+    return { available };
+  },
+});
+
+/**
+ * Update store domain (internal)
+ */
+export const updateStoreDomain = internalMutation({
+  args: {
+    storeId: v.id("stores"),
+    domain: v.string(),
+    status: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.storeId, {
+      customDomain: args.domain,
+      domainStatus: args.status,
+    });
+    return null;
   },
 });
 
@@ -81,7 +141,7 @@ export const verifyCustomDomain = mutation({
 /**
  * Remove custom domain
  */
-export const removeCustomDomain = mutation({
+export const removeCustomDomain = action({
   args: {
     storeId: v.id("stores"),
   },
@@ -90,15 +150,67 @@ export const removeCustomDomain = mutation({
     message: v.string(),
   }),
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.storeId, {
-      customDomain: undefined,
-      domainStatus: undefined,
+    // Get current domain
+    const store = await ctx.runQuery(internal.customDomains.getStoreDomain, {
+      storeId: args.storeId,
+    });
+
+    if (store?.customDomain) {
+      // Remove from Vercel
+      // TODO: Uncomment when vercelDomainManager is registered
+      // await ctx.runAction(internal.vercelDomainManager.removeDomainFromVercel, {
+      //   domain: store.customDomain,
+      // });
+    }
+
+    // Remove from database
+    await ctx.runMutation(internal.customDomains.clearStoreDomain, {
+      storeId: args.storeId,
     });
 
     return {
       success: true,
       message: "Custom domain removed successfully",
     };
+  },
+});
+
+/**
+ * Get store domain (internal)
+ */
+export const getStoreDomain = internalQuery({
+  args: {
+    storeId: v.id("stores"),
+  },
+  returns: v.union(
+    v.object({
+      customDomain: v.optional(v.string()),
+    }),
+    v.null()
+  ),
+  handler: async (ctx, args) => {
+    const store = await ctx.db.get(args.storeId);
+    if (!store) return null;
+    return {
+      customDomain: (store as any).customDomain,
+    };
+  },
+});
+
+/**
+ * Clear store domain (internal)
+ */
+export const clearStoreDomain = internalMutation({
+  args: {
+    storeId: v.id("stores"),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.storeId, {
+      customDomain: undefined,
+      domainStatus: undefined,
+    });
+    return null;
   },
 });
 

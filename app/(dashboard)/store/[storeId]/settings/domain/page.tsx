@@ -46,9 +46,9 @@ export default function DomainSettingsPage() {
     storeId ? { storeId: storeId as any } : "skip"
   );
 
-  // Mutations and actions
-  const connectDomain = useMutation(api.customDomains.connectCustomDomain);
-  const removeDomain = useMutation(api.customDomains.removeCustomDomain);
+  // Actions
+  const connectDomain = useAction(api.customDomains.connectCustomDomain);
+  const removeDomain = useAction(api.customDomains.removeCustomDomain);
   const verifyDomainDNS = useAction(api.domainVerification.verifyDomainDNS);
 
   const handleCopyDNS = (value: string) => {
