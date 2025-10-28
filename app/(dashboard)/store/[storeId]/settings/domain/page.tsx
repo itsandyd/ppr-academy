@@ -17,6 +17,8 @@ import {
   Copy,
   ExternalLink,
   Loader2,
+  Edit,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -28,6 +30,7 @@ export default function DomainSettingsPage() {
 
   const [domain, setDomain] = useState("");
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   // Get app URL from env
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'ppr-academy.com';
@@ -156,7 +159,7 @@ export default function DomainSettingsPage() {
           {currentDomain ? (
             <div className="p-4 bg-chart-2/10 rounded-lg border border-chart-2/20">
               <div className="flex items-center justify-between">
-                <div>
+                <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
                     <p className="text-sm text-muted-foreground">Custom Domain</p>
                     <Badge className={
@@ -172,14 +175,30 @@ export default function DomainSettingsPage() {
                   </div>
                   <p className="font-mono font-medium text-lg">{currentDomain}</p>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => window.open(`https://${currentDomain}`, '_blank')}
-                  disabled={domainStatus !== 'active'}
-                >
-                  <ExternalLink className="w-4 h-4" />
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(`https://${currentDomain}`, '_blank')}
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsEditing(true)}
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleRemoveDomain}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             </div>
           ) : (
@@ -191,13 +210,37 @@ export default function DomainSettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Connect Domain */}
-      {!currentDomain && (
+      {/* Connect/Edit Domain */}
+      {(!currentDomain || isEditing) && (
         <Card className="border-chart-1/20">
           <CardHeader>
-            <CardTitle>Connect Your Domain</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>{isEditing ? 'Change Domain' : 'Connect Your Domain'}</CardTitle>
+              {isEditing && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setIsEditing(false);
+                    setDomain("");
+                  }}
+                >
+                  Cancel
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent className="space-y-6">
+            {isEditing && currentDomain && (
+              <Alert className="bg-chart-5/10 border-chart-5/20">
+                <AlertCircle className="h-4 w-4 text-chart-5" />
+                <AlertTitle>Changing Domain</AlertTitle>
+                <AlertDescription>
+                  Current domain: {currentDomain}. Enter a new domain below to replace it.
+                </AlertDescription>
+              </Alert>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="domain">Domain Name</Label>
               <Input
@@ -231,24 +274,38 @@ export default function DomainSettingsPage() {
               </Alert>
             )}
 
-            <Button
-              onClick={handleConnectDomain}
-              disabled={!domain || isConnecting}
-              className="w-full bg-gradient-to-r from-chart-1 to-chart-2"
-              size="lg"
-            >
-              {isConnecting ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Connecting...
-                </>
-              ) : (
-                <>
-                  <Globe className="w-5 h-5 mr-2" />
-                  Connect Domain
-                </>
+            <div className="flex gap-3">
+              {isEditing && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsEditing(false);
+                    setDomain("");
+                  }}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
               )}
-            </Button>
+              <Button
+                onClick={handleConnectDomain}
+                disabled={!domain || isConnecting}
+                className="flex-1 bg-gradient-to-r from-chart-1 to-chart-2"
+                size="lg"
+              >
+                {isConnecting ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    {isEditing ? 'Updating...' : 'Connecting...'}
+                  </>
+                ) : (
+                  <>
+                    <Globe className="w-5 h-5 mr-2" />
+                    {isEditing ? 'Update Domain' : 'Connect Domain'}
+                  </>
+                )}
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
