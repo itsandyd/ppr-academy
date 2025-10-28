@@ -31,6 +31,7 @@ export default function DomainSettingsPage() {
   const [domain, setDomain] = useState("");
   const [isConnecting, setIsConnecting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   // Get app URL from env
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'ppr-academy.com';
@@ -48,6 +49,7 @@ export default function DomainSettingsPage() {
   // Mutations
   const connectDomain = useMutation(api.customDomains.connectCustomDomain);
   const removeDomain = useMutation(api.customDomains.removeCustomDomain);
+  const verifyDomain = useMutation(api.customDomains.verifyCustomDomain);
 
   const handleCopyDNS = (value: string) => {
     navigator.clipboard.writeText(value);
@@ -90,6 +92,18 @@ export default function DomainSettingsPage() {
       }
     } catch (error: any) {
       toast.error(error.message || "Failed to remove domain");
+    }
+  };
+
+  const handleVerifyDomain = async () => {
+    setIsVerifying(true);
+    try {
+      const result = await verifyDomain({ storeId: storeId as any });
+      toast.info(result.message);
+    } catch (error: any) {
+      toast.error(error.message || "Verification check failed");
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -366,12 +380,26 @@ export default function DomainSettingsPage() {
             </div>
 
             <p className="text-sm text-muted-foreground">
-              After adding these records, verification can take 5-60 minutes. We'll automatically check and activate your domain.
+              After adding these records, verification can take 5-60 minutes. We'll automatically check every 15 minutes, or you can manually check now.
             </p>
 
-            <Button variant="outline" className="w-full">
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Checking Verification...
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={handleVerifyDomain}
+              disabled={isVerifying}
+            >
+              {isVerifying ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Checking Verification...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Check Verification Status
+                </>
+              )}
             </Button>
           </CardContent>
         </Card>
