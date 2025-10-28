@@ -62,6 +62,7 @@ export default function DomainSettingsPage() {
       return;
     }
 
+    console.log("🔗 Connecting domain:", { storeId, domain: domain.trim() });
     setIsConnecting(true);
     try {
       const result = await connectDomain({
@@ -69,13 +70,17 @@ export default function DomainSettingsPage() {
         domain: domain.trim(),
       });
 
+      console.log("✅ Domain connection result:", result);
+
       if (result.success) {
         toast.success(result.message);
         setDomain("");
+        setIsEditing(false);
       } else {
         toast.error(result.message);
       }
     } catch (error: any) {
+      console.error("❌ Domain connection error:", error);
       toast.error(error.message || "Failed to connect domain");
     } finally {
       setIsConnecting(false);
