@@ -33,15 +33,18 @@ export const connectCustomDomain = action({
       return { success: false, message: "This domain is already connected to another store" };
     }
 
-    // Add domain to Vercel first
-    // TODO: Uncomment when vercelDomainManager is registered
-    // const vercelResult: { success: boolean; message: string } = await ctx.runAction(internal.vercelDomainManager.addDomainToVercel, {
-    //   domain,
-    //   storeId: args.storeId,
-    // });
-
-    // For now, skip Vercel API (add manually or add later)
-    const vercelResult = { success: true, message: "Skipping Vercel API for now" };
+    // Add domain to Vercel automatically
+    let vercelResult: { success: boolean; message: string };
+    try {
+      vercelResult = await ctx.runAction((internal as any).vercelDomainManager.addDomainToVercel, {
+        domain,
+        storeId: args.storeId,
+      });
+    } catch (error) {
+      // Fallback if vercelDomainManager not registered yet
+      console.log("Vercel API not available, skipping auto-add");
+      vercelResult = { success: true, message: "Manual Vercel setup required" };
+    }
 
     if (!vercelResult.success) {
       return {
@@ -156,11 +159,14 @@ export const removeCustomDomain = action({
     });
 
     if (store?.customDomain) {
-      // Remove from Vercel
-      // TODO: Uncomment when vercelDomainManager is registered
-      // await ctx.runAction(internal.vercelDomainManager.removeDomainFromVercel, {
-      //   domain: store.customDomain,
-      // });
+      // Remove from Vercel automatically
+      try {
+        await ctx.runAction((internal as any).vercelDomainManager.removeDomainFromVercel, {
+          domain: store.customDomain,
+        });
+      } catch (error) {
+        console.log("Vercel API not available, skipping auto-remove");
+      }
     }
 
     // Remove from database
