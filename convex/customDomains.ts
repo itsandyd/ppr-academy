@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, internalMutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 
 /**
@@ -99,6 +99,23 @@ export const removeCustomDomain = mutation({
       success: true,
       message: "Custom domain removed successfully",
     };
+  },
+});
+
+/**
+ * Update domain status (internal - called by verification action)
+ */
+export const updateDomainStatus = internalMutation({
+  args: {
+    storeId: v.id("stores"),
+    status: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.storeId, {
+      domainStatus: args.status,
+    });
+    return null;
   },
 });
 

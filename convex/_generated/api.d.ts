@@ -53,6 +53,7 @@ import type * as discord from "../discord.js";
 import type * as discordInternal from "../discordInternal.js";
 import type * as discordPublic from "../discordPublic.js";
 import type * as discordSchema from "../discordSchema.js";
+import type * as domainVerification from "../domainVerification.js";
 import type * as emailABTesting from "../emailABTesting.js";
 import type * as emailAnalyticsRollup from "../emailAnalyticsRollup.js";
 import type * as emailCampaigns from "../emailCampaigns.js";
@@ -169,6 +170,7 @@ declare const fullApi: ApiFromModules<{
   discordInternal: typeof discordInternal;
   discordPublic: typeof discordPublic;
   discordSchema: typeof discordSchema;
+  domainVerification: typeof domainVerification;
   emailABTesting: typeof emailABTesting;
   emailAnalyticsRollup: typeof emailAnalyticsRollup;
   emailCampaigns: typeof emailCampaigns;

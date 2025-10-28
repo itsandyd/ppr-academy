@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -46,10 +46,10 @@ export default function DomainSettingsPage() {
     storeId ? { storeId: storeId as any } : "skip"
   );
 
-  // Mutations
+  // Mutations and actions
   const connectDomain = useMutation(api.customDomains.connectCustomDomain);
   const removeDomain = useMutation(api.customDomains.removeCustomDomain);
-  const verifyDomain = useMutation(api.customDomains.verifyCustomDomain);
+  const verifyDomainDNS = useAction(api.domainVerification.verifyDomainDNS);
 
   const handleCopyDNS = (value: string) => {
     navigator.clipboard.writeText(value);
@@ -76,6 +76,8 @@ export default function DomainSettingsPage() {
         toast.success(result.message);
         setDomain("");
         setIsEditing(false);
+        // Force a page reload to fetch updated store data
+        window.location.reload();
       } else {
         toast.error(result.message);
       }
@@ -101,10 +103,24 @@ export default function DomainSettingsPage() {
   };
 
   const handleVerifyDomain = async () => {
+    if (!currentDomain) return;
+    
     setIsVerifying(true);
     try {
-      const result = await verifyDomain({ storeId: storeId as any });
-      toast.info(result.message);
+      const result = await verifyDomainDNS({ 
+        storeId: storeId as any,
+        domain: currentDomain,
+      });
+
+      if (result.success) {
+        toast.success(result.message);
+        // Reload to show updated status
+        setTimeout(() => window.location.reload(), 1000);
+      } else {
+        toast.error(result.message, {
+          description: `A Record: ${result.aRecordValid ? '✓' : '✗'} | CNAME: ${result.cnameRecordValid ? '✓' : '✗'}`,
+        });
+      }
     } catch (error: any) {
       toast.error(error.message || "Verification check failed");
     } finally {
