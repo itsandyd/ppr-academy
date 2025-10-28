@@ -47,6 +47,15 @@ export const addDomainToVercel = action({
 
       if (!response.ok) {
         console.error("Vercel API error:", data);
+        
+        // Check if it's a scope/permission error
+        if (response.status === 403 || response.status === 401) {
+          return {
+            success: false,
+            message: "Vercel token lacks permissions. Recreate token with 'Full Account' scope.",
+          };
+        }
+        
         return {
           success: false,
           message: data.error?.message || "Failed to add domain to Vercel",
