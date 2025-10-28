@@ -13,6 +13,8 @@ const storeValidator = v.object({
   avatar: v.optional(v.string()),
   logoUrl: v.optional(v.string()),
   bannerImage: v.optional(v.string()),
+  customDomain: v.optional(v.string()),
+  domainStatus: v.optional(v.string()),
   bio: v.optional(v.string()),
   socialLinks: v.optional(v.object({
     website: v.optional(v.string()),

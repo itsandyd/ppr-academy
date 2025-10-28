@@ -42,6 +42,7 @@ import type * as courseNotifications from "../courseNotifications.js";
 import type * as courses from "../courses.js";
 import type * as credits from "../credits.js";
 import type * as crons from "../crons.js";
+import type * as customDomains from "../customDomains.js";
 import type * as customers from "../customers.js";
 import type * as debug_checkEnrollments from "../debug/checkEnrollments.js";
 import type * as debug from "../debug.js";
@@ -157,6 +158,7 @@ declare const fullApi: ApiFromModules<{
   courses: typeof courses;
   credits: typeof credits;
   crons: typeof crons;
+  customDomains: typeof customDomains;
   customers: typeof customers;
   "debug/checkEnrollments": typeof debug_checkEnrollments;
   debug: typeof debug;

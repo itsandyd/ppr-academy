@@ -260,6 +260,106 @@ export function CreatorDashboardContent() {
         </motion.div>
       )}
 
+      {/* Custom Domain Promotion (if not set up) */}
+      {stores?.[0] && !(stores[0] as any).customDomain && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.04 }}
+        >
+          <Card className="border-chart-1/20 bg-gradient-to-r from-chart-1/10 via-chart-2/10 to-chart-3/10">
+            <CardContent className="p-6">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge className="bg-chart-1 text-primary-foreground">Pro Feature</Badge>
+                  </div>
+                  <h3 className="text-lg font-bold mb-2">Use Your Own Domain</h3>
+                  <p className="text-muted-foreground mb-4">
+                    Point your domain (like beatsbymike.com) to your storefront and build your brand.
+                  </p>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
+                    <div className="flex items-center gap-1">
+                      <svg className="w-4 h-4 text-chart-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                      <span>Professional branding</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <svg className="w-4 h-4 text-chart-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                      <span>SEO benefits</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <svg className="w-4 h-4 text-chart-1" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                      <span>Full control</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <Link href={`/store/${storeId}/settings/domain`}>
+                      <Button className="bg-gradient-to-r from-chart-1 to-chart-2 hover:from-chart-1/90 hover:to-chart-2/90">
+                        Connect Your Domain
+                      </Button>
+                    </Link>
+                    <Button variant="outline" onClick={() => {
+                      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ppr-academy.com';
+                      const domain = appUrl.replace('https://', '').replace('http://', '');
+                      navigator.clipboard.writeText(`${appUrl}/${stores?.[0]?.slug}`);
+                      toast.success(`Copied: ${domain}/${stores?.[0]?.slug}`);
+                    }}>
+                      Copy Shareable Link
+                    </Button>
+                  </div>
+                </div>
+                <div className="hidden lg:block">
+                  <div className="w-24 h-24 rounded-lg bg-gradient-to-br from-chart-1/20 to-chart-3/20 flex items-center justify-center">
+                    <svg className="w-12 h-12 text-chart-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Custom Domain Active Status (if set up) */}
+      {(stores?.[0] as any)?.customDomain && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.04 }}
+        >
+          <Card className="border-chart-2/20 bg-chart-2/5">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-chart-2/20 flex items-center justify-center">
+                    <svg className="w-5 h-5 text-chart-2" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                  </div>
+                  <div>
+                    <p className="font-medium">Custom Domain Active</p>
+                    <p className="text-sm text-muted-foreground">{(stores?.[0] as any)?.customDomain}</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(`https://${(stores?.[0] as any)?.customDomain}`, '_blank')}
+                  >
+                    Visit Site
+                  </Button>
+                  <Link href={`/store/${storeId}/settings/domain`}>
+                    <Button variant="ghost" size="sm">
+                      Settings
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
       {/* Onboarding Hints */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}

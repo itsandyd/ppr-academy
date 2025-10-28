@@ -265,6 +265,8 @@ export default defineSchema({
     avatar: v.optional(v.string()),
     logoUrl: v.optional(v.string()), // Store logo URL
     bannerImage: v.optional(v.string()), // Store banner image
+    customDomain: v.optional(v.string()), // Custom domain (e.g., beatsbymike.com)
+    domainStatus: v.optional(v.string()), // pending, verified, active
     bio: v.optional(v.string()),
     socialLinks: v.optional(v.object({
       website: v.optional(v.string()),
