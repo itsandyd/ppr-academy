@@ -71,6 +71,7 @@ import type * as emailWorkflows from "../emailWorkflows.js";
 import type * as emails from "../emails.js";
 import type * as embeddingActions from "../embeddingActions.js";
 import type * as embeddings from "../embeddings.js";
+import type * as fanCountAggregation from "../fanCountAggregation.js";
 import type * as files from "../files.js";
 import type * as http from "../http.js";
 import type * as importFans from "../importFans.js";
@@ -191,6 +192,7 @@ declare const fullApi: ApiFromModules<{
   emails: typeof emails;
   embeddingActions: typeof embeddingActions;
   embeddings: typeof embeddings;
+  fanCountAggregation: typeof fanCountAggregation;
   files: typeof files;
   http: typeof http;
   importFans: typeof importFans;

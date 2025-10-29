@@ -73,4 +73,14 @@ crons.interval(
   internal.inboxSync.fetchInboxReplies
 );
 
+/**
+ * Update fan counts for all stores
+ * Runs every 6 hours to provide accurate total counts
+ */
+crons.interval(
+  "update-fan-counts",
+  { hours: 6 },
+  internal.fanCountAggregation.updateAllStoreFanCounts
+);
+
 export default crons;

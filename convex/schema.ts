@@ -602,6 +602,17 @@ export default defineSchema({
   .index("by_type", ["type"])
   .index("by_email_and_store", ["email", "storeId"]),
 
+  // Fan Count Aggregation (for large datasets)
+  fanCounts: defineTable({
+    storeId: v.string(),
+    totalCount: v.number(),
+    leads: v.number(),
+    paying: v.number(),
+    subscriptions: v.number(),
+    lastUpdated: v.number(), // Timestamp of last count
+  })
+  .index("by_storeId", ["storeId"]),
+
   // Purchase History - Enhanced for library system
   purchases: defineTable({
     userId: v.string(), // Direct user ID from Clerk for library access

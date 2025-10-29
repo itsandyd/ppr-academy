@@ -75,6 +75,55 @@ export const getCustomersForAdmin = query({
   },
 });
 
+// Get customer count for a store (optimized for large datasets)
+export const getCustomerCount = query({
+  args: { storeId: v.string() },
+  returns: v.object({
+    total: v.number(),
+    showing: v.number(),
+    exact: v.boolean(), // Whether this is the exact count or estimate
+    lastUpdated: v.optional(v.number()), // When the count was last updated
+  }),
+  handler: async (ctx, args) => {
+    // First, check if we have a cached exact count
+    const cachedCount = await ctx.db
+      .query("fanCounts")
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+      .first();
+
+    if (cachedCount) {
+      // Return exact count from cache
+      return {
+        total: cachedCount.totalCount,
+        showing: 100,
+        exact: true,
+        lastUpdated: cachedCount.lastUpdated,
+      };
+    }
+
+    // Fall back to sampling if no cached count yet
+    const sample = await ctx.db
+      .query("customers")
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+      .take(1000);
+    
+    // If we got 1000, there are likely more
+    if (sample.length === 1000) {
+      return {
+        total: 1000, // We know there are at least 1000
+        showing: 100,
+        exact: false,
+      };
+    }
+    
+    return {
+      total: sample.length,
+      showing: Math.min(100, sample.length),
+      exact: sample.length < 1000, // If < 1000, we got all of them
+    };
+  },
+});
+
 // Get customers by store with enrollment details
 export const getCustomersForStore = query({
   args: { storeId: v.string() },
@@ -128,117 +177,20 @@ export const getCustomersForStore = query({
     }))),
   })),
   handler: async (ctx, args) => {
+    // For large datasets (>1000 customers), just return basic data without enrichment
+    // Use getCustomerDetails for individual customer lookups
     const customers = await ctx.db
       .query("customers")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .order("desc")
-      .collect();
+      .take(100); // Limit to 100 most recent customers
 
-    // Enrich customers with enrollment and purchase details
-    const enrichedCustomers = await Promise.all(
-      customers.map(async (customer) => {
-        // Get user by email to find their purchases
-        const user = await ctx.db
-          .query("users")
-          .withIndex("by_email", (q) => q.eq("email", customer.email))
-          .first();
-
-        if (!user || !user.clerkId) {
-          return { ...customer, enrolledCourses: [], purchasedProducts: [] };
-        }
-
-        // Get course enrollments
-        const coursePurchases = await ctx.db
-          .query("purchases")
-          .withIndex("by_userId", (q) => q.eq("userId", user.clerkId!))
-          .filter((q) => 
-            q.and(
-              q.eq(q.field("productType"), "course"),
-              q.eq(q.field("status"), "completed")
-            )
-          )
-          .collect();
-
-        // Deduplicate courses (in case user has multiple purchases for same course)
-        const uniqueCourseMap = new Map();
-        for (const purchase of coursePurchases) {
-          if (purchase.courseId && !uniqueCourseMap.has(purchase.courseId)) {
-            uniqueCourseMap.set(purchase.courseId, purchase);
-          }
-        }
-        
-        const uniqueCoursePurchases = Array.from(uniqueCourseMap.values());
-
-        const enrolledCourses = (await Promise.all(
-          uniqueCoursePurchases
-            .filter(p => p.courseId)
-            .map(async (purchase) => {
-              const course = await ctx.db.get(purchase.courseId!);
-              if (!course || !('title' in course)) return null;
-
-              // Get progress
-              const enrollment = await ctx.db
-                .query("enrollments")
-                .withIndex("by_user_course", (q) => 
-                  q.eq("userId", user.clerkId!).eq("courseId", purchase.courseId!)
-                )
-                .unique();
-
-              return {
-                courseId: purchase.courseId!,
-                courseTitle: course.title,
-                enrolledAt: purchase._creationTime,
-                progress: enrollment?.progress || 0,
-              };
-            })
-        )).filter(Boolean);
-
-        // Get digital product purchases
-        const productPurchases = await ctx.db
-          .query("purchases")
-          .withIndex("by_userId", (q) => q.eq("userId", user.clerkId!))
-          .filter((q) => 
-            q.and(
-              q.eq(q.field("productType"), "digitalProduct"),
-              q.eq(q.field("status"), "completed")
-            )
-          )
-          .collect();
-
-        // Deduplicate products
-        const uniqueProductMap = new Map();
-        for (const purchase of productPurchases) {
-          if (purchase.productId && !uniqueProductMap.has(purchase.productId)) {
-            uniqueProductMap.set(purchase.productId, purchase);
-          }
-        }
-        
-        const uniqueProductPurchases = Array.from(uniqueProductMap.values());
-
-        const purchasedProducts = (await Promise.all(
-          uniqueProductPurchases
-            .filter(p => p.productId)
-            .map(async (purchase) => {
-              const product = await ctx.db.get(purchase.productId!);
-              if (!product || !('title' in product)) return null;
-
-              return {
-                productId: purchase.productId!,
-                productTitle: product.title,
-                purchasedAt: purchase._creationTime,
-              };
-            })
-        )).filter(Boolean);
-
-        return {
-          ...customer,
-          enrolledCourses: enrolledCourses as any[],
-          purchasedProducts: purchasedProducts as any[],
-        };
-      })
-    );
-
-    return enrichedCustomers;
+    // Return basic customer data without enrichment for performance
+    return customers.map(customer => ({
+      ...customer,
+      enrolledCourses: [],
+      purchasedProducts: [],
+    }));
   },
 });
 
@@ -376,61 +328,34 @@ export const getCustomerStats = query({
     averageOrderValue: v.number(),
   }),
   handler: async (ctx, args) => {
-    const customers = await ctx.db
+    // For large datasets, use sampling to avoid read limits
+    const customersSample = await ctx.db
       .query("customers")
       .withIndex("by_adminUserId", (q) => q.eq("adminUserId", args.adminUserId))
-      .collect();
+      .take(1000); // Sample first 1000 customers
 
-    const purchases = await ctx.db
+    const purchasesSample = await ctx.db
       .query("purchases")
       .withIndex("by_adminUserId", (q) => q.eq("adminUserId", args.adminUserId))
       .filter(q => q.eq(q.field("status"), "completed"))
-      .collect();
+      .take(1000); // Sample first 1000 purchases
 
-    // Use the newer membershipSubscriptions table instead of legacy subscriptions
-    const membershipSubscriptions = await ctx.db
-      .query("membershipSubscriptions")
-      .filter(q => q.eq(q.field("status"), "active"))
-      .collect();
+    // Count customers by type from sample
+    const leads = customersSample.filter(c => c.type === "lead").length;
+    const paying = customersSample.filter(c => c.type === "paying").length;
+    const subscription = customersSample.filter(c => c.type === "subscription").length;
 
-    // Filter membership subscriptions by matching storeId to adminUserId
-    const stores = await ctx.db
-      .query("stores")
-      .withIndex("by_userId", (q) => q.eq("userId", args.adminUserId))
-      .collect();
-    
-    const storeIds = stores.map(s => s._id);
-    const relevantSubscriptions = membershipSubscriptions.filter(sub => 
-      storeIds.includes(sub.storeId)
-    );
-
-    const totalCustomers = customers.length;
-    const leads = customers.filter(c => c.type === "lead").length;
-    const payingCustomers = customers.filter(c => c.type === "paying").length;
-    const subscriptionCustomers = customers.filter(c => c.type === "subscription").length;
-    
-    // Calculate total revenue from purchases
-    const purchaseRevenue = purchases.reduce((sum, p) => sum + p.amount, 0);
-    
-    // Calculate subscription revenue from membership subscriptions
-    const subscriptionRevenue = relevantSubscriptions.reduce((sum, s) => sum + (s.amountPaid || 0), 0);
-    
-    // Alternative: Sum up totalSpent from all customers (more accurate)
-    const totalRevenueFromCustomers = customers.reduce((sum, c) => sum + (c.totalSpent || 0), 0);
-    
-    // Use the customer-based revenue as it's more accurate and comprehensive
-    const totalRevenue = totalRevenueFromCustomers;
-    
-    const averageOrderValue = purchases.length > 0 ? 
-      purchaseRevenue / purchases.length : 0;
+    // Calculate revenue from sample
+    const totalRevenue = purchasesSample.reduce((sum, p) => sum + (p.amount || 0), 0);
+    const avgOrderValue = purchasesSample.length > 0 ? totalRevenue / purchasesSample.length : 0;
 
     return {
-      totalCustomers,
+      totalCustomers: customersSample.length, // Will be 1000 if there are more
       leads,
-      payingCustomers,
-      subscriptionCustomers,
+      payingCustomers: paying,
+      subscriptionCustomers: subscription,
       totalRevenue,
-      averageOrderValue,
+      averageOrderValue: avgOrderValue,
     };
   },
 });

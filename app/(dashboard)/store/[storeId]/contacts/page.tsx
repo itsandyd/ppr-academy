@@ -57,6 +57,7 @@ import {
   Eye,
   GraduationCap,
   Package,
+  Loader2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -74,6 +75,7 @@ export default function ContactsPage() {
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
   const [importResults, setImportResults] = useState<{ success: number; failed: number; errors: string[] } | null>(null);
+  const [isCounting, setIsCounting] = useState(false);
 
   // New contact form
   const [newContact, setNewContact] = useState({
@@ -102,9 +104,15 @@ export default function ContactsPage() {
 
   const storeId = userStores?.[0]?._id;
 
-  // Fetch contacts (using customers table)
+  // Fetch contacts (using customers table - limited to 100 most recent)
   const contacts = useQuery(
     api.customers.getCustomersForStore,
+    storeId ? { storeId } : "skip"
+  );
+
+  // Fetch total count (optimized for large datasets)
+  const countData = useQuery(
+    api.customers.getCustomerCount,
     storeId ? { storeId } : "skip"
   );
 
@@ -124,7 +132,8 @@ export default function ContactsPage() {
   } : null;
 
   // Import action
-  const importFansAction = useAction(api.importFans.importFansFromCSV);
+  const importFansBatch = useMutation(api.importFans.importFansBatch);
+  const triggerFanCount = useAction(api.fanCountAggregation.triggerCountForStore);
 
   // Filter contacts based on search
   const filteredContacts = contacts?.filter((contact: any) => {
@@ -148,7 +157,7 @@ export default function ContactsPage() {
       const headers = lines[0].split(',').map(h => h.trim());
 
       // Parse CSV
-      const fans = lines.slice(1)
+      const allFans = lines.slice(1)
         .filter(line => line.trim())
         .map(line => {
           const values = line.split(',').map(v => v.trim());
@@ -258,24 +267,51 @@ export default function ContactsPage() {
         })
         .filter((fan: any) => fan.email); // Only include rows with email
 
-      setImportProgress({ current: 0, total: fans.length });
+      // Process in batches of 500
+      const BATCH_SIZE = 500;
+      const batches = [];
+      for (let i = 0; i < allFans.length; i += BATCH_SIZE) {
+        batches.push(allFans.slice(i, i + BATCH_SIZE));
+      }
 
-      // Call import action
-      const result = await importFansAction({
-        storeId,
-        adminUserId: convexUser.clerkId,
-        fans,
-      });
+      setImportProgress({ current: 0, total: allFans.length });
+
+      let totalImported = 0;
+      let totalUpdated = 0;
+      let totalSkipped = 0;
+      const allErrors: Array<{ email: string; error: string }> = [];
+
+      // Process each batch
+      for (let i = 0; i < batches.length; i++) {
+        const batch = batches[i];
+        
+        const result = await importFansBatch({
+          storeId,
+          adminUserId: convexUser.clerkId,
+          fans: batch,
+        });
+
+        totalImported += result.imported;
+        totalUpdated += result.updated;
+        totalSkipped += result.skipped;
+        allErrors.push(...result.errors);
+
+        // Update progress
+        setImportProgress({
+          current: Math.min((i + 1) * BATCH_SIZE, allFans.length),
+          total: allFans.length,
+        });
+      }
 
       setImportResults({
-        success: result.successCount,
-        failed: result.errorCount,
-        errors: result.errors || [],
+        success: totalImported + totalUpdated,
+        failed: allErrors.length,
+        errors: allErrors.map(e => `${e.email}: ${e.error}`),
       });
 
       toast({
         title: "Import complete!",
-        description: `Successfully imported ${result.successCount} fans${result.errorCount > 0 ? ` (${result.errorCount} errors)` : ''}`,
+        description: `Imported ${totalImported} new fans, updated ${totalUpdated} existing fans${allErrors.length > 0 ? ` (${allErrors.length} errors)` : ''}`,
       });
 
       setCsvFile(null);
@@ -296,6 +332,36 @@ export default function ContactsPage() {
       description: "Adding fans directly will be available soon. For now, fans are automatically added when they make a purchase.",
     });
     setIsAddDialogOpen(false);
+  };
+
+  const handleCountFans = async () => {
+    if (!storeId) return;
+
+    setIsCounting(true);
+    try {
+      const result = await triggerFanCount({ storeId });
+      
+      if (result.success) {
+        toast({
+          title: "Count complete!",
+          description: result.message,
+        });
+      } else {
+        toast({
+          title: "Count failed",
+          description: result.message,
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Count failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsCounting(false);
+    }
   };
 
   const handleDeleteContact = async (contactId: Id<"customers">) => {
@@ -585,9 +651,38 @@ export default function ContactsPage() {
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
-                  <div>
+                  <div className="flex-1">
                     <p className="text-sm text-muted-foreground">Total Fans</p>
-                    <p className="text-3xl font-bold">{contactStats.total}</p>
+                    <p className="text-3xl font-bold">
+                      {countData?.exact 
+                        ? countData.total.toLocaleString()
+                        : countData && countData.total >= 1000 
+                        ? '1,000+' 
+                        : contactStats?.total || 0}
+                    </p>
+                    {countData?.exact && countData.lastUpdated && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Updated {new Date(countData.lastUpdated).toLocaleTimeString()}
+                      </p>
+                    )}
+                    {!countData?.exact && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={handleCountFans}
+                        disabled={isCounting}
+                        className="mt-2 h-7 text-xs"
+                      >
+                        {isCounting ? (
+                          <>
+                            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                            Counting...
+                          </>
+                        ) : (
+                          "Get Exact Count"
+                        )}
+                      </Button>
+                    )}
                   </div>
                   <Users className="h-8 w-8 text-blue-500" />
                 </div>
@@ -665,10 +760,37 @@ export default function ContactsPage() {
         {/* Fans List - Card Layout Like Customers */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="w-5 h-5" />
-              Fans ({filteredContacts?.length || 0})
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="w-5 h-5" />
+                  Fans ({filteredContacts?.length || 0}{
+                    countData?.exact
+                      ? ` of ${countData.total.toLocaleString()}`
+                      : countData && countData.total >= 1000 
+                      ? '+ of 1000+' 
+                      : countData && countData.total > 100 
+                      ? ` of ${countData.total.toLocaleString()}` 
+                      : ''
+                  })
+                </CardTitle>
+                {countData && !countData.exact && countData.total >= 1000 && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Showing 100 most recent fans (exact count pending)
+                  </p>
+                )}
+                {countData?.exact && countData.total > 100 && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Showing 100 most recent of {countData.total.toLocaleString()} total fans
+                  </p>
+                )}
+                {countData && countData.total > 100 && countData.total < 1000 && !countData.exact && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Showing 100 most recent fans
+                  </p>
+                )}
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {filteredContacts?.length === 0 ? (

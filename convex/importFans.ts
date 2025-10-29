@@ -3,9 +3,11 @@ import { mutation } from "./_generated/server";
 
 /**
  * Import fans/customers from ActiveCampaign CSV
- * Maps all ActiveCampaign fields to the customers table
+ * Processes fans in batches to avoid argument size limits
+ * 
+ * Max batch size: 500 fans per call (well under 8192 array limit)
  */
-export const importFansFromCSV = mutation({
+export const importFansBatch = mutation({
   args: {
     storeId: v.string(),
     adminUserId: v.string(),
@@ -36,6 +38,7 @@ export const importFansFromCSV = mutation({
       // Engagement
       opensEmail: v.optional(v.boolean()),
       clicksLinks: v.optional(v.boolean()),
+      lastOpenDate: v.optional(v.number()),
       
       // Location
       city: v.optional(v.string()),
@@ -89,6 +92,7 @@ export const importFansFromCSV = mutation({
             genreSpecialty: fan.genreSpecialty || existing.genreSpecialty,
             opensEmail: fan.opensEmail !== undefined ? fan.opensEmail : existing.opensEmail,
             clicksLinks: fan.clicksLinks !== undefined ? fan.clicksLinks : existing.clicksLinks,
+            lastOpenDate: fan.lastOpenDate || existing.lastOpenDate,
             city: fan.city || existing.city,
             state: fan.state || existing.state,
             stateCode: fan.stateCode || existing.stateCode,
@@ -126,6 +130,7 @@ export const importFansFromCSV = mutation({
             genreSpecialty: fan.genreSpecialty,
             opensEmail: fan.opensEmail,
             clicksLinks: fan.clicksLinks,
+            lastOpenDate: fan.lastOpenDate,
             city: fan.city,
             state: fan.state,
             stateCode: fan.stateCode,
