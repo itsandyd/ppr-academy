@@ -429,11 +429,47 @@ export const getCampaignRecipients = internalQuery({
     const campaign = await ctx.db.get(args.campaignId);
     if (!campaign) return [];
 
+    // Check which table this campaign is from
+    const tableName = (args.campaignId as any).__tableName;
+    
+    // Handle emailCampaigns table (newer)
+    if (tableName === "emailCampaigns") {
+      // Get recipients from emailCampaignRecipients table
+      const campaignRecipients = await ctx.db
+        .query("emailCampaignRecipients")
+        .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId as any))
+        .collect();
+      
+      // Fetch customer details for each recipient
+      const recipients = [];
+      for (const recipient of campaignRecipients) {
+        const customer = await ctx.db.get(recipient.customerId);
+        if (customer && customer.email) {
+          recipients.push({
+            email: customer.email,
+            userId: customer.adminUserId,
+            name: customer.name,
+            // Add additional customer fields for personalization
+            musicAlias: customer.musicAlias,
+            daw: customer.daw,
+            studentLevel: customer.studentLevel,
+            city: customer.city,
+            state: customer.state,
+            country: customer.country,
+          });
+        }
+      }
+      return recipients;
+    }
+
+    // Handle resendCampaigns table (older) - original logic
+    const resendCampaign = campaign as any;
+    
     // Custom recipients (specific users)
-    if (campaign.targetAudience === "custom_list" && campaign.customRecipients) {
+    if (resendCampaign.targetAudience === "custom_list" && resendCampaign.customRecipients) {
       // customRecipients contains user IDs, so we need to look them up
       const recipients: Array<{ email: string; userId: string | undefined; name: string | undefined }> = [];
-      for (const userId of campaign.customRecipients) {
+      for (const userId of resendCampaign.customRecipients) {
         // Type assertion: we know these are user IDs
         const user = await ctx.db.get(userId as any);
         // Type guard: check if this is actually a user document
@@ -450,15 +486,15 @@ export const getCampaignRecipients = internalQuery({
 
     const allUsers = await ctx.db.query("users").collect();
 
-    switch (campaign.targetAudience) {
+    switch (resendCampaign.targetAudience) {
       case "all_users":
         return allUsers
           .filter((u) => u.email)
           .map((u) => ({ email: u.email!, userId: u.clerkId, name: u.name }));
 
       case "course_students":
-        if (campaign.targetCourseId) {
-          const courseIdStr = campaign.targetCourseId as string;
+        if (resendCampaign.targetCourseId) {
+          const courseIdStr = resendCampaign.targetCourseId as string;
           const enrollments = await ctx.db
             .query("enrollments")
             .withIndex("by_courseId", (q) => q.eq("courseId", courseIdStr))
@@ -471,10 +507,10 @@ export const getCampaignRecipients = internalQuery({
         break;
 
       case "store_students":
-        if (campaign.targetStoreId) {
+        if (resendCampaign.targetStoreId) {
           const courses = await ctx.db
             .query("courses")
-            .withIndex("by_storeId", (q) => q.eq("storeId", campaign.targetStoreId))
+            .withIndex("by_storeId", (q) => q.eq("storeId", resendCampaign.targetStoreId))
             .collect();
           const courseIds = courses.map((c) => c._id);
           const enrollments = await ctx.db.query("enrollments").collect();
@@ -490,8 +526,8 @@ export const getCampaignRecipients = internalQuery({
         break;
 
       case "inactive_users":
-        if (campaign.inactiveDays) {
-          const cutoff = Date.now() - campaign.inactiveDays * 24 * 60 * 60 * 1000;
+        if (resendCampaign.inactiveDays) {
+          const cutoff = Date.now() - resendCampaign.inactiveDays * 24 * 60 * 60 * 1000;
           return allUsers
             .filter((u) => u.email && u._creationTime < cutoff)
             .map((u) => ({ email: u.email!, userId: u.clerkId, name: u.name }));
@@ -499,8 +535,8 @@ export const getCampaignRecipients = internalQuery({
         break;
 
       case "completed_course":
-        if (campaign.targetCourseId) {
-          const courseIdStr = campaign.targetCourseId as string;
+        if (resendCampaign.targetCourseId) {
+          const courseIdStr = resendCampaign.targetCourseId as string;
           const enrollments = await ctx.db
             .query("enrollments")
             .withIndex("by_courseId", (q) => q.eq("courseId", courseIdStr))
@@ -524,7 +560,7 @@ export const getCampaignRecipients = internalQuery({
  */
 export const updateCampaignStatus = internalMutation({
   args: {
-    campaignId: v.id("resendCampaigns"),
+    campaignId: v.union(v.id("resendCampaigns"), v.id("emailCampaigns")),
     status: v.union(
       v.literal("draft"),
       v.literal("scheduled"),
@@ -546,7 +582,7 @@ export const updateCampaignStatus = internalMutation({
  */
 export const updateCampaignMetrics = internalMutation({
   args: {
-    campaignId: v.id("resendCampaigns"),
+    campaignId: v.union(v.id("resendCampaigns"), v.id("emailCampaigns")),
     recipientCount: v.optional(v.number()),
     sentCount: v.optional(v.number()),
   },

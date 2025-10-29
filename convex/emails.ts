@@ -68,7 +68,7 @@ function personalizeContent(
  */
 export const processCampaign = internalAction({
   args: {
-    campaignId: v.id("resendCampaigns"),
+    campaignId: v.union(v.id("resendCampaigns"), v.id("emailCampaigns")),
   },
   handler: async (ctx, args) => {
     console.log("=== STARTING CAMPAIGN PROCESSING ===");
@@ -116,11 +116,15 @@ export const processCampaign = internalAction({
       }
       console.log("✅ Resend client initialized");
 
-      // Get connection for sender details (if this is a store campaign)
+      // Check which table this campaign is from
+      const tableName = (args.campaignId as any).__tableName;
+      const isEmailCampaign = tableName === "emailCampaigns";
+
+      // Get connection for sender details (if this is a resendCampaign)
       let connection = null;
-      if (campaign.connectionId) {
+      if (!isEmailCampaign && (campaign as any).connectionId) {
         connection = await ctx.runQuery(internal.emailQueries.getConnectionById, {
-          connectionId: campaign.connectionId,
+          connectionId: (campaign as any).connectionId,
         });
 
         if (!connection) {
@@ -128,27 +132,47 @@ export const processCampaign = internalAction({
         }
       }
 
-      // Use connection settings or defaults for admin campaigns
-      const fromEmail = connection?.fromEmail || process.env.FROM_EMAIL || "noreply@yourdomain.com";
-      const fromName = connection?.fromName || process.env.FROM_NAME || "PPR Academy";
-      const replyToEmail = connection?.replyToEmail || process.env.REPLY_TO_EMAIL || fromEmail;
+      // Get email settings
+      let fromEmail, fromName, replyToEmail;
+      if (isEmailCampaign) {
+        // Use settings from emailCampaigns table
+        const emailCampaign = campaign as any;
+        fromEmail = emailCampaign.fromEmail;
+        fromName = "PPR Academy"; // Default name
+        replyToEmail = emailCampaign.replyToEmail || emailCampaign.fromEmail;
+      } else {
+        // Use connection settings or defaults for resendCampaigns
+        fromEmail = connection?.fromEmail || process.env.FROM_EMAIL || "noreply@yourdomain.com";
+        fromName = connection?.fromName || process.env.FROM_NAME || "PPR Academy";
+        replyToEmail = connection?.replyToEmail || process.env.REPLY_TO_EMAIL || fromEmail;
+      }
       console.log(`📧 Email settings - From: ${fromName} <${fromEmail}>, ReplyTo: ${replyToEmail}`);
 
       // Get email content
-      let htmlContent = campaign.htmlContent || "";
-      let textContent = campaign.textContent || "";
+      let htmlContent = "";
+      let textContent = "";
+      
+      if (isEmailCampaign) {
+        // emailCampaigns stores content directly
+        htmlContent = (campaign as any).content || "";
+        textContent = ""; // emailCampaigns doesn't have separate textContent
+      } else {
+        // resendCampaigns may have htmlContent/textContent or use a template
+        htmlContent = (campaign as any).htmlContent || "";
+        textContent = (campaign as any).textContent || "";
 
-      if (campaign.templateId) {
-        console.log("📄 Loading template:", campaign.templateId);
-        const template = await ctx.runQuery(internal.emailQueries.getTemplateById, {
-          templateId: campaign.templateId,
-        });
-        if (template) {
-          htmlContent = template.htmlContent;
-          textContent = template.textContent;
-          console.log("✅ Template loaded");
-        } else {
-          console.warn("⚠️ Template not found!");
+        if ((campaign as any).templateId) {
+          console.log("📄 Loading template:", (campaign as any).templateId);
+          const template = await ctx.runQuery(internal.emailQueries.getTemplateById, {
+            templateId: (campaign as any).templateId as any,
+          });
+          if (template) {
+            htmlContent = template.htmlContent;
+            textContent = template.textContent;
+            console.log("✅ Template loaded");
+          } else {
+            console.warn("⚠️ Template not found!");
+          }
         }
       }
 
@@ -211,15 +235,15 @@ export const processCampaign = internalAction({
               }
 
               // Log email send (only if there's a connection)
-              if (campaign.connectionId) {
+              if (!isEmailCampaign && connection) {
                 await ctx.runMutation(internal.emailQueries.logEmail, {
-                  connectionId: campaign.connectionId,
+                  connectionId: (campaign as any).connectionId,
                   resendEmailId: result.data?.id,
                   recipientEmail: recipient.email,
                   recipientUserId: recipient.userId,
                   recipientName: recipient.name,
-                  campaignId: args.campaignId,
-                  templateId: campaign.templateId,
+                  campaignId: args.campaignId as any,
+                  templateId: (campaign as any).templateId as any,
                   subject: campaign.subject,
                   fromEmail: fromEmail,
                   fromName: fromName,
@@ -233,14 +257,14 @@ export const processCampaign = internalAction({
               console.error(`  ❌ Exception sending to ${recipient.email}:`, error.message);
               
               // Log failed send (only if there's a connection)
-              if (campaign.connectionId) {
+              if (!isEmailCampaign && connection) {
                 await ctx.runMutation(internal.emailQueries.logEmail, {
-                  connectionId: campaign.connectionId,
+                  connectionId: (campaign as any).connectionId,
                   recipientEmail: recipient.email,
                   recipientUserId: recipient.userId,
                   recipientName: recipient.name,
-                  campaignId: args.campaignId,
-                  templateId: campaign.templateId,
+                  campaignId: args.campaignId as any,
+                  templateId: (campaign as any).templateId as any,
                   subject: campaign.subject,
                   fromEmail: fromEmail,
                   fromName: fromName,
