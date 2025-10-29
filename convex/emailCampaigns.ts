@@ -105,6 +105,7 @@ export const getCampaigns = query({
     replyToEmail: v.optional(v.string()),
     tags: v.optional(v.array(v.string())),
     templateId: v.optional(v.string()),
+    updatedAt: v.optional(v.number()),
   })),
   handler: async (ctx, args) => {
     let query = ctx.db
@@ -146,6 +147,9 @@ export const getCampaign = query({
     fromEmail: v.string(),
     replyToEmail: v.optional(v.string()),
     tags: v.optional(v.array(v.string())),
+    previewText: v.optional(v.string()),
+    templateId: v.optional(v.string()),
+    updatedAt: v.optional(v.number()),
   })),
   handler: async (ctx, args) => {
     return await ctx.db.get(args.campaignId);
