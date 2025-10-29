@@ -781,6 +781,7 @@ export default defineSchema({
     scheduledAt: v.optional(v.number()),
     sentAt: v.optional(v.number()),
     recipientCount: v.optional(v.number()),
+    sentCount: v.optional(v.number()), // Number of emails successfully sent
     deliveredCount: v.optional(v.number()),
     openedCount: v.optional(v.number()),
     clickedCount: v.optional(v.number()),

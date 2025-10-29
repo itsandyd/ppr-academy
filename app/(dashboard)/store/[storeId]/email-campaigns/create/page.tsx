@@ -75,6 +75,7 @@ export default function CreateCampaignPage() {
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [isLoadingTemplate, setIsLoadingTemplate] = useState(false);
+  const [isAddingAllCustomers, setIsAddingAllCustomers] = useState(false);
   
   // Product attachment & AI options
   const [selectedProductId, setSelectedProductId] = useState<string | undefined>();
@@ -114,8 +115,13 @@ export default function CreateCampaignPage() {
     { label: "Country", value: "{{country}}", description: "Country location" },
   ];
 
-  // Fetch customers for recipient selection
-  // Only load when searching to avoid hitting limits
+  // Fetch initial customers (first 100) for recipient selection
+  const initialCustomers = useQuery(
+    api.customers?.getCustomersForStore,
+    storeId ? { storeId } : "skip"
+  );
+
+  // Fetch search results when user is actively searching
   const searchResults = useQuery(
     api.customers?.searchCustomersForStore,
     recipientSearch.length >= 2 ? { storeId, searchTerm: recipientSearch } : "skip"
@@ -127,8 +133,8 @@ export default function CreateCampaignPage() {
     storeId ? { storeId } : "skip"
   );
 
-  // Use search results when searching, otherwise empty
-  const customers = searchResults || [];
+  // Use search results when searching, otherwise show initial customers
+  const customers = recipientSearch.length >= 2 ? (searchResults || []) : (initialCustomers || []);
   const totalCustomers = customerCount?.total || 0;
   const isSearching = recipientSearch.length >= 2 && searchResults === undefined;
   
@@ -196,6 +202,7 @@ export default function CreateCampaignPage() {
 
   const createCampaign = useMutation((api as any).emailCampaigns?.createCampaign);
   const addRecipients = useMutation((api as any).emailCampaigns?.addRecipients);
+  const addAllCustomersAsRecipients = useMutation((api as any).emailCampaigns?.addAllCustomersAsRecipients);
   const generateCopy = useAction(api.emailCopyGenerator?.generateEmailCopy);
 
   // Generate email copy from product + template
@@ -260,6 +267,94 @@ export default function CreateCampaignPage() {
       });
     } finally {
       setIsGeneratingCopy(false);
+    }
+  };
+
+  // Handler to add ALL customers from the store as recipients
+  const handleAddAllCustomers = async () => {
+    if (!confirm(`Add ALL ${totalCustomers.toLocaleString()} customers as recipients? This may take a moment.`)) {
+      return;
+    }
+
+    // Need basic campaign info first
+    if (!campaignName.trim()) {
+      toast({
+        title: "Missing Information",
+        description: "Please enter a campaign name first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!subject.trim() || !content.trim() || !fromEmail.trim()) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in subject, content, and from email before adding all recipients",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsAddingAllCustomers(true);
+    try {
+      // Create campaign first
+      const newCampaignId = await createCampaign({
+        name: campaignName,
+        subject,
+        content,
+        previewText,
+        fromEmail,
+        replyToEmail,
+        storeId,
+        adminUserId: user?.id || "",
+      });
+
+      toast({
+        title: "Adding all customers...",
+        description: `Processing ${totalCustomers.toLocaleString()} customers. This will take a few moments.`,
+      });
+
+      // Add customers in batches by calling mutation repeatedly
+      // Each call automatically skips customers already added
+      let hasMore = true;
+      let totalAdded = 0;
+      let batchCount = 0;
+
+      while (hasMore) {
+        const result = await addAllCustomersAsRecipients({
+          campaignId: newCampaignId,
+          storeId,
+          batchSize: 100, // Process 100 at a time
+        });
+
+        totalAdded = result.totalCount;
+        hasMore = result.hasMore;
+        batchCount++;
+
+        // Show progress
+        if (hasMore && batchCount % 10 === 0) {
+          toast({
+            title: "Processing...",
+            description: `Added ${totalAdded.toLocaleString()} of ~${totalCustomers.toLocaleString()} recipients (batch ${batchCount})`,
+          });
+        }
+      }
+
+      toast({
+        title: "Success!",
+        description: `Added all ${totalAdded.toLocaleString()} recipients to your campaign`,
+      });
+
+      // Navigate to the campaign
+      router.push(`/store/${storeId}/email-campaigns/${newCampaignId}`);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add all customers",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAddingAllCustomers(false);
     }
   };
 
@@ -780,31 +875,61 @@ export default function CreateCampaignPage() {
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <CardTitle>Select Recipients</CardTitle>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
                       <span className="text-sm text-muted-foreground">
                         {selectedCustomers.length} selected • {totalCustomers.toLocaleString()} total contacts
                       </span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleSelectAllCustomers}
-                        disabled={customers.length === 0}
-                      >
-                        {selectedCustomers.length === customers.length ? "Deselect All" : "Select All Visible"}
-                      </Button>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {/* Quick Actions */}
+                  <div className="flex items-center gap-2 p-4 bg-gradient-to-r from-chart-1/10 to-chart-2/10 border border-chart-1/20 rounded-lg">
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">Send to everyone?</p>
+                      <p className="text-xs text-muted-foreground">
+                        Add all {totalCustomers.toLocaleString()} customers as recipients
+                      </p>
+                    </div>
+                    <Button
+                      onClick={handleAddAllCustomers}
+                      disabled={isAddingAllCustomers || totalCustomers === 0}
+                      className="bg-gradient-to-r from-chart-1 to-chart-2 hover:from-chart-1/90 hover:to-chart-2/90"
+                    >
+                      {isAddingAllCustomers ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Adding...
+                        </>
+                      ) : (
+                        <>
+                          <Users className="w-4 h-4 mr-2" />
+                          Add All
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t border-border" />
+                    </div>
+                    <div className="relative flex justify-center text-xs">
+                      <span className="bg-background px-2 text-muted-foreground">
+                        Or select specific recipients
+                      </span>
+                    </div>
+                  </div>
+
                   {/* Search Box */}
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input
-                      placeholder={`Search by name or email... (${totalCustomers.toLocaleString()} contacts in database)`}
+                      placeholder={`Search by name or email...`}
                       value={recipientSearch}
                       onChange={(e) => setRecipientSearch(e.target.value)}
                       className="pl-10"
-                      autoFocus
                     />
                     {recipientSearch && (
                       <Button
@@ -818,20 +943,6 @@ export default function CreateCampaignPage() {
                     )}
                   </div>
 
-                  {/* Helper Text */}
-                  {!recipientSearch && (
-                    <div className="text-center py-12">
-                      <Search className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                      <h3 className="text-lg font-semibold mb-2">Search to find recipients</h3>
-                      <p className="text-muted-foreground mb-2">
-                        Type a name or email to search through your {totalCustomers.toLocaleString()} contacts
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        💡 Tip: Search for specific names, emails, or domains (e.g. "@gmail.com")
-                      </p>
-                    </div>
-                  )}
-
                   {/* Loading State */}
                   {isSearching && (
                     <div className="text-center py-12">
@@ -844,33 +955,39 @@ export default function CreateCampaignPage() {
                   )}
 
                   {/* Recipients List */}
-                  {!isSearching && recipientSearch && customers.length === 0 ? (
+                  {!isSearching && customers.length === 0 ? (
                     <div className="text-center py-12">
-                      <Search className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                      <h3 className="text-lg font-semibold mb-2">No results found</h3>
+                      <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">No contacts found</h3>
                       <p className="text-muted-foreground">
-                        No customers match "{recipientSearch}"
+                        {recipientSearch ? `No customers match "${recipientSearch}"` : "No customers in your store yet"}
                       </p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setRecipientSearch("")}
-                        className="mt-4"
-                      >
-                        Clear Search
-                      </Button>
                     </div>
-                  ) : !isSearching && recipientSearch && customers.length > 0 ? (
+                  ) : !isSearching && customers.length > 0 ? (
                     <>
                       <div className="flex items-center justify-between">
                         <p className="text-sm text-muted-foreground">
-                          Found {customers.length} matching contact{customers.length !== 1 ? 's' : ''}
+                          {recipientSearch 
+                            ? `Found ${customers.length} matching contact${customers.length !== 1 ? 's' : ''}`
+                            : `Showing ${customers.length} recent contact${customers.length !== 1 ? 's' : ''}`
+                          }
                         </p>
-                        {customers.length === 200 && (
-                          <Badge variant="outline" className="text-xs">
-                            Showing top 200 results
-                          </Badge>
-                        )}
+                        <div className="flex gap-2">
+                          {customers.length === 200 && (
+                            <Badge variant="outline" className="text-xs">
+                              Top 200 results
+                            </Badge>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleSelectAllCustomers}
+                          >
+                            {selectedCustomers.length === customers.length && selectedCustomers.length > 0
+                              ? "Deselect All" 
+                              : `Select All ${customers.length}`}
+                          </Button>
+                        </div>
                       </div>
                       <div className="space-y-3 max-h-96 overflow-y-auto">
                         {customers.map((customer: any) => (

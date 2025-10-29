@@ -98,6 +98,7 @@ export const getCampaigns = query({
     scheduledAt: v.optional(v.number()),
     sentAt: v.optional(v.number()),
     recipientCount: v.optional(v.number()),
+    sentCount: v.optional(v.number()),
     deliveredCount: v.optional(v.number()),
     openedCount: v.optional(v.number()),
     clickedCount: v.optional(v.number()),
@@ -141,6 +142,7 @@ export const getCampaign = query({
     scheduledAt: v.optional(v.number()),
     sentAt: v.optional(v.number()),
     recipientCount: v.optional(v.number()),
+    sentCount: v.optional(v.number()),
     deliveredCount: v.optional(v.number()),
     openedCount: v.optional(v.number()),
     clickedCount: v.optional(v.number()),
@@ -211,6 +213,92 @@ export const addRecipients = mutation({
     });
 
     return addedCount;
+  },
+});
+
+// Add ALL customers from a store as recipients (for bulk sends)
+// Uses a smart filtering approach: only processes customers not yet added
+export const addAllCustomersAsRecipients = mutation({
+  args: {
+    campaignId: v.id("emailCampaigns"),
+    storeId: v.string(),
+    batchSize: v.optional(v.number()),
+  },
+  returns: v.object({
+    addedCount: v.number(),
+    totalCount: v.number(),
+    hasMore: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    const campaign = await ctx.db.get(args.campaignId);
+    if (!campaign) {
+      throw new Error("Campaign not found");
+    }
+
+    if (campaign.status !== "draft") {
+      throw new Error("Can only add recipients to draft campaigns");
+    }
+
+    const batchSize = args.batchSize || 100;
+
+    // Get existing recipient customer IDs (just the IDs, not full docs)
+    const existingRecipients = await ctx.db
+      .query("emailCampaignRecipients")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId))
+      .collect();
+    
+    const existingCustomerIds = new Set(existingRecipients.map(r => r.customerId));
+
+    // Fetch a batch of customers and filter out ones already added
+    const customers = await ctx.db
+      .query("customers")
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+      .order("asc")
+      .take(batchSize * 10); // Fetch more to account for filtering
+    
+    // Filter to only customers not yet added
+    const customersToAdd = customers.filter(c => !existingCustomerIds.has(c._id));
+    const customersToProcess = customersToAdd.slice(0, batchSize); // Take only batchSize
+
+    if (customersToProcess.length === 0) {
+      // No more customers to add
+      await ctx.db.patch(args.campaignId, {
+        recipientCount: existingCustomerIds.size,
+      });
+
+      return {
+        addedCount: 0,
+        totalCount: existingCustomerIds.size,
+        hasMore: false,
+      };
+    }
+
+    // Add this batch of customers as recipients
+    let addedCount = 0;
+    for (const customer of customersToProcess) {
+      await ctx.db.insert("emailCampaignRecipients", {
+        campaignId: args.campaignId,
+        customerId: customer._id,
+        customerEmail: customer.email,
+        customerName: customer.name,
+        status: "queued",
+      });
+      addedCount++;
+    }
+
+    const newTotalCount = existingCustomerIds.size + addedCount;
+    const hasMore = customersToAdd.length > batchSize; // More filtered customers available
+
+    // Update count
+    await ctx.db.patch(args.campaignId, {
+      recipientCount: newTotalCount,
+    });
+
+    return {
+      addedCount,
+      totalCount: newTotalCount,
+      hasMore,
+    };
   },
 });
 

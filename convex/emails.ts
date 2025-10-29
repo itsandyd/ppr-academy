@@ -116,9 +116,13 @@ export const processCampaign = internalAction({
       }
       console.log("✅ Resend client initialized");
 
-      // Check which table this campaign is from
-      const tableName = (args.campaignId as any).__tableName;
-      const isEmailCampaign = tableName === "emailCampaigns";
+      // Check if this is an emailCampaign by looking for recipients in emailCampaignRecipients table
+      const emailCampaignRecipients = await ctx.runQuery(
+        internal.emailQueries.checkEmailCampaignRecipients,
+        { campaignId: args.campaignId }
+      );
+      const isEmailCampaign = emailCampaignRecipients > 0;
+      console.log(`📋 Campaign type: ${isEmailCampaign ? 'emailCampaigns' : 'resendCampaigns'}`);
 
       // Get connection for sender details (if this is a resendCampaign)
       let connection = null;

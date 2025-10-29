@@ -421,6 +421,21 @@ export const getTemplateById = internalQuery({
 });
 
 /**
+ * Check if campaign has recipients in emailCampaignRecipients table (INTERNAL)
+ */
+export const checkEmailCampaignRecipients = internalQuery({
+  args: { campaignId: v.union(v.id("resendCampaigns"), v.id("emailCampaigns")) },
+  returns: v.number(),
+  handler: async (ctx, args) => {
+    const recipients = await ctx.db
+      .query("emailCampaignRecipients")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId as any))
+      .collect();
+    return recipients.length;
+  },
+});
+
+/**
  * Get campaign recipients (INTERNAL)
  */
 export const getCampaignRecipients = internalQuery({
@@ -429,20 +444,17 @@ export const getCampaignRecipients = internalQuery({
     const campaign = await ctx.db.get(args.campaignId);
     if (!campaign) return [];
 
-    // Check which table this campaign is from
-    const tableName = (args.campaignId as any).__tableName;
+    // Try to fetch from emailCampaignRecipients table first (for emailCampaigns)
+    const emailCampaignRecipients = await ctx.db
+      .query("emailCampaignRecipients")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId as any))
+      .collect();
     
-    // Handle emailCampaigns table (newer)
-    if (tableName === "emailCampaigns") {
-      // Get recipients from emailCampaignRecipients table
-      const campaignRecipients = await ctx.db
-        .query("emailCampaignRecipients")
-        .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId as any))
-        .collect();
-      
-      // Fetch customer details for each recipient
+    // If we found recipients in emailCampaignRecipients, this is an emailCampaign
+    if (emailCampaignRecipients.length > 0) {
+      // Fetch customer details for each recipient to get personalization fields
       const recipients = [];
-      for (const recipient of campaignRecipients) {
+      for (const recipient of emailCampaignRecipients) {
         const customer = await ctx.db.get(recipient.customerId);
         if (customer && customer.email) {
           recipients.push({
@@ -462,7 +474,7 @@ export const getCampaignRecipients = internalQuery({
       return recipients;
     }
 
-    // Handle resendCampaigns table (older) - original logic
+    // Otherwise, this is a resendCampaign - use original logic
     const resendCampaign = campaign as any;
     
     // Custom recipients (specific users)
