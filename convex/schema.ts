@@ -564,6 +564,37 @@ export default defineSchema({
     lastActivity: v.optional(v.number()),
     source: v.optional(v.string()),
     notes: v.optional(v.string()),
+    
+    // ActiveCampaign / Fan Management Fields
+    phone: v.optional(v.string()),
+    tags: v.optional(v.array(v.string())), // For segmentation
+    
+    // Producer Profile Fields
+    daw: v.optional(v.string()), // Digital Audio Workstation (Ableton, FL Studio, etc.)
+    typeOfMusic: v.optional(v.string()), // Genre preference
+    goals: v.optional(v.string()), // Production goals
+    musicAlias: v.optional(v.string()), // Artist name
+    studentLevel: v.optional(v.string()), // Beginner, Intermediate, Advanced, Pro
+    howLongProducing: v.optional(v.string()),
+    whySignedUp: v.optional(v.string()),
+    genreSpecialty: v.optional(v.string()),
+    
+    // Engagement Tracking
+    score: v.optional(v.number()), // Engagement score (0-100)
+    lastOpenDate: v.optional(v.number()), // Last email open
+    opensEmail: v.optional(v.boolean()),
+    clicksLinks: v.optional(v.boolean()),
+    
+    // Location
+    city: v.optional(v.string()),
+    state: v.optional(v.string()),
+    stateCode: v.optional(v.string()),
+    zipCode: v.optional(v.string()),
+    country: v.optional(v.string()),
+    countryCode: v.optional(v.string()),
+    
+    // ActiveCampaign Import
+    activeCampaignId: v.optional(v.string()),
   })
   .index("by_email", ["email"])
   .index("by_storeId", ["storeId"])

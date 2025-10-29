@@ -226,7 +226,7 @@ export default function EmailCampaignsPage() {
 
       {/* Tabs for Campaigns and Automations */}
       <Tabs defaultValue="campaigns" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 bg-white dark:bg-black">
+        <TabsList className="grid w-full grid-cols-3 bg-white dark:bg-black">
           <TabsTrigger value="campaigns" className="flex items-center gap-2">
             <Mail className="w-4 h-4" />
             Campaigns
@@ -234,6 +234,10 @@ export default function EmailCampaignsPage() {
           <TabsTrigger value="automations" className="flex items-center gap-2">
             <Zap className="w-4 h-4" />
             Automations
+          </TabsTrigger>
+          <TabsTrigger value="contacts" className="flex items-center gap-2" onClick={() => router.push(`/store/${storeId}/contacts`)}>
+            <Users className="w-4 h-4" />
+            Fans
           </TabsTrigger>
         </TabsList>
 

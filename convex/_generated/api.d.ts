@@ -73,6 +73,7 @@ import type * as embeddingActions from "../embeddingActions.js";
 import type * as embeddings from "../embeddings.js";
 import type * as files from "../files.js";
 import type * as http from "../http.js";
+import type * as importFans from "../importFans.js";
 import type * as inboxActions from "../inboxActions.js";
 import type * as inboxHelpers from "../inboxHelpers.js";
 import type * as inboxQueries from "../inboxQueries.js";
@@ -192,6 +193,7 @@ declare const fullApi: ApiFromModules<{
   embeddings: typeof embeddings;
   files: typeof files;
   http: typeof http;
+  importFans: typeof importFans;
   inboxActions: typeof inboxActions;
   inboxHelpers: typeof inboxHelpers;
   inboxQueries: typeof inboxQueries;

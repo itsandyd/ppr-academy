@@ -644,3 +644,145 @@ export const listHygieneActionsTable = defineTable({
   .index("by_connectionId", ["connectionId"])
   .index("by_actionType", ["actionType"]);
 
+// ============================================================================
+// CONTACTS - ActiveCampaign-style Contact Management
+// ============================================================================
+
+export const contactsTable = defineTable({
+  // Store/Connection ownership
+  storeId: v.id("stores"),
+  connectionId: v.optional(v.id("resendConnections")),
+  
+  // Core Identity
+  email: v.string(),
+  firstName: v.optional(v.string()),
+  lastName: v.optional(v.string()),
+  phone: v.optional(v.string()),
+  
+  // ActiveCampaign Import Fields
+  activeCampaignId: v.optional(v.string()), // Original AC contact ID
+  dateCreated: v.optional(v.number()),
+  ipAddress: v.optional(v.string()),
+  userAgent: v.optional(v.string()),
+  
+  // Custom Fields - Sign Up Info
+  whySignedUp: v.optional(v.string()),
+  pricing: v.optional(v.string()),
+  availability: v.optional(v.string()),
+  
+  // Student Fields
+  studentLessonsAndGoals: v.optional(v.string()),
+  studentLevel: v.optional(v.string()), // e.g., "beginner", "intermediate", "advanced"
+  
+  // Coach Fields
+  genreSpecialty: v.optional(v.string()),
+  coachStyle: v.optional(v.string()),
+  coachBackground: v.optional(v.string()),
+  
+  // Email Preferences
+  emailPreferences: v.optional(v.string()),
+  opensEmail: v.optional(v.boolean()),
+  clicksLinks: v.optional(v.boolean()),
+  
+  // Producer Profile
+  howLongProducing: v.optional(v.string()),
+  typeOfMusic: v.optional(v.string()),
+  goals: v.optional(v.string()),
+  musicAlias: v.optional(v.string()),
+  daw: v.optional(v.string()), // Digital Audio Workstation
+  whyGoalsNotReached: v.optional(v.string()),
+  
+  // Activity Tracking
+  lastSignIn: v.optional(v.number()),
+  lastActivity: v.optional(v.number()),
+  lastOpenDate: v.optional(v.number()),
+  
+  // Location
+  address: v.optional(v.string()),
+  city: v.optional(v.string()),
+  state: v.optional(v.string()),
+  stateCode: v.optional(v.string()),
+  zipCode: v.optional(v.string()),
+  country: v.optional(v.string()),
+  countryCode: v.optional(v.string()),
+  
+  // Engagement Scoring (ActiveCampaign-style)
+  purchasePoints: v.optional(v.number()), // Points from purchases
+  totalPoints: v.optional(v.number()), // Sum of all points
+  score: v.optional(v.number()), // Overall engagement score (0-100+)
+  replyPoints: v.optional(v.number()), // Points from email replies
+  
+  // Tags (flexible tagging system)
+  tags: v.array(v.string()), // e.g., ["student", "hip-hop", "pro-tools", "engaged"]
+  
+  // List/Audience Assignment
+  audienceListIds: v.optional(v.array(v.id("resendAudienceLists"))),
+  
+  // Status
+  status: v.union(
+    v.literal("active"),
+    v.literal("unsubscribed"),
+    v.literal("bounced"),
+    v.literal("complained")
+  ),
+  unsubscribedAt: v.optional(v.number()),
+  
+  // Metadata
+  source: v.optional(v.string()), // e.g., "activecampaign_import", "landing_page", "checkout"
+  importBatchId: v.optional(v.id("resendImportedContacts")),
+  
+  createdAt: v.number(),
+  updatedAt: v.number(),
+})
+  .index("by_storeId", ["storeId"])
+  .index("by_email", ["email"])
+  .index("by_storeId_and_email", ["storeId", "email"])
+  .index("by_status", ["status"])
+  .index("by_score", ["score"])
+  .index("by_activeCampaignId", ["activeCampaignId"]);
+
+// Contact Activity Log (track all interactions)
+export const contactActivityTable = defineTable({
+  contactId: v.id("contacts"),
+  storeId: v.id("stores"),
+  
+  // Activity type
+  activityType: v.union(
+    v.literal("email_opened"),
+    v.literal("email_clicked"),
+    v.literal("email_replied"),
+    v.literal("email_bounced"),
+    v.literal("email_complained"),
+    v.literal("purchase"),
+    v.literal("course_enrolled"),
+    v.literal("tag_added"),
+    v.literal("tag_removed"),
+    v.literal("score_updated"),
+    v.literal("manual_note"),
+    v.literal("form_submitted")
+  ),
+  
+  // Context
+  campaignId: v.optional(v.id("resendCampaigns")),
+  automationId: v.optional(v.id("emailWorkflows")),
+  
+  // Activity details
+  description: v.string(),
+  metadata: v.optional(v.object({
+    points: v.optional(v.number()),
+    linkClicked: v.optional(v.string()),
+    purchaseAmount: v.optional(v.number()),
+    tags: v.optional(v.array(v.string())),
+    note: v.optional(v.string()),
+  })),
+  
+  // Scoring impact
+  pointsAdded: v.optional(v.number()),
+  
+  createdAt: v.number(),
+})
+  .index("by_contactId", ["contactId"])
+  .index("by_storeId", ["storeId"])
+  .index("by_activityType", ["activityType"])
+  .index("by_contactId_and_createdAt", ["contactId", "createdAt"]);
+
