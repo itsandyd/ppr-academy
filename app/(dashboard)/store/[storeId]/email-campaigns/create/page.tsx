@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -24,6 +24,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { 
   Mail, 
   Users, 
@@ -34,10 +42,13 @@ import {
   User,
   Package,
   Sparkles,
-  Loader2
+  Loader2,
+  Search,
+  Plus
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAction } from "convex/react";
+import { WysiwygEditor, WysiwygEditorRef } from "@/components/ui/wysiwyg-editor";
 
 export default function CreateCampaignPage() {
   const { user } = useUser();
@@ -70,12 +81,56 @@ export default function CreateCampaignPage() {
   const [isGeneratingCopy, setIsGeneratingCopy] = useState(false);
   const [emailStyle, setEmailStyle] = useState<string>("casual-producer");
   const [copyLength, setCopyLength] = useState<string>("medium");
+  const [recipientSearch, setRecipientSearch] = useState("");
+
+  // Ref for Tiptap editor
+  const editorRef = useRef<WysiwygEditorRef>(null);
+
+  // Personalization token insertion helpers
+  const insertToken = (token: string, targetField: 'subject' | 'content') => {
+    if (targetField === 'subject') {
+      setSubject(prev => prev + token);
+    } else {
+      // Use the editor ref to insert into Tiptap
+      if (editorRef.current) {
+        editorRef.current.insertText(token);
+      }
+    }
+    toast({
+      title: "Token inserted",
+      description: `Added ${token} to ${targetField === 'subject' ? 'subject line' : 'email content'}`,
+    });
+  };
+
+  const personalizationTokens = [
+    { label: "First Name", value: "{{firstName}}", description: "Contact's first name" },
+    { label: "Full Name", value: "{{name}}", description: "Contact's full name" },
+    { label: "Email", value: "{{email}}", description: "Contact's email address" },
+    { label: "Music Alias", value: "{{musicAlias}}", description: "Artist/producer name" },
+    { label: "DAW", value: "{{daw}}", description: "Digital Audio Workstation" },
+    { label: "Student Level", value: "{{studentLevel}}", description: "Skill level" },
+    { label: "City", value: "{{city}}", description: "City location" },
+    { label: "State", value: "{{state}}", description: "State location" },
+    { label: "Country", value: "{{country}}", description: "Country location" },
+  ];
 
   // Fetch customers for recipient selection
-  const customers = useQuery(
-    api.customers?.getCustomersForStore,
+  // Only load when searching to avoid hitting limits
+  const searchResults = useQuery(
+    api.customers?.searchCustomersForStore,
+    recipientSearch.length >= 2 ? { storeId, searchTerm: recipientSearch } : "skip"
+  );
+
+  // Get total count for display
+  const customerCount = useQuery(
+    api.customers?.getCustomerCount,
     storeId ? { storeId } : "skip"
-  ) || [];
+  );
+
+  // Use search results when searching, otherwise empty
+  const customers = searchResults || [];
+  const totalCustomers = customerCount?.total || 0;
+  const isSearching = recipientSearch.length >= 2 && searchResults === undefined;
   
   // Fetch store's email configuration
   const emailConfig = useQuery(
@@ -627,18 +682,42 @@ export default function CreateCampaignPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="subject">Subject Line</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="subject">Subject Line</Label>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm" className="h-7 text-xs">
+                            <Plus className="w-3 h-3 mr-1" />
+                            Insert Field
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-black">
+                          <DropdownMenuLabel>Personalization Fields</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          {personalizationTokens.map((token) => (
+                            <DropdownMenuItem
+                              key={token.value}
+                              onClick={() => insertToken(token.value, 'subject')}
+                              className="cursor-pointer"
+                            >
+                              <div className="flex flex-col">
+                                <span className="font-medium">{token.label}</span>
+                                <span className="text-xs text-muted-foreground">{token.description}</span>
+                              </div>
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                     <Input
                       id="subject"
-                      placeholder="📢 Exciting news from our store!"
+                      placeholder="e.g., Hey {{firstName}}, check out this new course!"
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
                     />
-                    {template && (
-                      <p className="text-xs text-muted-foreground">
-                        💡 Replace variables like {'{{productName}}'} with actual values
-                      </p>
-                    )}
+                    <p className="text-xs text-muted-foreground">
+                      💡 Click "Insert Field" above to add personalization
+                    </p>
                   </div>
 
                   <div className="space-y-2">
@@ -652,17 +731,45 @@ export default function CreateCampaignPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="content">Email Content</Label>
-                    <Textarea
-                      id="content"
-                      placeholder="Write your email content here... You can use HTML for formatting."
-                      value={content}
-                      onChange={(e) => setContent(e.target.value)}
-                      className="min-h-[300px]"
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="content">Email Content</Label>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm" className="h-7 text-xs">
+                            <Plus className="w-3 h-3 mr-1" />
+                            Insert Field
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56 bg-white dark:bg-black">
+                          <DropdownMenuLabel>Personalization Fields</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          {personalizationTokens.map((token) => (
+                            <DropdownMenuItem
+                              key={token.value}
+                              onClick={() => insertToken(token.value, 'content')}
+                              className="cursor-pointer"
+                            >
+                              <div className="flex flex-col">
+                                <span className="font-medium">{token.label}</span>
+                                <span className="text-xs text-muted-foreground">{token.description}</span>
+                              </div>
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                    <WysiwygEditor
+                      ref={editorRef}
+                      content={content}
+                      onChange={setContent}
+                      placeholder="Write your email content here... You can use formatting, add links, lists, and more."
+                      className="min-h-[400px]"
                     />
-                    <p className="text-sm text-muted-foreground">
-                      💡 Tip: {template ? "Replace {{variables}} with your actual content" : "You can use HTML tags for formatting (bold, links, etc.)"}
-                    </p>
+                    <div className="flex items-start gap-2 text-sm text-muted-foreground">
+                      <div className="flex-1">
+                        💡 Tip: Use the toolbar to format or click "Insert Field" to personalize
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -675,52 +782,121 @@ export default function CreateCampaignPage() {
                     <CardTitle>Select Recipients</CardTitle>
                     <div className="flex items-center gap-4">
                       <span className="text-sm text-muted-foreground">
-                        {selectedCustomers.length} of {customers.length} selected
+                        {selectedCustomers.length} selected • {totalCustomers.toLocaleString()} total contacts
                       </span>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={handleSelectAllCustomers}
+                        disabled={customers.length === 0}
                       >
-                        {selectedCustomers.length === customers.length ? "Deselect All" : "Select All"}
+                        {selectedCustomers.length === customers.length ? "Deselect All" : "Select All Visible"}
                       </Button>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent>
-                  {customers.length === 0 ? (
+                <CardContent className="space-y-4">
+                  {/* Search Box */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      placeholder={`Search by name or email... (${totalCustomers.toLocaleString()} contacts in database)`}
+                      value={recipientSearch}
+                      onChange={(e) => setRecipientSearch(e.target.value)}
+                      className="pl-10"
+                      autoFocus
+                    />
+                    {recipientSearch && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setRecipientSearch("")}
+                        className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 px-2 text-xs"
+                      >
+                        Clear
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Helper Text */}
+                  {!recipientSearch && (
                     <div className="text-center py-12">
-                      <User className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                      <h3 className="text-lg font-semibold mb-2">No customers found</h3>
-                      <p className="text-muted-foreground">
-                        You need customers in your database before you can send campaigns.
+                      <Search className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">Search to find recipients</h3>
+                      <p className="text-muted-foreground mb-2">
+                        Type a name or email to search through your {totalCustomers.toLocaleString()} contacts
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        💡 Tip: Search for specific names, emails, or domains (e.g. "@gmail.com")
                       </p>
                     </div>
-                  ) : (
-                    <div className="space-y-3 max-h-96 overflow-y-auto">
-                      {customers.map((customer: any) => (
-                        <div
-                          key={customer._id}
-                          className="flex items-center gap-3 p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors"
-                        >
-                          <Checkbox
-                            checked={selectedCustomers.includes(customer._id)}
-                            onCheckedChange={() => toggleCustomerSelection(customer._id)}
-                          />
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-medium">{customer.name}</span>
-                              {getCustomerBadge(customer)}
-                            </div>
-                            <p className="text-sm text-muted-foreground">{customer.email}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {customer.source} • Joined {new Date(customer._creationTime).toLocaleDateString()}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
+                  )}
+
+                  {/* Loading State */}
+                  {isSearching && (
+                    <div className="text-center py-12">
+                      <Loader2 className="w-12 h-12 text-chart-1 mx-auto mb-4 animate-spin" />
+                      <h3 className="text-lg font-semibold mb-2">Searching...</h3>
+                      <p className="text-muted-foreground">
+                        Looking through {totalCustomers.toLocaleString()} contacts for "{recipientSearch}"
+                      </p>
                     </div>
                   )}
+
+                  {/* Recipients List */}
+                  {!isSearching && recipientSearch && customers.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Search className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">No results found</h3>
+                      <p className="text-muted-foreground">
+                        No customers match "{recipientSearch}"
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setRecipientSearch("")}
+                        className="mt-4"
+                      >
+                        Clear Search
+                      </Button>
+                    </div>
+                  ) : !isSearching && recipientSearch && customers.length > 0 ? (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm text-muted-foreground">
+                          Found {customers.length} matching contact{customers.length !== 1 ? 's' : ''}
+                        </p>
+                        {customers.length === 200 && (
+                          <Badge variant="outline" className="text-xs">
+                            Showing top 200 results
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="space-y-3 max-h-96 overflow-y-auto">
+                        {customers.map((customer: any) => (
+                          <div
+                            key={customer._id}
+                            className="flex items-center gap-3 p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors"
+                          >
+                            <Checkbox
+                              checked={selectedCustomers.includes(customer._id)}
+                              onCheckedChange={() => toggleCustomerSelection(customer._id)}
+                            />
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="font-medium">{customer.name}</span>
+                                {getCustomerBadge(customer)}
+                              </div>
+                              <p className="text-sm text-muted-foreground">{customer.email}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {customer.source} • Joined {new Date(customer._creationTime).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  ) : null}
                 </CardContent>
               </Card>
             </TabsContent>

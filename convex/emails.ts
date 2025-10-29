@@ -18,6 +18,47 @@ function getResendClient(apiKey?: string) {
   return resendClient;
 }
 
+/**
+ * Replace personalization tokens in content
+ */
+function personalizeContent(
+  content: string, 
+  recipient: { 
+    name: string; 
+    email: string;
+    musicAlias?: string;
+    daw?: string;
+    studentLevel?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+  }
+): string {
+  // Extract first name from full name
+  const firstName = recipient.name.split(' ')[0] || recipient.name;
+  
+  return content
+    // {{firstName}} or {{first_name}}
+    .replace(/\{\{firstName\}\}/g, firstName)
+    .replace(/\{\{first_name\}\}/g, firstName)
+    // {{name}} or {{fullName}}
+    .replace(/\{\{name\}\}/g, recipient.name)
+    .replace(/\{\{fullName\}\}/g, recipient.name)
+    .replace(/\{\{full_name\}\}/g, recipient.name)
+    // {{email}}
+    .replace(/\{\{email\}\}/g, recipient.email)
+    // Producer/Fan specific fields
+    .replace(/\{\{musicAlias\}\}/g, recipient.musicAlias || '')
+    .replace(/\{\{daw\}\}/g, recipient.daw || '')
+    .replace(/\{\{studentLevel\}\}/g, recipient.studentLevel || '')
+    // Location fields
+    .replace(/\{\{city\}\}/g, recipient.city || '')
+    .replace(/\{\{state\}\}/g, recipient.state || '')
+    .replace(/\{\{country\}\}/g, recipient.country || '')
+    // Legacy support for {{customer.name}}
+    .replace(/\{\{customer\.name\}\}/g, recipient.name);
+}
+
 // ============================================================================
 // EMAIL ACTIONS (Node.js Runtime - Resend Integration)
 // ============================================================================
@@ -129,13 +170,36 @@ export const processCampaign = internalAction({
           batch.map(async (recipient: any) => {
             try {
               console.log(`  → Sending to ${recipient.email}...`);
+              
+              // Personalize content for this recipient
+              const personalizedHtml = personalizeContent(htmlContent, {
+                name: recipient.name || 'there',
+                email: recipient.email,
+                musicAlias: recipient.musicAlias,
+                daw: recipient.daw,
+                studentLevel: recipient.studentLevel,
+                city: recipient.city,
+                state: recipient.state,
+                country: recipient.country,
+              });
+              const personalizedSubject = personalizeContent(campaign.subject, {
+                name: recipient.name || 'there',
+                email: recipient.email,
+                musicAlias: recipient.musicAlias,
+                daw: recipient.daw,
+                studentLevel: recipient.studentLevel,
+                city: recipient.city,
+                state: recipient.state,
+                country: recipient.country,
+              });
+              
               const result = await resend.emails.send({
                 from: fromName 
                   ? `${fromName} <${fromEmail}>` 
                   : fromEmail,
                 to: recipient.email,
-                subject: campaign.subject,
-                html: htmlContent,
+                subject: personalizedSubject,
+                html: personalizedHtml,
                 text: textContent,
                 replyTo: replyToEmail,
               });

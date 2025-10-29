@@ -23,7 +23,7 @@ import {
   Undo,
   Redo,
 } from "lucide-react";
-import { useCallback } from "react";
+import { useCallback, useImperativeHandle, forwardRef } from "react";
 
 interface WysiwygEditorProps {
   content: string;
@@ -32,12 +32,16 @@ interface WysiwygEditorProps {
   className?: string;
 }
 
-export function WysiwygEditor({
+export interface WysiwygEditorRef {
+  insertText: (text: string) => void;
+}
+
+export const WysiwygEditor = forwardRef<WysiwygEditorRef, WysiwygEditorProps>(({
   content,
   onChange,
   placeholder = "Start writing...",
   className = "",
-}: WysiwygEditorProps) {
+}, ref) => {
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -59,10 +63,19 @@ export function WysiwygEditor({
     },
     editorProps: {
       attributes: {
-        class: "prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none min-h-[200px] px-4 py-3",
+        class: "prose prose-sm max-w-none focus:outline-none h-full px-4 py-3",
       },
     },
   });
+
+  // Expose insertText method to parent
+  useImperativeHandle(ref, () => ({
+    insertText: (text: string) => {
+      if (editor) {
+        editor.chain().focus().insertContent(text).run();
+      }
+    },
+  }));
 
   const addImage = useCallback(() => {
     const url = window.prompt("Enter image URL:");
@@ -92,15 +105,15 @@ export function WysiwygEditor({
   }
 
   return (
-    <div className={`border border-gray-200 dark:border-gray-700 rounded-lg ${className}`}>
+    <div className={`border border-border rounded-lg flex flex-col ${className}`}>
       {/* Toolbar */}
-      <div className="border-b border-gray-200 dark:border-gray-700 p-2 flex flex-wrap gap-1 bg-gray-50 dark:bg-gray-800 rounded-t-lg">
+      <div className="border-b border-border p-2 flex flex-wrap gap-1 bg-muted rounded-t-lg flex-shrink-0">
         {/* Text Formatting */}
         <Button
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().toggleBold().run()}
-          className={editor.isActive("bold") ? "bg-gray-200 dark:bg-gray-600" : ""}
+          className={editor.isActive("bold") ? "bg-accent" : ""}
         >
           <Bold className="h-4 w-4" />
         </Button>
@@ -108,7 +121,7 @@ export function WysiwygEditor({
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().toggleItalic().run()}
-          className={editor.isActive("italic") ? "bg-gray-200 dark:bg-gray-600" : ""}
+          className={editor.isActive("italic") ? "bg-accent" : ""}
         >
           <Italic className="h-4 w-4" />
         </Button>
@@ -116,7 +129,7 @@ export function WysiwygEditor({
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().toggleStrike().run()}
-          className={editor.isActive("strike") ? "bg-gray-200 dark:bg-gray-600" : ""}
+          className={editor.isActive("strike") ? "bg-accent" : ""}
         >
           <Strikethrough className="h-4 w-4" />
         </Button>
@@ -124,7 +137,7 @@ export function WysiwygEditor({
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().toggleCode().run()}
-          className={editor.isActive("code") ? "bg-gray-200 dark:bg-gray-600" : ""}
+          className={editor.isActive("code") ? "bg-accent" : ""}
         >
           <Code className="h-4 w-4" />
         </Button>
@@ -136,7 +149,7 @@ export function WysiwygEditor({
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-          className={editor.isActive("heading", { level: 1 }) ? "bg-gray-200 dark:bg-gray-600" : ""}
+          className={editor.isActive("heading", { level: 1 }) ? "bg-accent" : ""}
         >
           <Heading1 className="h-4 w-4" />
         </Button>
@@ -144,7 +157,7 @@ export function WysiwygEditor({
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-          className={editor.isActive("heading", { level: 2 }) ? "bg-gray-200 dark:bg-gray-600" : ""}
+          className={editor.isActive("heading", { level: 2 }) ? "bg-accent" : ""}
         >
           <Heading2 className="h-4 w-4" />
         </Button>
@@ -152,7 +165,7 @@ export function WysiwygEditor({
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-          className={editor.isActive("heading", { level: 3 }) ? "bg-gray-200 dark:bg-gray-600" : ""}
+          className={editor.isActive("heading", { level: 3 }) ? "bg-accent" : ""}
         >
           <Heading3 className="h-4 w-4" />
         </Button>
@@ -164,7 +177,7 @@ export function WysiwygEditor({
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().toggleBulletList().run()}
-          className={editor.isActive("bulletList") ? "bg-gray-200 dark:bg-gray-600" : ""}
+          className={editor.isActive("bulletList") ? "bg-accent" : ""}
         >
           <List className="h-4 w-4" />
         </Button>
@@ -172,7 +185,7 @@ export function WysiwygEditor({
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          className={editor.isActive("orderedList") ? "bg-gray-200 dark:bg-gray-600" : ""}
+          className={editor.isActive("orderedList") ? "bg-accent" : ""}
         >
           <ListOrdered className="h-4 w-4" />
         </Button>
@@ -180,7 +193,7 @@ export function WysiwygEditor({
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().toggleBlockquote().run()}
-          className={editor.isActive("blockquote") ? "bg-gray-200 dark:bg-gray-600" : ""}
+          className={editor.isActive("blockquote") ? "bg-accent" : ""}
         >
           <Quote className="h-4 w-4" />
         </Button>
@@ -217,17 +230,19 @@ export function WysiwygEditor({
       </div>
 
       {/* Editor Content */}
-      <div className="bg-white dark:bg-gray-900">
+      <div className="bg-background flex-1 overflow-hidden relative">
         <EditorContent 
           editor={editor} 
-          className="min-h-[200px] max-h-[400px] overflow-y-auto"
+          className="h-full overflow-y-auto"
         />
         {editor.isEmpty && (
-          <div className="absolute top-[60px] left-4 text-gray-400 pointer-events-none">
-            {placeholder}
+          <div className="absolute top-3 left-4 text-muted-foreground pointer-events-none prose prose-sm">
+            <p>{placeholder}</p>
           </div>
         )}
       </div>
     </div>
   );
-}
+});
+
+WysiwygEditor.displayName = "WysiwygEditor";
