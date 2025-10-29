@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useUser } from "@clerk/nextjs";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,6 +36,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import {
   Users,
@@ -54,6 +55,8 @@ import {
   XCircle,
   BarChart3,
   Eye,
+  GraduationCap,
+  Package,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -66,6 +69,11 @@ export default function ContactsPage() {
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "unsubscribed" | "bounced" | "complained">("all");
   const [selectedContact, setSelectedContact] = useState<Id<"customers"> | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
+  const [importResults, setImportResults] = useState<{ success: number; failed: number; errors: string[] } | null>(null);
 
   // New contact form
   const [newContact, setNewContact] = useState({
@@ -115,6 +123,9 @@ export default function ContactsPage() {
     topTags: [], // Can add tags to customers later
   } : null;
 
+  // Import action
+  const importFansAction = useAction(api.importFans.importFansFromCSV);
+
   // Filter contacts based on search
   const filteredContacts = contacts?.filter((contact: any) => {
     if (!searchQuery) return true;
@@ -124,6 +135,160 @@ export default function ContactsPage() {
       contact.email.toLowerCase().includes(search)
     );
   });
+
+  const handleImportCSV = async () => {
+    if (!csvFile || !storeId || !convexUser) return;
+
+    setIsImporting(true);
+    setImportResults(null);
+
+    try {
+      const text = await csvFile.text();
+      const lines = text.split('\n');
+      const headers = lines[0].split(',').map(h => h.trim());
+
+      // Parse CSV
+      const fans = lines.slice(1)
+        .filter(line => line.trim())
+        .map(line => {
+          const values = line.split(',').map(v => v.trim());
+          const fan: any = {};
+
+          headers.forEach((header, index) => {
+            const value = values[index];
+            if (!value) return;
+
+            // Map CSV columns to customer fields
+            switch (header.toLowerCase()) {
+              case 'email':
+                fan.email = value;
+                break;
+              case 'first name':
+                fan.firstName = value;
+                break;
+              case 'last name':
+                fan.lastName = value;
+                break;
+              case 'phone':
+              case 'phone number':
+                fan.phone = value;
+                break;
+              case 'tags':
+                fan.tags = value.split(';').map((t: string) => t.trim());
+                break;
+              case 'score':
+              case '*score 7':
+                fan.score = parseInt(value) || 0;
+                break;
+              case 'daw':
+              case '*daw':
+                fan.daw = value;
+                break;
+              case 'type of music':
+              case '*type of music':
+                fan.typeOfMusic = value;
+                break;
+              case 'goals':
+              case '*goals':
+                fan.goals = value;
+                break;
+              case 'music alias':
+              case '*music alias':
+                fan.musicAlias = value;
+                break;
+              case 'student level':
+              case '*student level':
+                fan.studentLevel = value;
+                break;
+              case 'how long have you been producing for':
+              case '*how long have you been producing for':
+                fan.howLongProducing = value;
+                break;
+              case 'why did you sign up':
+              case '*why did you sign up':
+                fan.whySignedUp = value;
+                break;
+              case 'genre specialty':
+              case '*genre specialty':
+                fan.genreSpecialty = value;
+                break;
+              case 'opens email':
+              case '*opens email':
+                fan.opensEmail = value.toLowerCase() === 'true' || value === '1';
+                break;
+              case 'clicks links':
+              case '*clicks links':
+                fan.clicksLinks = value.toLowerCase() === 'true' || value === '1';
+                break;
+              case 'last open date':
+              case '*last open date':
+                fan.lastOpenDate = new Date(value).getTime();
+                break;
+              case 'city':
+              case '*city':
+                fan.city = value;
+                break;
+              case 'state':
+              case '*state':
+                fan.state = value;
+                break;
+              case 'state code':
+              case '*state code':
+                fan.stateCode = value;
+                break;
+              case 'zip code':
+              case '*zip code':
+                fan.zipCode = value;
+                break;
+              case 'country':
+              case '*country':
+                fan.country = value;
+                break;
+              case 'country code':
+              case '*country code':
+                fan.countryCode = value;
+                break;
+              case 'id':
+                fan.activeCampaignId = value;
+                break;
+            }
+          });
+
+          return fan;
+        })
+        .filter((fan: any) => fan.email); // Only include rows with email
+
+      setImportProgress({ current: 0, total: fans.length });
+
+      // Call import action
+      const result = await importFansAction({
+        storeId,
+        adminUserId: convexUser.clerkId,
+        fans,
+      });
+
+      setImportResults({
+        success: result.successCount,
+        failed: result.errorCount,
+        errors: result.errors || [],
+      });
+
+      toast({
+        title: "Import complete!",
+        description: `Successfully imported ${result.successCount} fans${result.errorCount > 0 ? ` (${result.errorCount} errors)` : ''}`,
+      });
+
+      setCsvFile(null);
+    } catch (error: any) {
+      toast({
+        title: "Import failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsImporting(false);
+    }
+  };
 
   const handleCreateContact = async () => {
     toast({
@@ -176,10 +341,123 @@ export default function ContactsPage() {
             </div>
             
             <div className="flex gap-2">
-              <Button variant="outline" className="gap-2">
-                <Upload className="h-4 w-4" />
-                Import CSV
-              </Button>
+              <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" className="gap-2">
+                    <Upload className="h-4 w-4" />
+                    Import CSV
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl bg-white dark:bg-black">
+                  <DialogHeader>
+                    <DialogTitle>Import Fans from CSV</DialogTitle>
+                    <DialogDescription>
+                      Upload a CSV file with your ActiveCampaign contacts or fan data
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="space-y-4">
+                    {/* File Upload */}
+                    <div className="border-2 border-dashed rounded-lg p-8 text-center">
+                      <Input
+                        type="file"
+                        accept=".csv"
+                        onChange={(e) => setCsvFile(e.target.files?.[0] || null)}
+                        className="hidden"
+                        id="csv-upload"
+                      />
+                      <label
+                        htmlFor="csv-upload"
+                        className="cursor-pointer flex flex-col items-center gap-2"
+                      >
+                        <Upload className="h-8 w-8 text-muted-foreground" />
+                        <p className="text-sm font-medium">
+                          {csvFile ? csvFile.name : "Choose a CSV file"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Click to browse or drag and drop
+                        </p>
+                      </label>
+                    </div>
+
+                    {/* CSV Format Guide */}
+                    <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                      <h4 className="font-medium mb-2 text-sm">CSV Format</h4>
+                      <p className="text-xs text-muted-foreground mb-2">
+                        Your CSV should have these column headers:
+                      </p>
+                      <code className="text-xs bg-white dark:bg-black p-2 rounded block overflow-x-auto">
+                        Email,First Name,Last Name,Phone,Tags,Score,DAW,Type of Music,Goals,Music Alias,Student Level,City,State,Country
+                      </code>
+                    </div>
+
+                    {/* Import Progress */}
+                    {isImporting && (
+                      <div className="space-y-2">
+                        <p className="text-sm text-muted-foreground">
+                          Importing... {importProgress.current} / {importProgress.total}
+                        </p>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-blue-600 h-2 rounded-full transition-all"
+                            style={{
+                              width: `${(importProgress.current / importProgress.total) * 100}%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Import Results */}
+                    {importResults && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm">
+                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          <span>{importResults.success} fans imported successfully</span>
+                        </div>
+                        {importResults.failed > 0 && (
+                          <div className="flex items-center gap-2 text-sm text-red-600">
+                            <XCircle className="h-4 w-4" />
+                            <span>{importResults.failed} errors</span>
+                          </div>
+                        )}
+                        {importResults.errors.length > 0 && (
+                          <div className="text-xs text-muted-foreground max-h-32 overflow-y-auto">
+                            {importResults.errors.slice(0, 5).map((error, i) => (
+                              <p key={i}>{error}</p>
+                            ))}
+                            {importResults.errors.length > 5 && (
+                              <p>... and {importResults.errors.length - 5} more</p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsImportDialogOpen(false);
+                        setCsvFile(null);
+                        setImportResults(null);
+                      }}
+                      disabled={isImporting}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleImportCSV}
+                      disabled={!csvFile || isImporting}
+                      className="gap-2"
+                    >
+                      {isImporting ? "Importing..." : "Import Fans"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
               <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                 <DialogTrigger asChild>
                   <Button className="gap-2 bg-gradient-to-r from-blue-600 to-purple-600">
@@ -384,82 +662,160 @@ export default function ContactsPage() {
           </CardContent>
         </Card>
 
-        {/* Contacts Table */}
+        {/* Fans List - Card Layout Like Customers */}
         <Card>
           <CardHeader>
-            <CardTitle>Fans ({filteredContacts?.length || 0})</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Fans ({filteredContacts?.length || 0})
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Fan</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Total Spent</TableHead>
-                  <TableHead>Enrolled</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredContacts?.map((contact) => (
-                  <TableRow key={contact._id}>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{contact.name}</p>
-                        <p className="text-sm text-muted-foreground">{contact.email}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={contact.status === "active" ? "default" : "secondary"}
-                      >
-                        {contact.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={
-                          contact.type === "lead"
-                            ? "bg-green-50 text-green-700"
-                            : contact.type === "paying"
-                            ? "bg-blue-50 text-blue-700"
-                            : "bg-purple-50 text-purple-700"
-                        }
-                      >
-                        {contact.type}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-medium">${contact.totalSpent?.toFixed(2) || "0.00"}</span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm text-muted-foreground">
-                        {contact.enrolledCourses?.length || 0} course(s)
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setSelectedContact(contact._id)}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-
-            {filteredContacts?.length === 0 && (
+            {filteredContacts?.length === 0 ? (
               <div className="text-center py-12">
                 <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-muted-foreground">No fans found</p>
                 <p className="text-sm text-muted-foreground mt-2">
                   Fans are automatically added when they make a purchase
                 </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {filteredContacts?.map((contact: any) => (
+                  <Card key={contact._id} className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <Avatar className="w-10 h-10">
+                          <AvatarFallback className="bg-blue-100 text-blue-600">
+                            {contact.name
+                              .split(" ")
+                              .map((n: string) => n.charAt(0))
+                              .join("")
+                              .toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-semibold">{contact.name}</h3>
+                            <Badge
+                              variant="outline"
+                              className={
+                                contact.type === "lead"
+                                  ? "bg-green-50 text-green-700 border-green-200"
+                                  : contact.type === "paying"
+                                  ? "bg-blue-50 text-blue-700 border-blue-200"
+                                  : "bg-purple-50 text-purple-700 border-purple-200"
+                              }
+                            >
+                              {contact.type === "lead" ? "Lead" : contact.type === "paying" ? "Customer" : "Subscriber"}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-gray-600">{contact.email}</p>
+                          <p className="text-xs text-gray-500">
+                            {contact.source || "Unknown source"} • {new Date(contact._creationTime).toLocaleDateString()}
+                          </p>
+
+                          {/* Show Producer Profile (DAW, Genre, Level) */}
+                          {(contact.daw || contact.typeOfMusic || contact.studentLevel) && (
+                            <div className="mt-2 flex flex-wrap gap-1">
+                              {contact.daw && (
+                                <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 text-xs">
+                                  🎹 {contact.daw}
+                                </Badge>
+                              )}
+                              {contact.typeOfMusic && (
+                                <Badge variant="outline" className="bg-pink-50 text-pink-700 border-pink-200 text-xs">
+                                  🎵 {contact.typeOfMusic}
+                                </Badge>
+                              )}
+                              {contact.studentLevel && (
+                                <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 text-xs">
+                                  📊 {contact.studentLevel}
+                                </Badge>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Show Tags */}
+                          {contact.tags && contact.tags.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-1">
+                              {contact.tags.slice(0, 5).map((tag: string) => (
+                                <Badge key={tag} variant="secondary" className="text-xs">
+                                  #{tag}
+                                </Badge>
+                              ))}
+                              {contact.tags.length > 5 && (
+                                <Badge variant="secondary" className="text-xs">
+                                  +{contact.tags.length - 5} more
+                                </Badge>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Show Enrolled Courses & Products */}
+                          {(contact.enrolledCourses?.length > 0 || contact.purchasedProducts?.length > 0) && (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {contact.enrolledCourses?.map((course: any, index: number) => (
+                                <Badge
+                                  key={`${course.courseId}-${index}`}
+                                  variant="outline"
+                                  className="bg-blue-50 text-blue-700 border-blue-200 text-xs"
+                                >
+                                  <GraduationCap className="w-3 h-3 mr-1" />
+                                  {course.courseTitle}
+                                  {course.progress > 0 && ` (${course.progress}%)`}
+                                </Badge>
+                              ))}
+                              {contact.purchasedProducts?.map((product: any, index: number) => (
+                                <Badge
+                                  key={`${product.productId}-${index}`}
+                                  variant="outline"
+                                  className="bg-purple-50 text-purple-700 border-purple-200 text-xs"
+                                >
+                                  <Package className="w-3 h-3 mr-1" />
+                                  {product.productTitle}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <p className="text-sm font-medium">${contact.totalSpent?.toFixed(2) || "0.00"}</p>
+                          <p className="text-xs text-gray-500">
+                            {contact.enrolledCourses?.length || 0} course{contact.enrolledCourses?.length !== 1 ? 's' : ''}
+                          </p>
+                          {/* Show Engagement Score */}
+                          {contact.score !== undefined && contact.score > 0 && (
+                            <div className="mt-1">
+                              <p className="text-xs text-purple-600 font-medium">
+                                Score: {contact.score}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex flex-col items-center gap-2">
+                          <Badge
+                            variant={contact.status === "active" ? "default" : "secondary"}
+                            className={contact.status === "active" ? "bg-green-100 text-green-800" : ""}
+                          >
+                            {contact.status}
+                          </Badge>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setSelectedContact(contact._id)}
+                            className="h-8"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
               </div>
             )}
           </CardContent>
