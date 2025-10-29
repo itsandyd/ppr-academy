@@ -406,7 +406,7 @@ export const saveGeneratedAudioToChapter = mutation({
 });
 
 // Step 1: Generate audio only (no metadata)
-export const generateAudioOnly = action({
+export const generateTextToSoundEffect = action({
   args: {
     description: v.string(),
     duration: v.number(),
@@ -431,7 +431,7 @@ export const generateAudioOnly = action({
   }> => {
     try {
       // Generate sound effect (Node.js action handles ElevenLabs + Convex storage upload)
-      const result = await ctx.runAction(internal.audioGenerationNode.callElevenLabsSFX, {
+      const result = await ctx.runAction(internal.sampleGeneration.generateSoundEffectFromText, {
         description: args.description,
         duration: args.duration,
       });
@@ -562,7 +562,7 @@ export const generateAISample = action({
       
       // Generate sound effect using ElevenLabs via Node.js action
       const elevenlabsResult: { success: boolean; filePath?: string; error?: string } = 
-        await ctx.runAction(internal.audioGenerationNode.callElevenLabsSFX, {
+        await ctx.runAction(internal.sampleGeneration.generateSoundEffectFromText, {
           description: args.description,
           duration: args.duration,
         });

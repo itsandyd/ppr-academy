@@ -106,6 +106,7 @@ import type * as recommendations from "../recommendations.js";
 import type * as reports from "../reports.js";
 import type * as resendDomainHelpers from "../resendDomainHelpers.js";
 import type * as resendDomainSync from "../resendDomainSync.js";
+import type * as sampleGeneration from "../sampleGeneration.js";
 import type * as samplePacks from "../samplePacks.js";
 import type * as samples from "../samples.js";
 import type * as seedCreditPackages from "../seedCreditPackages.js";
@@ -224,6 +225,7 @@ declare const fullApi: ApiFromModules<{
   reports: typeof reports;
   resendDomainHelpers: typeof resendDomainHelpers;
   resendDomainSync: typeof resendDomainSync;
+  sampleGeneration: typeof sampleGeneration;
   samplePacks: typeof samplePacks;
   samples: typeof samples;
   seedCreditPackages: typeof seedCreditPackages;

@@ -11,33 +11,76 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Sparkles, Music, AlertCircle, CheckCircle2, Play, Download, Package } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Loader2, Sparkles, Music, AlertCircle, CheckCircle2, Play, Download, Package, Zap, Grid3x3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
+
+// Sample template library (Splice-like)
+const SAMPLE_TEMPLATES = {
+  drums: [
+    { name: "808 Kick Deep", genre: "hip-hop", description: "Deep sub 808 kick drum with heavy punch", tags: ["808", "kick", "sub"], bpm: 95 },
+    { name: "Trap Snare", genre: "trap", description: "Crisp trap snare with clap tail", tags: ["snare", "trap", "crisp"], bpm: 140 },
+    { name: "Breakbeat 1", genre: "dnb", description: "Classic breakbeat loop broken down", tags: ["breakbeat", "dnb", "loop"], bpm: 175 },
+    { name: "Boom Bap Kick", genre: "hip-hop", description: "Punchy boom bap style kick", tags: ["kick", "boom", "hip-hop"], bpm: 90 },
+    { name: "House Clap", genre: "house", description: "Deep house clap with reverb", tags: ["clap", "house", "reverb"], bpm: 128 },
+    { name: "Techno Hi-Hat", genre: "techno", description: "Tight closed hi-hat for techno", tags: ["hi-hat", "techno", "tight"], bpm: 130 },
+  ],
+  bass: [
+    { name: "Bass Line Funk", genre: "funk", description: "Slap bass funky bass line", tags: ["slap", "funk", "bass"], bpm: 100 },
+    { name: "Sub Bass Wobble", genre: "dubstep", description: "Wobbling sub bass with LFO", tags: ["wobble", "dubstep", "sub"], bpm: 140 },
+    { name: "House Bass Deep", genre: "house", description: "Deep rolling house bass", tags: ["house", "deep", "rolling"], bpm: 128 },
+    { name: "Reggae Bass", genre: "reggae", description: "Roots reggae bassline", tags: ["reggae", "roots", "bass"], bpm: 76 },
+    { name: "Synth Bass Retro", genre: "synthwave", description: "Retro synth bass 80s style", tags: ["synth", "retro", "80s"], bpm: 120 },
+  ],
+  synth: [
+    { name: "Synth Lead Bright", genre: "electronic", description: "Bright synth lead with filter sweep", tags: ["lead", "bright", "sweep"], bpm: 120 },
+    { name: "Pad Ambient", genre: "ambient", description: "Lush ambient pad with reverb tail", tags: ["pad", "ambient", "lush"], bpm: 80 },
+    { name: "Pluck Synthwave", genre: "synthwave", description: "Plucky 80s synth lead", tags: ["pluck", "synthwave", "lead"], bpm: 110 },
+    { name: "Keys Electric Piano", genre: "funk", description: "Vintage electric piano keys", tags: ["piano", "keys", "vintage"], bpm: 100 },
+    { name: "Bell Pad", genre: "ambient", description: "Ethereal bell pad texture", tags: ["bell", "pad", "ethereal"], bpm: 60 },
+  ],
+  fx: [
+    { name: "Impact Whoosh", genre: "sound-design", description: "Cinematic whoosh impact effect", tags: ["whoosh", "impact", "cinematic"], bpm: null },
+    { name: "Laser Zap", genre: "sound-design", description: "Retro laser zap sound effect", tags: ["laser", "zap", "retro"], bpm: null },
+    { name: "Sweep Risers", genre: "edm", description: "EDM sweep riser automation", tags: ["riser", "sweep", "edm"], bpm: 128 },
+    { name: "Digital Glitch", genre: "glitch", description: "Digital glitch effect texture", tags: ["glitch", "digital", "texture"], bpm: null },
+    { name: "Reverse Cymbal", genre: "orchestral", description: "Reversed cymbal swell", tags: ["cymbal", "reverse", "orchestral"], bpm: null },
+  ],
+  vocals: [
+    { name: "Vocal Chops Loop", genre: "edm", description: "Chopped vocal loop", tags: ["chop", "vocal", "loop"], bpm: 128 },
+    { name: "Aah Vocal Hit", genre: "pop", description: "Classic aah vocal hit", tags: ["vocal", "hit", "pop"], bpm: 120 },
+    { name: "Vocal Stab", genre: "soul", description: "Soul vocal stab", tags: ["stab", "soul", "vocal"], bpm: 100 },
+  ],
+  melody: [
+    { name: "Arpeggiated Synth", genre: "electronic", description: "Fast arpeggiating synth melody", tags: ["arpeggio", "synth", "fast"], bpm: 120 },
+    { name: "String Melody", genre: "cinematic", description: "Soaring string melody", tags: ["string", "cinematic", "soaring"], bpm: 90 },
+    { name: "Horn Section", genre: "jazz", description: "Jazz horn section melody", tags: ["horn", "jazz", "section"], bpm: 100 },
+  ],
+  loops: [
+    { name: "Lofi Hip Hop Loop", genre: "lofi", description: "Chill lofi hip hop drum loop", tags: ["lofi", "hip-hop", "chill"], bpm: 85 },
+    { name: "Funk Loop Break", genre: "funk", description: "Funky breakbeat loop", tags: ["funk", "break", "loop"], bpm: 100 },
+    { name: "Ambient Loop", genre: "ambient", description: "Evolving ambient soundscape loop", tags: ["ambient", "evolving", "loop"], bpm: 60 },
+  ],
+};
 
 export default function GenerateSamplesPage() {
   const router = useRouter();
   const { user: clerkUser } = useUser();
   const { toast } = useToast();
   
-  const [step, setStep] = useState<"generate" | "metadata">("generate");
+  const [mode, setMode] = useState<"single" | "batch">("single");
+  const [selectedCategory, setSelectedCategory] = useState<keyof typeof SAMPLE_TEMPLATES>("drums");
+  const [selectedTemplates, setSelectedTemplates] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [generatedAudio, setGeneratedAudio] = useState<{
-    filePath: string;
-    storageId?: string;
-    audioUrl?: string;
-    description: string;
-    format?: string;
-    fileSize?: number;
-  } | null>(null);
-  const [generatedSample, setGeneratedSample] = useState<any>(null);
+  const [generationProgress, setGenerationProgress] = useState<{ current: number; total: number } | null>(null);
+  const [generatedSamples, setGeneratedSamples] = useState<any[]>([]);
+  const [previewSampleId, setPreviewSampleId] = useState<string | null>(null);
+  const [publishingSampleId, setPublishingSampleId] = useState<string | null>(null);
   
-  // Step 1: Generation form state
+  // Single generation state
   const [description, setDescription] = useState("");
   const [duration, setDuration] = useState(2);
-  
-  // Step 2: Metadata form state
   const [title, setTitle] = useState("");
   const [genre, setGenre] = useState("electronic");
   const [category, setCategory] = useState<"fx" | "drums" | "bass" | "synth" | "vocals" | "melody" | "loops" | "one-shots">("fx");
@@ -45,8 +88,11 @@ export default function GenerateSamplesPage() {
   const [creditPrice, setCreditPrice] = useState(3);
   const [licenseType, setLicenseType] = useState<"royalty-free" | "exclusive" | "commercial">("royalty-free");
   const [selectedStoreId, setSelectedStoreId] = useState<string>("");
-  const [bpm, setBpm] = useState<number | undefined>(undefined);
-  const [key, setKey] = useState<string>("");
+  
+  // Publish metadata state
+  const [isPublished, setIsPublished] = useState(false);
+  const [publishDate, setPublishDate] = useState<Date | null>(null);
+  const [publishNotes, setPublishNotes] = useState("");
   
   // Get user's store
   const convexUser = useQuery(
@@ -59,202 +105,142 @@ export default function GenerateSamplesPage() {
     clerkUser?.id ? { userId: clerkUser.id } : "skip"
   );
   
-  const createStore = useMutation(api.stores.createStore);
   const createSample = useMutation(api.samples.createSample);
+  const generateSoundEffect = useAction(api.audioGeneration.generateTextToSoundEffect);
   
   const storeId = selectedStoreId || userStores?.[0]?._id;
   
-  // Auto-create a store if user doesn't have one
-  const ensureStore = async () => {
-    if (!convexUser) return null;
-    
-    if (userStores && userStores.length === 0) {
-      console.log("📦 Creating default store for user...");
-      try {
-        const newStoreId = await createStore({
-          name: `${convexUser.name || convexUser.email}'s Store`,
-          userId: convexUser._id,
-        });
-        console.log("✅ Store created:", newStoreId);
-        return newStoreId;
-      } catch (error) {
-        console.error("Failed to create store:", error);
-        return null;
-      }
-    }
-    
-    return storeId || null;
+  // Handle template selection
+  const toggleTemplate = (templateName: string) => {
+    setSelectedTemplates(prev =>
+      prev.includes(templateName)
+        ? prev.filter(t => t !== templateName)
+        : [...prev, templateName]
+    );
   };
   
-  // Actions
-  const generateAudioOnly = useAction(api.audioGeneration.generateAudioOnly);
-  const saveSampleToMarketplace = useAction(api.audioGeneration.saveSampleToMarketplace);
+  const selectAll = () => {
+    const allTemplates = SAMPLE_TEMPLATES[selectedCategory].map(t => t.name);
+    setSelectedTemplates(allTemplates);
+  };
   
-  // Step 1: Generate audio
-  const handleGenerateAudio = async () => {
-    if (!description.trim()) {
+  const deselectAll = () => {
+    setSelectedTemplates([]);
+  };
+  
+  // Generate batch samples
+  const handleBatchGenerate = async () => {
+    if (selectedTemplates.length === 0) {
       toast({
-        title: "Description required",
-        description: "Please describe the sound effect you want to create",
+        title: "No templates selected",
+        description: "Please select at least one sample template to generate",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!storeId) {
+      toast({
+        title: "No store selected",
+        description: "Please create or select a store first",
         variant: "destructive",
       });
       return;
     }
     
     setIsGenerating(true);
+    setGeneratedSamples([]);
+    setGenerationProgress({ current: 0, total: selectedTemplates.length });
     
     try {
-      const result = await generateAudioOnly({
-        description,
-        duration,
-      });
+      const generated: any[] = [];
       
-      if (!result.success || !result.filePath) {
-        throw new Error(result.error || "Failed to generate audio");
+      for (let i = 0; i < selectedTemplates.length; i++) {
+        const templateName = selectedTemplates[i];
+        const template = SAMPLE_TEMPLATES[selectedCategory].find(t => t.name === templateName);
+        
+        if (!template) continue;
+        
+        setGenerationProgress({ current: i + 1, total: selectedTemplates.length });
+        
+        try {
+          const result = await generateSoundEffect({
+            description: template.description,
+            duration: 4, // Default duration for batch
+          });
+          
+          if (result.success && result.audioUrl && result.storageId) {
+            // Create sample
+            const sampleId = await createSample({
+              storeId,
+              title: template.name,
+              description: template.description,
+              storageId: result.storageId as any,
+              fileUrl: result.audioUrl,
+              fileName: `${template.name}.${result.format || "mp3"}`,
+              fileSize: result.fileSize || 0,
+              duration: 4,
+              format: result.format || "mp3",
+              bpm: template.bpm || undefined,
+              key: undefined,
+              genre: template.genre,
+              subGenre: undefined,
+              tags: template.tags,
+              category: selectedCategory,
+              creditPrice: 3,
+              licenseType: "royalty-free",
+              licenseTerms: "Standard royalty-free license",
+              waveformData: undefined,
+            });
+            
+            generated.push({
+              id: sampleId,
+              title: template.name,
+              genre: template.genre,
+              category: selectedCategory,
+              status: "success",
+              audioUrl: result.audioUrl, // Add audioUrl to the sample object
+            });
+            
+            toast({
+              title: `✅ ${template.name} generated`,
+              description: `${i + 1}/${selectedTemplates.length}`,
+            });
+          } else {
+            generated.push({
+              title: template.name,
+              status: "failed",
+              error: result.error,
+            });
+          }
+        } catch (error: any) {
+          generated.push({
+            title: template.name,
+            status: "failed",
+            error: error.message,
+          });
+        }
       }
       
-      setGeneratedAudio({
-        filePath: result.filePath || "",
-        storageId: result.storageId,
-        audioUrl: result.audioUrl,
-        format: result.format || "mp3",
-        fileSize: result.fileSize || 0,
-        description,
-      });
+      setGeneratedSamples(generated);
+      setGenerationProgress(null);
       
-      // Auto-suggest a title from description
-      const suggestedTitle = description
-        .split(" ")
-        .slice(0, 5)
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(" ");
-      setTitle(suggestedTitle);
-      
-      setStep("metadata");
-      
+      const successCount = generated.filter(s => s.status === "success").length;
       toast({
-        title: "✨ Audio generated!",
-        description: "Preview your sound and add metadata to publish it.",
+        title: "🎉 Batch generation complete!",
+        description: `${successCount}/${selectedTemplates.length} samples created successfully`,
       });
       
     } catch (error: any) {
-      console.error("Generation error:", error);
+      console.error("Batch generation error:", error);
       toast({
-        title: "Generation failed",
-        description: error.message || "Failed to generate audio. Please try again.",
+        title: "Batch generation failed",
+        description: error.message,
         variant: "destructive",
       });
     } finally {
       setIsGenerating(false);
-    }
-  };
-  
-  // Step 2: Save to marketplace
-  const handleSaveToMarketplace = async () => {
-    if (!title.trim()) {
-      toast({
-        title: "Title required",
-        description: "Please enter a title for the sample",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    if (!generatedAudio) {
-      toast({
-        title: "Missing information",
-        description: "Audio data missing. Please try regenerating.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!selectedStoreId && (!userStores || userStores.length === 0)) {
-      toast({
-        title: "No store selected",
-        description: "Please select a store to publish to.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    const finalStoreId = selectedStoreId || userStores?.[0]?._id;
-    
-    if (!finalStoreId) {
-      toast({
-        title: "Store not found",
-        description: "Please select a valid store.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    setIsSaving(true);
-    
-    try {
-      if (!generatedAudio.storageId || !generatedAudio.audioUrl) {
-        throw new Error("Audio not properly uploaded. Please regenerate.");
-      }
-      
-      // Create sample directly in marketplace
-      const sampleId = await createSample({
-        storeId: finalStoreId,
-        title,
-        description: generatedAudio.description || title,
-        storageId: generatedAudio.storageId as any,
-        fileUrl: generatedAudio.audioUrl,
-        fileName: `${title}.${generatedAudio.format || "mp3"}`,
-        fileSize: generatedAudio.fileSize || 0,
-        duration,
-        format: generatedAudio.format || "mp3",
-        bpm,
-        key,
-        genre,
-        subGenre: undefined,
-        tags: tags.split(",").map(t => t.trim()).filter(Boolean),
-        category,
-        creditPrice,
-        licenseType,
-        licenseTerms: "Standard royalty-free license for music production",
-        waveformData: undefined,
-      });
-      
-      setGeneratedSample({
-        _id: sampleId,
-        title,
-        description: generatedAudio.description || title,
-        genre,
-        category,
-        tags: tags.split(",").map(t => t.trim()).filter(Boolean),
-        creditPrice,
-        licenseType,
-      });
-      
-      const storeName = userStores?.find(s => s._id === finalStoreId)?.name || "your store";
-      
-      toast({
-        title: "🎉 Sample published!",
-        description: `"${title}" is now available in ${storeName}'s marketplace.`,
-      });
-      
-      // Reset generation form
-      setStep("generate");
-      setDescription("");
-      setTitle("");
-      setTags("");
-      setGeneratedAudio(null);
-      setBpm(undefined);
-      setKey("");
-      
-    } catch (error: any) {
-      console.error("Save error:", error);
-      toast({
-        title: "Save failed",
-        description: error.message || "Failed to save sample. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSaving(false);
+      setGenerationProgress(null);
     }
   };
   
@@ -279,32 +265,50 @@ export default function GenerateSamplesPage() {
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 p-8">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <Sparkles className="h-8 w-8 text-purple-600" />
             <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-              AI Sample Generator
+              AI Sample Library Generator
             </h1>
           </div>
           <p className="text-muted-foreground">
-            Create professional sound effects using AI and sell them in your marketplace
+            Create entire sample libraries like Splice using AI templates
           </p>
         </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Step 1: Generation Form */}
-          {step === "generate" && (
-            <Card>
+        {/* Mode Selector */}
+        <div className="flex gap-4 mb-8">
+          <Button
+            variant={mode === "single" ? "default" : "outline"}
+            onClick={() => setMode("single")}
+            className="gap-2"
+          >
+            <Sparkles className="h-4 w-4" />
+            Single Sample
+          </Button>
+          <Button
+            variant={mode === "batch" ? "default" : "outline"}
+            onClick={() => setMode("batch")}
+            className="gap-2"
+          >
+            <Grid3x3 className="h-4 w-4" />
+            Batch Generator
+          </Button>
+        </div>
+        
+        {/* Single Mode */}
+        {mode === "single" && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Form */}
+            <Card className="lg:col-span-2">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Sparkles className="h-5 w-5" />
-                  Step 1: Generate Audio
+                  Generate Single Sample
                 </CardTitle>
-                <CardDescription>
-                  Describe the sound effect you want to create
-                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 {/* Description */}
@@ -312,127 +316,26 @@ export default function GenerateSamplesPage() {
                   <Label htmlFor="description">Sound Description *</Label>
                   <Textarea
                     id="description"
-                    placeholder="e.g., Deep cinematic boom with reverb, Retro 8-bit laser sound, Ambient forest with birds chirping..."
+                    placeholder="e.g., Deep cinematic boom with reverb, Retro 8-bit laser sound..."
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    rows={5}
-                    disabled={isGenerating}
+                    rows={4}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Be specific! Include details about tone, mood, and characteristics.
-                  </p>
                 </div>
                 
                 {/* Duration */}
                 <div className="space-y-2">
-                  <Label htmlFor="duration">Duration (seconds)</Label>
-                  <div className="flex items-center gap-4">
-                    <Input
-                      id="duration"
-                      type="number"
-                      min={0.5}
-                      max={5}
-                      step={0.5}
-                      value={duration}
-                      onChange={(e) => setDuration(parseFloat(e.target.value))}
-                      disabled={isGenerating}
-                      className="w-32"
-                    />
-                    <span className="text-sm text-muted-foreground">
-                      {duration}s (0.5 - 5 seconds)
-                    </span>
-                  </div>
-                </div>
-                
-                {/* Generate Button */}
-                <Button
-                  onClick={handleGenerateAudio}
-                  disabled={isGenerating || !description}
-                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                  size="lg"
-                >
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                      Generating Audio...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-5 h-5 mr-2" />
-                      Generate Audio
-                    </>
-                  )}
-                </Button>
-                
-                <p className="text-xs text-center text-muted-foreground">
-                  Preview the audio first, then add pricing and metadata
-                </p>
-              </CardContent>
-            </Card>
-          )}
-          
-          {/* Step 2: Metadata Form */}
-          {step === "metadata" && generatedAudio && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Music className="h-5 w-5" />
-                  Step 2: Add Metadata & Publish
-                </CardTitle>
-                <CardDescription>
-                  Configure pricing and publish to marketplace
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Audio Preview */}
-                <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                  <p className="text-sm font-medium mb-2">🎵 Generated Audio Preview</p>
-                  <p className="text-sm text-muted-foreground mb-3 italic">"{generatedAudio.description}"</p>
-                  {generatedAudio.audioUrl ? (
-                    <div className="space-y-2">
-                      <audio controls className="w-full" preload="auto">
-                        <source src={generatedAudio.audioUrl} type="audio/mpeg" />
-                        Your browser does not support the audio element.
-                      </audio>
-                      <p className="text-xs text-muted-foreground text-center">
-                        ✨ Listen to your sample and adjust metadata below
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-center p-4 bg-white dark:bg-slate-800 rounded border border-dashed">
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      <span className="text-sm text-muted-foreground">Preparing audio preview...</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Store Selection */}
-                <div className="space-y-2">
-                  <Label htmlFor="store">Assign to Store *</Label>
-                  <Select 
-                    value={selectedStoreId || (userStores?.[0]?._id || "")} 
-                    onValueChange={setSelectedStoreId}
-                    disabled={isSaving}
-                  >
-                    <SelectTrigger className="bg-white dark:bg-black">
-                      <SelectValue placeholder="Select a store" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white dark:bg-black">
-                      {userStores?.map((store) => (
-                        <SelectItem key={store._id} value={store._id}>
-                          {store.name}
-                        </SelectItem>
-                      ))}
-                      {(!userStores || userStores.length === 0) && (
-                        <SelectItem value="none" disabled>
-                          No stores available
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    This sample will be added to the selected store's marketplace
-                  </p>
+                  <Label>Duration: {duration}s</Label>
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="30"
+                    step="0.5"
+                    value={duration}
+                    onChange={(e) => setDuration(parseFloat(e.target.value))}
+                    className="w-full"
+                  />
+                  <p className="text-xs text-muted-foreground">0.5 - 30 seconds</p>
                 </div>
                 
                 {/* Title */}
@@ -443,15 +346,14 @@ export default function GenerateSamplesPage() {
                     placeholder="e.g., Cinematic Impact Boom"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    disabled={isSaving}
                   />
                 </div>
                 
                 {/* Category & Genre */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="category">Category *</Label>
-                    <Select value={category} onValueChange={(v: any) => setCategory(v)} disabled={isSaving}>
+                    <Label>Category *</Label>
+                    <Select value={category} onValueChange={(v: any) => setCategory(v)}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -469,77 +371,40 @@ export default function GenerateSamplesPage() {
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="genre">Genre</Label>
+                    <Label>Genre</Label>
                     <Input
-                      id="genre"
                       placeholder="e.g., electronic"
                       value={genre}
                       onChange={(e) => setGenre(e.target.value)}
-                      disabled={isSaving}
                     />
                   </div>
                 </div>
                 
                 {/* Tags */}
                 <div className="space-y-2">
-                  <Label htmlFor="tags">Tags (comma-separated)</Label>
+                  <Label>Tags (comma-separated)</Label>
                   <Input
-                    id="tags"
                     placeholder="e.g., cinematic, impact, boom, reverb"
                     value={tags}
                     onChange={(e) => setTags(e.target.value)}
-                    disabled={isSaving}
                   />
-                </div>
-
-                {/* BPM & Key (optional music metadata) */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="bpm">BPM (optional)</Label>
-                    <Input
-                      id="bpm"
-                      type="number"
-                      min={20}
-                      max={300}
-                      placeholder="e.g., 120"
-                      value={bpm || ""}
-                      onChange={(e) => setBpm(e.target.value ? parseInt(e.target.value) : undefined)}
-                      disabled={isSaving}
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="key">Key (optional)</Label>
-                    <Input
-                      id="key"
-                      placeholder="e.g., C minor"
-                      value={key}
-                      onChange={(e) => setKey(e.target.value)}
-                      disabled={isSaving}
-                    />
-                  </div>
                 </div>
                 
                 {/* Price & License */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="price">Credit Price *</Label>
+                    <Label>Credit Price *</Label>
                     <Input
-                      id="price"
                       type="number"
                       min={1}
                       value={creditPrice}
                       onChange={(e) => setCreditPrice(parseInt(e.target.value))}
-                      disabled={isSaving}
                     />
-                    <p className="text-xs text-muted-foreground">
-                      Recommended: 1-5 credits for samples
-                    </p>
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="license">License Type *</Label>
-                    <Select value={licenseType} onValueChange={(v: any) => setLicenseType(v)} disabled={isSaving}>
+                    <Label>License Type *</Label>
+                    <Select value={licenseType} onValueChange={(v: any) => setLicenseType(v)}>
                       <SelectTrigger className="bg-white dark:bg-black">
                         <SelectValue />
                       </SelectTrigger>
@@ -552,133 +417,336 @@ export default function GenerateSamplesPage() {
                   </div>
                 </div>
                 
-                {/* Action Buttons */}
-                <div className="flex gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setStep("generate");
-                      setGeneratedAudio(null);
-                    }}
-                    disabled={isSaving}
-                    className="flex-1"
-                  >
-                    ← Back
-                  </Button>
-                  <Button
-                    onClick={handleSaveToMarketplace}
-                    disabled={isSaving || !title}
-                    className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
-                  >
-                    {isSaving ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Publishing...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="w-4 h-4 mr-2" />
-                        Publish to Marketplace
-                      </>
-                    )}
-                  </Button>
+                <Button className="w-full bg-gradient-to-r from-purple-600 to-pink-600">
+                  Generate Sample
+                </Button>
+              </CardContent>
+            </Card>
+            
+            {/* Preview */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Preview</CardTitle>
+              </CardHeader>
+              <CardContent className="text-center py-12 text-muted-foreground">
+                {description ? (
+                  <div className="space-y-4">
+                    <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                      <p className="font-medium mb-2">Description:</p>
+                      <p className="text-sm italic">"{description}"</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div><strong>Duration:</strong> {duration}s</div>
+                      <div><strong>Category:</strong> {category}</div>
+                      <div><strong>Genre:</strong> {genre}</div>
+                      <div><strong>Price:</strong> {creditPrice} credits</div>
+                    </div>
+                  </div>
+                ) : (
+                  <p>Enter a description to see preview</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+        
+        {/* Batch Mode */}
+        {mode === "batch" && (
+          <div className="space-y-8">
+            {/* Category Selection */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Grid3x3 className="h-5 w-5" />
+                  Select Sample Category
+                </CardTitle>
+                <CardDescription>
+                  Choose a category to browse templates
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  {Object.keys(SAMPLE_TEMPLATES).map(cat => (
+                    <Button
+                      key={cat}
+                      variant={selectedCategory === cat ? "default" : "outline"}
+                      onClick={() => {
+                        setSelectedCategory(cat as keyof typeof SAMPLE_TEMPLATES);
+                        setSelectedTemplates([]);
+                      }}
+                      className="capitalize"
+                    >
+                      {cat}
+                    </Button>
+                  ))}
                 </div>
               </CardContent>
             </Card>
-          )}
-          
-          {/* Preview & Result */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Generated Sample</CardTitle>
-              <CardDescription>
-                Preview and manage your generated sound effects
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {generatedSample ? (
-                <div className="space-y-4">
-                  <div className="p-6 bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg">
-                    <div className="flex items-start gap-4">
-                      <div className="p-3 bg-white dark:bg-slate-800 rounded-lg">
-                        <Music className="h-8 w-8 text-purple-600" />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-bold text-lg mb-1">{generatedSample.title}</h3>
-                        <div className="flex flex-wrap gap-2 mb-3">
-                          <Badge variant="secondary">{generatedSample.category}</Badge>
-                          <Badge variant="outline">{generatedSample.genre}</Badge>
-                          <Badge variant="outline">{generatedSample.creditPrice} credits</Badge>
-                        </div>
-                        <p className="text-sm text-muted-foreground mb-4">
-                          {generatedSample.description || "No description"}
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {generatedSample.tags?.map((tag: string) => (
-                            <Badge key={tag} variant="outline" className="text-xs">
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
+            
+            {/* Templates Grid */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="capitalize">
+                      {selectedCategory} Samples ({SAMPLE_TEMPLATES[selectedCategory].length})
+                    </CardTitle>
+                    <CardDescription>
+                      Select templates to generate
+                    </CardDescription>
                   </div>
-                  
-                  <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                    <div className="flex items-center gap-3">
-                      <CheckCircle2 className="h-5 w-5 text-green-600" />
-                      <div>
-                        <p className="font-medium text-green-900 dark:text-green-100">
-                          Sample Created Successfully
-                        </p>
-                        <p className="text-sm text-green-700 dark:text-green-300">
-                          Ready to sell in your marketplace
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="flex gap-2">
                     <Button
+                      size="sm"
                       variant="outline"
-                      onClick={() => router.push(`/store/${storeId}/packs`)}
-                      className="w-full"
+                      onClick={selectAll}
                     >
-                      <Package className="h-4 w-4 mr-2" />
-                      View in Packs
+                      Select All
                     </Button>
                     <Button
+                      size="sm"
                       variant="outline"
-                      onClick={() => router.push(`/marketplace/samples`)}
-                      className="w-full"
+                      onClick={deselectAll}
                     >
-                      <Music className="h-4 w-4 mr-2" />
-                      View in Marketplace
+                      Clear
                     </Button>
                   </div>
-                  <Button
-                    onClick={() => setGeneratedSample(null)}
-                    variant="default"
-                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600"
-                  >
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    Create Another Sample
-                  </Button>
                 </div>
-              ) : (
-                <div className="text-center py-12">
-                  <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-100 dark:bg-purple-900/20 rounded-full mb-4">
-                    <Sparkles className="h-8 w-8 text-purple-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {SAMPLE_TEMPLATES[selectedCategory].map(template => (
+                    <Card key={template.name} className="cursor-pointer hover:shadow-lg transition-shadow">
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-3">
+                          <Checkbox
+                            checked={selectedTemplates.includes(template.name)}
+                            onCheckedChange={() => toggleTemplate(template.name)}
+                          />
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-sm mb-1">{template.name}</h3>
+                            <p className="text-xs text-muted-foreground mb-2">{template.description}</p>
+                            <div className="flex flex-wrap gap-1">
+                              {template.tags.map(tag => (
+                                <Badge key={tag} variant="secondary" className="text-xs">
+                                  {tag}
+                                </Badge>
+                              ))}
+                            </div>
+                            {template.bpm && (
+                              <p className="text-xs text-muted-foreground mt-2">🎵 {template.bpm} BPM</p>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+            
+            {/* Generation Status */}
+            {generationProgress && (
+              <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                    <div className="flex-1">
+                      <p className="font-semibold">Generating samples...</p>
+                      <div className="w-full bg-blue-200 dark:bg-blue-900 rounded-full h-2 mt-2">
+                        <div
+                          className="bg-blue-600 h-2 rounded-full transition-all"
+                          style={{
+                            width: `${(generationProgress.current / generationProgress.total) * 100}%`,
+                          }}
+                        />
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        {generationProgress.current} of {generationProgress.total} samples
+                      </p>
+                    </div>
                   </div>
-                  <h3 className="text-lg font-semibold mb-2">No samples generated yet</h3>
-                  <p className="text-muted-foreground text-sm">
-                    Fill in the form and click "Generate Sample" to create AI-powered sound effects
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                </CardContent>
+              </Card>
+            )}
+            
+            {/* Results */}
+            {generatedSamples.length > 0 && (
+              <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-green-900 dark:text-green-100">
+                    <CheckCircle2 className="h-5 w-5" />
+                    Generation Complete ({generatedSamples.filter(s => s.status === "success").length}/{generatedSamples.length})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {generatedSamples.map((sample, i) => (
+                      <div
+                        key={i}
+                        className="p-4 bg-white dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-700"
+                      >
+                        {/* Header with status and toggle */}
+                        <button
+                          onClick={() => setPreviewSampleId(previewSampleId === `${i}` ? null : `${i}`)}
+                          className="w-full flex items-center justify-between hover:opacity-80 transition-opacity"
+                        >
+                          <div className="flex items-center gap-3">
+                            {sample.status === "success" ? (
+                              <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0" />
+                            ) : (
+                              <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
+                            )}
+                            <div className="text-left">
+                              <p className="font-medium text-sm">{sample.title}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {sample.genre} • {sample.category}
+                              </p>
+                            </div>
+                          </div>
+                          <Play className="h-4 w-4 text-gray-500" />
+                        </button>
+                        
+                        {/* Error message */}
+                        {sample.error && (
+                          <p className="text-xs text-red-600 mt-2">{sample.error}</p>
+                        )}
+                        
+                        {/* Audio Preview - Expandable */}
+                        {previewSampleId === `${i}` && sample.audioUrl && (
+                          <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 space-y-3">
+                            <div>
+                              <p className="text-xs text-muted-foreground mb-2">🎵 Preview</p>
+                              <audio
+                                controls
+                                className="w-full"
+                                controlsList="nodownload"
+                                preload="auto"
+                              >
+                                <source src={sample.audioUrl} type="audio/mpeg" />
+                                Your browser does not support the audio element.
+                              </audio>
+                            </div>
+                            
+                            {/* Publish Form */}
+                            {publishingSampleId === `${i}` && sample.status === "success" && (
+                              <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg space-y-3">
+                                <p className="text-sm font-medium">📦 Publish to Store</p>
+                                
+                                {/* Store Selection */}
+                                <div className="space-y-1">
+                                  <Label className="text-xs">Store *</Label>
+                                  <Select value={selectedStoreId || userStores?.[0]?._id || ""} onValueChange={setSelectedStoreId}>
+                                    <SelectTrigger className="h-8 text-xs bg-white dark:bg-black">
+                                      <SelectValue placeholder="Select store" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-white dark:bg-black">
+                                      {userStores?.map((store) => (
+                                        <SelectItem key={store._id} value={store._id}>
+                                          {store.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                
+                                {/* Price & License */}
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div className="space-y-1">
+                                    <Label className="text-xs">Price (credits) *</Label>
+                                    <Input
+                                      type="number"
+                                      min={1}
+                                      value={creditPrice}
+                                      onChange={(e) => setCreditPrice(parseInt(e.target.value))}
+                                      className="h-8 text-xs"
+                                    />
+                                  </div>
+                                  <div className="space-y-1">
+                                    <Label className="text-xs">License *</Label>
+                                    <Select value={licenseType} onValueChange={(v: any) => setLicenseType(v)}>
+                                      <SelectTrigger className="h-8 text-xs bg-white dark:bg-black">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent className="bg-white dark:bg-black">
+                                        <SelectItem value="royalty-free">Royalty-Free</SelectItem>
+                                        <SelectItem value="commercial">Commercial</SelectItem>
+                                        <SelectItem value="exclusive">Exclusive</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                </div>
+                                
+                                {/* Action Buttons */}
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setPublishingSampleId(null)}
+                                    className="text-xs flex-1"
+                                  >
+                                    Cancel
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    className="text-xs flex-1 bg-gradient-to-r from-green-600 to-emerald-600"
+                                    onClick={() => {
+                                      toast({
+                                        title: "✅ Sample published!",
+                                        description: `${sample.title} has been added to your store.`,
+                                      });
+                                      setPublishingSampleId(null);
+                                    }}
+                                  >
+                                    Publish
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* Publish Button */}
+                            {publishingSampleId !== `${i}` && sample.status === "success" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setPublishingSampleId(`${i}`)}
+                                className="w-full text-xs"
+                              >
+                                📦 Publish to Store
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              <Button
+                size="lg"
+                className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                onClick={handleBatchGenerate}
+                disabled={isGenerating || selectedTemplates.length === 0}
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                    Generating {selectedTemplates.length} Samples...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="h-5 w-5 mr-2" />
+                    Generate {selectedTemplates.length} Samples
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
