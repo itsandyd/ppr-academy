@@ -201,6 +201,7 @@ export const storeFanCounts = internalMutation({
 });
 
 // Count all customers for a store (called by background job)
+// Uses batched counting to avoid exceeding read limits
 export const countAllFans = internalQuery({
   args: { storeId: v.string() },
   returns: v.object({
@@ -210,21 +211,30 @@ export const countAllFans = internalQuery({
     subscriptions: v.number(),
   }),
   handler: async (ctx, args) => {
-    // Use async iteration to count without pagination limits
     let total = 0;
     let leads = 0;
     let paying = 0;
     let subscriptions = 0;
+    let hasMore = true;
+    let cursor: string | null = null;
 
-    // Use async iteration instead of pagination (avoids multiple pagination error)
-    for await (const customer of ctx.db
-      .query("customers")
-      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-    ) {
-      total++;
-      if (customer.type === "lead") leads++;
-      else if (customer.type === "paying") paying++;
-      else if (customer.type === "subscription") subscriptions++;
+    // Use pagination to count in batches (max 5000 per batch to stay under 32K limit)
+    while (hasMore) {
+      const batch = await ctx.db
+        .query("customers")
+        .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+        .paginate({ cursor: cursor, numItems: 5000 });
+
+      // Count this batch
+      for (const customer of batch.page) {
+        total++;
+        if (customer.type === "lead") leads++;
+        else if (customer.type === "paying") paying++;
+        else if (customer.type === "subscription") subscriptions++;
+      }
+
+      hasMore = !batch.isDone;
+      cursor = batch.continueCursor;
     }
 
     return { total, leads, paying, subscriptions };

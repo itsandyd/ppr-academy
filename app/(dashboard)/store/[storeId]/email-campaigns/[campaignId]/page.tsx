@@ -28,14 +28,12 @@ export default function CampaignDetailPage() {
     campaignId ? { campaignId: campaignId as any } : "skip"
   );
 
-  const recipients = useQuery(
-    api.emailCampaigns?.getCampaignRecipients,
-    campaignId ? { campaignId: campaignId as any } : "skip"
-  );
+  // Don't load all recipients - just show the count from campaign
+  // For large campaigns (31k+ recipients), loading all would hit array limits
 
   const sendCampaign = useAction((api as any).emails?.sendCampaign);
   const createCampaign = useMutation((api as any).emailCampaigns?.createCampaign);
-  const addRecipients = useMutation((api as any).emailCampaigns?.addRecipients);
+  const duplicateAllRecipients = useMutation((api as any).emailCampaigns?.duplicateAllRecipients);
 
   const handleSend = async () => {
     if (!campaign) return;
@@ -72,14 +70,21 @@ export default function CampaignDetailPage() {
   };
 
   const handleResend = async () => {
-    if (!campaign || !recipients) return;
+    if (!campaign) return;
 
-    if (!confirm(`Create a new draft campaign with the same content and ${recipients.length} recipients?`)) {
+    const recipientCount = campaign.recipientCount || 0;
+
+    if (!confirm(`Create a new draft campaign with the same content and ${recipientCount.toLocaleString()} recipients?`)) {
       return;
     }
 
     setIsResending(true);
     try {
+      toast({
+        title: "Duplicating campaign...",
+        description: "Copying campaign and all recipients. This may take a moment for large campaigns.",
+      });
+
       // Create a duplicate campaign
       const newCampaignId = await createCampaign({
         name: `${campaign.name} (Copy)`,
@@ -89,23 +94,41 @@ export default function CampaignDetailPage() {
         fromEmail: campaign.fromEmail,
         replyToEmail: campaign.replyToEmail,
         storeId: campaign.storeId,
-        adminUserId: campaign.adminUserId, // Include the adminUserId
+        adminUserId: campaign.adminUserId,
       });
 
-      // Add the same recipients
-      if (recipients.length > 0) {
-        const customerIds = recipients.map((r: any) => r.customerId).filter(Boolean);
-        if (customerIds.length > 0) {
-          await addRecipients({
-            campaignId: newCampaignId,
-            customerIds,
+      // Duplicate all recipients in batches
+      let hasMore = true;
+      let totalCopied = 0;
+      let batchCount = 0;
+      let cursor: string | undefined = undefined;
+
+      while (hasMore) {
+        const result = await duplicateAllRecipients({
+          sourceCampaignId: campaign._id,
+          targetCampaignId: newCampaignId,
+          batchSize: 100,
+          cursor,
+          currentTotalCount: totalCopied,
+        });
+
+        totalCopied = result.totalCount;
+        hasMore = result.hasMore;
+        cursor = result.nextCursor;
+        batchCount++;
+
+        // Show progress every 10 batches
+        if (hasMore && batchCount % 10 === 0) {
+          toast({
+            title: "Copying recipients...",
+            description: `Copied ${totalCopied.toLocaleString()} of ${recipientCount.toLocaleString()} recipients (batch ${batchCount})`,
           });
         }
       }
 
       toast({
         title: "Campaign duplicated!",
-        description: `Created a new draft campaign with ${recipients.length} recipients.`,
+        description: `Created a new draft campaign with ${totalCopied.toLocaleString()} recipients ready to send.`,
       });
 
       // Navigate to the new campaign
@@ -169,7 +192,7 @@ export default function CampaignDetailPage() {
     );
   }
 
-  const canSend = campaign.status === "draft" && (recipients?.length || 0) > 0;
+  const canSend = campaign.status === "draft" && (campaign.recipientCount || 0) > 0;
   const canResend = campaign.status === "sent" || campaign.status === "failed";
 
   return (
@@ -331,30 +354,24 @@ export default function CampaignDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Recipients */}
-      {recipients && recipients.length > 0 && (
+      {/* Recipient Summary */}
+      {campaign.recipientCount && campaign.recipientCount > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Recipients ({recipients.length})</CardTitle>
+            <CardTitle>Recipients</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2 max-h-96 overflow-y-auto">
-              {recipients.map((recipient: any) => (
-                <div
-                  key={recipient._id}
-                  className="flex items-center justify-between p-3 border border-border rounded-lg"
-                >
-                  <div>
-                    <p className="font-medium">{recipient.customerName}</p>
-                    <p className="text-sm text-muted-foreground">{recipient.customerEmail}</p>
-                  </div>
-                  {recipient.status !== "queued" && (
-                    <Badge variant="outline" className="text-xs">
-                      {recipient.status}
-                    </Badge>
-                  )}
-                </div>
-              ))}
+            <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg">
+              <Users className="w-8 h-8 text-muted-foreground" />
+              <div>
+                <p className="text-2xl font-bold">{campaign.recipientCount.toLocaleString()}</p>
+                <p className="text-sm text-muted-foreground">
+                  {campaign.status === "draft" && "Ready to send"}
+                  {campaign.status === "sent" && `Sent to ${campaign.sentCount || campaign.recipientCount} recipients`}
+                  {campaign.status === "sending" && "Currently sending..."}
+                  {campaign.status === "failed" && "Send failed"}
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>

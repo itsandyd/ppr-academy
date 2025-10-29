@@ -76,7 +76,7 @@ export const getCustomersForAdmin = query({
   },
 });
 
-// Get customer count for a store (optimized for large datasets)
+// Get customer count for a store (uses cached count only)
 export const getCustomerCount = query({
   args: { storeId: v.string() },
   returns: v.object({
@@ -86,7 +86,7 @@ export const getCustomerCount = query({
     lastUpdated: v.optional(v.number()), // When the count was last updated
   }),
   handler: async (ctx, args) => {
-    // First, check if we have a cached exact count
+    // ONLY use cached count - never count in real-time to avoid exceeding limits
     const cachedCount = await ctx.db
       .query("fanCounts")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
@@ -102,25 +102,12 @@ export const getCustomerCount = query({
       };
     }
 
-    // Fall back to sampling if no cached count yet
-    const sample = await ctx.db
-      .query("customers")
-      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .take(1000);
-    
-    // If we got 1000, there are likely more
-    if (sample.length === 1000) {
-      return {
-        total: 1000, // We know there are at least 1000
-        showing: 5000, // Updated to match getFansForStore limit
-        exact: false,
-      };
-    }
-    
+    // If no cache exists yet, return a safe estimate
+    // The background job will update this soon
     return {
-      total: sample.length,
-      showing: Math.min(5000, sample.length), // Updated to match getFansForStore limit
-      exact: sample.length < 1000, // If < 1000, we got all of them
+      total: 0,
+      showing: 5000,
+      exact: false,
     };
   },
 });
@@ -491,12 +478,14 @@ export const getCustomersByType = query({
     notes: v.optional(v.string()),
   })),
   handler: async (ctx, args) => {
-    const allCustomers = await ctx.db
+    // Use filter directly in the query to avoid collecting all customers
+    const customers = await ctx.db
       .query("customers")
       .withIndex("by_adminUserId", (q) => q.eq("adminUserId", args.adminUserId))
-      .collect();
+      .filter((q) => q.eq(q.field("type"), args.type))
+      .take(5000); // Limit to 5000 to stay under read limits
     
-    return allCustomers.filter(customer => customer.type === args.type);
+    return customers;
   },
 });
 
@@ -592,7 +581,7 @@ export const createSubscription = mutation({
   },
 });
 
-// Get customer statistics
+// Get customer statistics (uses cached counts from fanCounts table)
 export const getCustomerStats = query({
   args: { adminUserId: v.string() },
   returns: v.object({
@@ -604,29 +593,56 @@ export const getCustomerStats = query({
     averageOrderValue: v.number(),
   }),
   handler: async (ctx, args) => {
-    // For large datasets, use sampling to avoid read limits
-    const customersSample = await ctx.db
-      .query("customers")
-      .withIndex("by_adminUserId", (q) => q.eq("adminUserId", args.adminUserId))
-      .take(1000); // Sample first 1000 customers
+    // Get user's stores first
+    const stores = await ctx.db
+      .query("stores")
+      .withIndex("by_userId", (q) => q.eq("userId", args.adminUserId))
+      .collect();
 
-    const purchasesSample = await ctx.db
+    if (stores.length === 0) {
+      return {
+        totalCustomers: 0,
+        leads: 0,
+        payingCustomers: 0,
+        subscriptionCustomers: 0,
+        totalRevenue: 0,
+        averageOrderValue: 0,
+      };
+    }
+
+    // Aggregate counts from cached fanCounts for all stores
+    let totalCustomers = 0;
+    let leads = 0;
+    let paying = 0;
+    let subscription = 0;
+
+    for (const store of stores) {
+      const cachedCount = await ctx.db
+        .query("fanCounts")
+        .withIndex("by_storeId", (q) => q.eq("storeId", store._id))
+        .first();
+
+      if (cachedCount) {
+        totalCustomers += cachedCount.totalCount;
+        leads += cachedCount.leads;
+        paying += cachedCount.paying;
+        subscription += cachedCount.subscriptions;
+      }
+    }
+
+    // For revenue, sample recent purchases (much smaller dataset)
+    const recentPurchases = await ctx.db
       .query("purchases")
       .withIndex("by_adminUserId", (q) => q.eq("adminUserId", args.adminUserId))
       .filter(q => q.eq(q.field("status"), "completed"))
-      .take(1000); // Sample first 1000 purchases
+      .order("desc")
+      .take(500); // Small sample of recent purchases
 
-    // Count customers by type from sample
-    const leads = customersSample.filter(c => c.type === "lead").length;
-    const paying = customersSample.filter(c => c.type === "paying").length;
-    const subscription = customersSample.filter(c => c.type === "subscription").length;
-
-    // Calculate revenue from sample
-    const totalRevenue = purchasesSample.reduce((sum, p) => sum + (p.amount || 0), 0);
-    const avgOrderValue = purchasesSample.length > 0 ? totalRevenue / purchasesSample.length : 0;
+    const totalRevenue = recentPurchases.reduce((sum, p) => sum + (p.amount || 0), 0);
+    const avgOrderValue = recentPurchases.length > 0 ? totalRevenue / recentPurchases.length : 0;
 
     return {
-      totalCustomers: customersSample.length, // Will be 1000 if there are more
+      totalCustomers,
       leads,
       payingCustomers: paying,
       subscriptionCustomers: subscription,

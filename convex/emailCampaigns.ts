@@ -217,17 +217,20 @@ export const addRecipients = mutation({
 });
 
 // Add ALL customers from a store as recipients (for bulk sends)
-// Uses a smart filtering approach: only processes customers not yet added
+// Uses cursor-based pagination to avoid reading too many documents
 export const addAllCustomersAsRecipients = mutation({
   args: {
     campaignId: v.id("emailCampaigns"),
     storeId: v.string(),
     batchSize: v.optional(v.number()),
+    cursor: v.optional(v.string()), // Pagination cursor from previous batch
+    currentTotalCount: v.optional(v.number()), // Current total from previous batch
   },
   returns: v.object({
     addedCount: v.number(),
     totalCount: v.number(),
     hasMore: v.boolean(),
+    nextCursor: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
     const campaign = await ctx.db.get(args.campaignId);
@@ -240,42 +243,35 @@ export const addAllCustomersAsRecipients = mutation({
     }
 
     const batchSize = args.batchSize || 100;
+    let currentTotalCount = args.currentTotalCount || 0;
 
-    // Get existing recipient customer IDs (just the IDs, not full docs)
-    const existingRecipients = await ctx.db
-      .query("emailCampaignRecipients")
-      .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId))
-      .collect();
-    
-    const existingCustomerIds = new Set(existingRecipients.map(r => r.customerId));
-
-    // Fetch a batch of customers and filter out ones already added
-    const customers = await ctx.db
+    // Use cursor-based pagination - this is the only safe way for large datasets
+    const paginationResult = await ctx.db
       .query("customers")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .order("asc")
-      .take(batchSize * 10); // Fetch more to account for filtering
-    
-    // Filter to only customers not yet added
-    const customersToAdd = customers.filter(c => !existingCustomerIds.has(c._id));
-    const customersToProcess = customersToAdd.slice(0, batchSize); // Take only batchSize
+      .paginate({ 
+        cursor: args.cursor || null,
+        numItems: batchSize
+      });
 
-    if (customersToProcess.length === 0) {
-      // No more customers to add
+    if (paginationResult.page.length === 0) {
+      // No more customers - update final count
       await ctx.db.patch(args.campaignId, {
-        recipientCount: existingCustomerIds.size,
+        recipientCount: currentTotalCount,
       });
 
       return {
         addedCount: 0,
-        totalCount: existingCustomerIds.size,
+        totalCount: currentTotalCount,
         hasMore: false,
+        nextCursor: undefined,
       };
     }
 
-    // Add this batch of customers as recipients
+    // Add all customers in this batch
     let addedCount = 0;
-    for (const customer of customersToProcess) {
+    for (const customer of paginationResult.page) {
       await ctx.db.insert("emailCampaignRecipients", {
         campaignId: args.campaignId,
         customerId: customer._id,
@@ -284,20 +280,90 @@ export const addAllCustomersAsRecipients = mutation({
         status: "queued",
       });
       addedCount++;
+      currentTotalCount++;
     }
 
-    const newTotalCount = existingCustomerIds.size + addedCount;
-    const hasMore = customersToAdd.length > batchSize; // More filtered customers available
+    const hasMore = !paginationResult.isDone;
 
-    // Update count
-    await ctx.db.patch(args.campaignId, {
-      recipientCount: newTotalCount,
-    });
+    // Update count periodically (every ~10 batches to reduce writes)
+    if (!hasMore || currentTotalCount % 1000 < batchSize) {
+      await ctx.db.patch(args.campaignId, {
+        recipientCount: currentTotalCount,
+      });
+    }
 
     return {
       addedCount,
-      totalCount: newTotalCount,
+      totalCount: currentTotalCount,
       hasMore,
+      nextCursor: hasMore ? paginationResult.continueCursor : undefined,
+    };
+  },
+});
+
+// Duplicate all recipients from one campaign to another (for resending)
+export const duplicateAllRecipients = mutation({
+  args: {
+    sourceCampaignId: v.id("emailCampaigns"),
+    targetCampaignId: v.id("emailCampaigns"),
+    batchSize: v.optional(v.number()),
+    cursor: v.optional(v.string()),
+    currentTotalCount: v.optional(v.number()),
+  },
+  returns: v.object({
+    addedCount: v.number(),
+    totalCount: v.number(),
+    hasMore: v.boolean(),
+    nextCursor: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    const targetCampaign = await ctx.db.get(args.targetCampaignId);
+    if (!targetCampaign) throw new Error("Target campaign not found");
+    
+    if (targetCampaign.status !== "draft") {
+      throw new Error("Can only add recipients to draft campaigns");
+    }
+
+    const batchSize = args.batchSize || 100;
+    let currentTotalCount = args.currentTotalCount || 0;
+
+    // Get a batch of recipients from the source campaign
+    const paginationResult = await ctx.db
+      .query("emailCampaignRecipients")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", args.sourceCampaignId))
+      .paginate({ 
+        cursor: args.cursor || null,
+        numItems: batchSize
+      });
+
+    // Copy each recipient to the target campaign
+    let addedCount = 0;
+    for (const sourceRecipient of paginationResult.page) {
+      await ctx.db.insert("emailCampaignRecipients", {
+        campaignId: args.targetCampaignId,
+        customerId: sourceRecipient.customerId,
+        customerEmail: sourceRecipient.customerEmail,
+        customerName: sourceRecipient.customerName,
+        status: "queued", // Reset status to queued for new campaign
+      });
+      addedCount++;
+      currentTotalCount++;
+    }
+
+    const hasMore = !paginationResult.isDone;
+
+    // Update count periodically
+    if (!hasMore || currentTotalCount % 1000 < batchSize) {
+      await ctx.db.patch(args.targetCampaignId, {
+        recipientCount: currentTotalCount,
+      });
+    }
+
+    return {
+      addedCount,
+      totalCount: currentTotalCount,
+      hasMore,
+      nextCursor: hasMore ? paginationResult.continueCursor : undefined,
     };
   },
 });

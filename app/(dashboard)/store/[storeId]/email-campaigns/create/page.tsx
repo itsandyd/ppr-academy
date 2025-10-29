@@ -315,20 +315,24 @@ export default function CreateCampaignPage() {
       });
 
       // Add customers in batches by calling mutation repeatedly
-      // Each call automatically skips customers already added
+      // Uses cursor-based pagination for safe handling of large datasets
       let hasMore = true;
       let totalAdded = 0;
       let batchCount = 0;
+      let cursor: string | undefined = undefined;
 
       while (hasMore) {
         const result = await addAllCustomersAsRecipients({
           campaignId: newCampaignId,
           storeId,
-          batchSize: 100, // Process 100 at a time
+          batchSize: 100,
+          cursor,
+          currentTotalCount: totalAdded,
         });
 
         totalAdded = result.totalCount;
         hasMore = result.hasMore;
+        cursor = result.nextCursor;
         batchCount++;
 
         // Show progress

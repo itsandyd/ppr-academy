@@ -436,28 +436,39 @@ export const checkEmailCampaignRecipients = internalQuery({
 });
 
 /**
- * Get campaign recipients (INTERNAL)
+ * Get campaign recipients (INTERNAL) - with pagination support for large campaigns
  */
 export const getCampaignRecipients = internalQuery({
-  args: { campaignId: v.union(v.id("resendCampaigns"), v.id("emailCampaigns")) },
+  args: { 
+    campaignId: v.union(v.id("resendCampaigns"), v.id("emailCampaigns")),
+    cursor: v.optional(v.string()),
+    batchSize: v.optional(v.number()),
+  },
   handler: async (ctx, args) => {
     const campaign = await ctx.db.get(args.campaignId);
-    if (!campaign) return [];
+    if (!campaign) return { recipients: [], isDone: true, continueCursor: null };
+
+    const batchSize = args.batchSize || 100;
 
     // Try to fetch from emailCampaignRecipients table first (for emailCampaigns)
-    const emailCampaignRecipients = await ctx.db
+    const paginationResult = await ctx.db
       .query("emailCampaignRecipients")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId as any))
-      .collect();
+      .filter((q) => q.eq(q.field("status"), "queued")) // Only get unsent emails
+      .paginate({
+        cursor: args.cursor || null,
+        numItems: batchSize,
+      });
     
     // If we found recipients in emailCampaignRecipients, this is an emailCampaign
-    if (emailCampaignRecipients.length > 0) {
+    if (paginationResult.page.length > 0) {
       // Fetch customer details for each recipient to get personalization fields
       const recipients = [];
-      for (const recipient of emailCampaignRecipients) {
+      for (const recipient of paginationResult.page) {
         const customer = await ctx.db.get(recipient.customerId);
         if (customer && customer.email) {
           recipients.push({
+            recipientId: recipient._id, // Include recipient ID for status tracking
             email: customer.email,
             userId: customer.adminUserId,
             name: customer.name,
@@ -471,16 +482,22 @@ export const getCampaignRecipients = internalQuery({
           });
         }
       }
-      return recipients;
+      return {
+        recipients,
+        isDone: paginationResult.isDone,
+        continueCursor: paginationResult.continueCursor,
+      };
     }
 
-    // Otherwise, this is a resendCampaign - use original logic
+    // Otherwise, this is a resendCampaign - use original logic (no pagination for now)
+    // Return all recipients at once for backwards compatibility
     const resendCampaign = campaign as any;
+    
+    let recipients: Array<{ email: string; userId: string | undefined; name: string | undefined }> = [];
     
     // Custom recipients (specific users)
     if (resendCampaign.targetAudience === "custom_list" && resendCampaign.customRecipients) {
       // customRecipients contains user IDs, so we need to look them up
-      const recipients: Array<{ email: string; userId: string | undefined; name: string | undefined }> = [];
       for (const userId of resendCampaign.customRecipients) {
         // Type assertion: we know these are user IDs
         const user = await ctx.db.get(userId as any);
@@ -493,16 +510,17 @@ export const getCampaignRecipients = internalQuery({
           });
         }
       }
-      return recipients;
+      return { recipients, isDone: true, continueCursor: null };
     }
 
     const allUsers = await ctx.db.query("users").collect();
 
     switch (resendCampaign.targetAudience) {
       case "all_users":
-        return allUsers
+        recipients = allUsers
           .filter((u) => u.email)
           .map((u) => ({ email: u.email!, userId: u.clerkId, name: u.name }));
+        break;
 
       case "course_students":
         if (resendCampaign.targetCourseId) {
@@ -512,7 +530,7 @@ export const getCampaignRecipients = internalQuery({
             .withIndex("by_courseId", (q) => q.eq("courseId", courseIdStr))
             .collect();
           const userIds = new Set(enrollments.map((e) => e.userId));
-          return allUsers
+          recipients = allUsers
             .filter((u) => u.email && u.clerkId && userIds.has(u.clerkId))
             .map((u) => ({ email: u.email!, userId: u.clerkId!, name: u.name }));
         }
@@ -531,7 +549,7 @@ export const getCampaignRecipients = internalQuery({
               .filter((e) => courseIds.includes(e.courseId as any))
               .map((e) => e.userId)
           );
-          return allUsers
+          recipients = allUsers
             .filter((u) => u.email && u.clerkId && storeStudentIds.has(u.clerkId))
             .map((u) => ({ email: u.email!, userId: u.clerkId!, name: u.name }));
         }
@@ -540,7 +558,7 @@ export const getCampaignRecipients = internalQuery({
       case "inactive_users":
         if (resendCampaign.inactiveDays) {
           const cutoff = Date.now() - resendCampaign.inactiveDays * 24 * 60 * 60 * 1000;
-          return allUsers
+          recipients = allUsers
             .filter((u) => u.email && u._creationTime < cutoff)
             .map((u) => ({ email: u.email!, userId: u.clerkId, name: u.name }));
         }
@@ -556,14 +574,14 @@ export const getCampaignRecipients = internalQuery({
           const completedIds = new Set(
             enrollments.filter((e) => e.progress === 100).map((e) => e.userId)
           );
-          return allUsers
+          recipients = allUsers
             .filter((u) => u.email && u.clerkId && completedIds.has(u.clerkId))
             .map((u) => ({ email: u.email!, userId: u.clerkId!, name: u.name }));
         }
         break;
     }
 
-    return [];
+    return { recipients, isDone: true, continueCursor: null };
   },
 });
 
@@ -586,6 +604,27 @@ export const updateCampaignStatus = internalMutation({
     const updates: any = { status: args.status, updatedAt: Date.now() };
     if (args.sentAt) updates.sentAt = args.sentAt;
     await ctx.db.patch(args.campaignId, updates);
+  },
+});
+
+/**
+ * Update recipient status (INTERNAL)
+ */
+export const updateRecipientStatus = internalMutation({
+  args: {
+    recipientId: v.id("emailCampaignRecipients"),
+    status: v.union(
+      v.literal("queued"),
+      v.literal("sent"),
+      v.literal("delivered"),
+      v.literal("opened"),
+      v.literal("clicked"),
+      v.literal("bounced"),
+      v.literal("failed")
+    ),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.recipientId, { status: args.status });
   },
 });
 

@@ -151,6 +151,10 @@ export default function EmailCampaignsPage() {
     }
   };
 
+  const handleResendCampaign = (campaignId: string) => {
+    router.push(`/store/${storeId}/email-campaigns/${campaignId}`);
+  };
+
   const handleToggleWorkflow = async (workflowId: string, isActive: boolean) => {
     try {
       await toggleWorkflowStatus({ workflowId: workflowId as any, isActive: !isActive });
@@ -484,6 +488,18 @@ export default function EmailCampaignsPage() {
                         >
                           <Send className="w-4 h-4" />
                           Send Now
+                        </Button>
+                      )}
+                      
+                      {(campaign.status === "sent" || campaign.status === "failed") && (
+                        <Button
+                          onClick={() => handleResendCampaign(campaign._id)}
+                          size="sm"
+                          variant="outline"
+                          className="flex items-center gap-1"
+                        >
+                          <Copy className="w-4 h-4" />
+                          Resend
                         </Button>
                       )}
                       
