@@ -13,6 +13,12 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { 
   Music, 
   BookOpen, 
@@ -758,47 +764,63 @@ export default function SectionedMarketplace() {
           </motion.div>
 
           <motion.div
-            className="max-w-3xl mx-auto space-y-4"
+            className="max-w-3xl mx-auto"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
             viewport={{ once: true }}
           >
-            {[
-              {
-                question: "What is PPR Academy?",
-                answer: "PPR Academy is a marketplace platform connecting music creators with students. Creators can sell courses, sample packs, and digital products, while students can access high-quality educational content."
-              },
-              {
-                question: "How much does it cost to use PPR Academy?",
-                answer: "It's free to browse and discover creators. Individual courses and products have their own pricing. Creators keep 90% of their sales revenue."
-              },
-              {
-                question: "How does the 90% creator payout work?",
-                answer: "We believe in empowering creators. When you sell content, you keep 90% of the sale price. We only take a 10% platform fee to maintain and improve the service."
-              },
-              {
-                question: "Is it a course? How do I get automated?",
-                answer: "PPR Academy offers both individual courses and creator storefronts. You can enroll in courses for structured learning or subscribe to your favorite creators for ongoing content."
-              },
-              {
-                question: "Can I integrate SoundPitch with my existing workflow?",
-                answer: "Yes! PPR Academy is designed to complement your existing workflow. Access your content library anywhere and integrate with your production tools seamlessly."
-              },
-              {
-                question: "How do I join as a verified creator?",
-                answer: "Sign up and create your creator profile. Once you've added your first course or product, you can start selling immediately. We review all content to ensure quality."
-              }
-            ].map((faq, index) => (
-              <Card key={index} className="bg-card/50 border-border backdrop-blur-sm">
-                <button className="w-full text-left p-6 hover:bg-card/70 transition-colors">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold text-foreground pr-8">{faq.question}</h3>
-                    <ChevronDown className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                  </div>
-                </button>
-              </Card>
-            ))}
+            <Accordion type="single" collapsible className="space-y-4">
+              {[
+                {
+                  question: "What is PPR Academy?",
+                  answer: "PPR Academy is a marketplace platform connecting music creators with students. Creators can sell courses, sample packs, and digital products, while students get access to high-quality educational content and production resources from industry professionals."
+                },
+                {
+                  question: "How much does it cost for students?",
+                  answer: "It's completely free to browse and discover content. You only pay when you purchase individual courses, sample packs, or digital products. Each item has its own price set by the creator, with no monthly subscription required."
+                },
+                {
+                  question: "How much does it cost for creators?",
+                  answer: "Creating an account and setting up your storefront is free. We only earn when you earn - taking just a 10% platform fee on sales. You keep 90% of every sale, which is paid out directly to your connected Stripe account."
+                },
+                {
+                  question: "What can I sell as a creator?",
+                  answer: "You can sell online courses with video lessons, sample packs, presets, project templates, e-books, and any other digital products related to music production. You can also offer coaching sessions and build a subscriber base."
+                },
+                {
+                  question: "Do I need to be verified to start selling?",
+                  answer: "No verification required! Simply sign up, create your profile, connect your Stripe account for payments, and start uploading your content. Your products go live immediately after you publish them."
+                },
+                {
+                  question: "How do students access purchased content?",
+                  answer: "After purchasing, all content is instantly available in your Library. For courses, you'll get lifetime access to all lessons and materials. Sample packs and digital products can be downloaded directly from your library at any time."
+                },
+                {
+                  question: "Is there a refund policy?",
+                  answer: "Yes! We offer a money-back guarantee. If you're not satisfied with a purchase within the first 30 days, contact our support team for a full refund. We want to ensure you're happy with every purchase."
+                },
+                {
+                  question: "How do I get paid as a creator?",
+                  answer: "Connect your Stripe account in your dashboard settings. When students purchase your content, payments are processed through Stripe, and you receive 90% of the sale directly. Payouts follow Stripe's standard schedule."
+                }
+              ].map((faq, index) => (
+                <AccordionItem 
+                  key={index} 
+                  value={`item-${index}`}
+                  className="bg-card/50 border border-border backdrop-blur-sm rounded-lg px-6 overflow-hidden"
+                >
+                  <AccordionTrigger className="hover:no-underline py-6 text-left">
+                    <h3 className="text-lg font-semibold text-foreground pr-4">
+                      {faq.question}
+                    </h3>
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground leading-relaxed pb-6">
+                    {faq.answer}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
           </motion.div>
 
           <motion.div 
