@@ -169,29 +169,30 @@ export default function GenerateSamplesPage() {
             duration: 4, // Default duration for batch
           });
           
-          if (result.success && result.audioUrl && result.storageId) {
-            // Create sample
-            const sampleId = await createSample({
-              storeId,
-              title: template.name,
-              description: template.description,
-              storageId: result.storageId as any,
-              fileUrl: result.audioUrl,
-              fileName: `${template.name}.${result.format || "mp3"}`,
-              fileSize: result.fileSize || 0,
-              duration: 4,
-              format: result.format || "mp3",
-              bpm: template.bpm || undefined,
-              key: undefined,
-              genre: template.genre,
-              subGenre: undefined,
-              tags: template.tags,
-              category: selectedCategory,
-              creditPrice: 3,
-              licenseType: "royalty-free",
-              licenseTerms: "Standard royalty-free license",
-              waveformData: undefined,
-            });
+            if (result.success && result.audioUrl && result.storageId) {
+              // Create sample
+              // Note: ElevenLabs doesn't provide BPM/key - these would need separate audio analysis
+              const sampleId = await createSample({
+                storeId,
+                title: template.name,
+                description: template.description,
+                storageId: result.storageId as any,
+                fileUrl: result.audioUrl,
+                fileName: `${template.name}.${result.format || "mp3"}`,
+                fileSize: result.fileSize || 0,
+                duration: 4, // ElevenLabs generates based on prompt, actual duration may vary
+                format: result.format || "mp3",
+                bpm: undefined, // Would require audio analysis (e.g., music-tempo package)
+                key: undefined, // Would require audio analysis (e.g., key-detection package)
+                genre: template.genre,
+                subGenre: undefined,
+                tags: template.tags,
+                category: selectedCategory,
+                creditPrice: 3,
+                licenseType: "royalty-free",
+                licenseTerms: "Standard royalty-free license",
+                waveformData: undefined, // Could be generated client-side with wavesurfer.js
+              });
             
             generated.push({
               id: sampleId,
