@@ -40,7 +40,7 @@ import {
 import { BulkSelectionTable, userBulkActions } from "@/components/admin/bulk-selection-table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-const USERS_PER_PAGE = 20;
+const USERS_PER_PAGE = 1000;
 
 export default function UsersManagementPage() {
   const [searchQuery, setSearchQuery] = useState("");

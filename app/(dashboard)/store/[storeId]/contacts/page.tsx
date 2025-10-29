@@ -36,7 +36,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import {
   Users,
@@ -104,9 +104,9 @@ export default function ContactsPage() {
 
   const storeId = userStores?.[0]?._id;
 
-  // Fetch contacts (using customers table - limited to 100 most recent)
+  // Fetch contacts (unified customers + users view - limited to 100 most recent)
   const contacts = useQuery(
-    api.customers.getCustomersForStore,
+    api.customers.getFansForStore,
     storeId ? { storeId } : "skip"
   );
 
@@ -776,17 +776,17 @@ export default function ContactsPage() {
                 </CardTitle>
                 {countData && !countData.exact && countData.total >= 1000 && (
                   <p className="text-sm text-muted-foreground mt-1">
-                    Showing 100 most recent fans (exact count pending)
+                    Showing up to 5,000 most recent fans (exact count pending)
                   </p>
                 )}
-                {countData?.exact && countData.total > 100 && (
+                {countData?.exact && countData.total > 5000 && (
                   <p className="text-sm text-muted-foreground mt-1">
-                    Showing 100 most recent of {countData.total.toLocaleString()} total fans
+                    Showing 5,000 most recent of {countData.total.toLocaleString()} total fans
                   </p>
                 )}
-                {countData && countData.total > 100 && countData.total < 1000 && !countData.exact && (
+                {countData && countData.total > 100 && countData.total <= 5000 && !countData.exact && (
                   <p className="text-sm text-muted-foreground mt-1">
-                    Showing 100 most recent fans
+                    Showing most recent fans
                   </p>
                 )}
               </div>
@@ -808,6 +808,7 @@ export default function ContactsPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
                         <Avatar className="w-10 h-10">
+                          {contact.imageUrl && <AvatarImage src={contact.imageUrl} alt={contact.name} />}
                           <AvatarFallback className="bg-blue-100 text-blue-600">
                             {contact.name
                               .split(" ")
@@ -826,10 +827,18 @@ export default function ContactsPage() {
                                   ? "bg-green-50 text-green-700 border-green-200"
                                   : contact.type === "paying"
                                   ? "bg-blue-50 text-blue-700 border-blue-200"
-                                  : "bg-purple-50 text-purple-700 border-purple-200"
+                                  : contact.type === "subscription"
+                                  ? "bg-purple-50 text-purple-700 border-purple-200"
+                                  : "bg-gray-50 text-gray-700 border-gray-200" // user type
                               }
                             >
-                              {contact.type === "lead" ? "Lead" : contact.type === "paying" ? "Customer" : "Subscriber"}
+                              {contact.type === "lead" 
+                                ? "Lead" 
+                                : contact.type === "paying" 
+                                ? "Customer" 
+                                : contact.type === "subscription"
+                                ? "Subscriber"
+                                : "Registered User"}
                             </Badge>
                           </div>
                           <p className="text-sm text-gray-600">{contact.email}</p>
