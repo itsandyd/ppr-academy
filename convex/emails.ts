@@ -298,7 +298,7 @@ export const processCampaign = internalAction({
  */
 export const sendCampaign = action({
   args: {
-    campaignId: v.id("resendCampaigns"),
+    campaignId: v.union(v.id("resendCampaigns"), v.id("emailCampaigns")),
   },
   returns: v.object({
     success: v.boolean(),

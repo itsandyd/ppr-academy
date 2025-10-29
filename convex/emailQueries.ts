@@ -394,7 +394,7 @@ export const getStoreCampaigns = query({
  * Get campaign by ID (INTERNAL)
  */
 export const getCampaignById = internalQuery({
-  args: { campaignId: v.id("resendCampaigns") },
+  args: { campaignId: v.union(v.id("resendCampaigns"), v.id("emailCampaigns")) },
   handler: async (ctx, args) => {
     return await ctx.db.get(args.campaignId);
   },
@@ -424,7 +424,7 @@ export const getTemplateById = internalQuery({
  * Get campaign recipients (INTERNAL)
  */
 export const getCampaignRecipients = internalQuery({
-  args: { campaignId: v.id("resendCampaigns") },
+  args: { campaignId: v.union(v.id("resendCampaigns"), v.id("emailCampaigns")) },
   handler: async (ctx, args) => {
     const campaign = await ctx.db.get(args.campaignId);
     if (!campaign) return [];
