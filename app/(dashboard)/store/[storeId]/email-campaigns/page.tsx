@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useParams, useRouter } from "next/navigation";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useValidStoreId } from "@/hooks/useStoreId";
 
@@ -67,7 +67,7 @@ export default function EmailCampaignsPage() {
   );
 
   const deleteCampaign = useMutation((api as any).emailCampaigns?.deleteCampaign);
-  const sendCampaign = useMutation((api as any).emails?.sendCampaign);
+  const sendCampaign = useAction((api as any).emails?.sendCampaign);
   
   // Workflow mutations
   const deleteWorkflow = useMutation(api.emailWorkflows?.deleteWorkflow);
