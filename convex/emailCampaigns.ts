@@ -320,8 +320,10 @@ export const duplicateAllRecipients = mutation({
     const targetCampaign = await ctx.db.get(args.targetCampaignId);
     if (!targetCampaign) throw new Error("Target campaign not found");
     
-    if (targetCampaign.status !== "draft") {
-      throw new Error("Can only add recipients to draft campaigns");
+    // Allow adding recipients to draft or sending campaigns
+    // (sending status is set at the start of processing)
+    if (targetCampaign.status !== "draft" && targetCampaign.status !== "sending") {
+      throw new Error("Can only add recipients to draft or sending campaigns");
     }
 
     const batchSize = args.batchSize || 100;

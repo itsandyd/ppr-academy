@@ -427,11 +427,23 @@ export const checkEmailCampaignRecipients = internalQuery({
   args: { campaignId: v.union(v.id("resendCampaigns"), v.id("emailCampaigns")) },
   returns: v.number(),
   handler: async (ctx, args) => {
-    const recipients = await ctx.db
-      .query("emailCampaignRecipients")
-      .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId as any))
-      .collect();
-    return recipients.length;
+    // Use pagination to safely count recipients without hitting document limit
+    let count = 0;
+    let cursor: string | null = null;
+    let isDone = false;
+    
+    while (!isDone) {
+      const page = await ctx.db
+        .query("emailCampaignRecipients")
+        .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId as any))
+        .paginate({ cursor, numItems: 1000 });
+      
+      count += page.page.length;
+      isDone = page.isDone;
+      cursor = page.continueCursor;
+    }
+    
+    return count;
   },
 });
 
