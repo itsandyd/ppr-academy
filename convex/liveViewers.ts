@@ -13,7 +13,7 @@ import { Id } from "./_generated/dataModel";
 export const recordPresence = mutation({
   args: {
     courseId: v.id("courses"),
-    chapterId: v.optional(v.id("chapters")),
+    chapterId: v.optional(v.id("courseChapters")),
     userId: v.string(), // Clerk user ID
   },
   handler: async (ctx, args) => {
@@ -54,14 +54,14 @@ export const recordPresence = mutation({
 export const getLiveViewerCount = query({
   args: {
     courseId: v.id("courses"),
-    chapterId: v.optional(v.id("chapters")),
+    chapterId: v.optional(v.id("courseChapters")),
   },
   returns: v.object({
     total: v.number(),
     byChapter: v.optional(
       v.array(
         v.object({
-          chapterId: v.id("chapters"),
+          chapterId: v.id("courseChapters"),
           count: v.number(),
         })
       )
@@ -99,7 +99,7 @@ export const getLiveViewerCount = query({
     return {
       total: viewers.length,
       byChapter: Object.entries(byChapter).map(([chapterId, count]) => ({
-        chapterId: chapterId as Id<"chapters">,
+        chapterId: chapterId as Id<"courseChapters">,
         count,
       })),
     };
@@ -110,7 +110,7 @@ export const getLiveViewerCount = query({
 export const getActiveViewers = query({
   args: {
     courseId: v.id("courses"),
-    chapterId: v.optional(v.id("chapters")),
+    chapterId: v.optional(v.id("courseChapters")),
     limit: v.optional(v.number()),
   },
   returns: v.array(
@@ -118,7 +118,7 @@ export const getActiveViewers = query({
       userId: v.string(),
       userName: v.optional(v.string()),
       userAvatar: v.optional(v.string()),
-      chapterId: v.optional(v.id("chapters")),
+      chapterId: v.optional(v.id("courseChapters")),
       chapterTitle: v.optional(v.string()),
       lastSeen: v.number(),
     })
@@ -143,11 +143,11 @@ export const getActiveViewers = query({
     // Enrich with user and chapter details
     const enrichedViewers = await Promise.all(
       filteredViewers.map(async (viewer) => {
-        // Get user details
-        const user = await ctx.db
-          .query("users")
-          .withIndex("by_clerk_id", (q) => q.eq("clerkId", viewer.userId))
-          .first();
+      // Get user details
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", viewer.userId))
+        .first();
 
         // Get chapter details if applicable
         let chapterTitle: string | undefined;

@@ -18,7 +18,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface LiveViewerBadgeProps {
   courseId: Id<"courses">;
-  chapterId?: Id<"chapters">;
+  chapterId?: Id<"courseChapters">;
   showAvatars?: boolean;
 }
 

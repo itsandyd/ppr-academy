@@ -521,7 +521,7 @@ export default defineSchema({
   // Live Viewer Tracking (Real-time presence)
   liveViewers: defineTable({
     courseId: v.id("courses"),
-    chapterId: v.optional(v.id("chapters")),
+    chapterId: v.optional(v.id("courseChapters")),
     userId: v.string(), // Clerk user ID
     lastSeen: v.number(), // Timestamp of last heartbeat
     expiresAt: v.number(), // When this presence expires (60s after last heartbeat)
@@ -549,7 +549,7 @@ export default defineSchema({
   // Collaborative Timestamped Notes
   courseNotes: defineTable({
     courseId: v.id("courses"),
-    chapterId: v.id("chapters"),
+    chapterId: v.id("courseChapters"),
     userId: v.string(), // Clerk user ID
     content: v.string(),
     timestamp: v.number(), // Timestamp in seconds

@@ -13,7 +13,7 @@ import { Id } from "./_generated/dataModel";
 export const createNote = mutation({
   args: {
     courseId: v.id("courses"),
-    chapterId: v.id("chapters"),
+    chapterId: v.id("courseChapters"),
     userId: v.string(),
     content: v.string(),
     timestamp: v.number(), // Timestamp in seconds
@@ -90,7 +90,7 @@ export const deleteNote = mutation({
 // Get notes for a chapter
 export const getChapterNotes = query({
   args: {
-    chapterId: v.id("chapters"),
+    chapterId: v.id("courseChapters"),
     userId: v.string(),
     includePublic: v.optional(v.boolean()),
   },
@@ -99,7 +99,7 @@ export const getChapterNotes = query({
       _id: v.id("courseNotes"),
       _creationTime: v.number(),
       courseId: v.id("courses"),
-      chapterId: v.id("chapters"),
+      chapterId: v.id("courseChapters"),
       userId: v.string(),
       userName: v.optional(v.string()),
       userAvatar: v.optional(v.string()),
@@ -147,7 +147,7 @@ export const getChapterNotes = query({
         if (note.userId !== args.userId) {
           const user = await ctx.db
             .query("users")
-            .withIndex("by_clerk_id", (q) => q.eq("clerkId", note.userId))
+            .withIndex("by_clerkId", (q) => q.eq("clerkId", note.userId))
             .first();
 
           userName = user?.name;
@@ -170,7 +170,7 @@ export const getChapterNotes = query({
 // Get notes at specific timestamp (for inline display)
 export const getNotesAtTimestamp = query({
   args: {
-    chapterId: v.id("chapters"),
+    chapterId: v.id("courseChapters"),
     timestamp: v.number(),
     userId: v.string(),
     includePublic: v.optional(v.boolean()),
@@ -216,7 +216,7 @@ export const getNotesAtTimestamp = query({
         if (note.userId !== args.userId) {
           const user = await ctx.db
             .query("users")
-            .withIndex("by_clerk_id", (q) => q.eq("clerkId", note.userId))
+            .withIndex("by_clerkId", (q) => q.eq("clerkId", note.userId))
             .first();
 
           userName = user?.name;

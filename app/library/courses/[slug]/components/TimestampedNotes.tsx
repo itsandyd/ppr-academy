@@ -33,7 +33,7 @@ import {
 
 interface TimestampedNotesProps {
   courseId: Id<"courses">;
-  chapterId: Id<"chapters">;
+  chapterId: Id<"courseChapters">;
   currentTimestamp?: number; // Current video/audio timestamp
   onSeekTo?: (timestamp: number) => void; // Callback to seek to timestamp
 }
