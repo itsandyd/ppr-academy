@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
-import { ArrowRight, Store, Gift, ExternalLink, GraduationCap, Youtube, Music, Globe, Link } from "lucide-react";
+import { ArrowRight, Store, Gift, ExternalLink, GraduationCap, Youtube, Music, Globe, Link as LinkIcon } from "lucide-react";
 import { LeadMagnetPreview } from "./LeadMagnetPreview";
 import Link from "next/link";
 import Image from "next/image";
@@ -302,7 +302,7 @@ export function DesktopStorefront({ store, user, products, displayName, initials
                 switch (mediaType) {
                   case "youtube": return <Youtube className="w-16 h-16 text-secondary" />;
                   case "spotify": return <Music className="w-16 h-16 text-primary" />;
-                  default: return <Link className="w-16 h-16 text-accent" />;
+                  default: return <LinkIcon className="w-16 h-16 text-accent" />;
                 }
               };
 
