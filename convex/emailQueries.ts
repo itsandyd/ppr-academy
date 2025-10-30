@@ -422,28 +422,20 @@ export const getTemplateById = internalQuery({
 
 /**
  * Check if campaign has recipients in emailCampaignRecipients table (INTERNAL)
+ * Returns true if ANY recipients exist, false otherwise
+ * This is optimized to avoid reading large datasets
  */
 export const checkEmailCampaignRecipients = internalQuery({
   args: { campaignId: v.union(v.id("resendCampaigns"), v.id("emailCampaigns")) },
-  returns: v.number(),
+  returns: v.boolean(),
   handler: async (ctx, args) => {
-    // Use pagination to safely count recipients without hitting document limit
-    let count = 0;
-    let cursor: string | null = null;
-    let isDone = false;
+    // Just check if any recipient exists - much faster than counting all
+    const firstRecipient = await ctx.db
+      .query("emailCampaignRecipients")
+      .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId as any))
+      .first();
     
-    while (!isDone) {
-      const page = await ctx.db
-        .query("emailCampaignRecipients")
-        .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId as any))
-        .paginate({ cursor, numItems: 1000 });
-      
-      count += page.page.length;
-      isDone = page.isDone;
-      cursor = page.continueCursor;
-    }
-    
-    return count;
+    return firstRecipient !== null;
   },
 });
 

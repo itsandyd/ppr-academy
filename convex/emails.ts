@@ -198,11 +198,11 @@ export const sendCampaignBatch = internalAction({
     }
 
     // Check if this is an emailCampaign
-    const emailCampaignRecipients = await ctx.runQuery(
+    const hasEmailCampaignRecipients = await ctx.runQuery(
       internal.emailQueries.checkEmailCampaignRecipients,
       { campaignId: args.campaignId }
     );
-    const isEmailCampaign = emailCampaignRecipients > 0;
+    const isEmailCampaign = hasEmailCampaignRecipients;
 
     // Get email settings
     let fromEmail, fromName, replyToEmail;
