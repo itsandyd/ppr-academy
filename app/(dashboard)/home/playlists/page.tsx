@@ -9,8 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Plus, List, Music, Settings, Eye, EyeOff, Edit, Trash2, ExternalLink } from "lucide-react";
+import { Plus, List, Music, Settings, Eye, EyeOff, Edit, Trash2, ExternalLink, X } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
+import Link from "next/link";
+import Image from "next/image";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useToast } from "@/hooks/use-toast";
@@ -293,7 +295,13 @@ export default function PlaylistsPage() {
                 {/* Cover */}
                 <div className="aspect-square bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg flex items-center justify-center relative overflow-hidden">
                   {playlist.coverUrl ? (
-                    <img src={playlist.coverUrl} alt={playlist.name} className="w-full h-full object-cover" />
+                    <Image 
+                      src={playlist.coverUrl} 
+                      alt={playlist.name} 
+                      width={400}
+                      height={400}
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
                     <List className="w-16 h-16 text-purple-400" />
                   )}
@@ -507,7 +515,13 @@ export default function PlaylistsPage() {
               />
               {coverUrl && (
                 <div className="mt-2 relative w-32 h-32 rounded-lg overflow-hidden border">
-                  <img src={coverUrl} alt="Cover preview" className="w-full h-full object-cover" />
+                  <Image 
+                    src={coverUrl} 
+                    alt="Cover preview" 
+                    width={128}
+                    height={128}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
               )}
               <p className="text-xs text-muted-foreground mt-1">

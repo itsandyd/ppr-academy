@@ -26,6 +26,7 @@ import {
   Loader2
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 interface Course {
   _id: string;
@@ -369,9 +370,11 @@ export function CourseCheckout({ course, store, creator, user }: CourseCheckoutP
                 <div className="space-y-4">
                   <div className="w-full h-48 bg-emerald-100 rounded-lg overflow-hidden">
                     {course.imageUrl ? (
-                      <img 
+                      <Image 
                         src={course.imageUrl} 
                         alt={course.title}
+                        width={640}
+                        height={192}
                         className="w-full h-full object-cover"
                       />
                     ) : (

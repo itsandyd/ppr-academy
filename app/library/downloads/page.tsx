@@ -19,6 +19,7 @@ import {
   Link as LinkIcon,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
@@ -157,10 +158,13 @@ export default function LibraryDownloadsPage() {
             <Card key={product._id} className="overflow-hidden hover:shadow-lg transition-shadow">
               <div className="aspect-video bg-muted overflow-hidden">
                 {product.imageUrl ? (
-                  <img 
+                  <Image 
                     src={product.imageUrl} 
                     alt={product.title}
+                    width={640}
+                    height={360}
                     className="w-full h-full object-cover"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">

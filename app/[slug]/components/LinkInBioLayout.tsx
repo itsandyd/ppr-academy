@@ -4,6 +4,8 @@ import * as React from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, Store, Gift, ExternalLink, GraduationCap } from "lucide-react";
+import Link from "next/link";
+import Image from "next/image";
 import { LeadMagnetPreview } from "./LeadMagnetPreview";
 import { useToast } from "@/hooks/use-toast";
 
@@ -212,9 +214,11 @@ export function LinkInBioLayout({ products, leadMagnetData, storeData }: LinkInB
                     : "bg-blue-100"
                 }`}>
                   {product.imageUrl ? (
-                    <img 
+                    <Image 
                       src={product.imageUrl} 
                       alt={product.title}
+                      width={80}
+                      height={80}
                       className="w-full h-full object-cover"
                     />
                   ) : isCourse ? (

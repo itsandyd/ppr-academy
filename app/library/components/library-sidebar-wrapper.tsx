@@ -13,6 +13,7 @@ import { useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import Image from "next/image";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -188,9 +189,11 @@ export function LibrarySidebarWrapper({ children }: LibrarySidebarWrapperProps) 
                         <div className="flex items-start gap-3 w-full">
                           {/* Sender Avatar */}
                           {notification.senderAvatar ? (
-                            <img
+                            <Image
                               src={notification.senderAvatar}
                               alt={notification.senderName || "Sender"}
+                              width={32}
+                              height={32}
                               className="w-8 h-8 rounded-full object-cover shrink-0"
                             />
                           ) : (
@@ -269,9 +272,11 @@ export function LibrarySidebarWrapper({ children }: LibrarySidebarWrapperProps) 
                   <div className="flex items-start gap-3 mb-4">
                     {/* Sender Avatar */}
                     {selectedNotification.senderAvatar ? (
-                      <img
+                      <Image
                         src={selectedNotification.senderAvatar}
                         alt={selectedNotification.senderName || "Sender"}
+                        width={48}
+                        height={48}
                         className="w-12 h-12 rounded-full object-cover"
                       />
                     ) : (

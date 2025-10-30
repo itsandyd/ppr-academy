@@ -6,7 +6,9 @@ import { DashboardPreferenceSwitcher } from "@/components/dashboard/dashboard-pr
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Bell, Search, Settings, X, CheckCheck, Package, Users, BarChart3, BookOpen, TrendingUp, MessageCircle } from "lucide-react";
+import { Bell, Search, Settings, X, CheckCheck, Package, Users, BarChart3, BookOpen, TrendingUp, MessageCircle, User } from "lucide-react";
+import Link from "next/link";
+import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -195,9 +197,11 @@ export function SidebarWrapper({ children }: SidebarWrapperProps) {
                         <div className="flex items-start gap-3 w-full">
                           {/* Sender Avatar */}
                           {notification.senderAvatar ? (
-                            <img
+                            <Image
                               src={notification.senderAvatar}
                               alt={notification.senderName || "Sender"}
+                              width={32}
+                              height={32}
                               className="w-8 h-8 rounded-full object-cover shrink-0"
                             />
                           ) : (
@@ -276,9 +280,11 @@ export function SidebarWrapper({ children }: SidebarWrapperProps) {
                   <div className="flex items-start gap-3 mb-4">
                     {/* Sender Avatar */}
                     {selectedNotification.senderAvatar ? (
-                      <img
+                      <Image
                         src={selectedNotification.senderAvatar}
                         alt={selectedNotification.senderName || "Sender"}
+                        width={48}
+                        height={48}
                         className="w-12 h-12 rounded-full object-cover"
                       />
                     ) : (

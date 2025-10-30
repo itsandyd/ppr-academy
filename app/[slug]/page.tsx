@@ -4,6 +4,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { use } from "react";
 import { notFound } from "next/navigation";
+import Image from "next/image";
 import { Loader2, Search, Filter, BookOpen, Play, Users, Star, X, ExternalLink, Download, ShoppingCart } from "lucide-react";
 import { DesktopStorefront } from "./components/DesktopStorefront";
 import { MobileStorefront } from "./components/MobileStorefront";
@@ -359,7 +360,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center text-primary-foreground font-bold text-xl">
               {avatarUrl ? (
-                <img src={avatarUrl} alt={displayName} className="w-full h-full rounded-full object-cover" />
+                <Image src={avatarUrl} alt={displayName} width={64} height={64} className="w-full h-full rounded-full object-cover" />
               ) : (
                 initials
               )}
@@ -496,10 +497,13 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
                   {/* Product Image */}
                   <div className="relative h-48 bg-gradient-to-br from-muted to-muted/80">
                     {product.imageUrl ? (
-                      <img
+                      <Image
                         src={product.imageUrl}
                         alt={product.title}
+                        width={640}
+                        height={192}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
@@ -777,9 +781,11 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
                 {/* Product Image */}
                 {selectedProduct.imageUrl && (
                   <div className="relative h-64 rounded-lg overflow-hidden">
-                    <img
+                    <Image
                       src={selectedProduct.imageUrl}
                       alt={selectedProduct.title}
+                      width={640}
+                      height={256}
                       className="w-full h-full object-cover"
                     />
                   </div>

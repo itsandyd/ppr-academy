@@ -453,9 +453,11 @@ export function ProductsList({ products, storeId }: ProductsListProps) {
                         {/* Course Image */}
                         <div className="relative h-48 overflow-hidden bg-gradient-to-br from-purple-100 via-pink-50 to-blue-100 dark:from-purple-900/20 dark:via-pink-900/10 dark:to-blue-900/20">
                           {course.imageUrl ? (
-                            <img 
+                            <Image 
                               src={course.imageUrl} 
                               alt={course.title}
+                              width={640}
+                              height={192}
                               className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                             />
                           ) : (
@@ -617,9 +619,11 @@ export function ProductsList({ products, storeId }: ProductsListProps) {
                           {/* Course Image */}
                           <div className="w-20 h-20 bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg overflow-hidden flex-shrink-0">
                             {course.imageUrl ? (
-                              <img 
+                              <Image 
                                 src={course.imageUrl} 
                                 alt={course.title}
+                                width={80}
+                                height={80}
                                 className="w-full h-full object-cover"
                               />
                             ) : (
@@ -760,9 +764,11 @@ export function ProductsList({ products, storeId }: ProductsListProps) {
                     {/* Product Image */}
                     <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                       {product.imageUrl ? (
-                        <img 
+                        <Image 
                           src={product.imageUrl} 
                           alt={product.title}
+                          width={64}
+                          height={64}
                           className="w-full h-full object-cover"
                         />
                       ) : (

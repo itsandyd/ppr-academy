@@ -34,6 +34,7 @@ import {
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import Image from "next/image";
 
 export function LibraryHeader() {
   const pathname = usePathname();
@@ -325,9 +326,11 @@ export function LibraryHeader() {
                     >
                       <div className="flex items-start gap-3">
                         {course.imageUrl && (
-                          <img
+                          <Image
                             src={course.imageUrl}
                             alt={course.title}
+                            width={64}
+                            height={64}
                             className="w-16 h-16 rounded object-cover"
                           />
                         )}

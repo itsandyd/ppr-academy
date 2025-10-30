@@ -6,6 +6,8 @@ import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
 import { ArrowRight, Store, Gift, ExternalLink, GraduationCap, Youtube, Music, Globe, Link } from "lucide-react";
 import { LeadMagnetPreview } from "./LeadMagnetPreview";
+import Link from "next/link";
+import Image from "next/image";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import * as React from "react";
 import { cn } from "@/lib/utils";
@@ -129,10 +131,13 @@ export function DesktopStorefront({ store, user, products, displayName, initials
                     {/* Image */}
                     <div className="w-full h-48 bg-primary/10 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
                       {leadMagnet.imageUrl ? (
-                        <img 
+                        <Image 
                           src={leadMagnet.imageUrl} 
                           alt={leadMagnet.title}
+                          width={640}
+                          height={192}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                         />
                       ) : (
                         <div className="text-center">
@@ -199,10 +204,13 @@ export function DesktopStorefront({ store, user, products, displayName, initials
                 {/* Image */}
                 <div className="w-full h-48 bg-primary/10 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
                   {course.imageUrl ? (
-                    <img 
+                    <Image 
                       src={course.imageUrl} 
                       alt={course.title}
+                      width={640}
+                      height={192}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     />
                   ) : (
                     <div className="text-center">
@@ -248,10 +256,13 @@ export function DesktopStorefront({ store, user, products, displayName, initials
                 {/* Image */}
                 <div className="w-full h-48 bg-primary/10 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
                   {course.imageUrl ? (
-                    <img 
+                    <Image 
                       src={course.imageUrl} 
                       alt={course.title}
+                      width={640}
+                      height={192}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     />
                   ) : (
                     <div className="text-center">
@@ -360,10 +371,13 @@ export function DesktopStorefront({ store, user, products, displayName, initials
                 {/* Image */}
                 <div className="w-full h-48 bg-gradient-to-br from-accent/5 to-accent/10 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
                   {product.imageUrl ? (
-                    <img 
+                    <Image 
                       src={product.imageUrl} 
                       alt={product.title}
+                      width={640}
+                      height={192}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     />
                   ) : (
                     <div className="text-center">
@@ -408,10 +422,13 @@ export function DesktopStorefront({ store, user, products, displayName, initials
                         {/* Image */}
                         <div className="w-full h-48 bg-primary/10 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
                           {product.imageUrl ? (
-                            <img 
+                            <Image 
                               src={product.imageUrl} 
                               alt={product.title}
+                              width={640}
+                              height={192}
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                             />
                           ) : (
                             <div className="text-center">
@@ -485,10 +502,13 @@ export function DesktopStorefront({ store, user, products, displayName, initials
                 {/* Image */}
                 <div className="w-full h-48 bg-gradient-to-br from-accent/5 to-accent/10 rounded-lg mb-4 flex items-center justify-center overflow-hidden">
                   {product.imageUrl ? (
-                    <img 
+                    <Image 
                       src={product.imageUrl} 
                       alt={product.title}
+                      width={640}
+                      height={192}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     />
                   ) : (
                     <div className="text-center">

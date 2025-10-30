@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Music, Play, Share2, Edit, Plus, ExternalLink, Instagram, Twitter, Sparkles } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { EmptyStateEnhanced } from "@/components/ui/empty-state-enhanced";
 import { useToast } from "@/hooks/use-toast";
 
@@ -125,7 +126,14 @@ export default function ShowcasePage() {
                   {/* Cover/Thumbnail */}
                   <div className="aspect-square bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg flex items-center justify-center relative overflow-hidden">
                     {track.coverUrl ? (
-                      <img src={track.coverUrl} alt={track.title} className="w-full h-full object-cover" />
+                      <Image 
+                        src={track.coverUrl} 
+                        alt={track.title} 
+                        width={400}
+                        height={400}
+                        className="w-full h-full object-cover"
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      />
                     ) : (
                       <Music className="w-16 h-16 text-purple-400" />
                     )}

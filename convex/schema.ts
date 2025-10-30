@@ -514,7 +514,21 @@ export default defineSchema({
   .index("by_user_course", ["userId", "courseId"])
   // NEW: Performance indexes for completion queries
   .index("by_user_completed", ["userId", "isCompleted"])
-  .index("by_course_completed", ["courseId", "isCompleted"]),
+  .index("by_course_completed", ["courseId", "isCompleted"])
+  // Additional composite index for filtering completed progress by user and course
+  .index("by_user_course_completed", ["userId", "courseId", "isCompleted"]),
+
+  // Live Viewer Tracking (Real-time presence)
+  liveViewers: defineTable({
+    courseId: v.id("courses"),
+    chapterId: v.optional(v.id("chapters")),
+    userId: v.string(), // Clerk user ID
+    lastSeen: v.number(), // Timestamp of last heartbeat
+    expiresAt: v.number(), // When this presence expires (60s after last heartbeat)
+  })
+    .index("by_course", ["courseId"])
+    .index("by_course_user", ["courseId", "userId"])
+    .index("by_expiresAt", ["expiresAt"]),
 
   // Library Sessions - Track user activity in library
   librarySessions: defineTable({
@@ -531,6 +545,23 @@ export default defineSchema({
   .index("by_sessionType", ["sessionType"])
   .index("by_resourceId", ["resourceId"])
   .index("by_startedAt", ["startedAt"]),
+
+  // Collaborative Timestamped Notes
+  courseNotes: defineTable({
+    courseId: v.id("courses"),
+    chapterId: v.id("chapters"),
+    userId: v.string(), // Clerk user ID
+    content: v.string(),
+    timestamp: v.number(), // Timestamp in seconds
+    isPublic: v.boolean(), // Private by default, can be shared
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_chapter", ["chapterId"])
+    .index("by_chapter_user", ["chapterId", "userId"])
+    .index("by_chapter_public", ["chapterId", "isPublic"])
+    .index("by_user", ["userId"])
+    .index("by_course", ["courseId"]),
 
   // Lead Magnet Submissions
   leadSubmissions: defineTable({

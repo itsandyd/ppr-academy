@@ -12,6 +12,7 @@ import {
   Sparkles
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 interface FollowCreatorCTAProps {
@@ -71,9 +72,11 @@ export function FollowCreatorCTA({
             {/* Creator Info */}
             <div className="flex items-center gap-4 mb-4">
               {creatorAvatar && (
-                <img
+                <Image
                   src={creatorAvatar}
                   alt={creatorName}
+                  width={48}
+                  height={48}
                   className="w-12 h-12 rounded-full border-2 border-white/30"
                 />
               )}

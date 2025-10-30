@@ -280,14 +280,18 @@ export function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData 
           placeholder="Your Name" 
           value={formData.name}
           onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-          className="h-12 bg-white dark:bg-black border-border text-foreground placeholder-muted-foreground focus:border-primary focus:ring-primary relative z-10 pointer-events-auto min-h-[44px] touch-manipulation" 
+          className="h-12 bg-white dark:bg-black border-border text-foreground placeholder-muted-foreground focus:border-primary focus:ring-primary relative z-10 pointer-events-auto min-h-[44px] touch-manipulation"
+          aria-label="Your name"
+          required
         />
         <Input 
           placeholder="Your Email" 
           type="email"
           value={formData.email}
           onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-          className="h-12 bg-white dark:bg-black border-border text-foreground placeholder-muted-foreground focus:border-primary focus:ring-primary relative z-10 pointer-events-auto min-h-[44px] touch-manipulation" 
+          className="h-12 bg-white dark:bg-black border-border text-foreground placeholder-muted-foreground focus:border-primary focus:ring-primary relative z-10 pointer-events-auto min-h-[44px] touch-manipulation"
+          aria-label="Your email address"
+          required
         />
         <Button 
           type="button"
@@ -298,9 +302,10 @@ export function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData 
           }}
           disabled={isSubmitting}
           className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground flex items-center justify-center gap-2 font-semibold disabled:opacity-50 relative z-10 pointer-events-auto touch-manipulation min-h-[44px]"
+          aria-label={leadMagnet?.ctaText || "Get Free Resource"}
         >
           {isSubmitting ? "Submitting..." : (leadMagnet?.ctaText || "Get Free Resource")}
-          <ArrowRight className="w-4 h-4" />
+          <ArrowRight className="w-4 h-4" aria-hidden="true" />
         </Button>
       </div>
 

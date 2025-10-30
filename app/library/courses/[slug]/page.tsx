@@ -27,6 +27,7 @@ import {
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { CourseQAChat } from "@/components/course/CourseQAChat";
+import { LiveViewerBadge } from "./components/LiveViewerBadge";
 import { LessonQASection } from "@/components/qa/LessonQASection";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
@@ -232,6 +233,7 @@ export default function CoursePlayerPage() {
             <span className="font-semibold">Course Menu</span>
           </Button>
           <div className="flex items-center gap-2.5 text-sm">
+            <LiveViewerBadge courseId={courseData._id} chapterId={selectedChapter as any} />
             <Progress value={overallProgress} className="w-20 h-2" />
             <span className="font-semibold text-foreground min-w-[3ch]">{overallProgress}%</span>
           </div>
@@ -500,8 +502,9 @@ export default function CoursePlayerPage() {
                       variant="outline"
                       onClick={() => setSelectedChapter(previousChapter._id)}
                       className="w-full justify-start gap-3 h-auto py-3 px-4"
+                      aria-label={`Previous chapter: ${previousChapter.title}`}
                     >
-                      <ChevronLeft className="w-4 h-4 flex-shrink-0" />
+                      <ChevronLeft className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
                       <div className="text-left min-w-0 flex-1">
                         <div className="text-xs text-muted-foreground font-medium">Previous</div>
                         <div className="font-semibold text-sm truncate">{previousChapter.title}</div>
@@ -512,17 +515,18 @@ export default function CoursePlayerPage() {
                     <Button
                       onClick={() => setSelectedChapter(nextChapter._id)}
                       className="w-full justify-between gap-3 h-auto py-3 px-4"
+                      aria-label={`Next chapter: ${nextChapter.title}`}
                     >
                       <div className="text-left min-w-0 flex-1">
                         <div className="text-xs opacity-90 font-medium">Next</div>
                         <div className="font-semibold text-sm truncate">{nextChapter.title}</div>
                       </div>
-                      <ChevronRight className="w-4 h-4 flex-shrink-0" />
+                      <ChevronRight className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
                     </Button>
                   ) : (
                     <Button variant="default" asChild className="w-full py-3">
-                      <Link href="/library/courses" className="flex items-center justify-center gap-2">
-                        <CheckCircle className="w-4 h-4" />
+                      <Link href="/library/courses" className="flex items-center justify-center gap-2" aria-label="Return to courses - course complete">
+                        <CheckCircle className="w-4 h-4" aria-hidden="true" />
                         <span className="font-semibold">Course Complete</span>
                       </Link>
                     </Button>

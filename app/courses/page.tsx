@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function CoursesPage() {
   const { user } = useUser();
@@ -102,10 +103,14 @@ export default function CoursesPage() {
               <Card key={course._id} className="hover:shadow-lg transition-shadow">
                 <div className="w-full h-48 bg-emerald-100 rounded-t-lg overflow-hidden">
                   {course.imageUrl ? (
-                    <img 
+                    <Image 
                       src={course.imageUrl} 
                       alt={course.title}
+                      width={640}
+                      height={192}
                       className="w-full h-full object-cover"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      priority={index < 3}
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">

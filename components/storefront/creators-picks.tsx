@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Star, TrendingUp, Crown, Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 interface CreatorsPickProduct {
@@ -86,10 +87,13 @@ export function CreatorsPicks({
               {/* Image */}
               <div className="relative aspect-video bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900/20 dark:to-blue-900/20 overflow-hidden">
                 {product.imageUrl ? (
-                  <img
+                  <Image
                     src={product.imageUrl}
                     alt={product.title}
+                    width={640}
+                    height={360}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
@@ -200,9 +204,11 @@ export function CreatorsPicksCompact({
             >
               <div className="flex items-center gap-3 p-3 bg-white dark:bg-black rounded-lg border border-slate-200 dark:border-slate-800 hover:border-amber-300 dark:hover:border-amber-700 transition-colors cursor-pointer">
                 {product.imageUrl && (
-                  <img
+                  <Image
                     src={product.imageUrl}
                     alt={product.title}
+                    width={48}
+                    height={48}
                     className="w-12 h-12 rounded object-cover"
                   />
                 )}

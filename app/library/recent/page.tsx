@@ -15,8 +15,10 @@ import {
   PlayCircle,
   FileText,
   Package,
+  Folder,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
 import { Progress } from "@/components/ui/progress";
 
@@ -192,9 +194,11 @@ export default function LibraryRecentPage() {
                         {/* Thumbnail */}
                         <div className="w-16 h-16 bg-muted rounded-lg overflow-hidden ml-4">
                           {item.imageUrl ? (
-                            <img 
+                            <Image 
                               src={item.imageUrl} 
                               alt={item.title}
+                              width={64}
+                              height={64}
                               className="w-full h-full object-cover"
                             />
                           ) : (

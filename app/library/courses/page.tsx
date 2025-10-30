@@ -18,6 +18,7 @@ import {
   Star,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -133,10 +134,13 @@ export default function LibraryCoursesPage() {
             <Card key={course._id} className="overflow-hidden hover:shadow-lg transition-shadow">
               <div className="aspect-video bg-muted overflow-hidden">
                 {course.imageUrl ? (
-                  <img 
+                  <Image 
                     src={course.imageUrl} 
                     alt={course.title}
+                    width={640}
+                    height={360}
                     className="w-full h-full object-cover"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">

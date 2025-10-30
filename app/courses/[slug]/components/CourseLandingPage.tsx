@@ -20,6 +20,7 @@ import {
   TrendingUp
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { CourseQAChat } from "@/components/course/CourseQAChat";
 
@@ -164,10 +165,14 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
             <div className="relative mt-6 sm:mt-8 lg:mt-0 min-w-0">
               <div className="w-full h-48 sm:h-64 lg:h-80 xl:h-96 bg-white/10 rounded-xl sm:rounded-2xl overflow-hidden backdrop-blur-sm border border-white/20">
                 {course.imageUrl ? (
-                  <img 
+                  <Image 
                     src={course.imageUrl} 
                     alt={course.title}
+                    width={1200}
+                    height={630}
                     className="w-full h-full object-cover"
+                    priority
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 1200px"
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
