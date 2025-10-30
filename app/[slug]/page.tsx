@@ -637,44 +637,34 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
             <div className="max-w-5xl mx-auto">
               {/* Attention-Grabbing Pre-Headline */}
               <div className="text-center mb-8">
-                <Badge className="mb-4 bg-gradient-to-r from-chart-1 to-chart-4 text-primary-foreground border-none px-6 py-2 text-base font-semibold shadow-lg animate-pulse">
-                  ⚡ Join {displayName} & 2,500+ Successful Creators
+                <Badge className="mb-4 bg-gradient-to-r from-chart-1 to-chart-4 text-primary-foreground border-none px-6 py-2 text-base font-semibold shadow-lg">
+                  🎵 For Music Creators Like {displayName}
                 </Badge>
                 
                 {/* Power Headline with Benefit Focus */}
                 <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
                   <span className="bg-gradient-to-r from-chart-1 via-chart-2 to-chart-3 bg-clip-text text-transparent">
-                    Turn Your Music Skills
+                    Build Your Own
                   </span>
                   <br />
-                  <span className="text-foreground">Into Passive Income</span>
+                  <span className="text-foreground">Professional Storefront</span>
                 </h2>
                 
                 {/* Compelling Sub-Headline */}
                 <p className="text-xl md:text-2xl text-foreground/80 max-w-3xl mx-auto font-medium mb-4">
-                  Build a professional storefront in under 10 minutes. Start earning from sample packs, presets, courses & coaching.
+                  Sell sample packs, presets, courses, and coaching - all from your own link-in-bio storefront
                 </p>
-                
-                {/* Urgency/Scarcity Element */}
-                <div className="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/20 rounded-full px-4 py-2 text-sm font-semibold text-amber-700 dark:text-amber-400">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-                  </span>
-                  <span>Limited: Get 3 months free when you start today</span>
-                </div>
               </div>
 
-              {/* Benefit-Driven Value Props with Stats */}
+              {/* Benefit-Driven Value Props */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
                 <div className="group bg-card/60 backdrop-blur-sm rounded-2xl p-6 border-2 border-border hover:border-chart-1/50 transition-all duration-300 hover:shadow-2xl hover:scale-105">
                   <div className="w-14 h-14 bg-gradient-to-br from-chart-1 to-chart-2 rounded-xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform shadow-lg">
                     <BookOpen className="w-7 h-7 text-primary-foreground" aria-hidden="true" />
                   </div>
                   <div className="text-center">
-                    <div className="text-3xl font-bold text-chart-1 mb-2">$2.4K+</div>
-                    <h3 className="font-bold text-lg mb-2">Average Monthly Revenue</h3>
-                    <p className="text-sm text-muted-foreground">Creators earn selling sample packs, courses, and 1-on-1 coaching all in one place</p>
+                    <h3 className="font-bold text-lg mb-2">All-in-One Platform</h3>
+                    <p className="text-sm text-muted-foreground">Sell products, courses, and services from one professional storefront</p>
                   </div>
                 </div>
 
@@ -683,9 +673,8 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
                     <Users className="w-7 h-7 text-primary-foreground" aria-hidden="true" />
                   </div>
                   <div className="text-center">
-                    <div className="text-3xl font-bold text-chart-2 mb-2">10 Min</div>
-                    <h3 className="font-bold text-lg mb-2">Setup Time</h3>
-                    <p className="text-sm text-muted-foreground">Your custom link-in-bio storefront ready for Instagram, TikTok & YouTube in minutes</p>
+                    <h3 className="font-bold text-lg mb-2">Your Brand, Your Way</h3>
+                    <p className="text-sm text-muted-foreground">Custom branding perfect for Instagram, TikTok, and YouTube bios</p>
                   </div>
                 </div>
 
@@ -694,41 +683,8 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
                     <Play className="w-7 h-7 text-primary-foreground" aria-hidden="true" />
                   </div>
                   <div className="text-center">
-                    <div className="text-3xl font-bold text-chart-3 mb-2">95%</div>
-                    <h3 className="font-bold text-lg mb-2">Creator Retention</h3>
-                    <p className="text-sm text-muted-foreground">Keep more of your earnings with low fees and instant payments to your account</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Enhanced Social Proof */}
-              <div className="bg-card/40 backdrop-blur-sm rounded-2xl p-6 mb-10 border border-border">
-                <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                  <div className="flex items-center gap-4">
-                    <div className="flex -space-x-3">
-                      {Array.from({ length: 7 }).map((_, i) => (
-                        <div
-                          key={i}
-                          className="w-10 h-10 bg-gradient-to-br from-chart-1 to-chart-3 rounded-full border-2 border-background flex items-center justify-center text-primary-foreground text-xs font-bold shadow-lg"
-                        >
-                          {String.fromCharCode(65 + i)}
-                        </div>
-                      ))}
-                    </div>
-                    <div className="text-left">
-                      <div className="font-bold text-lg text-foreground">2,847 Active Creators</div>
-                      <div className="text-sm text-muted-foreground">Combined $4.2M+ in sales last month</div>
-                    </div>
-                  </div>
-                  
-                  <div className="text-center md:text-right">
-                    <div className="flex items-center justify-center md:justify-end gap-1 mb-2">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <Star key={i} className="w-5 h-5 fill-amber-400 text-amber-400" aria-hidden="true" />
-                      ))}
-                    </div>
-                    <div className="font-bold text-foreground">4.9/5 Rating</div>
-                    <div className="text-sm text-muted-foreground">From 1,284+ verified reviews</div>
+                    <h3 className="font-bold text-lg mb-2">Setup in Minutes</h3>
+                    <p className="text-sm text-muted-foreground">Get started quickly with our intuitive platform - no coding required</p>
                   </div>
                 </div>
               </div>
@@ -743,7 +699,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
                     aria-label="Start your free storefront"
                   >
                     <span className="relative z-10 flex items-center gap-3">
-                      <span>Start Free Today</span>
+                      <span>Get Started Free</span>
                       <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
                     </span>
                     <div className="absolute inset-0 bg-gradient-to-r from-chart-2 via-chart-3 to-chart-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
@@ -757,7 +713,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
                     aria-label="See creator examples"
                   >
                     <Play className="w-5 h-5 mr-2" aria-hidden="true" />
-                    Watch 2-Min Demo
+                    See More Examples
                   </Button>
                 </div>
 
@@ -769,7 +725,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                       </svg>
                     </div>
-                    <span>Free forever plan available</span>
+                    <span>Free plan available</span>
                   </div>
                   <div className="flex items-center gap-2 font-semibold text-foreground">
                     <div className="w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center">
@@ -785,13 +741,13 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                       </svg>
                     </div>
-                    <span>Cancel anytime</span>
+                    <span>Setup in under 10 minutes</span>
                   </div>
                 </div>
 
                 {/* Final Trust Line */}
                 <p className="text-sm text-muted-foreground">
-                  🔒 Trusted by producers from Splice, Beatstars, and independent labels worldwide
+                  Join producers and creators already earning with their own storefronts
                 </p>
               </div>
             </div>
