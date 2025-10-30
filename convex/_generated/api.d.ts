@@ -74,6 +74,7 @@ import type * as embeddingActions from "../embeddingActions.js";
 import type * as embeddings from "../embeddings.js";
 import type * as fanCountAggregation from "../fanCountAggregation.js";
 import type * as files from "../files.js";
+import type * as followGateSubmissions from "../followGateSubmissions.js";
 import type * as http from "../http.js";
 import type * as importFans from "../importFans.js";
 import type * as inboxActions from "../inboxActions.js";
@@ -197,6 +198,7 @@ declare const fullApi: ApiFromModules<{
   embeddings: typeof embeddings;
   fanCountAggregation: typeof fanCountAggregation;
   files: typeof files;
+  followGateSubmissions: typeof followGateSubmissions;
   http: typeof http;
   importFans: typeof importFans;
   inboxActions: typeof inboxActions;

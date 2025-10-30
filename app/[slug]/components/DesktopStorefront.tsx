@@ -4,14 +4,16 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
-import { ArrowRight, Store, Gift, ExternalLink, GraduationCap, Youtube, Music, Globe, Link as LinkIcon } from "lucide-react";
+import { ArrowRight, Store, Gift, ExternalLink, GraduationCap, Youtube, Music, Globe, Link as LinkIcon, Lock } from "lucide-react";
 import { LeadMagnetPreview } from "./LeadMagnetPreview";
+import { FollowGateModal } from "@/components/follow-gates/FollowGateModal";
 import Link from "next/link";
 import Image from "next/image";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { Id } from "@/convex/_generated/dataModel";
 
 // Custom DialogContent with solid overlay
 const CustomDialogContent = React.forwardRef<
@@ -56,6 +58,23 @@ interface Product {
   buttonLabel?: string;
   downloadUrl?: string;
   _creationTime: number;
+  // Follow Gate fields
+  followGateEnabled?: boolean;
+  followGateRequirements?: {
+    requireEmail?: boolean;
+    requireInstagram?: boolean;
+    requireTiktok?: boolean;
+    requireYoutube?: boolean;
+    requireSpotify?: boolean;
+    minFollowsRequired?: number;
+  };
+  followGateSocialLinks?: {
+    instagram?: string;
+    tiktok?: string;
+    youtube?: string;
+    spotify?: string;
+  };
+  followGateMessage?: string;
 }
 
 interface DesktopStorefrontProps {
@@ -77,6 +96,9 @@ interface DesktopStorefrontProps {
 
 export function DesktopStorefront({ store, user, products, displayName, initials, avatarUrl }: DesktopStorefrontProps) {
   const { toast } = useToast();
+  const [showFollowGate, setShowFollowGate] = React.useState(false);
+  const [selectedProduct, setSelectedProduct] = React.useState<Product | null>(null);
+  
   return (
     <div>
       {/* Store Landing Page Header */}
@@ -414,7 +436,70 @@ export function DesktopStorefront({ store, user, products, displayName, initials
               const isLeadMagnet = product.price === 0;
               
               if (isLeadMagnet) {
-                // Free products (lead magnets) should show opt-in form
+                // Check if follow gate is enabled
+                if (product.followGateEnabled) {
+                  return (
+                    <Card 
+                      key={product._id} 
+                      className="group p-6 border-primary/20 bg-primary/5 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer"
+                      onClick={() => {
+                        setSelectedProduct(product);
+                        setShowFollowGate(true);
+                      }}
+                    >
+                      {/* Image */}
+                      <div className="w-full h-48 bg-primary/10 rounded-lg mb-4 flex items-center justify-center overflow-hidden relative">
+                        {product.imageUrl ? (
+                          <>
+                            <Image 
+                              src={product.imageUrl} 
+                              alt={product.title}
+                              width={640}
+                              height={192}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                            />
+                            {/* Follow Gate Overlay Badge */}
+                            <div className="absolute top-2 right-2 bg-chart-1 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-lg">
+                              <Lock className="w-3 h-3" />
+                              Follow to Unlock
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-center">
+                            <Gift className="w-16 h-16 text-primary mx-auto mb-2" />
+                            <span className="text-sm text-primary font-medium">Free Resource</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Content */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Badge className="bg-primary hover:bg-primary/90 text-primary-foreground border-0 font-semibold">
+                            FREE
+                          </Badge>
+                          <div className="flex items-center gap-1">
+                            <Lock className="w-4 h-4 text-chart-1" />
+                            <span className="text-xs text-chart-1 font-semibold">Follow Gate</span>
+                          </div>
+                        </div>
+                        <h3 className="font-bold text-xl text-primary line-clamp-2">
+                          {product.title}
+                        </h3>
+                        <p className="text-primary/80 text-sm line-clamp-3 leading-relaxed">
+                          {product.description || "Get this amazing free resource"}
+                        </p>
+                        <div className="flex items-center justify-between pt-2">
+                          <span className="text-xs text-primary font-medium">Follow to get free access</span>
+                          <ArrowRight className="w-4 h-4 text-primary group-hover:translate-x-1 transition-all duration-200" />
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                }
+                
+                // Standard lead magnet (no follow gate)
                 return (
                   <Dialog key={product._id}>
                     <DialogTrigger asChild>
@@ -596,6 +681,23 @@ export function DesktopStorefront({ store, user, products, displayName, initials
           </div>
         </div>
       </div>
+
+      {/* Follow Gate Modal */}
+      {selectedProduct && (
+        <FollowGateModal
+          open={showFollowGate}
+          onOpenChange={setShowFollowGate}
+          product={selectedProduct as any}
+          onSuccess={(submissionId) => {
+            console.log(`Follow gate completed for ${selectedProduct.title}`, submissionId);
+            toast({
+              title: "🎉 Success!",
+              description: "Check your email for the download link!",
+              className: "bg-white dark:bg-black",
+            });
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -411,6 +411,24 @@ export default defineSchema({
     orderBumpPrice: v.optional(v.number()),
     orderBumpImageUrl: v.optional(v.string()),
     affiliateEnabled: v.optional(v.boolean()),
+    
+    // Follow Gate Configuration
+    followGateEnabled: v.optional(v.boolean()),
+    followGateRequirements: v.optional(v.object({
+      requireEmail: v.optional(v.boolean()), // Require email to unlock
+      requireInstagram: v.optional(v.boolean()), // Require Instagram follow
+      requireTiktok: v.optional(v.boolean()), // Require TikTok follow
+      requireYoutube: v.optional(v.boolean()), // Require YouTube subscribe
+      requireSpotify: v.optional(v.boolean()), // Require Spotify follow
+      minFollowsRequired: v.optional(v.number()), // e.g., "Follow 2 out of 4" (0 = all required)
+    })),
+    followGateSocialLinks: v.optional(v.object({
+      instagram: v.optional(v.string()), // @username or full URL
+      tiktok: v.optional(v.string()),
+      youtube: v.optional(v.string()),
+      spotify: v.optional(v.string()),
+    })),
+    followGateMessage: v.optional(v.string()), // Custom message to show users
     affiliateCommissionRate: v.optional(v.number()),
     affiliateMinPayout: v.optional(v.number()),
     affiliateCookieDuration: v.optional(v.number()),
@@ -582,6 +600,41 @@ export default defineSchema({
   .index("by_storeId", ["storeId"])
   .index("by_adminUserId", ["adminUserId"])
   .index("by_email_and_product", ["email", "productId"]),
+
+  // Follow Gate Submissions (Track social follow gates)
+  followGateSubmissions: defineTable({
+    productId: v.id("digitalProducts"),
+    storeId: v.string(),
+    creatorId: v.string(), // Creator who owns the product
+    
+    // User Information
+    email: v.string(),
+    name: v.optional(v.string()),
+    
+    // Follow Confirmations (self-reported by user)
+    followedPlatforms: v.object({
+      instagram: v.optional(v.boolean()),
+      tiktok: v.optional(v.boolean()),
+      youtube: v.optional(v.boolean()),
+      spotify: v.optional(v.boolean()),
+    }),
+    
+    // Metadata
+    submittedAt: v.number(),
+    ipAddress: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+    
+    // Download Tracking
+    hasDownloaded: v.optional(v.boolean()),
+    downloadCount: v.optional(v.number()),
+    lastDownloadAt: v.optional(v.number()),
+  })
+    .index("by_product", ["productId"])
+    .index("by_email", ["email"])
+    .index("by_creator", ["creatorId"])
+    .index("by_store", ["storeId"])
+    .index("by_email_product", ["email", "productId"])
+    .index("by_submitted_at", ["submittedAt"]),
 
   // Customer Management
   customers: defineTable({

@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Image, CreditCard, Settings, Star, Mail, TrendingUp, Users, CheckSquare, Save, Send } from "lucide-react";
+import { Image, CreditCard, Settings, Star, Mail, TrendingUp, Users, CheckSquare, Save, Send, Lock } from "lucide-react";
 import Link from "next/link";
 import { schema, OptionsProSchema } from "./schema";
 import { Reviews } from "./Reviews";
@@ -14,6 +14,7 @@ import { EmailFlows } from "./EmailFlows";
 import { OrderBump } from "./OrderBump";
 import { AffiliateShare } from "./AffiliateShare";
 import { ConfirmationEmail } from "./ConfirmationEmail";
+import { FollowGate } from "./FollowGate";
 
 export function OptionsForm() {
   const searchParams = useSearchParams();
@@ -84,8 +85,8 @@ export function OptionsForm() {
                   value={step.label.toLowerCase().replace(' ', '-')}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     step.active
-                      ? "bg-white border border-[#6356FF] text-[#6356FF] font-bold data-[state=active]:bg-white data-[state=active]:text-[#6356FF]"
-                      : "text-[#4B4E68] hover:text-[#6356FF] data-[state=active]:bg-transparent"
+                      ? "bg-white dark:bg-zinc-900 border border-[#6356FF] text-[#6356FF] font-bold data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:text-[#6356FF]"
+                      : "text-[#4B4E68] dark:text-zinc-400 hover:text-[#6356FF] dark:hover:text-[#6356FF] data-[state=active]:bg-transparent"
                   }`}
                   asChild={!step.active}
                 >
@@ -110,62 +111,74 @@ export function OptionsForm() {
       {/* Form */}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-12">
         <Accordion type="multiple" className="space-y-6" defaultValue={["confirm"]}>
-          <AccordionItem value="reviews" className="border-none">
-            <AccordionTrigger className="h-16 rounded-xl px-6 shadow-sm border border-transparent hover:border-[#E8EAF8] transition-colors bg-white data-[state=open]:border-[#E8EAF8] hover:no-underline">
+          <AccordionItem value="followgate" className="border-none">
+            <AccordionTrigger className="h-16 rounded-xl px-6 shadow-sm border border-transparent hover:border-[#E8EAF8] dark:hover:border-zinc-700 transition-colors bg-white dark:bg-zinc-900 data-[state=open]:border-[#E8EAF8] dark:data-[state=open]:border-zinc-700 hover:no-underline">
               <div className="flex items-center flex-1">
-                <Star size={20} className="mr-3 text-[#4B4E68]" />
+                <Lock size={20} className="mr-3 text-[#4B4E68] dark:text-zinc-400" />
+                <span className="flex-1 text-base font-semibold text-left">Follow Gate</span>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-6 pb-8 pt-4 bg-[#F8F8FF] dark:bg-zinc-950 mx-6 rounded-b-xl">
+              <FollowGate control={control} />
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="reviews" className="border-none">
+            <AccordionTrigger className="h-16 rounded-xl px-6 shadow-sm border border-transparent hover:border-[#E8EAF8] dark:hover:border-zinc-700 transition-colors bg-white dark:bg-zinc-900 data-[state=open]:border-[#E8EAF8] dark:data-[state=open]:border-zinc-700 hover:no-underline">
+              <div className="flex items-center flex-1">
+                <Star size={20} className="mr-3 text-[#4B4E68] dark:text-zinc-400" />
                 <span className="flex-1 text-base font-semibold text-left">Add Reviews</span>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="px-6 pb-8 pt-4 bg-[#F8F8FF] mx-6 rounded-b-xl">
+            <AccordionContent className="px-6 pb-8 pt-4 bg-[#F8F8FF] dark:bg-zinc-950 mx-6 rounded-b-xl">
               <Reviews control={control} />
             </AccordionContent>
           </AccordionItem>
 
           <AccordionItem value="flows" className="border-none">
-            <AccordionTrigger className="h-16 rounded-xl px-6 shadow-sm border border-transparent hover:border-[#E8EAF8] transition-colors bg-white data-[state=open]:border-[#E8EAF8] hover:no-underline">
+            <AccordionTrigger className="h-16 rounded-xl px-6 shadow-sm border border-transparent hover:border-[#E8EAF8] dark:hover:border-zinc-700 transition-colors bg-white dark:bg-zinc-900 data-[state=open]:border-[#E8EAF8] dark:data-[state=open]:border-zinc-700 hover:no-underline">
               <div className="flex items-center flex-1">
-                <Mail size={20} className="mr-3 text-[#4B4E68]" />
+                <Mail size={20} className="mr-3 text-[#4B4E68] dark:text-zinc-400" />
                 <span className="flex-1 text-base font-semibold text-left">Email Flows</span>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="px-6 pb-8 pt-4 bg-[#F8F8FF] mx-6 rounded-b-xl">
+            <AccordionContent className="px-6 pb-8 pt-4 bg-[#F8F8FF] dark:bg-zinc-950 mx-6 rounded-b-xl">
               <EmailFlows control={control} />
             </AccordionContent>
           </AccordionItem>
 
           <AccordionItem value="bump" className="border-none">
-            <AccordionTrigger className="h-16 rounded-xl px-6 shadow-sm border border-transparent hover:border-[#E8EAF8] transition-colors bg-white data-[state=open]:border-[#E8EAF8] hover:no-underline">
+            <AccordionTrigger className="h-16 rounded-xl px-6 shadow-sm border border-transparent hover:border-[#E8EAF8] dark:hover:border-zinc-700 transition-colors bg-white dark:bg-zinc-900 data-[state=open]:border-[#E8EAF8] dark:data-[state=open]:border-zinc-700 hover:no-underline">
               <div className="flex items-center flex-1">
-                <TrendingUp size={20} className="mr-3 text-[#4B4E68]" />
+                <TrendingUp size={20} className="mr-3 text-[#4B4E68] dark:text-zinc-400" />
                 <span className="flex-1 text-base font-semibold text-left">Order Bump</span>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="px-6 pb-8 pt-4 bg-[#F8F8FF] mx-6 rounded-b-xl">
+            <AccordionContent className="px-6 pb-8 pt-4 bg-[#F8F8FF] dark:bg-zinc-950 mx-6 rounded-b-xl">
               <OrderBump control={control} />
             </AccordionContent>
           </AccordionItem>
 
           <AccordionItem value="affiliate" className="border-none">
-            <AccordionTrigger className="h-16 rounded-xl px-6 shadow-sm border border-transparent hover:border-[#E8EAF8] transition-colors bg-white data-[state=open]:border-[#E8EAF8] hover:no-underline">
+            <AccordionTrigger className="h-16 rounded-xl px-6 shadow-sm border border-transparent hover:border-[#E8EAF8] dark:hover:border-zinc-700 transition-colors bg-white dark:bg-zinc-900 data-[state=open]:border-[#E8EAF8] dark:data-[state=open]:border-zinc-700 hover:no-underline">
               <div className="flex items-center flex-1">
-                <Users size={20} className="mr-3 text-[#4B4E68]" />
+                <Users size={20} className="mr-3 text-[#4B4E68] dark:text-zinc-400" />
                 <span className="flex-1 text-base font-semibold text-left">Affiliate Share</span>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="px-6 pb-8 pt-4 bg-[#F8F8FF] mx-6 rounded-b-xl">
+            <AccordionContent className="px-6 pb-8 pt-4 bg-[#F8F8FF] dark:bg-zinc-950 mx-6 rounded-b-xl">
               <AffiliateShare control={control} />
             </AccordionContent>
           </AccordionItem>
 
           <AccordionItem value="confirm" className="border-none">
-            <AccordionTrigger className="h-16 rounded-xl px-6 shadow-sm border border-transparent hover:border-[#E8EAF8] transition-colors bg-white data-[state=open]:border-[#E8EAF8] hover:no-underline">
+            <AccordionTrigger className="h-16 rounded-xl px-6 shadow-sm border border-transparent hover:border-[#E8EAF8] dark:hover:border-zinc-700 transition-colors bg-white dark:bg-zinc-900 data-[state=open]:border-[#E8EAF8] dark:data-[state=open]:border-zinc-700 hover:no-underline">
               <div className="flex items-center flex-1">
-                <CheckSquare size={20} className="mr-3 text-[#4B4E68]" />
+                <CheckSquare size={20} className="mr-3 text-[#4B4E68] dark:text-zinc-400" />
                 <span className="flex-1 text-base font-semibold text-left">Confirmation Email</span>
               </div>
             </AccordionTrigger>
-            <AccordionContent className="px-6 pb-8 pt-4 bg-[#F8F8FF] mx-6 rounded-b-xl">
+            <AccordionContent className="px-6 pb-8 pt-4 bg-[#F8F8FF] dark:bg-zinc-950 mx-6 rounded-b-xl">
               <ConfirmationEmail control={control} register={register} />
             </AccordionContent>
           </AccordionItem>
@@ -173,7 +186,7 @@ export function OptionsForm() {
 
         {/* Action Bar */}
         <div className="flex items-center gap-6 justify-end relative">
-          <span className="absolute -top-6 right-0 italic text-xs text-[#6B6E85]">
+          <span className="absolute -top-6 right-0 italic text-xs text-[#6B6E85] dark:text-zinc-500">
             Improve this page
           </span>
           <Button 
