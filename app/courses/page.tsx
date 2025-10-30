@@ -99,7 +99,7 @@ export default function CoursesPage() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredCourses.map((course) => (
+            {filteredCourses.map((course, index) => (
               <Card key={course._id} className="hover:shadow-lg transition-shadow">
                 <div className="w-full h-48 bg-emerald-100 rounded-t-lg overflow-hidden">
                   {course.imageUrl ? (

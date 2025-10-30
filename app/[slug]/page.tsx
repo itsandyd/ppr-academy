@@ -277,7 +277,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
   };
 
   const handleStartStorefront = () => {
-    router.push('/sign-up');
+    router.push('/sign-up?intent=creator');
   };
 
   const handleSeeExamples = () => {
@@ -703,17 +703,6 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
                       <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
                     </span>
                     <div className="absolute inset-0 bg-gradient-to-r from-chart-2 via-chart-3 to-chart-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  </Button>
-                  
-                  <Button 
-                    variant="outline" 
-                    size="lg"
-                    className="border-2 border-foreground/20 hover:border-chart-1 hover:bg-chart-1/10 px-10 py-7 text-lg font-semibold transition-all duration-300"
-                    onClick={handleSeeExamples}
-                    aria-label="See creator examples"
-                  >
-                    <Play className="w-5 h-5 mr-2" aria-hidden="true" />
-                    See More Examples
                   </Button>
                 </div>
 
