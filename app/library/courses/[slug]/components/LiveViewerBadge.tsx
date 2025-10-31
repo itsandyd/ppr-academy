@@ -34,13 +34,13 @@ export function LiveViewerBadge({
   // Get viewer count
   const viewerData = useQuery(
     api.liveViewers.getLiveViewerCount,
-    { courseId, chapterId }
+    { courseId, chapterId: chapterId || undefined }
   );
 
   // Get active viewers with details (if showing avatars)
   const activeViewers = useQuery(
-    showAvatars ? api.liveViewers.getActiveViewers : undefined,
-    showAvatars ? { courseId, chapterId, limit: 5 } : "skip"
+    api.liveViewers.getActiveViewers,
+    showAvatars ? { courseId, chapterId: chapterId || undefined, limit: 5 } : "skip"
   );
 
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -52,7 +52,7 @@ export function LiveViewerBadge({
     // Send initial presence
     recordPresence({ 
       courseId, 
-      chapterId, 
+      chapterId: chapterId || undefined, 
       userId: user.id 
     });
 
@@ -60,7 +60,7 @@ export function LiveViewerBadge({
     heartbeatIntervalRef.current = setInterval(() => {
       recordPresence({ 
         courseId, 
-        chapterId, 
+        chapterId: chapterId || undefined, 
         userId: user.id 
       });
     }, 30000); // 30 seconds
