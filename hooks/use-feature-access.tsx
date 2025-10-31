@@ -4,6 +4,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useState } from "react";
+import { UpgradePrompt } from "@/components/creator/upgrade-prompt";
 
 interface UseFeatureAccessResult {
   hasAccess: boolean;
@@ -32,9 +33,6 @@ export function useFeatureAccess(
 
   const UpgradePromptComponent = () => {
     if (!access || !access.requiresPlan) return null;
-
-    // Dynamically import the UpgradePrompt to avoid circular dependencies
-    const { UpgradePrompt } = require("@/components/creator/upgrade-prompt");
     
     return (
       <UpgradePrompt
