@@ -17,6 +17,9 @@ import Link from "next/link";
 import { CourseCreationProvider, useCourseCreation } from "./context";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useFeatureAccess } from "@/hooks/use-feature-access";
+import { UpgradeBanner } from "@/components/creator/upgrade-prompt";
+import { Id } from "@/convex/_generated/dataModel";
 
 // Prevent static generation for this layout
 export const dynamic = 'force-dynamic';
@@ -90,6 +93,12 @@ function LayoutContent({ children }: CourseCreateLayoutProps) {
     storeId && !isUserIdInsteadOfStoreId ? { storeId: storeId as any } : "skip"
   );
 
+  // Check feature access for courses
+  const { hasAccess, isLoading: isCheckingAccess, showUpgradePrompt, UpgradePromptComponent } = useFeatureAccess(
+    storeId as Id<"stores"> | undefined,
+    "courses"
+  );
+
   const navigateToStep = (step: string) => {
     router.push(`/store/${storeId}/course/create?step=${step}`);
   };
@@ -123,6 +132,41 @@ function LayoutContent({ children }: CourseCreateLayoutProps) {
     );
   }
 
+  // Show loading state while checking access
+  if (isCheckingAccess) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 lg:pt-10 pb-24">
+          <div className="lg:flex lg:gap-8 xl:gap-20">
+            <div className="flex-1 space-y-6 sm:space-y-8 lg:space-y-10">
+              <div className="animate-pulse">
+                <div className="h-6 sm:h-8 bg-muted rounded w-1/3 sm:w-1/4 mb-6 sm:mb-8"></div>
+                <div className="h-64 sm:h-96 bg-muted rounded"></div>
+              </div>
+            </div>
+            <div className="hidden lg:block w-[356px] h-[678px] bg-muted rounded-3xl animate-pulse" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show upgrade banner if no access to courses (only after loading is complete)
+  if (!hasAccess) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <UpgradeBanner 
+            feature="courses"
+            requiredPlan="creator"
+            storeId={storeId}
+          />
+        </div>
+        <UpgradePromptComponent />
+      </div>
+    );
+  }
+
   // Calculate overall progress
   const completedSteps = Object.values(state.stepCompletion).filter(Boolean).length;
   const progressPercentage = (completedSteps / steps.length) * 100;
@@ -139,7 +183,7 @@ function LayoutContent({ children }: CourseCreateLayoutProps) {
               </div>
               <div>
                 <h1 className="text-lg font-bold text-foreground">Course Creation</h1>
-                <p className="text-xs text-muted-foreground">Step {Object.keys(steps).findIndex(s => s === currentStep) + 1} of {steps.length}</p>
+                <p className="text-xs text-muted-foreground">Step {steps.findIndex(s => s.id === currentStep) + 1} of {steps.length}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -170,7 +214,7 @@ function LayoutContent({ children }: CourseCreateLayoutProps) {
                     const Icon = step.icon;
                     const isActive = currentStep === step.id;
                     const isComplete = state.stepCompletion[step.id as keyof typeof state.stepCompletion];
-                    const isPrevious = Object.keys(steps).indexOf(currentStep) > index;
+                    const isPrevious = steps.findIndex(s => s.id === currentStep) > index;
                     
                     return (
                       <div key={step.id} className="flex items-center">

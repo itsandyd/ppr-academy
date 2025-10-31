@@ -189,11 +189,11 @@ export default function PayoutSettingsPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "enabled":
-        return <Badge className="bg-green-100 text-green-800">Active</Badge>;
+        return <Badge className="bg-green-500/10 dark:bg-green-500/20 text-green-700 dark:text-green-400 border border-green-500/20">Active</Badge>;
       case "restricted":
-        return <Badge className="bg-yellow-100 text-yellow-800">Restricted</Badge>;
+        return <Badge className="bg-yellow-500/10 dark:bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 border border-yellow-500/20">Restricted</Badge>;
       case "pending":
-        return <Badge className="bg-gray-100 text-gray-800">Pending</Badge>;
+        return <Badge className="bg-muted text-muted-foreground border border-border">Pending</Badge>;
       default:
         return <Badge variant="secondary">Unknown</Badge>;
     }
@@ -245,13 +245,13 @@ export default function PayoutSettingsPage() {
             /* Has Stripe Account */
             <div className="space-y-6">
               {/* Account Status */}
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border border-border">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                    <CreditCard className="w-5 h-5 text-green-600" />
+                  <div className="w-10 h-10 bg-green-500/10 dark:bg-green-500/20 rounded-full flex items-center justify-center">
+                    <CreditCard className="w-5 h-5 text-green-600 dark:text-green-400" />
                   </div>
                   <div>
-                    <h4 className="font-medium">Stripe Account Connected</h4>
+                    <h4 className="font-medium text-foreground">Stripe Account Connected</h4>
                     <p className="text-sm text-muted-foreground">Account ID: {convexUser.stripeConnectAccountId}</p>
                   </div>
                 </div>
@@ -265,10 +265,10 @@ export default function PayoutSettingsPage() {
                     <CardContent className="p-4">
                       <div className="flex items-center gap-3">
                         <CheckCircle className={`w-5 h-5 ${
-                          stripeAccountStatus.detailsSubmitted ? "text-green-600" : "text-gray-400"
+                          stripeAccountStatus.detailsSubmitted ? "text-green-600 dark:text-green-400" : "text-muted-foreground"
                         }`} />
                         <div>
-                          <p className="font-medium text-sm">Details Submitted</p>
+                          <p className="font-medium text-sm text-foreground">Details Submitted</p>
                           <p className="text-xs text-muted-foreground">
                             {stripeAccountStatus.detailsSubmitted ? "Complete" : "Pending"}
                           </p>
@@ -281,10 +281,10 @@ export default function PayoutSettingsPage() {
                     <CardContent className="p-4">
                       <div className="flex items-center gap-3">
                         <CreditCard className={`w-5 h-5 ${
-                          stripeAccountStatus.chargesEnabled ? "text-green-600" : "text-gray-400"
+                          stripeAccountStatus.chargesEnabled ? "text-green-600 dark:text-green-400" : "text-muted-foreground"
                         }`} />
                         <div>
-                          <p className="font-medium text-sm">Charges Enabled</p>
+                          <p className="font-medium text-sm text-foreground">Charges Enabled</p>
                           <p className="text-xs text-muted-foreground">
                             {stripeAccountStatus.chargesEnabled ? "Can receive payments" : "Not yet enabled"}
                           </p>
@@ -297,10 +297,10 @@ export default function PayoutSettingsPage() {
                     <CardContent className="p-4">
                       <div className="flex items-center gap-3">
                         <DollarSign className={`w-5 h-5 ${
-                          stripeAccountStatus.payoutsEnabled ? "text-green-600" : "text-gray-400"
+                          stripeAccountStatus.payoutsEnabled ? "text-green-600 dark:text-green-400" : "text-muted-foreground"
                         }`} />
                         <div>
-                          <p className="font-medium text-sm">Payouts Enabled</p>
+                          <p className="font-medium text-sm text-foreground">Payouts Enabled</p>
                           <p className="text-xs text-muted-foreground">
                             {stripeAccountStatus.payoutsEnabled ? "Can receive payouts" : "Not yet enabled"}
                           </p>
@@ -360,21 +360,21 @@ export default function PayoutSettingsPage() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <div className="text-2xl font-bold text-green-700">$0</div>
-                <p className="text-sm text-green-600">Total Earnings</p>
+              <div className="text-center p-4 bg-green-500/10 dark:bg-green-500/20 rounded-lg border border-green-500/20">
+                <div className="text-2xl font-bold text-green-700 dark:text-green-400">$0</div>
+                <p className="text-sm text-green-600 dark:text-green-500">Total Earnings</p>
               </div>
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-700">0</div>
-                <p className="text-sm text-blue-600">Course Sales</p>
+              <div className="text-center p-4 bg-blue-500/10 dark:bg-blue-500/20 rounded-lg border border-blue-500/20">
+                <div className="text-2xl font-bold text-blue-700 dark:text-blue-400">0</div>
+                <p className="text-sm text-blue-600 dark:text-blue-500">Course Sales</p>
               </div>
-              <div className="text-center p-4 bg-purple-50 rounded-lg">
-                <div className="text-2xl font-bold text-purple-700">$0</div>
-                <p className="text-sm text-purple-600">This Month</p>
+              <div className="text-center p-4 bg-purple-500/10 dark:bg-purple-500/20 rounded-lg border border-purple-500/20">
+                <div className="text-2xl font-bold text-purple-700 dark:text-purple-400">$0</div>
+                <p className="text-sm text-purple-600 dark:text-purple-500">This Month</p>
               </div>
-              <div className="text-center p-4 bg-orange-50 rounded-lg">
-                <div className="text-2xl font-bold text-orange-700">$0</div>
-                <p className="text-sm text-orange-600">Pending Payout</p>
+              <div className="text-center p-4 bg-orange-500/10 dark:bg-orange-500/20 rounded-lg border border-orange-500/20">
+                <div className="text-2xl font-bold text-orange-700 dark:text-orange-400">$0</div>
+                <p className="text-sm text-orange-600 dark:text-orange-500">Pending Payout</p>
               </div>
             </div>
             
@@ -395,12 +395,12 @@ export default function PayoutSettingsPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-              <span className="font-medium">Course Sales</span>
+            <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg border border-border">
+              <span className="font-medium text-foreground">Course Sales</span>
               <span className="text-sm text-muted-foreground">10% platform fee</span>
             </div>
-            <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-              <span className="font-medium">Stripe Processing</span>
+            <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg border border-border">
+              <span className="font-medium text-foreground">Stripe Processing</span>
               <span className="text-sm text-muted-foreground">2.9% + 30¢ per transaction</span>
             </div>
             <div className="text-xs text-muted-foreground">

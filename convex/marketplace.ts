@@ -205,8 +205,12 @@ export const getAllCreators = query({
     const limit = args.limit || 20;
     const offset = args.offset || 0;
 
-    // Get all stores
-    const allStores = await ctx.db.query("stores").collect();
+    // Get only public stores with published profiles
+    const allStores = await ctx.db
+      .query("stores")
+      .withIndex("by_public", (q) => q.eq("isPublic", true))
+      .filter((q) => q.eq(q.field("isPublishedProfile"), true))
+      .collect();
     
     // Paginate
     const stores = allStores.slice(offset, offset + limit);

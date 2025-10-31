@@ -110,10 +110,37 @@ export async function POST(request: NextRequest) {
 
         // Handle subscription checkouts
         if (session.mode === "subscription" && session.subscription) {
-          const { planId, userId, storeId, billingCycle } = session.metadata || {};
+          const { planId, userId, storeId, billingCycle, productType, plan } = session.metadata || {};
           
-          if (planId && userId) {
-            console.log("🔄 Creating subscription in Convex:", {
+          // Handle creator plan subscriptions
+          if (productType === "creator_plan" && storeId && plan) {
+            console.log("🎨 Creating creator plan subscription:", {
+              userId,
+              storeId,
+              plan,
+              stripeSubscriptionId: session.subscription,
+            });
+
+            const { fetchMutation: fetchMutationPlan } = await import("convex/nextjs");
+            const { api: apiPlan } = await import("@/convex/_generated/api");
+
+            // Get subscription details from Stripe
+            const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+
+            await fetchMutationPlan(apiPlan.creatorPlans.upgradePlan, {
+              storeId: storeId as any,
+              plan: plan as "creator" | "creator_pro",
+              stripeCustomerId: subscription.customer as string,
+              stripeSubscriptionId: subscription.id,
+              subscriptionStatus: subscription.status === "trialing" ? "trialing" : "active",
+              trialEndsAt: subscription.trial_end ? subscription.trial_end * 1000 : undefined,
+            });
+
+            console.log("✅ Creator plan subscription created successfully");
+          }
+          // Handle content subscription (existing)
+          else if (planId && userId) {
+            console.log("🔄 Creating content subscription in Convex:", {
               userId,
               planId,
               stripeSubscriptionId: session.subscription,
@@ -130,7 +157,7 @@ export async function POST(request: NextRequest) {
               stripeSubscriptionId: session.subscription as string,
             });
 
-            console.log("✅ Subscription created successfully");
+            console.log("✅ Content subscription created successfully");
           }
         }
 
@@ -244,12 +271,21 @@ export async function POST(request: NextRequest) {
         const { fetchMutation: fetchMutationUpdate } = await import("convex/nextjs");
         const { api: apiUpdate } = await import("@/convex/_generated/api");
 
-        await fetchMutationUpdate(apiUpdate.subscriptions.updateSubscriptionStatus, {
-          stripeSubscriptionId: updatedSubscription.id,
-          status: updatedSubscription.status as "active" | "canceled" | "past_due" | "expired",
-        });
-
-        console.log("✅ Subscription status updated in Convex");
+        // Check if this is a creator plan subscription
+        if (updatedSubscription.metadata?.storeId && updatedSubscription.metadata?.plan) {
+          await fetchMutationUpdate(apiUpdate.creatorPlans.updateSubscriptionStatus, {
+            storeId: updatedSubscription.metadata.storeId as any,
+            subscriptionStatus: updatedSubscription.status as "active" | "trialing" | "past_due" | "canceled" | "incomplete",
+          });
+          console.log("✅ Creator plan subscription status updated");
+        } else {
+          // Handle content subscriptions (existing)
+          await fetchMutationUpdate(apiUpdate.subscriptions.updateSubscriptionStatus, {
+            stripeSubscriptionId: updatedSubscription.id,
+            status: updatedSubscription.status as "active" | "canceled" | "past_due" | "expired",
+          });
+          console.log("✅ Content subscription status updated in Convex");
+        }
         break;
 
       case "customer.subscription.deleted":
@@ -263,12 +299,22 @@ export async function POST(request: NextRequest) {
         const { fetchMutation: fetchMutationDelete } = await import("convex/nextjs");
         const { api: apiDelete } = await import("@/convex/_generated/api");
 
-        await fetchMutationDelete(apiDelete.subscriptions.updateSubscriptionStatus, {
-          stripeSubscriptionId: deletedSubscription.id,
-          status: "canceled",
-        });
-
-        console.log("✅ Subscription marked as canceled in Convex");
+        // Check if this is a creator plan subscription
+        if (deletedSubscription.metadata?.storeId) {
+          await fetchMutationDelete(apiDelete.creatorPlans.updateSubscriptionStatus, {
+            storeId: deletedSubscription.metadata.storeId as any,
+            subscriptionStatus: "canceled",
+            downgradeToPlan: "free",
+          });
+          console.log("✅ Creator plan subscription canceled, downgraded to free");
+        } else {
+          // Handle content subscriptions (existing)
+          await fetchMutationDelete(apiDelete.subscriptions.updateSubscriptionStatus, {
+            stripeSubscriptionId: deletedSubscription.id,
+            status: "canceled",
+          });
+          console.log("✅ Content subscription marked as canceled in Convex");
+        }
         break;
 
       case "invoice.payment_succeeded":

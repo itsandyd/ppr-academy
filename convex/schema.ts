@@ -275,6 +275,25 @@ export default defineSchema({
       linkedin: v.optional(v.string()),
       youtube: v.optional(v.string()),
     })),
+    // Creator Plan & Visibility Settings
+    plan: v.optional(v.union(
+      v.literal("free"),      // Free - Basic link-in-bio only
+      v.literal("creator"),   // Creator - Courses + coaching
+      v.literal("creator_pro") // Creator Pro - Full features
+    )),
+    planStartedAt: v.optional(v.number()),
+    isPublic: v.optional(v.boolean()), // Show on marketplace/public discovery
+    isPublishedProfile: v.optional(v.boolean()), // Profile is complete and ready to show
+    stripeCustomerId: v.optional(v.string()),
+    stripeSubscriptionId: v.optional(v.string()),
+    subscriptionStatus: v.optional(v.union(
+      v.literal("active"),
+      v.literal("trialing"),
+      v.literal("past_due"),
+      v.literal("canceled"),
+      v.literal("incomplete")
+    )),
+    trialEndsAt: v.optional(v.number()),
     // Email Sender Configuration (API key handled centrally via environment variables)
     emailConfig: v.optional(v.object({
       fromEmail: v.string(),
@@ -301,7 +320,9 @@ export default defineSchema({
     })),
   })
     .index("by_userId", ["userId"])
-    .index("by_slug", ["slug"]),
+    .index("by_slug", ["slug"])
+    .index("by_plan", ["plan"])
+    .index("by_public", ["isPublic"]),
 
   // Digital Products
   // Email Automation Workflows
@@ -3101,6 +3122,28 @@ export default defineSchema({
     .index("by_stripeCustomerId", ["stripeCustomerId"])
     .index("by_stripeSubscriptionId", ["stripeSubscriptionId"]),
   
+  // ============================================
+  // LINK-IN-BIO SYSTEM
+  // ============================================
+  linkInBioLinks: defineTable({
+    storeId: v.id("stores"),
+    userId: v.string(), // Clerk ID
+    title: v.string(),
+    url: v.string(),
+    description: v.optional(v.string()),
+    thumbnailUrl: v.optional(v.string()),
+    icon: v.optional(v.string()), // lucide icon name or emoji
+    order: v.number(), // For drag-and-drop ordering
+    isActive: v.boolean(),
+    clicks: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_storeId", ["storeId"])
+    .index("by_userId", ["userId"])
+    .index("by_storeId_order", ["storeId", "order"])
+    .index("by_isActive", ["isActive"]),
+
   // ============================================
   // EMAIL DOMAIN MONITORING TABLES
   // ============================================
