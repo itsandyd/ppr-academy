@@ -102,11 +102,10 @@ export default function PublicCoursePage() {
         }}
         price={course.price}
         currency="USD"
-        imageUrl={course.thumbnail}
+        imageUrl={course.imageUrl}
         category={course.category}
         url={`${baseUrl}/courses/${courseSlug}`}
         datePublished={new Date(course._creationTime).toISOString()}
-        dateModified={course.updatedAt ? new Date(course.updatedAt).toISOString() : undefined}
       />
 
       {/* Preview Banner */}

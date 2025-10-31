@@ -47,10 +47,10 @@ export async function generateMetadata({ params }: { params: { slug: string } })
         url: courseUrl,
         siteName: "PPR Academy",
         type: "website",
-        images: course.thumbnail
+        images: course.imageUrl
           ? [
               {
-                url: course.thumbnail,
+                url: course.imageUrl,
                 width: 1200,
                 height: 630,
                 alt: course.title,
@@ -62,7 +62,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
         card: "summary_large_image",
         title,
         description,
-        images: course.thumbnail ? [course.thumbnail] : undefined,
+        images: course.imageUrl ? [course.imageUrl] : undefined,
         creator: store?.socialLinks?.twitter ? `@${store.socialLinks.twitter}` : undefined,
       },
       alternates: {
