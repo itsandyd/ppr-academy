@@ -12,6 +12,7 @@ import { SubscriptionSection } from "./components/SubscriptionSection";
 import { CreatorsPicks } from "@/components/storefront/creators-picks";
 import { FollowCreatorCTA } from "@/components/storefront/follow-creator-cta";
 import { AnimatedFilterResults, AnimatedGridItem } from "@/components/ui/animated-filter-transitions";
+import { StorefrontStructuredDataWrapper } from "./components/StorefrontStructuredDataWrapper";
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
@@ -28,6 +29,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
 
 interface StorefrontPageProps {
   params: Promise<{
@@ -354,6 +357,19 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Structured Data for SEO */}
+      <StorefrontStructuredDataWrapper
+        name={displayName}
+        description={store.description || store.bio}
+        url={`${baseUrl}/${slug}`}
+        imageUrl={store.bannerImage || store.logoUrl}
+        socialLinks={{
+          instagram: store.socialLinks?.instagram,
+          twitter: store.socialLinks?.twitter,
+          youtube: store.socialLinks?.youtube,
+        }}
+      />
+
       {/* Enhanced Header */}
       <div className="border-b bg-card shadow-sm">
         <div className="container mx-auto px-4 py-6">

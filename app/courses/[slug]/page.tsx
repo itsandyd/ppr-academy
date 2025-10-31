@@ -4,9 +4,12 @@ import { useParams, useSearchParams } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { CourseLandingPage } from "./components/CourseLandingPage";
+import { CourseStructuredDataWrapper } from "./components/CourseStructuredDataWrapper";
 import { Loader2, Eye } from "lucide-react";
 import { notFound } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
+
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
 
 export default function PublicCoursePage() {
   const params = useParams();
@@ -89,6 +92,23 @@ export default function PublicCoursePage() {
 
   return (
     <div className="relative">
+      {/* Structured Data for SEO */}
+      <CourseStructuredDataWrapper
+        courseName={course.title}
+        description={course.description || `Learn ${course.title} with expert instructors`}
+        instructor={{
+          name: creator.name || "Expert Instructor",
+          url: `${baseUrl}/${store.slug}`,
+        }}
+        price={course.price}
+        currency="USD"
+        imageUrl={course.thumbnail}
+        category={course.category}
+        url={`${baseUrl}/courses/${courseSlug}`}
+        datePublished={new Date(course._creationTime).toISOString()}
+        dateModified={course.updatedAt ? new Date(course.updatedAt).toISOString() : undefined}
+      />
+
       {/* Preview Banner */}
       {isPreview && isOwner && !course.isPublished && (
         <div className="fixed top-0 left-0 right-0 z-50 bg-amber-500 dark:bg-amber-600 text-white px-4 py-3 shadow-lg">

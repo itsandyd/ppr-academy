@@ -92,6 +92,17 @@ export const getStoreBySlug = query({
   },
 });
 
+// Get all stores (for sitemap generation)
+export const getAllStores = query({
+  args: {},
+  returns: v.array(storeValidator),
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("stores")
+      .collect();
+  },
+});
+
 // Helper function to generate URL-friendly slug
 const generateSlug = (name: string): string => {
   return name
