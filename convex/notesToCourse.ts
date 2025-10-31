@@ -237,7 +237,7 @@ async function generateCourseStructureFromNotes({
   includeQuizzes: boolean;
 }) {
   const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
+    apiKey: process.env.OPENAI_API_KEY || "dummy-key-for-deployment",
   });
 
   if (!process.env.OPENAI_API_KEY) {
@@ -355,7 +355,7 @@ async function analyzeNotesForCourseCreation({
   courseGoal: string;
 }) {
   const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
+    apiKey: process.env.OPENAI_API_KEY || "dummy-key-for-deployment",
   });
 
   if (!process.env.OPENAI_API_KEY) {
@@ -431,7 +431,7 @@ async function generateAISummary({
   summaryType: string;
 }) {
   const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
+    apiKey: process.env.OPENAI_API_KEY || "dummy-key-for-deployment",
   });
 
   if (!process.env.OPENAI_API_KEY) {
