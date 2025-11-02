@@ -97,6 +97,12 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
     store ? { storeId: store._id } : "skip"
   );
 
+  // Fetch connected social accounts for this store
+  const socialAccounts = useQuery(
+    api.socialMedia?.getSocialAccounts as any,
+    store ? { storeId: store._id } : "skip"
+  );
+
   // TODO: Fetch coaching profiles for this store
   // const coachProfiles = useQuery(
   //   api.coachProfiles.getProfilesByStore,
@@ -776,6 +782,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
             displayName={displayName}
             initials={initials}
             avatarUrl={avatarUrl}
+            socialAccounts={socialAccounts || []}
           />
         ) : (
           <MobileStorefront 

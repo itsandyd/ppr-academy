@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
-import { ArrowRight, Store, Gift, ExternalLink, GraduationCap, Youtube, Music, Globe, Link as LinkIcon, Lock } from "lucide-react";
+import { ArrowRight, Store, Gift, ExternalLink, GraduationCap, Youtube, Music, Globe, Link as LinkIcon, Lock, Instagram, Twitter, Facebook } from "lucide-react";
 import { LeadMagnetPreview } from "./LeadMagnetPreview";
 import { FollowGateModal } from "@/components/follow-gates/FollowGateModal";
 import Link from "next/link";
@@ -92,9 +92,18 @@ interface DesktopStorefrontProps {
   displayName: string;
   initials: string;
   avatarUrl: string;
+  socialAccounts?: Array<{
+    _id: string;
+    platform: "instagram" | "twitter" | "facebook" | "tiktok" | "linkedin";
+    platformUsername?: string;
+    platformDisplayName?: string;
+    accountLabel?: string;
+    isActive: boolean;
+    isConnected: boolean;
+  }>;
 }
 
-export function DesktopStorefront({ store, user, products, displayName, initials, avatarUrl }: DesktopStorefrontProps) {
+export function DesktopStorefront({ store, user, products, displayName, initials, avatarUrl, socialAccounts = [] }: DesktopStorefrontProps) {
   const { toast } = useToast();
   const [showFollowGate, setShowFollowGate] = React.useState(false);
   const [selectedProduct, setSelectedProduct] = React.useState<Product | null>(null);
@@ -638,6 +647,109 @@ export function DesktopStorefront({ store, user, products, displayName, initials
             )}
           </div>
         </div>
+
+        {/* Social Media Accounts Section */}
+        {socialAccounts && socialAccounts.length > 0 && (
+          <div className="mt-16">
+            <h2 className="text-2xl font-bold text-center text-foreground mb-8">Connect With Me</h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {socialAccounts
+                .filter(account => account.isActive && account.isConnected)
+                .map((account) => {
+                  const getPlatformIcon = () => {
+                    switch (account.platform) {
+                      case "instagram":
+                        return <Instagram className="w-6 h-6" />;
+                      case "twitter":
+                        return <Twitter className="w-6 h-6" />;
+                      case "facebook":
+                        return <Facebook className="w-6 h-6" />;
+                      case "tiktok":
+                        return <Music className="w-6 h-6" />;
+                      case "linkedin":
+                        return <LinkIcon className="w-6 h-6" />;
+                      default:
+                        return <Globe className="w-6 h-6" />;
+                    }
+                  };
+
+                  const getPlatformColor = () => {
+                    switch (account.platform) {
+                      case "instagram":
+                        return "from-purple-500 to-pink-500";
+                      case "twitter":
+                        return "from-blue-400 to-blue-600";
+                      case "facebook":
+                        return "from-blue-600 to-blue-800";
+                      case "tiktok":
+                        return "from-black to-gray-800 dark:from-white dark:to-gray-200";
+                      case "linkedin":
+                        return "from-blue-700 to-blue-900";
+                      default:
+                        return "from-gray-500 to-gray-700";
+                    }
+                  };
+
+                  const getPlatformUsername = () => {
+                    if (account.platformUsername) {
+                      return `@${account.platformUsername.replace('@', '')}`;
+                    }
+                    return account.platformDisplayName || account.platform;
+                  };
+
+                  const getPlatformUrl = () => {
+                    const username = account.platformUsername?.replace('@', '') || '';
+                    switch (account.platform) {
+                      case "instagram":
+                        return `https://instagram.com/${username}`;
+                      case "twitter":
+                        return `https://twitter.com/${username}`;
+                      case "facebook":
+                        return `https://facebook.com/${username}`;
+                      case "tiktok":
+                        return `https://tiktok.com/@${username}`;
+                      case "linkedin":
+                        return `https://linkedin.com/in/${username}`;
+                      default:
+                        return "#";
+                    }
+                  };
+
+                  return (
+                    <a
+                      key={account._id}
+                      href={getPlatformUrl()}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group"
+                    >
+                      <Card className="p-4 hover:shadow-lg transition-all duration-300 cursor-pointer hover:-translate-y-1 bg-card">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${getPlatformColor()} flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform`}>
+                            {getPlatformIcon()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-foreground capitalize truncate">
+                              {account.platform}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {getPlatformUsername()}
+                            </p>
+                            {account.accountLabel && (
+                              <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 mt-1">
+                                {account.accountLabel}
+                              </Badge>
+                            )}
+                          </div>
+                          <ExternalLink className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                      </Card>
+                    </a>
+                  );
+                })}
+            </div>
+          </div>
+        )}
 
         {/* Store Footer */}
         <div className="mt-16 pt-12 border-t border-border">

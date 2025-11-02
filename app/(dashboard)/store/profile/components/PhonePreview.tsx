@@ -3,7 +3,7 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Instagram, Twitter, Youtube, Globe, Video } from "lucide-react";
+import { Instagram, Twitter, Youtube, Globe, Video, Facebook, Music2 } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -27,6 +27,12 @@ export function PhonePreview({ className }: PhonePreviewProps) {
     clerkUser?.id ? { userId: clerkUser.id } : "skip"
   );
   const store = stores?.[0];
+
+  // Fetch connected social accounts
+  const socialAccounts = useQuery(
+    api.socialMedia?.getSocialAccounts as any,
+    store ? { storeId: store._id } : "skip"
+  );
 
   // Show loading state while fetching user data
   if (!clerkUser || convexUser === undefined || !store) {
@@ -66,14 +72,45 @@ export function PhonePreview({ className }: PhonePreviewProps) {
   // Use saved avatar or fallback to Clerk image
   const avatarUrl = convexUser?.imageUrl || clerkUser.imageUrl || "";
 
-  // Get social links
-  const socialLinks = [
-    { icon: Instagram, url: convexUser?.instagram, color: "text-pink-500" },
-    { icon: Video, url: convexUser?.tiktok, color: "text-black dark:text-white" },
-    { icon: Twitter, url: convexUser?.twitter, color: "text-blue-500" },
-    { icon: Youtube, url: convexUser?.youtube, color: "text-red-500" },
-    { icon: Globe, url: convexUser?.website, color: "text-gray-600 dark:text-gray-400" },
-  ].filter(link => link.url);
+  // Get active social accounts
+  const activeSocialAccounts = (socialAccounts || []).filter(
+    account => account.isActive && account.isConnected
+  );
+
+  // Map social accounts to icon components with platform-specific colors
+  const socialAccountsWithIcons = activeSocialAccounts.map(account => {
+    let icon, color;
+    switch (account.platform) {
+      case "instagram":
+        icon = Instagram;
+        color = "text-pink-500";
+        break;
+      case "twitter":
+        icon = Twitter;
+        color = "text-blue-400";
+        break;
+      case "facebook":
+        icon = Facebook;
+        color = "text-blue-600";
+        break;
+      case "tiktok":
+        icon = Music2;
+        color = "text-black dark:text-white";
+        break;
+      case "youtube":
+        icon = Youtube;
+        color = "text-red-500";
+        break;
+      case "linkedin":
+        icon = Globe;
+        color = "text-blue-700";
+        break;
+      default:
+        icon = Globe;
+        color = "text-gray-600";
+    }
+    return { ...account, icon, color };
+  });
 
   return (
     <div className={className}>
@@ -149,18 +186,26 @@ export function PhonePreview({ className }: PhonePreviewProps) {
           </div>
 
           {/* Social links if any */}
-          {socialLinks.length > 0 && (
+          {socialAccountsWithIcons.length > 0 && (
             <div className="mt-4 pt-4 border-t border-border">
               <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-2 text-center">Connect</p>
-              <div className="flex justify-center gap-2">
-                {socialLinks.map((link, index) => {
-                  const Icon = link.icon;
+              <div className="flex flex-wrap justify-center gap-2">
+                {socialAccountsWithIcons.map((account) => {
+                  const Icon = account.icon;
                   return (
                     <div
-                      key={index}
-                      className={`w-7 h-7 rounded-full bg-muted flex items-center justify-center ${link.color}`}
+                      key={account._id}
+                      className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted/50 border border-border"
                     >
-                      <Icon className="w-3.5 h-3.5" />
+                      <Icon className={`w-3 h-3 ${account.color}`} />
+                      <span className="text-[10px] font-medium text-foreground capitalize">
+                        {account.accountLabel || account.platform}
+                      </span>
+                      {account.platformUsername && (
+                        <span className="text-[9px] text-muted-foreground">
+                          @{account.platformUsername.replace('@', '').slice(0, 8)}
+                        </span>
+                      )}
                     </div>
                   );
                 })}
