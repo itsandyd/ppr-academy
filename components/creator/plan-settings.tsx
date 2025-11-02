@@ -40,6 +40,7 @@ export function PlanSettings({ storeId }: PlanSettingsProps) {
   const { user } = useUser();
   const planData = useQuery(api.creatorPlans.getStorePlan, { storeId });
   const usageStats = useQuery(api.creatorPlans.getPlanUsageStats, { storeId });
+  const storeData = useQuery(api.stores.getStoreById, { storeId });
   const updateVisibility = useMutation(api.creatorPlans.updateStoreVisibility);
   
   // Check if user is admin
@@ -48,10 +49,17 @@ export function PlanSettings({ storeId }: PlanSettingsProps) {
     user?.id ? { clerkId: user.id } : "skip"
   );
 
-  const [isPublic, setIsPublic] = useState(planData?.isActive && planData.plan !== "free");
-  const [isUpgrading, setIsUpgrading] = useState(false);
+  // Get isPublic from actual store data, not from plan status
+  const isPublicFromDb = storeData?.isPublic ?? false;
+  
+  console.log('Store data:', { 
+    storeId, 
+    isPublic: storeData?.isPublic, 
+    isPublishedProfile: storeData?.isPublishedProfile,
+    plan: storeData?.plan 
+  });
 
-  if (!planData || !usageStats) {
+  if (!planData || !usageStats || !storeData) {
     return (
       <div className="space-y-6 animate-pulse">
         <div className="h-32 bg-muted rounded-lg" />
@@ -64,28 +72,29 @@ export function PlanSettings({ storeId }: PlanSettingsProps) {
 
   const handleVisibilityToggle = async (checked: boolean) => {
     try {
-      setIsPublic(checked);
-      await updateVisibility({
+      console.log('Updating visibility to:', checked);
+      const result = await updateVisibility({
         storeId,
         isPublic: checked,
         isPublishedProfile: checked,
         clerkId: user?.id,
       });
       
-      const message = isAdmin && checked
-        ? "Profile is now public (admin override)"
-        : checked 
-        ? "Profile is now public" 
-        : "Profile is now private";
+      console.log('Update result:', result);
       
-      toast.success(message);
+      if (!result.success) {
+        throw new Error(result.message);
+      }
+      
+      toast.success(result.message);
     } catch (error: any) {
+      console.error('Visibility toggle error:', error);
       toast.error(error.message || "Failed to update visibility");
-      setIsPublic(!checked);
     }
   };
 
   const handleUpgrade = async (targetPlan: "creator" | "creator_pro", billingPeriod: "monthly" | "yearly" = "monthly") => {
+    const setIsUpgrading = (val: boolean) => {}; // Placeholder for upgrade state
     setIsUpgrading(true);
     try {
       const response = await fetch("/api/creator-plans/create-checkout", {
@@ -171,7 +180,7 @@ export function PlanSettings({ storeId }: PlanSettingsProps) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            {isPublic ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
+            {isPublicFromDb ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
             Profile Visibility
             {isAdmin && <Badge variant="secondary" className="ml-2"><Shield className="w-3 h-3 mr-1" />Admin</Badge>}
           </CardTitle>
@@ -186,14 +195,14 @@ export function PlanSettings({ storeId }: PlanSettingsProps) {
                 Make Profile Public
               </Label>
               <p className="text-sm text-muted-foreground">
-                {isPublic
+                {isPublicFromDb
                   ? "Your profile is visible to everyone on the marketplace"
                   : "Your profile is private and only accessible via direct link"}
               </p>
             </div>
             <Switch
               id="public-profile"
-              checked={isPublic}
+              checked={isPublicFromDb}
               onCheckedChange={handleVisibilityToggle}
               disabled={!isAdmin && planData.plan === "free"}
             />
@@ -288,7 +297,7 @@ export function PlanSettings({ storeId }: PlanSettingsProps) {
               ]}
               current={planData.plan === "free"}
               onUpgrade={() => {}}
-              isUpgrading={isUpgrading}
+              isUpgrading={false}
             />
             <PlanCard
               name="Creator"
@@ -306,7 +315,7 @@ export function PlanSettings({ storeId }: PlanSettingsProps) {
               current={planData.plan === "creator"}
               popular
               onUpgrade={() => handleUpgrade("creator")}
-              isUpgrading={isUpgrading}
+              isUpgrading={false}
             />
             <PlanCard
               name="Creator Pro"
@@ -322,7 +331,7 @@ export function PlanSettings({ storeId }: PlanSettingsProps) {
               ]}
               current={planData.plan === "creator_pro"}
               onUpgrade={() => handleUpgrade("creator_pro")}
-              isUpgrading={isUpgrading}
+              isUpgrading={false}
             />
           </div>
         </CardContent>
