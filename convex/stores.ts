@@ -31,6 +31,25 @@ const storeValidator = v.object({
     lastTestedAt: v.optional(v.number()),
     emailsSentThisMonth: v.optional(v.number()),
   })),
+  // Creator Plan & Visibility Settings
+  plan: v.optional(v.union(
+    v.literal("free"),
+    v.literal("creator"),
+    v.literal("creator_pro")
+  )),
+  planStartedAt: v.optional(v.number()),
+  isPublic: v.optional(v.boolean()),
+  isPublishedProfile: v.optional(v.boolean()),
+  stripeCustomerId: v.optional(v.string()),
+  stripeSubscriptionId: v.optional(v.string()),
+  subscriptionStatus: v.optional(v.union(
+    v.literal("active"),
+    v.literal("trialing"),
+    v.literal("past_due"),
+    v.literal("canceled"),
+    v.literal("incomplete")
+  )),
+  trialEndsAt: v.optional(v.number()),
 });
 
 // Get all stores for a user

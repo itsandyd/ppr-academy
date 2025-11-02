@@ -386,16 +386,16 @@ export default function SectionedMarketplace() {
                     </>
                   ) : (
                     <>
-                      <Link href="/sign-in">
-                        <Button className="w-full py-6 text-base shadow-md shadow-chart-1/20 hover:shadow-lg hover:scale-105 hover:-translate-y-1 transition-all duration-300 bg-gradient-to-r from-chart-1 to-chart-1/80 text-primary-foreground border-2 border-chart-1/40">
+                        <Link href="/sign-in">
+                          <Button className="w-full py-6 text-base shadow-md shadow-chart-1/20 hover:shadow-lg hover:scale-105 hover:-translate-y-1 transition-all duration-300 bg-gradient-to-r from-chart-1 to-chart-1/80 text-primary-foreground border-2 border-chart-1/40">
                           Explore Courses and Tools
-                        </Button>
-                      </Link>
-                      <Link href="/sign-up?intent=creator">
-                        <Button variant="outline" className="w-full py-6 text-base hover:scale-105 hover:-translate-y-1 transition-all duration-300 border-2 border-chart-1/40 bg-background/80 hover:bg-background/90 hover:shadow-lg">
+                          </Button>
+                        </Link>
+                        <Link href="/sign-up?intent=creator">
+                          <Button variant="outline" className="w-full py-6 text-base hover:scale-105 hover:-translate-y-1 transition-all duration-300 border-2 border-chart-1/40 bg-background/80 hover:bg-background/90 hover:shadow-lg">
                           Start Free as a Creator
-                        </Button>
-                      </Link>
+                          </Button>
+                        </Link>
                     </>
                   )}
                 </motion.div>
@@ -502,32 +502,32 @@ export default function SectionedMarketplace() {
       {!isSearching && featuredCreators.length > 0 && (
         <section className="relative py-24 z-10">
           <div className="absolute inset-0 bg-gradient-to-br from-chart-1/5 via-transparent to-chart-4/5"></div>
-          
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-            <motion.div 
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+          <motion.div 
               className="text-center mb-16"
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              viewport={{ once: true }}
-            >
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+          >
               <h2 className="text-3xl leading-8 font-bold tracking-tight sm:text-4xl bg-clip-text text-transparent bg-gradient-to-r from-chart-1 to-chart-4 mb-4">
                 Discover real producers teaching what they know
               </h2>
               <p className="max-w-2xl text-lg text-muted-foreground mx-auto">
                 Browse packs, presets, and lessons from independent producers building their brands on PausePlayRepeat.
-              </p>
-            </motion.div>
+            </p>
+          </motion.div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {featuredCreators.slice(0, 6).map((creator: any, index: number) => (
-                <motion.div
+              <motion.div 
                   key={creator._id}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: index * 0.1 }}
-                  viewport={{ once: true }}
-                >
+                        viewport={{ once: true }}
+                      >
                   <Link href={`/${creator.slug}`}>
                     <Card className="group overflow-hidden border-border bg-card hover:shadow-2xl hover:shadow-black/10 dark:hover:shadow-white/5 transition-all duration-300 cursor-pointer hover:-translate-y-1">
                       {/* Banner */}
@@ -544,7 +544,7 @@ export default function SectionedMarketplace() {
                           <div className="absolute inset-0 bg-gradient-to-br from-chart-1/20 via-chart-2/20 to-chart-3/20 dark:from-chart-1/30 dark:via-chart-2/30 dark:to-chart-3/30" />
                         )}
                         <div className="absolute inset-0 bg-gradient-to-t from-card via-card/50 to-transparent" />
-                      </div>
+                          </div>
 
                       <CardContent className="pb-6 px-6 -mt-10 relative z-10 space-y-3">
                         {/* Avatar */}
@@ -561,14 +561,14 @@ export default function SectionedMarketplace() {
                         <div className="text-center">
                           <h3 className="font-bold text-lg group-hover:text-chart-1 transition-colors mb-1">
                             {creator.name}
-                          </h3>
+                  </h3>
                           {creator.bio && (
                             <p className="text-sm text-muted-foreground line-clamp-2">
                               {creator.bio}
                             </p>
                           )}
-                        </div>
-
+                </div>
+                
                         {/* Stats */}
                         <div className="flex items-center justify-center gap-4 pt-3 border-t border-border text-sm text-muted-foreground">
                           <div className="flex items-center gap-1">
@@ -582,31 +582,31 @@ export default function SectionedMarketplace() {
                           <div className="flex items-center gap-1">
                             <Users className="w-4 h-4" />
                             <span>{creator.totalStudents}</span>
-                          </div>
+                        </div>
                         </div>
                       </CardContent>
                     </Card>
                   </Link>
-                </motion.div>
-              ))}
-            </div>
+                      </motion.div>
+                    ))}
+                  </div>
 
-            <motion.div 
+          <motion.div 
               className="mt-12 text-center"
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.4 }}
-              viewport={{ once: true }}
-            >
+            viewport={{ once: true }}
+          >
               <Link href="/marketplace/creators">
                 <Button variant="outline" size="lg" className="group">
                   View All Creators
                   <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
-            </motion.div>
-          </div>
-        </section>
+          </motion.div>
+        </div>
+      </section>
       )}
 
       {/* Feature Section (Framed for Both) */}
@@ -632,47 +632,47 @@ export default function SectionedMarketplace() {
 
           <div className="mt-16 grid md:grid-cols-3 gap-8">
             {/* A. Learn from real producers */}
-            <motion.div
+              <motion.div 
               className="bg-card/50 backdrop-blur-sm p-8 rounded-xl shadow-md border border-border hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
               initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
+                whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
-              viewport={{ once: true }}
+                viewport={{ once: true }}
             >
               <div className="w-16 h-16 bg-gradient-to-br from-chart-1 to-chart-2 rounded-xl flex items-center justify-center mb-6 shadow-lg">
                 <BookOpen className="w-8 h-8 text-primary-foreground" />
-              </div>
+                  </div>
               <h3 className="text-2xl font-bold text-foreground mb-4">Learn from real producers</h3>
               <p className="text-muted-foreground leading-relaxed">
                 Watch courses, download tools, and apply what you learn instantly in your DAW.
               </p>
-            </motion.div>
+              </motion.div>
 
             {/* B. Create and share your own */}
-            <motion.div
+          <motion.div 
               className="bg-card/50 backdrop-blur-sm p-8 rounded-xl shadow-md border border-border hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
-              viewport={{ once: true }}
-            >
+            viewport={{ once: true }}
+          >
               <div className="w-16 h-16 bg-gradient-to-br from-chart-3 to-chart-4 rounded-xl flex items-center justify-center mb-6 shadow-lg">
                 <Upload className="w-8 h-8 text-primary-foreground" />
-              </div>
+            </div>
               <h3 className="text-2xl font-bold text-foreground mb-4">Create and share your own</h3>
               <p className="text-muted-foreground leading-relaxed">
                 Turn your knowledge into income with a page that sells for you.
-              </p>
-            </motion.div>
+            </p>
+          </motion.div>
 
             {/* C. Grow together */}
-            <motion.div
+          <motion.div
               className="bg-card/50 backdrop-blur-sm p-8 rounded-xl shadow-md border border-border hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
-              viewport={{ once: true }}
-            >
+            viewport={{ once: true }}
+          >
               <div className="w-16 h-16 bg-gradient-to-br from-chart-4 to-chart-5 rounded-xl flex items-center justify-center mb-6 shadow-lg">
                 <Users className="w-8 h-8 text-primary-foreground" />
               </div>
@@ -680,7 +680,7 @@ export default function SectionedMarketplace() {
               <p className="text-muted-foreground leading-relaxed">
                 Join a community of artists who learn, teach, and push each other forward.
               </p>
-            </motion.div>
+          </motion.div>
           </div>
         </div>
       </section>
