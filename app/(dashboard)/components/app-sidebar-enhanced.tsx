@@ -29,7 +29,8 @@ import {
   PenTool,
   List,
   Inbox,
-  MessageSquare
+  MessageSquare,
+  CreditCard
 } from "lucide-react";
 import { usePathname, useParams } from "next/navigation";
 import { useUser, UserButton, SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
@@ -195,6 +196,12 @@ export function AppSidebarEnhanced() {
           href: `/store/${storeId || 'setup'}/settings/payouts`, 
           label: "Earnings",
           gradient: "from-green-500 to-emerald-500"
+        },
+        { 
+          icon: CreditCard, 
+          href: `/store/${storeId || 'setup'}/plan`, 
+          label: "Plan & Billing",
+          gradient: "from-violet-500 to-purple-500"
         },
         { 
           icon: Settings, 

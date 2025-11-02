@@ -99,6 +99,7 @@ export function SidebarWrapper({ children }: SidebarWrapperProps) {
       if (pathname.includes("/inbox")) return "Customer Inbox";
       if (pathname.includes("/social")) return "Socials";
       if (pathname.includes("/automations")) return "Automations";
+      if (pathname.includes("/plan")) return "Plan & Billing";
       if (pathname.includes("/options")) return "Settings";
       if (pathname.includes("/settings")) return "Store Settings";
     }

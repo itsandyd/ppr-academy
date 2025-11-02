@@ -6,6 +6,7 @@ import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Sheet,
   SheetContent,
@@ -61,6 +62,7 @@ export default function SectionedMarketplace() {
   const products = useQuery(api.digitalProducts.getAllPublishedProducts) || [];
   const samplePacks = useQuery(api.samplePacks?.getAllPublishedSamplePacks as any) || [];
   const platformStats = useQuery(api.marketplace?.getPlatformStats as any);
+  const featuredCreators = useQuery(api.marketplace?.getAllCreators as any, { limit: 6 }) || [];
 
   // Transform data to include contentType
   const coursesWithType = useMemo(() => 
@@ -343,10 +345,9 @@ export default function SectionedMarketplace() {
                 className="tracking-tight font-display"
               >
                 <span className="block text-5xl font-bold sm:text-6xl drop-shadow-sm">
-                  <span className="block bg-gradient-to-r from-[#1e293b] via-[#6b7280] to-[#1e293b] dark:from-[#e2e8f0] dark:via-[#9ca3af] dark:to-[#e2e8f0] bg-clip-text text-transparent">The Smart Way To</span>
                   <span className="relative mt-1 block">
                     <span className="text-transparent relative bg-clip-text bg-gradient-to-r from-chart-1 to-chart-4">
-                      Learn Production & Sell Your Sound
+                      Build and learn in one place
                     </span>
                   </span>
                 </span>
@@ -358,7 +359,7 @@ export default function SectionedMarketplace() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.3 }}
               >
-                PPR Academy brings together music creators and students in one seamless platform. Learn from experts with personalized content, or build your own creator business.
+                PausePlayRepeat Academy connects music producers who want to grow with creators who teach, share, and sell what they've learned.
               </motion.p>
               
               <div className="mt-10 sm:max-w-lg sm:mx-auto sm:text-center lg:text-left lg:mx-0">
@@ -385,24 +386,16 @@ export default function SectionedMarketplace() {
                     </>
                   ) : (
                     <>
-                      <div className="space-y-2">
-                        <Link href="/sign-in">
-                          <Button className="w-full py-6 text-base shadow-md shadow-chart-1/20 hover:shadow-lg hover:scale-105 hover:-translate-y-1 transition-all duration-300 bg-gradient-to-r from-chart-1 to-chart-1/80 text-primary-foreground border-2 border-chart-1/40">
-                            <BookOpen className="mr-2 h-5 w-5" />
-                            For Students
-                          </Button>
-                        </Link>
-                        <p className="text-xs text-muted-foreground mt-2 text-center">Learn & access content</p>
-                      </div>
-                      <div className="space-y-2">
-                        <Link href="/sign-up?intent=creator">
-                          <Button variant="outline" className="w-full py-6 text-base hover:scale-105 hover:-translate-y-1 transition-all duration-300 border-2 border-chart-1/40 bg-background/80 hover:bg-background/90 hover:shadow-lg">
-                            <Store className="mr-2 h-5 w-5" />
-                            For Creators
-                          </Button>
-                        </Link>
-                        <p className="text-xs text-muted-foreground mt-2 text-center">Sell your content</p>
-                      </div>
+                      <Link href="/sign-in">
+                        <Button className="w-full py-6 text-base shadow-md shadow-chart-1/20 hover:shadow-lg hover:scale-105 hover:-translate-y-1 transition-all duration-300 bg-gradient-to-r from-chart-1 to-chart-1/80 text-primary-foreground border-2 border-chart-1/40">
+                          Explore Courses and Tools
+                        </Button>
+                      </Link>
+                      <Link href="/sign-up?intent=creator">
+                        <Button variant="outline" className="w-full py-6 text-base hover:scale-105 hover:-translate-y-1 transition-all duration-300 border-2 border-chart-1/40 bg-background/80 hover:bg-background/90 hover:shadow-lg">
+                          Start Free as a Creator
+                        </Button>
+                      </Link>
                     </>
                   )}
                 </motion.div>
@@ -505,7 +498,118 @@ export default function SectionedMarketplace() {
         </section>
       )}
 
-      {/* How It Works */}
+      {/* Creator Spotlight Section */}
+      {!isSearching && featuredCreators.length > 0 && (
+        <section className="relative py-24 z-10">
+          <div className="absolute inset-0 bg-gradient-to-br from-chart-1/5 via-transparent to-chart-4/5"></div>
+          
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+            <motion.div 
+              className="text-center mb-16"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              viewport={{ once: true }}
+            >
+              <h2 className="text-3xl leading-8 font-bold tracking-tight sm:text-4xl bg-clip-text text-transparent bg-gradient-to-r from-chart-1 to-chart-4 mb-4">
+                Discover real producers teaching what they know
+              </h2>
+              <p className="max-w-2xl text-lg text-muted-foreground mx-auto">
+                Browse packs, presets, and lessons from independent producers building their brands on PausePlayRepeat.
+              </p>
+            </motion.div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {featuredCreators.slice(0, 6).map((creator: any, index: number) => (
+                <motion.div
+                  key={creator._id}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                  viewport={{ once: true }}
+                >
+                  <Link href={`/${creator.slug}`}>
+                    <Card className="group overflow-hidden border-border bg-card hover:shadow-2xl hover:shadow-black/10 dark:hover:shadow-white/5 transition-all duration-300 cursor-pointer hover:-translate-y-1">
+                      {/* Banner */}
+                      <div className="relative h-32 overflow-hidden">
+                        {creator.bannerImage ? (
+                          <div className="relative w-full h-full">
+                            <img
+                              src={creator.bannerImage}
+                              alt={`${creator.name} banner`}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                          </div>
+                        ) : (
+                          <div className="absolute inset-0 bg-gradient-to-br from-chart-1/20 via-chart-2/20 to-chart-3/20 dark:from-chart-1/30 dark:via-chart-2/30 dark:to-chart-3/30" />
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-card via-card/50 to-transparent" />
+                      </div>
+
+                      <CardContent className="pb-6 px-6 -mt-10 relative z-10 space-y-3">
+                        {/* Avatar */}
+                        <div className="flex justify-center">
+                          <Avatar className="w-20 h-20 border-4 border-card shadow-xl ring-2 ring-border">
+                            <AvatarImage src={creator.avatar} />
+                            <AvatarFallback className="text-xl bg-gradient-to-br from-chart-1 to-chart-2 text-primary-foreground">
+                              {creator.name.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
+                        </div>
+                        
+                        {/* Name & Bio */}
+                        <div className="text-center">
+                          <h3 className="font-bold text-lg group-hover:text-chart-1 transition-colors mb-1">
+                            {creator.name}
+                          </h3>
+                          {creator.bio && (
+                            <p className="text-sm text-muted-foreground line-clamp-2">
+                              {creator.bio}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Stats */}
+                        <div className="flex items-center justify-center gap-4 pt-3 border-t border-border text-sm text-muted-foreground">
+                          <div className="flex items-center gap-1">
+                            <BookOpen className="w-4 h-4" />
+                            <span>{creator.totalCourses}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Package className="w-4 h-4" />
+                            <span>{creator.totalProducts}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Users className="w-4 h-4" />
+                            <span>{creator.totalStudents}</span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                </motion.div>
+              ))}
+            </div>
+
+            <motion.div 
+              className="mt-12 text-center"
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+              viewport={{ once: true }}
+            >
+              <Link href="/marketplace/creators">
+                <Button variant="outline" size="lg" className="group">
+                  View All Creators
+                  <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </Link>
+            </motion.div>
+          </div>
+        </section>
+      )}
+
+      {/* Feature Section (Framed for Both) */}
       <section id="how-it-works" className="relative py-24 z-10">
         <div className="absolute inset-0 backdrop-blur-sm bg-card/30"></div>
         
@@ -517,337 +621,74 @@ export default function SectionedMarketplace() {
             transition={{ duration: 0.6 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-base text-chart-1 font-semibold tracking-wide uppercase">How It Works</h2>
+            <h2 className="text-base text-chart-1 font-semibold tracking-wide uppercase">What You Can Do</h2>
             <p className="mt-2 text-3xl leading-8 font-bold tracking-tight sm:text-4xl bg-clip-text text-transparent bg-gradient-to-r from-chart-1 to-chart-4">
-              Connecting creativity with opportunity
+              Learn, create, and grow together
             </p>
             <p className="mt-4 max-w-2xl text-xl text-muted-foreground mx-auto">
-              Our platform streamlines music education and creator commerce for everyone
+              Whether you're here to learn or to teach, this is your home base
             </p>
           </motion.div>
 
-          <div className="mt-16">
-            <div className="flex flex-col lg:flex-row space-y-10 lg:space-y-0 lg:space-x-10">
-              {/* For Students */}
-              <motion.div 
-                className="lg:w-1/2"
-                initial={{ opacity: 0, x: -30 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6 }}
-                viewport={{ once: true }}
-              >
-                <div className="bg-chart-1/10 backdrop-blur-sm rounded-xl p-6 mb-10 border border-chart-1/20 shadow-md">
-                  <h3 className="text-xl text-center font-bold text-chart-1 flex items-center justify-center">
-                    <BookOpen className="mr-2 h-5 w-5" /> For Students
-                  </h3>
-                </div>
-                
-                <div className="relative">
-                  <div className="absolute top-12 left-0 w-full border-t-2 border-dashed border-muted/30 z-0"></div>
-                  
-                  <div className="relative z-10 flex flex-col space-y-8">
-                    {studentSteps.map((step, index) => (
-                      <motion.div 
-                        key={index}
-                        className="bg-card/50 backdrop-blur-sm p-6 rounded-xl shadow-md border border-border hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5, delay: 0.1 * index }}
-                        viewport={{ once: true }}
-                      >
-                        <div className="flex">
-                          <div className="flex-shrink-0">
-                            <div className="w-12 h-12 flex items-center justify-center rounded-full bg-chart-1/20 text-chart-1 font-bold text-lg border border-chart-1/20 shadow-inner">{index + 1}</div>
-                          </div>
-                          <div className="ml-5">
-                            <h4 className="text-lg font-bold text-foreground">{step.title}</h4>
-                            <p className="text-muted-foreground mt-2">{step.description}</p>
-                          </div>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
-              
-              {/* For Creators */}
-              <motion.div 
-                className="lg:w-1/2"
-                initial={{ opacity: 0, x: 30 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6 }}
-                viewport={{ once: true }}
-              >
-                <div className="bg-chart-3/10 backdrop-blur-sm rounded-xl p-6 mb-10 border border-chart-3/20 shadow-md">
-                  <h3 className="text-xl text-center font-bold text-chart-3 flex items-center justify-center">
-                    <Store className="mr-2 h-5 w-5" /> For Creators
-                  </h3>
-                </div>
-                
-                <div className="relative">
-                  <div className="absolute top-12 left-0 w-full border-t-2 border-dashed border-muted/30 z-0"></div>
-                  
-                  <div className="relative z-10 flex flex-col space-y-8">
-                    {creatorSteps.map((step, index) => (
-                      <motion.div 
-                        key={index}
-                        className="bg-card/50 backdrop-blur-sm p-6 rounded-xl shadow-md border border-border hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5, delay: 0.1 * index }}
-                        viewport={{ once: true }}
-                      >
-                        <div className="flex">
-                          <div className="flex-shrink-0">
-                            <div className="w-12 h-12 flex items-center justify-center rounded-full bg-chart-3/20 text-chart-3 font-bold text-lg border border-chart-3/20 shadow-inner">{index + 1}</div>
-                          </div>
-                          <div className="ml-5">
-                            <h4 className="text-lg font-bold text-foreground">{step.title}</h4>
-                            <p className="text-muted-foreground mt-2">{step.description}</p>
-                          </div>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
-            </div>
+          <div className="mt-16 grid md:grid-cols-3 gap-8">
+            {/* A. Learn from real producers */}
+            <motion.div
+              className="bg-card/50 backdrop-blur-sm p-8 rounded-xl shadow-md border border-border hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              viewport={{ once: true }}
+            >
+              <div className="w-16 h-16 bg-gradient-to-br from-chart-1 to-chart-2 rounded-xl flex items-center justify-center mb-6 shadow-lg">
+                <BookOpen className="w-8 h-8 text-primary-foreground" />
+              </div>
+              <h3 className="text-2xl font-bold text-foreground mb-4">Learn from real producers</h3>
+              <p className="text-muted-foreground leading-relaxed">
+                Watch courses, download tools, and apply what you learn instantly in your DAW.
+              </p>
+            </motion.div>
+
+            {/* B. Create and share your own */}
+            <motion.div
+              className="bg-card/50 backdrop-blur-sm p-8 rounded-xl shadow-md border border-border hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              viewport={{ once: true }}
+            >
+              <div className="w-16 h-16 bg-gradient-to-br from-chart-3 to-chart-4 rounded-xl flex items-center justify-center mb-6 shadow-lg">
+                <Upload className="w-8 h-8 text-primary-foreground" />
+              </div>
+              <h3 className="text-2xl font-bold text-foreground mb-4">Create and share your own</h3>
+              <p className="text-muted-foreground leading-relaxed">
+                Turn your knowledge into income with a page that sells for you.
+              </p>
+            </motion.div>
+
+            {/* C. Grow together */}
+            <motion.div
+              className="bg-card/50 backdrop-blur-sm p-8 rounded-xl shadow-md border border-border hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              viewport={{ once: true }}
+            >
+              <div className="w-16 h-16 bg-gradient-to-br from-chart-4 to-chart-5 rounded-xl flex items-center justify-center mb-6 shadow-lg">
+                <Users className="w-8 h-8 text-primary-foreground" />
+              </div>
+              <h3 className="text-2xl font-bold text-foreground mb-4">Grow together</h3>
+              <p className="text-muted-foreground leading-relaxed">
+                Join a community of artists who learn, teach, and push each other forward.
+              </p>
+            </motion.div>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="relative py-24 z-10">
-        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm"></div>
-        
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <motion.div 
-            className="text-center"
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
-          >
-            <h2 className="text-base text-chart-1 font-semibold tracking-wide uppercase">Features</h2>
-            <p className="mt-2 text-3xl leading-8 font-bold tracking-tight sm:text-4xl bg-clip-text text-transparent bg-gradient-to-r from-chart-1 to-chart-4">
-              Smart tools for both sides of music
-            </p>
-            <p className="mt-4 max-w-2xl text-xl text-muted-foreground mx-auto">
-              PPR Academy combines powerful tools to create a platform where creators and students thrive together.
-            </p>
-          </motion.div>
-
-          <div className="mt-16 grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {features.map((feature, index) => (
-              <motion.div 
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                viewport={{ once: true }}
-              >
-                <Card className="p-6 bg-card border-border hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-                  <div className="space-y-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-chart-1 to-chart-2 rounded-xl flex items-center justify-center">
-                      <feature.icon className="w-6 h-6 text-primary-foreground" />
-                    </div>
-                    <div className="space-y-2">
-                      <h3 className="text-lg font-semibold text-foreground">
-                        {feature.title}
-                      </h3>
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        {feature.description}
-                      </p>
-                    </div>
-                  </div>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials Section */}
-      <section id="testimonials" className="relative py-24 z-10">
-        <div className="absolute inset-0 bg-card/50 backdrop-blur-sm"></div>
-        
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <motion.div 
-            className="text-center"
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
-          >
-            <h2 className="text-base text-chart-1 font-semibold tracking-wide uppercase">Testimonials</h2>
-            <p className="mt-2 text-3xl leading-8 font-bold tracking-tight sm:text-4xl bg-clip-text text-transparent bg-gradient-to-r from-chart-1 to-chart-4">
-              What our community says
-            </p>
-            <p className="mt-4 max-w-2xl text-xl text-muted-foreground mx-auto">
-              Join thousands of artists and students who are already transforming their music careers
-            </p>
-          </motion.div>
-
-          <div className="mt-16 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-            {[
-              {
-                content: "PPR Academy completely transformed my approach to music production. I've learned more in 3 months than I did in years of trial and error.",
-                author: "Alex Rivera",
-                role: "Electronic Music Producer"
-              },
-              {
-                content: "As a creator, this platform lets me focus on what I do best - teaching. The tools handle everything else seamlessly.",
-                author: "Samantha Wright",
-                role: "Course Creator"
-              },
-              {
-                content: "The quality of courses and sample packs here is unmatched. Every purchase has been worth it and helped me level up my skills.",
-                author: "Marcus Johnson",
-                role: "Hip-Hop Producer"
-              }
-            ].map((testimonial, index) => (
-              <motion.div 
-                key={index}
-                className="transform transition-all duration-500 hover:-translate-y-2"
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                viewport={{ once: true }}
-                style={index === 1 ? { transform: 'translateY(2rem)' } : {}}
-              >
-                <Card className="h-full bg-card border-border backdrop-blur-sm p-6">
-                  <div className="flex items-start gap-1 mb-4">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="w-5 h-5 fill-chart-5 text-chart-5" />
-                    ))}
-                  </div>
-                  <p className="text-foreground mb-6 leading-relaxed">"{testimonial.content}"</p>
-                  <div className="border-t border-border pt-4">
-                    <p className="font-semibold text-foreground">{testimonial.author}</p>
-                    <p className="text-sm text-muted-foreground">{testimonial.role}</p>
-                  </div>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-
-          <motion.div 
-            className="mt-16 text-center"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-            viewport={{ once: true }}
-          >
-            <div className="inline-flex items-center space-x-2 bg-chart-1/10 px-5 py-3 rounded-full text-chart-1 text-sm border border-chart-1/20 backdrop-blur-sm">
-              <TrendingUp className="h-4 w-4 mr-2" />
-              <span>Join {stats.totalCreators || '2,500'}+ music professionals using PPR Academy</span>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* FAQ Section */}
-      <section id="faq" className="relative py-24 z-10">
-        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm"></div>
-        
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <motion.div 
-            className="text-center mb-12 relative"
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
-          >
-            <h2 className="text-base text-chart-1 font-semibold tracking-wide uppercase">FAQ</h2>
-            <p className="mt-2 text-3xl leading-8 font-bold tracking-tight sm:text-4xl bg-clip-text text-transparent bg-gradient-to-r from-chart-1 to-chart-4">
-              Frequently asked questions
-            </p>
-            <p className="mt-4 max-w-2xl text-xl text-muted-foreground mx-auto">
-              Everything you need to know about PPR Academy
-            </p>
-          </motion.div>
-
-          <motion.div
-            className="max-w-3xl mx-auto"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            viewport={{ once: true }}
-          >
-            <Accordion type="single" collapsible className="space-y-4">
-              {[
-                {
-                  question: "What is PPR Academy?",
-                  answer: "PPR Academy is a marketplace platform connecting music creators with students. Creators can sell courses, sample packs, and digital products, while students get access to high-quality educational content and production resources from industry professionals."
-                },
-                {
-                  question: "How much does it cost for students?",
-                  answer: "It's completely free to browse and discover content. You only pay when you purchase individual courses, sample packs, or digital products. Each item has its own price set by the creator, with no monthly subscription required."
-                },
-                {
-                  question: "How much does it cost for creators?",
-                  answer: "Creating an account and setting up your storefront is free. We only earn when you earn - taking just a 10% platform fee on sales. You keep 90% of every sale, which is paid out directly to your connected Stripe account."
-                },
-                {
-                  question: "What can I sell as a creator?",
-                  answer: "You can sell online courses with video lessons, sample packs, presets, project templates, e-books, and any other digital products related to music production. You can also offer coaching sessions and build a subscriber base."
-                },
-                {
-                  question: "Do I need to be verified to start selling?",
-                  answer: "No verification required! Simply sign up, create your profile, connect your Stripe account for payments, and start uploading your content. Your products go live immediately after you publish them."
-                },
-                {
-                  question: "How do students access purchased content?",
-                  answer: "After purchasing, all content is instantly available in your Library. For courses, you'll get lifetime access to all lessons and materials. Sample packs and digital products can be downloaded directly from your library at any time."
-                },
-                {
-                  question: "Is there a refund policy?",
-                  answer: "Yes! We offer a money-back guarantee. If you're not satisfied with a purchase within the first 30 days, contact our support team for a full refund. We want to ensure you're happy with every purchase."
-                },
-                {
-                  question: "How do I get paid as a creator?",
-                  answer: "Connect your Stripe account in your dashboard settings. When students purchase your content, payments are processed through Stripe, and you receive 90% of the sale directly. Payouts follow Stripe's standard schedule."
-                }
-              ].map((faq, index) => (
-                <AccordionItem 
-                  key={index} 
-                  value={`item-${index}`}
-                  className="bg-card/50 border border-border backdrop-blur-sm rounded-lg px-6 overflow-hidden"
-                >
-                  <AccordionTrigger className="hover:no-underline py-6 text-left">
-                    <h3 className="text-lg font-semibold text-foreground pr-4">
-                      {faq.question}
-                    </h3>
-                  </AccordionTrigger>
-                  <AccordionContent className="text-muted-foreground leading-relaxed pb-6">
-                    {faq.answer}
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-          </motion.div>
-
-          <motion.div 
-            className="mt-16 text-center"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            viewport={{ once: true }}
-          >
-            <p className="text-muted-foreground mb-6">
-              Still have questions?
-            </p>
-            <Button className="px-8 py-6 rounded-xl text-base transition-all duration-300 hover:shadow-lg hover:shadow-chart-1/20 hover:scale-105 hover:-translate-y-1">
-              Contact Support
-            </Button>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Content Showcase - After FAQ */}
+      {/* What You Can Find Section (Explore the Academy Library) */}
       {!isSearching && allContent.length > 0 && (
         <section className="relative py-24 z-10">
-          <div className="absolute inset-0 bg-background"></div>
+          <div className="absolute inset-0 bg-card/50 backdrop-blur-sm"></div>
           
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
             <motion.div 
@@ -857,9 +698,11 @@ export default function SectionedMarketplace() {
               transition={{ duration: 0.6 }}
               viewport={{ once: true }}
             >
-              <h2 className="text-3xl font-bold text-foreground mb-4">Explore Our Marketplace</h2>
+              <h2 className="text-3xl font-bold text-foreground mb-4 bg-clip-text text-transparent bg-gradient-to-r from-chart-1 to-chart-4">
+                Explore the Academy Library
+              </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Discover courses, sample packs, and digital products from talented creators
+                Courses, sound packs, and presets from producers around the world — new drops every week.
               </p>
             </motion.div>
             
@@ -873,9 +716,9 @@ export default function SectionedMarketplace() {
                 transition={{ duration: 0.5 }}
                 viewport={{ once: true }}
               >
-                <Link href="/courses">
+                <Link href="/marketplace">
                   <Button variant="outline" size="lg" className="group">
-                    View All Content
+                    Browse All Products
                     <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </Link>
@@ -904,11 +747,11 @@ export default function SectionedMarketplace() {
           >
             <div className="space-y-4">
               <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-primary-foreground leading-tight">
-                Ready to transform your
-                <span className="block">music career?</span>
+                Whether you're learning or creating,
+                <span className="block">this is your home base</span>
               </h2>
               <p className="text-xl text-primary-foreground/80 max-w-2xl mx-auto leading-relaxed">
-                Join PPR Academy today and start building your skills or sharing your knowledge with the world. Start for free.
+                Join PausePlayRepeat Academy today and start building your skills or sharing your knowledge with the world. Start for free.
               </p>
             </div>
 
@@ -920,17 +763,17 @@ export default function SectionedMarketplace() {
                       size="lg" 
                       className="w-full sm:w-auto rounded-xl bg-background text-chart-1 hover:bg-background/90 font-bold px-12 py-6 text-xl shadow-2xl transition-all duration-300 hover:scale-105"
                     >
-                      Get Started Free
+                      Start Learning Free
                       <ArrowRight className="ml-2 w-5 h-5" />
                     </Button>
                   </SignUpButton>
-                  <Link href="/sign-in">
+                  <Link href="/sign-up?intent=creator">
                     <Button 
                       variant="outline"
                       size="lg" 
                       className="w-full sm:w-auto rounded-xl border-primary-foreground/40 text-primary-foreground hover:bg-primary-foreground/10 font-semibold px-12 py-6 text-xl shadow-lg transition-all duration-300 hover:scale-105"
                     >
-                      Sign In
+                      Become a Creator
                     </Button>
                   </Link>
                 </>
