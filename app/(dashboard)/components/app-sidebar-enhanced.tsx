@@ -192,6 +192,12 @@ export function AppSidebarEnhanced() {
           gradient: "from-rose-500 to-pink-500"
         },
         { 
+          icon: User, 
+          href: `/store/profile`, 
+          label: "Profile",
+          gradient: "from-blue-500 to-indigo-500"
+        },
+        { 
           icon: DollarSign, 
           href: `/store/${storeId || 'setup'}/settings/payouts`, 
           label: "Earnings",

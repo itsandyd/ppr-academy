@@ -92,6 +92,7 @@ export function SidebarWrapper({ children }: SidebarWrapperProps) {
   const getPageTitle = () => {
     if (pathname === "/home") return "Dashboard";
     if (pathname === "/home/analytics") return "Analytics";
+    if (pathname === "/store/profile") return "Profile Settings";
     if (pathname.startsWith("/store/")) {
       if (pathname.includes("/products")) return "Products";
       if (pathname.includes("/customers")) return "Customers";
