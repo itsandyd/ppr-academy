@@ -10,10 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Instagram, Music, Loader2, Twitter, Youtube, Globe, Video, Eye, EyeOff, Shield } from "lucide-react";
+import { Loader2, Eye, EyeOff, Shield } from "lucide-react";
 import { AvatarUpload } from "./AvatarUpload";
-import { SocialField } from "./SocialField";
 import { useUser } from "@clerk/nextjs";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -23,13 +21,6 @@ import { useEffect, useState } from "react";
 const headerSchema = z.object({
   name: z.string().max(50, "Name must be 50 characters or less"),
   bio: z.string().max(80, "Bio must be 80 characters or less"),
-  socials: z.object({
-    instagram: z.string().optional(),
-    tiktok: z.string().optional(),
-    twitter: z.string().optional(),
-    youtube: z.string().optional(),
-    website: z.string().optional(),
-  }),
 });
 
 type HeaderSchema = z.infer<typeof headerSchema>;
@@ -99,13 +90,6 @@ export function HeaderForm() {
     defaultValues: {
       name: "",
       bio: "",
-      socials: {
-        instagram: "",
-        tiktok: "",
-        twitter: "",
-        youtube: "",
-        website: "",
-      },
     },
   });
 
@@ -124,13 +108,6 @@ export function HeaderForm() {
       reset({
         name: displayName,
         bio: convexUser.bio || "",
-        socials: {
-          instagram: convexUser.instagram || "",
-          tiktok: convexUser.tiktok || "",
-          twitter: convexUser.twitter || "",
-          youtube: convexUser.youtube || "",
-          website: convexUser.website || "",
-        },
       });
     }
   }, [clerkUser, convexUser, reset]);
@@ -151,11 +128,6 @@ export function HeaderForm() {
         clerkId: clerkUser.id,
         name: data.name,
         bio: data.bio,
-        instagram: data.socials.instagram,
-        tiktok: data.socials.tiktok,
-        twitter: data.socials.twitter,
-        youtube: data.socials.youtube,
-        website: data.socials.website,
       });
       
       toast({
@@ -286,52 +258,6 @@ export function HeaderForm() {
           />
         </FormField>
 
-        <fieldset className="space-y-4">
-          <legend className="text-base font-semibold">Social Links (URL)</legend>
-          <SocialField 
-            icon={Instagram} 
-            placeholder="Your Username" 
-            iconBg="bg-gradient-to-br from-purple-500 to-pink-500"
-            {...register("socials.instagram")} 
-          />
-          <SocialField 
-            icon={Video} 
-            placeholder="Your Username" 
-            iconBg="bg-black"
-            {...register("socials.tiktok")} 
-          />
-
-          <Accordion type="single" collapsible>
-            <AccordionItem value="more">
-              <AccordionTrigger className="text-[#6356FF] text-sm font-bold hover:underline">
-                More socials
-              </AccordionTrigger>
-              <AccordionContent className="space-y-4 pt-4">
-                <SocialField 
-                  icon={Twitter} 
-                  placeholder="Your Username" 
-                  iconBg="bg-blue-500"
-                  label="Twitter"
-                  {...register("socials.twitter")} 
-                />
-                <SocialField 
-                  icon={Youtube} 
-                  placeholder="Your Username" 
-                  iconBg="bg-red-500"
-                  label="YouTube"
-                  {...register("socials.youtube")} 
-                />
-                <SocialField 
-                  icon={Globe} 
-                  placeholder="Your Website URL" 
-                  iconBg="bg-gray-600"
-                  label="Website"
-                  {...register("socials.website")} 
-                />
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-        </fieldset>
         <Button type="submit" className="w-full mt-6" disabled={isLoading}>
           {isLoading ? (
             <>
