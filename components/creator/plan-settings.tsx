@@ -26,18 +26,27 @@ import {
   Eye,
   EyeOff,
   ArrowRight,
+  Shield,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
+import { useUser } from "@clerk/nextjs";
 
 interface PlanSettingsProps {
   storeId: Id<"stores">;
 }
 
 export function PlanSettings({ storeId }: PlanSettingsProps) {
+  const { user } = useUser();
   const planData = useQuery(api.creatorPlans.getStorePlan, { storeId });
   const usageStats = useQuery(api.creatorPlans.getPlanUsageStats, { storeId });
   const updateVisibility = useMutation(api.creatorPlans.updateStoreVisibility);
+  
+  // Check if user is admin
+  const adminStatus = useQuery(
+    api.users.checkIsAdmin,
+    user?.id ? { clerkId: user.id } : "skip"
+  );
 
   const [isPublic, setIsPublic] = useState(planData?.isActive && planData.plan !== "free");
   const [isUpgrading, setIsUpgrading] = useState(false);
@@ -51,6 +60,8 @@ export function PlanSettings({ storeId }: PlanSettingsProps) {
     );
   }
 
+  const isAdmin = adminStatus?.isAdmin === true;
+
   const handleVisibilityToggle = async (checked: boolean) => {
     try {
       setIsPublic(checked);
@@ -58,10 +69,18 @@ export function PlanSettings({ storeId }: PlanSettingsProps) {
         storeId,
         isPublic: checked,
         isPublishedProfile: checked,
+        clerkId: user?.id,
       });
-      toast.success(checked ? "Profile is now public" : "Profile is now private");
-    } catch (error) {
-      toast.error("Failed to update visibility");
+      
+      const message = isAdmin && checked
+        ? "Profile is now public (admin override)"
+        : checked 
+        ? "Profile is now public" 
+        : "Profile is now private";
+      
+      toast.success(message);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update visibility");
       setIsPublic(!checked);
     }
   };
@@ -154,6 +173,7 @@ export function PlanSettings({ storeId }: PlanSettingsProps) {
           <CardTitle className="flex items-center gap-2">
             {isPublic ? <Eye className="h-5 w-5" /> : <EyeOff className="h-5 w-5" />}
             Profile Visibility
+            {isAdmin && <Badge variant="secondary" className="ml-2"><Shield className="w-3 h-3 mr-1" />Admin</Badge>}
           </CardTitle>
           <CardDescription>
             Control whether your creator profile appears in the public marketplace
@@ -175,17 +195,29 @@ export function PlanSettings({ storeId }: PlanSettingsProps) {
               id="public-profile"
               checked={isPublic}
               onCheckedChange={handleVisibilityToggle}
-              disabled={planData.plan === "free"}
+              disabled={!isAdmin && planData.plan === "free"}
             />
           </div>
 
-          {planData.plan === "free" && (
+          {!isAdmin && planData.plan === "free" && (
             <div className="p-4 bg-muted/50 border border-border rounded-lg flex items-start gap-3">
               <Lock className="h-5 w-5 text-muted-foreground mt-0.5" />
               <div className="space-y-1">
                 <p className="text-sm font-medium">Upgrade to Go Public</p>
                 <p className="text-xs text-muted-foreground">
                   Public profile visibility is available on Creator and Creator Pro plans
+                </p>
+              </div>
+            </div>
+          )}
+          
+          {isAdmin && (
+            <div className="p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg flex items-start gap-3">
+              <Shield className="h-5 w-5 text-green-600 dark:text-green-400 mt-0.5" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-green-900 dark:text-green-100">Admin Access</p>
+                <p className="text-xs text-green-700 dark:text-green-300">
+                  You have admin privileges and can bypass all plan restrictions
                 </p>
               </div>
             </div>

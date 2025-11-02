@@ -159,17 +159,37 @@ export const checkFeatureAccess = query({
   args: {
     storeId: v.id("stores"),
     feature: v.string(),
+    clerkId: v.optional(v.string()), // Add clerkId to check for admin
   },
   returns: v.object({
     hasAccess: v.boolean(),
     currentUsage: v.optional(v.number()),
     limit: v.optional(v.number()),
     requiresPlan: v.optional(v.union(v.literal("creator"), v.literal("creator_pro"))),
+    isAdmin: v.optional(v.boolean()), // Add admin flag to response
   }),
   handler: async (ctx, args) => {
     const store = await ctx.db.get(args.storeId);
     if (!store) {
       return { hasAccess: false };
+    }
+
+    // Check if user is admin - admins bypass all paywalls
+    if (args.clerkId) {
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+        .unique();
+      
+      if (user?.admin === true) {
+        // Admin has access to everything
+        return {
+          hasAccess: true,
+          currentUsage: 0,
+          limit: -1, // Unlimited
+          isAdmin: true,
+        };
+      }
     }
 
     const plan = store.plan || "free";
@@ -266,12 +286,14 @@ export const checkFeatureAccess = query({
 
 /**
  * Update store visibility settings
+ * Admins can always toggle visibility regardless of plan
  */
 export const updateStoreVisibility = mutation({
   args: {
     storeId: v.id("stores"),
     isPublic: v.boolean(),
     isPublishedProfile: v.optional(v.boolean()),
+    clerkId: v.optional(v.string()), // Add clerkId to check for admin
   },
   returns: v.object({
     success: v.boolean(),
@@ -281,6 +303,25 @@ export const updateStoreVisibility = mutation({
     const store = await ctx.db.get(args.storeId);
     if (!store) {
       return { success: false, message: "Store not found" };
+    }
+
+    // Check if user is admin
+    let isAdmin = false;
+    if (args.clerkId) {
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+        .unique();
+      isAdmin = user?.admin === true;
+    }
+
+    // Check if user has permission (admin or paid plan)
+    const plan = store.plan || "free";
+    if (!isAdmin && plan === "free" && args.isPublic) {
+      return {
+        success: false,
+        message: "Public profile visibility requires Creator or Creator Pro plan. Please upgrade to continue.",
+      };
     }
 
     const updateData: any = {
@@ -293,9 +334,13 @@ export const updateStoreVisibility = mutation({
 
     await ctx.db.patch(args.storeId, updateData);
 
+    const message = isAdmin 
+      ? `Profile is now ${args.isPublic ? "public" : "private"} (admin override)`
+      : `Profile is now ${args.isPublic ? "public" : "private"}`;
+
     return {
       success: true,
-      message: `Profile is now ${args.isPublic ? "public" : "private"}`,
+      message,
     };
   },
 });
