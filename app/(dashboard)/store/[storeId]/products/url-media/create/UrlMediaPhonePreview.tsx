@@ -1,7 +1,7 @@
 "use client";
 
+import { PhoneShell } from "@/components/shared/PhoneShell";
 import { Card } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { 
   Youtube, 
@@ -37,13 +37,6 @@ export function UrlMediaPhonePreview({
   const displayName = user.firstName && user.lastName 
     ? `${user.firstName} ${user.lastName}`
     : user.firstName || user.lastName || "Creator";
-    
-  const initials = displayName
-    .split(" ")
-    .map(name => name.charAt(0))
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
 
   const avatarUrl = user.imageUrl || "";
 
@@ -157,33 +150,17 @@ export function UrlMediaPhonePreview({
   };
 
   return (
-    <div className="lg:sticky lg:top-24">
-      <Card className="w-[356px] h-[678px] rounded-3xl border-4 border-foreground/90 bg-card flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="bg-card border-b border-border p-4">
-          <div className="flex items-center gap-3">
-            <Avatar className="w-10 h-10">
-              <AvatarImage src={avatarUrl} alt={`${displayName}'s profile`} />
-              <AvatarFallback className="text-sm font-semibold bg-muted">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <span className="font-semibold text-sm truncate block">{displayName}</span>
-              <span className="text-xs text-muted-foreground truncate block">
-                @{store?.slug || store?.name?.toLowerCase().replace(/\s+/g, '') || "store"}
-              </span>
-            </div>
-          </div>
+    <PhoneShell
+      storeName={store?.name || displayName}
+      displayName={displayName}
+      slug={store?.slug || store?.name?.toLowerCase().replace(/\s+/g, '') || "store"}
+      avatarUrl={avatarUrl}
+    >
+      <div className="p-4 bg-background">
+        <div className="w-full space-y-3">
+          {renderPreview()}
         </div>
-        
-        {/* URL/Media Preview */}
-        <div className="flex-1 p-4 overflow-y-auto bg-background">
-          <div className="w-full space-y-3">
-            {renderPreview()}
-          </div>
-        </div>
-      </Card>
-    </div>
+      </div>
+    </PhoneShell>
   );
 }

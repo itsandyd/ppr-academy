@@ -199,17 +199,19 @@ app/(dashboard)/store/profile/components/PhonePreview.tsx
 - Fetches data and passes props
 - Much simpler (70 lines → 60 lines)
 
-### Step 3: TODO - Migrate Other Previews
+### Step 3: Pragmatic Approach - Keep Custom Previews
 ```
-✅ Profile page
-⬜ Store setup page
-⬜ Digital download creation
-⬜ Coaching call creation  
-⬜ URL media creation
-⬜ Bundle creation
-⬜ Lead magnet creation
-⬜ Course creation
+✅ Profile page (MIGRATED)
+⏸️ Store setup page (KEEP - multi-mode, interactive)
+⏸️ Digital download creation (KEEP - checkout forms)
+⏸️ Coaching call creation (KEEP - booking UI)
+⏸️ URL media creation (KEEP - embedded content)
+⏸️ Bundle creation (KEEP - complex layouts)
+⏸️ Lead magnet creation (KEEP - opt-in flows)
+⏸️ Course creation (KEEP - specialized layouts)
 ```
+
+**Decision:** Keep specialized previews as-is. They have custom interactive content that goes beyond a simple storefront display. Use `GlobalPhonePreview` for **new features** going forward.
 
 ---
 
