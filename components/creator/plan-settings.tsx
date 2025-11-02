@@ -51,6 +51,7 @@ export function PlanSettings({ storeId }: PlanSettingsProps) {
 
   // Get isPublic from actual store data, not from plan status
   const isPublicFromDb = storeData?.isPublic ?? false;
+  const [isUpgrading, setIsUpgrading] = useState(false);
   
   console.log('Store data:', { 
     storeId, 
@@ -94,7 +95,6 @@ export function PlanSettings({ storeId }: PlanSettingsProps) {
   };
 
   const handleUpgrade = async (targetPlan: "creator" | "creator_pro", billingPeriod: "monthly" | "yearly" = "monthly") => {
-    const setIsUpgrading = (val: boolean) => {}; // Placeholder for upgrade state
     setIsUpgrading(true);
     try {
       const response = await fetch("/api/creator-plans/create-checkout", {
@@ -297,7 +297,7 @@ export function PlanSettings({ storeId }: PlanSettingsProps) {
               ]}
               current={planData.plan === "free"}
               onUpgrade={() => {}}
-              isUpgrading={false}
+              isUpgrading={isUpgrading}
             />
             <PlanCard
               name="Creator"
@@ -315,7 +315,7 @@ export function PlanSettings({ storeId }: PlanSettingsProps) {
               current={planData.plan === "creator"}
               popular
               onUpgrade={() => handleUpgrade("creator")}
-              isUpgrading={false}
+              isUpgrading={isUpgrading}
             />
             <PlanCard
               name="Creator Pro"
@@ -331,7 +331,7 @@ export function PlanSettings({ storeId }: PlanSettingsProps) {
               ]}
               current={planData.plan === "creator_pro"}
               onUpgrade={() => handleUpgrade("creator_pro")}
-              isUpgrading={false}
+              isUpgrading={isUpgrading}
             />
           </div>
         </CardContent>
