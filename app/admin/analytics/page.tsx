@@ -32,11 +32,33 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { PlatformKPIsOverview } from "./components/platform-kpis-overview";
+import { PlatformFunnels } from "./components/platform-funnels";
+import { CreatorPipelineBoard } from "./components/creator-pipeline-board";
+import { StuckCreatorsAlert } from "./components/stuck-creators-alert";
+import { SystemHealthMonitor } from "./components/system-health-monitor";
+import { useState } from "react";
 
 const COLORS = ['#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#ef4444'];
 
+type TimeWindow = "7d" | "28d";
+
 export default function AdminAnalyticsPage() {
   const { user } = useUser();
+  const [timeWindow, setTimeWindow] = useState<TimeWindow>("7d");
+
+  // Calculate time range
+  const getTimeRange = () => {
+    const now = Date.now();
+    switch (timeWindow) {
+      case "7d":
+        return { start: now - 7 * 24 * 60 * 60 * 1000, end: now };
+      case "28d":
+        return { start: now - 28 * 24 * 60 * 60 * 1000, end: now };
+    }
+  };
+
+  const { start, end } = getTimeRange();
 
   // Fetch analytics data
   const overview = useQuery(
@@ -167,9 +189,9 @@ export default function AdminAnalyticsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-bold tracking-tight">Platform Analytics</h1>
+          <h1 className="text-4xl font-bold tracking-tight">Operator Dashboard</h1>
           <p className="text-muted-foreground mt-2 text-lg">
-            Comprehensive insights into platform performance and user behavior
+            Platform-wide analytics, creator pipeline, and system health
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -180,6 +202,26 @@ export default function AdminAnalyticsPage() {
             </p>
           </div>
         </div>
+      </div>
+
+      {/* NEW: Platform KPIs with time window toggle */}
+      <PlatformKPIsOverview />
+
+      {/* NEW: Platform-Wide Funnels (Learner + Creator side-by-side) */}
+      <PlatformFunnels startTime={start} endTime={end} />
+
+      {/* NEW: Creator Pipeline Kanban Board */}
+      <CreatorPipelineBoard />
+
+      {/* NEW: Alerts & System Health Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <StuckCreatorsAlert />
+        <SystemHealthMonitor startTime={start} endTime={end} />
+      </div>
+
+      {/* Divider */}
+      <div className="border-t pt-8">
+        <h2 className="text-2xl font-bold mb-6">Historical Analytics</h2>
       </div>
 
       {/* Metrics Grid */}

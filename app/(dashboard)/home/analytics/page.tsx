@@ -37,6 +37,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
+// NEW: Import enhanced analytics components
+import { MyFunnel } from "./components/my-funnel";
+import { MyKPIsGrid } from "./components/my-kpis-grid";
+import { MyCampaigns } from "./components/my-campaigns";
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -75,6 +79,12 @@ export default function CreatorAnalyticsPage() {
   // Fetch user data from Convex
   const convexUser = useQuery(api.users.getUserFromClerk, 
     user?.id ? { clerkId: user.id } : "skip"
+  );
+  
+  // NEW: Fetch user's store for scoped analytics
+  // Use user.id (Clerk ID) directly instead of convexUser.clerkId to avoid infinite loop
+  const userStore = useQuery(api.stores.getUserStore,
+    user?.id ? { userId: user.id } : "skip"
   );
   
   // Fetch analytics data
@@ -296,7 +306,25 @@ export default function CreatorAnalyticsPage() {
           </div>
       </div>
 
-      {/* Key Metrics Grid */}
+      {/* NEW: Enhanced Analytics Section */}
+      {userStore && (
+        <div className="space-y-6">
+          {/* My KPIs Grid with Time Window Toggle */}
+          <MyKPIsGrid storeId={userStore._id} />
+
+          {/* Grid: My Funnel + My Campaigns */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <MyFunnel 
+              storeId={userStore._id}
+              startTime={Date.now() - (7 * 24 * 60 * 60 * 1000)}
+              endTime={Date.now()}
+            />
+            {user?.id && <MyCampaigns userId={user.id} />}
+          </div>
+        </div>
+      )}
+
+      {/* Original Key Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {metrics.map((metric, index) => (
           <motion.div

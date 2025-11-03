@@ -1107,6 +1107,7 @@ export default defineSchema({
     userId: v.string(), // Clerk user ID
     storeId: v.optional(v.string()),
     eventType: v.union(
+      // Existing events
       v.literal("page_view"),
       v.literal("product_view"),
       v.literal("course_view"),
@@ -1119,7 +1120,29 @@ export default defineSchema({
       v.literal("search"),
       v.literal("click"),
       v.literal("signup"),
-      v.literal("login")
+      v.literal("login"),
+      // NEW: Creator funnel events
+      v.literal("creator_started"),
+      v.literal("creator_profile_completed"),
+      v.literal("creator_published"),
+      v.literal("first_sale"),
+      // NEW: Learner activation events
+      v.literal("enrollment"),
+      v.literal("return_week_2"),
+      // NEW: Email & campaign events
+      v.literal("email_sent"),
+      v.literal("email_delivered"),
+      v.literal("email_opened"),
+      v.literal("email_clicked"),
+      v.literal("email_bounced"),
+      v.literal("email_complained"),
+      // NEW: Campaign & outreach events
+      v.literal("dm_sent"),
+      v.literal("cta_clicked"),
+      v.literal("campaign_view"),
+      // NEW: System events
+      v.literal("error"),
+      v.literal("webhook_failed")
     ),
     resourceId: v.optional(v.string()), // courseId, productId, etc.
     resourceType: v.optional(v.union(
@@ -1130,18 +1153,37 @@ export default defineSchema({
       v.literal("page")
     )),
     metadata: v.optional(v.object({
-      // Flexible metadata for different event types
+      // Existing metadata
       page: v.optional(v.string()),
       referrer: v.optional(v.string()),
       searchTerm: v.optional(v.string()),
       duration: v.optional(v.number()),
       progress: v.optional(v.number()),
-      value: v.optional(v.number()), // for purchase events
+      value: v.optional(v.number()),
       country: v.optional(v.string()),
       city: v.optional(v.string()),
       device: v.optional(v.string()),
       browser: v.optional(v.string()),
       os: v.optional(v.string()),
+      // NEW: Campaign tracking
+      source: v.optional(v.string()),
+      campaign_id: v.optional(v.string()),
+      utm_source: v.optional(v.string()),
+      utm_medium: v.optional(v.string()),
+      utm_campaign: v.optional(v.string()),
+      // NEW: Creator-specific
+      daw: v.optional(v.string()),
+      audience_size: v.optional(v.number()),
+      // NEW: Product/revenue specific
+      product_id: v.optional(v.string()),
+      amount_cents: v.optional(v.number()),
+      currency: v.optional(v.string()),
+      // NEW: Experiment tracking
+      experiment_id: v.optional(v.string()),
+      variant: v.optional(v.string()),
+      // NEW: Error tracking
+      error_code: v.optional(v.string()),
+      error_message: v.optional(v.string()),
     })),
     sessionId: v.optional(v.string()),
     ipAddress: v.optional(v.string()),
@@ -1229,6 +1271,140 @@ export default defineSchema({
     .index("by_sessionId", ["sessionId"])
     .index("by_startTime", ["startTime"])
     .index("by_user_start", ["userId", "startTime"]),
+
+  // Creator Pipeline - Track creator journey and status
+  creatorPipeline: defineTable({
+    userId: v.string(), // Clerk ID
+    storeId: v.optional(v.id("stores")),
+    stage: v.union(
+      v.literal("prospect"),
+      v.literal("invited"),
+      v.literal("signed_up"),
+      v.literal("drafting"),
+      v.literal("published"),
+      v.literal("first_sale"),
+      v.literal("active"),
+      v.literal("churn_risk")
+    ),
+    // Timestamps for funnel timing
+    prospectAt: v.optional(v.number()),
+    invitedAt: v.optional(v.number()),
+    signedUpAt: v.optional(v.number()),
+    draftingAt: v.optional(v.number()),
+    publishedAt: v.optional(v.number()),
+    firstSaleAt: v.optional(v.number()),
+    // Outreach tracking
+    lastTouchAt: v.optional(v.number()),
+    lastTouchType: v.optional(v.union(
+      v.literal("dm"),
+      v.literal("email"),
+      v.literal("comment"),
+      v.literal("call")
+    )),
+    nextStepNote: v.optional(v.string()),
+    assignedTo: v.optional(v.string()), // Admin handling this creator
+    // Creator metadata
+    daw: v.optional(v.string()),
+    instagramHandle: v.optional(v.string()),
+    tiktokHandle: v.optional(v.string()),
+    audienceSize: v.optional(v.number()),
+    niche: v.optional(v.string()), // "mixing", "production", "mastering"
+    // Stats
+    totalRevenue: v.optional(v.number()),
+    productCount: v.optional(v.number()),
+    enrollmentCount: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_stage_and_updatedAt", ["stage", "updatedAt"])
+    .index("by_storeId", ["storeId"])
+    .index("by_assignedTo_and_stage", ["assignedTo", "stage"]),
+
+  // Campaigns - Track marketing campaigns
+  campaigns: defineTable({
+    name: v.string(),
+    type: v.union(
+      v.literal("email"),
+      v.literal("instagram"),
+      v.literal("tiktok"),
+      v.literal("dm_batch")
+    ),
+    status: v.union(
+      v.literal("draft"),
+      v.literal("scheduled"),
+      v.literal("active"),
+      v.literal("completed"),
+      v.literal("paused")
+    ),
+    // Targeting
+    targetRole: v.optional(v.union(
+      v.literal("learner"),
+      v.literal("creator"),
+      v.literal("both")
+    )),
+    targetSegment: v.optional(v.string()), // "stuck_creators", "new_signups", etc.
+    // Content
+    subject: v.optional(v.string()),
+    body: v.string(),
+    ctaText: v.optional(v.string()),
+    ctaUrl: v.optional(v.string()),
+    // Scheduling
+    scheduledAt: v.optional(v.number()),
+    sentAt: v.optional(v.number()),
+    // Results
+    sentCount: v.optional(v.number()),
+    deliveredCount: v.optional(v.number()),
+    openedCount: v.optional(v.number()),
+    clickedCount: v.optional(v.number()),
+    bouncedCount: v.optional(v.number()),
+    convertedCount: v.optional(v.number()),
+    createdBy: v.string(), // Admin user ID
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_status_and_scheduledAt", ["status", "scheduledAt"])
+    .index("by_type_and_createdAt", ["type", "createdAt"]),
+
+  // Experiments - Track A/B tests
+  experiments: defineTable({
+    name: v.string(),
+    hypothesis: v.string(),
+    metric: v.string(), // "conversion_rate", "signup_rate", etc.
+    startDate: v.number(),
+    endDate: v.optional(v.number()),
+    status: v.union(
+      v.literal("draft"),
+      v.literal("running"),
+      v.literal("completed"),
+      v.literal("cancelled")
+    ),
+    // Variants
+    variantA: v.object({
+      name: v.string(),
+      description: v.string(),
+      ctaText: v.optional(v.string()),
+      ctaUrl: v.optional(v.string()),
+      assetUrl: v.optional(v.string()),
+    }),
+    variantB: v.object({
+      name: v.string(),
+      description: v.string(),
+      ctaText: v.optional(v.string()),
+      ctaUrl: v.optional(v.string()),
+      assetUrl: v.optional(v.string()),
+    }),
+    // Results
+    variantAViews: v.optional(v.number()),
+    variantAConversions: v.optional(v.number()),
+    variantBViews: v.optional(v.number()),
+    variantBConversions: v.optional(v.number()),
+    winner: v.optional(v.union(v.literal("A"), v.literal("B"), v.literal("tie"))),
+    createdBy: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_status_and_startDate", ["status", "startDate"]),
 
   // Simplified Music Showcase - Artist Profiles
   artistProfiles: defineTable({

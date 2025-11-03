@@ -4,6 +4,9 @@ import { api } from "@/convex/_generated/api";
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
 
+// Revalidate the sitemap every 24 hours
+export const revalidate = 86400; // 24 hours in seconds
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Static pages
   const staticPages: MetadataRoute.Sitemap = [
