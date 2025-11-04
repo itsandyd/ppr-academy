@@ -27,6 +27,7 @@ import {
   TrendingUp,
   Grid3x3,
   List,
+  Plug,
 } from "lucide-react";
 import Link from "next/link";
 import { MarketplaceGrid } from "@/app/_components/marketplace-grid";
@@ -41,7 +42,7 @@ export default function MarketplacePage() {
   
   // Filter state
   const [searchTerm, setSearchTerm] = useState("");
-  const [contentType, setContentType] = useState<"all" | "courses" | "products" | "coaching" | "sample-packs">("all");
+  const [contentType, setContentType] = useState<"all" | "courses" | "products" | "coaching" | "sample-packs" | "plugins">("all");
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
   const [priceRange, setPriceRange] = useState<"free" | "under-50" | "50-100" | "over-100" | undefined>(undefined);
   const [sortBy, setSortBy] = useState<"newest" | "popular" | "price-low" | "price-high">("newest");
@@ -211,7 +212,7 @@ export default function MarketplacePage() {
                         Courses
                       </TabsTrigger>
                     </TabsList>
-                    <TabsList className="grid w-full grid-cols-3 mt-2 bg-white dark:bg-black">
+                    <TabsList className="grid w-full grid-cols-2 mt-2 bg-white dark:bg-black">
                       <TabsTrigger value="products" className="text-xs">
                         <Package className="w-3 h-3 mr-1" />
                         Products
@@ -219,6 +220,12 @@ export default function MarketplacePage() {
                       <TabsTrigger value="coaching" className="text-xs">
                         <Video className="w-3 h-3 mr-1" />
                         Coaching
+                      </TabsTrigger>
+                    </TabsList>
+                    <TabsList className="grid w-full grid-cols-2 mt-2 bg-white dark:bg-black">
+                      <TabsTrigger value="plugins" className="text-xs">
+                        <Plug className="w-3 h-3 mr-1" />
+                        Plugins
                       </TabsTrigger>
                       <TabsTrigger value="sample-packs" className="text-xs" asChild>
                         <Link href="/marketplace/samples">

@@ -288,7 +288,8 @@ export const searchMarketplace = query({
       v.literal("courses"),
       v.literal("products"),
       v.literal("coaching"),
-      v.literal("sample-packs")
+      v.literal("sample-packs"),
+      v.literal("plugins")
     )),
     category: v.optional(v.string()),
     priceRange: v.optional(v.union(
@@ -489,6 +490,52 @@ export const searchMarketplace = query({
       );
 
       allResults.push(...coachingWithDetails);
+    }
+
+    // Fetch plugins
+    if (contentType === "all" || contentType === "plugins") {
+      const plugins = await ctx.db
+        .query("plugins")
+        .withIndex("by_published", (q) => q.eq("isPublished", true))
+        .collect();
+
+      const pluginsWithDetails = await Promise.all(
+        plugins.map(async (plugin) => {
+          let categoryName: string | undefined;
+          let typeName: string | undefined;
+
+          if (plugin.categoryId) {
+            const category = await ctx.db.get(plugin.categoryId);
+            categoryName = category?.name;
+          }
+          if (plugin.pluginTypeId) {
+            const type = await ctx.db.get(plugin.pluginTypeId);
+            typeName = type?.name;
+          }
+
+          return {
+            _id: plugin._id,
+            _creationTime: plugin.createdAt,
+            title: plugin.name,
+            slug: plugin.slug || plugin.name.toLowerCase().replace(/\s+/g, "-"),
+            description: plugin.description,
+            price: plugin.price || 0,
+            imageUrl: plugin.image,
+            author: plugin.author,
+            category: categoryName,
+            pluginType: typeName,
+            pricingType: plugin.pricingType,
+            purchaseUrl: plugin.purchaseUrl,
+            optInFormUrl: plugin.optInFormUrl,
+            videoUrl: plugin.videoUrl,
+            audioUrl: plugin.audioUrl,
+            contentType: "plugin" as const,
+            creatorName: plugin.author || "Plugin Author",
+          };
+        })
+      );
+
+      allResults.push(...pluginsWithDetails);
     }
 
     // Apply filters

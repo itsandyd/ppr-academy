@@ -4,10 +4,12 @@ import { api } from "@/convex/_generated/api";
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   try {
+    const { slug } = await params;
+    
     // Fetch store by slug
-    const store = await fetchQuery(api.stores.getStoreBySlug, { slug: params.slug });
+    const store = await fetchQuery(api.stores.getStoreBySlug, { slug });
 
     if (!store) {
       return {
@@ -21,7 +23,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 
     const title = `${store.name} - Creator Storefront`;
     const description = store.description || store.bio || `Explore courses, digital products, and more from ${store.name} on PPR Academy`;
-    const storefrontUrl = `${baseUrl}/${params.slug}`;
+    const storefrontUrl = `${baseUrl}/${slug}`;
 
     return {
       title,

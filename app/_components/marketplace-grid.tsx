@@ -4,7 +4,7 @@ import { FC, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BookOpen, Package, Users, Download, Star, ExternalLink, ShoppingCart } from "lucide-react";
+import { BookOpen, Package, Users, Download, Star, ExternalLink, ShoppingCart, Plug } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Image from "next/image";
@@ -24,7 +24,7 @@ interface ContentItem {
   price: number;
   thumbnail?: string;
   imageUrl?: string;
-  contentType: "course" | "product" | "sample-pack";
+  contentType: "course" | "product" | "sample-pack" | "plugin";
   creatorName?: string;
   creatorAvatar?: string;
   enrollmentCount?: number;
@@ -55,7 +55,11 @@ export const MarketplaceGrid: FC<MarketplaceGridProps> = ({
   const [hasSubmittedEmail, setHasSubmittedEmail] = useState(false);
 
   const handleProductClick = (item: ContentItem) => {
-    if (item.contentType === "product" || item.contentType === "sample-pack") {
+    if (item.contentType === "plugin") {
+      // Navigate to plugin detail page
+      const slug = item.slug || item.title.toLowerCase().replace(/\s+/g, "-");
+      router.push(`/marketplace/plugins/${slug}`);
+    } else if (item.contentType === "product" || item.contentType === "sample-pack") {
       // Reset form state
       setEmail("");
       setName("");
@@ -376,18 +380,24 @@ const ContentCard: FC<{ item: ContentItem; index: number; onClick: () => void }>
     ? BookOpen 
     : item.contentType === "sample-pack"
     ? Package
+    : item.contentType === "plugin"
+    ? Plug
     : Package;
     
   const badgeColor = item.contentType === "course" 
     ? "bg-chart-1/10 text-chart-1 dark:bg-chart-1/20 dark:text-chart-1" 
     : item.contentType === "sample-pack"
     ? "bg-chart-5/10 text-chart-5 dark:bg-chart-5/20 dark:text-chart-5"
+    : item.contentType === "plugin"
+    ? "bg-purple-500/10 text-purple-500 dark:bg-purple-500/20 dark:text-purple-400"
     : "bg-chart-3/10 text-chart-3 dark:bg-chart-3/20 dark:text-chart-3";
 
   const badgeLabel = item.contentType === "course"
     ? "Course"
     : item.contentType === "sample-pack"
     ? "Sample Pack"
+    : item.contentType === "plugin"
+    ? "Plugin"
     : "Product";
 
   return (
@@ -457,7 +467,7 @@ const ContentCard: FC<{ item: ContentItem; index: number; onClick: () => void }>
             {/* Creator */}
             <div className="flex items-center gap-2">
               <Avatar className="w-7 h-7 border border-border">
-                <AvatarImage src={item.creatorAvatar || "/placeholder-avatar.jpg"} />
+                <AvatarImage src={item.creatorAvatar} />
                 <AvatarFallback className="text-xs bg-gradient-to-r from-chart-1 to-chart-2 text-primary-foreground">
                   {item.creatorName?.charAt(0) || "C"}
                 </AvatarFallback>

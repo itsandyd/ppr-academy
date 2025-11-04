@@ -3329,4 +3329,89 @@ export default defineSchema({
   // EMAIL REPLIES SYSTEM (INBOX)
   // ============================================
   ...emailRepliesTables,
+
+  // ============================================
+  // PLUGIN DIRECTORY SYSTEM
+  // ============================================
+
+  // Plugin Types (e.g., "Effect", "Instrument", "Studio Tool")
+  pluginTypes: defineTable({
+    name: v.string(), // e.g., "Effect", "Instrument", "Studio Tool"
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_name", ["name"]),
+
+  // Effect-specific categories (e.g., "Reverb", "Delay", "EQ")
+  pluginEffectCategories: defineTable({
+    name: v.string(),
+    pluginTypeId: v.optional(v.id("pluginTypes")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_pluginTypeId", ["pluginTypeId"])
+    .index("by_name", ["name"]),
+
+  // Instrument-specific categories (e.g., "Synth", "Sampler", "Drums")
+  pluginInstrumentCategories: defineTable({
+    name: v.string(),
+    pluginTypeId: v.optional(v.id("pluginTypes")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_pluginTypeId", ["pluginTypeId"])
+    .index("by_name", ["name"]),
+
+  // Studio Tool categories (e.g., "Utility", "Analyzer", "Metering")
+  pluginStudioToolCategories: defineTable({
+    name: v.string(),
+    pluginTypeId: v.optional(v.id("pluginTypes")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_pluginTypeId", ["pluginTypeId"])
+    .index("by_name", ["name"]),
+
+  // General plugin categories (e.g., "Mixing", "Mastering", "Sound Design")
+  pluginCategories: defineTable({
+    name: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_name", ["name"]),
+
+  // Main Plugin records
+  plugins: defineTable({
+    name: v.string(),
+    slug: v.optional(v.string()),
+    author: v.optional(v.string()),
+    description: v.optional(v.string()),
+    videoScript: v.optional(v.string()),
+    image: v.optional(v.string()), // Can be URL or Convex storage ID
+    videoUrl: v.optional(v.string()),
+    audioUrl: v.optional(v.string()),
+    userId: v.optional(v.string()), // Admin Clerk ID who created it
+    categoryId: v.optional(v.id("pluginCategories")),
+    pluginTypeId: v.optional(v.id("pluginTypes")),
+    optInFormUrl: v.optional(v.string()),
+    price: v.optional(v.number()),
+    pricingType: v.union(
+      v.literal("FREE"),
+      v.literal("PAID"),
+      v.literal("FREEMIUM")
+    ),
+    purchaseUrl: v.optional(v.string()),
+    isPublished: v.optional(v.boolean()), // For marketplace visibility
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_categoryId", ["categoryId"])
+    .index("by_pluginTypeId", ["pluginTypeId"])
+    .index("by_slug", ["slug"])
+    .index("by_published", ["isPublished"])
+    .searchIndex("search_name", {
+      searchField: "name",
+      filterFields: ["isPublished", "pricingType"],
+    }),
 }); 
