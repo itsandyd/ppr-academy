@@ -17,6 +17,20 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
+// Helper function to strip HTML tags and get plain text
+const stripHtml = (html: string): string => {
+  return html
+    .replace(/<[^>]*>/g, '') // Remove HTML tags
+    .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
+    .replace(/&amp;/g, '&') // Replace &amp; with &
+    .replace(/&lt;/g, '<') // Replace &lt; with <
+    .replace(/&gt;/g, '>') // Replace &gt; with >
+    .replace(/&quot;/g, '"') // Replace &quot; with "
+    .replace(/&#39;/g, "'") // Replace &#39; with '
+    .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+    .trim();
+};
+
 interface ContentItem {
   _id: string;
   title: string;
@@ -458,7 +472,7 @@ const ContentCard: FC<{ item: ContentItem; index: number; onClick: () => void }>
           {/* Description */}
           {item.description && (
             <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-              {item.description}
+              {stripHtml(item.description)}
             </p>
           )}
 

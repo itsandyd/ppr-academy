@@ -42,7 +42,7 @@ export const startAudioGeneration = mutation({
       });
 
       // Schedule the audio generation action
-      // @ts-expect-error - Deep type instantiation limitation with Convex function references
+      // @ts-expect-error Type instantiation is excessively deep
       await ctx.scheduler.runAfter(0, internal.audioGeneration.generateAudio, {
         chapterId: args.chapterId,
       });

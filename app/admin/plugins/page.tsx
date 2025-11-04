@@ -93,6 +93,10 @@ export default function AdminPluginsPage() {
   });
 
   // Fetch data
+  const convexUser = useQuery(
+    api.users.getUserFromClerk,
+    user?.id ? { clerkId: user.id } : "skip"
+  );
   const plugins = useQuery(
     api.plugins.getAllPlugins,
     user?.id ? { clerkId: user.id } : "skip"
@@ -257,10 +261,19 @@ export default function AdminPluginsPage() {
           id="description"
           value={formData.description}
           onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          placeholder="Describe the plugin features and benefits..."
-          rows={4}
-          className="bg-background"
+          placeholder="Describe the plugin features and benefits... (HTML supported)"
+          rows={6}
+          className="bg-background font-mono text-sm"
         />
+        {formData.description && (
+          <div className="mt-2 p-4 border border-border rounded-lg bg-muted/30">
+            <p className="text-xs text-muted-foreground mb-2 font-semibold">Preview:</p>
+            <div 
+              className="prose dark:prose-invert prose-sm max-w-none"
+              dangerouslySetInnerHTML={{ __html: formData.description }}
+            />
+          </div>
+        )}
       </div>
 
       {/* Categories */}
@@ -425,7 +438,16 @@ export default function AdminPluginsPage() {
     </div>
   );
 
-  if (!user?.publicMetadata?.admin && !user?.emailAddresses?.[0]?.emailAddress?.includes("@ppr")) {
+  // Check admin access
+  if (!user || convexUser === undefined) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
+  if (!convexUser?.admin && !user?.publicMetadata?.admin && !user?.emailAddresses?.[0]?.emailAddress?.includes("@ppr")) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Card className="max-w-md">

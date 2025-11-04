@@ -114,11 +114,10 @@ export default function PluginDetailPage({ params }: PluginPageProps) {
 
               {/* Description */}
               {plugin.description && (
-                <div className="prose dark:prose-invert max-w-none">
-                  <p className="text-lg text-muted-foreground leading-relaxed">
-                    {plugin.description}
-                  </p>
-                </div>
+                <div 
+                  className="prose dark:prose-invert max-w-none text-lg text-muted-foreground leading-relaxed"
+                  dangerouslySetInnerHTML={{ __html: plugin.description }}
+                />
               )}
             </div>
 

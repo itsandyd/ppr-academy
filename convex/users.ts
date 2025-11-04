@@ -258,3 +258,30 @@ export const getUserStats = query({
     };
   },
 });
+
+// Set user as admin (mutation to grant admin access)
+export const setUserAsAdmin = mutation({
+  args: { 
+    clerkId: v.string(),
+  },
+  returns: v.id("users"),
+  handler: async (ctx, args) => {
+    // Find the user
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .unique();
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    // Update user to be admin
+    await ctx.db.patch(user._id, {
+      admin: true,
+    });
+
+    console.log(`✅ User ${user.email} (${args.clerkId}) is now an admin`);
+    return user._id;
+  },
+});
