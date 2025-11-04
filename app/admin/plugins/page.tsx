@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useUser } from "@clerk/nextjs";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,7 +44,10 @@ import {
   Search,
   Loader2,
   ExternalLink,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Sparkles,
+  Check,
+  X
 } from "lucide-react";
 
 type PricingType = "FREE" | "PAID" | "FREEMIUM";
@@ -74,6 +77,11 @@ export default function AdminPluginsPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedPlugin, setSelectedPlugin] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // AI Enhancement state
+  const [isEnhancing, setIsEnhancing] = useState(false);
+  const [enhancedDescription, setEnhancedDescription] = useState<string | null>(null);
+  const [originalDescription, setOriginalDescription] = useState<string>("");
 
   // Form state
   const [formData, setFormData] = useState<PluginFormData>({
@@ -110,6 +118,9 @@ export default function AdminPluginsPage() {
   const deletePlugin = useMutation(api.plugins.deletePlugin);
   const createPluginType = useMutation(api.plugins.createPluginType);
   const createPluginCategory = useMutation(api.plugins.createPluginCategory);
+  
+  // Actions
+  const enhanceDescription = useAction(api.enhancePluginDescriptions.enhancePluginDescription);
 
   // Filter plugins
   const filteredPlugins = plugins?.filter((plugin) =>
@@ -134,6 +145,51 @@ export default function AdminPluginsPage() {
       purchaseUrl: "",
       isPublished: false,
     });
+    setEnhancedDescription(null);
+    setOriginalDescription("");
+  };
+
+  const handleEnhanceDescription = async () => {
+    if (!user?.id || !selectedPlugin || !formData.description) {
+      toast.error("Please add a description first");
+      return;
+    }
+
+    setIsEnhancing(true);
+    setOriginalDescription(formData.description);
+
+    try {
+      const result = await enhanceDescription({
+        clerkId: user.id,
+        pluginId: selectedPlugin._id,
+      });
+
+      if (result.enhancedDescription) {
+        setEnhancedDescription(result.enhancedDescription);
+        toast.success("AI enhancement complete! Review and approve below.");
+      } else {
+        toast.error("Failed to enhance description");
+      }
+    } catch (error: any) {
+      toast.error(`Enhancement failed: ${error.message}`);
+    } finally {
+      setIsEnhancing(false);
+    }
+  };
+
+  const handleApproveEnhancement = () => {
+    if (enhancedDescription) {
+      setFormData({ ...formData, description: enhancedDescription });
+      setEnhancedDescription(null);
+      setOriginalDescription("");
+      toast.success("Enhanced description applied!");
+    }
+  };
+
+  const handleDenyEnhancement = () => {
+    setEnhancedDescription(null);
+    setOriginalDescription("");
+    toast.info("Enhancement discarded");
   };
 
   const handleCreatePlugin = async () => {
@@ -256,7 +312,31 @@ export default function AdminPluginsPage() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="description">Description</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="description">Description</Label>
+          {isEditDialogOpen && formData.description && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleEnhanceDescription}
+              disabled={isEnhancing}
+              className="gap-2"
+            >
+              {isEnhancing ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Enhancing...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  Enhance with AI
+                </>
+              )}
+            </Button>
+          )}
+        </div>
         <Textarea
           id="description"
           value={formData.description}
@@ -265,7 +345,66 @@ export default function AdminPluginsPage() {
           rows={6}
           className="bg-background font-mono text-sm"
         />
-        {formData.description && (
+        
+        {/* AI Enhancement Preview - Show side by side comparison */}
+        {enhancedDescription && (
+          <div className="mt-4 p-4 border-2 border-primary rounded-lg bg-primary/5">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-primary" />
+                <h4 className="font-semibold text-primary">AI Enhanced Description</h4>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={handleDenyEnhancement}
+                  className="gap-2"
+                >
+                  <X className="w-4 h-4" />
+                  Deny
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleApproveEnhancement}
+                  className="gap-2 bg-green-600 hover:bg-green-700"
+                >
+                  <Check className="w-4 h-4" />
+                  Approve
+                </Button>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              {/* Original */}
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase">Original</p>
+                <div className="p-3 border border-border rounded-lg bg-background max-h-[300px] overflow-y-auto">
+                  <div
+                    className="prose dark:prose-invert prose-sm max-w-none"
+                    dangerouslySetInnerHTML={{ __html: originalDescription }}
+                  />
+                </div>
+              </div>
+              
+              {/* Enhanced */}
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-primary uppercase">AI Enhanced</p>
+                <div className="p-3 border border-primary rounded-lg bg-background max-h-[300px] overflow-y-auto">
+                  <div
+                    className="prose dark:prose-invert prose-sm max-w-none"
+                    dangerouslySetInnerHTML={{ __html: enhancedDescription }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Regular Preview - Only show when not enhancing */}
+        {formData.description && !enhancedDescription && (
           <div className="mt-2 p-4 border border-border rounded-lg bg-muted/30">
             <p className="text-xs text-muted-foreground mb-2 font-semibold">Preview:</p>
             <div 
