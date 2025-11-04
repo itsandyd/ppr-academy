@@ -47,7 +47,11 @@ import {
   Image as ImageIcon,
   Sparkles,
   Check,
-  X
+  X,
+  Video,
+  Copy,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 
 type PricingType = "FREE" | "PAID" | "FREEMIUM";
@@ -82,6 +86,14 @@ export default function AdminPluginsPage() {
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [enhancedDescription, setEnhancedDescription] = useState<string | null>(null);
   const [originalDescription, setOriginalDescription] = useState<string>("");
+  
+  // Video Generation state
+  const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
+  const [videoScript, setVideoScript] = useState<string | null>(null);
+  const [audioScript, setAudioScript] = useState<string | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [showVideoGenerator, setShowVideoGenerator] = useState(false);
+  const [generateAudioAutomatically, setGenerateAudioAutomatically] = useState(true);
 
   // Form state
   const [formData, setFormData] = useState<PluginFormData>({
@@ -102,24 +114,27 @@ export default function AdminPluginsPage() {
 
   // Fetch data - Avoid deep type instantiation with type assertion
   const clerkId = user?.id ?? "";
-  // @ts-expect-error - Type instantiation is excessively deep, but the runtime behavior is correct
-  const convexUser = useQuery(api.users.getUserFromClerk, clerkId ? { clerkId } : "skip");
-  const plugins = useQuery(api.plugins.getAllPlugins, clerkId ? { clerkId } : "skip") as any[] | undefined;
-  const pluginTypes = useQuery(api.plugins.getPluginTypes);
-  const pluginCategories = useQuery(api.plugins.getPluginCategories);
+  const getUserArgs = (clerkId ? { clerkId } : "skip") as any;
+  const getPluginsArgs = (clerkId ? { clerkId } : "skip") as any;
+  // @ts-ignore - Convex deep type instantiation issue
+  const convexUser = useQuery(api.users.getUserFromClerk, getUserArgs) as any;
+  const plugins = useQuery(api.plugins.getAllPlugins, getPluginsArgs) as any;
+  const pluginTypes = useQuery(api.plugins.getPluginTypes) as any;
+  const pluginCategories = useQuery(api.plugins.getPluginCategories) as any;
 
-  // Mutations
-  const createPlugin = useMutation(api.plugins.createPlugin);
-  const updatePlugin = useMutation(api.plugins.updatePlugin);
-  const deletePlugin = useMutation(api.plugins.deletePlugin);
-  const createPluginType = useMutation(api.plugins.createPluginType);
-  const createPluginCategory = useMutation(api.plugins.createPluginCategory);
+  // Mutations - Type assertion to avoid deep type instantiation
+  const createPlugin = useMutation(api.plugins.createPlugin) as any;
+  const updatePlugin = useMutation(api.plugins.updatePlugin) as any;
+  const deletePlugin = useMutation(api.plugins.deletePlugin) as any;
+  const createPluginType = useMutation(api.plugins.createPluginType) as any;
+  const createPluginCategory = useMutation(api.plugins.createPluginCategory) as any;
   
   // Actions - Type assertion to avoid deep type instantiation
   const enhanceDescription = useAction(api.enhancePluginDescriptions.enhancePluginDescription) as any;
+  const generateUniversalScript = useAction(api.pluginVideoGeneration.generateUniversalPluginScript) as any;
 
   // Filter plugins
-  const filteredPlugins = plugins?.filter((plugin) =>
+  const filteredPlugins = plugins?.filter((plugin: any) =>
     plugin.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     plugin.author?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     plugin.description?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -186,6 +201,49 @@ export default function AdminPluginsPage() {
     setEnhancedDescription(null);
     setOriginalDescription("");
     toast.info("Enhancement discarded");
+  };
+
+  const handleGenerateVideo = async () => {
+    if (!user?.id || !selectedPlugin) {
+      toast.error("Please select a plugin first");
+      return;
+    }
+
+    setIsGeneratingVideo(true);
+    setAudioUrl(null); // Reset audio URL
+
+    try {
+      const result = await generateUniversalScript({
+        clerkId: user.id,
+        pluginId: selectedPlugin._id,
+        generateAudio: generateAudioAutomatically,
+      });
+
+      if (result.success) {
+        setVideoScript(result.script || null);
+        setAudioScript(result.audioScript || null);
+        setAudioUrl(result.audioUrl || null);
+        
+        if (generateAudioAutomatically && result.audioUrl) {
+          toast.success("Script + Audio generated! Ready to download.");
+        } else {
+          toast.success("Universal script generated! Use for Instagram, TikTok, and YouTube.");
+        }
+      } else {
+        toast.error(`Failed to generate script: ${result.error}`);
+      }
+    } catch (error: any) {
+      toast.error(`Script generation failed: ${error.message}`);
+    } finally {
+      setIsGeneratingVideo(false);
+    }
+  };
+
+  const handleCopyAudioScript = () => {
+    if (audioScript) {
+      navigator.clipboard.writeText(audioScript);
+      toast.success("Audio script copied to clipboard!");
+    }
   };
 
   const handleCreatePlugin = async () => {
@@ -425,7 +483,7 @@ export default function AdminPluginsPage() {
               <SelectValue placeholder="Select type" />
             </SelectTrigger>
             <SelectContent className="bg-white dark:bg-black">
-              {pluginTypes?.map((type) => (
+              {pluginTypes?.map((type: any) => (
                 <SelectItem key={type._id} value={type._id}>
                   {type.name}
                 </SelectItem>
@@ -446,7 +504,7 @@ export default function AdminPluginsPage() {
               <SelectValue placeholder="Select category" />
             </SelectTrigger>
             <SelectContent className="bg-white dark:bg-black">
-              {pluginCategories?.map((category) => (
+              {pluginCategories?.map((category: any) => (
                 <SelectItem key={category._id} value={category._id}>
                   {category.name}
                 </SelectItem>
@@ -466,6 +524,22 @@ export default function AdminPluginsPage() {
           placeholder="https://example.com/plugin-image.jpg"
           className="bg-background"
         />
+        {/* Image Preview */}
+        {formData.image && (
+          <div className="mt-2 p-2 border border-border rounded-lg bg-muted/30">
+            <p className="text-xs text-muted-foreground mb-2 font-semibold">Image Preview:</p>
+            <div className="relative w-full h-48 bg-muted rounded-lg overflow-hidden">
+              <img
+                src={formData.image}
+                alt="Plugin preview"
+                className="w-full h-full object-contain"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect width='400' height='300' fill='%23ddd'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-size='18' fill='%23999'%3EImage Failed to Load%3C/text%3E%3C/svg%3E";
+                }}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -570,6 +644,156 @@ export default function AdminPluginsPage() {
           Publish to Marketplace
         </Label>
       </div>
+
+      {/* Video Generation Section */}
+      {isEditDialogOpen && formData.description && formData.image && (
+        <div className="pt-4 border-t border-border">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowVideoGenerator(!showVideoGenerator)}
+            className="w-full gap-2"
+          >
+            {showVideoGenerator ? (
+              <>
+                <ChevronUp className="w-4 h-4" />
+                Hide Video Generator
+              </>
+            ) : (
+              <>
+                <Video className="w-4 h-4" />
+                Generate Short-Form Video Content
+              </>
+            )}
+          </Button>
+
+          {showVideoGenerator && (
+            <div className="mt-4 space-y-4 p-4 border border-border rounded-lg bg-muted/30">
+              <div>
+                <h4 className="text-sm font-semibold mb-3">Universal Script Generator</h4>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Generates ONE script that works for Instagram, TikTok, and YouTube Shorts
+                </p>
+
+                {/* Auto-generate audio checkbox */}
+                <div className="flex items-center space-x-2 mb-3 p-2 bg-background rounded border border-border">
+                  <input
+                    type="checkbox"
+                    id="generate-audio"
+                    checked={generateAudioAutomatically}
+                    onChange={(e) => setGenerateAudioAutomatically(e.target.checked)}
+                    className="w-4 h-4 text-primary bg-background border-border rounded focus:ring-primary"
+                  />
+                  <label htmlFor="generate-audio" className="text-xs cursor-pointer flex-1">
+                    <span className="font-semibold">Auto-generate audio with ElevenLabs</span>
+                    <span className="block text-muted-foreground mt-0.5">
+                      Automatically creates audio file (requires ELEVENLABS_API_KEY)
+                    </span>
+                  </label>
+                </div>
+
+                <Button
+                  type="button"
+                  onClick={handleGenerateVideo}
+                  disabled={isGeneratingVideo}
+                  className="w-full gap-2"
+                >
+                  {isGeneratingVideo ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Generating via Blotato + OpenAI{generateAudioAutomatically ? " + ElevenLabs" : ""}...
+                    </>
+                  ) : (
+                    <>
+                      <Video className="w-4 h-4" />
+                      Generate {generateAudioAutomatically ? "Script + Audio" : "Script"}
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {/* Generated Content Display */}
+              {videoScript && (
+                <div className="space-y-3 pt-4 border-t border-border">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-semibold">Generated Script</h4>
+                    <div className="flex gap-1">
+                      <Badge variant="outline" className="text-xs">Instagram</Badge>
+                      <Badge variant="outline" className="text-xs">TikTok</Badge>
+                      <Badge variant="outline" className="text-xs">YouTube</Badge>
+                    </div>
+                  </div>
+                  
+                  <div className="p-3 border border-border rounded-lg bg-background max-h-[200px] overflow-y-auto">
+                    <p className="text-sm whitespace-pre-wrap leading-relaxed">{videoScript}</p>
+                  </div>
+                  
+                  {audioScript && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-semibold">Audio Script</Label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleCopyAudioScript}
+                          className="gap-2 h-7 text-xs"
+                        >
+                          <Copy className="w-3 h-3" />
+                          Copy
+                        </Button>
+                      </div>
+                      <div className="p-3 border border-primary/50 rounded-lg bg-primary/5 max-h-[150px] overflow-y-auto">
+                        <p className="text-xs leading-relaxed">{audioScript}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Audio Player */}
+                  {audioUrl && (
+                    <div className="space-y-2 p-3 border border-green-500/30 rounded-lg bg-green-50 dark:bg-green-950/20">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-xs font-semibold text-green-700 dark:text-green-300">
+                          🎙️ Generated Audio
+                        </Label>
+                        <Button
+                          asChild
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs"
+                        >
+                          <a href={audioUrl} download target="_blank" rel="noopener noreferrer">
+                            Download MP3
+                          </a>
+                        </Button>
+                      </div>
+                      <audio controls className="w-full" src={audioUrl}>
+                        Your browser does not support the audio element.
+                      </audio>
+                      <p className="text-xs text-muted-foreground">
+                        ✅ Audio ready! Download or use directly in your video editing software.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* No audio but checked */}
+                  {generateAudioAutomatically && !audioUrl && (
+                    <div className="p-3 border border-blue-500/30 rounded-lg bg-blue-50 dark:bg-blue-950/20">
+                      <p className="text-xs font-semibold text-blue-700 dark:text-blue-300 mb-1">
+                        ℹ️ Audio Generation Not Available
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Add <code className="bg-black/10 dark:bg-white/10 px-1 rounded">ELEVENLABS_API_KEY</code> to your environment variables to enable automatic audio generation.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 
@@ -632,7 +856,7 @@ export default function AdminPluginsPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold">
-                {plugins?.filter((p) => p.isPublished).length || 0}
+                {plugins?.filter((p: any) => p.isPublished).length || 0}
               </div>
               <div className="text-sm text-muted-foreground">Published</div>
             </CardContent>
@@ -640,7 +864,7 @@ export default function AdminPluginsPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold">
-                {plugins?.filter((p) => p.pricingType === "FREE").length || 0}
+                {plugins?.filter((p: any) => p.pricingType === "FREE").length || 0}
               </div>
               <div className="text-sm text-muted-foreground">Free Plugins</div>
             </CardContent>
@@ -648,7 +872,7 @@ export default function AdminPluginsPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold">
-                {plugins?.filter((p) => p.pricingType === "PAID").length || 0}
+                {plugins?.filter((p: any) => p.pricingType === "PAID").length || 0}
               </div>
               <div className="text-sm text-muted-foreground">Paid Plugins</div>
             </CardContent>
@@ -689,7 +913,7 @@ export default function AdminPluginsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredPlugins?.map((plugin) => (
+                {filteredPlugins?.map((plugin: any) => (
                   <TableRow key={plugin._id}>
                     <TableCell>
                       <div className="flex items-center gap-2">
