@@ -100,15 +100,11 @@ export default function AdminPluginsPage() {
     isPublished: false,
   });
 
-  // Fetch data
-  const convexUser = useQuery(
-    api.users.getUserFromClerk,
-    user?.id ? { clerkId: user.id } : "skip"
-  );
-  const plugins = useQuery(
-    api.plugins.getAllPlugins,
-    user?.id ? { clerkId: user.id } : "skip"
-  );
+  // Fetch data - Avoid deep type instantiation with type assertion
+  const clerkId = user?.id ?? "";
+  // @ts-expect-error - Type instantiation is excessively deep, but the runtime behavior is correct
+  const convexUser = useQuery(api.users.getUserFromClerk, clerkId ? { clerkId } : "skip");
+  const plugins = useQuery(api.plugins.getAllPlugins, clerkId ? { clerkId } : "skip") as any[] | undefined;
   const pluginTypes = useQuery(api.plugins.getPluginTypes);
   const pluginCategories = useQuery(api.plugins.getPluginCategories);
 
@@ -119,8 +115,8 @@ export default function AdminPluginsPage() {
   const createPluginType = useMutation(api.plugins.createPluginType);
   const createPluginCategory = useMutation(api.plugins.createPluginCategory);
   
-  // Actions
-  const enhanceDescription = useAction(api.enhancePluginDescriptions.enhancePluginDescription);
+  // Actions - Type assertion to avoid deep type instantiation
+  const enhanceDescription = useAction(api.enhancePluginDescriptions.enhancePluginDescription) as any;
 
   // Filter plugins
   const filteredPlugins = plugins?.filter((plugin) =>
@@ -746,7 +742,7 @@ export default function AdminPluginsPage() {
                         >
                           {plugin.pricingType}
                         </Badge>
-                        {plugin.price > 0 && (
+                        {(plugin.price ?? 0) > 0 && (
                           <span className="text-sm text-muted-foreground">
                             ${plugin.price}
                           </span>

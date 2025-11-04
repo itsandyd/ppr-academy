@@ -44,6 +44,7 @@ export const getAllPlugins = query({
   args: {
     clerkId: v.string(),
   },
+  returns: v.array(v.any()),
   handler: async (ctx, args) => {
     // Check if user is admin
     const user = await ctx.db
