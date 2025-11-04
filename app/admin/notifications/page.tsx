@@ -395,13 +395,13 @@ export default function AdminNotificationsPage() {
                   </Label>
                   <Input
                     id="link"
-                    placeholder="/courses/new-feature"
+                    placeholder="/home"
                     value={link}
                     onChange={(e) => setLink(e.target.value)}
                     className="bg-white dark:bg-black"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Users will be redirected here when clicking the notification
+                    Enter a relative path (e.g., /home) or full URL. Users will be redirected here when clicking the notification.
                   </p>
                 </div>
               </div>

@@ -435,7 +435,7 @@ function generateNotificationEmailHTML(notification: any): string {
   
   ${notification.link && notification.actionLabel ? `
   <div style="text-align: center; margin: 30px 0;">
-    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://academy.pauseplayrepeat.com'}${notification.link}" 
+    <a href="${notification.link.startsWith('http://') || notification.link.startsWith('https://') ? notification.link : `${process.env.NEXT_PUBLIC_APP_URL || 'https://academy.pauseplayrepeat.com'}${notification.link}`}" 
        style="display: inline-block; background-color: ${color}; color: white; padding: 12px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
       ${notification.actionLabel}
     </a>
