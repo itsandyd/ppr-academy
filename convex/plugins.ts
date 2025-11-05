@@ -9,7 +9,34 @@ import { generateSlug } from "./lib/utils";
 // Get all published plugins (for marketplace)
 export const getAllPublishedPlugins = query({
   args: {},
-  returns: v.array(v.any()),
+  returns: v.array(v.object({
+    _id: v.id("plugins"),
+    _creationTime: v.number(),
+    name: v.string(),
+    slug: v.optional(v.string()),
+    author: v.optional(v.string()),
+    description: v.optional(v.string()),
+    videoScript: v.optional(v.string()),
+    image: v.optional(v.string()),
+    videoUrl: v.optional(v.string()),
+    audioUrl: v.optional(v.string()),
+    userId: v.optional(v.string()),
+    categoryId: v.optional(v.id("pluginCategories")),
+    effectCategoryId: v.optional(v.id("pluginEffectCategories")),
+    instrumentCategoryId: v.optional(v.id("pluginInstrumentCategories")),
+    studioToolCategoryId: v.optional(v.id("pluginStudioToolCategories")),
+    pluginTypeId: v.optional(v.id("pluginTypes")),
+    tags: v.optional(v.array(v.string())),
+    optInFormUrl: v.optional(v.string()),
+    price: v.optional(v.number()),
+    pricingType: v.union(v.literal("FREE"), v.literal("PAID"), v.literal("FREEMIUM")),
+    purchaseUrl: v.optional(v.string()),
+    isPublished: v.optional(v.boolean()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    categoryName: v.optional(v.string()),
+    typeName: v.optional(v.string()),
+  })),
   handler: async (ctx) => {
     const plugins = await ctx.db
       .query("plugins")
@@ -59,7 +86,34 @@ export const getAllPlugins = query({
   args: {
     clerkId: v.string(),
   },
-  returns: v.array(v.any()),
+  returns: v.array(v.object({
+    _id: v.id("plugins"),
+    _creationTime: v.number(),
+    name: v.string(),
+    slug: v.optional(v.string()),
+    author: v.optional(v.string()),
+    description: v.optional(v.string()),
+    videoScript: v.optional(v.string()),
+    image: v.optional(v.string()),
+    videoUrl: v.optional(v.string()),
+    audioUrl: v.optional(v.string()),
+    userId: v.optional(v.string()),
+    categoryId: v.optional(v.id("pluginCategories")),
+    effectCategoryId: v.optional(v.id("pluginEffectCategories")),
+    instrumentCategoryId: v.optional(v.id("pluginInstrumentCategories")),
+    studioToolCategoryId: v.optional(v.id("pluginStudioToolCategories")),
+    pluginTypeId: v.optional(v.id("pluginTypes")),
+    tags: v.optional(v.array(v.string())),
+    optInFormUrl: v.optional(v.string()),
+    price: v.optional(v.number()),
+    pricingType: v.union(v.literal("FREE"), v.literal("PAID"), v.literal("FREEMIUM")),
+    purchaseUrl: v.optional(v.string()),
+    isPublished: v.optional(v.boolean()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    categoryName: v.optional(v.string()),
+    typeName: v.optional(v.string()),
+  })),
   handler: async (ctx, args) => {
     // Check if user is admin
     const user = await ctx.db
@@ -159,7 +213,13 @@ export const getPluginBySlug = query({
 // Get all plugin types
 export const getPluginTypes = query({
   args: {},
-  returns: v.array(v.any()),
+  returns: v.array(v.object({
+    _id: v.id("pluginTypes"),
+    _creationTime: v.number(),
+    name: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })),
   handler: async (ctx) => {
     return await ctx.db.query("pluginTypes").collect();
   },
@@ -168,7 +228,13 @@ export const getPluginTypes = query({
 // Get all plugin categories
 export const getPluginCategories = query({
   args: {},
-  returns: v.array(v.any()),
+  returns: v.array(v.object({
+    _id: v.id("pluginCategories"),
+    _creationTime: v.number(),
+    name: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })),
   handler: async (ctx) => {
     return await ctx.db.query("pluginCategories").collect();
   },
@@ -202,7 +268,14 @@ export const getEffectCategories = query({
   args: {
     pluginTypeId: v.optional(v.id("pluginTypes")),
   },
-  returns: v.array(v.any()),
+  returns: v.array(v.object({
+    _id: v.id("pluginEffectCategories"),
+    _creationTime: v.number(),
+    name: v.string(),
+    pluginTypeId: v.optional(v.id("pluginTypes")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })),
   handler: async (ctx, args) => {
     if (args.pluginTypeId) {
       return await ctx.db
@@ -221,7 +294,14 @@ export const getInstrumentCategories = query({
   args: {
     pluginTypeId: v.optional(v.id("pluginTypes")),
   },
-  returns: v.array(v.any()),
+  returns: v.array(v.object({
+    _id: v.id("pluginInstrumentCategories"),
+    _creationTime: v.number(),
+    name: v.string(),
+    pluginTypeId: v.optional(v.id("pluginTypes")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })),
   handler: async (ctx, args) => {
     if (args.pluginTypeId) {
       return await ctx.db
@@ -240,7 +320,14 @@ export const getStudioToolCategories = query({
   args: {
     pluginTypeId: v.optional(v.id("pluginTypes")),
   },
-  returns: v.array(v.any()),
+  returns: v.array(v.object({
+    _id: v.id("pluginStudioToolCategories"),
+    _creationTime: v.number(),
+    name: v.string(),
+    pluginTypeId: v.optional(v.id("pluginTypes")),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })),
   handler: async (ctx, args) => {
     if (args.pluginTypeId) {
       return await ctx.db

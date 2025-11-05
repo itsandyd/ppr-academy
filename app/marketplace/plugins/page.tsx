@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +28,57 @@ import {
 import Link from "next/link";
 import { motion } from "framer-motion";
 
+type Plugin = {
+  _id: Id<"plugins">;
+  _creationTime: number;
+  name: string;
+  slug?: string;
+  author?: string;
+  description?: string;
+  videoScript?: string;
+  image?: string;
+  videoUrl?: string;
+  audioUrl?: string;
+  userId?: string;
+  categoryId?: Id<"pluginCategories">;
+  effectCategoryId?: Id<"pluginEffectCategories">;
+  instrumentCategoryId?: Id<"pluginInstrumentCategories">;
+  studioToolCategoryId?: Id<"pluginStudioToolCategories">;
+  pluginTypeId?: Id<"pluginTypes">;
+  tags?: string[];
+  optInFormUrl?: string;
+  price?: number;
+  pricingType: "FREE" | "PAID" | "FREEMIUM";
+  purchaseUrl?: string;
+  isPublished?: boolean;
+  createdAt: number;
+  updatedAt: number;
+  categoryName?: string;
+  typeName?: string;
+};
+
+type PluginType = {
+  _id: Id<"pluginTypes">;
+  _creationTime: number;
+  name: string;
+  createdAt: number;
+  updatedAt: number;
+};
+
+type PluginCategory = {
+  _id: Id<"pluginCategories">;
+  _creationTime: number;
+  name: string;
+  createdAt: number;
+  updatedAt: number;
+};
+
+type SpecificCategory = {
+  _id: string;
+  name: string;
+  type: string;
+};
+
 export default function PluginsMarketplacePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedType, setSelectedType] = useState<string | undefined>(undefined);
@@ -39,17 +91,21 @@ export default function PluginsMarketplacePage() {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 10;
 
-  // Fetch data
+  // Fetch data with explicit types
+  // @ts-ignore - Convex types causing deep instantiation error  
   const pluginsData = useQuery(api.plugins.getAllPublishedPlugins);
+  // @ts-ignore - Convex types causing deep instantiation error
   const pluginTypesData = useQuery(api.plugins.getPluginTypes);
+  // @ts-ignore - Convex types causing deep instantiation error
   const pluginCategoriesData = useQuery(api.plugins.getPluginCategories);
+  // @ts-ignore - Convex types causing deep instantiation error
   const specificCategoriesData = useQuery(api.plugins.getAllSpecificCategories);
   
   // Type-safe defaults
-  const plugins = pluginsData || [];
-  const pluginTypes = pluginTypesData || [];
-  const pluginCategories = pluginCategoriesData || [];
-  const specificCategories = specificCategoriesData || []; // Effect/Instrument/Studio Tool categories
+  const plugins: Plugin[] = pluginsData ?? [];
+  const pluginTypes: PluginType[] = pluginTypesData ?? [];
+  const pluginCategories: PluginCategory[] = pluginCategoriesData ?? [];
+  const specificCategories: SpecificCategory[] = specificCategoriesData ?? []; // Effect/Instrument/Studio Tool categories
   
   // Debug: Log first plugin to see structure (can remove later)
   if (plugins.length > 0 && typeof window !== 'undefined' && false) {
