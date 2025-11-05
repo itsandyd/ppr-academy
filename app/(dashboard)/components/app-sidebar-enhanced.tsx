@@ -37,9 +37,11 @@ import { usePathname, useParams } from "next/navigation";
 import { useUser, UserButton, SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { Doc } from "@/convex/_generated/dataModel";
 import Link from "next/link";
 import { ModeToggle } from "@/components/mode-toggle";
 import { motion } from "framer-motion";
+import { useMemo } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -67,6 +69,15 @@ interface NavSection {
   items: NavItem[];
 }
 
+// Helper function to fetch stores with proper typing
+function useStoresByUser(userId: string | undefined): Doc<"stores">[] | undefined {
+  const result: any = useQuery(
+    api.stores.getStoresByUser,
+    userId ? { userId } : "skip"
+  );
+  return result;
+}
+
 export function AppSidebarEnhanced() {
   const pathname = usePathname();
   const params = useParams();
@@ -75,11 +86,8 @@ export function AppSidebarEnhanced() {
   // Get storeId from URL params or fetch user's first store as fallback
   const urlStoreId = params.storeId as string;
   
-  // Fetch user's stores to get fallback storeId
-  const stores = useQuery(
-    api.stores.getStoresByUser,
-    user?.id ? { userId: user.id } : "skip"
-  );
+  // Fetch user's stores using helper function
+  const stores = useStoresByUser(user?.id);
   
   // Use URL storeId if available, otherwise use first store or fallback
   const storeId = urlStoreId || stores?.[0]?._id || 'setup';
