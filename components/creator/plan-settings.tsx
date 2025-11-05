@@ -139,6 +139,7 @@ export function PlanSettings({ storeId }: PlanSettingsProps) {
               <CardTitle className="text-2xl flex items-center gap-2">
                 {planData.plan === "creator_pro" && <Crown className="h-6 w-6 text-yellow-500" />}
                 {planData.plan === "creator" && <Sparkles className="h-6 w-6 text-blue-500" />}
+                {planData.plan === "early_access" && <Crown className="h-6 w-6 text-purple-500 animate-pulse" />}
                 {currentPlan.name} Plan
               </CardTitle>
               <CardDescription>{currentPlan.description}</CardDescription>
@@ -152,17 +153,22 @@ export function PlanSettings({ storeId }: PlanSettingsProps) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-3xl font-bold">
-                ${planData.plan === "free" ? "0" : (currentPlan.monthlyPrice / 100).toFixed(0)}
+                ${planData.plan === "free" || planData.plan === "early_access" ? "0" : (currentPlan.monthlyPrice / 100).toFixed(0)}
                 <span className="text-base font-normal text-muted-foreground">/month</span>
               </p>
-              {planData.plan !== "free" && (
+              {planData.plan !== "free" && planData.plan !== "early_access" && (
                 <p className="text-sm text-muted-foreground mt-1">
                   or ${(currentPlan.yearlyPrice / 100).toFixed(0)}/year (save{" "}
                   {Math.round((1 - currentPlan.yearlyPrice / 12 / currentPlan.monthlyPrice) * 100)}%)
                 </p>
               )}
+              {planData.plan === "early_access" && (
+                <p className="text-sm text-purple-500 font-medium mt-1 flex items-center gap-1">
+                  <Sparkles className="h-4 w-4" /> Grandfathered - Unlimited Forever!
+                </p>
+              )}
             </div>
-            {planData.plan !== "creator_pro" && (
+            {planData.plan !== "creator_pro" && planData.plan !== "early_access" && (
               <Button 
                 size="lg" 
                 className="gap-2"
@@ -333,6 +339,37 @@ export function PlanSettings({ storeId }: PlanSettingsProps) {
               onUpgrade={() => handleUpgrade("creator_pro")}
               isUpgrading={isUpgrading}
             />
+            
+            {/* Early Access Badge - Don't show upgrade for grandfathered users */}
+            {planData.plan === "early_access" && (
+              <div className="md:col-span-3 p-6 bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-2 border-purple-500/20 rounded-lg">
+                <div className="flex items-center gap-3 mb-3">
+                  <Crown className="h-8 w-8 text-purple-500 animate-pulse" />
+                  <div>
+                    <h3 className="text-xl font-bold">Early Access - Grandfathered</h3>
+                    <p className="text-sm text-muted-foreground">You have unlimited access to all features, forever free!</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                  <div className="flex items-center gap-1">
+                    <Sparkles className="h-4 w-4 text-purple-500" />
+                    <span>Unlimited everything</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Sparkles className="h-4 w-4 text-purple-500" />
+                    <span>Email automations</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Sparkles className="h-4 w-4 text-purple-500" />
+                    <span>Custom domain</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Sparkles className="h-4 w-4 text-purple-500" />
+                    <span>Priority support</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

@@ -35,7 +35,8 @@ const storeValidator = v.object({
   plan: v.optional(v.union(
     v.literal("free"),
     v.literal("creator"),
-    v.literal("creator_pro")
+    v.literal("creator_pro"),
+    v.literal("early_access")
   )),
   planStartedAt: v.optional(v.number()),
   isPublic: v.optional(v.boolean()),
@@ -165,6 +166,11 @@ export const createStore = mutation({
       name: args.name,
       slug,
       userId: args.userId,
+      plan: "early_access", // Default to early access (grandfathered unlimited)
+      planStartedAt: Date.now(),
+      isPublic: false, // Private by default
+      isPublishedProfile: false,
+      subscriptionStatus: "active",
     });
   },
 });

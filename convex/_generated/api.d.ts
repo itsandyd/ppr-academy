@@ -31,6 +31,7 @@ import type * as audioGeneration from "../audioGeneration.js";
 import type * as audioGenerationNode from "../audioGenerationNode.js";
 import type * as automation from "../automation.js";
 import type * as automations from "../automations.js";
+import type * as blog from "../blog.js";
 import type * as bundles from "../bundles.js";
 import type * as campaigns from "../campaigns.js";
 import type * as certificates from "../certificates.js";
@@ -168,6 +169,7 @@ declare const fullApi: ApiFromModules<{
   audioGenerationNode: typeof audioGenerationNode;
   automation: typeof automation;
   automations: typeof automations;
+  blog: typeof blog;
   bundles: typeof bundles;
   campaigns: typeof campaigns;
   certificates: typeof certificates;

@@ -277,9 +277,10 @@ export default defineSchema({
     })),
     // Creator Plan & Visibility Settings
     plan: v.optional(v.union(
-      v.literal("free"),      // Free - Basic link-in-bio only
-      v.literal("creator"),   // Creator - Courses + coaching
-      v.literal("creator_pro") // Creator Pro - Full features
+      v.literal("free"),         // Free - Basic link-in-bio only
+      v.literal("creator"),      // Creator - Courses + coaching
+      v.literal("creator_pro"),  // Creator Pro - Full features (paid)
+      v.literal("early_access")  // Early Access - Grandfathered unlimited (free)
     )),
     planStartedAt: v.optional(v.number()),
     isPublic: v.optional(v.boolean()), // Show on marketplace/public discovery
@@ -3421,4 +3422,69 @@ export default defineSchema({
       searchField: "name",
       filterFields: ["isPublished", "pricingType"],
     }),
+
+  // Blog System
+  blogPosts: defineTable({
+    title: v.string(),
+    slug: v.string(), // URL-friendly slug
+    excerpt: v.optional(v.string()), // Short description for listings
+    content: v.string(), // Full blog post content (rich text/markdown)
+    coverImage: v.optional(v.string()), // Featured image URL
+    authorId: v.string(), // Clerk ID of the creator
+    authorName: v.optional(v.string()),
+    authorAvatar: v.optional(v.string()),
+    storeId: v.optional(v.id("stores")), // Optional: associate with a store
+    
+    // SEO Fields
+    metaTitle: v.optional(v.string()), // Custom SEO title
+    metaDescription: v.optional(v.string()), // Meta description for search engines
+    keywords: v.optional(v.array(v.string())), // SEO keywords
+    canonicalUrl: v.optional(v.string()), // Canonical URL for duplicate content
+    
+    // Publishing
+    status: v.union(
+      v.literal("draft"),
+      v.literal("published"),
+      v.literal("archived")
+    ),
+    publishedAt: v.optional(v.number()),
+    scheduledFor: v.optional(v.number()), // Future publishing date
+    
+    // Categories and Tags
+    category: v.optional(v.string()), // Main category (e.g., "tutorials", "news", "tips")
+    tags: v.optional(v.array(v.string())), // Tags for filtering
+    
+    // Engagement
+    views: v.optional(v.number()),
+    readTimeMinutes: v.optional(v.number()), // Estimated reading time
+    
+    // Timestamps
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_slug", ["slug"])
+    .index("by_authorId", ["authorId"])
+    .index("by_status", ["status"])
+    .index("by_storeId", ["storeId"])
+    .index("by_category", ["category"])
+    .index("by_publishedAt", ["publishedAt"])
+    .searchIndex("search_content", {
+      searchField: "content",
+      filterFields: ["status", "authorId"],
+    }),
+
+  // Blog Comments (optional feature for engagement)
+  blogComments: defineTable({
+    postId: v.id("blogPosts"),
+    authorId: v.string(), // Clerk ID
+    authorName: v.string(),
+    authorAvatar: v.optional(v.string()),
+    content: v.string(),
+    approved: v.boolean(), // Moderation flag
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_postId", ["postId"])
+    .index("by_authorId", ["authorId"])
+    .index("by_approved", ["approved"]),
 }); 

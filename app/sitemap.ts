@@ -17,6 +17,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 1.0,
     },
     {
+      url: `${baseUrl}/blog`,
+      lastModified: new Date(),
+      changeFrequency: "daily",
+      priority: 0.9,
+    },
+    {
       url: `${baseUrl}/courses`,
       lastModified: new Date(),
       changeFrequency: "daily",
@@ -88,12 +94,22 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.6,
     }));
 
+    // Fetch all published blog posts
+    const blogPosts = await fetchQuery(api.blog.getPublishedPosts, {});
+    const blogSitemapEntries: MetadataRoute.Sitemap = (blogPosts || []).map((post) => ({
+      url: `${baseUrl}/blog/${post.slug}`,
+      lastModified: post.publishedAt ? new Date(post.publishedAt) : new Date(post.createdAt),
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    }));
+
     // Combine all sitemap entries
     return [
       ...staticPages,
       ...courseSitemapEntries,
       ...storefrontSitemapEntries,
       ...productSitemapEntries,
+      ...blogSitemapEntries,
     ];
   } catch (error) {
     console.error("Error generating sitemap:", error);

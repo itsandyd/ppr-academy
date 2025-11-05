@@ -1,10 +1,11 @@
 /**
  * Creator Plans Management System
  * 
- * This module handles the freemium creator plan system with three tiers:
+ * This module handles the freemium creator plan system with four tiers:
  * - FREE: Basic link-in-bio (5 links max)
  * - CREATOR: Link-in-bio + courses + coaching + digital products
- * - CREATOR PRO: Everything + email campaigns + automations + advanced analytics
+ * - CREATOR PRO: Everything + email campaigns + automations + advanced analytics (PAID)
+ * - EARLY ACCESS: Grandfathered unlimited access for early adopters (FREE)
  */
 
 import { v } from "convex/values";
@@ -46,6 +47,20 @@ export const PLAN_LIMITS = {
     maxCourses: -1,
     maxProducts: -1,
     maxCoachingSessions: -1,
+    canUseEmailCampaigns: true,
+    canUseAutomations: true,
+    canUseCustomDomain: true,
+    canUseAdvancedAnalytics: true,
+    canUseSocialScheduling: true,
+    canUseFollowGates: true,
+    maxEmailSends: -1, // unlimited
+    showPlatformBranding: false,
+  },
+  early_access: {
+    maxLinks: -1, // unlimited
+    maxCourses: -1, // unlimited
+    maxProducts: -1, // unlimited
+    maxCoachingSessions: -1, // unlimited
     canUseEmailCampaigns: true,
     canUseAutomations: true,
     canUseCustomDomain: true,
@@ -107,6 +122,27 @@ export const PLAN_PRICING = {
       "Advanced integrations",
     ],
   },
+  early_access: {
+    name: "Early Access",
+    monthlyPrice: 0, // Free - grandfathered
+    yearlyPrice: 0,
+    description: "Grandfathered unlimited access for early supporters",
+    features: [
+      "🎉 Unlimited everything (forever free!)",
+      "Unlimited links",
+      "Unlimited courses",
+      "Unlimited digital products",
+      "Unlimited coaching sessions",
+      "Unlimited email sends",
+      "Email automation workflows",
+      "Custom domain",
+      "Social media scheduling",
+      "Follow gates",
+      "Advanced analytics",
+      "No platform branding",
+      "Priority support",
+    ],
+  },
 } as const;
 
 /**
@@ -118,7 +154,7 @@ export const getStorePlan = query({
   },
   returns: v.union(
     v.object({
-      plan: v.union(v.literal("free"), v.literal("creator"), v.literal("creator_pro")),
+      plan: v.union(v.literal("free"), v.literal("creator"), v.literal("creator_pro"), v.literal("early_access")),
       limits: v.any(),
       pricing: v.any(),
       isActive: v.boolean(),
@@ -137,7 +173,7 @@ export const getStorePlan = query({
     const store = await ctx.db.get(args.storeId);
     if (!store) return null;
 
-    const plan = store.plan || "free";
+    const plan = store.plan || "early_access"; // Default to early_access instead of free
     const limits = PLAN_LIMITS[plan];
     const pricing = PLAN_PRICING[plan];
 
@@ -145,7 +181,7 @@ export const getStorePlan = query({
       plan,
       limits,
       pricing,
-      isActive: store.subscriptionStatus === "active" || store.subscriptionStatus === "trialing" || plan === "free",
+      isActive: store.subscriptionStatus === "active" || store.subscriptionStatus === "trialing" || plan === "free" || plan === "early_access",
       subscriptionStatus: store.subscriptionStatus,
       trialEndsAt: store.trialEndsAt,
     };
@@ -346,7 +382,7 @@ export const updateStoreVisibility = mutation({
 });
 
 /**
- * Initialize a new store with free plan
+ * Initialize a new store with early_access plan (grandfathered)
  */
 export const initializeStorePlan = mutation({
   args: {
@@ -364,7 +400,7 @@ export const initializeStorePlan = mutation({
     // Only initialize if no plan is set
     if (!store.plan) {
       await ctx.db.patch(args.storeId, {
-        plan: "free",
+        plan: "early_access", // Default to early access (grandfathered)
         planStartedAt: Date.now(),
         isPublic: false, // Private by default
         isPublishedProfile: false,
@@ -467,7 +503,7 @@ export const getPlanUsageStats = query({
     storeId: v.id("stores"),
   },
   returns: v.object({
-    plan: v.union(v.literal("free"), v.literal("creator"), v.literal("creator_pro")),
+    plan: v.union(v.literal("free"), v.literal("creator"), v.literal("creator_pro"), v.literal("early_access")),
     usage: v.object({
       links: v.object({ current: v.number(), limit: v.number() }),
       courses: v.object({ current: v.number(), limit: v.number() }),
@@ -481,7 +517,7 @@ export const getPlanUsageStats = query({
       throw new Error("Store not found");
     }
 
-    const plan = store.plan || "free";
+    const plan = store.plan || "early_access"; // Default to early_access
     const limits = PLAN_LIMITS[plan];
 
     // Get current usage

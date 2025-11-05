@@ -30,7 +30,8 @@ import {
   List,
   Inbox,
   MessageSquare,
-  CreditCard
+  CreditCard,
+  BookOpen
 } from "lucide-react";
 import { usePathname, useParams } from "next/navigation";
 import { useUser, UserButton, SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
@@ -121,6 +122,13 @@ export function AppSidebarEnhanced() {
           label: "Create Product",
           badge: "New",
           gradient: "from-purple-500 to-pink-500"
+        },
+        { 
+          icon: BookOpen, 
+          href: `/store/${storeId || 'setup'}/blog`, 
+          label: "Blog Posts",
+          isNew: true,
+          gradient: "from-blue-500 to-indigo-500"
         },
         { 
           icon: Music, 
