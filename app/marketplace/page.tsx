@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
@@ -44,31 +44,55 @@ export default function MarketplacePage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [contentType, setContentType] = useState<"all" | "courses" | "products" | "coaching" | "sample-packs" | "plugins">("all");
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
+  const [selectedSpecificCategories, setSelectedSpecificCategories] = useState<string[]>([]); // Multi-select for effect/instrument categories
   const [priceRange, setPriceRange] = useState<"free" | "under-50" | "50-100" | "over-100" | undefined>(undefined);
   const [sortBy, setSortBy] = useState<"newest" | "popular" | "price-low" | "price-high">("newest");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 18;
   
   // Fetch data
   const marketplaceData = useQuery(api.marketplace.searchMarketplace, {
     searchTerm: searchTerm || undefined,
     contentType: contentType === "all" ? undefined : contentType,
     category: selectedCategory,
+    specificCategories: selectedSpecificCategories.length > 0 ? selectedSpecificCategories : undefined,
     priceRange,
     sortBy,
-    limit: 50,
+    limit: ITEMS_PER_PAGE,
+    offset: (currentPage - 1) * ITEMS_PER_PAGE,
   });
 
   const categories = useQuery(api.marketplace.getMarketplaceCategories) || [];
   const creators = useQuery(api.marketplace.getAllCreators, { limit: 8 }) || [];
   const stats = useQuery(api.marketplace.getPlatformStats);
+  
+  // Fetch plugin categories when plugins content type is selected
+  const pluginCategories = useQuery(
+    api.plugins.getPluginCategories,
+    contentType === "plugins" ? {} : "skip"
+  ) || [];
+  
+  // Fetch plugin specific categories (Effect/Instrument/Studio Tool categories)
+  const specificCategories = useQuery(
+    api.plugins.getAllSpecificCategories,
+    contentType === "plugins" ? {} : "skip"
+  ) || [];
+  
+  // Determine which categories to show based on content type
+  const displayCategories = contentType === "plugins" ? pluginCategories.map(cat => cat.name) : categories;
 
   const results = marketplaceData?.results || [];
   const total = marketplaceData?.total || 0;
+  const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
 
   // Active filters count
   const activeFiltersCount = [
     contentType !== "all",
     selectedCategory,
+    selectedSpecificCategories.length > 0,
     priceRange,
     searchTerm,
   ].filter(Boolean).length;
@@ -77,9 +101,26 @@ export default function MarketplacePage() {
     setSearchTerm("");
     setContentType("all");
     setSelectedCategory(undefined);
+    setSelectedSpecificCategories([]);
     setPriceRange(undefined);
     setSortBy("newest");
+    setCurrentPage(1); // Reset to first page when clearing filters
   };
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, contentType, selectedCategory, selectedSpecificCategories, priceRange, sortBy]);
+
+  // Clear category and specific categories selection when switching content types
+  useEffect(() => {
+    if (contentType === "plugins" || contentType === "all") {
+      setSelectedCategory(undefined);
+    }
+    if (contentType !== "plugins") {
+      setSelectedSpecificCategories([]);
+    }
+  }, [contentType]);
 
   const contentTypeCounts = useMemo(() => {
     const counts = {
@@ -238,25 +279,89 @@ export default function MarketplacePage() {
                 </div>
 
                 {/* Category */}
-                {categories.length > 0 && (
+                {displayCategories.length > 0 && (
                   <div className="space-y-3">
-                    <label className="text-sm font-medium">Category</label>
+                    <label className="text-sm font-medium">
+                      {contentType === "plugins" ? "Plugin Category" : "Category"}
+                    </label>
                     <Select
                       value={selectedCategory || "all"}
                       onValueChange={(v) => setSelectedCategory(v === "all" ? undefined : v)}
                     >
                       <SelectTrigger className="bg-white dark:bg-black">
-                        <SelectValue placeholder="All Categories" />
+                        <SelectValue placeholder={contentType === "plugins" ? "All Plugin Categories" : "All Categories"} />
                       </SelectTrigger>
                       <SelectContent className="bg-white dark:bg-black">
-                        <SelectItem value="all">All Categories</SelectItem>
-                        {categories.map((cat) => (
+                        <SelectItem value="all">
+                          {contentType === "plugins" ? "All Plugin Categories" : "All Categories"}
+                        </SelectItem>
+                        {displayCategories.map((cat) => (
                           <SelectItem key={cat} value={cat}>
                             {cat}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                )}
+
+                {/* Specific Categories (for plugins) - Effect/Instrument/Studio Tool categories */}
+                {contentType === "plugins" && specificCategories.length > 0 && (
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium">
+                      Filter by Category Type
+                      {selectedSpecificCategories.length > 0 && (
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          ({selectedSpecificCategories.length} selected)
+                        </span>
+                      )}
+                    </label>
+                    <div className="text-xs text-muted-foreground mb-2">
+                      Select specific categories like Reverb, Delay, Synth, Drums, etc.
+                    </div>
+                    <div className="max-h-48 overflow-y-auto border border-border rounded-lg p-3 space-y-2 bg-white dark:bg-black">
+                      {specificCategories.map((category: any) => {
+                        const isSelected = selectedSpecificCategories.includes(category.name);
+                        return (
+                          <button
+                            key={category._id}
+                            onClick={() => {
+                              if (isSelected) {
+                                setSelectedSpecificCategories(prev => prev.filter(c => c !== category.name));
+                              } else {
+                                setSelectedSpecificCategories(prev => [...prev, category.name]);
+                              }
+                            }}
+                            className={`
+                              w-full text-left px-3 py-2 rounded-md text-sm transition-colors
+                              ${isSelected 
+                                ? 'bg-primary text-primary-foreground' 
+                                : 'hover:bg-accent hover:text-accent-foreground'
+                              }
+                            `}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span>{category.name}</span>
+                              {isSelected && (
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {selectedSpecificCategories.length > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedSpecificCategories([])}
+                        className="w-full text-xs"
+                      >
+                        Clear Selected Categories
+                      </Button>
+                    )}
                   </div>
                 )}
 
@@ -407,10 +512,83 @@ export default function MarketplacePage() {
 
             {/* Results Grid */}
             {results.length > 0 ? (
-              <MarketplaceGrid 
-                content={results} 
-                emptyMessage="No results found. Try adjusting your filters."
-              />
+              <>
+                <MarketplaceGrid 
+                  content={results} 
+                  emptyMessage="No results found. Try adjusting your filters."
+                />
+                
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                  <div className="mt-8 flex items-center justify-center gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      Previous
+                    </Button>
+                    
+                    <div className="flex items-center gap-1">
+                      {/* First page */}
+                      {currentPage > 3 && (
+                        <>
+                          <Button
+                            variant={currentPage === 1 ? "default" : "ghost"}
+                            onClick={() => setCurrentPage(1)}
+                            size="sm"
+                          >
+                            1
+                          </Button>
+                          {currentPage > 4 && <span className="px-2">...</span>}
+                        </>
+                      )}
+                      
+                      {/* Page numbers around current */}
+                      {Array.from({ length: totalPages }, (_, i) => i + 1)
+                        .filter(page => 
+                          page === currentPage ||
+                          page === currentPage - 1 ||
+                          page === currentPage + 1 ||
+                          page === currentPage - 2 ||
+                          page === currentPage + 2
+                        )
+                        .map(page => (
+                          <Button
+                            key={page}
+                            variant={currentPage === page ? "default" : "ghost"}
+                            onClick={() => setCurrentPage(page)}
+                            size="sm"
+                          >
+                            {page}
+                          </Button>
+                        ))}
+                      
+                      {/* Last page */}
+                      {currentPage < totalPages - 2 && (
+                        <>
+                          {currentPage < totalPages - 3 && <span className="px-2">...</span>}
+                          <Button
+                            variant={currentPage === totalPages ? "default" : "ghost"}
+                            onClick={() => setCurrentPage(totalPages)}
+                            size="sm"
+                          >
+                            {totalPages}
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                    
+                    <Button
+                      variant="outline"
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                )}
+              </>
             ) : (
               <Card className="p-12 text-center bg-card border-border">
                 <Package className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />

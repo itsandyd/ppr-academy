@@ -3393,6 +3393,7 @@ export default defineSchema({
     userId: v.optional(v.string()), // Admin Clerk ID who created it
     categoryId: v.optional(v.id("pluginCategories")),
     pluginTypeId: v.optional(v.id("pluginTypes")),
+    tags: v.optional(v.array(v.string())), // Array of tag strings for filtering
     optInFormUrl: v.optional(v.string()),
     price: v.optional(v.number()),
     pricingType: v.union(

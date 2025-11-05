@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Card, CardContent } from "@/components/ui/card";
@@ -32,11 +32,23 @@ export default function PluginsMarketplacePage() {
   const [selectedType, setSelectedType] = useState<string | undefined>(undefined);
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
   const [pricingFilter, setPricingFilter] = useState<string | undefined>(undefined);
+  const [selectedSpecificCategories, setSelectedSpecificCategories] = useState<string[]>([]); // Multi-select for effect/instrument categories
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   // Fetch data
-  const plugins = useQuery(api.plugins.getAllPublishedPlugins) || [];
-  const pluginTypes = useQuery(api.plugins.getPluginTypes) || [];
-  const pluginCategories = useQuery(api.plugins.getPluginCategories) || [];
+  const pluginsData = useQuery(api.plugins.getAllPublishedPlugins);
+  const pluginTypesData = useQuery(api.plugins.getPluginTypes);
+  const pluginCategoriesData = useQuery(api.plugins.getPluginCategories);
+  const specificCategoriesData = useQuery(api.plugins.getAllSpecificCategories);
+  
+  // Type-safe defaults
+  const plugins = pluginsData || [];
+  const pluginTypes = pluginTypesData || [];
+  const pluginCategories = pluginCategoriesData || [];
+  const specificCategories = specificCategoriesData || []; // Effect/Instrument/Studio Tool categories
 
   // Filter plugins
   const filteredPlugins = useMemo(() => {
@@ -68,8 +80,30 @@ export default function PluginsMarketplacePage() {
       filtered = filtered.filter((plugin) => plugin.pricingType === pricingFilter);
     }
 
+    // Specific categories filter (Effect/Instrument/Studio Tool categories)
+    if (selectedSpecificCategories.length > 0) {
+      filtered = filtered.filter((plugin) => {
+        // Check if plugin has any matching specific category by name
+        const categoryName = plugin.categoryName;
+        return categoryName && selectedSpecificCategories.includes(categoryName);
+      });
+    }
+
     return filtered;
-  }, [plugins, searchQuery, selectedType, selectedCategory, pricingFilter]);
+  }, [plugins, searchQuery, selectedType, selectedCategory, pricingFilter, selectedSpecificCategories]);
+  
+  // Pagination
+  const totalResults = filteredPlugins.length;
+  const totalPages = Math.ceil(totalResults / ITEMS_PER_PAGE);
+  const paginatedPlugins = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredPlugins.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredPlugins, currentPage]);
+  
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedType, selectedCategory, pricingFilter, selectedSpecificCategories]);
 
   // Stats
   const stats = {
@@ -84,6 +118,8 @@ export default function PluginsMarketplacePage() {
     setSelectedType(undefined);
     setSelectedCategory(undefined);
     setPricingFilter(undefined);
+    setSelectedSpecificCategories([]);
+    setCurrentPage(1);
   };
 
   return (
@@ -206,12 +242,72 @@ export default function PluginsMarketplacePage() {
                   Clear Filters
                 </Button>
               </div>
+
+              {/* Specific Categories Filter (Effects, Instruments, Studio Tools) */}
+              {specificCategories.length > 0 && (
+                <div className="space-y-3">
+                  <label className="text-sm font-medium">
+                    Filter by Category Type
+                    {selectedSpecificCategories.length > 0 && (
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        ({selectedSpecificCategories.length} selected)
+                      </span>
+                    )}
+                  </label>
+                  <div className="text-xs text-muted-foreground mb-2">
+                    Select specific categories like Reverb, Delay, Synth, Drums, etc.
+                  </div>
+                  <div className="max-h-40 overflow-y-auto border border-border rounded-lg p-3 space-y-2 bg-background">
+                    {specificCategories.map((category) => {
+                      const isSelected = selectedSpecificCategories.includes(category.name);
+                      return (
+                        <button
+                          key={category._id}
+                          onClick={() => {
+                            if (isSelected) {
+                              setSelectedSpecificCategories(prev => prev.filter(c => c !== category.name));
+                            } else {
+                              setSelectedSpecificCategories(prev => [...prev, category.name]);
+                            }
+                          }}
+                          className={`
+                            w-full text-left px-3 py-2 rounded-md text-sm transition-colors
+                            ${isSelected 
+                              ? 'bg-primary text-primary-foreground' 
+                              : 'hover:bg-accent hover:text-accent-foreground'
+                            }
+                          `}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span>{category.name}</span>
+                            {isSelected && (
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {selectedSpecificCategories.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedSpecificCategories([])}
+                      className="w-full text-xs"
+                    >
+                      Clear Selected Categories
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
 
         {/* Results */}
-        {filteredPlugins.length === 0 ? (
+        {paginatedPlugins.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
               <Puzzle className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
@@ -223,12 +319,17 @@ export default function PluginsMarketplacePage() {
           </Card>
         ) : (
           <>
-            <div className="mb-4 text-sm text-muted-foreground">
-              Showing {filteredPlugins.length} plugin{filteredPlugins.length !== 1 ? "s" : ""}
+            <div className="mb-4 flex items-center justify-between">
+              <div className="text-sm text-muted-foreground">
+                Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, totalResults)} of {totalResults} plugin{totalResults !== 1 ? "s" : ""}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Page {currentPage} of {totalPages}
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredPlugins.map((plugin, index) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+              {paginatedPlugins.map((plugin, index) => (
                 <motion.div
                   key={plugin._id}
                   initial={{ opacity: 0, y: 20 }}
@@ -300,7 +401,7 @@ export default function PluginsMarketplacePage() {
                       )}
 
                       {/* Price */}
-                      {plugin.price > 0 && (
+                      {typeof plugin.price === 'number' && plugin.price > 0 && (
                         <div className="flex items-center gap-2 mb-4">
                           <DollarSign className="w-4 h-4 text-muted-foreground" />
                           <span className="text-lg font-bold">${plugin.price}</span>
@@ -384,6 +485,77 @@ export default function PluginsMarketplacePage() {
                 </motion.div>
               ))}
             </div>
+            
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="mt-8 flex items-center justify-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  Previous
+                </Button>
+                
+                <div className="flex items-center gap-1">
+                  {/* First page */}
+                  {currentPage > 3 && (
+                    <>
+                      <Button
+                        variant={currentPage === 1 ? "default" : "ghost"}
+                        onClick={() => setCurrentPage(1)}
+                        size="sm"
+                      >
+                        1
+                      </Button>
+                      {currentPage > 4 && <span className="px-2">...</span>}
+                    </>
+                  )}
+                  
+                  {/* Page numbers around current */}
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter(page => 
+                      page === currentPage ||
+                      page === currentPage - 1 ||
+                      page === currentPage + 1 ||
+                      page === currentPage - 2 ||
+                      page === currentPage + 2
+                    )
+                    .map(page => (
+                      <Button
+                        key={page}
+                        variant={currentPage === page ? "default" : "ghost"}
+                        onClick={() => setCurrentPage(page)}
+                        size="sm"
+                      >
+                        {page}
+                      </Button>
+                    ))}
+                  
+                  {/* Last page */}
+                  {currentPage < totalPages - 2 && (
+                    <>
+                      {currentPage < totalPages - 3 && <span className="px-2">...</span>}
+                      <Button
+                        variant={currentPage === totalPages ? "default" : "ghost"}
+                        onClick={() => setCurrentPage(totalPages)}
+                        size="sm"
+                      >
+                        {totalPages}
+                      </Button>
+                    </>
+                  )}
+                </div>
+                
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            )}
           </>
         )}
       </div>

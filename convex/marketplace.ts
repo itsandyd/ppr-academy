@@ -292,6 +292,7 @@ export const searchMarketplace = query({
       v.literal("plugins")
     )),
     category: v.optional(v.string()),
+    specificCategories: v.optional(v.array(v.string())), // Array of specific category names (Reverb, Delay, Synth, etc.)
     priceRange: v.optional(v.union(
       v.literal("free"),
       v.literal("under-50"),
@@ -316,6 +317,7 @@ export const searchMarketplace = query({
       searchTerm,
       contentType = "all",
       category,
+      specificCategories,
       priceRange,
       sortBy = "newest",
       limit = 20,
@@ -524,6 +526,7 @@ export const searchMarketplace = query({
             author: plugin.author,
             category: categoryName,
             pluginType: typeName,
+            tags: plugin.tags || [], // Include tags in results
             pricingType: plugin.pricingType,
             purchaseUrl: plugin.purchaseUrl,
             optInFormUrl: plugin.optInFormUrl,
@@ -554,6 +557,17 @@ export const searchMarketplace = query({
     // Category filter
     if (category) {
       filtered = filtered.filter(item => item.category === category);
+    }
+
+    // Specific Categories filter (for plugins - Effect/Instrument/Studio Tool specific categories)
+    if (specificCategories && specificCategories.length > 0) {
+      filtered = filtered.filter(item => {
+        if (item.contentType === "plugin" && item.category) {
+          // Check if plugin's category name matches any of the selected specific categories
+          return specificCategories.includes(item.category);
+        }
+        return false; // Non-plugins won't match specific category filters
+      });
     }
 
     // Price range filter

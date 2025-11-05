@@ -8,6 +8,8 @@ import { generateSlug } from "./lib/utils";
 
 // Get all published plugins (for marketplace)
 export const getAllPublishedPlugins = query({
+  args: {},
+  returns: v.array(v.any()),
   handler: async (ctx) => {
     const plugins = await ctx.db
       .query("plugins")
@@ -143,6 +145,8 @@ export const getPluginBySlug = query({
 
 // Get all plugin types
 export const getPluginTypes = query({
+  args: {},
+  returns: v.array(v.any()),
   handler: async (ctx) => {
     return await ctx.db.query("pluginTypes").collect();
   },
@@ -150,8 +154,33 @@ export const getPluginTypes = query({
 
 // Get all plugin categories
 export const getPluginCategories = query({
+  args: {},
+  returns: v.array(v.any()),
   handler: async (ctx) => {
     return await ctx.db.query("pluginCategories").collect();
+  },
+});
+
+// Get all unique tags from published plugins
+export const getPluginTags = query({
+  args: {},
+  returns: v.array(v.string()),
+  handler: async (ctx) => {
+    const plugins = await ctx.db
+      .query("plugins")
+      .withIndex("by_published", (q) => q.eq("isPublished", true))
+      .collect();
+    
+    // Collect all tags and get unique values
+    const allTags = new Set<string>();
+    plugins.forEach(plugin => {
+      if (plugin.tags) {
+        plugin.tags.forEach(tag => allTags.add(tag));
+      }
+    });
+    
+    // Return sorted array of unique tags
+    return Array.from(allTags).sort();
   },
 });
 
@@ -160,6 +189,7 @@ export const getEffectCategories = query({
   args: {
     pluginTypeId: v.optional(v.id("pluginTypes")),
   },
+  returns: v.array(v.any()),
   handler: async (ctx, args) => {
     if (args.pluginTypeId) {
       return await ctx.db
@@ -178,6 +208,7 @@ export const getInstrumentCategories = query({
   args: {
     pluginTypeId: v.optional(v.id("pluginTypes")),
   },
+  returns: v.array(v.any()),
   handler: async (ctx, args) => {
     if (args.pluginTypeId) {
       return await ctx.db
@@ -196,6 +227,7 @@ export const getStudioToolCategories = query({
   args: {
     pluginTypeId: v.optional(v.id("pluginTypes")),
   },
+  returns: v.array(v.any()),
   handler: async (ctx, args) => {
     if (args.pluginTypeId) {
       return await ctx.db
@@ -206,6 +238,32 @@ export const getStudioToolCategories = query({
         .collect();
     }
     return await ctx.db.query("pluginStudioToolCategories").collect();
+  },
+});
+
+// Get all specific categories (effects, instruments, studio tools) combined
+export const getAllSpecificCategories = query({
+  args: {},
+  returns: v.array(v.object({
+    _id: v.string(),
+    name: v.string(),
+    type: v.string(), // "effect", "instrument", or "studioTool"
+  })),
+  handler: async (ctx) => {
+    const [effects, instruments, studioTools] = await Promise.all([
+      ctx.db.query("pluginEffectCategories").collect(),
+      ctx.db.query("pluginInstrumentCategories").collect(),
+      ctx.db.query("pluginStudioToolCategories").collect(),
+    ]);
+    
+    const allCategories = [
+      ...effects.map(c => ({ _id: c._id, name: c.name, type: "effect" as const })),
+      ...instruments.map(c => ({ _id: c._id, name: c.name, type: "instrument" as const })),
+      ...studioTools.map(c => ({ _id: c._id, name: c.name, type: "studioTool" as const })),
+    ];
+    
+    // Sort alphabetically
+    return allCategories.sort((a, b) => a.name.localeCompare(b.name));
   },
 });
 
