@@ -17,11 +17,14 @@ import {
 } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { AdminCreatorsView } from "@/app/_components/admin-creators-view";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function AdminDashboard() {
   const { user, isLoaded } = useUser();
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState("overview");
   
   // Check if user is admin
   const adminCheck = useQuery(
@@ -174,104 +177,118 @@ export default function AdminDashboard() {
         </p>
       </div>
 
-      {/* Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {metrics.map((metric) => (
-          <Card key={metric.title}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className={`p-2 rounded-lg bg-gray-100 dark:bg-gray-800`}>
-                  <metric.icon className={`w-5 h-5 ${metric.color}`} />
-                </div>
-                <span
-                  className={`text-sm font-medium ${
-                    metric.changeType === "positive"
-                      ? "text-green-600"
-                      : metric.changeType === "negative"
-                      ? "text-red-600"
-                      : "text-gray-600"
-                  }`}
-                >
-                  {metric.change}
-                </span>
-              </div>
-              <div>
-                <p className="text-2xl font-bold mb-1">{metric.value}</p>
-                <p className="text-sm text-muted-foreground">{metric.title}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="bg-white dark:bg-black">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="creators">Creators & Products</TabsTrigger>
+        </TabsList>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {recentActivity && recentActivity.length > 0 ? (
-                recentActivity.slice(0, 8).map((activity, index) => (
-                  <div key={index} className="flex items-center gap-3 text-sm">
-                    <div 
-                      className={`w-2 h-2 rounded-full ${
-                        activity.type === "enrollment" ? "bg-green-500" :
-                        activity.type === "course_published" ? "bg-blue-500" :
-                        activity.type === "purchase" ? "bg-purple-500" :
-                        "bg-orange-500"
-                      }`} 
-                    />
-                    <span className="flex-1">{activity.description}</span>
-                    <span className="text-muted-foreground">
-                      {formatTimeAgo(activity.timestamp)}
+        <TabsContent value="overview" className="space-y-6">
+          {/* Metrics Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {metrics.map((metric) => (
+              <Card key={metric.title}>
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className={`p-2 rounded-lg bg-gray-100 dark:bg-gray-800`}>
+                      <metric.icon className={`w-5 h-5 ${metric.color}`} />
+                    </div>
+                    <span
+                      className={`text-sm font-medium ${
+                        metric.changeType === "positive"
+                          ? "text-green-600"
+                          : metric.changeType === "negative"
+                          ? "text-red-600"
+                          : "text-gray-600"
+                      }`}
+                    >
+                      {metric.change}
                     </span>
                   </div>
-                ))
-              ) : (
-                <div className="text-center py-4 text-muted-foreground text-sm">
-                  No recent activity
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                  <div>
+                    <p className="text-2xl font-bold mb-1">{metric.value}</p>
+                    <p className="text-sm text-muted-foreground">{metric.title}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>System Status</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm">API Status</span>
-                <span className="text-sm text-green-600 font-medium">
-                  ● Operational
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Database</span>
-                <span className="text-sm text-green-600 font-medium">
-                  ● Healthy
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Storage</span>
-                <span className="text-sm text-green-600 font-medium">
-                  ● Available
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Email Service</span>
-                <span className="text-sm text-green-600 font-medium">
-                  ● Online
-                </span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          {/* Quick Actions */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Activity</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {recentActivity && recentActivity.length > 0 ? (
+                    recentActivity.slice(0, 8).map((activity, index) => (
+                      <div key={index} className="flex items-center gap-3 text-sm">
+                        <div 
+                          className={`w-2 h-2 rounded-full ${
+                            activity.type === "enrollment" ? "bg-green-500" :
+                            activity.type === "course_published" ? "bg-blue-500" :
+                            activity.type === "purchase" ? "bg-purple-500" :
+                            "bg-orange-500"
+                          }`} 
+                        />
+                        <span className="flex-1">{activity.description}</span>
+                        <span className="text-muted-foreground">
+                          {formatTimeAgo(activity.timestamp)}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-4 text-muted-foreground text-sm">
+                      No recent activity
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>System Status</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">API Status</span>
+                    <span className="text-sm text-green-600 font-medium">
+                      ● Operational
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Database</span>
+                    <span className="text-sm text-green-600 font-medium">
+                      ● Healthy
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Storage</span>
+                    <span className="text-sm text-green-600 font-medium">
+                      ● Available
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Email Service</span>
+                    <span className="text-sm text-green-600 font-medium">
+                      ● Online
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="creators">
+          {user?.id && <AdminCreatorsView clerkId={user.id} />}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -362,3 +362,116 @@ export const getRecentActivity = query({
   },
 });
 
+// Get all creators with their products and courses (admin only)
+export const getAllCreatorsWithProducts = query({
+  args: {
+    clerkId: v.optional(v.string()),
+  },
+  returns: v.array(v.object({
+    userId: v.string(),
+    name: v.string(),
+    email: v.optional(v.string()),
+    imageUrl: v.optional(v.string()),
+    stores: v.array(v.object({
+      _id: v.id("stores"),
+      name: v.string(),
+      slug: v.string(),
+      isPublic: v.boolean(),
+    })),
+    courses: v.array(v.object({
+      _id: v.id("courses"),
+      title: v.string(),
+      price: v.optional(v.number()),
+      isPublished: v.optional(v.boolean()),
+      storeId: v.optional(v.string()),
+    })),
+    digitalProducts: v.array(v.object({
+      _id: v.id("digitalProducts"),
+      title: v.string(),
+      price: v.optional(v.number()),
+      isPublished: v.optional(v.boolean()),
+      productType: v.optional(v.string()),
+      storeId: v.optional(v.string()),
+    })),
+    totalRevenue: v.number(),
+    totalEnrollments: v.number(),
+  })),
+  handler: async (ctx, args) => {
+    // Verify admin access
+    await verifyAdmin(ctx, args.clerkId);
+    
+    // Get all users
+    const users = await ctx.db.query("users").collect();
+    
+    // Get all stores, courses, products, and analytics
+    const stores = await ctx.db.query("stores").collect();
+    const courses = await ctx.db.query("courses").collect();
+    const digitalProducts = await ctx.db.query("digitalProducts").collect();
+    const courseAnalytics = await ctx.db.query("courseAnalytics").collect();
+    const enrollments = await ctx.db.query("enrollments").collect();
+    
+    // Build creator data
+    const creatorsWithProducts = [];
+    
+    for (const user of users) {
+      if (!user.clerkId) continue; // Skip users without Clerk ID
+      
+      // Get user's stores
+      const userStores = stores.filter(s => s.userId === user.clerkId);
+      
+      // Get user's courses (courses use Clerk ID)
+      const userCourses = courses.filter(c => c.userId === user.clerkId);
+      
+      // Get user's digital products (products use Convex user ID)
+      const userProducts = digitalProducts.filter(p => p.userId === user._id);
+      
+      // Calculate total revenue from course analytics
+      const userRevenue = userCourses.reduce((sum, course) => {
+        const analytics = courseAnalytics.find(ca => ca.courseId === course._id);
+        return sum + (analytics?.revenue || 0);
+      }, 0);
+      
+      // Calculate total enrollments
+      const userEnrollments = enrollments.filter(e => 
+        userCourses.some(c => c._id === e.courseId)
+      ).length;
+      
+      // Only include creators who have stores, courses, or products
+      if (userStores.length > 0 || userCourses.length > 0 || userProducts.length > 0) {
+        creatorsWithProducts.push({
+          userId: user.clerkId,
+          name: user.name || user.firstName || user.email || "Unknown",
+          email: user.email,
+          imageUrl: user.imageUrl,
+          stores: userStores.map(s => ({
+            _id: s._id,
+            name: s.name || "Unnamed Store",
+            slug: s.slug,
+            isPublic: s.isPublic || false,
+          })),
+          courses: userCourses.map(c => ({
+            _id: c._id,
+            title: c.title,
+            price: c.price,
+            isPublished: c.isPublished,
+            storeId: c.storeId,
+          })),
+          digitalProducts: userProducts.map(p => ({
+            _id: p._id,
+            title: p.title,
+            price: p.price,
+            isPublished: p.isPublished,
+            productType: p.productType,
+            storeId: p.storeId,
+          })),
+          totalRevenue: userRevenue,
+          totalEnrollments: userEnrollments,
+        });
+      }
+    }
+    
+    // Sort by total revenue (descending)
+    return creatorsWithProducts.sort((a, b) => b.totalRevenue - a.totalRevenue);
+  },
+});
+
