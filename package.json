@@ -88,7 +88,6 @@
     "react-easy-crop": "^5.5.3",
     "react-hook-form": "^7.60.0",
     "react-markdown": "^10.1.0",
-    "react-quill": "^2.0.0",
     "reactflow": "^11.11.4",
     "recharts": "^3.2.1",
     "rehype-highlight": "^7.0.2",
