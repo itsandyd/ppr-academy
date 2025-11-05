@@ -3391,7 +3391,10 @@ export default defineSchema({
     videoUrl: v.optional(v.string()),
     audioUrl: v.optional(v.string()),
     userId: v.optional(v.string()), // Admin Clerk ID who created it
-    categoryId: v.optional(v.id("pluginCategories")),
+    categoryId: v.optional(v.id("pluginCategories")), // General category (Effects, Synths, etc.)
+    effectCategoryId: v.optional(v.id("pluginEffectCategories")), // Specific effect category (Reverb, Delay, etc.)
+    instrumentCategoryId: v.optional(v.id("pluginInstrumentCategories")), // Specific instrument category (Synth, Sampler, etc.)
+    studioToolCategoryId: v.optional(v.id("pluginStudioToolCategories")), // Specific studio tool category (Utility, Analyzer, etc.)
     pluginTypeId: v.optional(v.id("pluginTypes")),
     tags: v.optional(v.array(v.string())), // Array of tag strings for filtering
     optInFormUrl: v.optional(v.string()),
@@ -3408,6 +3411,9 @@ export default defineSchema({
   })
     .index("by_userId", ["userId"])
     .index("by_categoryId", ["categoryId"])
+    .index("by_effectCategoryId", ["effectCategoryId"])
+    .index("by_instrumentCategoryId", ["instrumentCategoryId"])
+    .index("by_studioToolCategoryId", ["studioToolCategoryId"])
     .index("by_pluginTypeId", ["pluginTypeId"])
     .index("by_slug", ["slug"])
     .index("by_published", ["isPublished"])

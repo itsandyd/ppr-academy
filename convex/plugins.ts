@@ -21,6 +21,7 @@ export const getAllPublishedPlugins = query({
       plugins.map(async (plugin) => {
         let category = null;
         let pluginType = null;
+        let specificCategoryName = null;
 
         if (plugin.categoryId) {
           category = await ctx.db.get(plugin.categoryId);
@@ -28,10 +29,22 @@ export const getAllPublishedPlugins = query({
         if (plugin.pluginTypeId) {
           pluginType = await ctx.db.get(plugin.pluginTypeId);
         }
+        
+        // Get the specific category name based on which field is populated
+        if (plugin.effectCategoryId) {
+          const effectCat = await ctx.db.get(plugin.effectCategoryId);
+          specificCategoryName = effectCat?.name;
+        } else if (plugin.instrumentCategoryId) {
+          const instrumentCat = await ctx.db.get(plugin.instrumentCategoryId);
+          specificCategoryName = instrumentCat?.name;
+        } else if (plugin.studioToolCategoryId) {
+          const studioToolCat = await ctx.db.get(plugin.studioToolCategoryId);
+          specificCategoryName = studioToolCat?.name;
+        }
 
         return {
           ...plugin,
-          categoryName: category?.name,
+          categoryName: specificCategoryName || category?.name, // Use specific category name if available
           typeName: pluginType?.name,
         };
       })
@@ -284,6 +297,9 @@ export const createPlugin = mutation({
     videoUrl: v.optional(v.string()),
     audioUrl: v.optional(v.string()),
     categoryId: v.optional(v.id("pluginCategories")),
+    effectCategoryId: v.optional(v.id("pluginEffectCategories")),
+    instrumentCategoryId: v.optional(v.id("pluginInstrumentCategories")),
+    studioToolCategoryId: v.optional(v.id("pluginStudioToolCategories")),
     pluginTypeId: v.optional(v.id("pluginTypes")),
     optInFormUrl: v.optional(v.string()),
     price: v.optional(v.number()),
@@ -328,6 +344,9 @@ export const createPlugin = mutation({
       audioUrl: args.audioUrl,
       userId: args.clerkId,
       categoryId: args.categoryId,
+      effectCategoryId: args.effectCategoryId,
+      instrumentCategoryId: args.instrumentCategoryId,
+      studioToolCategoryId: args.studioToolCategoryId,
       pluginTypeId: args.pluginTypeId,
       optInFormUrl: args.optInFormUrl,
       price: args.price,
@@ -472,6 +491,7 @@ export const createPluginCategory = mutation({
     clerkId: v.string(),
     name: v.string(),
   },
+  returns: v.id("pluginCategories"),
   handler: async (ctx, args) => {
     const user = await ctx.db
       .query("users")
@@ -488,6 +508,207 @@ export const createPluginCategory = mutation({
       createdAt: now,
       updatedAt: now,
     });
+  },
+});
+
+// Create effect category (admin only)
+export const createEffectCategory = mutation({
+  args: {
+    clerkId: v.string(),
+    name: v.string(),
+    pluginTypeId: v.optional(v.id("pluginTypes")),
+  },
+  returns: v.id("pluginEffectCategories"),
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .first();
+
+    if (!user?.admin) {
+      throw new Error("Unauthorized: Admin access required");
+    }
+
+    const now = Date.now();
+    return await ctx.db.insert("pluginEffectCategories", {
+      name: args.name,
+      pluginTypeId: args.pluginTypeId,
+      createdAt: now,
+      updatedAt: now,
+    });
+  },
+});
+
+// Create instrument category (admin only)
+export const createInstrumentCategory = mutation({
+  args: {
+    clerkId: v.string(),
+    name: v.string(),
+    pluginTypeId: v.optional(v.id("pluginTypes")),
+  },
+  returns: v.id("pluginInstrumentCategories"),
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .first();
+
+    if (!user?.admin) {
+      throw new Error("Unauthorized: Admin access required");
+    }
+
+    const now = Date.now();
+    return await ctx.db.insert("pluginInstrumentCategories", {
+      name: args.name,
+      pluginTypeId: args.pluginTypeId,
+      createdAt: now,
+      updatedAt: now,
+    });
+  },
+});
+
+// Create studio tool category (admin only)
+export const createStudioToolCategory = mutation({
+  args: {
+    clerkId: v.string(),
+    name: v.string(),
+    pluginTypeId: v.optional(v.id("pluginTypes")),
+  },
+  returns: v.id("pluginStudioToolCategories"),
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .first();
+
+    if (!user?.admin) {
+      throw new Error("Unauthorized: Admin access required");
+    }
+
+    const now = Date.now();
+    return await ctx.db.insert("pluginStudioToolCategories", {
+      name: args.name,
+      pluginTypeId: args.pluginTypeId,
+      createdAt: now,
+      updatedAt: now,
+    });
+  },
+});
+
+// ============================================
+// DELETE MUTATIONS (for cleanup/re-import)
+// ============================================
+
+export const updatePluginCategories = mutation({
+  args: {
+    clerkId: v.string(),
+    pluginId: v.id("plugins"),
+    effectCategoryId: v.optional(v.id("pluginEffectCategories")),
+    instrumentCategoryId: v.optional(v.id("pluginInstrumentCategories")),
+    studioToolCategoryId: v.optional(v.id("pluginStudioToolCategories")),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const user = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId)).first();
+    if (!user?.admin) throw new Error("Unauthorized");
+    
+    await ctx.db.patch(args.pluginId, {
+      effectCategoryId: args.effectCategoryId,
+      instrumentCategoryId: args.instrumentCategoryId,
+      studioToolCategoryId: args.studioToolCategoryId,
+    });
+    
+    return null;
+  },
+});
+
+export const deleteAllPlugins = mutation({
+  args: { clerkId: v.string() },
+  returns: v.number(),
+  handler: async (ctx, args) => {
+    const user = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId)).first();
+    if (!user?.admin) throw new Error("Unauthorized");
+    
+    const plugins = await ctx.db.query("plugins").collect();
+    for (const plugin of plugins) {
+      await ctx.db.delete(plugin._id);
+    }
+    return plugins.length;
+  },
+});
+
+export const deleteAllEffectCategories = mutation({
+  args: { clerkId: v.string() },
+  returns: v.number(),
+  handler: async (ctx, args) => {
+    const user = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId)).first();
+    if (!user?.admin) throw new Error("Unauthorized");
+    
+    const categories = await ctx.db.query("pluginEffectCategories").collect();
+    for (const cat of categories) {
+      await ctx.db.delete(cat._id);
+    }
+    return categories.length;
+  },
+});
+
+export const deleteAllInstrumentCategories = mutation({
+  args: { clerkId: v.string() },
+  returns: v.number(),
+  handler: async (ctx, args) => {
+    const user = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId)).first();
+    if (!user?.admin) throw new Error("Unauthorized");
+    
+    const categories = await ctx.db.query("pluginInstrumentCategories").collect();
+    for (const cat of categories) {
+      await ctx.db.delete(cat._id);
+    }
+    return categories.length;
+  },
+});
+
+export const deleteAllStudioToolCategories = mutation({
+  args: { clerkId: v.string() },
+  returns: v.number(),
+  handler: async (ctx, args) => {
+    const user = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId)).first();
+    if (!user?.admin) throw new Error("Unauthorized");
+    
+    const categories = await ctx.db.query("pluginStudioToolCategories").collect();
+    for (const cat of categories) {
+      await ctx.db.delete(cat._id);
+    }
+    return categories.length;
+  },
+});
+
+export const deleteAllPluginCategories = mutation({
+  args: { clerkId: v.string() },
+  returns: v.number(),
+  handler: async (ctx, args) => {
+    const user = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId)).first();
+    if (!user?.admin) throw new Error("Unauthorized");
+    
+    const categories = await ctx.db.query("pluginCategories").collect();
+    for (const cat of categories) {
+      await ctx.db.delete(cat._id);
+    }
+    return categories.length;
+  },
+});
+
+export const deleteAllPluginTypes = mutation({
+  args: { clerkId: v.string() },
+  returns: v.number(),
+  handler: async (ctx, args) => {
+    const user = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId)).first();
+    if (!user?.admin) throw new Error("Unauthorized");
+    
+    const types = await ctx.db.query("pluginTypes").collect();
+    for (const type of types) {
+      await ctx.db.delete(type._id);
+    }
+    return types.length;
   },
 });
 

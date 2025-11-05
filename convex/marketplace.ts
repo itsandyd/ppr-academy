@@ -505,14 +505,31 @@ export const searchMarketplace = query({
         plugins.map(async (plugin) => {
           let categoryName: string | undefined;
           let typeName: string | undefined;
+          let specificCategoryName: string | undefined;
 
+          // Get general category name (Effects, Instruments, Studio Tools)
           if (plugin.categoryId) {
             const category = await ctx.db.get(plugin.categoryId);
             categoryName = category?.name;
           }
+          
+          // Get plugin type name
           if (plugin.pluginTypeId) {
             const type = await ctx.db.get(plugin.pluginTypeId);
             typeName = type?.name;
+          }
+
+          // Get specific category name (Reverb, Delay, Synth, etc.)
+          // Check effectCategoryId first, then instrumentCategoryId, then studioToolCategoryId
+          if (plugin.effectCategoryId) {
+            const effectCategory = await ctx.db.get(plugin.effectCategoryId);
+            specificCategoryName = effectCategory?.name;
+          } else if (plugin.instrumentCategoryId) {
+            const instrumentCategory = await ctx.db.get(plugin.instrumentCategoryId);
+            specificCategoryName = instrumentCategory?.name;
+          } else if (plugin.studioToolCategoryId) {
+            const studioToolCategory = await ctx.db.get(plugin.studioToolCategoryId);
+            specificCategoryName = studioToolCategory?.name;
           }
 
           return {
@@ -524,7 +541,8 @@ export const searchMarketplace = query({
             price: plugin.price || 0,
             imageUrl: plugin.image,
             author: plugin.author,
-            category: categoryName,
+            category: specificCategoryName || categoryName, // Use specific category if available, otherwise general
+            generalCategory: categoryName, // Keep general category separately
             pluginType: typeName,
             tags: plugin.tags || [], // Include tags in results
             pricingType: plugin.pricingType,

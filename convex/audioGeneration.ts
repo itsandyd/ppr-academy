@@ -42,10 +42,15 @@ export const startAudioGeneration = mutation({
       });
 
       // Schedule the audio generation action
-      // @ts-expect-error Type instantiation is excessively deep
-      await ctx.scheduler.runAfter(0, internal.audioGeneration.generateAudio, {
-        chapterId: args.chapterId,
-      });
+      // @ts-ignore - Type instantiation depth issue with Convex internal types
+      const generateAudioRef = internal.audioGeneration.generateAudio;
+      await ctx.scheduler.runAfter(
+        0,
+        generateAudioRef,
+        {
+          chapterId: args.chapterId,
+        }
+      );
 
       return { success: true, message: "Audio generation started" };
     } catch (error) {

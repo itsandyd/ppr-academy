@@ -33,6 +33,7 @@ export default function PluginsMarketplacePage() {
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
   const [pricingFilter, setPricingFilter] = useState<string | undefined>(undefined);
   const [selectedSpecificCategories, setSelectedSpecificCategories] = useState<string[]>([]); // Multi-select for effect/instrument categories
+  const [categorySearchQuery, setCategorySearchQuery] = useState(""); // Search query for filtering categories
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -49,6 +50,17 @@ export default function PluginsMarketplacePage() {
   const pluginTypes = pluginTypesData || [];
   const pluginCategories = pluginCategoriesData || [];
   const specificCategories = specificCategoriesData || []; // Effect/Instrument/Studio Tool categories
+  
+  // Debug: Log first plugin to see structure (can remove later)
+  if (plugins.length > 0 && typeof window !== 'undefined' && false) {
+    console.log('=== PLUGIN DEBUG ===');
+    console.log('Total plugins:', plugins.length);
+    console.log('Sample plugin:', plugins[0]);
+    console.log('categoryId:', plugins[0].categoryId);
+    console.log('categoryName:', plugins[0].categoryName);
+    console.log('Available categories:', pluginCategories);
+    console.log('Selected category:', selectedCategory);
+  }
 
   // Filter plugins
   const filteredPlugins = useMemo(() => {
@@ -70,9 +82,9 @@ export default function PluginsMarketplacePage() {
       filtered = filtered.filter((plugin) => plugin.pluginTypeId === selectedType);
     }
 
-    // Category filter
+    // Category filter (same as Type filter since both use pluginTypeId)
     if (selectedCategory) {
-      filtered = filtered.filter((plugin) => plugin.categoryId === selectedCategory);
+      filtered = filtered.filter((plugin) => plugin.pluginTypeId === selectedCategory);
     }
 
     // Pricing filter
@@ -193,7 +205,10 @@ export default function PluginsMarketplacePage() {
 
               {/* Filter Row */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <Select value={selectedType} onValueChange={setSelectedType}>
+                <Select 
+                  value={selectedType || "all"} 
+                  onValueChange={(v) => setSelectedType(v === "all" ? undefined : v)}
+                >
                   <SelectTrigger className="bg-background">
                     <SelectValue placeholder="All Types" />
                   </SelectTrigger>
@@ -207,7 +222,10 @@ export default function PluginsMarketplacePage() {
                   </SelectContent>
                 </Select>
 
-                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <Select 
+                  value={selectedCategory || "all"} 
+                  onValueChange={(v) => setSelectedCategory(v === "all" ? undefined : v)}
+                >
                   <SelectTrigger className="bg-background">
                     <SelectValue placeholder="All Categories" />
                   </SelectTrigger>
@@ -221,7 +239,10 @@ export default function PluginsMarketplacePage() {
                   </SelectContent>
                 </Select>
 
-                <Select value={pricingFilter} onValueChange={setPricingFilter}>
+                <Select 
+                  value={pricingFilter || "all"} 
+                  onValueChange={(v) => setPricingFilter(v === "all" ? undefined : v)}
+                >
                   <SelectTrigger className="bg-background">
                     <SelectValue placeholder="All Pricing" />
                   </SelectTrigger>
@@ -257,8 +278,22 @@ export default function PluginsMarketplacePage() {
                   <div className="text-xs text-muted-foreground mb-2">
                     Select specific categories like Reverb, Delay, Synth, Drums, etc.
                   </div>
+                  
+                  {/* Search input for categories */}
+                  <Input
+                    type="text"
+                    placeholder="Search categories..."
+                    value={categorySearchQuery}
+                    onChange={(e) => setCategorySearchQuery(e.target.value)}
+                    className="mb-2 bg-background"
+                  />
+                  
                   <div className="max-h-40 overflow-y-auto border border-border rounded-lg p-3 space-y-2 bg-background">
-                    {specificCategories.map((category) => {
+                    {specificCategories
+                      .filter((category) => 
+                        category.name.toLowerCase().includes(categorySearchQuery.toLowerCase())
+                      )
+                      .map((category) => {
                       const isSelected = selectedSpecificCategories.includes(category.name);
                       return (
                         <button
@@ -289,6 +324,13 @@ export default function PluginsMarketplacePage() {
                         </button>
                       );
                     })}
+                    {specificCategories.filter((category) => 
+                      category.name.toLowerCase().includes(categorySearchQuery.toLowerCase())
+                    ).length === 0 && (
+                      <div className="text-center text-sm text-muted-foreground py-4">
+                        No categories found
+                      </div>
+                    )}
                   </div>
                   {selectedSpecificCategories.length > 0 && (
                     <Button

@@ -45,6 +45,7 @@ export default function MarketplacePage() {
   const [contentType, setContentType] = useState<"all" | "courses" | "products" | "coaching" | "sample-packs" | "plugins">("all");
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
   const [selectedSpecificCategories, setSelectedSpecificCategories] = useState<string[]>([]); // Multi-select for effect/instrument categories
+  const [categorySearchQuery, setCategorySearchQuery] = useState(""); // Search query for filtering categories
   const [priceRange, setPriceRange] = useState<"free" | "under-50" | "50-100" | "over-100" | undefined>(undefined);
   const [sortBy, setSortBy] = useState<"newest" | "popular" | "price-low" | "price-high">("newest");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -82,7 +83,10 @@ export default function MarketplacePage() {
   ) || [];
   
   // Determine which categories to show based on content type
-  const displayCategories = contentType === "plugins" ? pluginCategories.map(cat => cat.name) : categories;
+  // Deduplicate categories to avoid duplicate keys
+  const displayCategories = contentType === "plugins" 
+    ? Array.from(new Set(pluginCategories.map(cat => cat.name))) 
+    : categories;
 
   const results = marketplaceData?.results || [];
   const total = marketplaceData?.total || 0;
@@ -319,8 +323,22 @@ export default function MarketplacePage() {
                     <div className="text-xs text-muted-foreground mb-2">
                       Select specific categories like Reverb, Delay, Synth, Drums, etc.
                     </div>
+                    
+                    {/* Search input for categories */}
+                    <Input
+                      type="text"
+                      placeholder="Search categories..."
+                      value={categorySearchQuery}
+                      onChange={(e) => setCategorySearchQuery(e.target.value)}
+                      className="mb-2 bg-white dark:bg-black"
+                    />
+                    
                     <div className="max-h-48 overflow-y-auto border border-border rounded-lg p-3 space-y-2 bg-white dark:bg-black">
-                      {specificCategories.map((category: any) => {
+                      {specificCategories
+                        .filter((category: any) => 
+                          category.name.toLowerCase().includes(categorySearchQuery.toLowerCase())
+                        )
+                        .map((category: any) => {
                         const isSelected = selectedSpecificCategories.includes(category.name);
                         return (
                           <button
@@ -351,6 +369,13 @@ export default function MarketplacePage() {
                           </button>
                         );
                       })}
+                      {specificCategories.filter((category: any) => 
+                        category.name.toLowerCase().includes(categorySearchQuery.toLowerCase())
+                      ).length === 0 && (
+                        <div className="text-center text-sm text-muted-foreground py-4">
+                          No categories found
+                        </div>
+                      )}
                     </div>
                     {selectedSpecificCategories.length > 0 && (
                       <Button
