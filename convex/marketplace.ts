@@ -241,6 +241,12 @@ export const getAllCreators = query({
           .filter((q) => q.eq(q.field("storeId"), store._id))
           .collect();
 
+        // Count sample packs
+        const samplePacks = await ctx.db
+          .query("samplePacks")
+          .filter((q) => q.eq(q.field("storeId"), store._id))
+          .collect();
+
         // Count unique students
         const storePurchases = await ctx.db
           .query("purchases")
@@ -256,6 +262,11 @@ export const getAllCreators = query({
         products.forEach(p => {
           if (p.category) categories.add(p.category);
         });
+        samplePacks.forEach(sp => {
+          if (sp.categories) {
+            sp.categories.forEach(cat => categories.add(cat));
+          }
+        });
 
         return {
           _id: store._id,
@@ -264,7 +275,7 @@ export const getAllCreators = query({
           bio: store.bio,
           avatar: user?.imageUrl || store.logoUrl,
           bannerImage: store.bannerImage,
-          totalProducts: products.length,
+          totalProducts: products.length + samplePacks.length, // Include both digital products and sample packs
           totalCourses: courses.length,
           totalStudents: uniqueStudents.size,
           categories: Array.from(categories),

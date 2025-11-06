@@ -5,6 +5,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -35,7 +49,14 @@ import {
   Trash2,
   UserCog,
   Send,
-  Crown
+  Crown,
+  Package,
+  BookOpen,
+  Music,
+  FileText,
+  Video,
+  Clock,
+  ListChecks
 } from "lucide-react";
 import { BulkSelectionTable, userBulkActions } from "@/components/admin/bulk-selection-table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -312,6 +333,236 @@ export default function UsersManagementPage() {
                      "User"}
                   </Badge>
                 )
+              },
+              {
+                key: "content",
+                label: "Content",
+                render: (user: any) => {
+                  // Fetch the user's store and content counts
+                  const CreatorContentStats = ({ clerkId, userName }: { clerkId: string; userName: string }) => {
+                    const [isOpen, setIsOpen] = useState(false);
+                    const store = useQuery(api.stores.getUserStore, { userId: clerkId });
+                    const courses = useQuery(
+                      api.courses.getCoursesByUser,
+                      clerkId ? { userId: clerkId } : "skip"
+                    );
+                    const products = useQuery(
+                      api.digitalProducts.getProductsByUser,
+                      clerkId ? { userId: clerkId } : "skip"
+                    );
+                    const samplePacks = useQuery(
+                      api.samplePacks.getPacksByStore as any,
+                      store?._id ? { storeId: store._id } : "skip"
+                    );
+
+                    if (!store) return <span className="text-xs text-muted-foreground">No store</span>;
+
+                    const courseCount = courses?.length || 0;
+                    const productCount = products?.length || 0;
+                    const packCount = samplePacks?.length || 0;
+                    const totalContent = courseCount + productCount + packCount;
+
+                    if (totalContent === 0) {
+                      return <span className="text-xs text-muted-foreground">No content</span>;
+                    }
+
+                    return (
+                      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+                        <DialogTrigger asChild>
+                          <button className="flex items-center gap-3 text-xs hover:opacity-70 transition-opacity">
+                            {courseCount > 0 && (
+                              <div className="flex items-center gap-1">
+                                <BookOpen className="w-3 h-3 text-blue-500" />
+                                <span>{courseCount}</span>
+                              </div>
+                            )}
+                            {productCount > 0 && (
+                              <div className="flex items-center gap-1">
+                                <Package className="w-3 h-3 text-green-500" />
+                                <span>{productCount}</span>
+                              </div>
+                            )}
+                            {packCount > 0 && (
+                              <div className="flex items-center gap-1">
+                                <Music className="w-3 h-3 text-purple-500" />
+                                <span>{packCount}</span>
+                              </div>
+                            )}
+                          </button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-white dark:bg-black">
+                          <DialogHeader>
+                            <DialogTitle>Content for {userName}</DialogTitle>
+                            <DialogDescription>
+                              View all courses, products, and sample packs by this creator
+                            </DialogDescription>
+                          </DialogHeader>
+                          
+                          <div className="space-y-6 mt-4">
+                            {/* Courses */}
+                            {courseCount > 0 && (
+                              <div>
+                                <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                                  <BookOpen className="w-4 h-4 text-blue-500" />
+                                  Courses ({courseCount})
+                                </h3>
+                                <Accordion type="single" collapsible className="space-y-2">
+                                  {courses?.map((course: any, idx: number) => {
+                                    // Calculate course completion percentage
+                                    const totalChapters = course.chapters?.length || 0;
+                                    const completedChapters = course.chapters?.filter((ch: any) => ch.isPublished)?.length || 0;
+                                    const completionPercent = totalChapters > 0 ? Math.round((completedChapters / totalChapters) * 100) : 0;
+                                    
+                                    return (
+                                      <AccordionItem key={course._id} value={`course-${idx}`} className="border rounded-lg">
+                                        <AccordionTrigger className="px-3 py-2 hover:no-underline hover:bg-muted/50">
+                                          <div className="flex items-center justify-between w-full pr-2">
+                                            <div className="flex-1 text-left">
+                                              <p className="font-medium text-sm">{course.title}</p>
+                                              <div className="flex items-center gap-2 mt-1">
+                                                <Badge variant={course.isPublished ? "default" : "secondary"} className="text-xs">
+                                                  {course.isPublished ? "Published" : "Draft"}
+                                                </Badge>
+                                                {course.price && (
+                                                  <span className="text-xs text-muted-foreground">
+                                                    ${(course.price / 100).toFixed(2)}
+                                                  </span>
+                                                )}
+                                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                                  <ListChecks className="w-3 h-3" />
+                                                  <span>{completionPercent}% complete</span>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </AccordionTrigger>
+                                        <AccordionContent className="px-3 pb-3">
+                                          <div className="space-y-2 mt-2">
+                                            <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+                                              <span>{totalChapters} chapters total</span>
+                                              <span>{completedChapters} published</span>
+                                            </div>
+                                            
+                                            {/* Chapters List */}
+                                            {course.chapters && course.chapters.length > 0 ? (
+                                              <div className="space-y-1">
+                                                {course.chapters.map((chapter: any, chIdx: number) => (
+                                                  <div key={chapter._id || chIdx} className="flex items-center gap-2 p-2 bg-muted/30 rounded text-xs">
+                                                    <span className="text-muted-foreground font-mono">{chIdx + 1}</span>
+                                                    <div className="flex-1">
+                                                      <p className="font-medium">{chapter.title || "Untitled Chapter"}</p>
+                                                      <div className="flex items-center gap-2 mt-0.5">
+                                                        {chapter.videoUrl && (
+                                                          <span className="flex items-center gap-1 text-muted-foreground">
+                                                            <Video className="w-3 h-3" />
+                                                            Video
+                                                          </span>
+                                                        )}
+                                                        {chapter.duration && (
+                                                          <span className="flex items-center gap-1 text-muted-foreground">
+                                                            <Clock className="w-3 h-3" />
+                                                            {chapter.duration}
+                                                          </span>
+                                                        )}
+                                                      </div>
+                                                    </div>
+                                                    <Badge variant={chapter.isPublished ? "outline" : "secondary"} className="text-xs">
+                                                      {chapter.isPublished ? "✓" : "Draft"}
+                                                    </Badge>
+                                                  </div>
+                                                ))}
+                                              </div>
+                                            ) : (
+                                              <p className="text-xs text-muted-foreground italic">No chapters yet</p>
+                                            )}
+
+                                            {/* Course Stats */}
+                                            {course.description && (
+                                              <div className="mt-3 pt-2 border-t">
+                                                <p className="text-xs text-muted-foreground line-clamp-2">
+                                                  {course.description}
+                                                </p>
+                                              </div>
+                                            )}
+                                          </div>
+                                        </AccordionContent>
+                                      </AccordionItem>
+                                    );
+                                  })}
+                                </Accordion>
+                              </div>
+                            )}
+
+                            {/* Digital Products */}
+                            {productCount > 0 && (
+                              <div>
+                                <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                                  <Package className="w-4 h-4 text-green-500" />
+                                  Digital Products ({productCount})
+                                </h3>
+                                <div className="space-y-2">
+                                  {products?.map((product: any) => (
+                                    <div key={product._id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
+                                      <div className="flex-1">
+                                        <p className="font-medium text-sm">{product.title}</p>
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <Badge variant={product.isPublished ? "default" : "secondary"} className="text-xs">
+                                            {product.isPublished ? "Published" : "Draft"}
+                                          </Badge>
+                                          {product.price && (
+                                            <span className="text-xs text-muted-foreground">
+                                              ${(product.price / 100).toFixed(2)}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Sample Packs */}
+                            {packCount > 0 && (
+                              <div>
+                                <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                                  <Music className="w-4 h-4 text-purple-500" />
+                                  Sample Packs ({packCount})
+                                </h3>
+                                <div className="space-y-2">
+                                  {samplePacks?.map((pack: any) => (
+                                    <div key={pack._id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
+                                      <div className="flex-1">
+                                        <p className="font-medium text-sm">{pack.name}</p>
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <Badge variant={pack.isPublished ? "default" : "secondary"} className="text-xs">
+                                            {pack.isPublished ? "Published" : "Draft"}
+                                          </Badge>
+                                          {pack.price && (
+                                            <span className="text-xs text-muted-foreground">
+                                              ${(pack.price / 100).toFixed(2)}
+                                            </span>
+                                          )}
+                                          {pack.sampleCount && (
+                                            <span className="text-xs text-muted-foreground">
+                                              {pack.sampleCount} samples
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+                    );
+                  };
+
+                  return <CreatorContentStats clerkId={user.clerkId} userName={user.name || "Creator"} />;
+                }
               },
               {
                 key: "stripe",
