@@ -100,6 +100,35 @@ export const getStoreById = query({
   },
 });
 
+// Migration: Set all stores to public and published (for Early Access rollout)
+export const migrateStoresToPublic = mutation({
+  args: {},
+  returns: v.object({
+    updated: v.number(),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    const stores = await ctx.db.query("stores").collect();
+    let updated = 0;
+
+    for (const store of stores) {
+      // Update stores that are not already public/published
+      if (!store.isPublic || !store.isPublishedProfile) {
+        await ctx.db.patch(store._id, {
+          isPublic: true,
+          isPublishedProfile: true,
+        });
+        updated++;
+      }
+    }
+
+    return {
+      updated,
+      message: `Successfully updated ${updated} stores to public and published status.`,
+    };
+  },
+});
+
 // Get store by slug
 export const getStoreBySlug = query({
   args: { slug: v.string() },
@@ -168,8 +197,8 @@ export const createStore = mutation({
       userId: args.userId,
       plan: "early_access", // Default to early access (grandfathered unlimited)
       planStartedAt: Date.now(),
-      isPublic: false, // Private by default
-      isPublishedProfile: false,
+      isPublic: true, // Public by default (Early Access plan)
+      isPublishedProfile: true, // Published by default
       subscriptionStatus: "active",
     });
   },

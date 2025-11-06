@@ -226,6 +226,14 @@ export function HeaderForm() {
             </div>
           )}
 
+          {storePlan === "early_access" && (
+            <div className="mt-4 p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
+              <p className="text-sm text-purple-900 dark:text-purple-200">
+                ✨ <strong>Early Access:</strong> You have unlimited access to all features including public profile visibility
+              </p>
+            </div>
+          )}
+
           {isAdmin && (
             <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
               <p className="text-sm text-blue-900 dark:text-blue-200">

@@ -771,7 +771,7 @@ export default function SectionedMarketplace() {
                     <Button 
                       variant="outline"
                       size="lg" 
-                      className="w-full sm:w-auto rounded-xl border-primary-foreground/40 text-primary-foreground hover:bg-primary-foreground/10 font-semibold px-12 py-6 text-xl shadow-lg transition-all duration-300 hover:scale-105"
+                      className="w-full sm:w-auto rounded-xl border-2 border-primary-foreground bg-transparent text-primary-foreground hover:bg-primary-foreground hover:text-background font-semibold px-12 py-6 text-xl shadow-lg transition-all duration-300 hover:scale-105"
                     >
                       Become a Creator
                     </Button>
@@ -792,7 +792,7 @@ export default function SectionedMarketplace() {
                     <Button 
                       variant="outline"
                       size="lg" 
-                      className="w-full sm:w-auto rounded-xl border-primary-foreground/40 text-primary-foreground hover:bg-primary-foreground/10 font-semibold px-12 py-6 text-xl shadow-lg transition-all duration-300 hover:scale-105"
+                      className="w-full sm:w-auto rounded-xl border-2 border-primary-foreground bg-transparent text-primary-foreground hover:bg-primary-foreground hover:text-background font-semibold px-12 py-6 text-xl shadow-lg transition-all duration-300 hover:scale-105"
                     >
                       <Store className="mr-2 w-5 h-5" />
                       Creator Studio
