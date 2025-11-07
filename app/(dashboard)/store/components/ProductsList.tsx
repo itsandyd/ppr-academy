@@ -453,7 +453,7 @@ export function ProductsList({ products, storeId }: ProductsListProps) {
                       <Card className="group hover:shadow-2xl transition-all duration-300 overflow-hidden border-2 hover:border-purple-200 dark:hover:border-purple-800">
                         {/* Course Image */}
                         <div className="relative h-48 overflow-hidden bg-gradient-to-br from-purple-100 via-pink-50 to-blue-100 dark:from-purple-900/20 dark:via-pink-900/10 dark:to-blue-900/20">
-                          {course.imageUrl ? (
+                          {course.imageUrl && course.imageUrl.startsWith('http') ? (
                             <Image 
                               src={course.imageUrl} 
                               alt={course.title}

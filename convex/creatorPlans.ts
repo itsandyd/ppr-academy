@@ -228,7 +228,7 @@ export const checkFeatureAccess = query({
       }
     }
 
-    const plan = store.plan || "free";
+    const plan = store.plan || "early_access"; // Default to early_access (grandfathered)
     const limits = PLAN_LIMITS[plan];
 
     // Check specific features

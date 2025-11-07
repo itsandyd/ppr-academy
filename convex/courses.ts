@@ -411,8 +411,45 @@ export const createCourseWithData = mutation({
         checkoutHeadline: data.checkoutHeadline,
       });
 
-      // Skip modules creation for now to simplify debugging
-      // TODO: Add module creation back later
+      // Create modules, lessons, and chapters if provided
+      if (data.modules && Array.isArray(data.modules)) {
+        for (const moduleData of data.modules) {
+          const moduleId = await ctx.db.insert("courseModules", {
+            courseId,
+            title: moduleData.title,
+            description: moduleData.description,
+            position: moduleData.orderIndex || 0,
+          });
+
+          // Create lessons for this module
+          if (moduleData.lessons && Array.isArray(moduleData.lessons)) {
+            for (const lessonData of moduleData.lessons) {
+              const lessonId = await ctx.db.insert("courseLessons", {
+                moduleId,
+                title: lessonData.title,
+                description: lessonData.description,
+                position: lessonData.orderIndex || 0,
+              });
+
+              // Create chapters for this lesson
+              if (lessonData.chapters && Array.isArray(lessonData.chapters)) {
+                for (const chapterData of lessonData.chapters) {
+                  await ctx.db.insert("courseChapters", {
+                    lessonId,
+                    courseId,
+                    title: chapterData.title,
+                    description: chapterData.content || chapterData.description || "",
+                    position: chapterData.orderIndex || 0,
+                    isPublished: true,
+                  });
+                }
+              }
+            }
+          }
+        }
+        console.log(`✅ Created ${data.modules.length} modules with lessons and chapters`);
+      }
+
       console.log("Course created successfully:", courseId);
 
       return {

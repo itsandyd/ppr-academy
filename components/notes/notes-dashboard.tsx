@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { useMutation, useQuery } from 'convex/react';
+import { useMutation, useQuery, useAction } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Id } from '@/convex/_generated/dataModel';
 import { NotionEditor } from './notion-editor';
@@ -45,7 +45,9 @@ import {
   Brain,
   Zap,
   PlusCircle,
-  Settings
+  Settings,
+  ChevronRight,
+  Home,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
@@ -74,6 +76,7 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
     skillLevel: 'intermediate' as 'beginner' | 'intermediate' | 'advanced',
     preferredModuleCount: 4,
     includeQuizzes: true,
+    matchExistingStyle: true, // NEW: Match existing course style by default
   });
 
   // Current note state
@@ -100,6 +103,11 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
     paginationOpts: { numItems: 50, cursor: null },
   });
 
+  // Get user's existing courses for style analysis
+  const userCourses = useQuery(api.courses.getCoursesByStore, {
+    storeId,
+  }) ?? [];
+
   const notes = notesQuery?.page ?? [];
 
   const selectedNote = useQuery(
@@ -111,8 +119,32 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
   const updateNote = useMutation(api.notes.updateNote);
   const deleteNote = useMutation(api.notes.deleteNote);
   const createFolder = useMutation(api.notes.createFolder);
+  const updateFolder = useMutation(api.notes.updateFolder);
   const deleteFolder = useMutation(api.notes.deleteFolder);
-  const generateCourseFromNotes = useMutation((api as any).notesToCourse.generateCourseFromNotes);
+  const generateCourseFromNotes = useAction((api as any).notesToCourse.generateCourseFromNotes);
+
+  // Get current folder for breadcrumb
+  const currentFolder = selectedFolderId 
+    ? folders.find(f => f._id === selectedFolderId)
+    : null;
+
+  // Build breadcrumb path
+  const getBreadcrumbPath = () => {
+    if (!selectedFolderId || !currentFolder) return [];
+    
+    const path: Array<{_id: string, name: string}> = [];
+    let folder = currentFolder;
+    
+    // Build path from current folder to root
+    while (folder) {
+      path.unshift({ _id: folder._id, name: folder.name });
+      folder = folders.find(f => f._id === folder.parentId) as any;
+    }
+    
+    return path;
+  };
+
+  const breadcrumbPath = getBreadcrumbPath();
 
   // Handlers
   const handleNoteSelect = useCallback((noteId: string) => {
@@ -166,6 +198,25 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
     }
   }, [createFolder, userId, storeId]);
 
+  const handleRenameFolder = useCallback(async (folderId: string, newName: string) => {
+    try {
+      await updateFolder({
+        folderId: folderId as Id<"noteFolders">,
+        name: newName,
+      });
+      toast({
+        title: "Folder Renamed",
+        description: "Your folder has been renamed successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to rename folder.",
+        variant: "destructive",
+      });
+    }
+  }, [updateFolder]);
+
   const handleSaveNote = useCallback(async (showToast = true) => {
     if (!selectedNoteId) {
       await handleCreateNote(selectedFolderId || undefined);
@@ -212,6 +263,16 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
     setSelectedNotesForCourse(newSelection);
   };
 
+  // NEW: Select ALL notes in current folder for course generation
+  const handleSelectAllNotesInFolder = () => {
+    const folderNotes = notes.map(note => note._id);
+    setSelectedNotesForCourse(new Set(folderNotes));
+    toast({
+      title: "Notes Selected",
+      description: `Selected all ${folderNotes.length} notes in this folder for course generation.`,
+    });
+  };
+
   const handleGenerateCourse = async () => {
     if (selectedNotesForCourse.size === 0) {
       toast({
@@ -235,12 +296,16 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
         skillLevel: courseFormData.skillLevel,
         preferredModuleCount: courseFormData.preferredModuleCount,
         includeQuizzes: courseFormData.includeQuizzes,
+        matchExistingStyle: courseFormData.matchExistingStyle, // NEW: Pass style matching flag
       });
 
       if (result.success && result.courseId) {
+        const styleMessage = courseFormData.matchExistingStyle 
+          ? " matching your teaching style" 
+          : "";
         toast({
           title: "Course Generated Successfully!",
-          description: `Your course "${courseFormData.title}" has been created from ${selectedNotesForCourse.size} notes.`,
+          description: `Your course "${courseFormData.title}" has been created from ${selectedNotesForCourse.size} notes${styleMessage}.`,
         });
         setShowCourseDialog(false);
         setSelectedNotesForCourse(new Set());
@@ -252,6 +317,7 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
           skillLevel: 'intermediate',
           preferredModuleCount: 4,
           includeQuizzes: true,
+          matchExistingStyle: true,
         });
         // Optionally redirect to course editor
         window.open(`/store/${storeId}/course/${result.courseId}/edit`, '_blank');
@@ -336,6 +402,7 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
           onFolderSelect={setSelectedFolderId}
           onCreateNote={handleCreateNote}
           onCreateFolder={handleCreateFolder}
+          onRenameFolder={handleRenameFolder}
           onDeleteFolder={(folderId) => deleteFolder({ folderId: folderId as Id<"noteFolders"> })}
           onDeleteNote={(noteId) => deleteNote({ noteId: noteId as Id<"notes"> })}
           searchQuery={searchQuery}
@@ -345,12 +412,42 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col bg-white dark:bg-[#1a1a1a] min-w-0">
-        {/* Header - Clean and spacious */}
-        <div className="h-16 border-b border-gray-200 dark:border-gray-800/50 flex items-center justify-between px-6 bg-white dark:bg-[#1e1e1e]/50 backdrop-blur-sm flex-shrink-0">
-          <div className="flex items-center gap-4 min-w-0">
-            <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 truncate">
-              {selectedNoteId ? currentNote.title : 'Notes'}
-            </h1>
+        {/* Header with Breadcrumbs - Clean and spacious */}
+        <div className="border-b border-gray-200 dark:border-gray-800/50 bg-white dark:bg-[#1e1e1e]/50 backdrop-blur-sm flex-shrink-0">
+          {/* Breadcrumb Navigation */}
+          {breadcrumbPath.length > 0 && (
+            <div className="px-6 pt-3 pb-2 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <button
+                onClick={() => setSelectedFolderId(null)}
+                className="hover:text-gray-900 dark:hover:text-gray-100 flex items-center gap-1 transition-colors"
+              >
+                <Home className="h-4 w-4" />
+                <span>All Notes</span>
+              </button>
+              {breadcrumbPath.map((folder, index) => (
+                <div key={folder._id} className="flex items-center gap-2">
+                  <ChevronRight className="h-4 w-4" />
+                  <button
+                    onClick={() => setSelectedFolderId(folder._id)}
+                    className={cn(
+                      "hover:text-gray-900 dark:hover:text-gray-100 transition-colors",
+                      index === breadcrumbPath.length - 1 && "font-semibold text-gray-900 dark:text-gray-100"
+                    )}
+                  >
+                    {folder.name}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {/* Main Header */}
+          <div className="h-16 flex items-center justify-between px-6">
+            <div className="flex items-center gap-4 min-w-0">
+              <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 truncate">
+                {selectedNoteId ? currentNote.title : (currentFolder ? currentFolder.name : 'Notes')}
+              </h1>
+            </div>
             
             {selectedNote && (
               <div className="flex items-center gap-2 flex-shrink-0">
@@ -481,6 +578,44 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
                           Include quizzes and assessments
                         </Label>
                       </div>
+                      
+                      {/* NEW: Match Existing Style Toggle */}
+                      <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id="match-style"
+                              checked={courseFormData.matchExistingStyle}
+                              onChange={(e) => setCourseFormData(prev => ({ ...prev, matchExistingStyle: e.target.checked }))}
+                              className="rounded border-gray-300"
+                            />
+                            <Label htmlFor="match-style" className="text-sm font-semibold flex items-center gap-2">
+                              <Sparkles className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                              Match My Course Style
+                            </Label>
+                          </div>
+                        </div>
+                        {courseFormData.matchExistingStyle && (
+                          <div className="pl-6 text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                            {userCourses.length > 0 ? (
+                              <>
+                                <p className="font-medium text-green-600 dark:text-green-400">
+                                  ✓ Found {userCourses.length} existing course{userCourses.length > 1 ? 's' : ''} to analyze
+                                </p>
+                                <p className="leading-relaxed">
+                                  AI will analyze your existing courses to match your teaching style, 
+                                  content structure, and communication approach.
+                                </p>
+                              </>
+                            ) : (
+                              <p className="text-amber-600 dark:text-amber-400 leading-relaxed">
+                                No existing courses found. The AI will use best practices for course creation.
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     <DialogFooter>
@@ -524,6 +659,19 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
               <CheckSquare className="h-4 w-4" />
               {selectedNotesForCourse.size > 0 ? 'Clear Selection' : 'Select Notes'}
             </Button>
+            
+            {/* NEW: Select all notes in folder */}
+            {notes.length > 0 && selectedNotesForCourse.size === 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 border-purple-200 text-purple-700 hover:bg-purple-50 dark:border-purple-800 dark:text-purple-300 dark:hover:bg-purple-950/20"
+                onClick={handleSelectAllNotesInFolder}
+              >
+                <Folder className="h-4 w-4" />
+                Select All in Folder ({notes.length})
+              </Button>
+            )}
 
             {selectedNoteId && (
               <Button onClick={() => handleSaveNote(true)} className="gap-2">

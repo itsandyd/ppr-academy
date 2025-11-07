@@ -52,6 +52,21 @@ export const DashboardPreferenceSwitcher: FC = () => {
   const hasStore = !!userStore;
   const hasEnrollments = enrolledCourses && enrolledCourses.length > 0;
   const isHybrid = hasStore && hasEnrollments;
+  
+  // Show "Become a Creator" button if user doesn't have a store
+  // (regardless of enrollment status)
+  const shouldShowBecomeCreatorButton = convexUser && !hasStore;
+
+  // Debug logging
+  console.log('Dashboard Switcher Debug:', {
+    hasStore,
+    hasEnrollments,
+    isHybrid,
+    shouldShowBecomeCreatorButton,
+    enrolledCourses: enrolledCourses?.length,
+    userStore: !!userStore,
+    convexUser: !!convexUser
+  });
 
   // Load saved preference on mount
   useEffect(() => {
@@ -68,7 +83,23 @@ export const DashboardPreferenceSwitcher: FC = () => {
     ? 'student'
     : null;
 
-  // Don't show if not hybrid user
+  // Show "Become a Creator" button for users without a store
+  if (shouldShowBecomeCreatorButton) {
+    return (
+      <Button 
+        variant="default" 
+        size="sm"
+        className="gap-2"
+        onClick={() => router.push('/home')}
+      >
+        <Store className="w-4 h-4" />
+        <span className="hidden sm:inline">Become a Creator</span>
+        <span className="sm:hidden">Create</span>
+      </Button>
+    );
+  }
+
+  // Show dropdown only for hybrid users (has both store and enrollments)
   if (!isHybrid) return null;
 
   const handleSwitch = (mode: 'student' | 'creator', savePreference: boolean = false) => {

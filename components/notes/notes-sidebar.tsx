@@ -59,6 +59,7 @@ interface NotesSidebarProps {
   onFolderSelect: (folderId: string | null) => void;
   onCreateNote: (folderId?: string) => void;
   onCreateFolder: (parentId?: string) => void;
+  onRenameFolder: (folderId: string, newName: string) => void;
   onDeleteFolder: (folderId: string) => void;
   onDeleteNote: (noteId: string) => void;
   searchQuery: string;
@@ -75,6 +76,7 @@ export function NotesSidebar({
   onFolderSelect,
   onCreateNote,
   onCreateFolder,
+  onRenameFolder,
   onDeleteFolder,
   onDeleteNote,
   searchQuery,
@@ -83,6 +85,8 @@ export function NotesSidebar({
 }: NotesSidebarProps) {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<'all' | 'favorites' | 'recent' | 'templates'>('all');
+  const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null);
+  const [renameFolderValue, setRenameFolderValue] = useState('');
 
   const toggleFolder = (folderId: string) => {
     const newExpanded = new Set(expandedFolders);
@@ -92,6 +96,25 @@ export function NotesSidebar({
       newExpanded.add(folderId);
     }
     setExpandedFolders(newExpanded);
+  };
+
+  const handleStartRename = (folder: Folder, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setRenamingFolderId(folder._id);
+    setRenameFolderValue(folder.name);
+  };
+
+  const handleFinishRename = (folderId: string) => {
+    if (renameFolderValue.trim() && renameFolderValue !== folders.find(f => f._id === folderId)?.name) {
+      onRenameFolder(folderId, renameFolderValue.trim());
+    }
+    setRenamingFolderId(null);
+    setRenameFolderValue('');
+  };
+
+  const handleCancelRename = () => {
+    setRenamingFolderId(null);
+    setRenameFolderValue('');
   };
 
   const getStatusColor = (status: string) => {
@@ -169,50 +192,77 @@ export function NotesSidebar({
           
           <div 
             className="flex items-center gap-2 flex-1"
-            onClick={() => onFolderSelect(folder._id)}
+            onClick={() => renamingFolderId !== folder._id && onFolderSelect(folder._id)}
           >
             {isExpanded ? (
               <FolderOpen className="h-4 w-4 text-gray-600 dark:text-gray-400" />
             ) : (
               <Folder className="h-4 w-4 text-gray-600 dark:text-gray-400" />
             )}
-            <span className="text-sm font-medium truncate text-gray-900 dark:text-gray-100">{folder.name}</span>
-            {folderNotes.length > 0 && (
-              <Badge variant="secondary" className="text-xs">
-                {folderNotes.length}
-              </Badge>
+            
+            {renamingFolderId === folder._id ? (
+              <Input
+                value={renameFolderValue}
+                onChange={(e) => setRenameFolderValue(e.target.value)}
+                onBlur={() => handleFinishRename(folder._id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleFinishRename(folder._id);
+                  } else if (e.key === 'Escape') {
+                    handleCancelRename();
+                  }
+                }}
+                autoFocus
+                className="h-6 text-sm bg-white dark:bg-zinc-900"
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <>
+                <span className="text-sm font-medium truncate text-gray-900 dark:text-gray-100">{folder.name}</span>
+                {folderNotes.length > 0 && (
+                  <Badge variant="secondary" className="text-xs">
+                    {folderNotes.length}
+                  </Badge>
+                )}
+              </>
             )}
           </div>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="opacity-0 group-hover:opacity-100 p-0 h-4 w-4"
+          {renamingFolderId !== folder._id && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="opacity-0 group-hover:opacity-100 p-0 h-4 w-4"
+                >
+                  <MoreHorizontal className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-white dark:bg-[#1e1e1e]">
+              <DropdownMenuItem onClick={(e) => handleStartRename(folder, e)}>
+                <Settings className="h-4 w-4 mr-2" />
+                Rename
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onCreateNote(folder._id)}>
+                <FileText className="h-4 w-4 mr-2" />
+                New Note
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onCreateFolder(folder._id)}>
+                <Folder className="h-4 w-4 mr-2" />
+                New Folder
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                onClick={() => onDeleteFolder(folder._id)}
+                className="text-red-600 dark:text-red-400"
               >
-                <MoreHorizontal className="h-3 w-3" />
-              </Button>
-            </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-white dark:bg-[#1e1e1e]">
-            <DropdownMenuItem onClick={() => onCreateNote(folder._id)}>
-              <FileText className="h-4 w-4 mr-2" />
-              New Note
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onCreateFolder(folder._id)}>
-              <Folder className="h-4 w-4 mr-2" />
-              New Folder
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              onClick={() => onDeleteFolder(folder._id)}
-              className="text-red-600 dark:text-red-400"
-            >
-              <Archive className="h-4 w-4 mr-2" />
-              Archive Folder
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-          </DropdownMenu>
+                <Archive className="h-4 w-4 mr-2" />
+                Archive Folder
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
 
         {isExpanded && (

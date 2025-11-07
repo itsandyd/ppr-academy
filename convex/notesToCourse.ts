@@ -26,6 +26,7 @@ export const generateCourseFromNotes: any = action({
     )),
     preferredModuleCount: v.optional(v.number()),
     includeQuizzes: v.optional(v.boolean()),
+    matchExistingStyle: v.optional(v.boolean()), // NEW: Match user's existing course style
   },
   returns: v.object({
     success: v.boolean(),
@@ -52,6 +53,21 @@ export const generateCourseFromNotes: any = action({
       
       console.log(`📚 Processing ${notes.length} notes for course generation`);
       
+      // Get user's existing courses for style analysis (if requested)
+      let existingCoursesAnalysis = "";
+      if (args.matchExistingStyle) {
+        console.log("🎨 Analyzing existing courses to match style...");
+        const existingCourses = await ctx.runQuery(api.courses.getCoursesByStore, {
+          storeId: args.storeId,
+        });
+        
+        if (existingCourses && existingCourses.length > 0) {
+          // Analyze the structure and style of existing courses
+          existingCoursesAnalysis = await analyzeExistingCoursesStyle(ctx, existingCourses, args.userId);
+          console.log(`✅ Analyzed ${existingCourses.length} existing courses`);
+        }
+      }
+      
       // Get related content using RAG for additional context
       // TODO: Fix RAG integration after basic functions are deployed
       const ragContext: any[] = [];
@@ -69,6 +85,7 @@ export const generateCourseFromNotes: any = action({
         skillLevel: args.skillLevel || "intermediate",
         preferredModuleCount: args.preferredModuleCount || 4,
         includeQuizzes: args.includeQuizzes || true,
+        existingCoursesStyle: existingCoursesAnalysis, // NEW: Pass style analysis
       });
       
       console.log("🧠 AI course structure generated, creating in database...");
@@ -215,6 +232,83 @@ export const generateNotesSummary: any = action({
 
 // ==================== AI HELPER FUNCTIONS ====================
 
+/**
+ * Analyze user's existing courses to understand their teaching style
+ */
+async function analyzeExistingCoursesStyle(ctx: any, courses: any[], userId: string): Promise<string> {
+  const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY || "dummy-key-for-deployment",
+  });
+
+  if (!process.env.OPENAI_API_KEY) {
+    console.log("⚠️ OpenAI API key not configured, skipping style analysis");
+    return "";
+  }
+
+  // Get sample content from existing courses
+  const courseAnalysis: string[] = [];
+  for (const course of courses.slice(0, 5)) { // Analyze up to 5 courses
+    try {
+      // Get course modules directly from the database
+      const modules = await ctx.runQuery(internal.notes.getModulesForStyleAnalysis, {
+        courseId: course._id,
+      });
+      
+      if (modules && modules.length > 0) {
+        courseAnalysis.push(`
+Course: ${course.title}
+Description: ${course.description || 'N/A'}
+Category: ${course.category || 'N/A'}
+Skill Level: ${course.skillLevel || 'N/A'}
+Number of Modules: ${modules.length}
+Module Structure: ${modules.map((m: any) => `- ${m.title}`).join('\n')}
+`);
+      }
+    } catch (error) {
+      console.log(`⚠️ Could not analyze course ${course._id}`);
+    }
+  }
+
+  if (courseAnalysis.length === 0) {
+    return "";
+  }
+
+  const analysisPrompt = `Analyze these existing courses created by the user and identify their teaching style, course structure patterns, and content organization preferences:
+
+${courseAnalysis.join('\n\n---\n\n')}
+
+Provide a concise summary of:
+1. Common structural patterns (module count, lesson organization)
+2. Writing style and tone
+3. Content depth and detail level
+4. Target audience approach
+5. Category preferences
+
+This analysis will be used to generate a new course that matches this creator's established style.`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-5",
+      messages: [
+        {
+          role: "system",
+          content: "You are an expert at analyzing educational content and identifying teaching styles.",
+        },
+        {
+          role: "user",
+          content: analysisPrompt,
+        },
+      ],
+      max_completion_tokens: 1000,
+    });
+
+    return completion.choices[0].message.content || "";
+  } catch (error) {
+    console.error("❌ Error analyzing existing courses:", error);
+    return "";
+  }
+}
+
 async function generateCourseStructureFromNotes({
   notes,
   ragContext,
@@ -225,6 +319,7 @@ async function generateCourseStructureFromNotes({
   skillLevel,
   preferredModuleCount,
   includeQuizzes,
+  existingCoursesStyle, // NEW: Style analysis from existing courses
 }: {
   notes: any[];
   ragContext: any[];
@@ -235,6 +330,7 @@ async function generateCourseStructureFromNotes({
   skillLevel: string;
   preferredModuleCount: number;
   includeQuizzes: boolean;
+  existingCoursesStyle?: string; // NEW
 }) {
   const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY || "dummy-key-for-deployment",
@@ -255,6 +351,24 @@ async function generateCourseStructureFromNotes({
       `=== RELATED CONTENT ${index + 1} ===\n${item.content}\n`
     ).join('\n\n') : '';
 
+  // Add style matching instruction if we have existing course analysis
+  const styleInstruction = existingCoursesStyle ? `
+
+=== IMPORTANT: MATCH CREATOR'S EXISTING STYLE ===
+This creator has an established teaching style and course structure. Here's the analysis of their existing courses:
+
+${existingCoursesStyle}
+
+CRITICAL: The course you generate MUST match this creator's style in:
+- Module and lesson structure patterns
+- Writing tone and approach
+- Content depth and detail level
+- Target audience communication style
+- Overall course organization
+
+Generate a course that feels like it was created by this same educator, maintaining consistency with their other courses.
+` : '';
+
   const systemPrompt = `You are an expert instructional designer and course creator. Your task is to analyze the provided notes and create a comprehensive, well-structured online course.
 
 Key Requirements:
@@ -266,6 +380,7 @@ Key Requirements:
 - Ensure content flows naturally and builds upon previous lessons
 - Target audience: ${targetAudience || 'General learners'}
 - Skill level: ${skillLevel}
+${styleInstruction}
 
 Return a JSON object with this exact structure:
 {
@@ -322,18 +437,26 @@ Please analyze these notes and create a comprehensive course structure. Focus on
   console.log("🤖 Calling OpenAI to generate course structure...");
 
   const completion = await openai.chat.completions.create({
-    model: "gpt-4o",
+    model: "gpt-5",
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
     ],
     response_format: { type: "json_object" },
-    temperature: 0.7,
-    max_tokens: 4000,
+    max_completion_tokens: 16000, // GPT-5 needs more tokens (reasoning + output)
+  });
+
+  console.log("📊 OpenAI Response:", {
+    hasChoices: !!completion.choices,
+    choicesLength: completion.choices?.length,
+    hasMessage: !!completion.choices?.[0]?.message,
+    hasContent: !!completion.choices?.[0]?.message?.content,
+    finishReason: completion.choices?.[0]?.finish_reason,
   });
 
   const responseText = completion.choices[0].message.content;
   if (!responseText) {
+    console.error("❌ No content in OpenAI response. Full completion:", JSON.stringify(completion, null, 2));
     throw new Error("No response from OpenAI");
   }
 
@@ -406,7 +529,7 @@ ${notesContent}
 Please provide detailed analysis and improvement suggestions for creating a high-quality course.`;
 
   const completion = await openai.chat.completions.create({
-    model: "gpt-4o",
+    model: "gpt-5",
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
@@ -470,7 +593,7 @@ Return a JSON object with:
 }`;
 
   const completion = await openai.chat.completions.create({
-    model: "gpt-4o",
+    model: "gpt-5",
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: `Please summarize these ${notes.length} notes:\n\n${notesContent}` },

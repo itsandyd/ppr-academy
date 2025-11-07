@@ -604,3 +604,28 @@ export const useNoteTemplate: any = mutation({
     });
   },
 });
+
+// ==================== HELPER QUERIES FOR COURSE GENERATION ====================
+
+// Helper internal query to get modules for style analysis
+export const getModulesForStyleAnalysis = internalQuery({
+  args: {
+    courseId: v.id("courses"),
+  },
+  returns: v.array(v.object({
+    title: v.string(),
+    description: v.optional(v.string()),
+  })),
+  handler: async (ctx, args) => {
+    const modules = await ctx.db
+      .query("courseModules")
+      .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId))
+      .order("asc")
+      .collect();
+    
+    return modules.map(m => ({
+      title: m.title,
+      description: m.description,
+    }));
+  },
+});
