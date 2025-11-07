@@ -760,7 +760,7 @@ export default function SectionedMarketplace() {
                     <Button 
                       variant="outline"
                       size="lg" 
-                      className="w-full sm:w-auto rounded-xl border-2 border-primary-foreground bg-transparent text-primary-foreground hover:bg-primary-foreground hover:text-background font-semibold px-12 py-6 text-xl shadow-lg transition-all duration-300 hover:scale-105"
+                      className="w-full sm:w-auto rounded-xl hover:scale-105 hover:-translate-y-1 transition-all duration-300 border-2 border-chart-1/40 bg-background/80 hover:bg-background/90 hover:shadow-lg px-12 py-6 text-xl font-semibold"
                     >
                       Become a Creator
                     </Button>
@@ -771,7 +771,7 @@ export default function SectionedMarketplace() {
                   <Link href="/library">
                     <Button 
                       size="lg" 
-                      className="w-full sm:w-auto rounded-xl bg-background text-chart-1 hover:bg-background/90 font-bold px-12 py-6 text-xl shadow-2xl transition-all duration-300 hover:scale-105"
+                      className="w-full sm:w-auto rounded-xl shadow-md shadow-chart-1/20 hover:shadow-lg hover:scale-105 hover:-translate-y-1 transition-all duration-300 bg-gradient-to-r from-chart-1 to-chart-1/80 text-primary-foreground border-2 border-chart-1/40 px-12 py-6 text-xl font-bold"
                     >
                       <BookOpen className="mr-2 w-5 h-5" />
                       Student Library
@@ -781,7 +781,7 @@ export default function SectionedMarketplace() {
                     <Button 
                       variant="outline"
                       size="lg" 
-                      className="w-full sm:w-auto rounded-xl border-2 border-primary-foreground bg-transparent text-primary-foreground hover:bg-primary-foreground hover:text-background font-semibold px-12 py-6 text-xl shadow-lg transition-all duration-300 hover:scale-105"
+                      className="w-full sm:w-auto rounded-xl hover:scale-105 hover:-translate-y-1 transition-all duration-300 border-2 border-chart-1/40 bg-background/80 hover:bg-background/90 hover:shadow-lg px-12 py-6 text-xl font-semibold"
                     >
                       <Store className="mr-2 w-5 h-5" />
                       Creator Studio
