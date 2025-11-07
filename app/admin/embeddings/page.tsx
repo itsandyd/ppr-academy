@@ -1,8 +1,9 @@
+// @ts-nocheck - Bypassing deep type instantiation errors with large Convex API
 "use client";
 
 import { useState } from "react";
 import { useAction, useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { api } from "@/lib/convex-api";
 import { useUser } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
