@@ -245,9 +245,9 @@ async function analyzeExistingCoursesStyle(ctx: any, courses: any[], userId: str
     return "";
   }
 
-  // Get sample content from existing courses
+  // Get sample content from existing courses - LIMIT TO 3 COURSES AND REDUCE DATA
   const courseAnalysis: string[] = [];
-  for (const course of courses.slice(0, 5)) { // Analyze up to 5 courses
+  for (const course of courses.slice(0, 3)) { // Reduced from 5 to 3 courses
     try {
       // Get course modules directly from the database
       const modules = await ctx.runQuery(internal.notes.getModulesForStyleAnalysis, {
@@ -255,13 +255,16 @@ async function analyzeExistingCoursesStyle(ctx: any, courses: any[], userId: str
       });
       
       if (modules && modules.length > 0) {
+        // Only include first 3 module titles to save tokens
+        const sampleModules = modules.slice(0, 3).map((m: any) => m.title);
+        
         courseAnalysis.push(`
 Course: ${course.title}
-Description: ${course.description || 'N/A'}
+Description: ${(course.description || 'N/A').substring(0, 150)}...
 Category: ${course.category || 'N/A'}
 Skill Level: ${course.skillLevel || 'N/A'}
-Number of Modules: ${modules.length}
-Module Structure: ${modules.map((m: any) => `- ${m.title}`).join('\n')}
+Module Count: ${modules.length}
+Sample Modules: ${sampleModules.join(", ")}
 `);
       }
     } catch (error) {
@@ -273,18 +276,12 @@ Module Structure: ${modules.map((m: any) => `- ${m.title}`).join('\n')}
     return "";
   }
 
-  const analysisPrompt = `Analyze these existing courses created by the user and identify their teaching style, course structure patterns, and content organization preferences:
+  const analysisPrompt = `Analyze these courses and identify the creator's teaching style in 2 CONCISE paragraphs:
 
-${courseAnalysis.join('\n\n---\n\n')}
+${courseAnalysis.join('\n---\n')}
 
-Provide a concise summary of:
-1. Common structural patterns (module count, lesson organization)
-2. Writing style and tone
-3. Content depth and detail level
-4. Target audience approach
-5. Category preferences
-
-This analysis will be used to generate a new course that matches this creator's established style.`;
+Focus on: 1) Structural patterns 2) Teaching tone
+Keep your response under 200 words.`;
 
   try {
     const completion = await openai.chat.completions.create({
@@ -292,20 +289,20 @@ This analysis will be used to generate a new course that matches this creator's 
       messages: [
         {
           role: "system",
-          content: "You are an expert at analyzing educational content and identifying teaching styles.",
+          content: "You are a concise educational content analyst. Be brief.",
         },
         {
           role: "user",
           content: analysisPrompt,
         },
       ],
-      max_completion_tokens: 1000,
+      max_completion_tokens: 500, // Reduced from 1000
     });
 
     return completion.choices[0].message.content || "";
   } catch (error) {
     console.error("❌ Error analyzing existing courses:", error);
-    return "";
+    return ""; // Fail gracefully
   }
 }
 
@@ -374,6 +371,7 @@ Generate a course that feels like it was created by this same educator, maintain
 Key Requirements:
 - Create exactly ${preferredModuleCount} modules (or justify a different number)
 - Each module should have 3-5 lessons
+- **CRITICAL: Each lesson MUST contain 2-4 chapters with detailed content**
 - Include learning objectives for each module and lesson
 - Structure content logically from basic to advanced concepts
 - ${includeQuizzes ? 'Include quiz questions for each module' : 'Do not include quizzes'}
@@ -381,6 +379,8 @@ Key Requirements:
 - Target audience: ${targetAudience || 'General learners'}
 - Skill level: ${skillLevel}
 ${styleInstruction}
+
+**CHAPTERS ARE MANDATORY**: Every lesson must have a "chapters" array with 2-4 chapter objects. Do not skip this!
 
 Return a JSON object with this exact structure:
 {
@@ -393,16 +393,27 @@ Return a JSON object with this exact structure:
     {
       "title": "Module title",
       "description": "Module description",
+      "orderIndex": 0,
       "learningObjectives": ["List of objectives"],
       "lessons": [
         {
           "title": "Lesson title",
           "description": "Lesson description",
-          "content": "Detailed lesson content derived from notes",
-          "duration": "Estimated duration in minutes",
-          "type": "video|text|interactive",
-          "keyPoints": ["List of key points"],
-          "resources": ["Additional resources if relevant"]
+          "orderIndex": 0,
+          "chapters": [
+            {
+              "title": "Chapter title",
+              "content": "Detailed chapter content with at least 3-5 paragraphs of teaching material",
+              "description": "Brief chapter summary",
+              "orderIndex": 0
+            },
+            {
+              "title": "Second chapter title",
+              "content": "More detailed teaching content",
+              "description": "Brief chapter summary",
+              "orderIndex": 1
+            }
+          ]
         }
       ],
       ${includeQuizzes ? '"quiz": { "questions": [{"question": "Question text", "type": "multiple_choice|true_false", "options": ["A", "B", "C", "D"], "correct": 0, "explanation": "Why this is correct"}] },' : ''}
@@ -416,7 +427,9 @@ Return a JSON object with this exact structure:
   "aiGenerated": true,
   "sourceNotes": ${notes.length},
   "generatedAt": "${new Date().toISOString()}"
-}`;
+}
+
+CRITICAL INSTRUCTION: The "chapters" array inside each lesson is MANDATORY. Every lesson must have at least 2 chapters. The chapter "content" field should contain the actual teaching material (multiple paragraphs). Do NOT omit chapters!`;
 
   const userPrompt = `Course Title: ${courseTitle}
 Course Description: ${courseDescription || 'Generate based on notes content'}
@@ -436,38 +449,124 @@ Please analyze these notes and create a comprehensive course structure. Focus on
 
   console.log("🤖 Calling OpenAI to generate course structure...");
 
-  const completion = await openai.chat.completions.create({
+  // STEP 1: Generate course outline (modules + lessons only, no chapters yet)
+  const outlineCompletion = await openai.chat.completions.create({
     model: "gpt-5",
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
     ],
     response_format: { type: "json_object" },
-    max_completion_tokens: 16000, // GPT-5 needs more tokens (reasoning + output)
+    max_completion_tokens: 16000,
   });
 
   console.log("📊 OpenAI Response:", {
-    hasChoices: !!completion.choices,
-    choicesLength: completion.choices?.length,
-    hasMessage: !!completion.choices?.[0]?.message,
-    hasContent: !!completion.choices?.[0]?.message?.content,
-    finishReason: completion.choices?.[0]?.finish_reason,
+    hasChoices: !!outlineCompletion.choices,
+    choicesLength: outlineCompletion.choices?.length,
+    hasMessage: !!outlineCompletion.choices?.[0]?.message,
+    hasContent: !!outlineCompletion.choices?.[0]?.message?.content,
+    finishReason: outlineCompletion.choices?.[0]?.finish_reason,
   });
 
-  const responseText = completion.choices[0].message.content;
+  const responseText = outlineCompletion.choices[0].message.content;
   if (!responseText) {
-    console.error("❌ No content in OpenAI response. Full completion:", JSON.stringify(completion, null, 2));
+    console.error("❌ No content in OpenAI response. Full completion:", JSON.stringify(outlineCompletion, null, 2));
     throw new Error("No response from OpenAI");
   }
 
+  let courseStructure;
   try {
-    const courseStructure = JSON.parse(responseText);
-    console.log("✅ Course structure parsed successfully");
-    return courseStructure;
+    courseStructure = JSON.parse(responseText);
+    console.log("✅ Course outline parsed successfully");
   } catch (error) {
     console.error("❌ Failed to parse OpenAI response:", error);
     throw new Error("Failed to parse AI response");
   }
+
+  // STEP 2: Generate chapters for each lesson separately (to avoid token limits)
+  console.log("📚 Generating chapters for all lessons in parallel...");
+  
+  if (courseStructure.modules && Array.isArray(courseStructure.modules)) {
+    // Collect all chapter generation promises to run in parallel
+    const chapterPromises: Promise<void>[] = [];
+    
+    for (let moduleIndex = 0; moduleIndex < courseStructure.modules.length; moduleIndex++) {
+      const module = courseStructure.modules[moduleIndex];
+      
+      if (module.lessons && Array.isArray(module.lessons)) {
+        for (let lessonIndex = 0; lessonIndex < module.lessons.length; lessonIndex++) {
+          const lesson = module.lessons[lessonIndex];
+          
+          // Create a promise for this lesson's chapter generation
+          const chapterPromise = (async () => {
+            console.log(`  🔄 Generating chapters for: Module ${moduleIndex + 1}, Lesson ${lessonIndex + 1}: "${lesson.title}"`);
+            
+            const chapterPrompt = `Generate 2-4 chapters for this lesson based on the notes content:
+
+Lesson Title: ${lesson.title}
+Lesson Description: ${lesson.description || 'N/A'}
+Module Context: ${module.title}
+
+Notes Content:
+${notesContent.substring(0, 3000)}
+
+Create 2-4 chapters that break down this lesson into digestible learning units. Each chapter should have:
+- title: Clear, descriptive chapter title
+- content: 3-5 paragraphs of detailed teaching material
+- description: 1-sentence summary
+
+Return ONLY a JSON array of chapters:
+[
+  {
+    "title": "Chapter 1 title",
+    "content": "Detailed teaching content here...",
+    "description": "Brief summary",
+    "orderIndex": 0
+  }
+]`;
+
+            try {
+              const chapterCompletion = await openai.chat.completions.create({
+                model: "gpt-5",
+                messages: [
+                  { role: "system", content: "You are an expert instructional designer. Generate detailed chapter content." },
+                  { role: "user", content: chapterPrompt },
+                ],
+                response_format: { type: "json_object" },
+                max_completion_tokens: 2000,
+              });
+
+              const chapterResponse = chapterCompletion.choices[0].message.content;
+              if (chapterResponse) {
+                const chaptersData = JSON.parse(chapterResponse);
+                // Handle both array and object with chapters property
+                lesson.chapters = Array.isArray(chaptersData) ? chaptersData : (chaptersData.chapters || []);
+                console.log(`    ✅ Generated ${lesson.chapters.length} chapters for "${lesson.title}"`);
+              }
+            } catch (error) {
+              console.error(`    ❌ Failed to generate chapters for lesson "${lesson.title}":`, error);
+              // Create a default chapter so lesson isn't empty
+              lesson.chapters = [{
+                title: lesson.title,
+                content: lesson.description || "Content to be added",
+                description: lesson.description || "",
+                orderIndex: 0,
+              }];
+            }
+          })();
+          
+          chapterPromises.push(chapterPromise);
+        }
+      }
+    }
+    
+    // Wait for all chapter generation to complete
+    console.log(`⏳ Waiting for ${chapterPromises.length} chapter generations to complete...`);
+    await Promise.all(chapterPromises);
+  }
+
+  console.log("✅ All chapters generated successfully");
+  return courseStructure;
 }
 
 async function analyzeNotesForCourseCreation({

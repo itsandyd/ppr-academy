@@ -413,7 +413,12 @@ export const createCourseWithData = mutation({
 
       // Create modules, lessons, and chapters if provided
       if (data.modules && Array.isArray(data.modules)) {
-        for (const moduleData of data.modules) {
+        console.log(`📦 Processing ${data.modules.length} modules`);
+        
+        for (let i = 0; i < data.modules.length; i++) {
+          const moduleData = data.modules[i];
+          console.log(`  📚 Module ${i + 1}: "${moduleData.title}"`);
+          
           const moduleId = await ctx.db.insert("courseModules", {
             courseId,
             title: moduleData.title,
@@ -423,7 +428,13 @@ export const createCourseWithData = mutation({
 
           // Create lessons for this module
           if (moduleData.lessons && Array.isArray(moduleData.lessons)) {
-            for (const lessonData of moduleData.lessons) {
+            console.log(`    📖 Found ${moduleData.lessons.length} lessons in module "${moduleData.title}"`);
+            
+            for (let j = 0; j < moduleData.lessons.length; j++) {
+              const lessonData = moduleData.lessons[j];
+              console.log(`      📝 Lesson ${j + 1}: "${lessonData.title}"`);
+              console.log(`      🔍 Has chapters? ${!!lessonData.chapters}, Is array? ${Array.isArray(lessonData.chapters)}, Count: ${lessonData.chapters?.length || 0}`);
+              
               const lessonId = await ctx.db.insert("courseLessons", {
                 moduleId,
                 title: lessonData.title,
@@ -433,21 +444,34 @@ export const createCourseWithData = mutation({
 
               // Create chapters for this lesson
               if (lessonData.chapters && Array.isArray(lessonData.chapters)) {
-                for (const chapterData of lessonData.chapters) {
+                console.log(`        ✨ Creating ${lessonData.chapters.length} chapters for lesson "${lessonData.title}"`);
+                
+                for (let k = 0; k < lessonData.chapters.length; k++) {
+                  const chapterData = lessonData.chapters[k];
+                  console.log(`          📄 Chapter ${k + 1}: "${chapterData.title}"`);
+                  
                   await ctx.db.insert("courseChapters", {
                     lessonId,
                     courseId,
                     title: chapterData.title,
                     description: chapterData.content || chapterData.description || "",
-                    position: chapterData.orderIndex || 0,
+                    position: chapterData.orderIndex || k,
                     isPublished: true,
                   });
                 }
+                console.log(`        ✅ Created ${lessonData.chapters.length} chapters`);
+              } else {
+                console.log(`        ⚠️ NO CHAPTERS found for lesson "${lessonData.title}"!`);
+                console.log(`        📊 Lesson data keys:`, Object.keys(lessonData));
               }
             }
+          } else {
+            console.log(`    ⚠️ NO LESSONS found for module "${moduleData.title}"!`);
           }
         }
         console.log(`✅ Created ${data.modules.length} modules with lessons and chapters`);
+      } else {
+        console.log(`⚠️ NO MODULES provided in data!`);
       }
 
       console.log("Course created successfully:", courseId);

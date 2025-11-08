@@ -123,8 +123,15 @@ export function StepProgressCompact({
   className
 }: StepProgressIndicatorProps) {
   const currentIndex = steps.findIndex(s => s.id === currentStep);
-  const progress = ((currentIndex + 1) / steps.length) * 100;
+  const safeCurrentIndex = currentIndex === -1 ? 0 : currentIndex;
+  const progress = ((safeCurrentIndex + 1) / steps.length) * 100;
   const completedCount = completedSteps.length;
+  const currentStepData = steps[safeCurrentIndex];
+
+  // If no valid step data, return null
+  if (!currentStepData) {
+    return null;
+  }
 
   return (
     <div className={cn("w-full space-y-3", className)}>
@@ -138,7 +145,7 @@ export function StepProgressCompact({
         </div>
         <div className="flex justify-between mt-2 text-xs text-muted-foreground">
           <span>
-            Step {currentIndex + 1} of {steps.length}
+            Step {safeCurrentIndex + 1} of {steps.length}
           </span>
           <span>
             {completedCount} completed
@@ -148,18 +155,18 @@ export function StepProgressCompact({
 
       {/* Current Step Info */}
       <div className="flex items-center gap-3 p-3 bg-purple-50 dark:bg-purple-900/10 rounded-lg border border-purple-200 dark:border-purple-800">
-        {steps[currentIndex].icon && (
+        {currentStepData.icon && (
           <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center flex-shrink-0">
-            {React.createElement(steps[currentIndex].icon!, {
+            {React.createElement(currentStepData.icon, {
               className: "w-4 h-4 text-white"
             })}
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium">{steps[currentIndex].title}</p>
-          {steps[currentIndex].description && (
+          <p className="text-sm font-medium">{currentStepData.title}</p>
+          {currentStepData.description && (
             <p className="text-xs text-muted-foreground">
-              {steps[currentIndex].description}
+              {currentStepData.description}
             </p>
           )}
         </div>
