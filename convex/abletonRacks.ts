@@ -389,3 +389,107 @@ export const getAbletonRackStats = query({
   },
 });
 
+// Get Ableton Rack by slug
+export const getAbletonRackBySlug = query({
+  args: { slug: v.string() },
+  returns: v.union(
+    v.object({
+      _id: v.id("digitalProducts"),
+      _creationTime: v.number(),
+      title: v.string(),
+      description: v.optional(v.string()),
+      price: v.number(),
+      imageUrl: v.optional(v.string()),
+      downloadUrl: v.optional(v.string()),
+      storeId: v.string(),
+      userId: v.string(),
+      isPublished: v.optional(v.boolean()),
+      // Ableton-specific fields
+      productType: v.optional(v.union(
+        v.literal("digital"),
+        v.literal("urlMedia"),
+        v.literal("coaching"),
+        v.literal("abletonRack"),
+        v.literal("abletonPreset")
+      )),
+      abletonVersion: v.optional(v.string()),
+      minAbletonVersion: v.optional(v.string()),
+      rackType: v.optional(v.union(
+        v.literal("audioEffect"),
+        v.literal("instrument"),
+        v.literal("midiEffect"),
+        v.literal("drumRack")
+      )),
+      effectType: v.optional(v.array(v.string())),
+      macroCount: v.optional(v.number()),
+      cpuLoad: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
+      genre: v.optional(v.array(v.string())),
+      bpm: v.optional(v.number()),
+      musicalKey: v.optional(v.string()),
+      requiresMaxForLive: v.optional(v.boolean()),
+      thirdPartyPlugins: v.optional(v.array(v.string())),
+      demoAudioUrl: v.optional(v.string()),
+      chainImageUrl: v.optional(v.string()),
+      macroScreenshotUrls: v.optional(v.array(v.string())),
+      complexity: v.optional(v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced"))),
+      tags: v.optional(v.array(v.string())),
+      fileFormat: v.optional(v.union(v.literal("adg"), v.literal("adv"), v.literal("alp"))),
+      fileSize: v.optional(v.number()),
+      installationNotes: v.optional(v.string()),
+      // Order bump & affiliate fields (from database)
+      orderBumpEnabled: v.optional(v.boolean()),
+      affiliateEnabled: v.optional(v.boolean()),
+      // Creator info
+      creatorName: v.optional(v.string()),
+      creatorAvatar: v.optional(v.string()),
+    }),
+    v.null()
+  ),
+  handler: async (ctx, args) => {
+    // Find rack by matching slug (title converted to slug format)
+    const racks = await ctx.db
+      .query("digitalProducts")
+      .filter((q) => 
+        q.or(
+          q.eq(q.field("productType"), "abletonRack"),
+          q.eq(q.field("productType"), "abletonPreset")
+        )
+      )
+      .collect();
+    
+    // Match slug (convert title to slug and compare)
+    const rack = racks.find(r => {
+      const titleSlug = r.title.toLowerCase().replace(/\s+/g, "-");
+      return titleSlug === args.slug;
+    });
+    
+    if (!rack) {
+      return null;
+    }
+    
+    // Get creator info
+    let creatorName = "Creator";
+    let creatorAvatar: string | undefined = undefined;
+    
+    const stores = await ctx.db.query("stores").collect();
+    const store = stores.find(s => s._id === rack.storeId);
+    
+    if (store) {
+      const user = await ctx.db
+        .query("users")
+        .filter((q) => q.eq(q.field("clerkId"), store.userId))
+        .first();
+      if (user) {
+        creatorName = user.name || store.name || "Creator";
+        creatorAvatar = user.imageUrl;
+      }
+    }
+    
+    return {
+      ...rack,
+      creatorName,
+      creatorAvatar,
+    };
+  },
+});
+

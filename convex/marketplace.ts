@@ -402,7 +402,9 @@ export const searchMarketplace = query({
         .collect();
 
       const digitalProducts = products.filter(p => 
-        (p as any).productType !== "coaching"
+        (p as any).productType !== "coaching" &&
+        (p as any).productType !== "abletonRack" &&
+        (p as any).productType !== "abletonPreset"
       );
 
       const productsWithDetails = await Promise.all(

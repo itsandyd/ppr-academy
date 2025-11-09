@@ -38,7 +38,7 @@ interface ContentItem {
   price: number;
   thumbnail?: string;
   imageUrl?: string;
-  contentType: "course" | "product" | "sample-pack" | "plugin";
+  contentType: "course" | "product" | "sample-pack" | "plugin" | "ableton-rack";
   creatorName?: string;
   creatorAvatar?: string;
   enrollmentCount?: number;
@@ -73,6 +73,10 @@ export const MarketplaceGrid: FC<MarketplaceGridProps> = ({
       // Navigate to plugin detail page
       const slug = item.slug || item.title.toLowerCase().replace(/\s+/g, "-");
       router.push(`/marketplace/plugins/${slug}`);
+    } else if (item.contentType === "ableton-rack") {
+      // Navigate to Ableton rack detail page
+      const slug = item.slug || item.title.toLowerCase().replace(/\s+/g, "-");
+      router.push(`/marketplace/ableton-racks/${slug}`);
     } else if (item.contentType === "product" || item.contentType === "sample-pack") {
       // Reset form state
       setEmail("");
@@ -169,7 +173,11 @@ export const MarketplaceGrid: FC<MarketplaceGridProps> = ({
               <DialogHeader>
                 <DialogTitle className="text-2xl">{selectedProduct.title}</DialogTitle>
                 <DialogDescription>
-                  {selectedProduct.contentType === "sample-pack" ? "Sample Pack" : "Digital Product"}
+                  {selectedProduct.contentType === "sample-pack" 
+                    ? "Sample Pack" 
+                    : selectedProduct.contentType === "ableton-rack" 
+                    ? "Ableton Rack" 
+                    : "Digital Product"}
                 </DialogDescription>
               </DialogHeader>
               
@@ -396,6 +404,8 @@ const ContentCard: FC<{ item: ContentItem; index: number; onClick: () => void }>
     ? Package
     : item.contentType === "plugin"
     ? Plug
+    : item.contentType === "ableton-rack"
+    ? Plug
     : Package;
     
   const badgeColor = item.contentType === "course" 
@@ -404,6 +414,8 @@ const ContentCard: FC<{ item: ContentItem; index: number; onClick: () => void }>
     ? "bg-chart-5/10 text-chart-5 dark:bg-chart-5/20 dark:text-chart-5"
     : item.contentType === "plugin"
     ? "bg-purple-500/10 text-purple-500 dark:bg-purple-500/20 dark:text-purple-400"
+    : item.contentType === "ableton-rack"
+    ? "bg-chart-2/10 text-chart-2 dark:bg-chart-2/20 dark:text-chart-2"
     : "bg-chart-3/10 text-chart-3 dark:bg-chart-3/20 dark:text-chart-3";
 
   const badgeLabel = item.contentType === "course"
@@ -412,6 +424,8 @@ const ContentCard: FC<{ item: ContentItem; index: number; onClick: () => void }>
     ? "Sample Pack"
     : item.contentType === "plugin"
     ? "Plugin"
+    : item.contentType === "ableton-rack"
+    ? "Ableton Rack"
     : "Product";
 
   return (
