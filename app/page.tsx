@@ -375,7 +375,7 @@ export default function SectionedMarketplace() {
                     </>
                   ) : (
                     <>
-                        <Link href="/sign-in">
+                        <Link href="/marketplace">
                           <Button className="w-full py-6 text-base shadow-md shadow-chart-1/20 hover:shadow-lg hover:scale-105 hover:-translate-y-1 transition-all duration-300 bg-gradient-to-r from-chart-1 to-chart-1/80 text-primary-foreground border-2 border-chart-1/40">
                           Explore Courses and Tools
                           </Button>

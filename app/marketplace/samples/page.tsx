@@ -43,12 +43,24 @@ import {
   Waves,
   Volume2,
   X,
+  Menu,
+  BookOpen,
+  Store,
+  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
+import { SignUpButton, useAuth } from "@clerk/nextjs";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 const GENRES = [
   "Hip Hop", "Trap", "R&B", "Pop", "Electronic", "House", "Techno",
@@ -60,6 +72,9 @@ const CATEGORIES = [
 ];
 
 export default function SamplesMarketplacePage() {
+  const { isSignedIn } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
   // View state
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [activeTab, setActiveTab] = useState<"samples" | "packs">("samples");
@@ -164,11 +179,142 @@ export default function SamplesMarketplacePage() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Navigation Bar - Same as homepage */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo */}
+            <Link href="/" className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-gradient-to-br from-chart-1 to-chart-2 rounded-lg flex items-center justify-center">
+                <Music className="w-5 h-5 text-primary-foreground" />
+              </div>
+              <span className="font-bold text-lg">PPR Academy</span>
+            </Link>
+
+            {/* Navigation Links */}
+            <div className="hidden md:flex items-center gap-6">
+              <Link href="/marketplace" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                Marketplace
+              </Link>
+              <Link href="/marketplace/samples" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                Samples
+              </Link>
+              <Link href="/marketplace/creators" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                Creators
+              </Link>
+            </div>
+
+            {/* Desktop Auth Buttons */}
+            <div className="hidden md:flex items-center gap-3">
+              {isSignedIn ? (
+                <>
+                  <Link href="/library">
+                    <Button variant="ghost" size="sm">
+                      <BookOpen className="w-4 h-4 mr-2" />
+                      Library
+                    </Button>
+                  </Link>
+                  <Link href="/home">
+                    <Button size="sm" className="bg-gradient-to-r from-chart-1 to-chart-2">
+                      Dashboard
+                    </Button>
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link href="/sign-in">
+                    <Button variant="ghost" size="sm">
+                      Sign In
+                    </Button>
+                  </Link>
+                  <SignUpButton mode="modal">
+                    <Button size="sm" className="bg-gradient-to-r from-chart-1 to-chart-2">
+                      Get Started
+                    </Button>
+                  </SignUpButton>
+                </>
+              )}
+            </div>
+
+            {/* Mobile Menu */}
+            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+              <SheetTrigger asChild className="md:hidden">
+                <Button variant="ghost" size="icon">
+                  <Menu className="w-5 h-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="bg-white dark:bg-black">
+                <SheetHeader>
+                  <SheetTitle className="flex items-center gap-2">
+                    <Music className="w-5 h-5 text-chart-1" />
+                    Menu
+                  </SheetTitle>
+                </SheetHeader>
+                <div className="flex flex-col gap-4 mt-8">
+                  {/* Navigation Links */}
+                  <Link href="/marketplace" onClick={() => setMobileMenuOpen(false)}>
+                    <Button variant="ghost" className="w-full justify-start">
+                      <Search className="w-4 h-4 mr-3" />
+                      Marketplace
+                    </Button>
+                  </Link>
+                  <Link href="/marketplace/samples" onClick={() => setMobileMenuOpen(false)}>
+                    <Button variant="ghost" className="w-full justify-start">
+                      <Music className="w-4 h-4 mr-3" />
+                      Samples
+                    </Button>
+                  </Link>
+                  <Link href="/marketplace/creators" onClick={() => setMobileMenuOpen(false)}>
+                    <Button variant="ghost" className="w-full justify-start">
+                      <Users className="w-4 h-4 mr-3" />
+                      Creators
+                    </Button>
+                  </Link>
+                  
+                  <div className="border-t border-border my-4"></div>
+                  
+                  {/* Auth Actions */}
+                  {isSignedIn ? (
+                    <>
+                      <Link href="/library" onClick={() => setMobileMenuOpen(false)}>
+                        <Button variant="ghost" className="w-full justify-start">
+                          <BookOpen className="w-4 h-4 mr-3" />
+                          My Library
+                        </Button>
+                      </Link>
+                      <Link href="/home" onClick={() => setMobileMenuOpen(false)}>
+                        <Button className="w-full bg-gradient-to-r from-chart-1 to-chart-2">
+                          <Store className="w-4 h-4 mr-2" />
+                          Dashboard
+                        </Button>
+                      </Link>
+                    </>
+                  ) : (
+                    <>
+                      <Link href="/sign-in" onClick={() => setMobileMenuOpen(false)}>
+                        <Button variant="outline" className="w-full">
+                          Sign In
+                        </Button>
+                      </Link>
+                      <SignUpButton mode="modal">
+                        <Button className="w-full bg-gradient-to-r from-chart-1 to-chart-2">
+                          Get Started Free
+                        </Button>
+                      </SignUpButton>
+                    </>
+                  )}
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
+        </div>
+      </nav>
+
       {/* Hidden audio element */}
       <audio ref={audioRef} />
 
       {/* Header */}
-      <section className="border-b border-border bg-card/50 backdrop-blur-sm">
+      <section className="border-b border-border bg-card/50 backdrop-blur-sm pt-16">{/* pt-16 for navbar spacing */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center space-y-4 mb-6">
             <motion.h1 
