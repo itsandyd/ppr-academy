@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertTriangle, Music, BookOpen, Users, Zap, Search, Filter, Package, Plus, Eye, DollarSign, TrendingUp, Mail } from "lucide-react";
+import { AlertTriangle, Music, BookOpen, Users, Zap, Search, Filter, Package, Plus, Eye, DollarSign, TrendingUp, Mail, Waves, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MusicOptionCard } from "../components/MusicOptionCard";
 import { musicOptions, groupedOptions, popularOptions } from "../components/music-options";
@@ -128,6 +128,7 @@ export default function ProductsPage() {
       // Music Products
       'sample-pack': `/store/${storeId}/products/digital-download/create?type=sample-pack`,
       'preset-pack': `/store/${storeId}/products/digital-download/create?type=preset-pack`,
+      'ableton-rack': `/store/${storeId}/products/ableton-rack/create`,
       'beat-lease': `/store/${storeId}/products/digital-download/create?type=beat-lease`,
       'project-files': `/store/${storeId}/products/digital-download/create?type=project-files`,
       
@@ -392,11 +393,107 @@ export default function ProductsPage() {
                     </p>
                   </div>
 
+                  {/* Featured: Ableton Audio Effect Rack */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-8"
+                  >
+                    <Card className="relative overflow-hidden bg-gradient-to-br from-chart-1 via-chart-2 to-chart-3 border-none shadow-2xl">
+                      {/* Animated background elements */}
+                      <div className="absolute inset-0 opacity-20">
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full blur-3xl animate-pulse"></div>
+                        <div className="absolute bottom-0 left-0 w-64 h-64 bg-white rounded-full blur-3xl animate-pulse delay-700"></div>
+                      </div>
+
+                      <CardContent className="relative z-10 p-8">
+                        <div className="flex flex-col lg:flex-row items-center gap-8">
+                          {/* Icon Section */}
+                          <div className="flex-shrink-0">
+                            <div className="w-24 h-24 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
+                              <Waves className="w-12 h-12 text-white" />
+                            </div>
+                          </div>
+
+                          {/* Content Section */}
+                          <div className="flex-1 text-center lg:text-left">
+                            <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full mb-3">
+                              <Sparkles className="w-3.5 h-3.5 text-white" />
+                              <span className="text-xs font-semibold text-white uppercase tracking-wide">Featured</span>
+                            </div>
+                            <h3 className="text-3xl font-bold text-white mb-2">
+                              Ableton Audio Effect Racks
+                            </h3>
+                            <p className="text-lg text-white/90 mb-4 leading-relaxed">
+                              Share your custom Ableton Live racks with producers worldwide. Upload device chains, macro controls, and earn from your sound design expertise.
+                            </p>
+                            <div className="flex flex-wrap gap-2 mb-6 justify-center lg:justify-start">
+                              <Badge variant="secondary" className="bg-white/20 text-white border-white/30 hover:bg-white/30">
+                                .adg Files
+                              </Badge>
+                              <Badge variant="secondary" className="bg-white/20 text-white border-white/30 hover:bg-white/30">
+                                Audio Previews
+                              </Badge>
+                              <Badge variant="secondary" className="bg-white/20 text-white border-white/30 hover:bg-white/30">
+                                Macro Controls
+                              </Badge>
+                              <Badge variant="secondary" className="bg-white/20 text-white border-white/30 hover:bg-white/30">
+                                Version Support
+                              </Badge>
+                            </div>
+                            <Button
+                              onClick={() => handleOptionClick('ableton-rack')}
+                              size="lg"
+                              className="bg-white text-chart-1 hover:bg-white/90 font-semibold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+                            >
+                              <Plus className="w-5 h-5 mr-2" />
+                              Create Ableton Rack
+                            </Button>
+                          </div>
+
+                          {/* Stats/Benefits Section */}
+                          <div className="flex-shrink-0 hidden xl:block">
+                            <div className="space-y-4 text-white">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
+                                  <Package className="w-5 h-5" />
+                                </div>
+                                <div>
+                                  <div className="text-2xl font-bold">Easy</div>
+                                  <div className="text-sm text-white/80">Upload</div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
+                                  <Eye className="w-5 h-5" />
+                                </div>
+                                <div>
+                                  <div className="text-2xl font-bold">Demo</div>
+                                  <div className="text-sm text-white/80">Preview</div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
+                                  <DollarSign className="w-5 h-5" />
+                                </div>
+                                <div>
+                                  <div className="text-2xl font-bold">Earn</div>
+                                  <div className="text-sm text-white/80">Revenue</div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+
                   {/* Enhanced Product Type Selector with Tooltips */}
                   <ProductTypeSelector 
                     onSelect={(typeId) => {
                       // Map ProductTypeSelector IDs to existing routes
                       const typeRouteMap: Record<string, string> = {
+                        'abletonRack': 'ableton-rack',
                         'samplePack': 'sample-pack',
                         'presetPack': 'preset-pack',
                         'musicCourse': 'ecourse',

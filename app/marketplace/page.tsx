@@ -54,7 +54,7 @@ export default function MarketplacePage() {
   
   // Filter state
   const [searchTerm, setSearchTerm] = useState("");
-  const [contentType, setContentType] = useState<"all" | "courses" | "products" | "coaching" | "sample-packs" | "plugins">("all");
+  const [contentType, setContentType] = useState<"all" | "courses" | "products" | "coaching" | "sample-packs" | "plugins" | "ableton-racks">("all");
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
   const [selectedSpecificCategories, setSelectedSpecificCategories] = useState<string[]>([]); // Multi-select for effect/instrument categories
   const [categorySearchQuery, setCategorySearchQuery] = useState(""); // Search query for filtering categories
@@ -177,6 +177,9 @@ export default function MarketplacePage() {
               <Link href="/marketplace/samples" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
                 Samples
               </Link>
+              <Link href="/marketplace/ableton-racks" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+                Ableton Racks
+              </Link>
               <Link href="/marketplace/creators" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
                 Creators
               </Link>
@@ -240,6 +243,12 @@ export default function MarketplacePage() {
                     <Button variant="ghost" className="w-full justify-start">
                       <Music className="w-4 h-4 mr-3" />
                       Samples
+                    </Button>
+                  </Link>
+                  <Link href="/marketplace/ableton-racks" onClick={() => setMobileMenuOpen(false)}>
+                    <Button variant="ghost" className="w-full justify-start">
+                      <Plug className="w-4 h-4 mr-3" />
+                      Ableton Racks
                     </Button>
                   </Link>
                   <Link href="/marketplace/creators" onClick={() => setMobileMenuOpen(false)}>
@@ -419,6 +428,14 @@ export default function MarketplacePage() {
                         <Link href="/marketplace/samples">
                           <Music className="w-3 h-3 mr-1" />
                           Samples
+                        </Link>
+                      </TabsTrigger>
+                    </TabsList>
+                    <TabsList className="grid w-full mt-2 bg-white dark:bg-black">
+                      <TabsTrigger value="ableton-racks" className="text-xs" asChild>
+                        <Link href="/marketplace/ableton-racks">
+                          <Plug className="w-3 h-3 mr-1" />
+                          Ableton Racks
                         </Link>
                       </TabsTrigger>
                     </TabsList>

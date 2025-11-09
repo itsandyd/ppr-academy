@@ -23,7 +23,8 @@ import {
   FileAudio,
   Mic2,
   Radio,
-  BookOpen
+  BookOpen,
+  Waves
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -264,6 +265,25 @@ export const productTypes: Record<string, ProductTypeInfo> = {
       "Build community engagement",
       "Offer annual discount (2-3 months free)",
       "Have content calendar planned"
+    ]
+  },
+  abletonRack: {
+    id: "ableton-rack",
+    name: "Ableton Rack",
+    icon: Waves,
+    description: "Custom Ableton Live audio effect racks with device chains, macro controls, and professional sound design ready for instant use.",
+    examples: ["Vocal Processing Chain", "Drum Bus Compressor", "Creative Reverb Rack", "Analog Warmth Suite"],
+    typicalPrice: "$15 - $75",
+    timeToCreate: "3-8 hours",
+    difficulty: "Medium",
+    bestFor: "Ableton users with signature processing chains",
+    tips: [
+      "Include 30-second audio demo showcasing the effect",
+      "Map 8 macro controls for easy tweaking",
+      "Provide chain screenshot and installation notes",
+      "Specify Ableton Live version compatibility",
+      "List any required third-party plugins clearly",
+      "Test CPU load and optimize if needed"
     ]
   }
 };

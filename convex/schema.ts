@@ -415,7 +415,13 @@ export default defineSchema({
     buttonLabel: v.optional(v.string()),
     style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))),
     // URL/Media specific fields
-    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"), v.literal("coaching"))),
+    productType: v.optional(v.union(
+      v.literal("digital"), 
+      v.literal("urlMedia"), 
+      v.literal("coaching"),
+      v.literal("abletonRack"),
+      v.literal("abletonPreset")
+    )),
     url: v.optional(v.string()),
     displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
     mediaType: v.optional(v.union(v.literal("youtube"), v.literal("spotify"), v.literal("website"), v.literal("social"))),
@@ -426,6 +432,31 @@ export default defineSchema({
     availability: v.optional(v.any()), // Availability configuration
     thumbnailStyle: v.optional(v.string()), // Thumbnail display style
     discordRoleId: v.optional(v.string()), // Discord role for coaching access
+    // Ableton Rack specific fields
+    abletonVersion: v.optional(v.string()), // "Live 9", "Live 10", "Live 11", "Live 12"
+    minAbletonVersion: v.optional(v.string()), // Minimum required version
+    rackType: v.optional(v.union(
+      v.literal("audioEffect"),
+      v.literal("instrument"),
+      v.literal("midiEffect"),
+      v.literal("drumRack")
+    )),
+    effectType: v.optional(v.array(v.string())), // ["Delay", "Reverb", "Distortion", etc.]
+    macroCount: v.optional(v.number()), // Number of macro controls (typically 8)
+    cpuLoad: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
+    genre: v.optional(v.array(v.string())), // ["Hip Hop", "House", "Techno", etc.]
+    bpm: v.optional(v.number()), // Optimal BPM range
+    musicalKey: v.optional(v.string()), // Musical key if applicable
+    requiresMaxForLive: v.optional(v.boolean()),
+    thirdPartyPlugins: v.optional(v.array(v.string())), // ["FabFilter Pro-Q", "Soundtoys", etc.]
+    demoAudioUrl: v.optional(v.string()), // 30-second audio preview
+    chainImageUrl: v.optional(v.string()), // Screenshot of device chain
+    macroScreenshotUrls: v.optional(v.array(v.string())), // Screenshots of macro controls
+    complexity: v.optional(v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced"))),
+    tags: v.optional(v.array(v.string())), // Additional searchable tags
+    fileFormat: v.optional(v.union(v.literal("adg"), v.literal("adv"), v.literal("alp"))), // .adg = rack, .adv = preset, .alp = pack
+    fileSize: v.optional(v.number()), // File size in MB
+    installationNotes: v.optional(v.string()), // Special installation instructions
     // Order bump & affiliate fields
     orderBumpEnabled: v.optional(v.boolean()),
     orderBumpProductName: v.optional(v.string()),

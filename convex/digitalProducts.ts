@@ -19,7 +19,7 @@ export const getProductsByStore = query({
     buttonLabel: v.optional(v.string()),
     style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))),
     // URL/Media specific fields
-    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"), v.literal("coaching"))),
+    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"), v.literal("coaching"), v.literal("abletonRack"), v.literal("abletonPreset"))),
     url: v.optional(v.string()),
     displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
     mediaType: v.optional(v.union(v.literal("youtube"), v.literal("spotify"), v.literal("website"), v.literal("social"))),
@@ -68,7 +68,7 @@ export const getPublishedProductsByStore = query({
     buttonLabel: v.optional(v.string()),
     style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))),
     // URL/Media specific fields
-    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"), v.literal("coaching"))),
+    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"), v.literal("coaching"), v.literal("abletonRack"), v.literal("abletonPreset"))),
     url: v.optional(v.string()),
     displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
     mediaType: v.optional(v.union(v.literal("youtube"), v.literal("spotify"), v.literal("website"), v.literal("social"))),
@@ -120,7 +120,7 @@ export const getProductsByUser = query({
     buttonLabel: v.optional(v.string()),
     style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))),
     // URL/Media specific fields
-    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"), v.literal("coaching"))),
+    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"), v.literal("coaching"), v.literal("abletonRack"), v.literal("abletonPreset"))),
     url: v.optional(v.string()),
     displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
     mediaType: v.optional(v.union(v.literal("youtube"), v.literal("spotify"), v.literal("website"), v.literal("social"))),
@@ -170,7 +170,7 @@ export const getProductById = query({
       buttonLabel: v.optional(v.string()),
       style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))),
     // URL/Media specific fields
-    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"), v.literal("coaching"))),
+    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"), v.literal("coaching"), v.literal("abletonRack"), v.literal("abletonPreset"))),
     url: v.optional(v.string()),
     displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
     mediaType: v.optional(v.union(v.literal("youtube"), v.literal("spotify"), v.literal("website"), v.literal("social"))),
@@ -274,7 +274,7 @@ export const updateProduct = mutation({
       buttonLabel: v.optional(v.string()),
       style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))),
     // URL/Media specific fields
-    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"), v.literal("coaching"))),
+    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"), v.literal("coaching"), v.literal("abletonRack"), v.literal("abletonPreset"))),
     url: v.optional(v.string()),
     displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
     mediaType: v.optional(v.union(v.literal("youtube"), v.literal("spotify"), v.literal("website"), v.literal("social"))),
@@ -386,7 +386,7 @@ export const getAllPublishedProducts = query({
     downloadUrl: v.optional(v.string()),
     url: v.optional(v.string()), // Added URL field for redirects
     buttonLabel: v.optional(v.string()), // Added button label
-    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"), v.literal("coaching"))), // Added product type
+    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"), v.literal("coaching"), v.literal("abletonRack"), v.literal("abletonPreset"))), // Added product type
     style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))), // Added style
     category: v.optional(v.string()),
     storeId: v.string(), // Store as string to match schema

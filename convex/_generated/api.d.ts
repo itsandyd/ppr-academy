@@ -13,6 +13,7 @@ import type {
   FilterApi,
   FunctionReference,
 } from "convex/server";
+import type * as abletonRacks from "../abletonRacks.js";
 import type * as accessControl from "../accessControl.js";
 import type * as achievements from "../achievements.js";
 import type * as adminAnalytics from "../adminAnalytics.js";
@@ -132,6 +133,7 @@ import type * as seedCreditPackages from "../seedCreditPackages.js";
 import type * as sendTimeOptimization from "../sendTimeOptimization.js";
 import type * as socialMedia from "../socialMedia.js";
 import type * as socialMediaActions from "../socialMediaActions.js";
+import type * as stats from "../stats.js";
 import type * as stores from "../stores.js";
 import type * as submissions from "../submissions.js";
 import type * as subscriptions from "../subscriptions.js";
@@ -151,6 +153,7 @@ import type * as webhooks_stripe from "../webhooks/stripe.js";
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  abletonRacks: typeof abletonRacks;
   accessControl: typeof accessControl;
   achievements: typeof achievements;
   adminAnalytics: typeof adminAnalytics;
@@ -270,6 +273,7 @@ declare const fullApi: ApiFromModules<{
   sendTimeOptimization: typeof sendTimeOptimization;
   socialMedia: typeof socialMedia;
   socialMediaActions: typeof socialMediaActions;
+  stats: typeof stats;
   stores: typeof stores;
   submissions: typeof submissions;
   subscriptions: typeof subscriptions;

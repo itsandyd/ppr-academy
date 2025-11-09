@@ -16,7 +16,8 @@ import {
   FileAudio,
   Disc3,
   Radio,
-  Mic2
+  Mic2,
+  Waves
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -33,7 +34,8 @@ const iconMap = {
   FileAudio,
   Disc3,
   Radio,
-  Mic2
+  Mic2,
+  Waves
 };
 
 interface ProductTypeSelectorProps {
@@ -44,6 +46,7 @@ interface ProductTypeSelectorProps {
 
 export function ProductTypeSelector({ onSelect, selectedType, className }: ProductTypeSelectorProps) {
   const productTypesList = [
+    { id: 'abletonRack', mapTo: 'abletonRack', label: 'Ableton Rack', description: 'Audio effect racks', gradient: 'from-chart-1 to-chart-2' },
     { id: 'samplePack', mapTo: 'samplePack', label: 'Sample Pack', description: 'Drums, loops, one-shots', gradient: 'from-purple-500 to-pink-500' },
     { id: 'presetPack', mapTo: 'presetPack', label: 'Preset Pack', description: 'Synth/effect settings', gradient: 'from-blue-500 to-cyan-500' },
     { id: 'midiPack', mapTo: 'midiPack', label: 'MIDI Pack', description: 'Melodies & chords', gradient: 'from-violet-500 to-purple-500' },
@@ -140,6 +143,7 @@ export function ProductTypeSelector({ onSelect, selectedType, className }: Produ
 // Compact version for dialogs
 export function ProductTypeSelectorCompact({ onSelect, selectedType, className }: ProductTypeSelectorProps) {
   const productTypesList = [
+    { id: 'abletonRack', mapTo: 'abletonRack', label: 'Ableton Rack', icon: Waves },
     { id: 'samplePack', mapTo: 'samplePack', label: 'Sample Pack', icon: Music },
     { id: 'presetPack', mapTo: 'presetPack', label: 'Preset Pack', icon: Package },
     { id: 'midiPack', mapTo: 'midiPack', label: 'MIDI Pack', icon: Disc3 },

@@ -300,7 +300,8 @@ export const searchMarketplace = query({
       v.literal("products"),
       v.literal("coaching"),
       v.literal("sample-packs"),
-      v.literal("plugins")
+      v.literal("plugins"),
+      v.literal("ableton-racks")
     )),
     category: v.optional(v.string()),
     specificCategories: v.optional(v.array(v.string())), // Array of specific category names (Reverb, Delay, Synth, etc.)
@@ -568,6 +569,65 @@ export const searchMarketplace = query({
       );
 
       allResults.push(...pluginsWithDetails);
+    }
+
+    // Fetch Ableton racks
+    if (contentType === "all" || contentType === "ableton-racks") {
+      const racks = await ctx.db
+        .query("digitalProducts")
+        .filter((q) => 
+          q.and(
+            q.eq(q.field("isPublished"), true),
+            q.or(
+              q.eq(q.field("productType"), "abletonRack"),
+              q.eq(q.field("productType"), "abletonPreset")
+            )
+          )
+        )
+        .collect();
+
+      const racksWithDetails = await Promise.all(
+        racks.map(async (rack) => {
+          let creatorName = "Creator";
+          let creatorAvatar: string | undefined = undefined;
+
+          const stores = await ctx.db.query("stores").collect();
+          const store = stores.find(s => s._id === rack.storeId);
+          
+          if (store) {
+            const user = await ctx.db
+              .query("users")
+              .filter((q) => q.eq(q.field("clerkId"), store.userId))
+              .first();
+            if (user) {
+              creatorName = user.name || store.name || "Creator";
+              creatorAvatar = user.imageUrl;
+            }
+          }
+
+          return {
+            _id: rack._id,
+            _creationTime: rack._creationTime,
+            title: rack.title,
+            description: rack.description,
+            price: rack.price || 0,
+            thumbnail: rack.imageUrl,
+            category: rack.rackType, // audioEffect, instrument, etc.
+            contentType: "ableton-rack" as const,
+            creatorName,
+            creatorAvatar,
+            // Ableton-specific fields
+            abletonVersion: rack.abletonVersion,
+            rackType: rack.rackType,
+            cpuLoad: rack.cpuLoad,
+            complexity: rack.complexity,
+            genre: rack.genre,
+            demoAudioUrl: rack.demoAudioUrl,
+          };
+        })
+      );
+
+      allResults.push(...racksWithDetails);
     }
 
     // Apply filters
