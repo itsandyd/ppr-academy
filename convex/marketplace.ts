@@ -336,6 +336,17 @@ export const searchMarketplace = query({
       offset = 0,
     } = args;
 
+    // Helper function to convert storage ID to URL
+    const getImageUrl = async (imageUrl: string | undefined): Promise<string | undefined> => {
+      if (!imageUrl) return undefined;
+      if (imageUrl.startsWith('http')) return imageUrl; // Already a URL
+      try {
+        return await ctx.storage.getUrl(imageUrl as any) || imageUrl;
+      } catch {
+        return imageUrl;
+      }
+    };
+
     let allResults: Array<any> = [];
 
     // Fetch courses
@@ -378,7 +389,7 @@ export const searchMarketplace = query({
             slug: course.slug || course.title.toLowerCase().replace(/\s+/g, "-"),
             description: course.description,
             price: course.price || 0,
-            thumbnail: course.imageUrl,
+            thumbnail: await getImageUrl(course.imageUrl),
             category: course.category,
             subcategory: course.subcategory,
             tags: course.tags,
@@ -386,7 +397,7 @@ export const searchMarketplace = query({
             contentType: "course" as const,
             enrollmentCount: enrollments.length,
             creatorName,
-            creatorAvatar,
+            creatorAvatar: await getImageUrl(creatorAvatar),
           };
         })
       );
@@ -437,15 +448,15 @@ export const searchMarketplace = query({
             title: product.title,
             description: product.description,
             price: product.price,
-            imageUrl: product.imageUrl,
-            downloadUrl: product.downloadUrl,
+            imageUrl: await getImageUrl(product.imageUrl),
+            downloadUrl: await getImageUrl(product.downloadUrl),
             url: (product as any).url,
             buttonLabel: (product as any).buttonLabel,
             category: product.category,
             contentType: "product" as const,
             downloadCount: purchases.length,
             creatorName,
-            creatorAvatar,
+            creatorAvatar: await getImageUrl(creatorAvatar),
           };
         })
       );
@@ -494,13 +505,13 @@ export const searchMarketplace = query({
             title: product.title,
             description: product.description,
             price: product.price,
-            imageUrl: product.imageUrl,
+            imageUrl: await getImageUrl(product.imageUrl),
             duration: (product as any).duration,
             sessionType: (product as any).sessionType,
             contentType: "coaching" as const,
             bookingCount: purchases.length,
             creatorName,
-            creatorAvatar,
+            creatorAvatar: await getImageUrl(creatorAvatar),
           };
         })
       );
@@ -613,18 +624,18 @@ export const searchMarketplace = query({
             title: rack.title,
             description: rack.description,
             price: rack.price || 0,
-            thumbnail: rack.imageUrl,
+            thumbnail: await getImageUrl(rack.imageUrl),
             category: rack.rackType, // audioEffect, instrument, etc.
             contentType: "ableton-rack" as const,
             creatorName,
-            creatorAvatar,
+            creatorAvatar: await getImageUrl(creatorAvatar),
             // Ableton-specific fields
             abletonVersion: rack.abletonVersion,
             rackType: rack.rackType,
             cpuLoad: rack.cpuLoad,
             complexity: rack.complexity,
             genre: rack.genre,
-            demoAudioUrl: rack.demoAudioUrl,
+            demoAudioUrl: await getImageUrl(rack.demoAudioUrl),
           };
         })
       );

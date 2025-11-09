@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
@@ -74,8 +74,15 @@ export default function CreateAbletonRackPage() {
   const { user } = useUser();
   
   const storeId = params.storeId as string;
+  
+  // Check for edit mode
+  const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+  const editId = searchParams.get('id');
+  const isEditMode = !!editId;
+  
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(isEditMode);
   
   // Get Convex user
   const convexUser = useQuery(
@@ -83,8 +90,15 @@ export default function CreateAbletonRackPage() {
     user?.id ? { clerkId: user.id } : "skip"
   );
   
+  // Fetch existing rack data if in edit mode
+  const existingRack = useQuery(
+    api.digitalProducts.getProductById,
+    isEditMode && editId ? { productId: editId as Id<"digitalProducts"> } : "skip"
+  );
+  
   // Mutations
   const createRack = useMutation(api.abletonRacks.createAbletonRack);
+  const updateProduct = useMutation(api.digitalProducts.updateProduct);
   const generateUploadUrl = useMutation(api.files.generateUploadUrl);
   
   const [formData, setFormData] = useState<AbletonRackFormData>({
@@ -119,6 +133,40 @@ export default function CreateAbletonRackPage() {
     setFormData(prev => ({ ...prev, ...updates }));
   };
 
+  // Populate form with existing data in edit mode
+  useEffect(() => {
+    if (existingRack && isEditMode) {
+      setFormData({
+        title: existingRack.title || "",
+        description: existingRack.description || "",
+        price: existingRack.price?.toString() || "",
+        abletonVersion: existingRack.abletonVersion || "Live 12",
+        minAbletonVersion: existingRack.minAbletonVersion || "Live 11",
+        rackType: (existingRack.rackType as any) || "audioEffect",
+        effectType: existingRack.effectType || [],
+        macroCount: existingRack.macroCount?.toString() || "8",
+        cpuLoad: (existingRack.cpuLoad as any) || "medium",
+        complexity: (existingRack.complexity as any) || "intermediate",
+        fileFormat: (existingRack.fileFormat as any) || "adg",
+        genre: existingRack.genre || [],
+        bpm: existingRack.bpm?.toString() || "",
+        musicalKey: existingRack.musicalKey || "",
+        requiresMaxForLive: existingRack.requiresMaxForLive || false,
+        thirdPartyPlugins: existingRack.thirdPartyPlugins || [],
+        deliveryMethod: existingRack.downloadUrl ? "url" : "upload",
+        rackFileUrl: existingRack.downloadUrl || "",
+        rackFile: null,
+        coverImage: null,
+        demoAudio: null,
+        chainImage: null,
+        macroScreenshots: [],
+        tags: existingRack.tags || [],
+        installationNotes: existingRack.installationNotes || "",
+      });
+      setIsLoading(false);
+    }
+  }, [existingRack, isEditMode]);
+
   const handleFileChange = async (
     field: keyof AbletonRackFormData,
     file: File | null
@@ -126,7 +174,7 @@ export default function CreateAbletonRackPage() {
     updateFormData({ [field]: file });
   };
 
-  const uploadFile = async (file: File): Promise<Id<"_storage">> => {
+  const uploadFile = async (file: File): Promise<string> => {
     const uploadUrl = await generateUploadUrl();
     const response = await fetch(uploadUrl, {
       method: "POST",
@@ -134,6 +182,8 @@ export default function CreateAbletonRackPage() {
       body: file,
     });
     const { storageId } = await response.json();
+    
+    // Return the storage ID directly - Convex will handle URL generation
     return storageId;
   };
 
@@ -149,101 +199,135 @@ export default function CreateAbletonRackPage() {
       return;
     }
 
-    // Check delivery method
-    if (formData.deliveryMethod === "upload") {
-      if (!formData.rackFile) {
-        toast.error("Please upload the rack file (.adg, .adv, or .alp)");
-        return;
-      }
-    } else if (formData.deliveryMethod === "url") {
-      if (!formData.rackFileUrl || !formData.rackFileUrl.trim()) {
-        toast.error("Please provide a download URL for the rack file");
-        return;
-      }
-      // Basic URL validation
-      try {
-        new URL(formData.rackFileUrl);
-      } catch {
-        toast.error("Please provide a valid URL");
-        return;
+    // Check delivery method (only required for new uploads, not edits if URL already exists)
+    if (!isEditMode || !existingRack?.downloadUrl) {
+      if (formData.deliveryMethod === "upload") {
+        if (!formData.rackFile) {
+          toast.error("Please upload the rack file (.adg, .adv, or .alp)");
+          return;
+        }
+      } else if (formData.deliveryMethod === "url") {
+        if (!formData.rackFileUrl || !formData.rackFileUrl.trim()) {
+          toast.error("Please provide a download URL for the rack file");
+          return;
+        }
+        // Basic URL validation
+        try {
+          new URL(formData.rackFileUrl);
+        } catch {
+          toast.error("Please provide a valid URL");
+          return;
+        }
       }
     }
 
     setIsSubmitting(true);
 
     try {
-      let rackFileUrl: string | undefined;
-      let fileSize: number | undefined;
+      let rackFileUrl: string | undefined = existingRack?.downloadUrl;
+      let fileSize: number | undefined = existingRack?.fileSize;
 
-      // Handle file upload or URL
-      if (formData.deliveryMethod === "upload" && formData.rackFile) {
-        // Upload files to Convex storage
-        const rackFileId = await uploadFile(formData.rackFile);
-        rackFileUrl = await fetch(`${process.env.NEXT_PUBLIC_CONVEX_URL}/api/storage/${rackFileId}`).then(r => r.url);
-        fileSize = formData.rackFile.size / (1024 * 1024); // Convert to MB
-      } else if (formData.deliveryMethod === "url") {
-        // Use the provided URL
-        rackFileUrl = formData.rackFileUrl;
-        fileSize = undefined; // File size unknown for external URLs
+      // Only upload new file if provided
+      if (formData.rackFile || formData.rackFileUrl) {
+        if (formData.deliveryMethod === "upload" && formData.rackFile) {
+          // Upload rack file to Convex storage and store the storage ID
+          rackFileUrl = await uploadFile(formData.rackFile);
+          fileSize = formData.rackFile.size / (1024 * 1024); // Convert to MB
+        } else if (formData.deliveryMethod === "url") {
+          // Use the provided URL
+          rackFileUrl = formData.rackFileUrl;
+          fileSize = undefined; // File size unknown for external URLs
+        }
       }
 
-      // Upload optional files
-      const coverImageId = formData.coverImage ? await uploadFile(formData.coverImage) : undefined;
-      const demoAudioId = formData.demoAudio ? await uploadFile(formData.demoAudio) : undefined;
-      const chainImageId = formData.chainImage ? await uploadFile(formData.chainImage) : undefined;
+      // Upload optional files (only if new files are provided) - store storage IDs
+      const coverImageUrl = formData.coverImage 
+        ? await uploadFile(formData.coverImage)
+        : existingRack?.imageUrl;
+      const demoAudioUrl = formData.demoAudio 
+        ? await uploadFile(formData.demoAudio)
+        : existingRack?.demoAudioUrl;
+      const chainImageUrl = formData.chainImage 
+        ? await uploadFile(formData.chainImage)
+        : existingRack?.chainImageUrl;
       
-      const macroScreenshotIds = await Promise.all(
-        formData.macroScreenshots.map(file => uploadFile(file))
-      );
+      const macroScreenshotUrls = formData.macroScreenshots.length > 0
+        ? await Promise.all(formData.macroScreenshots.map(file => uploadFile(file)))
+        : existingRack?.macroScreenshotUrls || [];
 
-      // Get storage URLs for optional files
-      const coverImageUrl = coverImageId ? await fetch(`${process.env.NEXT_PUBLIC_CONVEX_URL}/api/storage/${coverImageId}`).then(r => r.url) : undefined;
-      const demoAudioUrl = demoAudioId ? await fetch(`${process.env.NEXT_PUBLIC_CONVEX_URL}/api/storage/${demoAudioId}`).then(r => r.url) : undefined;
-      const chainImageUrl = chainImageId ? await fetch(`${process.env.NEXT_PUBLIC_CONVEX_URL}/api/storage/${chainImageId}`).then(r => r.url) : undefined;
+      if (isEditMode && editId) {
+        // Update existing rack
+        await updateProduct({
+          id: editId as Id<"digitalProducts">,
+          title: formData.title,
+          description: formData.description,
+          price: parseFloat(formData.price),
+          imageUrl: coverImageUrl,
+          downloadUrl: rackFileUrl,
+          
+          // Ableton-specific
+          abletonVersion: formData.abletonVersion,
+          minAbletonVersion: formData.minAbletonVersion,
+          rackType: formData.rackType,
+          effectType: formData.effectType.length > 0 ? formData.effectType : undefined,
+          macroCount: parseInt(formData.macroCount),
+          cpuLoad: formData.cpuLoad,
+          genre: formData.genre.length > 0 ? formData.genre : undefined,
+          bpm: formData.bpm ? parseFloat(formData.bpm) : undefined,
+          musicalKey: formData.musicalKey || undefined,
+          requiresMaxForLive: formData.requiresMaxForLive,
+          thirdPartyPlugins: formData.thirdPartyPlugins.length > 0 ? formData.thirdPartyPlugins : undefined,
+          demoAudioUrl,
+          chainImageUrl,
+          macroScreenshotUrls: macroScreenshotUrls.length > 0 ? macroScreenshotUrls : undefined,
+          complexity: formData.complexity,
+          tags: formData.tags.length > 0 ? formData.tags : undefined,
+          fileFormat: formData.fileFormat,
+          fileSize,
+          installationNotes: formData.installationNotes || undefined,
+        });
+
+        toast.success("Ableton rack updated successfully!");
+      } else {
+        // Create new rack
+        await createRack({
+          title: formData.title,
+          description: formData.description,
+          price: parseFloat(formData.price),
+          imageUrl: coverImageUrl,
+          downloadUrl: rackFileUrl,
+          storeId,
+          userId: user!.id,
+          
+          // Ableton-specific
+          abletonVersion: formData.abletonVersion,
+          minAbletonVersion: formData.minAbletonVersion,
+          rackType: formData.rackType,
+          effectType: formData.effectType.length > 0 ? formData.effectType : undefined,
+          macroCount: parseInt(formData.macroCount),
+          cpuLoad: formData.cpuLoad,
+          genre: formData.genre.length > 0 ? formData.genre : undefined,
+          bpm: formData.bpm ? parseFloat(formData.bpm) : undefined,
+          musicalKey: formData.musicalKey || undefined,
+          requiresMaxForLive: formData.requiresMaxForLive,
+          thirdPartyPlugins: formData.thirdPartyPlugins.length > 0 ? formData.thirdPartyPlugins : undefined,
+          demoAudioUrl,
+          chainImageUrl,
+          macroScreenshotUrls: macroScreenshotUrls.length > 0 ? macroScreenshotUrls : undefined,
+          complexity: formData.complexity,
+          tags: formData.tags.length > 0 ? formData.tags : undefined,
+          fileFormat: formData.fileFormat,
+          fileSize,
+          installationNotes: formData.installationNotes || undefined,
+        });
+
+        toast.success("Ableton rack created successfully!");
+      }
       
-      const macroScreenshotUrls = await Promise.all(
-        macroScreenshotIds.map(id => 
-          fetch(`${process.env.NEXT_PUBLIC_CONVEX_URL}/api/storage/${id}`).then(r => r.url)
-        )
-      );
-
-      // Create the Ableton rack product
-      await createRack({
-        title: formData.title,
-        description: formData.description,
-        price: parseFloat(formData.price),
-        imageUrl: coverImageUrl,
-        downloadUrl: rackFileUrl,
-        storeId,
-        userId: user!.id,
-        
-        // Ableton-specific
-        abletonVersion: formData.abletonVersion,
-        minAbletonVersion: formData.minAbletonVersion,
-        rackType: formData.rackType,
-        effectType: formData.effectType.length > 0 ? formData.effectType : undefined,
-        macroCount: parseInt(formData.macroCount),
-        cpuLoad: formData.cpuLoad,
-        genre: formData.genre.length > 0 ? formData.genre : undefined,
-        bpm: formData.bpm ? parseFloat(formData.bpm) : undefined,
-        musicalKey: formData.musicalKey || undefined,
-        requiresMaxForLive: formData.requiresMaxForLive,
-        thirdPartyPlugins: formData.thirdPartyPlugins.length > 0 ? formData.thirdPartyPlugins : undefined,
-        demoAudioUrl,
-        chainImageUrl,
-        macroScreenshotUrls: macroScreenshotUrls.length > 0 ? macroScreenshotUrls : undefined,
-        complexity: formData.complexity,
-        tags: formData.tags.length > 0 ? formData.tags : undefined,
-        fileFormat: formData.fileFormat,
-        fileSize,
-        installationNotes: formData.installationNotes || undefined,
-      });
-
-      toast.success("Ableton rack created successfully!");
       router.push(`/store/${storeId}/products`);
     } catch (error: any) {
-      console.error("Error creating rack:", error);
-      toast.error(error.message || "Failed to create rack");
+      console.error("Error saving rack:", error);
+      toast.error(error.message || `Failed to ${isEditMode ? 'update' : 'create'} rack`);
     } finally {
       setIsSubmitting(false);
     }
@@ -259,29 +343,47 @@ export default function CreateAbletonRackPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background p-6">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <Button
-            variant="ghost"
-            onClick={() => router.back()}
-            className="mb-4"
-          >
-            <ChevronLeft className="w-4 h-4 mr-2" />
-            Back to Products
-          </Button>
-          
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-3 bg-gradient-to-br from-chart-1 to-chart-2 rounded-xl">
-              <Waves className="w-8 h-8 text-white" />
+        {/* Loading state */}
+        {isLoading && (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <div className="animate-spin w-12 h-12 border-4 border-chart-1 border-t-transparent rounded-full mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading rack data...</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Main form (hidden while loading) */}
+        {!isLoading && (
+          <>
+            {/* Header */}
+            <div className="mb-8">
+              <Button
+                variant="ghost"
+                onClick={() => router.back()}
+                className="mb-4"
+              >
+                <ChevronLeft className="w-4 h-4 mr-2" />
+                Back to Products
+              </Button>
+              
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-3 bg-gradient-to-br from-chart-1 to-chart-2 rounded-xl">
+                  <Waves className="w-8 h-8 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold">
+                    {isEditMode ? 'Edit' : 'Create'} Ableton Rack
+                  </h1>
+                  <p className="text-muted-foreground">
+                    {isEditMode 
+                      ? 'Update your audio effect rack details and settings'
+                      : 'Share your audio effect racks and presets with producers worldwide'
+                    }
+                  </p>
+                </div>
+              </div>
             </div>
-            <div>
-              <h1 className="text-3xl font-bold">Create Ableton Rack</h1>
-              <p className="text-muted-foreground">
-                Share your audio effect racks and presets with producers worldwide
-              </p>
-            </div>
-          </div>
-        </div>
 
         {/* Progress Steps */}
         <div className="mb-8">
@@ -382,18 +484,20 @@ export default function CreateAbletonRackPage() {
                 {isSubmitting ? (
                   <>
                     <Upload className="w-4 h-4 mr-2 animate-spin" />
-                    Creating...
+                    {isEditMode ? 'Updating...' : 'Creating...'}
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4 mr-2" />
-                    Create Rack
+                    {isEditMode ? 'Update Rack' : 'Create Rack'}
                   </>
                 )}
               </Button>
             )}
           </div>
         </Card>
+          </>
+        )}
       </div>
     </div>
   );

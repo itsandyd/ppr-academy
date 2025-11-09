@@ -51,6 +51,7 @@ interface Product {
   slug?: string; // For courses
   userId?: string; // For courses
   _creationTime?: number;
+  productType?: "digital" | "urlMedia" | "coaching" | "abletonRack" | "abletonPreset";
 }
 
 interface ProductsListProps {
@@ -77,6 +78,31 @@ export function ProductsList({ products, storeId }: ProductsListProps) {
     // Courses have a slug property and no style property
     // Digital products have a style property and no slug property
     return product.slug !== undefined && product.style === undefined;
+  };
+
+  const getEditUrl = (product: Product, storeId: string) => {
+    // If it's a course, route to course editor
+    if (isCourse(product)) {
+      return `/store/${storeId}/course/create?step=course&courseId=${product._id}`;
+    }
+    
+    // If it's an Ableton rack, route to Ableton rack creator with ID (for now, until we build a proper edit page)
+    if (product.productType === "abletonRack" || product.productType === "abletonPreset") {
+      return `/store/${storeId}/products/ableton-rack/create?id=${product._id}`;
+    }
+    
+    // For coaching products
+    if (product.productType === "coaching") {
+      return `/store/${storeId}/products/coaching-call/edit/${product._id}`;
+    }
+    
+    // For URL/media products
+    if (product.productType === "urlMedia") {
+      return `/store/${storeId}/products/url-media/edit/${product._id}`;
+    }
+    
+    // Default: generic digital download editor
+    return `/store/${storeId}/products/digital-download/edit/${product._id}`;
   };
 
   const handleDelete = async (productId: string, title: string) => {
@@ -811,7 +837,7 @@ export function ProductsList({ products, storeId }: ProductsListProps) {
                         </Button>
                         
                         <Button variant="outline" size="sm" asChild>
-                          <Link href={`/store/${storeId}/products/${product._id}`}>
+                          <Link href={getEditUrl(product, storeId || "")}>
                             <Edit className="h-3 w-3 mr-1" />
                             Edit
                           </Link>

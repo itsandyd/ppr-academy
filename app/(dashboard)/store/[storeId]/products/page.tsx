@@ -46,8 +46,8 @@ export default function ProductsPage() {
   );
 
   const digitalProducts = useQuery(
-    api.digitalProducts.getProductsByUser,
-    convexUser?._id ? { userId: convexUser._id } : "skip"
+    api.digitalProducts.getProductsByStore,
+    storeId ? { storeId } : "skip"
   );
 
   // Get user's samples
@@ -68,6 +68,7 @@ export default function ProductsPage() {
       slug: course.slug,
       userId: course.userId,
       type: 'course',
+      productType: undefined,
       storeId: course.storeId,
     })) || []),
     ...(digitalProducts?.map(product => ({
@@ -79,11 +80,13 @@ export default function ProductsPage() {
       isPublished: product.isPublished,
       userId: product.userId,
       type: 'digitalProduct',
+      productType: product.productType, // Preserve the productType
       storeId: product.storeId,
     })) || [])
   ];
 
-  const musicProducts = allProducts.filter(p => p.type === 'digitalProduct');
+  const musicProducts = allProducts.filter(p => p.type === 'digitalProduct' && p.productType !== 'abletonRack' && p.productType !== 'abletonPreset');
+  const abletonRacks = allProducts.filter(p => p.productType === 'abletonRack' || p.productType === 'abletonPreset');
   const courseProducts = allProducts.filter(p => p.type === 'course');
 
   // Calculate stats
@@ -295,7 +298,7 @@ export default function ProductsPage() {
                   >
                     {allProducts.length > 0 || (userSamples && userSamples.length > 0) ? (
                       <Tabs defaultValue="all" className="space-y-6">
-                        <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-4">
+                        <TabsList className="grid w-full max-w-3xl mx-auto grid-cols-5">
                           <TabsTrigger value="all" className="flex items-center gap-2">
                             <Package className="w-4 h-4" />
                             All
@@ -306,6 +309,15 @@ export default function ProductsPage() {
                             {userSamples && userSamples.length > 0 && (
                               <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
                                 {userSamples.length}
+                              </Badge>
+                            )}
+                          </TabsTrigger>
+                          <TabsTrigger value="abletonRacks" className="flex items-center gap-2">
+                            <Waves className="w-4 h-4" />
+                            Racks
+                            {abletonRacks.length > 0 && (
+                              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                                {abletonRacks.length}
                               </Badge>
                             )}
                           </TabsTrigger>
@@ -344,6 +356,28 @@ export default function ProductsPage() {
                                 >
                                   <Plus className="w-4 h-4 mr-2" />
                                   Upload Sample
+                                </Button>
+                              </CardContent>
+                            </Card>
+                          )}
+                        </TabsContent>
+                        <TabsContent value="abletonRacks">
+                          {abletonRacks.length > 0 ? (
+                            <ProductsList products={abletonRacks} storeId={storeId} />
+                          ) : (
+                            <Card className="text-center py-16">
+                              <CardContent>
+                                <Waves className="w-20 h-20 text-muted-foreground mx-auto mb-6" />
+                                <h3 className="text-2xl font-semibold mb-3">No Ableton racks yet</h3>
+                                <p className="text-muted-foreground mb-8 max-w-md mx-auto">
+                                  Upload your first Ableton rack to start sharing your custom device chains and sound design.
+                                </p>
+                                <Button 
+                                  onClick={() => handleOptionClick('ableton-rack')}
+                                  className="bg-gradient-to-r from-chart-1 to-chart-2 hover:from-chart-1/90 hover:to-chart-2/90"
+                                >
+                                  <Plus className="w-4 h-4 mr-2" />
+                                  Create Ableton Rack
                                 </Button>
                               </CardContent>
                             </Card>

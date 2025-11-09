@@ -64,10 +64,44 @@ export const getProductsByStore = query({
     installationNotes: v.optional(v.string()),
   })),
   handler: async (ctx, args) => {
-    return await ctx.db
+    const products = await ctx.db
       .query("digitalProducts")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .collect();
+    
+    // Convert storage IDs to URLs for image fields
+    const productsWithUrls = await Promise.all(
+      products.map(async (product) => {
+        let imageUrl = product.imageUrl;
+        let downloadUrl = product.downloadUrl;
+        let demoAudioUrl = product.demoAudioUrl;
+        let chainImageUrl = product.chainImageUrl;
+        
+        // Convert storage IDs to URLs if they're storage IDs (not external URLs)
+        if (imageUrl && !imageUrl.startsWith('http')) {
+          imageUrl = await ctx.storage.getUrl(imageUrl as any) || imageUrl;
+        }
+        if (downloadUrl && !downloadUrl.startsWith('http')) {
+          downloadUrl = await ctx.storage.getUrl(downloadUrl as any) || downloadUrl;
+        }
+        if (demoAudioUrl && !demoAudioUrl.startsWith('http')) {
+          demoAudioUrl = await ctx.storage.getUrl(demoAudioUrl as any) || demoAudioUrl;
+        }
+        if (chainImageUrl && !chainImageUrl.startsWith('http')) {
+          chainImageUrl = await ctx.storage.getUrl(chainImageUrl as any) || chainImageUrl;
+        }
+        
+        return {
+          ...product,
+          imageUrl,
+          downloadUrl,
+          demoAudioUrl,
+          chainImageUrl,
+        };
+      })
+    );
+    
+    return productsWithUrls;
   },
 });
 
@@ -277,7 +311,51 @@ export const getProductById = query({
     v.null()
   ),
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.productId);
+    const product = await ctx.db.get(args.productId);
+    
+    if (!product) {
+      return null;
+    }
+    
+    // Convert storage IDs to URLs for image fields
+    let imageUrl = product.imageUrl;
+    let downloadUrl = product.downloadUrl;
+    let demoAudioUrl = product.demoAudioUrl;
+    let chainImageUrl = product.chainImageUrl;
+    let macroScreenshotUrls = product.macroScreenshotUrls;
+    
+    // Convert storage IDs to URLs if they're storage IDs (not external URLs)
+    if (imageUrl && !imageUrl.startsWith('http')) {
+      imageUrl = await ctx.storage.getUrl(imageUrl as any) || imageUrl;
+    }
+    if (downloadUrl && !downloadUrl.startsWith('http')) {
+      downloadUrl = await ctx.storage.getUrl(downloadUrl as any) || downloadUrl;
+    }
+    if (demoAudioUrl && !demoAudioUrl.startsWith('http')) {
+      demoAudioUrl = await ctx.storage.getUrl(demoAudioUrl as any) || demoAudioUrl;
+    }
+    if (chainImageUrl && !chainImageUrl.startsWith('http')) {
+      chainImageUrl = await ctx.storage.getUrl(chainImageUrl as any) || chainImageUrl;
+    }
+    if (macroScreenshotUrls && macroScreenshotUrls.length > 0) {
+      macroScreenshotUrls = await Promise.all(
+        macroScreenshotUrls.map(async (url) => {
+          if (url && !url.startsWith('http')) {
+            return await ctx.storage.getUrl(url as any) || url;
+          }
+          return url;
+        })
+      );
+    }
+    
+    return {
+      ...product,
+      imageUrl,
+      downloadUrl,
+      demoAudioUrl,
+      chainImageUrl,
+      macroScreenshotUrls,
+    };
   },
 });
 
@@ -323,7 +401,7 @@ export const updateProduct = mutation({
     buttonLabel: v.optional(v.string()),
     style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))),
     // URL/Media specific fields
-    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"))),
+    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"), v.literal("coaching"), v.literal("abletonRack"), v.literal("abletonPreset"))),
     url: v.optional(v.string()),
     displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
     mediaType: v.optional(v.union(v.literal("youtube"), v.literal("spotify"), v.literal("website"), v.literal("social"))),
@@ -338,6 +416,31 @@ export const updateProduct = mutation({
     affiliateCookieDuration: v.optional(v.number()),
     confirmationEmailSubject: v.optional(v.string()),
     confirmationEmailBody: v.optional(v.string()),
+    // Ableton Rack specific fields
+    abletonVersion: v.optional(v.string()),
+    minAbletonVersion: v.optional(v.string()),
+    rackType: v.optional(v.union(
+      v.literal("audioEffect"),
+      v.literal("instrument"),
+      v.literal("midiEffect"),
+      v.literal("drumRack")
+    )),
+    effectType: v.optional(v.array(v.string())),
+    macroCount: v.optional(v.number()),
+    cpuLoad: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
+    genre: v.optional(v.array(v.string())),
+    bpm: v.optional(v.number()),
+    musicalKey: v.optional(v.string()),
+    requiresMaxForLive: v.optional(v.boolean()),
+    thirdPartyPlugins: v.optional(v.array(v.string())),
+    demoAudioUrl: v.optional(v.string()),
+    chainImageUrl: v.optional(v.string()),
+    macroScreenshotUrls: v.optional(v.array(v.string())),
+    complexity: v.optional(v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced"))),
+    tags: v.optional(v.array(v.string())),
+    fileFormat: v.optional(v.union(v.literal("adg"), v.literal("adv"), v.literal("alp"))),
+    fileSize: v.optional(v.number()),
+    installationNotes: v.optional(v.string()),
   },
   returns: v.union(
     v.object({
