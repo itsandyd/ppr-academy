@@ -227,7 +227,18 @@ export const getPublishedAbletonRacks = query({
       );
     }
 
-    // Enrich with creator info
+    // Helper function to convert storage ID to URL
+    const getImageUrl = async (imageUrl: string | undefined): Promise<string | undefined> => {
+      if (!imageUrl) return undefined;
+      if (imageUrl.startsWith('http')) return imageUrl; // Already a URL
+      try {
+        return await ctx.storage.getUrl(imageUrl as any) || imageUrl;
+      } catch {
+        return imageUrl;
+      }
+    };
+
+    // Enrich with creator info and convert storage IDs to URLs
     const racksWithCreator = await Promise.all(
       racks.map(async (rack) => {
         let creatorName = "Creator";
@@ -249,10 +260,34 @@ export const getPublishedAbletonRacks = query({
           }
         }
 
+        // Convert all storage IDs to URLs
+        const imageUrl = await getImageUrl(rack.imageUrl);
+        const downloadUrl = await getImageUrl(rack.downloadUrl);
+        const demoAudioUrl = await getImageUrl(rack.demoAudioUrl);
+        const chainImageUrl = await getImageUrl(rack.chainImageUrl);
+        const convertedCreatorAvatar = await getImageUrl(creatorAvatar);
+        
+        let macroScreenshotUrls = rack.macroScreenshotUrls;
+        if (macroScreenshotUrls && macroScreenshotUrls.length > 0) {
+          macroScreenshotUrls = await Promise.all(
+            macroScreenshotUrls.map(async (url: string) => {
+              if (url && !url.startsWith('http')) {
+                return await ctx.storage.getUrl(url as any) || url;
+              }
+              return url;
+            })
+          );
+        }
+
         return {
           ...rack,
+          imageUrl,
+          downloadUrl,
+          demoAudioUrl,
+          chainImageUrl,
+          macroScreenshotUrls,
           creatorName,
-          creatorAvatar,
+          creatorAvatar: convertedCreatorAvatar,
         };
       })
     );
