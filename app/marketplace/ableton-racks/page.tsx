@@ -16,17 +16,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   Search,
   Play,
   Pause,
-  Download,
   Music,
   Filter,
   Waves,
@@ -70,10 +62,6 @@ export default function AbletonRacksMarketplacePage() {
   const [playingRack, setPlayingRack] = useState<any | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  
-  // Purchase modal state
-  const [selectedForPurchase, setSelectedForPurchase] = useState<any | null>(null);
-  const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
 
   // Convert UI selections to query params
   const rackTypeMap: Record<string, any> = {
@@ -151,9 +139,10 @@ export default function AbletonRacksMarketplacePage() {
     };
   }, []);
 
-  const openPurchaseModal = (rack: any) => {
-    setSelectedForPurchase(rack);
-    setPurchaseModalOpen(true);
+  const handleRackClick = (rack: any) => {
+    // Navigate to the rack detail page
+    const slug = rack.title.toLowerCase().replace(/\s+/g, "-");
+    window.location.href = `/marketplace/ableton-racks/${slug}`;
   };
 
   const activeFiltersCount = [
@@ -396,7 +385,7 @@ export default function AbletonRacksMarketplacePage() {
                     index={index}
                     isPlaying={playingRack?._id === rack._id && isPlaying}
                     onPlayPause={handlePlayPause}
-                    onPurchase={() => openPurchaseModal(rack)}
+                    onViewDetails={() => handleRackClick(rack)}
                   />
                 ))}
               </div>
@@ -409,7 +398,7 @@ export default function AbletonRacksMarketplacePage() {
                     index={index}
                     isPlaying={playingRack?._id === rack._id && isPlaying}
                     onPlayPause={handlePlayPause}
-                    onPurchase={() => openPurchaseModal(rack)}
+                    onViewDetails={() => handleRackClick(rack)}
                   />
                 ))}
               </div>
@@ -427,107 +416,22 @@ export default function AbletonRacksMarketplacePage() {
           </div>
         </div>
       </div>
-
-      {/* Purchase Modal */}
-      <Dialog open={purchaseModalOpen} onOpenChange={setPurchaseModalOpen}>
-        <DialogContent className="bg-white dark:bg-black max-w-2xl">
-          {selectedForPurchase && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="text-2xl">
-                  {selectedForPurchase.title}
-                </DialogTitle>
-                <DialogDescription>
-                  {selectedForPurchase.rackType && getRackTypeLabel(selectedForPurchase.rackType)}
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="space-y-4">
-                {/* Preview Info */}
-                <div className="p-4 bg-muted/50 rounded-lg space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Price</span>
-                    <span className="text-3xl font-bold text-chart-1">
-                      ${selectedForPurchase.price}
-                    </span>
-                  </div>
-                  
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="secondary">
-                      {selectedForPurchase.abletonVersion}
-                    </Badge>
-                    {selectedForPurchase.cpuLoad && (
-                      <Badge variant="outline" className="gap-1">
-                        <Cpu className="w-3 h-3" />
-                        {selectedForPurchase.cpuLoad} CPU
-                      </Badge>
-                    )}
-                    {selectedForPurchase.macroCount && (
-                      <Badge variant="outline">
-                        {selectedForPurchase.macroCount} Macros
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-
-                {/* Description */}
-                {selectedForPurchase.description && (
-                  <div>
-                    <h4 className="font-semibold mb-2">Description</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {selectedForPurchase.description}
-                    </p>
-                  </div>
-                )}
-
-                {/* Creator */}
-                {selectedForPurchase.creatorName && (
-                  <div className="flex items-center gap-3 pt-3 border-t border-border">
-                    <Avatar className="w-10 h-10">
-                      <AvatarImage src={selectedForPurchase.creatorAvatar} />
-                      <AvatarFallback className="bg-gradient-to-r from-chart-1 to-chart-2 text-white">
-                        {selectedForPurchase.creatorName.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="text-sm font-medium">
-                        {selectedForPurchase.creatorName}
-                      </div>
-                      <div className="text-xs text-muted-foreground">Creator</div>
-                    </div>
-                  </div>
-                )}
-
-                <Button
-                  className="w-full"
-                  size="lg"
-                  onClick={() => {
-                    // TODO: Implement purchase flow
-                    toast.success("Purchase flow coming soon!");
-                    setPurchaseModalOpen(false);
-                  }}
-                >
-                  <Download className="w-5 h-5 mr-2" />
-                  Purchase & Download
-                </Button>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
 
 // Rack Card Component
-function RackCard({ rack, index, isPlaying, onPlayPause, onPurchase }: any) {
+function RackCard({ rack, index, isPlaying, onPlayPause, onViewDetails }: any) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.05 }}
     >
-      <Card className="group hover:shadow-xl transition-all duration-300 border-border bg-card overflow-hidden">
+      <Card 
+        className="group hover:shadow-xl transition-all duration-300 border-border bg-card overflow-hidden cursor-pointer"
+        onClick={onViewDetails}
+      >
         {/* Cover Image */}
         <div className="relative h-48 bg-gradient-to-br from-chart-1/20 to-chart-3/20">
           {rack.imageUrl && (
@@ -547,7 +451,10 @@ function RackCard({ rack, index, isPlaying, onPlayPause, onPurchase }: any) {
               <Button
                 size="icon"
                 className="w-16 h-16 rounded-full bg-white/90 hover:bg-white text-black shadow-lg"
-                onClick={() => onPlayPause(rack)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPlayPause(rack);
+                }}
               >
                 {isPlaying ? (
                   <Pause className="w-8 h-8" />
@@ -622,17 +529,7 @@ function RackCard({ rack, index, isPlaying, onPlayPause, onPurchase }: any) {
               </Avatar>
               <span className="text-sm text-muted-foreground">{rack.creatorName}</span>
             </div>
-            <div className="text-right">
-              <div className="text-2xl font-bold text-chart-1">${rack.price}</div>
-              <Button
-                size="sm"
-                onClick={onPurchase}
-                className="mt-1 w-full"
-              >
-                <Download className="w-4 h-4 mr-1" />
-                Buy
-              </Button>
-            </div>
+            <div className="text-2xl font-bold text-chart-1">${rack.price}</div>
           </div>
         </CardContent>
       </Card>
@@ -641,21 +538,27 @@ function RackCard({ rack, index, isPlaying, onPlayPause, onPurchase }: any) {
 }
 
 // Rack List Item
-function RackListItem({ rack, index, isPlaying, onPlayPause, onPurchase }: any) {
+function RackListItem({ rack, index, isPlaying, onPlayPause, onViewDetails }: any) {
   return (
     <motion.div
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.2, delay: index * 0.03 }}
     >
-      <Card className="hover:bg-muted/30 transition-colors border-border">
+      <Card 
+        className="hover:bg-muted/30 transition-colors border-border cursor-pointer"
+        onClick={onViewDetails}
+      >
         <CardContent className="p-4">
           <div className="flex items-center gap-4">
             {rack.demoAudioUrl && (
               <Button
                 size="icon"
                 variant={isPlaying ? "default" : "outline"}
-                onClick={() => onPlayPause(rack)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPlayPause(rack);
+                }}
               >
                 {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
               </Button>
@@ -674,12 +577,7 @@ function RackListItem({ rack, index, isPlaying, onPlayPause, onPurchase }: any) 
                 {rack.cpuLoad}
               </Badge>
             )}
-            <div className="text-right">
-              <div className="text-xl font-bold text-chart-1">${rack.price}</div>
-              <Button size="sm" onClick={onPurchase} className="mt-1">
-                Buy
-              </Button>
-            </div>
+            <div className="text-xl font-bold text-chart-1">${rack.price}</div>
           </div>
         </CardContent>
       </Card>
