@@ -173,7 +173,41 @@ export const getPublishedProductsByStore = query({
       .collect();
     
     // Filter for published products only
-    return products.filter(product => product.isPublished === true);
+    const publishedProducts = products.filter(product => product.isPublished === true);
+    
+    // Convert storage IDs to URLs for image fields
+    const productsWithUrls = await Promise.all(
+      publishedProducts.map(async (product) => {
+        let imageUrl = product.imageUrl;
+        let downloadUrl = product.downloadUrl;
+        let demoAudioUrl = product.demoAudioUrl;
+        let chainImageUrl = product.chainImageUrl;
+        
+        // Convert storage IDs to URLs if they're storage IDs (not external URLs)
+        if (imageUrl && !imageUrl.startsWith('http')) {
+          imageUrl = await ctx.storage.getUrl(imageUrl as any) || imageUrl;
+        }
+        if (downloadUrl && !downloadUrl.startsWith('http')) {
+          downloadUrl = await ctx.storage.getUrl(downloadUrl as any) || downloadUrl;
+        }
+        if (demoAudioUrl && !demoAudioUrl.startsWith('http')) {
+          demoAudioUrl = await ctx.storage.getUrl(demoAudioUrl as any) || demoAudioUrl;
+        }
+        if (chainImageUrl && !chainImageUrl.startsWith('http')) {
+          chainImageUrl = await ctx.storage.getUrl(chainImageUrl as any) || chainImageUrl;
+        }
+        
+        return {
+          ...product,
+          imageUrl,
+          downloadUrl,
+          demoAudioUrl,
+          chainImageUrl,
+        };
+      })
+    );
+    
+    return productsWithUrls;
   },
 });
 

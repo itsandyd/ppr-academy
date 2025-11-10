@@ -134,6 +134,7 @@ import type * as sendTimeOptimization from "../sendTimeOptimization.js";
 import type * as socialMedia from "../socialMedia.js";
 import type * as socialMediaActions from "../socialMediaActions.js";
 import type * as stats from "../stats.js";
+import type * as storeStats from "../storeStats.js";
 import type * as stores from "../stores.js";
 import type * as submissions from "../submissions.js";
 import type * as subscriptions from "../subscriptions.js";
@@ -274,6 +275,7 @@ declare const fullApi: ApiFromModules<{
   socialMedia: typeof socialMedia;
   socialMediaActions: typeof socialMediaActions;
   stats: typeof stats;
+  storeStats: typeof storeStats;
   stores: typeof stores;
   submissions: typeof submissions;
   subscriptions: typeof subscriptions;

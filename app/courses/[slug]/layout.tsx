@@ -5,10 +5,13 @@ import { notFound } from "next/navigation";
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   try {
+    // Await params in Next.js 15
+    const { slug } = await params;
+    
     // Fetch course by slug
-    const course = await fetchQuery(api.courses.getCourseBySlug, { slug: params.slug });
+    const course = await fetchQuery(api.courses.getCourseBySlug, { slug });
 
     if (!course) {
       return {
@@ -27,7 +30,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 
     const title = `${course.title} - Music Production Course`;
     const description = course.description || `Learn ${course.title} with ${creator?.name || "expert instructors"} on PPR Academy`;
-    const courseUrl = `${baseUrl}/courses/${params.slug}`;
+    const courseUrl = `${baseUrl}/courses/${slug}`;
 
     return {
       title,
