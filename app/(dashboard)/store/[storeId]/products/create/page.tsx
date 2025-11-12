@@ -3,7 +3,7 @@
 import { use, useEffect, useRef } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useProductForm } from "./hooks/useProductForm";
@@ -28,6 +28,7 @@ export default function UniversalProductCreatePage({ params }: PageProps) {
   const { user } = useUser();
   const userId = user?.id || "";
   const searchParams = useSearchParams();
+  const router = useRouter();
   const hasAutoAdvanced = useRef(false);
 
   // Form state
@@ -48,14 +49,27 @@ export default function UniversalProductCreatePage({ params }: PageProps) {
     if (typeParam && !hasAutoAdvanced.current) {
       hasAutoAdvanced.current = true;
       const validCategory = typeParam as ProductCategory;
-      // Set the product type and immediately advance to Step 2
+      
+      // Redirect complex product types to their specialized flows
+      if (validCategory === "course") {
+        router.push(`/store/${storeId}/course/create`);
+        return;
+      }
+      
+      // TODO: Add redirects for other complex types when their flows exist
+      // if (validCategory === "workshop" || validCategory === "masterclass") {
+      //   router.push(`/store/${storeId}/course/create?type=${validCategory}`);
+      //   return;
+      // }
+      
+      // For simple products, pre-select and advance to Step 2
       updateFields({
         productCategory: validCategory,
         productType: getProductTypeFromCategory(validCategory),
         currentStep: 2, // Auto-advance to pricing
       });
     }
-  }, [searchParams, updateFields]);
+  }, [searchParams, updateFields, storeId, router]);
 
   // Calculate progress (skip step 4 if not free)
   const effectiveStep = formData.pricingModel === "paid" && formData.currentStep > 3

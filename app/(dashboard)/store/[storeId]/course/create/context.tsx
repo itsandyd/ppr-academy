@@ -51,6 +51,27 @@ export interface CourseData {
     }>;
   }>;
   
+  // Pricing Model (NEW)
+  pricingModel?: "free_with_gate" | "paid";
+  
+  // Follow Gate Configuration (NEW - for free courses)
+  followGateEnabled?: boolean;
+  followGateRequirements?: {
+    requireEmail?: boolean;
+    requireInstagram?: boolean;
+    requireTiktok?: boolean;
+    requireYoutube?: boolean;
+    requireSpotify?: boolean;
+    minFollowsRequired?: number;
+  };
+  followGateSocialLinks?: {
+    instagram?: string;
+    tiktok?: string;
+    youtube?: string;
+    spotify?: string;
+  };
+  followGateMessage?: string;
+  
   // Options step
   enableSharing?: boolean;
   seoTitle?: string;
@@ -72,7 +93,9 @@ export interface CourseData {
 
 export interface StepCompletion {
   course: boolean;
+  pricing: boolean;
   checkout: boolean;
+  followGate: boolean;
   options: boolean;
 }
 
@@ -139,10 +162,14 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
   const togglePublishedMutation = useMutation(api.courses.togglePublished);
 
   const [state, setState] = useState<CourseCreationState>({
-    data: {},
+    data: {
+      pricingModel: "paid", // Default to paid
+    },
     stepCompletion: {
       course: false,
+      pricing: false,
       checkout: false,
+      followGate: false,
       options: false,
     },
     isLoading: false,
@@ -169,8 +196,21 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
                            ));
         // For now, require only basic info (modules are optional)
         return hasBasicInfo;
+      case "pricing":
+        // Pricing model must be selected
+        return !!(data.pricingModel);
       case "checkout":
-        return !!(data.price && data.checkoutHeadline);
+        // Only validate if paid
+        if (data.pricingModel === "paid") {
+          return !!(data.price && data.checkoutHeadline);
+        }
+        return true; // Skip validation if free
+      case "followGate":
+        // Only validate if free with gate
+        if (data.pricingModel === "free_with_gate") {
+          return !!(data.followGateEnabled && data.followGateRequirements);
+        }
+        return true; // Skip validation if paid
       case "options":
         // Mark as complete if user has set any options field
         return !!(data.enableSharing !== undefined || 

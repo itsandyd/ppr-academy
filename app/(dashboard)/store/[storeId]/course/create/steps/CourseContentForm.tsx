@@ -474,11 +474,21 @@ export function CourseContentForm() {
   // Debug: Log current state
   console.log("🔥 CourseContentForm render - current state.data:", state.data);
 
-  const handleBack = () => {
-    router.push(`/store/${storeId}/course/create?step=checkout`);
+  const handleContinue = () => {
+    router.push(`/store/${storeId}/course/create?step=pricing${courseId ? `&courseId=${courseId}` : ""}`);
   };
 
   const handleNext = () => {
+    // Route to pricing step instead of directly to checkout
+    handleContinue();
+  };
+  
+  const handleBack = () => {
+    // Can navigate back if needed (though this is first step)
+    router.push(`/store/${storeId}/products`);
+  };
+  
+  const handleNextOld = () => {
     // Check if basic info is complete before proceeding
     const isBasicInfoComplete = state.data?.title && state.data?.description && 
                                state.data?.category && state.data?.skillLevel;

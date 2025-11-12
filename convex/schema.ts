@@ -189,6 +189,24 @@ export default defineSchema({
     // Soft delete support
     deletedAt: v.optional(v.number()),
     deletedBy: v.optional(v.string()),
+    
+    // Follow Gate Configuration (NEW - for free courses)
+    followGateEnabled: v.optional(v.boolean()),
+    followGateRequirements: v.optional(v.object({
+      requireEmail: v.optional(v.boolean()),
+      requireInstagram: v.optional(v.boolean()),
+      requireTiktok: v.optional(v.boolean()),
+      requireYoutube: v.optional(v.boolean()),
+      requireSpotify: v.optional(v.boolean()),
+      minFollowsRequired: v.optional(v.number()),
+    })),
+    followGateSocialLinks: v.optional(v.object({
+      instagram: v.optional(v.string()),
+      tiktok: v.optional(v.string()),
+      youtube: v.optional(v.string()),
+      spotify: v.optional(v.string()),
+    })),
+    followGateMessage: v.optional(v.string()),
   })
   .index("by_instructorId", ["instructorId"])
   .index("by_slug", ["slug"])

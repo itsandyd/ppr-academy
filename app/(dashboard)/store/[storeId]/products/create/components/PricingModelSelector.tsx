@@ -27,7 +27,8 @@ export function PricingModelSelector({
   onBack,
 }: PricingModelSelectorProps) {
   // Some product types can't be free with gate
-  const canBeFree = !["coaching", "course", "workshop", "mixing-service", "mastering-service"].includes(productCategory);
+  // NOTE: Courses CAN be free now! Only pure services cannot.
+  const canBeFree = !["coaching", "mixing-service", "mastering-service"].includes(productCategory);
   
   // Tip jars are special - they're "pay what you want"
   const isTipJar = productCategory === "tip-jar" || productCategory === "donation";
@@ -36,58 +37,66 @@ export function PricingModelSelector({
     const model = value as PricingModel;
     onPricingModelChange(model);
     
-    // Auto-set price based on model
+    // Auto-set price based on model and product type
     if (model === "free_with_gate") {
       onPriceChange(0);
-    } else if (price === 0) {
-      onPriceChange(10); // Default paid price
+    } else if (price === 0 || !price) {
+      // Smart defaults based on product type
+      if (productCategory === "course" || productCategory === "workshop" || productCategory === "masterclass") {
+        onPriceChange(99); // Courses default to $99
+      } else if (productCategory === "coaching" || productCategory === "mixing-service" || productCategory === "mastering-service") {
+        onPriceChange(50); // Services default to $50
+      } else if (productCategory === "tip-jar" || productCategory === "donation") {
+        onPriceChange(5); // Tips default to $5
+      } else if (productCategory === "playlist-curation") {
+        onPriceChange(5); // Playlist submissions default to $5
+      } else {
+        onPriceChange(10); // Everything else defaults to $10
+      }
     }
   };
 
   const isValid = pricingModel === "free_with_gate" ? price === 0 : price > 0;
 
   return (
-    <div className="space-y-6">
+      <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold">Choose Pricing Model</h2>
         <p className="text-muted-foreground mt-1">
-          How do you want to offer this {productCategory}?
+          How do you want to offer this {productCategory.replace("-", " ")}?
         </p>
       </div>
-
-      <div className="grid gap-4">
+      
+      <div className="grid gap-6">
         {/* Free with Download Gate */}
         <Card
-          className={`cursor-pointer transition-all ${
+          className={`cursor-pointer transition-all border-2 ${
             pricingModel === "free_with_gate"
-              ? "ring-2 ring-primary bg-primary/5"
+              ? "ring-2 ring-purple-500 bg-purple-50 dark:bg-purple-950/20 border-purple-500"
               : canBeFree
-              ? "hover:shadow-md"
+              ? "hover:shadow-lg hover:border-purple-200"
               : "opacity-50 cursor-not-allowed"
           }`}
           onClick={() => canBeFree && handlePricingChange("free_with_gate")}
         >
-          <CardHeader>
+          <CardHeader className="pb-4">
             <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <Gift className="h-6 w-6 text-purple-500" />
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-purple-500 rounded-xl">
+                  <Gift className="h-6 w-6 text-white" />
+                </div>
                 <div>
-                  <CardTitle className="flex items-center gap-2">
+                  <CardTitle className="text-lg mb-1">
                     Free with Download Gate
-                    {!canBeFree && (
-                      <span className="text-xs font-normal text-muted-foreground">
-                        (Not available for this type)
-                      </span>
-                    )}
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-base">
                     Grow your audience - require follows to unlock
                   </CardDescription>
                 </div>
               </div>
               {pricingModel === "free_with_gate" && (
-                <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center">
-                  <Check className="h-3 w-3 text-primary-foreground" />
+                <div className="h-6 w-6 rounded-full bg-purple-500 flex items-center justify-center flex-shrink-0">
+                  <Check className="h-4 w-4 text-white font-bold" />
                 </div>
               )}
             </div>
@@ -116,27 +125,29 @@ export function PricingModelSelector({
 
         {/* Paid */}
         <Card
-          className={`cursor-pointer transition-all ${
+          className={`cursor-pointer transition-all border-2 ${
             pricingModel === "paid"
-              ? "ring-2 ring-primary bg-primary/5"
-              : "hover:shadow-md"
+              ? "ring-2 ring-green-500 bg-green-50 dark:bg-green-950/20 border-green-500"
+              : "hover:shadow-lg hover:border-green-200"
           }`}
           onClick={() => handlePricingChange("paid")}
         >
-          <CardHeader>
+          <CardHeader className="pb-4">
             <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <DollarSign className="h-6 w-6 text-green-500" />
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-green-500 rounded-xl">
+                  <DollarSign className="h-6 w-6 text-white" />
+                </div>
                 <div>
-                  <CardTitle>Paid Product</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-lg mb-1">Paid Product</CardTitle>
+                  <CardDescription className="text-base">
                     Direct purchase with instant payment
                   </CardDescription>
                 </div>
               </div>
               {pricingModel === "paid" && (
-                <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center">
-                  <Check className="h-3 w-3 text-primary-foreground" />
+                <div className="h-6 w-6 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+                  <Check className="h-4 w-4 text-white font-bold" />
                 </div>
               )}
             </div>
@@ -185,7 +196,13 @@ export function PricingModelSelector({
                     <p className="text-xs text-muted-foreground mt-1">
                       {isTipJar 
                         ? "This is the default suggested amount. Users can pay more or less."
-                        : `Recommended: ${productCategory === "playlist-curation" ? "$3-$10" : "$5-$50"}`
+                        : productCategory === "course" || productCategory === "workshop" || productCategory === "masterclass"
+                        ? "Recommended: $49-$299 (average course: $99)"
+                        : productCategory === "coaching" || productCategory === "mixing-service" || productCategory === "mastering-service"
+                        ? "Recommended: $30-$150 per session"
+                        : productCategory === "playlist-curation"
+                        ? "Recommended: $3-$10 per submission"
+                        : "Recommended: $5-$50"
                       }
                     </p>
                   </div>

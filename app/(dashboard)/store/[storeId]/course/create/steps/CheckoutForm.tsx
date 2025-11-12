@@ -19,6 +19,13 @@ export function CheckoutForm() {
   
   const { state, updateData, saveCourse } = useCourseCreation();
 
+  // Redirect if course is free with download gate
+  useEffect(() => {
+    if (state.data.pricingModel === "free_with_gate") {
+      router.push(`/store/${storeId}/course/create?step=followGate`);
+    }
+  }, [state.data.pricingModel, router, storeId]);
+
   const [formData, setFormData] = useState({
     price: "",
     originalPrice: "",
@@ -72,7 +79,7 @@ export function CheckoutForm() {
   };
 
   const handleBack = () => {
-    router.push(`/store/${storeId}/course/create?step=thumbnail`);
+    router.push(`/store/${storeId}/course/create?step=pricing`);
   };
 
   const handleNext = () => {

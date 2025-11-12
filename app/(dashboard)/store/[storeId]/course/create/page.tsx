@@ -4,12 +4,14 @@ import { ThumbnailForm } from "./steps/ThumbnailForm";
 import { CheckoutForm } from "./steps/CheckoutForm";
 import { CourseContentForm } from "./steps/CourseContentForm";
 import { OptionsForm } from "./steps/OptionsForm";
+import { PricingModelForm } from "./steps/PricingModelForm";
+import { FollowGateForm } from "./steps/FollowGateForm";
 import { useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCourseCreation } from "./context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, CreditCard, Settings, Sparkles, Clock, CheckCircle } from "lucide-react";
+import { BookOpen, CreditCard, Settings, Sparkles, Clock, CheckCircle, DollarSign, Lock } from "lucide-react";
 import { Suspense } from "react";
 import { StepProgressIndicator, StepProgressCompact } from "@/components/ui/step-progress-indicator";
 
@@ -22,6 +24,13 @@ const stepMetadata = {
     color: "from-blue-500 to-cyan-500",
     estimatedTime: "5-10 min"
   },
+  pricing: {
+    title: "Pricing Model",
+    description: "Choose free with download gate or paid",
+    icon: DollarSign,
+    color: "from-purple-500 to-pink-500",
+    estimatedTime: "2 min"
+  },
   checkout: {
     title: "Checkout Configuration",
     description: "Configure pricing and payment options",
@@ -29,11 +38,18 @@ const stepMetadata = {
     color: "from-emerald-500 to-teal-500",
     estimatedTime: "3-5 min"
   },
+  followGate: {
+    title: "Download Gate",
+    description: "Require follows to unlock free course",
+    icon: Lock,
+    color: "from-purple-500 to-pink-500",
+    estimatedTime: "2-3 min"
+  },
   options: {
     title: "Advanced Options",
     description: "Customize course settings and features",
     icon: Settings,
-    color: "from-purple-500 to-pink-500",
+    color: "from-orange-500 to-red-500",
     estimatedTime: "5-8 min"
   }
 };
@@ -47,7 +63,10 @@ function CreateCourseContent() {
   const Icon = currentStepMeta.icon;
   const isCompleted = state.stepCompletion[step as keyof typeof state.stepCompletion];
 
-  // Prepare steps for progress indicator
+  // Prepare steps for progress indicator (dynamic based on pricing model)
+  const isPaid = state.data.pricingModel === "paid";
+  const isFree = state.data.pricingModel === "free_with_gate";
+  
   const progressSteps = [
     {
       id: "course",
@@ -56,11 +75,24 @@ function CreateCourseContent() {
       icon: BookOpen
     },
     {
-      id: "checkout",
+      id: "pricing",
       title: "Pricing",
+      description: "Free or paid",
+      icon: DollarSign
+    },
+    // Conditional steps based on pricing model
+    ...(isPaid ? [{
+      id: "checkout",
+      title: "Checkout",
       description: "Payment setup",
       icon: CreditCard
-    },
+    }] : []),
+    ...(isFree ? [{
+      id: "followGate",
+      title: "Download Gate",
+      description: "Require follows",
+      icon: Lock
+    }] : []),
     {
       id: "options",
       title: "Options",
@@ -75,11 +107,15 @@ function CreateCourseContent() {
 
   const renderStep = () => {
     switch (step) {
-      case "checkout":
-        return <CheckoutForm />;
       case "course":
       case "thumbnail": // Redirect old thumbnail step to course
         return <CourseContentForm />;
+      case "pricing":
+        return <PricingModelForm />;
+      case "checkout":
+        return <CheckoutForm />;
+      case "followGate":
+        return <FollowGateForm />;
       case "options":
         return <OptionsForm />;
       default:

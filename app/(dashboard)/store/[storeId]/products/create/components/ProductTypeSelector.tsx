@@ -11,12 +11,14 @@ interface ProductTypeSelectorProps {
   selectedCategory?: ProductCategory;
   onSelect: (category: ProductCategory) => void;
   onContinue: () => void;
+  onDoubleClick?: (category: ProductCategory) => void;
 }
 
 export function ProductTypeSelector({
   selectedCategory,
   onSelect,
   onContinue,
+  onDoubleClick,
 }: ProductTypeSelectorProps) {
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -65,6 +67,15 @@ export function ProductTypeSelector({
               product={product}
               isSelected={selectedCategory === product.id}
               onSelect={() => onSelect(product.id as ProductCategory)}
+              onDoubleClick={() => {
+                onSelect(product.id as ProductCategory);
+                if (onDoubleClick) {
+                  onDoubleClick(product.id as ProductCategory);
+                } else {
+                  // Auto-advance if no custom handler
+                  onContinue();
+                }
+              }}
             />
           ))}
         </div>
@@ -81,6 +92,15 @@ export function ProductTypeSelector({
                     product={product}
                     isSelected={selectedCategory === product.id}
                     onSelect={() => onSelect(product.id as ProductCategory)}
+                    onDoubleClick={() => {
+                      onSelect(product.id as ProductCategory);
+                      if (onDoubleClick) {
+                        onDoubleClick(product.id as ProductCategory);
+                      } else {
+                        // Auto-advance if no custom handler
+                        onContinue();
+                      }
+                    }}
                   />
                 ))}
               </div>
@@ -107,15 +127,17 @@ interface ProductTypeCardProps {
   product: typeof PRODUCT_TYPE_INFO[number];
   isSelected: boolean;
   onSelect: () => void;
+  onDoubleClick: () => void;
 }
 
-function ProductTypeCard({ product, isSelected, onSelect }: ProductTypeCardProps) {
+function ProductTypeCard({ product, isSelected, onSelect, onDoubleClick }: ProductTypeCardProps) {
   return (
     <Card
       className={`cursor-pointer transition-all hover:shadow-md ${
         isSelected ? "ring-2 ring-primary bg-primary/5" : ""
       }`}
       onClick={onSelect}
+      onDoubleClick={onDoubleClick}
     >
       <CardHeader>
         <div className="flex items-center gap-3">
