@@ -49,12 +49,11 @@ export function ProductDetailsForm({
     "playlist-curation",
     "tip-jar",
     "donation",
-    "discord-community",
-    "community-access",
+    "community",
     "blog-post",
   ].includes(productCategory);
   
-  const isCommunity = productCategory === "discord-community" || productCategory === "community-access";
+  const isCommunity = productCategory === "community";
   const isBlogPost = productCategory === "blog-post";
 
   const handleAddTag = () => {

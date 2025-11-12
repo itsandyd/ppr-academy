@@ -450,8 +450,7 @@ export default defineSchema({
       v.literal("template"),
       v.literal("blog-post"),
       // Community
-      v.literal("discord-community"),
-      v.literal("community-access"),
+      v.literal("community"),
       // Support & Donations
       v.literal("tip-jar"),
       v.literal("donation"),

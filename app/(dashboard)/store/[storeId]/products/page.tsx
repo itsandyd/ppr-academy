@@ -579,8 +579,7 @@ export default function ProductsPage() {
                       <h3 className="text-xl font-bold mb-6">Community</h3>
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         {[
-                          { icon: "💬", label: "Discord Community", type: "discord-community" },
-                          { icon: "👥", label: "Community Access", type: "community-access" },
+                          { icon: "👥", label: "Community", type: "community" },
                         ].map((item, index) => (
                           <motion.div
                             key={item.label}

@@ -191,8 +191,7 @@ function getProductTypeFromCategory(category: ProductCategory) {
     "cheat-sheet": "digital",
     "template": "digital",
     "blog-post": "urlMedia",
-    "discord-community": "digital",
-    "community-access": "digital",
+    "community": "digital",
     "tip-jar": "digital",
     "donation": "digital",
   };

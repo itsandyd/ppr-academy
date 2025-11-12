@@ -35,8 +35,7 @@ export type ProductCategory =
   | "template"
   | "blog-post"
   // Community
-  | "discord-community"
-  | "community-access"
+  | "community"
   // Support
   | "tip-jar"
   | "donation";
@@ -198,17 +197,9 @@ export const PRODUCT_TYPE_INFO = [
   
   // Community
   {
-    id: "discord-community",
-    label: "Discord Community",
-    description: "Private Discord server access",
-    category: "Community",
-    productType: "digital" as ProductType,
-    icon: "💬",
-  },
-  {
-    id: "community-access",
-    label: "Community Access",
-    description: "Exclusive community membership",
+    id: "community",
+    label: "Community",
+    description: "Discord server or exclusive community access",
     category: "Community",
     productType: "digital" as ProductType,
     icon: "👥",
