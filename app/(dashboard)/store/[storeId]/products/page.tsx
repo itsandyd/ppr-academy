@@ -574,6 +574,32 @@ export default function ProductsPage() {
                       </div>
                     </div>
 
+                    {/* Community */}
+                    <div>
+                      <h3 className="text-xl font-bold mb-6">Community</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {[
+                          { icon: "💬", label: "Discord Community", type: "discord-community" },
+                          { icon: "👥", label: "Community Access", type: "community-access" },
+                        ].map((item, index) => (
+                          <motion.div
+                            key={item.label}
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: 0.55 + index * 0.05 }}
+                          >
+                            <Card 
+                              className="text-center p-5 hover:shadow-lg transition-all cursor-pointer hover:bg-accent hover:scale-105"
+                              onClick={() => router.push(`/store/${storeId}/products/create?type=${item.type}`)}
+                            >
+                              <div className="text-4xl mb-2">{item.icon}</div>
+                              <p className="text-sm font-medium">{item.label}</p>
+                            </Card>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+
                     {/* Support */}
                     <div>
                       <h3 className="text-xl font-bold mb-6">Support</h3>

@@ -34,6 +34,9 @@ export type ProductCategory =
   | "cheat-sheet"
   | "template"
   | "blog-post"
+  // Community
+  | "discord-community"
+  | "community-access"
   // Support
   | "tip-jar"
   | "donation";
@@ -191,6 +194,24 @@ export const PRODUCT_TYPE_INFO = [
     category: "Digital Content",
     productType: "urlMedia" as ProductType,
     icon: "📝",
+  },
+  
+  // Community
+  {
+    id: "discord-community",
+    label: "Discord Community",
+    description: "Private Discord server access",
+    category: "Community",
+    productType: "digital" as ProductType,
+    icon: "💬",
+  },
+  {
+    id: "community-access",
+    label: "Community Access",
+    description: "Exclusive community membership",
+    category: "Community",
+    productType: "digital" as ProductType,
+    icon: "👥",
   },
   
   // Services

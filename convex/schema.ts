@@ -449,6 +449,9 @@ export default defineSchema({
       v.literal("cheat-sheet"),
       v.literal("template"),
       v.literal("blog-post"),
+      // Community
+      v.literal("discord-community"),
+      v.literal("community-access"),
       // Support & Donations
       v.literal("tip-jar"),
       v.literal("donation"),

@@ -49,7 +49,13 @@ export function ProductDetailsForm({
     "playlist-curation",
     "tip-jar",
     "donation",
+    "discord-community",
+    "community-access",
+    "blog-post",
   ].includes(productCategory);
+  
+  const isCommunity = productCategory === "discord-community" || productCategory === "community-access";
+  const isBlogPost = productCategory === "blog-post";
 
   const handleAddTag = () => {
     if (newTag.trim() && !tags.includes(newTag.trim())) {
@@ -135,11 +141,55 @@ export function ProductDetailsForm({
         )}
       </div>
 
-      {/* Download File (if applicable) */}
+      {/* Discord Invite Link (for community products) */}
+      {isCommunity && (
+        <div className="space-y-2">
+          <Label htmlFor="downloadUrl">
+            Discord Invite Link <span className="text-red-500">*</span>
+          </Label>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <Input
+                id="downloadUrl"
+                placeholder="https://discord.gg/..."
+                value={downloadUrl}
+                onChange={(e) => onDownloadUrlChange(e.target.value)}
+              />
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Discord server invite link (make sure it doesn't expire)
+          </p>
+        </div>
+      )}
+      
+      {/* Blog Post URL */}
+      {isBlogPost && (
+        <div className="space-y-2">
+          <Label htmlFor="downloadUrl">
+            Blog Post URL
+          </Label>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <Input
+                id="downloadUrl"
+                placeholder="https://yourblog.com/post-title"
+                value={downloadUrl}
+                onChange={(e) => onDownloadUrlChange(e.target.value)}
+              />
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Link to your blog post or article
+          </p>
+        </div>
+      )}
+
+      {/* Download File (for digital products) */}
       {needsDownloadUrl && (
         <div className="space-y-2">
           <Label htmlFor="downloadUrl">
-            Download File {productCategory !== "playlist-curation" && <span className="text-red-500">*</span>}
+            Download File <span className="text-red-500">*</span>
           </Label>
           <div className="flex gap-2">
             <div className="flex-1">

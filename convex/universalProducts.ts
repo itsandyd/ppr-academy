@@ -130,6 +130,9 @@ export const createUniversalProduct = mutation({
       v.literal("cheat-sheet"),
       v.literal("template"),
       v.literal("blog-post"),
+      // Community
+      v.literal("discord-community"),
+      v.literal("community-access"),
       // Support & Donations
       v.literal("tip-jar"),
       v.literal("donation"),
@@ -456,6 +459,8 @@ export const getProductsByCategory = query({
       v.literal("cheat-sheet"),
       v.literal("template"),
       v.literal("blog-post"),
+      v.literal("discord-community"),
+      v.literal("community-access"),
       v.literal("tip-jar"),
       v.literal("donation"),
     ),
