@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertTriangle, Music, BookOpen, Users, Zap, Search, Filter, Package, Plus, Eye, DollarSign, TrendingUp, Mail, Waves, Sparkles } from "lucide-react";
+import { AlertTriangle, Music, BookOpen, Users, Zap, Search, Filter, Package, Plus, Eye, DollarSign, TrendingUp, Mail, Waves, Sparkles, Gift } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MusicOptionCard } from "../components/MusicOptionCard";
 import { musicOptions, groupedOptions, popularOptions } from "../components/music-options";
@@ -186,7 +186,7 @@ export default function ProductsPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+    <div className="min-h-screen">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header Section */}
         <motion.div 
@@ -206,6 +206,16 @@ export default function ProductsPage() {
               Manage your existing products or create new ones to grow your music business
         </p>
       </div>
+          
+          {/* Quick Create Button */}
+          <Button
+            onClick={() => router.push(`/store/${storeId}/products/create`)}
+            size="lg"
+            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 shadow-lg"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            Create Product
+          </Button>
         </motion.div>
 
         {/* Credit Balance Widget */}
@@ -399,7 +409,7 @@ export default function ProductsPage() {
                             Start by creating your first product to begin selling your music and content to your audience.
                           </p>
                           <Button 
-                            onClick={() => setActiveTab("create")}
+                            onClick={() => router.push(`/store/${storeId}/products/create`)}
                             className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
                           >
                             <Plus className="w-4 h-4 mr-2" />
@@ -414,294 +424,221 @@ export default function ProductsPage() {
 
               {activeTab === "create" && (
                 <TabsContent key="tab-create" value="create" className="space-y-8">
-                  <div className="text-center mb-8">
-                    <div className="inline-flex items-center gap-2 bg-green-100 dark:bg-green-900/20 px-4 py-2 rounded-full mb-4">
-                      <Plus className="w-4 h-4 text-green-600" />
-                      <span className="text-sm font-medium text-green-700 dark:text-green-300">Create New Product</span>
+                  {/* Hero Section */}
+                  <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-center mb-12"
+                  >
+                    <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20 px-4 py-2 rounded-full mb-6">
+                      <Sparkles className="w-4 h-4 text-purple-600" />
+                      <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Universal Product Creator</span>
                     </div>
-                    <h2 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-4">
-                      What are you creating today?
+                    <h2 className="text-4xl md:text-5xl font-bold text-slate-900 dark:text-slate-100 mb-4">
+                      Create Your Product
                     </h2>
-                    <p className="text-xl text-slate-600 dark:text-slate-400 max-w-3xl mx-auto leading-relaxed">
-                      Choose the perfect format for your music content — from sample packs and beats to courses and coaching sessions.
+                    <p className="text-xl text-slate-600 dark:text-slate-400 max-w-3xl mx-auto leading-relaxed mb-8">
+                      One simple wizard for everything — sample packs, PDFs, tip jars, playlists, and more. 
+                      Choose free with download gates or direct sales.
                     </p>
-                  </div>
+                    
+                    {/* Main CTA */}
+                    <Button
+                      onClick={() => router.push(`/store/${storeId}/products/create`)}
+                      size="lg"
+                      className="text-lg px-8 py-6 h-auto bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all"
+                    >
+                      <Plus className="w-6 h-6 mr-2" />
+                      Start Creating →
+                    </Button>
+                  </motion.div>
 
-                  {/* Featured: Ableton Audio Effect Rack */}
+                  {/* What You Can Create - Organized by Category */}
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mb-8"
+                    transition={{ delay: 0.1 }}
+                    className="space-y-10"
                   >
-                    <Card className="relative overflow-hidden bg-gradient-to-br from-chart-1 via-chart-2 to-chart-3 border-none shadow-2xl">
-                      {/* Animated background elements */}
-                      <div className="absolute inset-0 opacity-20">
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full blur-3xl animate-pulse"></div>
-                        <div className="absolute bottom-0 left-0 w-64 h-64 bg-white rounded-full blur-3xl animate-pulse delay-700"></div>
-                      </div>
-
-                      <CardContent className="relative z-10 p-8">
-                        <div className="flex flex-col lg:flex-row items-center gap-8">
-                          {/* Icon Section */}
-                          <div className="flex-shrink-0">
-                            <div className="w-24 h-24 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-                              <Waves className="w-12 h-12 text-white" />
-                            </div>
-                          </div>
-
-                          {/* Content Section */}
-                          <div className="flex-1 text-center lg:text-left">
-                            <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-full mb-3">
-                              <Sparkles className="w-3.5 h-3.5 text-white" />
-                              <span className="text-xs font-semibold text-white uppercase tracking-wide">Featured</span>
-                            </div>
-                            <h3 className="text-3xl font-bold text-white mb-2">
-                              Ableton Audio Effect Racks
-                            </h3>
-                            <p className="text-lg text-white/90 mb-4 leading-relaxed">
-                              Share your custom Ableton Live racks with producers worldwide. Upload device chains, macro controls, and earn from your sound design expertise.
-                            </p>
-                            <div className="flex flex-wrap gap-2 mb-6 justify-center lg:justify-start">
-                              <Badge variant="secondary" className="bg-white/20 text-white border-white/30 hover:bg-white/30">
-                                .adg Files
-                              </Badge>
-                              <Badge variant="secondary" className="bg-white/20 text-white border-white/30 hover:bg-white/30">
-                                Audio Previews
-                              </Badge>
-                              <Badge variant="secondary" className="bg-white/20 text-white border-white/30 hover:bg-white/30">
-                                Macro Controls
-                              </Badge>
-                              <Badge variant="secondary" className="bg-white/20 text-white border-white/30 hover:bg-white/30">
-                                Version Support
-                              </Badge>
-                            </div>
-                            <Button
-                              onClick={() => handleOptionClick('ableton-rack')}
-                              size="lg"
-                              className="bg-white text-chart-1 hover:bg-white/90 font-semibold shadow-lg hover:shadow-xl transition-all transform hover:scale-105"
+                    {/* Music Production */}
+                    <div>
+                      <h3 className="text-xl font-bold mb-6">Music Production</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {[
+                          { icon: "🎵", label: "Sample Pack", type: "sample-pack" },
+                          { icon: "🎛️", label: "Preset Pack", type: "preset-pack" },
+                          { icon: "🎹", label: "MIDI Pack", type: "midi-pack" },
+                          { icon: "🔊", label: "Ableton Rack", type: "ableton-rack" },
+                          { icon: "🎹", label: "Beat Lease", type: "beat-lease" },
+                          { icon: "📁", label: "Project Files", type: "project-files" },
+                          { icon: "🎚️", label: "Mixing Template", type: "mixing-template" },
+                        ].map((item, index) => (
+                          <motion.div
+                            key={item.label}
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: 0.15 + index * 0.05 }}
+                          >
+                            <Card 
+                              className="text-center p-5 hover:shadow-lg transition-all cursor-pointer hover:bg-accent hover:scale-105"
+                              onClick={() => router.push(`/store/${storeId}/products/create?type=${item.type}`)}
                             >
-                              <Plus className="w-5 h-5 mr-2" />
-                              Create Ableton Rack
-                            </Button>
-                          </div>
+                              <div className="text-4xl mb-2">{item.icon}</div>
+                              <p className="text-sm font-medium">{item.label}</p>
+                            </Card>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
 
-                          {/* Stats/Benefits Section */}
-                          <div className="flex-shrink-0 hidden xl:block">
-                            <div className="space-y-4 text-white">
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
-                                  <Package className="w-5 h-5" />
-                                </div>
-                                <div>
-                                  <div className="text-2xl font-bold">Easy</div>
-                                  <div className="text-sm text-white/80">Upload</div>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
-                                  <Eye className="w-5 h-5" />
-                                </div>
-                                <div>
-                                  <div className="text-2xl font-bold">Demo</div>
-                                  <div className="text-sm text-white/80">Preview</div>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-lg flex items-center justify-center">
-                                  <DollarSign className="w-5 h-5" />
-                                </div>
-                                <div>
-                                  <div className="text-2xl font-bold">Earn</div>
-                                  <div className="text-sm text-white/80">Revenue</div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                    {/* Digital Content */}
+                    <div>
+                      <h3 className="text-xl font-bold mb-6">Digital Content</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {[
+                          { icon: "📄", label: "PDF Guide", type: "pdf-guide" },
+                          { icon: "📋", label: "Cheat Sheet", type: "cheat-sheet" },
+                          { icon: "🎨", label: "Template", type: "template" },
+                          { icon: "📝", label: "Blog Post", type: "blog-post" },
+                        ].map((item, index) => (
+                          <motion.div
+                            key={item.label}
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: 0.25 + index * 0.05 }}
+                          >
+                            <Card 
+                              className="text-center p-5 hover:shadow-lg transition-all cursor-pointer hover:bg-accent hover:scale-105"
+                              onClick={() => router.push(`/store/${storeId}/products/create?type=${item.type}`)}
+                            >
+                              <div className="text-4xl mb-2">{item.icon}</div>
+                              <p className="text-sm font-medium">{item.label}</p>
+                            </Card>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Services */}
+                    <div>
+                      <h3 className="text-xl font-bold mb-6">Services</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {[
+                          { icon: "🎼", label: "Playlist Curation", type: "playlist-curation" },
+                          { icon: "💬", label: "Coaching Session", type: "coaching" },
+                          { icon: "🎚️", label: "Mixing Service", type: "mixing-service" },
+                          { icon: "💿", label: "Mastering Service", type: "mastering-service" },
+                        ].map((item, index) => (
+                          <motion.div
+                            key={item.label}
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: 0.35 + index * 0.05 }}
+                          >
+                            <Card 
+                              className="text-center p-5 hover:shadow-lg transition-all cursor-pointer hover:bg-accent hover:scale-105"
+                              onClick={() => router.push(`/store/${storeId}/products/create?type=${item.type}`)}
+                            >
+                              <div className="text-4xl mb-2">{item.icon}</div>
+                              <p className="text-sm font-medium">{item.label}</p>
+                            </Card>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Education */}
+                    <div>
+                      <h3 className="text-xl font-bold mb-6">Education</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {[
+                          { icon: "🎓", label: "Online Course", type: "course" },
+                          { icon: "👥", label: "Workshop", type: "workshop" },
+                          { icon: "⭐", label: "Masterclass", type: "masterclass" },
+                        ].map((item, index) => (
+                          <motion.div
+                            key={item.label}
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: 0.45 + index * 0.05 }}
+                          >
+                            <Card 
+                              className="text-center p-5 hover:shadow-lg transition-all cursor-pointer hover:bg-accent hover:scale-105"
+                              onClick={() => router.push(`/store/${storeId}/products/create?type=${item.type}`)}
+                            >
+                              <div className="text-4xl mb-2">{item.icon}</div>
+                              <p className="text-sm font-medium">{item.label}</p>
+                            </Card>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Support */}
+                    <div>
+                      <h3 className="text-xl font-bold mb-6">Support</h3>
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                        {[
+                          { icon: "☕", label: "Tip Jar", type: "tip-jar" },
+                          { icon: "💝", label: "Donation", type: "donation" },
+                        ].map((item, index) => (
+                          <motion.div
+                            key={item.label}
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: 0.55 + index * 0.05 }}
+                          >
+                            <Card 
+                              className="text-center p-5 hover:shadow-lg transition-all cursor-pointer hover:bg-accent hover:scale-105"
+                              onClick={() => router.push(`/store/${storeId}/products/create?type=${item.type}`)}
+                            >
+                              <div className="text-4xl mb-2">{item.icon}</div>
+                              <p className="text-sm font-medium">{item.label}</p>
+                            </Card>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
                   </motion.div>
 
-                  {/* Enhanced Product Type Selector with Tooltips */}
-                  <ProductTypeSelector 
-                    onSelect={(typeId) => {
-                      // Map ProductTypeSelector IDs to existing routes
-                      const typeRouteMap: Record<string, string> = {
-                        'abletonRack': 'ableton-rack',
-                        'samplePack': 'sample-pack',
-                        'presetPack': 'preset-pack',
-                        'musicCourse': 'ecourse',
-                        'coachingCall': 'coaching',
-                        'beatLease': 'beat-lease',
-                        'workshop': 'webinar',
-                        'leadMagnet': 'emails',
-                        'bundle': 'bundle'
-                      };
-                      
-                      const routeKey = typeRouteMap[typeId];
-                      if (routeKey) {
-                        handleOptionClick(routeKey);
-                      }
-                    }}
-                  />
-
-                  {/* Creation Category Tabs */}
-                  <Tabs defaultValue="popular" className="w-full">
-                    <TabsList className="grid w-full max-w-2xl mx-auto grid-cols-4 mb-8">
-                      <TabsTrigger value="popular" className="flex items-center gap-2">
-                        <Zap className="w-4 h-4" />
-                        <span className="hidden sm:inline">Popular</span>
-                      </TabsTrigger>
-                      <TabsTrigger value="music" className="flex items-center gap-2">
-                        <Music className="w-4 h-4" />
-                        <span className="hidden sm:inline">Music</span>
-                      </TabsTrigger>
-                      <TabsTrigger value="content" className="flex items-center gap-2">
-                        <BookOpen className="w-4 h-4" />
-                        <span className="hidden sm:inline">Content</span>
-                      </TabsTrigger>
-                      <TabsTrigger value="services" className="flex items-center gap-2">
-                        <Users className="w-4 h-4" />
-                        <span className="hidden sm:inline">Services</span>
-                      </TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="popular" className="space-y-8">
+                  {/* Key Features */}
                       <motion.div
-                        key="popular-header"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        className="text-center mb-8"
-                      >
-                        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">
-                          🔥 Most Popular Choices
-                        </h2>
-                        <p className="text-slate-600 dark:text-slate-400">
-                          The top picks among music creators on our platform
+                    transition={{ delay: 0.2 }}
+                  >
+                    <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+                      <Card className="text-center p-6 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 border-blue-200 dark:border-blue-800">
+                        <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Gift className="w-6 h-6 text-white" />
+                        </div>
+                        <h4 className="font-bold mb-2">Free with Download Gates</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Grow your audience by requiring email or social follows to unlock free products
                         </p>
-                      </motion.div>
+                      </Card>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {popularOptions.map((option, index) => (
-                          <MusicOptionCard
-                            key={`popular-${option.id}`}
-                            title={option.title}
-                            subtitle={option.subtitle}
-                            icon={option.icon}
-                            gradient={option.gradient}
-                            iconColor={option.iconColor}
-                            isPopular={option.isPopular}
-                            isNew={option.isNew}
-                            onClick={() => handleOptionClick(option.id)}
-                            index={index}
-                          />
-                        ))}
+                      <Card className="text-center p-6 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-green-200 dark:border-green-800">
+                        <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <DollarSign className="w-6 h-6 text-white" />
                       </div>
-                    </TabsContent>
-
-                    <TabsContent value="music" className="space-y-8">
-                      <motion.div
-                        key="music-header"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        className="text-center mb-8"
-                      >
-                        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">
-                          🎵 Music Products
-                        </h2>
-                        <p className="text-slate-600 dark:text-slate-400">
-                          Sell your beats, samples, presets, and project files
+                        <h4 className="font-bold mb-2">Direct Sales</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Sell directly with Stripe checkout, instant delivery, and automatic email confirmations
                         </p>
-                      </motion.div>
+                      </Card>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {groupedOptions.music.map((option, index) => (
-                          <MusicOptionCard
-                            key={`music-${option.id}`}
-                            title={option.title}
-                            subtitle={option.subtitle}
-                            icon={option.icon}
-                            gradient={option.gradient}
-                            iconColor={option.iconColor}
-                            isPopular={option.isPopular}
-                            isNew={option.isNew}
-                            onClick={() => handleOptionClick(option.id)}
-                            index={index}
-                          />
-                        ))}
+                      <Card className="text-center p-6 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border-purple-200 dark:border-purple-800">
+                        <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                          <Zap className="w-6 h-6 text-white" />
                       </div>
-                    </TabsContent>
-
-                    <TabsContent value="content" className="space-y-8">
-                      <motion.div
-                        key="content-header"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        className="text-center mb-8"
-                      >
-                        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">
-                          📚 Educational Content
-                        </h2>
-                        <p className="text-slate-600 dark:text-slate-400">
-                          Share your knowledge through courses, guides, and tutorials
+                        <h4 className="font-bold mb-2">Flexible Pricing</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Offer the same product as free (lead magnet) or paid. Test what works best for your audience.
                         </p>
-                      </motion.div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {groupedOptions.content.map((option, index) => (
-                          <MusicOptionCard
-                            key={`content-${option.id}`}
-                            title={option.title}
-                            subtitle={option.subtitle}
-                            icon={option.icon}
-                            gradient={option.gradient}
-                            iconColor={option.iconColor}
-                            isPopular={option.isPopular}
-                            isNew={option.isNew}
-                            onClick={() => handleOptionClick(option.id)}
-                            index={index}
-                          />
-                        ))}
+                      </Card>
                       </div>
-                    </TabsContent>
-
-                    <TabsContent value="services" className="space-y-8">
-                      <motion.div
-                        key="services-header"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        className="text-center mb-8"
-                      >
-                        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">
-                          🎧 Services & Community
-                        </h2>
-                        <p className="text-slate-600 dark:text-slate-400">
-                          Offer coaching, mixing services, and build your community
-                        </p>
                       </motion.div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {[...groupedOptions.services, ...groupedOptions.community].map((option, index) => (
-                          <MusicOptionCard
-                            key={`services-${option.id}`}
-            title={option.title}
-            subtitle={option.subtitle}
-            icon={option.icon}
-                            gradient={option.gradient}
-                            iconColor={option.iconColor}
-                            isPopular={option.isPopular}
-                            isNew={option.isNew}
-            onClick={() => handleOptionClick(option.id)}
-                            index={index}
-          />
-        ))}
-                      </div>
-                    </TabsContent>
-                  </Tabs>
                 </TabsContent>
               )}
           </Tabs>

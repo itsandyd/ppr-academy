@@ -40,3 +40,38 @@
 ## Next.js Configuration
 - When using Convex storage URLs in `next/image` components, add the hostname to `next.config.ts`
 - Add to `images.remotePatterns`: `{ protocol: 'https', hostname: '[deployment].convex.cloud', port: '', pathname: '/**' }`
+
+## Documentation Organization
+
+### Markdown File Placement
+- **NEVER** create `.md` files in the project root (except `README.md`)
+- All documentation must go in the `.docs/` directory with proper organization
+
+### Date-Based Organization
+New documentation files should be placed in date-based folders:
+- `.docs/2024-11-november/` - For November 2024 documentation
+- `.docs/2024-12-december/` - For December 2024 documentation
+- `.docs/2025-01-january/` - For January 2025 documentation (and so on)
+- `.docs/archive/` - For older historical documentation
+
+### Topic-Based Categories
+Documentation should also be categorized by topic when creating new files:
+- `products` - Product documentation (Universal Products, Digital Products, Ableton Racks, Plugins, Sample Packs, Marketplace)
+- `features` - Feature implementations and guides
+- `integrations` - Third-party integrations (Stripe, Clerk, Resend, ElevenLabs, Instagram, etc.)
+- `fixes` - Bug fixes, debugging guides, error resolution
+- `dashboards` - Dashboard documentation (Admin, Operator, Creator, Analytics)
+- `email-systems` - Email and notification systems, campaigns, deliverability
+- `social-media` - Social media features (Instagram, Facebook, DM automation, Follow Gates)
+- `courses` - Course-related documentation (Lessons, Enrollment, Categories, Notes)
+- `ai-features` - AI and automation features (NIA, Blotato, ElevenLabs, AI Copy Generation)
+- `technical` - Technical documentation (TypeScript, Convex, Performance, SEO, Optimization)
+
+### File Naming Convention
+- Use UPPERCASE with underscores: `FEATURE_NAME_GUIDE.md`
+- Be descriptive: `EMAIL_CAMPAIGN_PERFORMANCE_FIX.md` not `FIX.md`
+- Include context: `INSTAGRAM_DM_AUTOMATION_IMPLEMENTATION.md`
+
+### Documentation Index
+- `.docs/README.md` provides an overview of the documentation structure
+- Update it when adding significant new documentation categories

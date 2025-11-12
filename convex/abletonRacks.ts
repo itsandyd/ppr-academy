@@ -445,7 +445,8 @@ export const getAbletonRackBySlug = query({
         v.literal("urlMedia"),
         v.literal("coaching"),
         v.literal("abletonRack"),
-        v.literal("abletonPreset")
+        v.literal("abletonPreset"),
+        v.literal("playlistCuration")
       )),
       abletonVersion: v.optional(v.string()),
       minAbletonVersion: v.optional(v.string()),

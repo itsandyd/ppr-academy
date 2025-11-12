@@ -125,39 +125,35 @@ export function AppSidebarEnhanced() {
           gradient: "from-violet-500 to-purple-500"
         },
         { 
-          icon: Package, 
-          href: `/store/${storeId || 'setup'}/products`, 
+          icon: Sparkles, 
+          href: `/store/${storeId || 'setup'}/products/create`, 
           label: "Create Product",
           badge: "New",
           gradient: "from-purple-500 to-pink-500"
         },
         { 
+          icon: Package, 
+          href: `/store/${storeId || 'setup'}/products`, 
+          label: "My Products",
+          gradient: "from-blue-500 to-cyan-500"
+        },
+        { 
           icon: BookOpen, 
           href: `/store/${storeId || 'setup'}/blog`, 
           label: "Blog Posts",
-          isNew: true,
           gradient: "from-blue-500 to-indigo-500"
-        },
-        { 
-          icon: Music, 
-          href: `/store/${storeId || 'setup'}/packs`, 
-          label: "Sample Packs",
-          gradient: "from-pink-500 to-rose-500",
-          isNew: true
         },
         { 
           icon: List, 
           href: `/home/playlists`, 
-          label: "Playlists",
-          gradient: "from-purple-500 to-blue-500",
-          isNew: true
+          label: "My Playlists",
+          gradient: "from-purple-500 to-blue-500"
         },
         { 
           icon: Inbox, 
           href: `/home/submissions`, 
           label: "Submissions",
-          gradient: "from-orange-500 to-amber-500",
-          isNew: true
+          gradient: "from-orange-500 to-amber-500"
         },
       ]
     },

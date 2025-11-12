@@ -420,7 +420,40 @@ export default defineSchema({
       v.literal("urlMedia"), 
       v.literal("coaching"),
       v.literal("abletonRack"),
-      v.literal("abletonPreset")
+      v.literal("abletonPreset"),
+      v.literal("playlistCuration") // NEW: Playlist curation as a product
+    )),
+    
+    // Product Category (more specific than productType)
+    productCategory: v.optional(v.union(
+      // Music Production
+      v.literal("sample-pack"),
+      v.literal("preset-pack"),
+      v.literal("midi-pack"),
+      v.literal("ableton-rack"),
+      v.literal("beat-lease"),
+      v.literal("project-files"),
+      v.literal("mixing-template"),
+      // Services
+      v.literal("coaching"),
+      v.literal("mixing-service"),
+      v.literal("mastering-service"),
+      // Curation
+      v.literal("playlist-curation"),
+      // Education
+      v.literal("course"),
+      v.literal("workshop"),
+      v.literal("masterclass"),
+      // Digital Content
+      v.literal("pdf-guide"),
+      v.literal("cheat-sheet"),
+      v.literal("template"),
+      v.literal("blog-post"),
+      // Support & Donations
+      v.literal("tip-jar"),
+      v.literal("donation"),
+      // Legacy (for backward compatibility)
+      v.literal("lead-magnet"),
     )),
     url: v.optional(v.string()),
     displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
@@ -487,9 +520,19 @@ export default defineSchema({
     affiliateCookieDuration: v.optional(v.number()),
     confirmationEmailSubject: v.optional(v.string()),
     confirmationEmailBody: v.optional(v.string()),
+    
+    // Playlist Curation Configuration (for productCategory: "playlist-curation")
+    playlistCurationConfig: v.optional(v.object({
+      linkedPlaylistId: v.optional(v.id("curatorPlaylists")), // Link to existing playlist
+      reviewTurnaroundDays: v.optional(v.number()), // SLA (e.g., 3-7 days)
+      genresAccepted: v.optional(v.array(v.string())), // Genres curator accepts
+      submissionGuidelines: v.optional(v.string()), // Custom guidelines
+      maxSubmissionsPerMonth: v.optional(v.number()), // Rate limiting
+    })),
   })
   .index("by_storeId", ["storeId"])
-  .index("by_userId", ["userId"]),
+  .index("by_userId", ["userId"])
+  .index("by_productCategory", ["productCategory"]),
 
   // Reviews for products
   productReviews: defineTable({
@@ -3084,10 +3127,14 @@ export default defineSchema({
     trackCount: v.number(),
     totalPlays: v.number(),
     totalSubmissions: v.number(),
+    
+    // Product Integration (NEW)
+    linkedProductId: v.optional(v.id("digitalProducts")), // Link to product listing
   })
     .index("by_creatorId", ["creatorId"])
     .index("by_isPublic", ["isPublic"])
-    .index("by_acceptsSubmissions", ["acceptsSubmissions"]),
+    .index("by_acceptsSubmissions", ["acceptsSubmissions"])
+    .index("by_linkedProductId", ["linkedProductId"]),
 
   // Curator Playlist Tracks - Join table for new submission system
   curatorPlaylistTracks: defineTable({
