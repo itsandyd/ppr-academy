@@ -148,6 +148,7 @@ export const getPublishedProductsByStore = query({
     style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))),
     // URL/Media specific fields
     productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"), v.literal("coaching"), v.literal("abletonRack"), v.literal("abletonPreset"), v.literal("playlistCuration"))),
+    productCategory: v.optional(v.string()), // Product category (sample-pack, preset-pack, etc.)
     url: v.optional(v.string()),
     displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
     mediaType: v.optional(v.union(v.literal("youtube"), v.literal("spotify"), v.literal("website"), v.literal("social"))),
@@ -190,6 +191,25 @@ export const getPublishedProductsByStore = query({
     fileFormat: v.optional(v.union(v.literal("adg"), v.literal("adv"), v.literal("alp"))),
     fileSize: v.optional(v.number()),
     installationNotes: v.optional(v.string()),
+    // Follow gate fields (for free products with download gates)
+    followGateEnabled: v.optional(v.boolean()),
+    followGateRequirements: v.optional(v.object({
+      requireEmail: v.optional(v.boolean()),
+      requireInstagram: v.optional(v.boolean()),
+      requireTiktok: v.optional(v.boolean()),
+      requireYoutube: v.optional(v.boolean()),
+      requireSpotify: v.optional(v.boolean()),
+      minFollowsRequired: v.optional(v.number()),
+    })),
+    followGateSocialLinks: v.optional(v.object({
+      instagram: v.optional(v.string()),
+      tiktok: v.optional(v.string()),
+      youtube: v.optional(v.string()),
+      spotify: v.optional(v.string()),
+    })),
+    followGateMessage: v.optional(v.string()),
+    // Pack files (for sample/midi/preset packs)
+    packFiles: v.optional(v.string()), // JSON stringified array of file metadata
   })),
   handler: async (ctx, args) => {
     const products = await ctx.db
