@@ -95,14 +95,42 @@ export default function SamplesMarketplacePage() {
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
 
   // Queries
-  const samples = useQuery(api.samples.getPublishedSamples, {
+  const legacySamples = useQuery(api.samples.getPublishedSamples, {
     limit: 50,
     genre: selectedGenre,
     category: selectedCategory,
     searchQuery: searchTerm,
   }) || [];
+  
+  // Get samples from packs (new system)
+  // @ts-ignore TS2589 - Type instantiation is excessively deep
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const packSamples: any = useQuery(api.packSamples.getSamplesFromPacks, {
+    limit: 50,
+    genre: selectedGenre,
+  }) || [];
+  
+  // Combine legacy samples + pack samples
+  const samples = [...legacySamples, ...packSamples];
 
-  const packs = useQuery(api.samplePacks.getAllPublishedSamplePacks) || [];
+  // Get all published digital products (packs are now in digitalProducts table)
+  // @ts-ignore TS2589 - Type instantiation is excessively deep
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const allPublishedProducts: any = useQuery(api.digitalProducts.getAllPublishedProducts) || [];
+  
+  // Debug logging
+  console.log("All published products:", allPublishedProducts.length);
+  console.log("Product categories:", allPublishedProducts.map((p: any) => p.productCategory));
+  
+  // Filter for pack products only (sample-pack, midi-pack, preset-pack)
+  const packs = allPublishedProducts.filter((p: any) => 
+    p.productCategory === "sample-pack" || 
+    p.productCategory === "midi-pack" || 
+    p.productCategory === "preset-pack"
+  );
+  
+  console.log("Filtered packs:", packs.length, packs);
+  
   const userCredits = useQuery(api.credits.getUserCredits);
 
   // Mutations

@@ -43,6 +43,23 @@ export const getCourses = query({
     // Stripe integration fields
     stripeProductId: v.optional(v.string()),
     stripePriceId: v.optional(v.string()),
+    // Follow gate fields (for free courses with download gates)
+    followGateEnabled: v.optional(v.boolean()),
+    followGateRequirements: v.optional(v.object({
+      requireEmail: v.optional(v.boolean()),
+      requireInstagram: v.optional(v.boolean()),
+      requireTiktok: v.optional(v.boolean()),
+      requireYoutube: v.optional(v.boolean()),
+      requireSpotify: v.optional(v.boolean()),
+      minFollowsRequired: v.optional(v.number()),
+    })),
+    followGateSocialLinks: v.optional(v.object({
+      instagram: v.optional(v.string()),
+      tiktok: v.optional(v.string()),
+      youtube: v.optional(v.string()),
+      spotify: v.optional(v.string()),
+    })),
+    followGateMessage: v.optional(v.string()),
   })),
   handler: async (ctx) => {
     return await ctx.db.query("courses").collect();
@@ -81,6 +98,23 @@ export const getCourseBySlug = query({
       // Stripe integration fields
       stripeProductId: v.optional(v.string()),
       stripePriceId: v.optional(v.string()),
+      // Follow gate fields (for free courses with download gates)
+      followGateEnabled: v.optional(v.boolean()),
+      followGateRequirements: v.optional(v.object({
+        requireEmail: v.optional(v.boolean()),
+        requireInstagram: v.optional(v.boolean()),
+        requireTiktok: v.optional(v.boolean()),
+        requireYoutube: v.optional(v.boolean()),
+        requireSpotify: v.optional(v.boolean()),
+        minFollowsRequired: v.optional(v.number()),
+      })),
+      followGateSocialLinks: v.optional(v.object({
+        instagram: v.optional(v.string()),
+        tiktok: v.optional(v.string()),
+        youtube: v.optional(v.string()),
+        spotify: v.optional(v.string()),
+      })),
+      followGateMessage: v.optional(v.string()),
       // Modules data
       modules: v.optional(v.any()),
     }),
@@ -151,12 +185,16 @@ export const getCourseBySlug = query({
       acceptsStripe: course.acceptsStripe,
       stripeProductId: course.stripeProductId,
       stripePriceId: course.stripePriceId,
+      followGateEnabled: course.followGateEnabled,
+      followGateRequirements: course.followGateRequirements,
+      followGateSocialLinks: course.followGateSocialLinks,
+      followGateMessage: course.followGateMessage,
       modules: modulesWithLessons.length > 0 ? modulesWithLessons : undefined,
     };
   },
 });
 
-// Get courses by user
+// Get courses by user 
 export const getCoursesByUser = query({
   args: { userId: v.string() },
   returns: v.array(v.object({
@@ -187,6 +225,23 @@ export const getCoursesByUser = query({
     // Stripe integration fields
     stripeProductId: v.optional(v.string()),
     stripePriceId: v.optional(v.string()),
+    // Follow gate fields (for free courses with download gates)
+    followGateEnabled: v.optional(v.boolean()),
+    followGateRequirements: v.optional(v.object({
+      requireEmail: v.optional(v.boolean()),
+      requireInstagram: v.optional(v.boolean()),
+      requireTiktok: v.optional(v.boolean()),
+      requireYoutube: v.optional(v.boolean()),
+      requireSpotify: v.optional(v.boolean()),
+      minFollowsRequired: v.optional(v.number()),
+    })),
+    followGateSocialLinks: v.optional(v.object({
+      instagram: v.optional(v.string()),
+      tiktok: v.optional(v.string()),
+      youtube: v.optional(v.string()),
+      spotify: v.optional(v.string()),
+    })),
+    followGateMessage: v.optional(v.string()),
   })),
   handler: async (ctx, args) => {
     return await ctx.db
@@ -228,6 +283,23 @@ export const getCoursesByStore = query({
     // Stripe integration fields
     stripeProductId: v.optional(v.string()),
     stripePriceId: v.optional(v.string()),
+    // Follow gate fields (for free courses with download gates)
+    followGateEnabled: v.optional(v.boolean()),
+    followGateRequirements: v.optional(v.object({
+      requireEmail: v.optional(v.boolean()),
+      requireInstagram: v.optional(v.boolean()),
+      requireTiktok: v.optional(v.boolean()),
+      requireYoutube: v.optional(v.boolean()),
+      requireSpotify: v.optional(v.boolean()),
+      minFollowsRequired: v.optional(v.number()),
+    })),
+    followGateSocialLinks: v.optional(v.object({
+      instagram: v.optional(v.string()),
+      tiktok: v.optional(v.string()),
+      youtube: v.optional(v.string()),
+      spotify: v.optional(v.string()),
+    })),
+    followGateMessage: v.optional(v.string()),
   })),
   handler: async (ctx, args) => {
     return await ctx.db
@@ -268,6 +340,23 @@ export const getPublishedCoursesByStore = query({
     // Stripe integration fields
     stripeProductId: v.optional(v.string()),
     stripePriceId: v.optional(v.string()),
+    // Follow gate fields (for free courses with download gates)
+    followGateEnabled: v.optional(v.boolean()),
+    followGateRequirements: v.optional(v.object({
+      requireEmail: v.optional(v.boolean()),
+      requireInstagram: v.optional(v.boolean()),
+      requireTiktok: v.optional(v.boolean()),
+      requireYoutube: v.optional(v.boolean()),
+      requireSpotify: v.optional(v.boolean()),
+      minFollowsRequired: v.optional(v.number()),
+    })),
+    followGateSocialLinks: v.optional(v.object({
+      instagram: v.optional(v.string()),
+      tiktok: v.optional(v.string()),
+      youtube: v.optional(v.string()),
+      spotify: v.optional(v.string()),
+    })),
+    followGateMessage: v.optional(v.string()),
   })),
   handler: async (ctx, args) => {
     const courses = await ctx.db
@@ -311,6 +400,23 @@ export const getCoursesByInstructor = query({
     // Stripe integration fields
     stripeProductId: v.optional(v.string()),
     stripePriceId: v.optional(v.string()),
+    // Follow gate fields (for free courses with download gates)
+    followGateEnabled: v.optional(v.boolean()),
+    followGateRequirements: v.optional(v.object({
+      requireEmail: v.optional(v.boolean()),
+      requireInstagram: v.optional(v.boolean()),
+      requireTiktok: v.optional(v.boolean()),
+      requireYoutube: v.optional(v.boolean()),
+      requireSpotify: v.optional(v.boolean()),
+      minFollowsRequired: v.optional(v.number()),
+    })),
+    followGateSocialLinks: v.optional(v.object({
+      instagram: v.optional(v.string()),
+      tiktok: v.optional(v.string()),
+      youtube: v.optional(v.string()),
+      spotify: v.optional(v.string()),
+    })),
+    followGateMessage: v.optional(v.string()),
   })),
   handler: async (ctx, args) => {
     return await ctx.db
@@ -1276,6 +1382,23 @@ export const getAllPublishedCourses = query({
     enrollmentCount: v.optional(v.number()),
     creatorName: v.optional(v.string()),
     creatorAvatar: v.optional(v.string()),
+    // Follow gate fields (for free courses with download gates)
+    followGateEnabled: v.optional(v.boolean()),
+    followGateRequirements: v.optional(v.object({
+      requireEmail: v.optional(v.boolean()),
+      requireInstagram: v.optional(v.boolean()),
+      requireTiktok: v.optional(v.boolean()),
+      requireYoutube: v.optional(v.boolean()),
+      requireSpotify: v.optional(v.boolean()),
+      minFollowsRequired: v.optional(v.number()),
+    })),
+    followGateSocialLinks: v.optional(v.object({
+      instagram: v.optional(v.string()),
+      tiktok: v.optional(v.string()),
+      youtube: v.optional(v.string()),
+      spotify: v.optional(v.string()),
+    })),
+    followGateMessage: v.optional(v.string()),
   })),
   handler: async (ctx) => {
     // Get all published courses
@@ -1330,6 +1453,11 @@ export const getAllPublishedCourses = query({
           enrollmentCount: enrollments.length,
           creatorName,
           creatorAvatar,
+          // Follow gate fields
+          followGateEnabled: course.followGateEnabled,
+          followGateRequirements: course.followGateRequirements,
+          followGateSocialLinks: course.followGateSocialLinks,
+          followGateMessage: course.followGateMessage,
         };
       })
     );

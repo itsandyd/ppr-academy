@@ -448,6 +448,7 @@ export default defineSchema({
       v.literal("sample-pack"),
       v.literal("preset-pack"),
       v.literal("midi-pack"),
+      v.literal("bundle"), // NEW: Bundle multiple products together
       v.literal("ableton-rack"),
       v.literal("beat-lease"),
       v.literal("project-files"),
@@ -517,6 +518,9 @@ export default defineSchema({
     orderBumpPrice: v.optional(v.number()),
     orderBumpImageUrl: v.optional(v.string()),
     affiliateEnabled: v.optional(v.boolean()),
+    
+    // Pack Files (for sample/midi/preset packs)
+    packFiles: v.optional(v.string()), // JSON stringified array of file metadata
     
     // Follow Gate Configuration
     followGateEnabled: v.optional(v.boolean()),

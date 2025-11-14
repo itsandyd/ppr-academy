@@ -52,6 +52,7 @@ interface Product {
   userId?: string; // For courses
   _creationTime?: number;
   productType?: "digital" | "urlMedia" | "coaching" | "abletonRack" | "abletonPreset";
+  productCategory?: string; // Product category (sample-pack, preset-pack, etc.)
 }
 
 interface ProductsListProps {
@@ -86,7 +87,19 @@ export function ProductsList({ products, storeId }: ProductsListProps) {
       return `/store/${storeId}/course/create?step=course&courseId=${product._id}`;
     }
     
-    // If it's an Ableton rack, route to Ableton rack creator with ID (for now, until we build a proper edit page)
+    // For packs (sample/midi/preset), route to pack editor
+    if (product.productCategory === "sample-pack" || 
+        product.productCategory === "midi-pack" || 
+        product.productCategory === "preset-pack") {
+      return `/store/${storeId}/products/pack/create?packId=${product._id}&step=basics`;
+    }
+    
+    // For bundles
+    if (product.productCategory === "bundle") {
+      return `/store/${storeId}/products/bundle/create?bundleId=${product._id}`;
+    }
+    
+    // If it's an Ableton rack, route to Ableton rack creator with ID
     if (product.productType === "abletonRack" || product.productType === "abletonPreset") {
       return `/store/${storeId}/products/ableton-rack/create?id=${product._id}`;
     }

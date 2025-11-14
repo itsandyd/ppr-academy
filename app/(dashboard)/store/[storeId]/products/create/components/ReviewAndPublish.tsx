@@ -5,11 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ProductFormData } from "../types";
 import { useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import { api } from "@/lib/convex-api";
+import { Id } from "@/convex/_generated/dataModel";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2, Check, Edit } from "lucide-react";
+import { Loader2, Check, Edit, Info, BookOpen } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface ReviewAndPublishProps {
   formData: ProductFormData;
@@ -22,8 +24,28 @@ export function ReviewAndPublish({ formData, onBack, onEdit }: ReviewAndPublishP
   const [isPublishing, setIsPublishing] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   
-  const createProduct = useMutation(api.universalProducts.createUniversalProduct);
-  const updateProduct = useMutation(api.digitalProducts.updateProduct);
+  // Suppress TypeScript deep instantiation errors by casting both API references and useMutation
+  // This prevents TypeScript from attempting to infer complex union types from the Convex API
+  // @ts-ignore TS2589 - Type instantiation is excessively deep
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const createProductFn = api.universalProducts.createUniversalProduct as any;
+  // @ts-ignore TS2589 - Type instantiation is excessively deep
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const updateProductFn = api.digitalProducts.updateProduct as any;
+  // @ts-ignore TS2589 - Type instantiation is excessively deep
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const updateCourseFn = api.courses.updateCourse as any;
+  
+  // Cast useMutation to any to bypass generic type inference
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const useMutationAny = useMutation as any;
+  
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const createProduct: any = useMutationAny(createProductFn);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const updateProduct: any = useMutationAny(updateProductFn);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const updateCourse: any = useMutationAny(updateCourseFn);
 
   const handlePublish = async (publishNow: boolean) => {
     if (publishNow) {
@@ -33,6 +55,28 @@ export function ReviewAndPublish({ formData, onBack, onEdit }: ReviewAndPublishP
     }
 
     try {
+      // Prepare playlist config with proper type casting
+      // Cast string to Id<"curatorPlaylists"> as form data stores it as string
+      const linkedPlaylistId = formData.playlistConfig?.linkedPlaylistId
+        ? (formData.playlistConfig.linkedPlaylistId as unknown as Id<"curatorPlaylists">)
+        : undefined;
+      
+      const playlistConfig = formData.playlistConfig
+        ? ({
+            linkedPlaylistId,
+            reviewTurnaroundDays: formData.playlistConfig.reviewTurnaroundDays,
+            genresAccepted: formData.playlistConfig.genresAccepted,
+            submissionGuidelines: formData.playlistConfig.submissionGuidelines,
+            maxSubmissionsPerMonth: formData.playlistConfig.maxSubmissionsPerMonth,
+          } as {
+            linkedPlaylistId?: Id<"curatorPlaylists">;
+            reviewTurnaroundDays: number;
+            genresAccepted: string[];
+            submissionGuidelines?: string;
+            maxSubmissionsPerMonth?: number;
+          })
+        : undefined;
+
       const productId = await createProduct({
         title: formData.title,
         description: formData.description || undefined,
@@ -61,30 +105,42 @@ export function ReviewAndPublish({ formData, onBack, onEdit }: ReviewAndPublishP
           : undefined,
         
         // Playlist config (if applicable)
-        playlistConfig: formData.playlistConfig
-          ? {
-              linkedPlaylistId: formData.playlistConfig.linkedPlaylistId,
-              reviewTurnaroundDays: formData.playlistConfig.reviewTurnaroundDays,
-              genresAccepted: formData.playlistConfig.genresAccepted,
-              submissionGuidelines: formData.playlistConfig.submissionGuidelines,
-              maxSubmissionsPerMonth: formData.playlistConfig.maxSubmissionsPerMonth,
-            }
-          : undefined,
+        playlistConfig,
         
         // Ableton config (if applicable)
         abletonVersion: formData.abletonRackConfig?.abletonVersion,
         rackType: formData.abletonRackConfig?.rackType,
+        
+        // Coaching config (if applicable)
+        duration: formData.coachingConfig?.duration,
+        sessionType: formData.coachingConfig?.sessionType,
       });
 
       // Update to publish if needed
       if (publishNow) {
-        await updateProduct({
-          id: productId,
-          isPublished: true,
-        });
+        // Check if it's a course (courses are created in courses table)
+        if (formData.productCategory === "course") {
+          await updateCourse({
+            id: productId as any, // Type assertion needed since return type is union
+            isPublished: true,
+          });
+        } else {
+          await updateProduct({
+            id: productId as any, // Type assertion needed since return type is union
+            isPublished: true,
+          });
+        }
       }
 
-      toast.success(publishNow ? "Product published!" : "Draft saved!");
+      if (formData.productCategory === "course") {
+        toast.success(
+          publishNow 
+            ? "Course published! You can now add modules and lessons through the course editor." 
+            : "Course draft saved! Add modules and lessons when you're ready."
+        );
+      } else {
+        toast.success(publishNow ? "Product published!" : "Draft saved!");
+      }
       router.push(`/store/${formData.storeId}/products`);
     } catch (error) {
       console.error("Error creating product:", error);
@@ -103,6 +159,17 @@ export function ReviewAndPublish({ formData, onBack, onEdit }: ReviewAndPublishP
           Review your product before publishing
         </p>
       </div>
+
+      {/* Course-specific info banner */}
+      {formData.productCategory === "course" && (
+        <Alert className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+          <BookOpen className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          <AlertTitle className="text-blue-900 dark:text-blue-100">Next Steps: Add Course Content</AlertTitle>
+          <AlertDescription className="text-blue-800 dark:text-blue-200 mt-1">
+            After publishing, you'll be able to add modules, lessons, and chapters through the course editor. This wizard just sets up the basic course structure - you can add all your content later!
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Product Preview */}
       <Card>
@@ -192,6 +259,38 @@ export function ReviewAndPublish({ formData, onBack, onEdit }: ReviewAndPublishP
             <SummaryItem
               label="Playlist Configuration"
               value={`${formData.playlistConfig.genresAccepted.join(", ")} - ${formData.playlistConfig.reviewTurnaroundDays} day review`}
+              onEdit={() => onEdit(5)}
+            />
+          )}
+
+          {formData.abletonRackConfig && (
+            <SummaryItem
+              label="Ableton Configuration"
+              value={`${formData.abletonRackConfig.rackType} - Ableton ${formData.abletonRackConfig.abletonVersion}`}
+              onEdit={() => onEdit(5)}
+            />
+          )}
+
+          {formData.coachingConfig && (
+            <SummaryItem
+              label="Session Details"
+              value={`${formData.coachingConfig.duration} min - ${formData.coachingConfig.sessionType || "Not specified"}`}
+              onEdit={() => onEdit(5)}
+            />
+          )}
+
+          {formData.files && formData.files.length > 0 && (
+            <SummaryItem
+              label="Files"
+              value={`${formData.files.length} file(s) added`}
+              onEdit={() => onEdit(5)}
+            />
+          )}
+
+          {formData.bundleConfig && formData.bundleConfig.includedProductIds.length > 0 && (
+            <SummaryItem
+              label="Bundle Configuration"
+              value={`${formData.bundleConfig.includedProductIds.length} products${formData.bundleConfig.bundleDiscount ? ` - ${formData.bundleConfig.bundleDiscount}% off` : ""}`}
               onEdit={() => onEdit(5)}
             />
           )}

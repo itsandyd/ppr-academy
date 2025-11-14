@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Upload, Link as LinkIcon, X } from "lucide-react";
+import { Upload, Link as LinkIcon, X, Info } from "lucide-react";
 import { ProductCategory } from "../types";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface ProductDetailsFormProps {
   title: string;
@@ -51,10 +52,14 @@ export function ProductDetailsForm({
     "donation",
     "community",
     "blog-post",
+    "course", // Courses have their own content structure (modules/lessons)
+    "workshop",
+    "masterclass",
   ].includes(productCategory);
   
   const isCommunity = productCategory === "community";
   const isBlogPost = productCategory === "blog-post";
+  const isCourse = productCategory === "course";
 
   const handleAddTag = () => {
     if (newTag.trim() && !tags.includes(newTag.trim())) {
@@ -77,6 +82,17 @@ export function ProductDetailsForm({
           Tell us about your {productCategory.replace("-", " ")}
         </p>
       </div>
+
+      {/* Course-specific info banner */}
+      {isCourse && (
+        <Alert className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+          <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          <AlertTitle className="text-blue-900 dark:text-blue-100">Course Setup</AlertTitle>
+          <AlertDescription className="text-blue-800 dark:text-blue-200 mt-1">
+            You're creating the basic course structure now. After publishing, you can add modules, lessons, and chapters through the course editor. Don't worry - you can always come back to add content later!
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Title */}
       <div className="space-y-2">

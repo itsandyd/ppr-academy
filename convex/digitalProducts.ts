@@ -20,6 +20,7 @@ export const getProductsByStore = query({
     style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))),
     // URL/Media specific fields
     productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"), v.literal("coaching"), v.literal("abletonRack"), v.literal("abletonPreset"), v.literal("playlistCuration"))),
+    productCategory: v.optional(v.string()), // Product category (sample-pack, preset-pack, etc.)
     url: v.optional(v.string()),
     displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
     mediaType: v.optional(v.union(v.literal("youtube"), v.literal("spotify"), v.literal("website"), v.literal("social"))),
@@ -62,6 +63,25 @@ export const getProductsByStore = query({
     fileFormat: v.optional(v.union(v.literal("adg"), v.literal("adv"), v.literal("alp"))),
     fileSize: v.optional(v.number()),
     installationNotes: v.optional(v.string()),
+    // Follow gate fields (for free products with download gates)
+    followGateEnabled: v.optional(v.boolean()),
+    followGateRequirements: v.optional(v.object({
+      requireEmail: v.optional(v.boolean()),
+      requireInstagram: v.optional(v.boolean()),
+      requireTiktok: v.optional(v.boolean()),
+      requireYoutube: v.optional(v.boolean()),
+      requireSpotify: v.optional(v.boolean()),
+      minFollowsRequired: v.optional(v.number()),
+    })),
+    followGateSocialLinks: v.optional(v.object({
+      instagram: v.optional(v.string()),
+      tiktok: v.optional(v.string()),
+      youtube: v.optional(v.string()),
+      spotify: v.optional(v.string()),
+    })),
+    followGateMessage: v.optional(v.string()),
+    // Pack files (for sample/midi/preset packs)
+    packFiles: v.optional(v.string()), // JSON stringified array of file metadata
   })),
   handler: async (ctx, args) => {
     const products = await ctx.db
@@ -69,9 +89,14 @@ export const getProductsByStore = query({
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .collect();
     
+    // Filter out courses (they belong in the courses table, not digitalProducts)
+    const nonCourseProducts = products.filter(
+      (product) => product.productCategory !== "course"
+    );
+    
     // Convert storage IDs to URLs for image fields
     const productsWithUrls = await Promise.all(
-      products.map(async (product) => {
+      nonCourseProducts.map(async (product) => {
         let imageUrl = product.imageUrl;
         let downloadUrl = product.downloadUrl;
         let demoAudioUrl = product.demoAudioUrl;
@@ -172,8 +197,10 @@ export const getPublishedProductsByStore = query({
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .collect();
     
-    // Filter for published products only
-    const publishedProducts = products.filter(product => product.isPublished === true);
+    // Filter for published products only, and exclude courses (they belong in courses table)
+    const publishedProducts = products.filter(
+      (product) => product.isPublished === true && product.productCategory !== "course"
+    );
     
     // Convert storage IDs to URLs for image fields
     const productsWithUrls = await Promise.all(
@@ -287,6 +314,7 @@ export const getProductById = query({
     v.object({
       _id: v.id("digitalProducts"),
       _creationTime: v.number(),
+      productCategory: v.optional(v.string()), // Product category (sample-pack, preset-pack, etc.)
       title: v.string(),
       description: v.optional(v.string()),
       price: v.number(),
@@ -341,6 +369,25 @@ export const getProductById = query({
       fileFormat: v.optional(v.union(v.literal("adg"), v.literal("adv"), v.literal("alp"))),
       fileSize: v.optional(v.number()),
       installationNotes: v.optional(v.string()),
+      // Follow gate fields (for free products with download gates)
+      followGateEnabled: v.optional(v.boolean()),
+      followGateRequirements: v.optional(v.object({
+        requireEmail: v.optional(v.boolean()),
+        requireInstagram: v.optional(v.boolean()),
+        requireTiktok: v.optional(v.boolean()),
+        requireYoutube: v.optional(v.boolean()),
+        requireSpotify: v.optional(v.boolean()),
+        minFollowsRequired: v.optional(v.number()),
+      })),
+      followGateSocialLinks: v.optional(v.object({
+        instagram: v.optional(v.string()),
+        tiktok: v.optional(v.string()),
+        youtube: v.optional(v.string()),
+        spotify: v.optional(v.string()),
+      })),
+      followGateMessage: v.optional(v.string()),
+      // Pack files (for sample/midi/preset packs)
+      packFiles: v.optional(v.string()), // JSON stringified array of file metadata
     }),
     v.null()
   ),
@@ -450,6 +497,25 @@ export const updateProduct = mutation({
     affiliateCookieDuration: v.optional(v.number()),
     confirmationEmailSubject: v.optional(v.string()),
     confirmationEmailBody: v.optional(v.string()),
+    // Follow gate fields (for free products with download gates)
+    followGateEnabled: v.optional(v.boolean()),
+    followGateRequirements: v.optional(v.object({
+      requireEmail: v.optional(v.boolean()),
+      requireInstagram: v.optional(v.boolean()),
+      requireTiktok: v.optional(v.boolean()),
+      requireYoutube: v.optional(v.boolean()),
+      requireSpotify: v.optional(v.boolean()),
+      minFollowsRequired: v.optional(v.number()),
+    })),
+    followGateSocialLinks: v.optional(v.object({
+      instagram: v.optional(v.string()),
+      tiktok: v.optional(v.string()),
+      youtube: v.optional(v.string()),
+      spotify: v.optional(v.string()),
+    })),
+    followGateMessage: v.optional(v.string()),
+    // Pack files (for sample/midi/preset packs)
+    packFiles: v.optional(v.string()), // JSON stringified array of file metadata
     // Ableton Rack specific fields
     abletonVersion: v.optional(v.string()),
     minAbletonVersion: v.optional(v.string()),
@@ -492,6 +558,7 @@ export const updateProduct = mutation({
       style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))),
     // URL/Media specific fields
     productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"), v.literal("coaching"), v.literal("abletonRack"), v.literal("abletonPreset"), v.literal("playlistCuration"))),
+    productCategory: v.optional(v.string()), // Product category (sample-pack, preset-pack, etc.)
     url: v.optional(v.string()),
     displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
     mediaType: v.optional(v.union(v.literal("youtube"), v.literal("spotify"), v.literal("website"), v.literal("social"))),
@@ -514,6 +581,25 @@ export const updateProduct = mutation({
       affiliateCookieDuration: v.optional(v.number()),
       confirmationEmailSubject: v.optional(v.string()),
       confirmationEmailBody: v.optional(v.string()),
+      // Follow gate fields (for free products with download gates)
+      followGateEnabled: v.optional(v.boolean()),
+      followGateRequirements: v.optional(v.object({
+        requireEmail: v.optional(v.boolean()),
+        requireInstagram: v.optional(v.boolean()),
+        requireTiktok: v.optional(v.boolean()),
+        requireYoutube: v.optional(v.boolean()),
+        requireSpotify: v.optional(v.boolean()),
+        minFollowsRequired: v.optional(v.number()),
+      })),
+      followGateSocialLinks: v.optional(v.object({
+        instagram: v.optional(v.string()),
+        tiktok: v.optional(v.string()),
+        youtube: v.optional(v.string()),
+        spotify: v.optional(v.string()),
+      })),
+      followGateMessage: v.optional(v.string()),
+      // Pack files (for sample/midi/preset packs)
+      packFiles: v.optional(v.string()), // JSON stringified array of file metadata
       // Ableton Rack specific fields
       abletonVersion: v.optional(v.string()),
       minAbletonVersion: v.optional(v.string()),
@@ -544,7 +630,7 @@ export const updateProduct = mutation({
   },
 });
 
-// Update email confirmation settings for a product
+// Update email confirmation settings for a product 
 export const updateEmailConfirmation = mutation({
   args: {
     productId: v.id("digitalProducts"),
@@ -610,7 +696,7 @@ export const createUrlMediaProduct = mutation({
   },
 });
 
-// Get all published products across all stores (for marketplace homepage)
+// Get all published products across all stores (for marketplace homepage) 
 export const getAllPublishedProducts = query({
   args: {},
   returns: v.array(v.object({
@@ -622,8 +708,9 @@ export const getAllPublishedProducts = query({
     imageUrl: v.optional(v.string()),
     downloadUrl: v.optional(v.string()),
     url: v.optional(v.string()), // Added URL field for redirects
+    productCategory: v.optional(v.string()), // Product category (sample-pack, preset-pack, etc.)
+    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"), v.literal("coaching"), v.literal("abletonRack"), v.literal("abletonPreset"), v.literal("playlistCuration"))), // Product type
     buttonLabel: v.optional(v.string()), // Added button label
-    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"), v.literal("coaching"), v.literal("abletonRack"), v.literal("abletonPreset"), v.literal("playlistCuration"))), // Added product type
     style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))), // Added style
     category: v.optional(v.string()),
     storeId: v.string(), // Store as string to match schema
@@ -698,10 +785,11 @@ export const getAllPublishedProducts = query({
           price: product.price,
           imageUrl: product.imageUrl,
           downloadUrl: product.downloadUrl,
-          url: product.url, // ← Added URL field for redirects
-          buttonLabel: product.buttonLabel, // ← Added button label
-          productType: product.productType, // ← Added product type
-          style: product.style, // ← Added style
+          url: product.url,
+          productCategory: product.productCategory, // ← Pack category
+          productType: product.productType,
+          buttonLabel: product.buttonLabel,
+          style: product.style,
           category: product.productType,
           storeId: product.storeId,
           published: product.isPublished || false,

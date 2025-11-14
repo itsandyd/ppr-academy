@@ -113,6 +113,7 @@ import type * as notes from "../notes.js";
 import type * as notesToCourse from "../notesToCourse.js";
 import type * as notificationPreferences from "../notificationPreferences.js";
 import type * as notifications from "../notifications.js";
+import type * as packSamples from "../packSamples.js";
 import type * as paymentPlans from "../paymentPlans.js";
 import type * as playlists from "../playlists.js";
 import type * as pluginVideoGeneration from "../pluginVideoGeneration.js";
@@ -257,6 +258,7 @@ declare const fullApi: ApiFromModules<{
   notesToCourse: typeof notesToCourse;
   notificationPreferences: typeof notificationPreferences;
   notifications: typeof notifications;
+  packSamples: typeof packSamples;
   paymentPlans: typeof paymentPlans;
   playlists: typeof playlists;
   pluginVideoGeneration: typeof pluginVideoGeneration;

@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertTriangle, Music, BookOpen, Users, Zap, Search, Filter, Package, Plus, Eye, DollarSign, TrendingUp, Mail, Waves, Sparkles, Gift } from "lucide-react";
+import { AlertTriangle, Music, BookOpen, Users, Zap, Search, Filter, Package, Plus, Eye, DollarSign, TrendingUp, Mail, Waves, Sparkles, Gift, FileText } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MusicOptionCard } from "../components/MusicOptionCard";
 import { musicOptions, groupedOptions, popularOptions } from "../components/music-options";
@@ -20,6 +20,43 @@ import { SamplesList } from "@/components/samples/SamplesList";
 import { CreditBalance } from "@/components/credits/CreditBalance";
 import { useToast } from "@/hooks/use-toast";
 import { ProductTypeSelector } from "@/components/products/product-type-selector";
+
+// Empty state component
+function EmptyState({ 
+  icon: Icon, 
+  title, 
+  description, 
+  actionLabel, 
+  onAction 
+}: { 
+  icon: any; 
+  title: string; 
+  description: string; 
+  actionLabel: string; 
+  onAction: () => void;
+}) {
+  return (
+    <div className="bg-card rounded-2xl shadow-sm border border-border/50 overflow-hidden">
+      <div className="text-center py-20 px-6">
+        <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mx-auto mb-6">
+          <Icon className="w-10 h-10 text-muted-foreground" />
+        </div>
+        <h3 className="text-2xl font-semibold mb-3">{title}</h3>
+        <p className="text-muted-foreground mb-8 max-w-md mx-auto">
+          {description}
+        </p>
+        <Button 
+          onClick={onAction}
+          size="lg"
+          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg"
+        >
+          <Plus className="w-5 h-5 mr-2" />
+          {actionLabel}
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 export default function ProductsPage() {
   const params = useParams();
@@ -34,31 +71,54 @@ export default function ProductsPage() {
   const [searchTerm, setSearchTerm] = useState("");
 
   // Get user from Convex using Clerk ID
-  const convexUser = useQuery(
-    api.users.getUserFromClerk,
+  // Suppress TypeScript deep instantiation errors
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const getUserFromClerkFn: any = (() => {
+    // @ts-ignore TS2589
+    return api.users.getUserFromClerk as any;
+  })();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const useQueryAny: any = useQuery as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const convexUser: any = useQueryAny(
+    getUserFromClerkFn,
     user?.id ? { clerkId: user.id } : "skip"
   );
 
   // Get user's products (using clerkId since courses.userId stores clerkId)
-  const userCourses = useQuery(
-    api.courses.getCoursesByUser,
-    convexUser?.clerkId ? { userId: convexUser.clerkId } : "skip"
-  );
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const userCourses: any = (() => {
+    // @ts-ignore TS2589 - Type instantiation is excessively deep
+    return useQuery(
+      api.courses.getCoursesByUser,
+      convexUser?.clerkId ? { userId: convexUser.clerkId } : "skip"
+    );
+  })();
 
-  const digitalProducts = useQuery(
-    api.digitalProducts.getProductsByStore,
-    storeId ? { storeId } : "skip"
-  );
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const digitalProducts: any = (() => {
+    // @ts-ignore TS2589 - Type instantiation is excessively deep
+    return useQuery(
+      api.digitalProducts.getProductsByStore,
+      storeId ? { storeId } : "skip"
+    );
+  })();
 
   // Get user's samples
-  const userSamples = useQuery(
-    api.samples.getStoreSamples,
-    storeId ? { storeId } : "skip"
-  );
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const userSamples: any = (() => {
+    // @ts-ignore TS2589 - Type instantiation is excessively deep
+    return useQuery(
+      api.samples.getStoreSamples,
+      storeId ? { storeId } : "skip"
+    );
+  })();
 
   // Combine products for display
-  const allProducts = [
-    ...(userCourses?.map(course => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const allProducts: any = [
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ...(userCourses?.map((course: any) => ({
       _id: course._id,
       title: course.title,
       description: course.description,
@@ -71,7 +131,8 @@ export default function ProductsPage() {
       productType: undefined,
       storeId: course.storeId,
     })) || []),
-    ...(digitalProducts?.map(product => ({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ...(digitalProducts?.map((product: any) => ({
       _id: product._id,
       title: product.title || 'Untitled Product',
       description: product.description,
@@ -81,18 +142,23 @@ export default function ProductsPage() {
       userId: product.userId,
       type: 'digitalProduct',
       productType: product.productType, // Preserve the productType
+      productCategory: product.productCategory, // Preserve the productCategory
       storeId: product.storeId,
     })) || [])
   ];
 
-  const musicProducts = allProducts.filter(p => p.type === 'digitalProduct' && p.productType !== 'abletonRack' && p.productType !== 'abletonPreset');
-  const abletonRacks = allProducts.filter(p => p.productType === 'abletonRack' || p.productType === 'abletonPreset');
-  const courseProducts = allProducts.filter(p => p.type === 'course');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const musicProducts = allProducts.filter((p: any) => p.type === 'digitalProduct' && p.productType !== 'abletonRack' && p.productType !== 'abletonPreset');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const abletonRacks = allProducts.filter((p: any) => p.productType === 'abletonRack' || p.productType === 'abletonPreset');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const courseProducts = allProducts.filter((p: any) => p.type === 'course');
 
   // Calculate stats
   const stats = {
     totalProducts: allProducts.length + (userSamples?.length || 0),
-    publishedProducts: allProducts.filter(p => p.isPublished).length + (userSamples?.filter(s => s.isPublished).length || 0),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    publishedProducts: allProducts.filter((p: any) => p.isPublished).length + (userSamples?.filter((s: any) => s.isPublished).length || 0),
     totalViews: 0, // Placeholder for future analytics
     totalRevenue: 0, // Placeholder for future analytics
   };
@@ -307,116 +373,149 @@ export default function ProductsPage() {
                     exit={{ opacity: 0, y: -20 }}
                   >
                     {allProducts.length > 0 || (userSamples && userSamples.length > 0) ? (
-                      <Tabs defaultValue="all" className="space-y-6">
-                        <TabsList className="grid w-full max-w-3xl mx-auto grid-cols-5">
-                          <TabsTrigger value="all" className="flex items-center gap-2">
-                            <Package className="w-4 h-4" />
-                            All
-                          </TabsTrigger>
-                          <TabsTrigger value="samples" className="flex items-center gap-2">
-                            <Music className="w-4 h-4" />
-                            Samples
-                            {userSamples && userSamples.length > 0 && (
-                              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
-                                {userSamples.length}
-                              </Badge>
-                            )}
-                          </TabsTrigger>
-                          <TabsTrigger value="abletonRacks" className="flex items-center gap-2">
-                            <Waves className="w-4 h-4" />
-                            Racks
-                            {abletonRacks.length > 0 && (
-                              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
-                                {abletonRacks.length}
-                              </Badge>
-                            )}
-                          </TabsTrigger>
-                          <TabsTrigger value="music" className="flex items-center gap-2">
-                            <Music className="w-4 h-4" />
-                            Products
-                          </TabsTrigger>
-                          <TabsTrigger value="courses" className="flex items-center gap-2">
-                            <BookOpen className="w-4 h-4" />
-                            Courses
-                          </TabsTrigger>
-                        </TabsList>
+                      <div className="space-y-6">
+                        {/* Filters */}
+                        <div className="bg-card rounded-2xl shadow-sm border border-border/50 p-4">
+                          <Tabs defaultValue="all" className="w-full">
+                            <TabsList className="bg-muted/50 p-1 h-auto rounded-xl">
+                              <TabsTrigger 
+                                value="all" 
+                                className="flex items-center gap-2 px-4 py-2.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                              >
+                                <Package className="w-4 h-4" />
+                                <span>All Products</span>
+                                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                                  {allProducts.length + (userSamples?.length || 0)}
+                                </Badge>
+                              </TabsTrigger>
+                              <TabsTrigger 
+                                value="courses" 
+                                className="flex items-center gap-2 px-4 py-2.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                              >
+                                <BookOpen className="w-4 h-4" />
+                                <span>Courses</span>
+                                {courseProducts.length > 0 && (
+                                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                                    {courseProducts.length}
+                                  </Badge>
+                                )}
+                              </TabsTrigger>
+                              <TabsTrigger 
+                                value="samples" 
+                                className="flex items-center gap-2 px-4 py-2.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                              >
+                                <Music className="w-4 h-4" />
+                                <span>Samples</span>
+                                {userSamples && userSamples.length > 0 && (
+                                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                                    {userSamples.length}
+                                  </Badge>
+                                )}
+                              </TabsTrigger>
+                              <TabsTrigger 
+                                value="abletonRacks" 
+                                className="flex items-center gap-2 px-4 py-2.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                              >
+                                <Waves className="w-4 h-4" />
+                                <span>Racks</span>
+                                {abletonRacks.length > 0 && (
+                                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                                    {abletonRacks.length}
+                                  </Badge>
+                                )}
+                              </TabsTrigger>
+                              <TabsTrigger 
+                                value="music" 
+                                className="flex items-center gap-2 px-4 py-2.5 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                              >
+                                <Music className="w-4 h-4" />
+                                <span>Packs</span>
+                                {musicProducts.length > 0 && (
+                                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                                    {musicProducts.length}
+                                  </Badge>
+                                )}
+                              </TabsTrigger>
+                            </TabsList>
 
-                        <TabsContent value="all">
-                          {userSamples && userSamples.length > 0 && (
-                            <div className="mb-8">
-                              <SamplesList samples={userSamples} storeId={storeId} />
+                            <div className="mt-6">
+                              <TabsContent value="all" className="mt-0">
+                                {userSamples && userSamples.length > 0 && (
+                                  <div className="mb-8">
+                                    <h3 className="text-lg font-semibold mb-4">Samples</h3>
+                                    <SamplesList samples={userSamples} storeId={storeId} />
+                                  </div>
+                                )}
+                                <ProductsList products={allProducts as any} storeId={storeId} />
+                              </TabsContent>
+                              
+                              <TabsContent value="courses" className="mt-0">
+                                {courseProducts.length > 0 ? (
+                                  <ProductsList products={courseProducts as any} storeId={storeId} />
+                                ) : (
+                                  <EmptyState
+                                    icon={BookOpen}
+                                    title="No courses yet"
+                                    description="Create your first course to start teaching and earning from your expertise."
+                                    actionLabel="Create Course"
+                                    onAction={() => router.push(`/store/${storeId}/course/create`)}
+                                  />
+                                )}
+                              </TabsContent>
+                              
+                              <TabsContent value="samples" className="mt-0">
+                                {userSamples && userSamples.length > 0 ? (
+                                  <SamplesList samples={userSamples} storeId={storeId} />
+                                ) : (
+                                  <EmptyState
+                                    icon={Music}
+                                    title="No samples yet"
+                                    description="Upload your first sample to start building your sample library and earning credits."
+                                    actionLabel="Upload Sample"
+                                    onAction={() => router.push(`/store/${storeId}/samples/upload`)}
+                                  />
+                                )}
+                              </TabsContent>
+                              
+                              <TabsContent value="abletonRacks" className="mt-0">
+                                {abletonRacks.length > 0 ? (
+                                  <ProductsList products={abletonRacks as any} storeId={storeId} />
+                                ) : (
+                                  <EmptyState
+                                    icon={Waves}
+                                    title="No Ableton racks yet"
+                                    description="Upload your first Ableton rack to start sharing your custom device chains and sound design."
+                                    actionLabel="Create Ableton Rack"
+                                    onAction={() => router.push(`/store/${storeId}/products/ableton-rack/create`)}
+                                  />
+                                )}
+                              </TabsContent>
+                              
+                              <TabsContent value="music" className="mt-0">
+                                {musicProducts.length > 0 ? (
+                                  <ProductsList products={musicProducts as any} storeId={storeId} />
+                                ) : (
+                                  <EmptyState
+                                    icon={Package}
+                                    title="No packs yet"
+                                    description="Create your first sample pack, preset pack, or MIDI pack to start selling."
+                                    actionLabel="Create Pack"
+                                    onAction={() => router.push(`/store/${storeId}/products/pack/create`)}
+                                  />
+                                )}
+                              </TabsContent>
                             </div>
-                          )}
-                          <ProductsList products={allProducts} storeId={storeId} />
-                        </TabsContent>
-                        <TabsContent value="samples">
-                          {userSamples && userSamples.length > 0 ? (
-                            <SamplesList samples={userSamples} storeId={storeId} />
-                          ) : (
-                            <Card className="text-center py-16">
-                              <CardContent>
-                                <Music className="w-20 h-20 text-muted-foreground mx-auto mb-6" />
-                                <h3 className="text-2xl font-semibold mb-3">No samples yet</h3>
-                                <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-                                  Upload your first sample to start building your sample library and earning credits.
-                                </p>
-                                <Button 
-                                  onClick={() => router.push(`/store/${storeId}/samples/upload`)}
-                                  className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
-                                >
-                                  <Plus className="w-4 h-4 mr-2" />
-                                  Upload Sample
-                                </Button>
-                              </CardContent>
-                            </Card>
-                          )}
-                        </TabsContent>
-                        <TabsContent value="abletonRacks">
-                          {abletonRacks.length > 0 ? (
-                            <ProductsList products={abletonRacks} storeId={storeId} />
-                          ) : (
-                            <Card className="text-center py-16">
-                              <CardContent>
-                                <Waves className="w-20 h-20 text-muted-foreground mx-auto mb-6" />
-                                <h3 className="text-2xl font-semibold mb-3">No Ableton racks yet</h3>
-                                <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-                                  Upload your first Ableton rack to start sharing your custom device chains and sound design.
-                                </p>
-                                <Button 
-                                  onClick={() => handleOptionClick('ableton-rack')}
-                                  className="bg-gradient-to-r from-chart-1 to-chart-2 hover:from-chart-1/90 hover:to-chart-2/90"
-                                >
-                                  <Plus className="w-4 h-4 mr-2" />
-                                  Create Ableton Rack
-                                </Button>
-                              </CardContent>
-                            </Card>
-                          )}
-                        </TabsContent>
-                        <TabsContent value="music">
-                          <ProductsList products={musicProducts} storeId={storeId} />
-                        </TabsContent>
-                        <TabsContent value="courses">
-                          <ProductsList products={courseProducts} storeId={storeId} />
-                        </TabsContent>
-                      </Tabs>
+                          </Tabs>
+                        </div>
+                      </div>
                     ) : (
-                      <Card className="text-center py-16">
-                        <CardContent>
-                          <Package className="w-20 h-20 text-muted-foreground mx-auto mb-6" />
-                          <h3 className="text-2xl font-semibold mb-3">No products yet</h3>
-                          <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-                            Start by creating your first product to begin selling your music and content to your audience.
-                          </p>
-                          <Button 
-                            onClick={() => router.push(`/store/${storeId}/products/create`)}
-                            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
-                          >
-                            <Plus className="w-4 h-4 mr-2" />
-                            Create Your First Product
-                          </Button>
-                        </CardContent>
-                      </Card>
+                      <EmptyState
+                        icon={Package}
+                        title="No products yet"
+                        description="Start by creating your first product to begin selling your music and content to your audience."
+                        actionLabel="Create Your First Product"
+                        onAction={() => setActiveTab("create")}
+                      />
                     )}
                   </motion.div>
                 </TabsContent>
@@ -428,29 +527,20 @@ export default function ProductsPage() {
                   <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="text-center mb-12"
+                    className="bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 dark:from-purple-950/20 dark:via-pink-950/20 dark:to-blue-950/20 rounded-3xl p-12 mb-12 border border-purple-200 dark:border-purple-800"
                   >
-                    <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20 px-4 py-2 rounded-full mb-6">
-                      <Sparkles className="w-4 h-4 text-purple-600" />
-                      <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Universal Product Creator</span>
+                    <div className="text-center">
+                      <div className="inline-flex items-center gap-2 bg-white dark:bg-black/50 px-4 py-2 rounded-full mb-6 shadow-sm">
+                        <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                        <span className="text-sm font-medium text-purple-700 dark:text-purple-300">Choose Your Product Type</span>
+                      </div>
+                      <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-4">
+                        What would you like to create?
+                      </h2>
+                      <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+                        Select a product type below to get started. Each has a dedicated creation flow optimized for your workflow.
+                      </p>
                     </div>
-                    <h2 className="text-4xl md:text-5xl font-bold text-slate-900 dark:text-slate-100 mb-4">
-                      Create Your Product
-                    </h2>
-                    <p className="text-xl text-slate-600 dark:text-slate-400 max-w-3xl mx-auto leading-relaxed mb-8">
-                      One simple wizard for everything — sample packs, PDFs, tip jars, playlists, and more. 
-                      Choose free with download gates or direct sales.
-                    </p>
-                    
-                    {/* Main CTA */}
-                    <Button
-                      onClick={() => router.push(`/store/${storeId}/products/create`)}
-                      size="lg"
-                      className="text-lg px-8 py-6 h-auto bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all"
-                    >
-                      <Plus className="w-6 h-6 mr-2" />
-                      Start Creating →
-                    </Button>
                   </motion.div>
 
                   {/* What You Can Create - Organized by Category */}
@@ -461,17 +551,23 @@ export default function ProductsPage() {
                     className="space-y-10"
                   >
                     {/* Music Production */}
-                    <div>
-                      <h3 className="text-xl font-bold mb-6">Music Production</h3>
+                    <div className="bg-card rounded-2xl shadow-sm border border-border/50 p-6">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="p-2 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg">
+                          <Music className="w-5 h-5 text-white" />
+                        </div>
+                        <h3 className="text-xl font-bold">Music Production</h3>
+                      </div>
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         {[
-                          { icon: "🎵", label: "Sample Pack", type: "sample-pack" },
-                          { icon: "🎛️", label: "Preset Pack", type: "preset-pack" },
-                          { icon: "🎹", label: "MIDI Pack", type: "midi-pack" },
-                          { icon: "🔊", label: "Ableton Rack", type: "ableton-rack" },
-                          { icon: "🎹", label: "Beat Lease", type: "beat-lease" },
-                          { icon: "📁", label: "Project Files", type: "project-files" },
-                          { icon: "🎚️", label: "Mixing Template", type: "mixing-template" },
+                          { icon: "🎵", label: "Sample Pack", type: "sample-pack", route: `/store/${storeId}/products/pack/create?type=sample-pack` },
+                          { icon: "🎛️", label: "Preset Pack", type: "preset-pack", route: `/store/${storeId}/products/pack/create?type=preset-pack` },
+                          { icon: "🎹", label: "MIDI Pack", type: "midi-pack", route: `/store/${storeId}/products/pack/create?type=midi-pack` },
+                          { icon: "🔊", label: "Ableton Rack", type: "ableton-rack", route: `/store/${storeId}/products/ableton-rack/create` },
+                          { icon: "🎹", label: "Beat Lease", type: "beat-lease", route: `/store/${storeId}/products/digital-download/create?type=beat-lease` },
+                          { icon: "📁", label: "Project Files", type: "project-files", route: `/store/${storeId}/products/digital-download/create?type=project-files` },
+                          { icon: "🎚️", label: "Mixing Template", type: "mixing-template", route: `/store/${storeId}/products/digital-download/create?type=mixing-template` },
+                          { icon: "📦", label: "Bundle", type: "bundle", route: `/store/${storeId}/products/bundle/create` },
                         ].map((item, index) => (
                           <motion.div
                             key={item.label}
@@ -481,7 +577,7 @@ export default function ProductsPage() {
                           >
                             <Card 
                               className="text-center p-5 hover:shadow-lg transition-all cursor-pointer hover:bg-accent hover:scale-105"
-                              onClick={() => router.push(`/store/${storeId}/products/create?type=${item.type}`)}
+                              onClick={() => router.push(item.route)}
                             >
                               <div className="text-4xl mb-2">{item.icon}</div>
                               <p className="text-sm font-medium">{item.label}</p>
@@ -492,14 +588,19 @@ export default function ProductsPage() {
                     </div>
 
                     {/* Digital Content */}
-                    <div>
-                      <h3 className="text-xl font-bold mb-6">Digital Content</h3>
+                    <div className="bg-card rounded-2xl shadow-sm border border-border/50 p-6">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="p-2 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-lg">
+                          <FileText className="w-5 h-5 text-white" />
+                        </div>
+                        <h3 className="text-xl font-bold">Digital Content</h3>
+                      </div>
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         {[
-                          { icon: "📄", label: "PDF Guide", type: "pdf-guide" },
-                          { icon: "📋", label: "Cheat Sheet", type: "cheat-sheet" },
-                          { icon: "🎨", label: "Template", type: "template" },
-                          { icon: "📝", label: "Blog Post", type: "blog-post" },
+                          { icon: "📄", label: "PDF Guide", type: "pdf-guide", route: `/store/${storeId}/products/digital-download/create?type=pdf-guide` },
+                          { icon: "📋", label: "Cheat Sheet", type: "cheat-sheet", route: `/store/${storeId}/products/digital-download/create?type=cheat-sheet` },
+                          { icon: "🎨", label: "Template", type: "template", route: `/store/${storeId}/products/digital-download/create?type=template` },
+                          { icon: "📝", label: "Blog Post", type: "blog-post", route: `/store/${storeId}/products/url-media/create?type=blog-post` },
                         ].map((item, index) => (
                           <motion.div
                             key={item.label}
@@ -509,7 +610,7 @@ export default function ProductsPage() {
                           >
                             <Card 
                               className="text-center p-5 hover:shadow-lg transition-all cursor-pointer hover:bg-accent hover:scale-105"
-                              onClick={() => router.push(`/store/${storeId}/products/create?type=${item.type}`)}
+                              onClick={() => router.push(item.route)}
                             >
                               <div className="text-4xl mb-2">{item.icon}</div>
                               <p className="text-sm font-medium">{item.label}</p>
@@ -520,14 +621,19 @@ export default function ProductsPage() {
                     </div>
 
                     {/* Services */}
-                    <div>
-                      <h3 className="text-xl font-bold mb-6">Services</h3>
+                    <div className="bg-card rounded-2xl shadow-sm border border-border/50 p-6">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg">
+                          <Users className="w-5 h-5 text-white" />
+                        </div>
+                        <h3 className="text-xl font-bold">Services</h3>
+                      </div>
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         {[
-                          { icon: "🎼", label: "Playlist Curation", type: "playlist-curation" },
-                          { icon: "💬", label: "Coaching Session", type: "coaching" },
-                          { icon: "🎚️", label: "Mixing Service", type: "mixing-service" },
-                          { icon: "💿", label: "Mastering Service", type: "mastering-service" },
+                          { icon: "🎼", label: "Playlist Curation", type: "playlist-curation", route: `/store/${storeId}/products/create?type=playlist-curation` },
+                          { icon: "💬", label: "Coaching Session", type: "coaching", route: `/store/${storeId}/products/coaching-call/create?type=coaching` },
+                          { icon: "🎚️", label: "Mixing Service", type: "mixing-service", route: `/store/${storeId}/products/coaching-call/create?type=mixing-service` },
+                          { icon: "💿", label: "Mastering Service", type: "mastering-service", route: `/store/${storeId}/products/coaching-call/create?type=mastering-service` },
                         ].map((item, index) => (
                           <motion.div
                             key={item.label}
@@ -537,7 +643,7 @@ export default function ProductsPage() {
                           >
                             <Card 
                               className="text-center p-5 hover:shadow-lg transition-all cursor-pointer hover:bg-accent hover:scale-105"
-                              onClick={() => router.push(`/store/${storeId}/products/create?type=${item.type}`)}
+                              onClick={() => router.push(item.route)}
                             >
                               <div className="text-4xl mb-2">{item.icon}</div>
                               <p className="text-sm font-medium">{item.label}</p>
@@ -548,13 +654,18 @@ export default function ProductsPage() {
                     </div>
 
                     {/* Education */}
-                    <div>
-                      <h3 className="text-xl font-bold mb-6">Education</h3>
+                    <div className="bg-card rounded-2xl shadow-sm border border-border/50 p-6">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="p-2 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg">
+                          <BookOpen className="w-5 h-5 text-white" />
+                        </div>
+                        <h3 className="text-xl font-bold">Education</h3>
+                      </div>
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         {[
-                          { icon: "🎓", label: "Online Course", type: "course" },
-                          { icon: "👥", label: "Workshop", type: "workshop" },
-                          { icon: "⭐", label: "Masterclass", type: "masterclass" },
+                          { icon: "🎓", label: "Online Course", type: "course", route: `/store/${storeId}/course/create` },
+                          { icon: "👥", label: "Workshop", type: "workshop", route: `/store/${storeId}/products/coaching-call/create?type=workshop` },
+                          { icon: "⭐", label: "Masterclass", type: "masterclass", route: `/store/${storeId}/products/create?type=masterclass` },
                         ].map((item, index) => (
                           <motion.div
                             key={item.label}
@@ -564,7 +675,7 @@ export default function ProductsPage() {
                           >
                             <Card 
                               className="text-center p-5 hover:shadow-lg transition-all cursor-pointer hover:bg-accent hover:scale-105"
-                              onClick={() => router.push(`/store/${storeId}/products/create?type=${item.type}`)}
+                              onClick={() => router.push(item.route)}
                             >
                               <div className="text-4xl mb-2">{item.icon}</div>
                               <p className="text-sm font-medium">{item.label}</p>
@@ -575,11 +686,16 @@ export default function ProductsPage() {
                     </div>
 
                     {/* Community */}
-                    <div>
-                      <h3 className="text-xl font-bold mb-6">Community</h3>
+                    <div className="bg-card rounded-2xl shadow-sm border border-border/50 p-6">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="p-2 bg-gradient-to-r from-green-500 to-emerald-500 rounded-lg">
+                          <Users className="w-5 h-5 text-white" />
+                        </div>
+                        <h3 className="text-xl font-bold">Community</h3>
+                      </div>
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         {[
-                          { icon: "👥", label: "Community", type: "community" },
+                          { icon: "👥", label: "Community", type: "community", route: `/store/${storeId}/products/digital-download/create?type=community` },
                         ].map((item, index) => (
                           <motion.div
                             key={item.label}
@@ -589,7 +705,7 @@ export default function ProductsPage() {
                           >
                             <Card 
                               className="text-center p-5 hover:shadow-lg transition-all cursor-pointer hover:bg-accent hover:scale-105"
-                              onClick={() => router.push(`/store/${storeId}/products/create?type=${item.type}`)}
+                              onClick={() => router.push(item.route)}
                             >
                               <div className="text-4xl mb-2">{item.icon}</div>
                               <p className="text-sm font-medium">{item.label}</p>
@@ -600,12 +716,17 @@ export default function ProductsPage() {
                     </div>
 
                     {/* Support */}
-                    <div>
-                      <h3 className="text-xl font-bold mb-6">Support</h3>
+                    <div className="bg-card rounded-2xl shadow-sm border border-border/50 p-6">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="p-2 bg-gradient-to-r from-pink-500 to-rose-500 rounded-lg">
+                          <Gift className="w-5 h-5 text-white" />
+                        </div>
+                        <h3 className="text-xl font-bold">Support & Donations</h3>
+                      </div>
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         {[
-                          { icon: "☕", label: "Tip Jar", type: "tip-jar" },
-                          { icon: "💝", label: "Donation", type: "donation" },
+                          { icon: "☕", label: "Tip Jar", type: "tip-jar", route: `/store/${storeId}/products/digital-download/create?type=tip-jar` },
+                          { icon: "💝", label: "Donation", type: "donation", route: `/store/${storeId}/products/digital-download/create?type=donation` },
                         ].map((item, index) => (
                           <motion.div
                             key={item.label}
@@ -615,7 +736,7 @@ export default function ProductsPage() {
                           >
                             <Card 
                               className="text-center p-5 hover:shadow-lg transition-all cursor-pointer hover:bg-accent hover:scale-105"
-                              onClick={() => router.push(`/store/${storeId}/products/create?type=${item.type}`)}
+                              onClick={() => router.push(item.route)}
                             >
                               <div className="text-4xl mb-2">{item.icon}</div>
                               <p className="text-sm font-medium">{item.label}</p>
@@ -627,43 +748,42 @@ export default function ProductsPage() {
                   </motion.div>
 
                   {/* Key Features */}
-                      <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.2 }}
+                    className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto"
                   >
-                    <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-                      <Card className="text-center p-6 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 border-blue-200 dark:border-blue-800">
-                        <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <Gift className="w-6 h-6 text-white" />
-                        </div>
-                        <h4 className="font-bold mb-2">Free with Download Gates</h4>
-                        <p className="text-sm text-muted-foreground">
-                          Grow your audience by requiring email or social follows to unlock free products
-                        </p>
-                      </Card>
-                      
-                      <Card className="text-center p-6 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-green-200 dark:border-green-800">
-                        <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <DollarSign className="w-6 h-6 text-white" />
+                    <Card className="text-center p-8 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 border-blue-200 dark:border-blue-800 hover:shadow-xl transition-all">
+                      <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                        <Gift className="w-8 h-8 text-white" />
                       </div>
-                        <h4 className="font-bold mb-2">Direct Sales</h4>
-                        <p className="text-sm text-muted-foreground">
-                          Sell directly with Stripe checkout, instant delivery, and automatic email confirmations
-                        </p>
-                      </Card>
-                      
-                      <Card className="text-center p-6 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border-purple-200 dark:border-purple-800">
-                        <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                          <Zap className="w-6 h-6 text-white" />
+                      <h4 className="font-bold text-lg mb-2">Free with Download Gates</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Grow your audience by requiring email or social follows to unlock free products
+                      </p>
+                    </Card>
+                    
+                    <Card className="text-center p-8 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-green-200 dark:border-green-800 hover:shadow-xl transition-all">
+                      <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                        <DollarSign className="w-8 h-8 text-white" />
                       </div>
-                        <h4 className="font-bold mb-2">Flexible Pricing</h4>
-                        <p className="text-sm text-muted-foreground">
-                          Offer the same product as free (lead magnet) or paid. Test what works best for your audience.
-                        </p>
-                      </Card>
+                      <h4 className="font-bold text-lg mb-2">Direct Sales</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Sell directly with Stripe checkout, instant delivery, and automatic email confirmations
+                      </p>
+                    </Card>
+                    
+                    <Card className="text-center p-8 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border-purple-200 dark:border-purple-800 hover:shadow-xl transition-all">
+                      <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                        <Zap className="w-8 h-8 text-white" />
                       </div>
-                      </motion.div>
+                      <h4 className="font-bold text-lg mb-2">Flexible Pricing</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Offer the same product as free (lead magnet) or paid. Test what works best for your audience.
+                      </p>
+                    </Card>
+                  </motion.div>
                 </TabsContent>
               )}
           </Tabs>

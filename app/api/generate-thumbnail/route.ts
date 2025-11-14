@@ -42,19 +42,21 @@ export async function POST(request: NextRequest) {
     const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
     convex.setAuth(token!);
 
-    const { title, description, category } = await request.json();
-    console.log("📝 Request data:", { title, description, category });
+    const { title, description, category, type } = await request.json();
+    console.log("📝 Request data:", { title, description, category, type });
 
     // Validate required fields
-    if (!title || !description) {
+    if (!title) {
       return NextResponse.json(
-        { error: "Course title and description are required" },
+        { error: "Title is required" },
         { status: 400 }
       );
     }
 
-    // Create a descriptive prompt for DALL-E
-    const prompt = createThumbnailPrompt(title, description, category);
+    // Create a descriptive prompt for DALL-E based on type
+    const prompt = type === "pack" 
+      ? createPackThumbnailPrompt(title, description, category)
+      : createThumbnailPrompt(title, description, category);
     console.log("🎯 Generated prompt:", prompt);
 
     console.log("🤖 Calling OpenAI GPT-Image API...");
@@ -218,4 +220,37 @@ function createThumbnailPrompt(title: string, description: string, category?: st
   }
   
   return prompt;
-} 
+}
+
+function createPackThumbnailPrompt(title: string, description?: string, packType?: string): string {
+  const baseStyle = "Create a professional sample pack/preset pack cover art in landscape format (1536x1024). Use bold typography, vibrant colors, and modern design trends from music production marketing.";
+  
+  const packTypeStyle = packType === "sample-pack" 
+    ? "This is an audio sample pack. Include visual elements like waveforms, audio meters, drum pads, or vinyl records."
+    : packType === "preset-pack"
+    ? "This is a synth preset pack. Include visual elements like synthesizer interfaces, knobs, modulation, or futuristic sound design elements."
+    : packType === "midi-pack"
+    ? "This is a MIDI pack with melodies and chord progressions. Include visual elements like piano keys, MIDI notes, musical staffs, or melodic patterns."
+    : "This is a music production pack.";
+  
+  const titleFocus = `The pack is titled "${title}" - make the title PROMINENT and READABLE in the design with bold, eye-catching typography.`;
+  
+  const descriptionHint = description 
+    ? `Pack description: ${description.substring(0, 100)}. Use this to inform the visual style and color palette.`
+    : "";
+  
+  const styleGuide = "Design inspiration: professional music marketplace (Splice, ADSR, Loopmasters). Use gradients, modern fonts, and high-contrast colors. The title text should be the focal point.";
+  
+  const techSpecs = "Professional quality, suitable for product listings. Clean and sharp at thumbnail size.";
+  
+  const prompt = `${baseStyle} ${packTypeStyle} ${titleFocus} ${descriptionHint} ${styleGuide} ${techSpecs}`;
+  
+  // Ensure prompt isn't too long
+  if (prompt.length > 1000) {
+    console.warn("⚠️ Prompt is very long, truncating...");
+    return prompt.substring(0, 1000);
+  }
+  
+  return prompt;
+}
+ 

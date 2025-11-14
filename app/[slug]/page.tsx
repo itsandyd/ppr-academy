@@ -13,6 +13,7 @@ import { CreatorsPicks } from "@/components/storefront/creators-picks";
 import { FollowCreatorCTA } from "@/components/storefront/follow-creator-cta";
 import { AnimatedFilterResults, AnimatedGridItem } from "@/components/ui/animated-filter-transitions";
 import { StorefrontStructuredDataWrapper } from "./components/StorefrontStructuredDataWrapper";
+import { ArtistShowcase } from "@/components/music/artist-showcase";
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
@@ -79,10 +80,22 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
     { slug: slug }
   );
 
+  // Fetch artist profile by slug (for Linktree-style profiles)
+  const artistProfile = useQuery(
+    api.musicShowcase.getArtistProfileBySlug,
+    { slug: slug }
+  );
+
   // Fetch user data if store exists
   const user = useQuery(
     api.users.getUserFromClerk,
     store ? { clerkId: store.userId } : "skip"
+  );
+
+  // Fetch user data for artist profile if no store
+  const artistUser = useQuery(
+    api.users.getUserFromClerk,
+    artistProfile && !store ? { clerkId: artistProfile.userId } : "skip"
   );
 
   // Fetch published products for this store (public storefront only shows published)
@@ -305,8 +318,20 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
     }
   };
 
+  // Determine page type: store storefront or artist profile
+  const hasStore = !!store;
+  const hasProducts = (products && products.length > 0) || (courses && courses.length > 0);
+  const hasArtistProfile = !!artistProfile;
+  const shouldShowStore = hasStore && hasProducts;
+  const shouldShowArtistProfile = hasArtistProfile && !shouldShowStore;
+
   // Enhanced loading state with skeleton
-  if (store === undefined || user === undefined || products === undefined || courses === undefined) {
+  // If we have a store, wait for store data. Otherwise, wait for artist profile data.
+  const isLoadingStore = store === undefined || (store && (user === undefined || products === undefined || courses === undefined));
+  const isLoadingArtist = !store && (artistProfile === undefined || (artistProfile && artistUser === undefined));
+  
+  // Show loading if we're still determining what to show
+  if ((store === undefined && artistProfile === undefined) || isLoadingStore || isLoadingArtist) {
     return (
       <div className="min-h-screen bg-background">
         {/* Header Skeleton */}
@@ -352,9 +377,41 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
     );
   }
 
-  // Store not found
-  if (store === null) {
+  // Show artist profile if no store or store has no products
+  if (shouldShowArtistProfile && artistProfile) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
+        {/* Header */}
+        <div className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <h1 className="font-semibold">{artistProfile.displayName || artistProfile.artistName}</h1>
+                <p className="text-sm text-muted-foreground hidden sm:block">Music Showcase</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Artist Showcase Content */}
+        <div className="container mx-auto px-4 py-8">
+          <ArtistShowcase 
+            artistProfileId={artistProfile.userId} 
+            isOwner={false}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // Store not found and no artist profile
+  if (store === null && artistProfile === null) {
     notFound();
+  }
+
+  // If we get here, show store storefront
+  if (!store) {
+    return null; // Should not happen, but safety check
   }
 
   // Get display name and avatar

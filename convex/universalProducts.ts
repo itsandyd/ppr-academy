@@ -111,6 +111,7 @@ export const createUniversalProduct = mutation({
       v.literal("sample-pack"),
       v.literal("preset-pack"),
       v.literal("midi-pack"),
+      v.literal("bundle"),
       v.literal("ableton-rack"),
       v.literal("beat-lease"),
       v.literal("project-files"),
@@ -170,7 +171,7 @@ export const createUniversalProduct = mutation({
     duration: v.optional(v.number()),
     sessionType: v.optional(v.string()),
   },
-  returns: v.id("digitalProducts"),
+  returns: v.union(v.id("digitalProducts"), v.id("courses")),
   handler: async (ctx, args) => {
     // ========================================================================
     // VALIDATION
@@ -199,6 +200,69 @@ export const createUniversalProduct = mutation({
     // CREATE PRODUCT
     // ========================================================================
     
+    // Handle courses separately (they go in courses table, not digitalProducts)
+    if (args.productCategory === "course") {
+      // Generate slug for course
+      const generateSlug = (title: string): string => {
+        return title
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/(^-|-$)/g, '');
+      };
+      
+      const generateUniqueSlug = async (baseSlug: string): Promise<string> => {
+        let slug = baseSlug;
+        let counter = 1;
+        
+        while (true) {
+          const existing = await ctx.db
+            .query("courses")
+            .filter((q) => q.eq(q.field("slug"), slug))
+            .first();
+          
+          if (!existing) {
+            return slug;
+          }
+          
+          slug = `${baseSlug}-${counter}`;
+          counter++;
+        }
+      };
+      
+      const baseSlug = generateSlug(args.title);
+      const uniqueSlug = await generateUniqueSlug(baseSlug);
+      
+      const courseData = {
+        userId: args.userId,
+        instructorId: args.userId,
+        storeId: args.storeId,
+        title: args.title,
+        slug: uniqueSlug,
+        description: args.description,
+        price: args.price,
+        imageUrl: args.imageUrl,
+        tags: args.tags,
+        isPublished: false, // Start as draft
+        
+        // Follow Gate Setup
+        followGateEnabled: args.pricingModel === "free_with_gate",
+        followGateRequirements: args.followGateConfig ? {
+          requireEmail: args.followGateConfig.requireEmail,
+          requireInstagram: args.followGateConfig.requireInstagram,
+          requireTiktok: args.followGateConfig.requireTiktok,
+          requireYoutube: args.followGateConfig.requireYoutube,
+          requireSpotify: args.followGateConfig.requireSpotify,
+          minFollowsRequired: args.followGateConfig.minFollowsRequired,
+        } : undefined,
+        followGateSocialLinks: args.followGateConfig?.socialLinks,
+        followGateMessage: args.followGateConfig?.customMessage,
+      };
+      
+      const courseId = await ctx.db.insert("courses", courseData);
+      return courseId;
+    }
+    
+    // For all other products, create in digitalProducts table
     const productData: any = {
       title: args.title,
       description: args.description,
@@ -212,18 +276,9 @@ export const createUniversalProduct = mutation({
       tags: args.tags,
       isPublished: false, // Start as draft
       
-      // Follow Gate Setup
-      followGateEnabled: args.pricingModel === "free_with_gate",
-      followGateRequirements: args.followGateConfig ? {
-        requireEmail: args.followGateConfig.requireEmail,
-        requireInstagram: args.followGateConfig.requireInstagram,
-        requireTiktok: args.followGateConfig.requireTiktok,
-        requireYoutube: args.followGateConfig.requireYoutube,
-        requireSpotify: args.followGateConfig.requireSpotify,
-        minFollowsRequired: args.followGateConfig.minFollowsRequired,
-      } : undefined,
-      followGateSocialLinks: args.followGateConfig?.socialLinks,
-      followGateMessage: args.followGateConfig?.customMessage,
+      // Follow Gate Setup (only for digitalProducts that support it)
+      // Note: digitalProducts table doesn't have follow gate fields
+      // These are only for courses, so we skip them here
       
       // Playlist Curation Setup
       playlistCurationConfig: args.playlistConfig ? {
@@ -443,6 +498,7 @@ export const getProductsByCategory = query({
       v.literal("sample-pack"),
       v.literal("preset-pack"),
       v.literal("midi-pack"),
+      v.literal("bundle"),
       v.literal("ableton-rack"),
       v.literal("beat-lease"),
       v.literal("project-files"),

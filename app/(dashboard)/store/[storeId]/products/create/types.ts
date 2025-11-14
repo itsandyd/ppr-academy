@@ -15,6 +15,7 @@ export type ProductCategory =
   | "sample-pack"
   | "preset-pack"
   | "midi-pack"
+  | "bundle" // NEW: Bundle multiple products together
   | "ableton-rack"
   | "beat-lease"
   | "project-files"
@@ -73,6 +74,26 @@ export interface AbletonRackConfig {
   bpm?: number;
 }
 
+export interface CoachingConfig {
+  duration?: number;
+  sessionType?: string;
+  availabilityNotes?: string;
+}
+
+export interface FileItem {
+  id: string;
+  name: string;
+  url: string;
+  size?: number;
+  type?: string;
+}
+
+export interface BundleConfig {
+  includedProductIds: string[]; // Array of product IDs to bundle
+  bundleDiscount?: number; // Percentage discount vs buying individually
+  bundleDescription?: string; // What's included
+}
+
 export interface ProductFormData {
   // Step 1: Type Selection
   productType: ProductType;
@@ -89,12 +110,37 @@ export interface ProductFormData {
   downloadUrl: string;
   tags: string[];
   
+  // Course-specific fields (optional, only for courses)
+  category?: string;
+  subcategory?: string;
+  skillLevel?: string;
+  modules?: Array<{
+    title: string;
+    description: string;
+    orderIndex: number;
+    lessons: Array<{
+      title: string;
+      description: string;
+      orderIndex: number;
+      chapters: Array<{
+        title: string;
+        content: string;
+        videoUrl: string;
+        duration: number;
+        orderIndex: number;
+      }>;
+    }>;
+  }>;
+  
   // Step 4: Follow Gate (if free)
   followGateConfig?: FollowGateConfig;
   
   // Step 5: Type-Specific
   playlistConfig?: PlaylistConfig;
   abletonRackConfig?: AbletonRackConfig;
+  coachingConfig?: CoachingConfig;
+  bundleConfig?: BundleConfig;
+  files?: FileItem[];
   
   // Meta
   storeId: string;
@@ -119,6 +165,14 @@ export const PRODUCT_TYPE_INFO = [
     category: "Music Production",
     productType: "digital" as ProductType,
     icon: "🎛️",
+  },
+  {
+    id: "midi-pack",
+    label: "MIDI Pack",
+    description: "MIDI files & melodies",
+    category: "Music Production",
+    productType: "digital" as ProductType,
+    icon: "🎹",
   },
   {
     id: "ableton-rack",
@@ -151,14 +205,6 @@ export const PRODUCT_TYPE_INFO = [
     category: "Music Production",
     productType: "digital" as ProductType,
     icon: "🎚️",
-  },
-  {
-    id: "midi-pack",
-    label: "MIDI Pack",
-    description: "MIDI files & melodies",
-    category: "Music Production",
-    productType: "digital" as ProductType,
-    icon: "🎹",
   },
   
   // Digital Content
@@ -281,6 +327,16 @@ export const PRODUCT_TYPE_INFO = [
     category: "Support",
     productType: "digital" as ProductType,
     icon: "💝",
+  },
+  
+  // Bundles
+  {
+    id: "bundle",
+    label: "Bundle",
+    description: "Combine any products together (courses, packs, coaching, etc.)",
+    category: "Bundles",
+    productType: "digital" as ProductType,
+    icon: "📦",
   },
 ] as const;
 
