@@ -44,6 +44,8 @@ export const getUserPurchases = query({
     productDescription: v.optional(v.string()),
     storeName: v.optional(v.string()),
     storeSlug: v.optional(v.string()),
+    // Full product object for packs (includes packFiles)
+    product: v.optional(v.any()),
   })),
   handler: async (ctx, args) => {
     const purchases = await ctx.db
@@ -87,6 +89,28 @@ export const getUserPurchases = query({
             productTitle = product.title;
             productImageUrl = product.imageUrl || "";
             productDescription = product.description || "";
+            
+            // Return full product object for packs (needed for packFiles)
+            return {
+              _id: purchase._id,
+              _creationTime: purchase._creationTime,
+              userId: purchase.userId,
+              productType: purchase.productType,
+              amount: purchase.amount,
+              currency: purchase.currency,
+              status: purchase.status,
+              accessGranted: purchase.accessGranted,
+              downloadCount: purchase.downloadCount,
+              lastAccessedAt: purchase.lastAccessedAt,
+              productId: purchase.productId,
+              courseId: purchase.courseId,
+              productTitle,
+              productImageUrl,
+              productDescription,
+              storeName,
+              storeSlug,
+              product, // Include full product object
+            };
           }
         }
 

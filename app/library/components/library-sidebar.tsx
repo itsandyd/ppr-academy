@@ -88,6 +88,12 @@ export function LibrarySidebar() {
           gradient: "from-purple-500 to-pink-500"
         },
         { 
+          icon: Music, 
+          href: "/library/samples", 
+          label: "My Samples",
+          gradient: "from-indigo-500 to-purple-500"
+        },
+        { 
           icon: Package, 
           href: "/library/bundles", 
           label: "Bundles",

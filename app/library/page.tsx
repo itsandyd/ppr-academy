@@ -26,7 +26,10 @@ import {
   Calendar,
   Bell,
   ChevronRight,
-  Loader2
+  Loader2,
+  Download,
+  Music,
+  Package
 } from "lucide-react";
 import { useEffect } from "react";
 
@@ -84,6 +87,42 @@ export default function LibraryPage() {
     api.certificates.getUserCertificates,
     convexUser?.clerkId ? { userId: convexUser.clerkId } : "skip"
   );
+
+  // Fetch user's purchased products/samples
+  const userPurchases = useQuery(
+    api.library.getUserPurchases,
+    convexUser?.clerkId ? { userId: convexUser.clerkId } : "skip"
+  );
+
+  // Extract purchased packs (sample-pack, midi-pack, preset-pack)
+  const purchasedPacks = userPurchases?.filter((purchase: any) => 
+    purchase.product?.productCategory === "sample-pack" ||
+    purchase.product?.productCategory === "midi-pack" ||
+    purchase.product?.productCategory === "preset-pack"
+  ) || [];
+
+  // Extract samples from purchased packs
+  const purchasedSamples = purchasedPacks.flatMap((purchase: any) => {
+    const pack = purchase.product;
+    if (!pack?.packFiles) return [];
+    
+    try {
+      const files = JSON.parse(pack.packFiles);
+      return files.map((file: any) => ({
+        _id: file.storageId,
+        title: file.name.replace(/\.(wav|mp3|flac|aiff)$/i, ''),
+        fileName: file.name,
+        fileSize: file.size,
+        fileUrl: file.url || file.storageId,
+        storageId: file.storageId,
+        packTitle: pack.title,
+        packId: pack._id,
+        purchaseDate: purchase._creationTime,
+      }));
+    } catch (e) {
+      return [];
+    }
+  });
 
   // User display data
   const userData = {
@@ -298,8 +337,12 @@ export default function LibraryPage() {
         <div className="lg:col-span-3 space-y-6 md:space-y-8">
           {/* Content Tabs */}
           <Tabs defaultValue="continue" className="w-full">
-            <TabsList className="grid w-full max-w-2xl grid-cols-4">
+            <TabsList className="grid w-full max-w-3xl grid-cols-5">
               <TabsTrigger value="continue">Continue</TabsTrigger>
+              <TabsTrigger value="downloads">
+                <Download className="w-4 h-4 mr-2" />
+                Downloads
+              </TabsTrigger>
               <TabsTrigger value="recommended">Recommended</TabsTrigger>
               <TabsTrigger value="favorites">Favorites</TabsTrigger>
               <TabsTrigger value="certificates">
@@ -355,6 +398,135 @@ export default function LibraryPage() {
                   </Button>
                 </div>
               )}
+            </TabsContent>
+
+            <TabsContent value="downloads" className="space-y-6">
+              <div className="space-y-6 pt-2">
+                {/* Purchased Packs */}
+                {purchasedPacks.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <Package className="w-5 h-5" />
+                      Your Packs ({purchasedPacks.length})
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {purchasedPacks.map((purchase: any) => (
+                        <Card key={purchase._id} className="hover:shadow-lg transition-all">
+                          <CardContent className="p-6">
+                            <div className="flex items-start gap-4">
+                              <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20 flex items-center justify-center flex-shrink-0">
+                                <Package className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-semibold text-lg mb-1 line-clamp-1">
+                                  {purchase.product?.title}
+                                </h4>
+                                <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                                  {purchase.product?.description}
+                                </p>
+                                <div className="flex items-center gap-4 text-xs text-muted-foreground mb-4">
+                                  <span className="flex items-center gap-1">
+                                    <Music className="w-3 h-3" />
+                                    {JSON.parse(purchase.product?.packFiles || '[]').length} files
+                                  </span>
+                                  <span>
+                                    {new Date(purchase._creationTime).toLocaleDateString()}
+                                  </span>
+                                </div>
+                                <Button 
+                                  size="sm" 
+                                  className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                                  onClick={() => {
+                                    // Scroll to samples section
+                                    const samplesSection = document.getElementById(`pack-${purchase.product._id}-samples`);
+                                    samplesSection?.scrollIntoView({ behavior: 'smooth' });
+                                  }}
+                                >
+                                  <Download className="w-4 h-4 mr-2" />
+                                  View {JSON.parse(purchase.product?.packFiles || '[]').length} Samples
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* All Purchased Samples */}
+                {purchasedSamples.length > 0 ? (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <Music className="w-5 h-5" />
+                      All Your Samples ({purchasedSamples.length})
+                    </h3>
+                    <div className="space-y-2">
+                      {purchasedSamples.map((sample: any) => (
+                        <Card 
+                          key={sample._id} 
+                          id={`pack-${sample.packId}-samples`}
+                          className="hover:bg-muted/30 transition-colors"
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/20 dark:to-purple-900/20 flex items-center justify-center flex-shrink-0">
+                                <Music className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-medium truncate">{sample.title}</h4>
+                                <p className="text-sm text-muted-foreground">
+                                  From: {sample.packTitle}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="text-xs">
+                                  {(sample.fileSize / 1024).toFixed(0)} KB
+                                </Badge>
+                                <Button
+                                  size="sm"
+                                  className="bg-green-600 hover:bg-green-700"
+                                  onClick={async () => {
+                                    try {
+                                      const response = await fetch(sample.fileUrl);
+                                      const blob = await response.blob();
+                                      const url = window.URL.createObjectURL(blob);
+                                      const link = document.createElement('a');
+                                      link.href = url;
+                                      link.download = sample.fileName;
+                                      document.body.appendChild(link);
+                                      link.click();
+                                      document.body.removeChild(link);
+                                      window.URL.revokeObjectURL(url);
+                                    } catch (error) {
+                                      console.error('Download failed:', error);
+                                    }
+                                  }}
+                                >
+                                  <Download className="w-4 h-4 mr-2" />
+                                  Download
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <Package className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-medium mb-2">No Downloads Yet</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Purchase sample packs from the marketplace to build your library.
+                    </p>
+                    <Button onClick={() => window.location.href = '/marketplace/samples'}>
+                      <Package className="w-4 h-4 mr-2" />
+                      Browse Samples
+                    </Button>
+                  </div>
+                )}
+              </div>
             </TabsContent>
 
             <TabsContent value="recommended" className="space-y-6">
