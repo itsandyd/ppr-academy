@@ -435,7 +435,127 @@ export const deleteSamplePack = mutation({
 });
 
 /**
- * Purchase entire sample pack
+ * Purchase pack from digitalProducts table (new system)
+ */
+export const purchaseDigitalPack = mutation({
+  args: {
+    packId: v.id("digitalProducts"),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+    downloadUrl: v.optional(v.string()),
+    alreadyOwned: v.optional(v.boolean()),
+  }),
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    const userId = identity.subject;
+
+    const pack = await ctx.db.get(args.packId);
+    if (!pack) {
+      throw new Error("Pack not found");
+    }
+
+    if (!pack.isPublished) {
+      throw new Error("Pack is not available for purchase");
+    }
+
+    // Check if already owns
+    const existingPurchase = await ctx.db
+      .query("purchases")
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("userId"), userId),
+          q.eq(q.field("productId"), args.packId)
+        )
+      )
+      .first();
+
+    if (existingPurchase) {
+      // User already owns it - return success so they can download
+      return {
+        success: true,
+        message: `You already own ${pack.title}! Download it from your library.`,
+        alreadyOwned: true,
+      };
+    }
+
+    // For free packs (follow gate), just create purchase record
+    if (pack.price === 0) {
+      await ctx.db.insert("purchases", {
+        userId,
+        productId: args.packId,
+        amount: 0,
+        currency: "credits",
+        status: "completed",
+        storeId: pack.storeId,
+        adminUserId: pack.userId,
+        productType: "digitalProduct",
+        accessGranted: true,
+        downloadCount: 0,
+      });
+
+      return {
+        success: true,
+        message: `Successfully downloaded ${pack.title}!`,
+      };
+    }
+
+    // For paid packs, handle credits
+    const userCredits = await ctx.db
+      .query("userCredits")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .first();
+
+    if (!userCredits || userCredits.balance < pack.price) {
+      throw new Error(`Insufficient credits. You need ${pack.price} credits.`);
+    }
+
+    // Spend credits
+    const newBalance = userCredits.balance - pack.price;
+    await ctx.db.patch(userCredits._id, {
+      balance: newBalance,
+      lifetimeSpent: userCredits.lifetimeSpent + pack.price,
+      lastUpdated: Date.now(),
+    });
+
+    // Record transaction
+    await ctx.db.insert("creditTransactions", {
+      userId,
+      type: "spend",
+      amount: -pack.price,
+      balance: newBalance,
+      description: `Purchased pack: ${pack.title}`,
+      relatedResourceId: args.packId,
+      relatedResourceType: "pack",
+    });
+
+    // Create purchase record
+    await ctx.db.insert("purchases", {
+      userId,
+      productId: args.packId,
+      amount: pack.price,
+      currency: "credits",
+      status: "completed",
+      storeId: pack.storeId,
+      adminUserId: pack.userId,
+      productType: "digitalProduct",
+      accessGranted: true,
+      downloadCount: 0,
+    });
+
+    return {
+      success: true,
+      message: `Successfully purchased ${pack.title}!`,
+    };
+  },
+});
+
+/**
+ * Purchase entire sample pack (legacy - old samplePacks table)
  */
 export const purchasePack = mutation({
   args: {

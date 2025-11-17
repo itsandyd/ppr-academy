@@ -12,6 +12,7 @@ export const getStoreSamples = query({
   args: {
     storeId: v.string(),
   },
+  returns: v.array(v.any()),
   handler: async (ctx, args) => {
     const samples = await ctx.db
       .query("audioSamples")

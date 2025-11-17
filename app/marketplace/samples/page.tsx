@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -72,7 +73,8 @@ const CATEGORIES = [
 ];
 
 export default function SamplesMarketplacePage() {
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, userId } = useAuth();
+  const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   
   // View state
@@ -132,10 +134,37 @@ export default function SamplesMarketplacePage() {
   console.log("Filtered packs:", packs.length, packs);
   
   const userCredits = useQuery(api.credits.getUserCredits);
+  
+  // Get user's library/purchases to check ownership
+  // @ts-ignore TS2589
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const userLibrary: any = useQuery(
+    api.library.getUserPurchases,
+    isSignedIn && userId ? { userId } : "skip"
+  );
+  
+  // Create ownership lookup map for fast checking
+  const ownedProductIds = new Set(
+    userLibrary?.map((purchase: any) => purchase.productId).filter(Boolean) || []
+  );
+  const ownedPackIds = new Set(
+    packs.filter((pack: any) => ownedProductIds.has(pack._id)).map((p: any) => p._id)
+  );
+  
+  // Helper to check if user owns a sample
+  const userOwnsSample = (sample: any) => {
+    // Check if it's a pack sample and user owns the pack
+    if (sample.packId) {
+      return ownedPackIds.has(sample.packId);
+    }
+    // For individual samples, check if they own it directly
+    return ownedProductIds.has(sample._id);
+  };
 
   // Mutations
   const purchaseSample = useMutation(api.samples.purchaseSample);
-  const purchasePack = useMutation(api.samplePacks.purchasePack);
+  const purchaseOldPack = useMutation(api.samplePacks.purchasePack);
+  const purchaseDigitalPack = useMutation(api.samplePacks.purchaseDigitalPack);
   const toggleFavorite = useMutation(api.samples.toggleFavorite);
 
   // Audio player
@@ -174,20 +203,59 @@ export default function SamplesMarketplacePage() {
 
     try {
       if (selectedForPurchase.type === "pack") {
-        const result = await purchasePack({ packId: selectedForPurchase._id });
-        toast.success(result.message);
+        // All packs are now in digitalProducts table
+        const result = await purchaseDigitalPack({ packId: selectedForPurchase._id as any });
+        
+        setPurchaseModalOpen(false);
+        
+        if (result.alreadyOwned) {
+          // User already owns it - show toast with library link
+          toast.success(result.message, {
+            duration: 5000,
+            action: {
+              label: "Open Library",
+              onClick: () => router.push('/library'),
+            },
+          });
+        } else {
+          // Successful purchase - show toast with library link
+          toast.success(result.message, {
+            duration: 5000,
+            action: {
+              label: "View Downloads",
+              onClick: () => router.push('/library'),
+            },
+          });
+        }
       } else {
         const result = await purchaseSample({ sampleId: selectedForPurchase._id });
-        toast.success("Sample purchased successfully!");
+        setPurchaseModalOpen(false);
+        toast.success("Sample purchased successfully!", {
+          duration: 5000,
+          action: {
+            label: "View Library",
+            onClick: () => router.push('/library'),
+          },
+        });
       }
-      setPurchaseModalOpen(false);
     } catch (error: any) {
       toast.error(error.message || "Purchase failed");
     }
   };
 
   const openPurchaseModal = (item: any, type: "sample" | "pack") => {
-    setSelectedForPurchase({ ...item, type });
+    // If this is a pack sample (has packId), redirect to buying the pack
+    if (type === "sample" && item.packId) {
+      setSelectedForPurchase({ 
+        _id: item.packId, 
+        title: item.packTitle,
+        price: item.price || item.creditPrice,
+        creditPrice: item.creditPrice || item.price,
+        type: "pack" 
+      });
+    } else {
+      setSelectedForPurchase({ ...item, type });
+    }
     setPurchaseModalOpen(true);
   };
 
@@ -554,6 +622,7 @@ export default function SamplesMarketplacePage() {
                       onPlayPause={handlePlayPause}
                       onPurchase={() => openPurchaseModal(sample, "sample")}
                       onToggleFavorite={() => handleToggleFavorite(sample._id)}
+                      isOwned={userOwnsSample(sample)}
                     />
                   ))}
                 </div>
@@ -567,6 +636,7 @@ export default function SamplesMarketplacePage() {
                       isPlaying={playingSample?._id === sample._id && isPlaying}
                       onPlayPause={handlePlayPause}
                       onPurchase={() => openPurchaseModal(sample, "sample")}
+                      isOwned={userOwnsSample(sample)}
                     />
                   ))}
                 </div>
@@ -591,6 +661,7 @@ export default function SamplesMarketplacePage() {
                     pack={pack}
                     index={index}
                     onPurchase={() => openPurchaseModal(pack, "pack")}
+                    isOwned={ownedProductIds.has(pack._id)}
                   />
                 ))}
               </div>
@@ -673,7 +744,40 @@ export default function SamplesMarketplacePage() {
 }
 
 // Sample Card Component
-function SampleCard({ sample, index, isPlaying, onPlayPause, onPurchase, onToggleFavorite }: any) {
+function SampleCard({ sample, index, isPlaying, onPlayPause, onPurchase, onToggleFavorite, isOwned }: any) {
+  const handleDownload = async () => {
+    try {
+      // Fetch the file from Convex storage
+      const response = await fetch(sample.fileUrl);
+      const blob = await response.blob();
+      
+      // Create a download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Use fileName if available, otherwise construct from title
+      // Check if title/fileName already has extension to avoid duplication
+      let filename = sample.fileName || sample.title;
+      if (filename && !filename.match(/\.(wav|mp3|flac|aiff)$/i)) {
+        filename = `${filename}.${sample.format || 'wav'}`;
+      }
+      link.download = filename;
+      
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('Download started!');
+    } catch (error) {
+      console.error('Download failed:', error);
+      toast.error('Download failed. Please try again.');
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -722,13 +826,24 @@ function SampleCard({ sample, index, isPlaying, onPlayPause, onPurchase, onToggl
               >
                 <Heart className="w-4 h-4" />
               </Button>
-              <Button
-                size="sm"
-                onClick={onPurchase}
-                className="gap-1"
-              >
-                {sample.creditPrice} <Package className="w-3 h-3" />
-              </Button>
+              {isOwned ? (
+                <Button
+                  size="sm"
+                  onClick={handleDownload}
+                  className="gap-1 bg-green-600 hover:bg-green-700"
+                >
+                  <Download className="w-4 h-4" />
+                  Download
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  onClick={onPurchase}
+                  className="gap-1"
+                >
+                  {sample.creditPrice} <Package className="w-3 h-3" />
+                </Button>
+              )}
             </div>
           </div>
 
@@ -745,7 +860,40 @@ function SampleCard({ sample, index, isPlaying, onPlayPause, onPurchase, onToggl
 }
 
 // Sample List Item Component
-function SampleListItem({ sample, index, isPlaying, onPlayPause, onPurchase }: any) {
+function SampleListItem({ sample, index, isPlaying, onPlayPause, onPurchase, isOwned }: any) {
+  const handleDownload = async () => {
+    try {
+      // Fetch the file from Convex storage
+      const response = await fetch(sample.fileUrl);
+      const blob = await response.blob();
+      
+      // Create a download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Use fileName if available, otherwise construct from title
+      // Check if title/fileName already has extension to avoid duplication
+      let filename = sample.fileName || sample.title;
+      if (filename && !filename.match(/\.(wav|mp3|flac|aiff)$/i)) {
+        filename = `${filename}.${sample.format || 'wav'}`;
+      }
+      link.download = filename;
+      
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast.success('Download started!');
+    } catch (error) {
+      console.error('Download failed:', error);
+      toast.error('Download failed. Please try again.');
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, x: -20 }}
@@ -769,9 +917,16 @@ function SampleListItem({ sample, index, isPlaying, onPlayPause, onPurchase }: a
             <Badge variant="secondary">{sample.genre}</Badge>
             <Badge variant="outline">{sample.category}</Badge>
             {sample.bpm && <Badge variant="outline">{sample.bpm} BPM</Badge>}
-            <Button size="sm" onClick={onPurchase}>
-              {sample.creditPrice} credits
-            </Button>
+            {isOwned ? (
+              <Button size="sm" onClick={handleDownload} className="gap-1 bg-green-600 hover:bg-green-700">
+                <Download className="w-4 h-4" />
+                Download
+              </Button>
+            ) : (
+              <Button size="sm" onClick={onPurchase}>
+                {sample.creditPrice} credits
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -780,7 +935,14 @@ function SampleListItem({ sample, index, isPlaying, onPlayPause, onPurchase }: a
 }
 
 // Pack Card Component
-function PackCard({ pack, index, onPurchase }: any) {
+function PackCard({ pack, index, onPurchase, isOwned }: any) {
+  const router = useRouter();
+
+  const handleViewPack = () => {
+    // Navigate to library to view/download pack
+    router.push('/library?filter=packs');
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -802,10 +964,15 @@ function PackCard({ pack, index, onPurchase }: any) {
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
           
-          <div className="absolute bottom-3 left-3 right-3">
+          <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
             <Badge className="bg-chart-1 text-primary-foreground">
-              {pack.sampleCount} Samples
+              {pack.sampleCount || JSON.parse(pack.packFiles || '[]').length} Samples
             </Badge>
+            {isOwned && (
+              <Badge className="bg-green-600 text-white">
+                ✓ Owned
+              </Badge>
+            )}
           </div>
         </div>
 
@@ -843,15 +1010,29 @@ function PackCard({ pack, index, onPurchase }: any) {
             </div>
           )}
 
-          {/* Purchase */}
+          {/* Purchase or Download */}
           <div className="flex items-center justify-between pt-2">
-            <div className="text-2xl font-bold text-chart-1">
-              {pack.price} credits
-            </div>
-            <Button onClick={onPurchase} className="gap-2">
-              <ShoppingCart className="w-4 h-4" />
-              Buy Pack
-            </Button>
+            {isOwned ? (
+              <>
+                <span className="text-sm text-green-600 dark:text-green-400 font-medium">
+                  In Your Library
+                </span>
+                <Button onClick={handleViewPack} className="gap-2 bg-green-600 hover:bg-green-700">
+                  <Download className="w-4 h-4" />
+                  View & Download
+                </Button>
+              </>
+            ) : (
+              <>
+                <div className="text-2xl font-bold text-chart-1">
+                  {pack.price} credits
+                </div>
+                <Button onClick={onPurchase} className="gap-2">
+                  <ShoppingCart className="w-4 h-4" />
+                  Buy Pack
+                </Button>
+              </>
+            )}
           </div>
         </CardContent>
       </Card>

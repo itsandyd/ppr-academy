@@ -165,15 +165,61 @@ export default function ProductsPage() {
     );
   })();
 
-  // Get user's samples
+  // Get user's individual samples
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const userSamples: any = (() => {
+  const individualSamples: any = (() => {
     // @ts-ignore TS2589 - Type instantiation is excessively deep
     return useQuery(
       api.samples.getStoreSamples,
       storeId ? { storeId } : "skip"
     );
   })();
+
+  // Extract samples from packs (stored in packFiles)
+  const packSamples = digitalProducts?.filter((p: any) => 
+    p.productCategory === 'sample-pack' && p.packFiles
+  ).flatMap((pack: any) => {
+    try {
+      const files = JSON.parse(pack.packFiles);
+      return files.map((file: any) => ({
+        _id: file.storageId,
+        title: file.name.replace(/\.(wav|mp3|flac|aiff)$/i, ''), // Remove extension
+        fileName: file.name,
+        fileSize: file.size,
+        storageId: file.storageId,
+        fileUrl: file.url || file.storageId,
+        category: 'pack-sample',
+        genre: pack.tags?.[0] || 'Various',
+        tags: pack.tags || [],
+        creditPrice: 0, // Pack samples aren't sold individually
+        isPublished: pack.isPublished,
+        storeId: pack.storeId,
+        userId: pack.userId,
+        packId: pack._id,
+        packTitle: pack.title,
+        duration: 0,
+        plays: 0,
+        downloads: 0,
+        favorites: 0,
+      }));
+    } catch (e) {
+      console.error('Error parsing pack files:', e);
+      return [];
+    }
+  }) || [];
+
+  // Combine individual samples + pack samples
+  const userSamples = [...(individualSamples || []), ...packSamples];
+
+  // Debug logging for samples
+  console.log("📊 Samples Debug:", {
+    storeId,
+    individualSamples: individualSamples?.length,
+    packSamples: packSamples?.length,
+    totalSamples: userSamples?.length,
+    userSamples,
+    sampleTitles: userSamples?.map((s: any) => s.title),
+  });
 
   // Combine products for display
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -354,16 +400,6 @@ export default function ProductsPage() {
             <Plus className="w-5 h-5 mr-2" />
             Create Product
           </Button>
-        </motion.div>
-
-        {/* Credit Balance Widget */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="mb-8"
-        >
-          <CreditBalance storeId={storeId} showDetails />
         </motion.div>
 
         {/* Stats Overview - only show if user has products */}
