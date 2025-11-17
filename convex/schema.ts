@@ -45,6 +45,8 @@ export default defineSchema({
     twitter: v.optional(v.string()),
     youtube: v.optional(v.string()),
     website: v.optional(v.string()),
+    // Dashboard preference for unified dashboard
+    dashboardPreference: v.optional(v.union(v.literal('learn'), v.literal('create'))),
   })
   .index("by_email", ["email"])
   .index("by_clerkId", ["clerkId"])

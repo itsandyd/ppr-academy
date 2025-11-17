@@ -1,0 +1,83 @@
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { ModeToggle } from './ModeToggle';
+import { LearnModeContent } from './LearnModeContent';
+import { CreateModeContent } from './CreateModeContent';
+import { DashboardSidebar } from './DashboardSidebar';
+import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
+import { Bell, Search, Settings } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useUser } from '@clerk/nextjs';
+import { useMutation } from 'convex/react';
+import { api } from '@/convex/_generated/api';
+
+type DashboardMode = 'learn' | 'create';
+
+interface DashboardShellProps {
+  mode: DashboardMode;
+}
+
+export function DashboardShell({ mode }: DashboardShellProps) {
+  const router = useRouter();
+  const { user } = useUser();
+  const savePreference = useMutation(api.users.setDashboardPreference);
+
+  const handleModeChange = async (newMode: DashboardMode) => {
+    // Update URL immediately (optimistic)
+    router.replace(`/dashboard?mode=${newMode}`, { scroll: false });
+
+    // Save preference in background (non-blocking)
+    if (user?.id) {
+      try {
+        await savePreference({
+          clerkId: user.id,
+          preference: newMode,
+        });
+      } catch (error) {
+        console.error('Failed to save dashboard preference:', error);
+        // Don't block the UI, just log the error
+      }
+    }
+  };
+
+  return (
+    <SidebarProvider>
+      <DashboardSidebar mode={mode} />
+      <main className="flex-1 flex flex-col w-full">
+        {/* Top Header */}
+        <header className="flex h-16 shrink-0 items-center gap-4 px-4 border-b border-border bg-card">
+          <SidebarTrigger className="-ml-1 md:hidden" />
+          
+          <div className="flex-1">
+            <h1 className="text-lg font-semibold text-card-foreground">
+              {mode === 'learn' ? 'My Learning' : 'Creator Studio'}
+            </h1>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {/* Mode Toggle */}
+            <ModeToggle mode={mode} onChange={handleModeChange} />
+
+            {/* Quick actions */}
+            <Button variant="ghost" size="icon" className="hidden md:flex">
+              <Search className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="icon">
+              <Bell className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost" size="icon">
+              <Settings className="w-4 h-4" />
+            </Button>
+          </div>
+        </header>
+
+        {/* Page Content */}
+        <div className="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full bg-background">
+          {mode === 'learn' ? <LearnModeContent /> : <CreateModeContent />}
+        </div>
+      </main>
+    </SidebarProvider>
+  );
+}
+

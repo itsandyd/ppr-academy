@@ -285,3 +285,33 @@ export const setUserAsAdmin = mutation({
     return user._id;
   },
 });
+
+// Set user's dashboard preference (learn or create mode)
+export const setDashboardPreference = mutation({
+  args: {
+    clerkId: v.string(),
+    preference: v.union(v.literal('learn'), v.literal('create')),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query('users')
+      .withIndex('by_clerkId', (q) => q.eq('clerkId', args.clerkId))
+      .unique();
+
+    if (!user) {
+      // Create user if doesn't exist
+      await ctx.db.insert('users', {
+        clerkId: args.clerkId,
+        dashboardPreference: args.preference,
+      });
+    } else {
+      // Update preference
+      await ctx.db.patch(user._id, {
+        dashboardPreference: args.preference,
+      });
+    }
+
+    return null;
+  },
+});
