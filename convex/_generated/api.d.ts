@@ -98,6 +98,7 @@ import type * as leadSubmissions from "../leadSubmissions.js";
 import type * as leaderboards from "../leaderboards.js";
 import type * as lib_utils from "../lib/utils.js";
 import type * as library from "../library.js";
+import type * as libraryHelpers from "../libraryHelpers.js";
 import type * as linkInBio from "../linkInBio.js";
 import type * as liveViewers from "../liveViewers.js";
 import type * as marketplace from "../marketplace.js";
@@ -243,6 +244,7 @@ declare const fullApi: ApiFromModules<{
   leaderboards: typeof leaderboards;
   "lib/utils": typeof lib_utils;
   library: typeof library;
+  libraryHelpers: typeof libraryHelpers;
   linkInBio: typeof linkInBio;
   liveViewers: typeof liveViewers;
   marketplace: typeof marketplace;

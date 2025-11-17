@@ -17,7 +17,7 @@ import {
   Pause,
 } from "lucide-react";
 import Link from "next/link";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -30,77 +30,26 @@ export default function LibrarySamplesPage() {
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   
-  // Get user's purchases
+  // Get samples with properly resolved URLs from Convex
+  const allSamples = useQuery(
+    api.libraryHelpers.getPackSamplesWithUrls,
+    user?.id ? { userId: user.id } : "skip"
+  ) || [];
+
+  // Get user's purchases for pack count
   const userPurchases = useQuery(
     api.library.getUserPurchases,
     user?.id ? { userId: user.id } : "skip"
   );
 
-  // Extract purchased packs
-  const purchasedPacks = userPurchases?.filter((purchase: any) => 
-    purchase.product?.productCategory === "sample-pack" ||
-    purchase.product?.productCategory === "midi-pack" ||
-    purchase.product?.productCategory === "preset-pack"
-  ) || [];
-
-  // Debug logging
-  console.log("🎵 Library Samples Debug:", {
-    userPurchases: userPurchases?.length,
-    purchasedPacks: purchasedPacks.length,
-    packTitles: purchasedPacks.map((p: any) => p.product?.title),
-    hasPackFiles: purchasedPacks.map((p: any) => !!p.product?.packFiles),
-  });
-
-  // Extract all samples from purchased packs and resolve storage URLs
-  const [samplesWithUrls, setSamplesWithUrls] = useState<any[]>([]);
-
-  useEffect(() => {
-    const resolveSampleUrls = async () => {
-      const samples = purchasedPacks.flatMap((purchase: any) => {
-        const pack = purchase.product;
-        if (!pack?.packFiles) return [];
-        
-        try {
-          const files = JSON.parse(pack.packFiles);
-          return files.map((file: any) => ({
-            _id: file.storageId,
-            title: file.name.replace(/\.(wav|mp3|flac|aiff)$/i, ''),
-            fileName: file.name,
-            fileSize: file.size,
-            storageId: file.storageId,
-            packTitle: pack.title,
-            packId: pack._id,
-            purchaseDate: purchase._creationTime,
-            tags: pack.tags || [],
-          }));
-        } catch (e) {
-          return [];
-        }
-      });
-
-      // Resolve storage URLs using Convex API
-      const samplesWithResolvedUrls = await Promise.all(
-        samples.map(async (sample) => {
-          // Storage URLs are in format: https://[deployment].convex.cloud/api/storage/[storageId]
-          const fileUrl = `https://fastidious-snake-859.convex.cloud/api/storage/${sample.storageId}`;
-          return {
-            ...sample,
-            fileUrl,
-          };
-        })
-      );
-
-      setSamplesWithUrls(samplesWithResolvedUrls);
-    };
-
-    if (purchasedPacks.length > 0) {
-      resolveSampleUrls();
-    } else {
-      setSamplesWithUrls([]);
-    }
-  }, [purchasedPacks]);
-
-  const allSamples = samplesWithUrls;
+  // Extract purchased packs for stats
+  const purchasedPacks = useMemo(() => {
+    return userPurchases?.filter((purchase: any) => 
+      purchase.product?.productCategory === "sample-pack" ||
+      purchase.product?.productCategory === "midi-pack" ||
+      purchase.product?.productCategory === "preset-pack"
+    ) || [];
+  }, [userPurchases]);
 
   // Get unique packs for filter
   const uniquePacks = Array.from(new Set(allSamples.map(s => s.packId)))
@@ -128,16 +77,21 @@ export default function LibrarySamplesPage() {
   };
 
   // Audio player
-  const handlePlayPause = (sample: any) => {
+  const handlePlayPause = async (sample: any) => {
     if (playingSample?._id === sample._id && isPlaying) {
       audioRef.current?.pause();
       setIsPlaying(false);
     } else {
-      if (audioRef.current) {
-        audioRef.current.src = sample.fileUrl;
-        audioRef.current.play();
-        setPlayingSample(sample);
-        setIsPlaying(true);
+      if (audioRef.current && sample.fileUrl) {
+        try {
+          audioRef.current.src = sample.fileUrl;
+          await audioRef.current.play();
+          setPlayingSample(sample);
+          setIsPlaying(true);
+        } catch (error) {
+          console.error('Play failed:', error);
+          toast.error('Failed to play sample');
+        }
       }
     }
   };
