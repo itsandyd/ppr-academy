@@ -20,6 +20,67 @@ import { SamplesList } from "@/components/samples/SamplesList";
 import { CreditBalance } from "@/components/credits/CreditBalance";
 import { useToast } from "@/hooks/use-toast";
 import { ProductTypeSelector } from "@/components/products/product-type-selector";
+import { Skeleton } from "@/components/ui/skeleton";
+
+// Loading state component
+function LoadingState() {
+  return (
+    <div className="min-h-screen">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header Skeleton */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="space-y-4 flex-1">
+            <Skeleton className="h-8 w-48 bg-purple-100 dark:bg-purple-900/20" />
+            <Skeleton className="h-12 w-96" />
+            <Skeleton className="h-6 w-full max-w-2xl" />
+          </div>
+          <Skeleton className="h-12 w-48" />
+        </div>
+
+        {/* Credit Balance Skeleton */}
+        <Skeleton className="h-24 w-full mb-8 rounded-2xl" />
+
+        {/* Stats Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i} className="bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-4 rounded" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-16 mb-2" />
+                <Skeleton className="h-3 w-32" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Tabs Skeleton */}
+        <div className="mb-8">
+          <Skeleton className="h-12 w-full max-w-lg mx-auto mb-8 rounded-full" />
+          
+          {/* Products Grid Skeleton */}
+          <div className="bg-card rounded-2xl shadow-sm border border-border/50 p-6">
+            <Skeleton className="h-10 w-full mb-6 rounded-xl" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+              {[...Array(6)].map((_, i) => (
+                <Card key={i}>
+                  <Skeleton className="h-48 w-full rounded-t-lg" />
+                  <CardContent className="p-6">
+                    <Skeleton className="h-6 w-3/4 mb-2" />
+                    <Skeleton className="h-4 w-1/2 mb-4" />
+                    <Skeleton className="h-10 w-full" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // Empty state component
 function EmptyState({ 
@@ -154,6 +215,12 @@ export default function ProductsPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const courseProducts = allProducts.filter((p: any) => p.type === 'course');
 
+  // Check if data is still loading
+  const isLoading = convexUser === undefined || 
+                    userCourses === undefined || 
+                    digitalProducts === undefined || 
+                    userSamples === undefined;
+
   // Calculate stats
   const stats = {
     totalProducts: allProducts.length + (userSamples?.length || 0),
@@ -162,6 +229,11 @@ export default function ProductsPage() {
     totalViews: 0, // Placeholder for future analytics
     totalRevenue: 0, // Placeholder for future analytics
   };
+
+  // Show loading state while data is being fetched
+  if (isLoading) {
+    return <LoadingState />;
+  }
 
   if (!storeId) {
     return (

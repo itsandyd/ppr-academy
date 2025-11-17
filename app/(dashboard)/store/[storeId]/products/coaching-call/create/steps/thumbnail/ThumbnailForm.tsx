@@ -52,9 +52,9 @@ export default function ThumbnailForm() {
 
   const onSubmit = (data: ThumbnailSchema) => {
     console.log("Thumbnail form submitted:", data);
-    // Navigate to checkout step
+    // Navigate to pricing step (unified pattern)
     const qs = new URLSearchParams(searchParams);
-    qs.set('step', 'checkout');
+    qs.set('step', 'pricing');
     router.push(`${pathname}?${qs.toString()}`, { scroll: false });
   };
 

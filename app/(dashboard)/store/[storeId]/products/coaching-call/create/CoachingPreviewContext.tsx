@@ -4,24 +4,45 @@ import { createContext, useContext, useState, ReactNode } from "react";
 import { Id } from "@/convex/_generated/dataModel";
 
 interface CoachingPreviewData {
-  // Thumbnail step
+  // Details step
   imageFile?: File | null;
   imagePreviewUrl?: string | null;
   thumbnail?: string;
   thumbnailStyle?: string;
   style?: "button" | "callout" | "preview";
-  
-  // Checkout step
   title?: string;
   description?: string;
   duration?: number;
-  price?: number;
   sessionType?: "video" | "audio" | "phone";
+  
+  // Pricing Model step (NEW - matches course pattern)
+  pricingModel?: "free_with_gate" | "paid";
+  price?: number;
+  
+  // Checkout step (for paid sessions)
   customFields?: Array<{
     label: string;
     type: "text" | "email" | "phone" | "textarea";
     required: boolean;
   }>;
+  
+  // Follow Gate step (for free sessions)
+  followGateEnabled?: boolean;
+  followGateRequirements?: {
+    requireEmail?: boolean;
+    requireInstagram?: boolean;
+    requireTiktok?: boolean;
+    requireYoutube?: boolean;
+    requireSpotify?: boolean;
+    minFollowsRequired?: number;
+  };
+  followGateSocialLinks?: {
+    instagram?: string;
+    tiktok?: string;
+    youtube?: string;
+    spotify?: string;
+  };
+  followGateMessage?: string;
   
   // Availability step
   availability?: any;
@@ -64,6 +85,8 @@ export function CoachingPreviewProvider({ children }: { children: ReactNode }) {
     price: 99,
     duration: 60,
     sessionType: "video",
+    pricingModel: "paid", // Default to paid
+    followGateEnabled: false,
   });
 
   const updateFormData = (data: Partial<CoachingPreviewData>) => {
