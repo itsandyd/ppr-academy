@@ -131,7 +131,7 @@ export function CreateModeContent() {
         description: "1-on-1 mentoring",
         icon: Headphones,
         color: "from-orange-500 to-red-500",
-        href: `/dashboard/create/service?category=coaching`
+        href: `/dashboard/create/coaching?category=coaching`
       },
       {
         title: "View Analytics",

@@ -6,6 +6,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { 
   Package, 
   Music, 
@@ -14,7 +20,9 @@ import {
   Edit,
   Eye,
   TrendingUp,
-  Zap
+  Zap,
+  FileText,
+  PenTool
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -66,6 +74,18 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
     p.productCategory === 'ableton-rack' ||  // Legacy
     p.productType === 'effectChain' ||
     p.productType === 'abletonRack'  // Legacy
+  ) || [];
+  
+  // PDFs (new + legacy)
+  const pdfs = digitalProducts?.filter((p: any) => 
+    p.productCategory === 'pdf' ||
+    p.productCategory === 'pdf-guide' ||  // Legacy
+    p.productCategory === 'cheat-sheet' ||  // Legacy
+    p.productCategory === 'template'  // Legacy
+  ) || [];
+  
+  const blogPosts = digitalProducts?.filter((p: any) => 
+    p.productCategory === 'blog-post'  // Only actual blog posts, not all urlMedia
   ) || [];
   
   // Count by DAW for filtering
@@ -145,24 +165,79 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
       </div>
 
       {/* Product tabs */}
-      <Tabs defaultValue="all">
-        <TabsList>
-          <TabsTrigger value="all">All ({allProducts.length})</TabsTrigger>
-          <TabsTrigger value="published">Published ({publishedProducts.length})</TabsTrigger>
-          <TabsTrigger value="drafts">Drafts ({draftProducts.length})</TabsTrigger>
-          <TabsTrigger value="courses">
-            <BookOpen className="w-4 h-4 mr-2" />
-            Courses ({courses.length})
-          </TabsTrigger>
-          <TabsTrigger value="packs">
-            <Music className="w-4 h-4 mr-2" />
-            Packs ({packs.length})
-          </TabsTrigger>
-          <TabsTrigger value="chains">
-            <Zap className="w-4 h-4 mr-2" />
-            Effect Chains ({effectChains.length})
-          </TabsTrigger>
-        </TabsList>
+      <TooltipProvider>
+        <Tabs defaultValue="all">
+          <TabsList className="w-full justify-start overflow-x-auto">
+            <TabsTrigger value="all" className="flex-shrink-0">
+              <span>All</span>
+            </TabsTrigger>
+            <TabsTrigger value="published" className="flex-shrink-0">
+              <span>Published</span>
+            </TabsTrigger>
+            <TabsTrigger value="drafts" className="flex-shrink-0">
+              <span>Drafts</span>
+            </TabsTrigger>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <TabsTrigger value="courses" className="flex-shrink-0">
+                  <BookOpen className="w-4 h-4" />
+                  <span className="ml-2 hidden md:inline">Courses</span>
+                </TabsTrigger>
+              </TooltipTrigger>
+              <TooltipContent className="bg-white dark:bg-black">
+                <p>Courses ({courses.length})</p>
+              </TooltipContent>
+            </Tooltip>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <TabsTrigger value="packs" className="flex-shrink-0">
+                  <Music className="w-4 h-4" />
+                  <span className="ml-2 hidden md:inline">Packs</span>
+                </TabsTrigger>
+              </TooltipTrigger>
+              <TooltipContent className="bg-white dark:bg-black">
+                <p>Sample/Preset/MIDI Packs ({packs.length})</p>
+              </TooltipContent>
+            </Tooltip>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <TabsTrigger value="chains" className="flex-shrink-0">
+                  <Zap className="w-4 h-4" />
+                  <span className="ml-2 hidden md:inline">Chains</span>
+                </TabsTrigger>
+              </TooltipTrigger>
+              <TooltipContent className="bg-white dark:bg-black">
+                <p>Effect Chains ({effectChains.length})</p>
+              </TooltipContent>
+            </Tooltip>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <TabsTrigger value="pdfs" className="flex-shrink-0">
+                  <FileText className="w-4 h-4" />
+                  <span className="ml-2 hidden md:inline">PDFs</span>
+                </TabsTrigger>
+              </TooltipTrigger>
+              <TooltipContent className="bg-white dark:bg-black">
+                <p>PDF Guides & Cheat Sheets ({pdfs.length})</p>
+              </TooltipContent>
+            </Tooltip>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <TabsTrigger value="blogs" className="flex-shrink-0">
+                  <PenTool className="w-4 h-4" />
+                  <span className="ml-2 hidden md:inline">Blogs</span>
+                </TabsTrigger>
+              </TooltipTrigger>
+              <TooltipContent className="bg-white dark:bg-black">
+                <p>Blog Posts ({blogPosts.length})</p>
+              </TooltipContent>
+            </Tooltip>
+          </TabsList>
 
         <TabsContent value="all" className="space-y-4 mt-6">
           {allProducts.length === 0 ? (
@@ -297,8 +372,178 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
             </div>
           )}
         </TabsContent>
-      </Tabs>
+
+        <TabsContent value="pdfs" className="space-y-4 mt-6">
+          {pdfs.length === 0 ? (
+            <Card className="p-12 text-center">
+              <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">No PDFs Yet</h3>
+              <p className="text-muted-foreground mb-4">
+                Upload PDF guides, cheat sheets, ebooks, and educational content
+              </p>
+              <Button asChild>
+                <Link href="/dashboard/create/pdf">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Upload PDF
+                </Link>
+              </Button>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {pdfs.map((product: any) => (
+                <PDFCard key={product._id} product={product} />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="blogs" className="space-y-4 mt-6">
+          {blogPosts.length === 0 ? (
+            <Card className="p-12 text-center">
+              <PenTool className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">No Blog Posts Yet</h3>
+              <p className="text-muted-foreground mb-4">
+                Write articles and blog content to share with your audience
+              </p>
+              <Button asChild>
+                <Link href="/dashboard/create/blog">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Write Blog Post
+                </Link>
+              </Button>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {blogPosts.map((product: any) => (
+                <BlogPostCard key={product._id} product={product} />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+        </Tabs>
+      </TooltipProvider>
     </div>
+  );
+}
+
+function BlogPostCard({ product }: { product: any }) {
+  return (
+    <Card className="group hover:shadow-lg transition-all overflow-hidden">
+      {product.imageUrl ? (
+        <div className="aspect-video w-full overflow-hidden">
+          <img 
+            src={product.imageUrl} 
+            alt={product.title}
+            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+          />
+        </div>
+      ) : (
+        <div className="aspect-video w-full bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/20 dark:to-purple-900/20 flex items-center justify-center">
+          <PenTool className="w-16 h-16 text-indigo-400 dark:text-indigo-600" />
+        </div>
+      )}
+      
+      <CardContent className="p-6">
+        <div className="flex items-start justify-between mb-2">
+          <h3 className="font-semibold text-lg line-clamp-2 flex-1">
+            {product.title}
+          </h3>
+          <Badge variant={product.isPublished ? 'default' : 'secondary'}>
+            {product.isPublished ? 'Live' : 'Draft'}
+          </Badge>
+        </div>
+        <div className="flex items-center gap-2 mb-3">
+          <Badge variant="outline" className="text-xs">
+            Blog Post
+          </Badge>
+          {product.readTimeMinutes && (
+            <Badge variant="secondary" className="text-xs">
+              {product.readTimeMinutes} min read
+            </Badge>
+          )}
+        </div>
+        <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+          {product.description || product.excerpt || 'No description'}
+        </p>
+        <div className="flex items-center justify-between">
+          <span className="text-lg font-bold">${product.price || 0}</span>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm">
+              <Eye className="w-4 h-4 mr-1" />
+              View
+            </Button>
+            <Button size="sm">
+              <Edit className="w-4 h-4 mr-1" />
+              Edit
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function PDFCard({ product }: { product: any }) {
+  const pdfTypeLabel = product.pdfType === 'cheat-sheet' ? 'Cheat Sheet' :
+                       product.pdfType === 'guide' ? 'Guide' :
+                       product.pdfType === 'ebook' ? 'Ebook' :
+                       product.pdfType === 'workbook' ? 'Workbook' :
+                       product.pdfType === 'template' ? 'Template' :
+                       'PDF';
+
+  return (
+    <Card className="group hover:shadow-lg transition-all overflow-hidden">
+      {product.imageUrl ? (
+        <div className="aspect-video w-full overflow-hidden">
+          <img 
+            src={product.imageUrl} 
+            alt={product.title}
+            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+          />
+        </div>
+      ) : (
+        <div className="aspect-video w-full bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900/20 dark:to-indigo-900/20 flex items-center justify-center">
+          <FileText className="w-16 h-16 text-blue-400 dark:text-blue-600" />
+        </div>
+      )}
+      
+      <CardContent className="p-6">
+        <div className="flex items-start justify-between mb-2">
+          <h3 className="font-semibold text-lg line-clamp-2 flex-1">
+            {product.title}
+          </h3>
+          <Badge variant={product.isPublished ? 'default' : 'secondary'}>
+            {product.isPublished ? 'Live' : 'Draft'}
+          </Badge>
+        </div>
+        <div className="flex items-center gap-2 mb-3">
+          <Badge variant="outline" className="text-xs">
+            {pdfTypeLabel}
+          </Badge>
+          {product.pageCount && (
+            <Badge variant="secondary" className="text-xs">
+              {product.pageCount} pages
+            </Badge>
+          )}
+        </div>
+        <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+          {product.description || 'No description'}
+        </p>
+        <div className="flex items-center justify-between">
+          <span className="text-lg font-bold">${product.price || 0}</span>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm">
+              <Eye className="w-4 h-4 mr-1" />
+              View
+            </Button>
+            <Button size="sm">
+              <Edit className="w-4 h-4 mr-1" />
+              Edit
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -375,6 +620,10 @@ function ProductCard({ product }: { product: any }) {
                product.productCategory === 'ableton-rack' ? Zap :  // Legacy
                product.productType === 'effectChain' ? Zap :
                product.productType === 'abletonRack' ? Zap :  // Legacy
+               product.productCategory === 'pdf' ? FileText :
+               product.productCategory === 'pdf-guide' ? FileText :  // Legacy
+               product.productCategory === 'cheat-sheet' ? FileText :  // Legacy
+               product.productCategory === 'blog-post' ? PenTool :
                Package;
 
   return (

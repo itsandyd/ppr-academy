@@ -596,6 +596,9 @@ export const updateProduct = mutation({
       v.literal("multi-daw")
     )),
     dawVersion: v.optional(v.string()),
+    // Coaching specific fields
+    duration: v.optional(v.number()),
+    sessionType: v.optional(v.string()),
     // Ableton Rack specific fields (legacy)
     abletonVersion: v.optional(v.string()),
     minAbletonVersion: v.optional(v.string()),

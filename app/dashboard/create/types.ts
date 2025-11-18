@@ -59,7 +59,7 @@ export type ProductCategory =
 
 export type PricingModel = "free_with_gate" | "paid";
 
-export type CreationFlow = "digital" | "course" | "service" | "bundle" | "chain";
+export type CreationFlow = "digital" | "course" | "service" | "bundle" | "chain" | "coaching";
 
 // Map product categories to their creation flow
 export const CATEGORY_TO_FLOW: Record<ProductCategory, CreationFlow> = {
@@ -81,11 +81,13 @@ export const CATEGORY_TO_FLOW: Record<ProductCategory, CreationFlow> = {
   // Course (unique lesson builder)
   "course": "course",
   
-  // Services (all need scheduling)
-  "coaching": "service",
+  // Coaching (live sessions with scheduling)
+  "coaching": "coaching",
+  "workshop": "coaching",
+  
+  // Services (async work - separate creator)
   "mixing-service": "service",
   "mastering-service": "service",
-  "workshop": "service",
   "playlist-curation": "service",
   
   // Bundle (unique product selector)

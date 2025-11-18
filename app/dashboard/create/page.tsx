@@ -28,9 +28,23 @@ export default function ProductTypeSelectorPage() {
       return;
     }
     
-    // Services go to service creator
-    if (categoryId === 'coaching' || categoryId === 'mixing-service' || categoryId === 'mastering-service' || categoryId === 'workshop' || categoryId === 'playlist-curation') {
-      router.push(`/dashboard/create/service?category=${categoryId}`);
+    // Coaching sessions (live calls)
+    if (categoryId === 'coaching' || categoryId === 'workshop') {
+      router.push(`/dashboard/create/coaching?category=${categoryId}`);
+      return;
+    }
+    
+    // Services (async work) - coming soon
+    if (categoryId === 'mixing-service' || categoryId === 'mastering-service') {
+      // TODO: Create service creator for async work
+      router.push(`/dashboard/create`);
+      return;
+    }
+    
+    // Playlist curation (coming soon)
+    if (categoryId === 'playlist-curation') {
+      // TODO: Build playlist curation creator
+      router.push(`/dashboard/create`);
       return;
     }
     
@@ -49,6 +63,12 @@ export default function ProductTypeSelectorPage() {
     // PDFs go to PDF creator
     if (categoryId === 'pdf') {
       router.push(`/dashboard/create/pdf?type=guide`);
+      return;
+    }
+    
+    // Blog posts go to blog creator
+    if (categoryId === 'blog-post') {
+      router.push(`/dashboard/create/blog`);
       return;
     }
     
