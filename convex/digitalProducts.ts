@@ -82,6 +82,18 @@ export const getProductsByStore = query({
     followGateMessage: v.optional(v.string()),
     // Pack files (for sample/midi/preset packs)
     packFiles: v.optional(v.string()), // JSON stringified array of file metadata
+    // Effect Chain / DAW fields
+    dawType: v.optional(v.union(
+      v.literal("ableton"),
+      v.literal("fl-studio"),
+      v.literal("logic"),
+      v.literal("bitwig"),
+      v.literal("studio-one"),
+      v.literal("reason"),
+      v.literal("cubase"),
+      v.literal("multi-daw")
+    )),
+    dawVersion: v.optional(v.string()),
   })),
   handler: async (ctx, args) => {
     const products = await ctx.db
@@ -210,6 +222,18 @@ export const getPublishedProductsByStore = query({
     followGateMessage: v.optional(v.string()),
     // Pack files (for sample/midi/preset packs)
     packFiles: v.optional(v.string()), // JSON stringified array of file metadata
+    // Effect Chain / DAW fields
+    dawType: v.optional(v.union(
+      v.literal("ableton"),
+      v.literal("fl-studio"),
+      v.literal("logic"),
+      v.literal("bitwig"),
+      v.literal("studio-one"),
+      v.literal("reason"),
+      v.literal("cubase"),
+      v.literal("multi-daw")
+    )),
+    dawVersion: v.optional(v.string()),
   })),
   handler: async (ctx, args) => {
     const products = await ctx.db
@@ -318,6 +342,18 @@ export const getProductsByUser = query({
     fileFormat: v.optional(v.union(v.literal("adg"), v.literal("adv"), v.literal("alp"))),
     fileSize: v.optional(v.number()),
     installationNotes: v.optional(v.string()),
+    // Effect Chain / DAW fields
+    dawType: v.optional(v.union(
+      v.literal("ableton"),
+      v.literal("fl-studio"),
+      v.literal("logic"),
+      v.literal("bitwig"),
+      v.literal("studio-one"),
+      v.literal("reason"),
+      v.literal("cubase"),
+      v.literal("multi-daw")
+    )),
+    dawVersion: v.optional(v.string()),
   })),
   handler: async (ctx, args) => {
     return await ctx.db
@@ -548,7 +584,19 @@ export const updateProduct = mutation({
     followGateMessage: v.optional(v.string()),
     // Pack files (for sample/midi/preset packs)
     packFiles: v.optional(v.string()), // JSON stringified array of file metadata
-    // Ableton Rack specific fields
+    // Effect Chain / DAW fields
+    dawType: v.optional(v.union(
+      v.literal("ableton"),
+      v.literal("fl-studio"),
+      v.literal("logic"),
+      v.literal("bitwig"),
+      v.literal("studio-one"),
+      v.literal("reason"),
+      v.literal("cubase"),
+      v.literal("multi-daw")
+    )),
+    dawVersion: v.optional(v.string()),
+    // Ableton Rack specific fields (legacy)
     abletonVersion: v.optional(v.string()),
     minAbletonVersion: v.optional(v.string()),
     rackType: v.optional(v.union(
@@ -632,7 +680,19 @@ export const updateProduct = mutation({
       followGateMessage: v.optional(v.string()),
       // Pack files (for sample/midi/preset packs)
       packFiles: v.optional(v.string()), // JSON stringified array of file metadata
-      // Ableton Rack specific fields
+      // Effect Chain / DAW fields
+      dawType: v.optional(v.union(
+        v.literal("ableton"),
+        v.literal("fl-studio"),
+        v.literal("logic"),
+        v.literal("bitwig"),
+        v.literal("studio-one"),
+        v.literal("reason"),
+        v.literal("cubase"),
+        v.literal("multi-daw")
+      )),
+      dawVersion: v.optional(v.string()),
+      // Ableton Rack specific fields (legacy)
       abletonVersion: v.optional(v.string()),
       minAbletonVersion: v.optional(v.string()),
       rackType: v.optional(v.union(v.literal("audioEffect"), v.literal("instrument"), v.literal("midiEffect"), v.literal("drumRack"))),

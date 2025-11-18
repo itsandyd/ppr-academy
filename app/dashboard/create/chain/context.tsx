@@ -234,7 +234,7 @@ export function EffectChainCreationProvider({ children }: { children: React.Reac
     try {
       if (state.chainId) {
         // Update existing
-        await updateChainMutation({
+        const updateData = {
           id: state.chainId,
           title: state.data.title,
           description: state.data.description,
@@ -245,24 +245,30 @@ export function EffectChainCreationProvider({ children }: { children: React.Reac
           dawType: state.data.dawType,
           dawVersion: state.data.dawVersion,
           packFiles: state.data.files ? JSON.stringify(state.data.files) : undefined,
-        });
+        };
+        
+        console.log('Updating effect chain with data:', updateData);
+        await updateChainMutation(updateData);
       } else {
         // Create new
-        const result = await createChainMutation({
+        const createData = {
           title: state.data.title || "Untitled Effect Chain",
           description: state.data.description,
           storeId,
           userId: user.id,
-          productType: "effectChain",
-          productCategory: "effect-chain",
-          pricingModel: state.data.pricingModel || "paid",
+          productType: "effectChain" as const,
+          productCategory: "effect-chain" as const,  // Ensure this is always effect-chain
+          pricingModel: (state.data.pricingModel || "paid") as "free_with_gate" | "paid",
           price: state.data.pricingModel === "free_with_gate" ? 0 : parseFloat(state.data.price || "9.99"),
-          imageUrl: state.data.thumbnail,
-          downloadUrl: state.data.downloadUrl,
-          tags: state.data.tags,
-          dawType: state.data.dawType,
-          dawVersion: state.data.dawVersion,
-        });
+          imageUrl: state.data.thumbnail || undefined,
+          downloadUrl: state.data.downloadUrl || undefined,
+          tags: state.data.tags || undefined,
+          dawType: state.data.dawType || "ableton",  // Default to ableton
+          dawVersion: state.data.dawVersion || undefined,
+        };
+        
+        console.log('Creating effect chain with data:', JSON.stringify(createData, null, 2));
+        const result = await createChainMutation(createData);
 
         if (result) {
           setState(prev => ({ ...prev, chainId: result }));
