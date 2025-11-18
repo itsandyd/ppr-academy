@@ -254,3 +254,4 @@ npm run dev
 ```
 
 Navigate to `/dashboard/create/pack?type=sample-pack` and go through all 4 steps. The Files step is where you upload individual samples! 🎵
+
