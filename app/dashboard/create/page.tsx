@@ -46,6 +46,12 @@ export default function ProductTypeSelectorPage() {
       return;
     }
     
+    // PDFs go to PDF creator
+    if (categoryId === 'pdf') {
+      router.push(`/dashboard/create/pdf?type=guide`);
+      return;
+    }
+    
     // Everything else goes to digital creator
     const flow = getFlowForCategory(categoryId);
     router.push(`/dashboard/create/${flow}?category=${categoryId}`);

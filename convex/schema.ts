@@ -468,9 +468,10 @@ export default defineSchema({
       v.literal("workshop"),
       v.literal("masterclass"),
       // Digital Content
-      v.literal("pdf-guide"),
-      v.literal("cheat-sheet"),
-      v.literal("template"),
+      v.literal("pdf"),  // Consolidated: PDFs, cheat sheets, guides, ebooks
+      v.literal("pdf-guide"),  // Legacy
+      v.literal("cheat-sheet"),  // Legacy
+      v.literal("template"),  // Legacy
       v.literal("blog-post"),
       // Community
       v.literal("community"),

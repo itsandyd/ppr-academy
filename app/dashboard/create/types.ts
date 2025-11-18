@@ -20,6 +20,14 @@ export type DAWType =
   | "cubase"
   | "multi-daw";
 
+export type PDFType =
+  | "cheat-sheet"  // 1-5 pages, quick reference
+  | "guide"        // 10-50 pages, educational
+  | "ebook"        // 50+ pages, comprehensive
+  | "workbook"     // Interactive exercises
+  | "template"     // Fillable templates
+  | "other";
+
 export type ProductCategory = 
   // Music Production
   | "sample-pack"
@@ -41,9 +49,7 @@ export type ProductCategory =
   | "workshop"
   | "masterclass"
   // Digital Content
-  | "pdf-guide"
-  | "cheat-sheet"
-  | "template"
+  | "pdf"  // Consolidated: PDF guides, cheat sheets, ebooks, workbooks
   | "blog-post"
   // Community
   | "community"
@@ -64,9 +70,7 @@ export const CATEGORY_TO_FLOW: Record<ProductCategory, CreationFlow> = {
   "beat-lease": "digital",
   "project-files": "digital",
   "mixing-template": "digital",
-  "pdf-guide": "digital",
-  "cheat-sheet": "digital",
-  "template": "digital",
+  "pdf": "digital",  // Consolidated PDF category
   "blog-post": "digital",
   "community": "digital",
   "tip-jar": "digital",
@@ -182,9 +186,9 @@ export const PRODUCT_CATEGORIES = [
     flow: "digital" as CreationFlow,
   },
   {
-    id: "pdf-guide",
-    label: "PDF Guide",
-    description: "Educational PDFs & guides",
+    id: "pdf",
+    label: "PDF",
+    description: "Educational PDFs, cheat sheets, guides, and ebooks",
     category: "Digital Content",
     icon: "📄",
     flow: "digital" as CreationFlow,
@@ -320,6 +324,11 @@ export interface BaseProductFormData {
   // DAW-specific (for effect chains)
   dawType?: DAWType;
   dawVersion?: string;
+  
+  // PDF-specific (for pdf category)
+  pdfType?: PDFType;
+  pageCount?: number;
+  fileSize?: number;  // in bytes
   
   // Meta
   storeId: string;
