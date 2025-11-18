@@ -439,7 +439,8 @@ export default defineSchema({
       v.literal("digital"), 
       v.literal("urlMedia"), 
       v.literal("coaching"),
-      v.literal("abletonRack"),
+      v.literal("effectChain"),  // Renamed from abletonRack
+      v.literal("abletonRack"),  // Legacy - keep for backward compatibility
       v.literal("abletonPreset"),
       v.literal("playlistCuration") // NEW: Playlist curation as a product
     )),
@@ -451,7 +452,8 @@ export default defineSchema({
       v.literal("preset-pack"),
       v.literal("midi-pack"),
       v.literal("bundle"), // NEW: Bundle multiple products together
-      v.literal("ableton-rack"),
+      v.literal("effect-chain"),  // NEW: Multi-DAW effect chains
+      v.literal("ableton-rack"),  // Legacy - keep for backward compatibility
       v.literal("beat-lease"),
       v.literal("project-files"),
       v.literal("mixing-template"),
@@ -523,6 +525,19 @@ export default defineSchema({
     
     // Pack Files (for sample/midi/preset packs)
     packFiles: v.optional(v.string()), // JSON stringified array of file metadata
+    
+    // Effect Chain / DAW-specific fields
+    dawType: v.optional(v.union(
+      v.literal("ableton"),
+      v.literal("fl-studio"),
+      v.literal("logic"),
+      v.literal("bitwig"),
+      v.literal("studio-one"),
+      v.literal("reason"),
+      v.literal("cubase"),
+      v.literal("multi-daw")
+    )),
+    dawVersion: v.optional(v.string()),  // e.g., "11.3" for Ableton, "21.0" for FL Studio
     
     // Follow Gate Configuration
     followGateEnabled: v.optional(v.boolean()),

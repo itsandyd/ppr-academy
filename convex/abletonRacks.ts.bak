@@ -18,7 +18,7 @@ const abletonRackValidator = v.object({
   userId: v.string(),
   
   // Ableton-specific metadata
-  productType: v.union(v.literal("effectChain"), v.literal("effectChain"), v.literal("abletonRack"), v.literal("abletonPreset")),
+  productType: v.union(v.literal("abletonRack"), v.literal("abletonPreset")),
   abletonVersion: v.string(),
   minAbletonVersion: v.optional(v.string()),
   rackType: v.union(
@@ -444,7 +444,7 @@ export const getAbletonRackBySlug = query({
         v.literal("digital"),
         v.literal("urlMedia"),
         v.literal("coaching"),
-        v.literal("effectChain"), v.literal("abletonRack"),
+        v.literal("abletonRack"),
         v.literal("abletonPreset"),
         v.literal("playlistCuration")
       )),

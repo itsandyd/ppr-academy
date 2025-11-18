@@ -4,14 +4,12 @@ import React from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { PackCreationProvider, usePackCreation } from "./context";
-import { useValidStoreId } from "@/hooks/useStoreId";
 import { Package, DollarSign, Lock, Upload } from "lucide-react";
 
 // Import new shared components
-import { CreationLayout } from "@/app/dashboard/create/shared/CreationLayout";
-import { CreationHeader } from "@/app/dashboard/create/shared/CreationHeader";
 import { StepProgress, Step } from "@/app/dashboard/create/shared/StepProgress";
 import { ActionBar } from "@/app/dashboard/create/shared/ActionBar";
+import { Badge } from "@/components/ui/badge";
 
 export const dynamic = 'force-dynamic';
 
@@ -59,13 +57,13 @@ function LayoutContent({ children }: PackCreateLayoutProps) {
   const { user } = useUser();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const storeId = useValidStoreId();
   const currentStep = searchParams.get("step") || "basics";
   
   const { state, canPublish, createPack, savePack } = usePackCreation();
 
   const navigateToStep = (step: string) => {
-    router.push(`/store/${storeId}/products/pack/create?step=${step}${state.packId ? `&packId=${state.packId}` : ''}`);
+    const packType = searchParams.get("type") || state.data.packType || "sample-pack";
+    router.push(`/dashboard/create/pack?type=${packType}&step=${step}${state.packId ? `&packId=${state.packId}` : ''}`);
   };
 
   const handleSaveDraft = async () => {
@@ -108,42 +106,59 @@ function LayoutContent({ children }: PackCreateLayoutProps) {
   const packTypeLabel = state.data.packType?.replace("-", " ") || "Pack";
 
   return (
-    <CreationLayout
-      header={
-        <CreationHeader
-          title={`Create ${packTypeLabel.charAt(0).toUpperCase() + packTypeLabel.slice(1)}`}
-          description={visibleSteps.find(s => s.id === currentStep)?.description}
-          icon={state.data.packType === 'sample-pack' ? '🎵' : state.data.packType === 'preset-pack' ? '🎛️' : '🎹'}
-          badge="Music Production"
-          backHref="/dashboard?mode=create"
-        />
-      }
-      progress={
-        <StepProgress
-          steps={visibleSteps}
-          currentStepId={currentStep}
-          completedSteps={completedStepIds}
-          onStepClick={navigateToStep}
-          variant="full"
-        />
-      }
-      content={children}
-      actions={
-        <ActionBar
-          onBack={currentIndex > 0 ? () => navigateToStep(visibleSteps[currentIndex - 1].id) : undefined}
-          onNext={currentIndex < visibleSteps.length - 1 ? () => navigateToStep(visibleSteps[currentIndex + 1].id) : undefined}
-          onSaveDraft={handleSaveDraft}
-          onPublish={currentStep === 'files' || (currentStep === 'followGate' && state.data.pricingModel === 'free_with_gate') ? handlePublishPack : undefined}
-          canProceed={state.stepCompletion[currentStep as keyof typeof state.stepCompletion]}
-          canPublish={canPublish()}
-          isSaving={state.isSaving}
-          variant="sticky"
-          showProgress={true}
-          progress={progressPercentage}
-        />
-      }
-      variant="full-width"
-    />
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          <span className="text-3xl">
+            {state.data.packType === 'sample-pack' ? '🎵' : state.data.packType === 'preset-pack' ? '🎛️' : '🎹'}
+          </span>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold">
+                Create {packTypeLabel.charAt(0).toUpperCase() + packTypeLabel.slice(1)}
+              </h1>
+              <Badge variant="secondary">Music Production</Badge>
+            </div>
+            {visibleSteps.find(s => s.id === currentStep) && (
+              <p className="text-sm text-muted-foreground">
+                {visibleSteps.find(s => s.id === currentStep)?.description}
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Progress */}
+      <StepProgress
+        steps={visibleSteps}
+        currentStepId={currentStep}
+        completedSteps={completedStepIds}
+        onStepClick={navigateToStep}
+        variant="full"
+      />
+
+      {/* Content */}
+      <div className="space-y-6">
+        {children}
+      </div>
+
+      {/* Actions */}
+      <ActionBar
+        onBack={currentIndex > 0 ? () => navigateToStep(visibleSteps[currentIndex - 1].id) : undefined}
+        onNext={currentIndex < visibleSteps.length - 1 ? () => navigateToStep(visibleSteps[currentIndex + 1].id) : undefined}
+        onSaveDraft={handleSaveDraft}
+        onPublish={currentStep === 'files' ? handlePublishPack : undefined}
+        canProceed={state.stepCompletion[currentStep as keyof typeof state.stepCompletion] || currentStep === 'files'}
+        canPublish={canPublish()}
+        isSaving={state.isSaving}
+        nextLabel={currentStep === 'pricing' && state.data.pricingModel === 'paid' ? 'Continue to Files' : 'Continue'}
+        publishLabel="Publish Pack"
+        variant="compact"
+        showProgress={true}
+        progress={progressPercentage}
+      />
+    </div>
   );
 }
 

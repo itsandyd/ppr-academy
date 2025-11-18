@@ -1,5 +1,6 @@
 'use client';
 
+import { ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { ModeToggle } from './ModeToggle';
 import { LearnModeContent } from './LearnModeContent';
@@ -16,9 +17,10 @@ type DashboardMode = 'learn' | 'create';
 
 interface DashboardShellProps {
   mode: DashboardMode;
+  children?: ReactNode; // Optional children for subpages
 }
 
-export function DashboardShell({ mode }: DashboardShellProps) {
+export function DashboardShell({ mode, children }: DashboardShellProps) {
   const router = useRouter();
   const { user } = useUser();
   const savePreference = useMutation(api.users.setDashboardPreference);
@@ -74,7 +76,13 @@ export function DashboardShell({ mode }: DashboardShellProps) {
 
         {/* Page Content */}
         <div className="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full bg-background">
-          {mode === 'learn' ? <LearnModeContent /> : <CreateModeContent />}
+          {children ? (
+            // Subpages (products, courses, etc.) provide their own content
+            children
+          ) : (
+            // Main dashboard page shows mode-specific content
+            mode === 'learn' ? <LearnModeContent /> : <CreateModeContent />
+          )}
         </div>
       </main>
     </SidebarProvider>
