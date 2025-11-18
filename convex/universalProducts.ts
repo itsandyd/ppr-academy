@@ -101,7 +101,8 @@ export const createUniversalProduct = mutation({
     productType: v.union(
       v.literal("digital"),
       v.literal("playlistCuration"),
-      v.literal("abletonRack"),
+      v.literal("effectChain"),  // NEW
+      v.literal("abletonRack"),  // Legacy
       v.literal("abletonPreset"),
       v.literal("coaching"),
       v.literal("urlMedia"),
@@ -112,7 +113,8 @@ export const createUniversalProduct = mutation({
       v.literal("preset-pack"),
       v.literal("midi-pack"),
       v.literal("bundle"),
-      v.literal("ableton-rack"),
+      v.literal("effect-chain"),  // NEW
+      v.literal("ableton-rack"),  // Legacy
       v.literal("beat-lease"),
       v.literal("project-files"),
       v.literal("mixing-template"),
@@ -158,7 +160,20 @@ export const createUniversalProduct = mutation({
     // Metadata
     tags: v.optional(v.array(v.string())),
     
-    // Ableton-specific (if productType = "abletonRack" or "abletonPreset")
+    // Effect Chain / DAW-specific (if productType = "effectChain")
+    dawType: v.optional(v.union(
+      v.literal("ableton"),
+      v.literal("fl-studio"),
+      v.literal("logic"),
+      v.literal("bitwig"),
+      v.literal("studio-one"),
+      v.literal("reason"),
+      v.literal("cubase"),
+      v.literal("multi-daw")
+    )),
+    dawVersion: v.optional(v.string()),
+    
+    // Ableton-specific (legacy - if productType = "abletonRack" or "abletonPreset")
     abletonVersion: v.optional(v.string()),
     rackType: v.optional(v.union(
       v.literal("audioEffect"),
@@ -289,7 +304,11 @@ export const createUniversalProduct = mutation({
         maxSubmissionsPerMonth: args.playlistConfig.maxSubmissionsPerMonth,
       } : undefined,
       
-      // Type-specific fields
+      // Effect Chain / DAW-specific fields
+      dawType: args.dawType,
+      dawVersion: args.dawVersion,
+      
+      // Ableton-specific (legacy)
       abletonVersion: args.abletonVersion,
       rackType: args.rackType,
       duration: args.duration,

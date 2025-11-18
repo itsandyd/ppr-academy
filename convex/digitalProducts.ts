@@ -408,6 +408,18 @@ export const getProductById = query({
       followGateMessage: v.optional(v.string()),
       // Pack files (for sample/midi/preset packs)
       packFiles: v.optional(v.string()), // JSON stringified array of file metadata
+      // Effect Chain / DAW fields
+      dawType: v.optional(v.union(
+        v.literal("ableton"),
+        v.literal("fl-studio"),
+        v.literal("logic"),
+        v.literal("bitwig"),
+        v.literal("studio-one"),
+        v.literal("reason"),
+        v.literal("cubase"),
+        v.literal("multi-daw")
+      )),
+      dawVersion: v.optional(v.string()),
     }),
     v.null()
   ),
