@@ -27,6 +27,14 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.redirect(new URL('/dashboard?mode=create', req.url));
   }
 
+  // Redirect course pages to dashboard (preserve query params for chapters)
+  if (url.pathname.startsWith('/library/courses/') && url.pathname !== '/library/courses') {
+    const newPath = url.pathname.replace('/library/courses', '/dashboard/courses');
+    const newUrl = new URL(newPath, req.url);
+    newUrl.search = url.search; // Preserve ?chapter=xyz params
+    return NextResponse.redirect(newUrl);
+  }
+
   // 🌐 CUSTOM DOMAIN ROUTING
   // Check if this is a custom domain (not main platform domain)
   const mainDomain = process.env.NEXT_PUBLIC_APP_URL?.replace('https://', '').replace('http://', '') || 'ppr-academy.com';
