@@ -130,13 +130,13 @@ function LayoutContent({ children }: PackCreateLayoutProps) {
       </div>
 
       {/* Progress */}
-      <StepProgress
-        steps={visibleSteps}
-        currentStepId={currentStep}
-        completedSteps={completedStepIds}
-        onStepClick={navigateToStep}
-        variant="full"
-      />
+        <StepProgress
+          steps={visibleSteps}
+          currentStepId={currentStep}
+          completedSteps={completedStepIds}
+          onStepClick={navigateToStep}
+          variant="full"
+        />
 
       {/* Content */}
       <div className="space-y-6">
@@ -144,20 +144,20 @@ function LayoutContent({ children }: PackCreateLayoutProps) {
       </div>
 
       {/* Actions */}
-      <ActionBar
-        onBack={currentIndex > 0 ? () => navigateToStep(visibleSteps[currentIndex - 1].id) : undefined}
-        onNext={currentIndex < visibleSteps.length - 1 ? () => navigateToStep(visibleSteps[currentIndex + 1].id) : undefined}
-        onSaveDraft={handleSaveDraft}
+        <ActionBar
+          onBack={currentIndex > 0 ? () => navigateToStep(visibleSteps[currentIndex - 1].id) : undefined}
+          onNext={currentIndex < visibleSteps.length - 1 ? () => navigateToStep(visibleSteps[currentIndex + 1].id) : undefined}
+          onSaveDraft={handleSaveDraft}
         onPublish={currentStep === 'files' ? handlePublishPack : undefined}
         canProceed={state.stepCompletion[currentStep as keyof typeof state.stepCompletion] || currentStep === 'files'}
-        canPublish={canPublish()}
-        isSaving={state.isSaving}
+          canPublish={canPublish()}
+          isSaving={state.isSaving}
         nextLabel={currentStep === 'pricing' && state.data.pricingModel === 'paid' ? 'Continue to Files' : 'Continue'}
         publishLabel="Publish Pack"
         variant="compact"
-        showProgress={true}
-        progress={progressPercentage}
-      />
+          showProgress={true}
+          progress={progressPercentage}
+        />
     </div>
   );
 }
