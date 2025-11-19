@@ -22,7 +22,8 @@ import {
   TrendingUp,
   Zap,
   FileText,
-  PenTool
+  PenTool,
+  Music2
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -87,6 +88,17 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
   const blogPosts = digitalProducts?.filter((p: any) => 
     p.productCategory === 'blog-post'  // Only actual blog posts, not all urlMedia
   ) || [];
+  
+  const beats = digitalProducts?.filter((p: any) => 
+    p.productCategory === 'beat-lease'
+  ) || [];
+  
+  // Debug logging
+  console.log('Products debug:', {
+    totalProducts: digitalProducts?.length,
+    beats: beats.length,
+    beatProducts: beats.map(b => ({ title: b.title, category: b.productCategory }))
+  });
   
   // Count by DAW for filtering
   const dawCounts = effectChains.reduce((acc: any, chain: any) => {
@@ -235,6 +247,18 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
               </TooltipTrigger>
               <TooltipContent className="bg-white dark:bg-black">
                 <p>Blog Posts ({blogPosts.length})</p>
+              </TooltipContent>
+            </Tooltip>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <TabsTrigger value="beats" className="flex-shrink-0">
+                  <Music2 className="w-4 h-4" />
+                  <span className="ml-2 hidden md:inline">Beats</span>
+                </TabsTrigger>
+              </TooltipTrigger>
+              <TooltipContent className="bg-white dark:bg-black">
+                <p>Beat Leases ({beats.length})</p>
               </TooltipContent>
             </Tooltip>
           </TabsList>
@@ -420,9 +444,95 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
             </div>
           )}
         </TabsContent>
+
+        <TabsContent value="beats" className="space-y-4 mt-6">
+          {beats.length === 0 ? (
+            <Card className="p-12 text-center">
+              <Music2 className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">No Beat Leases Yet</h3>
+              <p className="text-muted-foreground mb-4">
+                Upload beats with multiple licensing options (free, basic, premium, exclusive)
+              </p>
+              <Button asChild>
+                <Link href="/dashboard/create/beat-lease">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Beat Lease
+                </Link>
+              </Button>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {beats.map((product: any) => (
+                <BeatCard key={product._id} product={product} />
+              ))}
+            </div>
+          )}
+        </TabsContent>
         </Tabs>
       </TooltipProvider>
     </div>
+  );
+}
+
+function BeatCard({ product }: { product: any }) {
+  return (
+    <Card className="group hover:shadow-lg transition-all overflow-hidden">
+      {product.imageUrl ? (
+        <div className="aspect-video w-full overflow-hidden">
+          <img 
+            src={product.imageUrl} 
+            alt={product.title}
+            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+          />
+        </div>
+      ) : (
+        <div className="aspect-video w-full bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20 flex items-center justify-center">
+          <Music2 className="w-16 h-16 text-purple-400 dark:text-purple-600" />
+        </div>
+      )}
+      
+      <CardContent className="p-6">
+        <div className="flex items-start justify-between mb-2">
+          <h3 className="font-semibold text-lg line-clamp-2 flex-1">
+            {product.title}
+          </h3>
+          <Badge variant={product.isPublished ? 'default' : 'secondary'}>
+            {product.isPublished ? 'Live' : 'Draft'}
+          </Badge>
+        </div>
+        <div className="flex items-center gap-2 mb-3">
+          <Badge variant="outline" className="text-xs">
+            Beat Lease
+          </Badge>
+          {product.bpm && (
+            <Badge variant="secondary" className="text-xs">
+              {product.bpm} BPM
+            </Badge>
+          )}
+          {product.musicalKey && (
+            <Badge variant="secondary" className="text-xs">
+              {product.musicalKey}
+            </Badge>
+          )}
+        </div>
+        <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+          {product.description || 'No description'}
+        </p>
+        <div className="flex items-center justify-between">
+          <span className="text-lg font-bold">From ${product.price || 0}</span>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm">
+              <Eye className="w-4 h-4 mr-1" />
+              View
+            </Button>
+            <Button size="sm">
+              <Edit className="w-4 h-4 mr-1" />
+              Edit
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -624,6 +734,7 @@ function ProductCard({ product }: { product: any }) {
                product.productCategory === 'pdf-guide' ? FileText :  // Legacy
                product.productCategory === 'cheat-sheet' ? FileText :  // Legacy
                product.productCategory === 'blog-post' ? PenTool :
+               product.productCategory === 'beat-lease' ? Music2 :
                Package;
 
   return (
