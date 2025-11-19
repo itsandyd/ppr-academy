@@ -72,6 +72,12 @@ export default function ProductTypeSelectorPage() {
       return;
     }
     
+    // Beat leases go to beat lease creator
+    if (categoryId === 'beat-lease') {
+      router.push(`/dashboard/create/beat-lease`);
+      return;
+    }
+    
     // Everything else goes to digital creator
     const flow = getFlowForCategory(categoryId);
     router.push(`/dashboard/create/${flow}?category=${categoryId}`);
