@@ -197,7 +197,7 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
                   <span className="ml-2 hidden md:inline">Courses</span>
                 </TabsTrigger>
               </TooltipTrigger>
-              <TooltipContent className="bg-white dark:bg-black">
+              <TooltipContent className="bg-white dark:bg-zinc-900 text-foreground">
                 <p>Courses ({courses.length})</p>
               </TooltipContent>
             </Tooltip>
@@ -209,7 +209,7 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
                   <span className="ml-2 hidden md:inline">Packs</span>
                 </TabsTrigger>
               </TooltipTrigger>
-              <TooltipContent className="bg-white dark:bg-black">
+              <TooltipContent className="bg-white dark:bg-zinc-900 text-foreground">
                 <p>Sample/Preset/MIDI Packs ({packs.length})</p>
               </TooltipContent>
             </Tooltip>
@@ -221,7 +221,7 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
                   <span className="ml-2 hidden md:inline">Chains</span>
                 </TabsTrigger>
               </TooltipTrigger>
-              <TooltipContent className="bg-white dark:bg-black">
+              <TooltipContent className="bg-white dark:bg-zinc-900 text-foreground">
                 <p>Effect Chains ({effectChains.length})</p>
               </TooltipContent>
             </Tooltip>
@@ -233,7 +233,7 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
                   <span className="ml-2 hidden md:inline">PDFs</span>
                 </TabsTrigger>
               </TooltipTrigger>
-              <TooltipContent className="bg-white dark:bg-black">
+              <TooltipContent className="bg-white dark:bg-zinc-900 text-foreground">
                 <p>PDF Guides & Cheat Sheets ({pdfs.length})</p>
               </TooltipContent>
             </Tooltip>
@@ -245,7 +245,7 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
                   <span className="ml-2 hidden md:inline">Blogs</span>
                 </TabsTrigger>
               </TooltipTrigger>
-              <TooltipContent className="bg-white dark:bg-black">
+              <TooltipContent className="bg-white dark:bg-zinc-900 text-foreground">
                 <p>Blog Posts ({blogPosts.length})</p>
               </TooltipContent>
             </Tooltip>
@@ -257,7 +257,7 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
                   <span className="ml-2 hidden md:inline">Beats</span>
                 </TabsTrigger>
               </TooltipTrigger>
-              <TooltipContent className="bg-white dark:bg-black">
+              <TooltipContent className="bg-white dark:bg-zinc-900 text-foreground">
                 <p>Beat Leases ({beats.length})</p>
               </TooltipContent>
             </Tooltip>
