@@ -209,7 +209,18 @@ export function LearnModeContent() {
           </div>
 
           <div className="flex flex-wrap gap-4">
-            <Button className="bg-primary-foreground/20 hover:bg-primary-foreground/30 border border-primary-foreground/30 backdrop-blur-sm text-primary-foreground">
+            <Button 
+              className="bg-primary-foreground/20 hover:bg-primary-foreground/30 border border-primary-foreground/30 backdrop-blur-sm text-primary-foreground"
+              onClick={() => {
+                // Navigate to most recent course or course list
+                const recentCourse = enrolledCourses?.[0];
+                if (recentCourse?.slug) {
+                  window.location.href = `/dashboard/courses/${recentCourse.slug}`;
+                } else {
+                  window.location.href = '/dashboard/courses?mode=learn';
+                }
+              }}
+            >
               <Play className="w-4 h-4 mr-2" />
               Continue Learning
             </Button>

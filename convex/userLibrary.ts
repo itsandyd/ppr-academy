@@ -1,7 +1,7 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
 
-// Get user's enrolled courses with progress
+// Get user's enrolled courses with progress (IMPROVED)
 export const getUserEnrolledCourses = query({
   args: { userId: v.string() },
   returns: v.array(
@@ -23,17 +23,60 @@ export const getUserEnrolledCourses = query({
     })
   ),
   handler: async (ctx, args) => {
-    // Get user's enrollments
+    // IMPROVED: Check both enrollments AND purchases for comprehensive access
+    
+    // Method 1: Get from enrollments table
     const enrollments = await ctx.db
       .query("enrollments")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .collect();
 
-    // Get course details for each enrollment
+    // Method 2: Get from purchases table (more reliable)
+    const coursePurchases = await ctx.db
+      .query("purchases")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .filter((q) => 
+        q.and(
+          q.eq(q.field("productType"), "course"),
+          q.eq(q.field("status"), "completed")
+        )
+      )
+      .collect();
+
+    // Combine both sources (purchases are authoritative)
+    const allCourseIds = new Set([
+      ...enrollments.map(e => e.courseId),
+      ...coursePurchases.map(p => p.courseId).filter(Boolean)
+    ]);
+
+    // Get course details for all accessible courses
     const coursesWithProgress = await Promise.all(
-      enrollments.map(async (enrollment) => {
-        const course = await ctx.db.get(enrollment.courseId as any) as any;
+      Array.from(allCourseIds).map(async (courseId) => {
+        const course = await ctx.db.get(courseId as any) as any;
         if (!course) return null;
+
+        // Get enrollment data (for progress)
+        const enrollment = enrollments.find(e => e.courseId === courseId);
+        
+        // Get purchase data (for access verification)
+        const purchase = coursePurchases.find(p => p.courseId === courseId);
+
+        // Calculate progress from userProgress table
+        const userProgress = await ctx.db
+          .query("userProgress")
+          .withIndex("by_user_course", (q) => 
+            q.eq("userId", args.userId).eq("courseId", courseId as any)
+          )
+          .collect();
+
+        const totalChapters = await ctx.db
+          .query("courseChapters")
+          .withIndex("by_courseId", (q) => q.eq("courseId", courseId as any))
+          .collect();
+
+        const completedChapters = userProgress.filter(p => p.isCompleted).length;
+        const calculatedProgress = totalChapters.length > 0 ? 
+          Math.round((completedChapters / totalChapters.length) * 100) : 0;
 
         return {
           _id: course._id,
@@ -47,9 +90,9 @@ export const getUserEnrolledCourses = query({
           skillLevel: course.skillLevel || undefined,
           slug: course.slug || undefined,
           userId: course.userId || "",
-          progress: enrollment.progress || 0,
-          enrolledAt: enrollment._creationTime,
-          lastAccessedAt: enrollment._creationTime,
+          progress: calculatedProgress, // Use calculated progress
+          enrolledAt: enrollment?._creationTime || purchase?._creationTime,
+          lastAccessedAt: purchase?.lastAccessedAt || enrollment?._creationTime,
         };
       })
     );
