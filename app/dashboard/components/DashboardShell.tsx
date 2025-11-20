@@ -45,7 +45,7 @@ export function DashboardShell({ mode, children }: DashboardShellProps) {
 
   return (
     <SidebarProvider>
-      <DashboardSidebar mode={mode} />
+      <DashboardSidebar mode={mode} onModeChange={handleModeChange} />
       <main className="flex-1 flex flex-col w-full">
         {/* Top Header */}
         <header className="flex h-16 shrink-0 items-center gap-4 px-4 border-b border-border bg-card">

@@ -1,9 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useUser } from '@clerk/nextjs';
-import { useQuery } from 'convex/react';
+import { usePathname, useRouter } from 'next/navigation';
+import { useUser, UserButton } from '@clerk/nextjs';
+import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { cn } from '@/lib/utils';
 import {
@@ -38,11 +38,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
+import { ModeToggle } from './ModeToggle';
+import { ModeToggle as ThemeToggle } from '@/components/mode-toggle';
 
 type DashboardMode = 'learn' | 'create';
 
 interface DashboardSidebarProps {
   mode: DashboardMode;
+  onModeChange?: (mode: DashboardMode) => void;
 }
 
 const learnLinks = [
@@ -61,10 +64,33 @@ const createLinks = [
   { href: '/dashboard/analytics?mode=create', label: 'Analytics', icon: BarChart3, color: 'text-orange-500' },
 ];
 
-export function DashboardSidebar({ mode }: DashboardSidebarProps) {
+export function DashboardSidebar({ mode, onModeChange }: DashboardSidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { user } = useUser();
   const links = mode === 'learn' ? learnLinks : createLinks;
+  const savePreference = useMutation(api.users.setDashboardPreference);
+
+  const handleModeChange = async (newMode: DashboardMode) => {
+    if (onModeChange) {
+      onModeChange(newMode);
+    } else {
+      // Fallback: navigate directly
+      router.push(`/dashboard?mode=${newMode}`);
+    }
+    
+    // Save preference in background
+    if (user?.id) {
+      try {
+        await savePreference({
+          clerkId: user.id,
+          preference: newMode,
+        });
+      } catch (error) {
+        console.error('Failed to save preference:', error);
+      }
+    }
+  };
 
   // Get user stats for sidebar widgets
   const convexUser = useQuery(
@@ -244,17 +270,43 @@ export function DashboardSidebar({ mode }: DashboardSidebarProps) {
       </SidebarContent>
 
       {/* Footer */}
-      <SidebarFooter className="border-t border-border p-3">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
+      <SidebarFooter className="border-t border-border p-3 space-y-3">
+        {/* Mode Toggle */}
+        <div className="flex justify-center">
+          <ModeToggle mode={mode} onChange={handleModeChange} />
+        </div>
+        
+        {/* User Menu & Controls */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <UserButton
+              appearance={{
+                elements: {
+                  avatarBox: "w-8 h-8",
+                  userButtonPopoverCard: "bg-white dark:bg-zinc-900",
+                  userButtonPopoverActionButton: "hover:bg-muted",
+                }
+              }}
+            />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">
+                {user?.firstName || user?.emailAddresses?.[0]?.emailAddress?.split('@')[0]}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {mode === 'learn' ? 'Learning' : 'Creating'}
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-1">
+            <ThemeToggle />
+            <Button variant="ghost" size="icon" asChild>
               <Link href="/dashboard/settings">
-                <Settings className="w-5 h-5" />
-                <span>Settings</span>
+                <Settings className="w-4 h-4" />
               </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+            </Button>
+          </div>
+        </div>
       </SidebarFooter>
     </Sidebar>
   );

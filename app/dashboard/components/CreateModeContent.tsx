@@ -14,6 +14,7 @@ import { AchievementCard, creatorAchievements } from '@/components/gamification/
 import { DiscordStatsWidget } from '@/components/discord/discord-stats-widget';
 import { discordConfig } from '@/lib/discord-config';
 import { NoProductsEmptyState } from '@/components/ui/empty-state-enhanced';
+import { StoreSetupWizardEnhanced } from '@/components/dashboard/store-setup-wizard-enhanced';
 import {
   Music,
   Package,
@@ -147,6 +148,26 @@ export function CreateModeContent() {
 
   if (isLoading) {
     return <LoadingState />;
+  }
+
+  // Show store setup wizard if user has no stores
+  if (user?.id && stores !== undefined && stores.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-2">Welcome to Creator Mode! 🎨</h2>
+          <p className="text-muted-foreground">
+            Let's set up your creator store to start selling your music content
+          </p>
+        </div>
+        <StoreSetupWizardEnhanced 
+          onStoreCreated={(storeId) => {
+            // Refresh the page to show the new store
+            window.location.reload();
+          }} 
+        />
+      </div>
+    );
   }
 
   const allProducts = products;
