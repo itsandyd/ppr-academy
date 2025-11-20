@@ -66,7 +66,7 @@ export default function CoursePlayerPage() {
   useEffect(() => {
     if (accessVerification !== undefined && !accessVerification.hasAccess) {
       toast.error("You don't have access to this course");
-      router.push("/library");
+      router.push("/dashboard/courses?mode=learn");
     }
   }, [accessVerification, router]);
 
@@ -183,7 +183,7 @@ export default function CoursePlayerPage() {
             This course may have been removed or is no longer available.
           </p>
           <Button asChild>
-            <Link href="/library/courses">Back to Courses</Link>
+            <Link href="/dashboard/courses?mode=learn">Back to Courses</Link>
           </Button>
         </CardContent>
       </Card>
@@ -284,7 +284,7 @@ export default function CoursePlayerPage() {
 
               {/* Course Home Button */}
               <Button asChild variant="ghost" size="sm" className="w-full justify-start hover:bg-muted">
-                <Link href="/library/courses">
+                <Link href="/dashboard/courses?mode=learn">
                   <Home className="w-4 h-4 mr-2" />
                   <span className="font-medium">Course Home</span>
                 </Link>
@@ -525,7 +525,7 @@ export default function CoursePlayerPage() {
                     </Button>
                   ) : (
                     <Button variant="default" asChild className="w-full py-3">
-                      <Link href="/library/courses" className="flex items-center justify-center gap-2" aria-label="Return to courses - course complete">
+                      <Link href="/dashboard/courses?mode=learn" className="flex items-center justify-center gap-2" aria-label="Return to courses - course complete">
                         <CheckCircle className="w-4 h-4" aria-hidden="true" />
                         <span className="font-semibold">Course Complete</span>
                       </Link>
@@ -568,7 +568,7 @@ export default function CoursePlayerPage() {
                       asChild 
                       className="flex-initial min-w-[240px] h-auto py-3 px-4 shadow-md"
                     >
-                      <Link href="/library/courses" className="flex items-center justify-center gap-2">
+                      <Link href="/dashboard/courses?mode=learn" className="flex items-center justify-center gap-2">
                         <CheckCircle className="w-5 h-5" />
                         <span className="font-semibold">Course Complete</span>
                       </Link>

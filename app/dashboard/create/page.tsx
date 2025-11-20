@@ -22,7 +22,7 @@ export default function ProductTypeSelectorPage() {
       return;
     }
     
-    // Courses go to course creator
+    // Courses go to course creator (placeholder for now)
     if (categoryId === 'course') {
       router.push(`/dashboard/create/course?category=${categoryId}`);
       return;

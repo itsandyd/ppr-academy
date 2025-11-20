@@ -59,6 +59,23 @@ export type ProductCategory =
 
 export type PricingModel = "free_with_gate" | "paid";
 
+// Follow Gate Configuration (for free products)
+export interface FollowGateConfig {
+  requireEmail: boolean;
+  requireInstagram: boolean;
+  requireTiktok: boolean;
+  requireYoutube: boolean;
+  requireSpotify: boolean;
+  minFollowsRequired: number;
+  socialLinks: {
+    instagram?: string;
+    tiktok?: string;
+    youtube?: string;
+    spotify?: string;
+  };
+  customMessage?: string;
+}
+
 export type CreationFlow = "digital" | "course" | "service" | "bundle" | "chain" | "coaching";
 
 // Map product categories to their creation flow

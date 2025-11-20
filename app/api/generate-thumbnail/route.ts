@@ -60,13 +60,13 @@ export async function POST(request: NextRequest) {
     console.log("🎯 Generated prompt:", prompt);
 
     console.log("🤖 Calling OpenAI GPT-Image API...");
-    // Generate image with gpt-image-1
+    // Generate image with gpt-image-1 (new state-of-the-art model)
     const response = await openai.images.generate({
       model: "gpt-image-1",
       prompt,
       size: "1536x1024",
       n: 1,
-      quality: "auto"
+      quality: "medium" // low, medium, or high for gpt-image-1
     });
     
     console.log("📏 Generated image size: 1024x1024");

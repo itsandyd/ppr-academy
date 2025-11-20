@@ -123,6 +123,7 @@ export default function CoursesPage() {
               slug={course.slug || ''}
               progress={mode === 'learn' ? (course.progress || 0) : undefined}
               isEnrolled={mode === 'learn'}
+              isCreatorMode={mode === 'create'} // NEW: Tell card it's in creator mode
               variant="default"
             />
           ))}

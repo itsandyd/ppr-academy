@@ -47,6 +47,7 @@ interface CourseCardProps {
   isFavorited?: boolean;
   isNew?: boolean;
   isTrending?: boolean;
+  isCreatorMode?: boolean; // NEW: If true, link to course editor
   variant?: "default" | "compact" | "featured";
   className?: string;
 }
@@ -67,13 +68,16 @@ export const CourseCardEnhanced: FC<CourseCardProps> = ({
   isFavorited = false,
   isNew = false,
   isTrending = false,
+  isCreatorMode = false,
   variant = "default",
   className,
 }) => {
-  // Use library player for enrolled courses, sales page for non-enrolled
-  const href = isEnrolled 
-    ? (slug ? `/library/courses/${slug}` : `/library/courses/${id}`)
-    : (slug ? `/courses/${slug}` : `/courses/${id}`);
+  // Determine link based on context
+  const href = isCreatorMode
+    ? `/dashboard/create/course?courseId=${id}&step=course` // Creator mode: Edit course
+    : isEnrolled 
+    ? (slug ? `/dashboard/courses/${slug}` : `/dashboard/courses/${id}`) // Learn mode: Course player
+    : (slug ? `/courses/${slug}` : `/courses/${id}`); // Public: Sales page
   
   const skillLevelColors = {
     Beginner: "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border-green-200 dark:border-green-800",
@@ -459,7 +463,7 @@ export const CourseCardEnhanced: FC<CourseCardProps> = ({
             
             <Link href={href}>
               <Button size="sm" className="group/btn">
-                {isEnrolled ? "Continue Learning" : "View Course"}
+                {isCreatorMode ? "Edit Course" : isEnrolled ? "Continue Learning" : "View Course"}
                 <ChevronRight className="w-4 h-4 ml-1 group-hover/btn:translate-x-1 transition-transform" />
               </Button>
             </Link>
