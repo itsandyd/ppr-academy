@@ -11,7 +11,7 @@ import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { Bell, Search, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useUser } from '@clerk/nextjs';
-import { useMutation } from 'convex/react';
+import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 
 type DashboardMode = 'learn' | 'create';
