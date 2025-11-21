@@ -6,6 +6,7 @@ import { ModeToggle } from './ModeToggle';
 import { LearnModeContent } from './LearnModeContent';
 import { CreateModeContent } from './CreateModeContent';
 import { DashboardSidebar } from './DashboardSidebar';
+import { StoreRequiredGuard } from './StoreRequiredGuard';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { Bell, Search, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,12 @@ export function DashboardShell({ mode, children }: DashboardShellProps) {
   const router = useRouter();
   const { user } = useUser();
   const savePreference = useMutation(api.users.setDashboardPreference);
+  
+  // Check if user has stores (required for Create mode)
+  const stores = useQuery(
+    api.stores.getStoresByUser,
+    user?.id ? { userId: user.id } : 'skip'
+  );
 
   const handleModeChange = async (newMode: DashboardMode) => {
     // Update URL immediately (optimistic)
@@ -76,13 +83,15 @@ export function DashboardShell({ mode, children }: DashboardShellProps) {
 
         {/* Page Content */}
         <div className="flex-1 p-4 md:p-8 max-w-7xl mx-auto w-full bg-background">
-          {children ? (
-            // Subpages (products, courses, etc.) provide their own content
-            children
-          ) : (
-            // Main dashboard page shows mode-specific content
-            mode === 'learn' ? <LearnModeContent /> : <CreateModeContent />
-          )}
+          <StoreRequiredGuard mode={mode}>
+            {children ? (
+              // Subpages (products, courses, etc.) provide their own content
+              children
+            ) : (
+              // Main dashboard page shows mode-specific content
+              mode === 'learn' ? <LearnModeContent /> : <CreateModeContent />
+            )}
+          </StoreRequiredGuard>
         </div>
       </main>
     </SidebarProvider>

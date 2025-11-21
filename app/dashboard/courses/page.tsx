@@ -2,8 +2,9 @@
 
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
-import { useQuery } from 'convex/react';
+import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
+import { toast } from 'sonner';
 import { CourseCardEnhanced } from '@/components/ui/course-card-enhanced';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -44,6 +45,10 @@ export default function CoursesPage() {
     mode === 'create' && convexUser?.clerkId ? { userId: convexUser.clerkId } : 'skip'
   );
 
+  // Mutations for course actions
+  const updateCourse = useMutation(api.courses.updateCourse);
+  const deleteCourse = useMutation(api.courses.deleteCourse);
+
   const isLoading = !user || convexUser === undefined;
 
   if (isLoading) {
@@ -52,6 +57,36 @@ export default function CoursesPage() {
 
   const courses = mode === 'learn' ? enrolledCourses : createdCourses;
   const hasNoCourses = !courses || courses.length === 0;
+
+  // Course action handlers
+  const handleEditCourse = (courseId: string) => {
+    router.push(`/dashboard/create/course?courseId=${courseId}&step=course`);
+  };
+
+  const handleDeleteCourse = async (courseId: string) => {
+    if (confirm('Are you sure you want to delete this course? This action cannot be undone.')) {
+      try {
+        await deleteCourse({ id: courseId as any });
+        toast.success('Course deleted successfully');
+      } catch (error) {
+        toast.error('Failed to delete course');
+        console.error('Delete error:', error);
+      }
+    }
+  };
+
+  const handleTogglePublish = async (courseId: string, currentState: boolean) => {
+      try {
+        await updateCourse({ 
+          id: courseId as any, 
+          isPublished: !currentState 
+        });
+        toast.success(currentState ? 'Course unpublished' : 'Course published successfully');
+      } catch (error) {
+      toast.error('Failed to update course');
+      console.error('Publish toggle error:', error);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -123,7 +158,11 @@ export default function CoursesPage() {
               slug={course.slug || ''}
               progress={mode === 'learn' ? (course.progress || 0) : undefined}
               isEnrolled={mode === 'learn'}
-              isCreatorMode={mode === 'create'} // NEW: Tell card it's in creator mode
+              isCreatorMode={mode === 'create'}
+              isPublished={course.isPublished}
+              onEdit={handleEditCourse}
+              onDelete={handleDeleteCourse}
+              onTogglePublish={handleTogglePublish}
               variant="default"
             />
           ))}

@@ -1,7 +1,8 @@
 'use client';
 
-import { useQuery } from 'convex/react';
+import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
+import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +13,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { 
   Package, 
   Music, 
@@ -23,7 +31,10 @@ import {
   Zap,
   FileText,
   PenTool,
-  Music2
+  Music2,
+  MoreVertical,
+  Trash2,
+  EyeOff
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -34,6 +45,79 @@ interface CreateProductsViewProps {
 
 export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
   const router = useRouter();
+  
+  // Mutations for product actions
+  const updateProduct = useMutation(api.digitalProducts.updateProduct);
+  const deleteProduct = useMutation(api.digitalProducts.deleteProduct);
+  const updateCourse = useMutation(api.courses.updateCourse);
+  const deleteCourse = useMutation(api.courses.deleteCourse);
+
+  // Product action handlers
+  const handleEditProduct = (productId: string) => {
+    // Route to appropriate editor based on product type
+    const product = allProducts.find(p => p._id === productId);
+    if (!product) return;
+
+    if (product.productCategory === 'sample-pack' || product.productCategory === 'preset-pack' || product.productCategory === 'midi-pack') {
+      router.push(`/dashboard/create/pack?type=${product.productCategory}&packId=${productId}`);
+    } else if (product.productCategory === 'effect-chain' || product.productCategory === 'ableton-rack') {
+      router.push(`/dashboard/create/chain?chainId=${productId}`);
+    } else if (product.productCategory === 'pdf') {
+      router.push(`/dashboard/create/pdf?pdfId=${productId}`);
+    } else if (product.productCategory === 'blog-post') {
+      router.push(`/dashboard/create/blog?postId=${productId}`);
+    } else if (product.productCategory === 'beat-lease') {
+      router.push(`/dashboard/create/beat-lease?beatId=${productId}`);
+    } else if (product.productCategory === 'coaching') {
+      router.push(`/dashboard/create/coaching?coachingId=${productId}`);
+    } else {
+      router.push(`/dashboard/create/digital?productId=${productId}`);
+    }
+  };
+
+  const handleDeleteProduct = async (productId: string) => {
+    if (confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
+      try {
+        // Check if it's a course or digital product
+        const product = allProducts.find(p => p._id === productId);
+        
+        if (product?.type === 'course') {
+          await deleteCourse({ id: productId as any });
+        } else {
+          await deleteProduct({ productId: productId as any });
+        }
+        
+        toast.success('Product deleted successfully');
+      } catch (error) {
+        toast.error('Failed to delete product');
+        console.error('Delete error:', error);
+      }
+    }
+  };
+
+  const handleTogglePublishProduct = async (productId: string, currentState: boolean) => {
+    try {
+      // Check if it's a course or digital product
+      const product = allProducts.find(p => p._id === productId);
+      
+      if (product?.type === 'course') {
+        await updateCourse({ 
+          id: productId as any, 
+          isPublished: !currentState 
+        });
+      } else {
+        await updateProduct({ 
+          id: productId as any, 
+          isPublished: !currentState 
+        });
+      }
+      
+      toast.success(currentState ? 'Product unpublished' : 'Product published successfully');
+    } catch (error) {
+      toast.error('Failed to update product');
+      console.error('Publish toggle error:', error);
+    }
+  };
   
   // Fetch user's stores
   const stores = useQuery(
@@ -269,7 +353,13 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {allProducts.map((product: any) => (
-                <ProductCard key={product._id} product={product} />
+                <ProductCard 
+                  key={product._id} 
+                  product={product}
+                  onEdit={handleEditProduct}
+                  onDelete={handleDeleteProduct}
+                  onTogglePublish={handleTogglePublishProduct}
+                />
               ))}
             </div>
           )}
@@ -721,7 +811,12 @@ function EffectChainCard({ product }: { product: any }) {
   );
 }
 
-function ProductCard({ product }: { product: any }) {
+function ProductCard({ product, onEdit, onDelete, onTogglePublish }: { 
+  product: any;
+  onEdit?: (productId: string) => void;
+  onDelete?: (productId: string) => void;
+  onTogglePublish?: (productId: string, currentState: boolean) => void;
+}) {
   const Icon = product.type === 'course' ? BookOpen : 
                product.productCategory === 'sample-pack' ? Music :
                product.productCategory === 'preset-pack' ? Music :
@@ -738,7 +833,7 @@ function ProductCard({ product }: { product: any }) {
                Package;
 
   return (
-    <Card className="group hover:shadow-lg transition-all overflow-hidden">
+    <Card className="group hover:shadow-lg transition-all overflow-hidden relative">
       {/* Image or placeholder */}
       {product.imageUrl ? (
         <div className="aspect-video w-full overflow-hidden">
@@ -753,6 +848,45 @@ function ProductCard({ product }: { product: any }) {
           <Icon className="w-16 h-16 text-purple-400 dark:text-purple-600" />
         </div>
       )}
+
+      {/* Action Dropdown */}
+      <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="w-8 h-8 p-0 rounded-full bg-white/90 dark:bg-black/90 hover:bg-white dark:hover:bg-black"
+            >
+              <MoreVertical className="w-4 h-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="bg-white dark:bg-zinc-900 text-foreground">
+            <DropdownMenuItem onClick={() => onEdit?.(product._id)}>
+              <Edit className="w-4 h-4 mr-2" />
+              Edit Product
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onTogglePublish?.(product._id, product.isPublished)}>
+              {product.isPublished ? (
+                <>
+                  <EyeOff className="w-4 h-4 mr-2" />
+                  Unpublish
+                </>
+              ) : (
+                <>
+                  <Eye className="w-4 h-4 mr-2" />
+                  Publish
+                </>
+              )}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => onDelete?.(product._id)} className="text-destructive">
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete Product
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
       
       <CardContent className="p-6">
         <div className="flex items-start justify-between mb-2">
@@ -768,16 +902,6 @@ function ProductCard({ product }: { product: any }) {
         </p>
         <div className="flex items-center justify-between">
           <span className="text-lg font-bold">${product.price || 0}</span>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm">
-              <Eye className="w-4 h-4 mr-1" />
-              View
-            </Button>
-            <Button size="sm">
-              <Edit className="w-4 h-4 mr-1" />
-              Edit
-            </Button>
-          </div>
         </div>
       </CardContent>
     </Card>

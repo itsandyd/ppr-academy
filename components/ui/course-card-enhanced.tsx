@@ -8,6 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { 
   Clock, 
   Users, 
@@ -17,7 +24,12 @@ import {
   TrendingUp,
   Heart,
   Share2,
-  ChevronRight
+  ChevronRight,
+  MoreVertical,
+  Edit,
+  Trash2,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -48,6 +60,10 @@ interface CourseCardProps {
   isNew?: boolean;
   isTrending?: boolean;
   isCreatorMode?: boolean; // NEW: If true, link to course editor
+  isPublished?: boolean; // NEW: For creator actions
+  onEdit?: (courseId: string) => void; // NEW: Edit callback
+  onDelete?: (courseId: string) => void; // NEW: Delete callback
+  onTogglePublish?: (courseId: string, currentState: boolean) => void; // NEW: Publish toggle
   variant?: "default" | "compact" | "featured";
   className?: string;
 }
@@ -69,6 +85,10 @@ export const CourseCardEnhanced: FC<CourseCardProps> = ({
   isNew = false,
   isTrending = false,
   isCreatorMode = false,
+  isPublished = false,
+  onEdit,
+  onDelete,
+  onTogglePublish,
   variant = "default",
   className,
 }) => {
@@ -211,20 +231,62 @@ export const CourseCardEnhanced: FC<CourseCardProps> = ({
             
             {/* Action Buttons */}
             <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              <Button
-                size="sm"
-                variant="secondary"
-                className="w-8 h-8 p-0 rounded-full bg-white/90 dark:bg-black/90 hover:bg-white dark:hover:bg-black"
-              >
-                <Heart className={cn("w-4 h-4", isFavorited && "fill-red-500 text-red-500")} />
-              </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                className="w-8 h-8 p-0 rounded-full bg-white/90 dark:bg-black/90 hover:bg-white dark:hover:bg-black"
-              >
-                <Share2 className="w-4 h-4" />
-              </Button>
+              {isCreatorMode ? (
+                /* Creator Actions Dropdown */
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="w-8 h-8 p-0 rounded-full bg-white/90 dark:bg-black/90 hover:bg-white dark:hover:bg-black"
+                    >
+                      <MoreVertical className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-white dark:bg-zinc-900 text-foreground">
+                    <DropdownMenuItem onClick={() => onEdit?.(id)}>
+                      <Edit className="w-4 h-4 mr-2" />
+                      Edit Course
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onTogglePublish?.(id, isPublished)}>
+                      {isPublished ? (
+                        <>
+                          <EyeOff className="w-4 h-4 mr-2" />
+                          Unpublish
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="w-4 h-4 mr-2" />
+                          Publish
+                        </>
+                      )}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => onDelete?.(id)} className="text-destructive">
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete Course
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                /* Student Actions */
+                <>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="w-8 h-8 p-0 rounded-full bg-white/90 dark:bg-black/90 hover:bg-white dark:hover:bg-black"
+                  >
+                    <Heart className={cn("w-4 h-4", isFavorited && "fill-red-500 text-red-500")} />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="w-8 h-8 p-0 rounded-full bg-white/90 dark:bg-black/90 hover:bg-white dark:hover:bg-black"
+                  >
+                    <Share2 className="w-4 h-4" />
+                  </Button>
+                </>
+              )}
             </div>
             
             {/* Play Button Overlay */}
