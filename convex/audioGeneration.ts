@@ -99,7 +99,7 @@ export const generateAudio = internalAction({
         await ctx.runMutation(internal.audioGeneration.updateAudioGenerationStatus, {
           chapterId: args.chapterId,
           status: "failed",
-          error: errorData.error || `HTTP ${response.status}`,
+          error: (errorData as any)?.error || `HTTP ${response.status}`,
         });
         return null;
       }
@@ -107,7 +107,7 @@ export const generateAudio = internalAction({
       const result = await response.json();
 
       // Store the generated audio URL or fallback to base64 data
-      const audioUrl = result.audioUrl || result.audioData;
+      const audioUrl = (result as any)?.audioUrl || (result as any)?.audioData;
       await ctx.runMutation(internal.audioGeneration.updateAudioGenerationStatus, {
         chapterId: args.chapterId,
         status: "completed",

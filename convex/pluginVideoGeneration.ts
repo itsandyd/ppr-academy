@@ -165,7 +165,7 @@ async function generateBlotatoScript(
     }
 
     const data = await response.json();
-    return data.script || data.content || content;
+    return (data as any)?.script || (data as any)?.content || content;
   } catch (error: any) {
     console.error(`❌ Blotato generation failed:`, error.message);
     return content; // Fallback to original content

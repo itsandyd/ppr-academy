@@ -52,8 +52,8 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
   // Mutations for product actions
   const updateProduct = useMutation(api.digitalProducts.updateProduct);
   const deleteProduct = useMutation(api.digitalProducts.deleteProduct);
-  const updateCourse = useMutation(api.courses.updateCourse);
-  const deleteCourse = useMutation(api.courses.deleteCourse);
+  const updateCourse: any = useMutation(api.courses.updateCourse);
+  const deleteCourse: any = useMutation(api.courses.deleteCourse);
 
   // Product action handlers
   const handleEditProduct = (productId: string) => {
@@ -129,13 +129,12 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
   
   // Fetch user's stores
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const stores: any = (() => {
-    // @ts-ignore TS2589 - Type instantiation is excessively deep (known Convex issue)
-    return useQuery(
-      api.stores.getStoresByUser as any,
-      convexUser?.clerkId ? { userId: convexUser.clerkId } : 'skip'
-    );
-  })();
+  const getStoresByUserQuery: any = api.stores.getStoresByUser as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const stores: any = useQuery(
+    getStoresByUserQuery,
+    convexUser?.clerkId ? { userId: convexUser.clerkId } : 'skip'
+  );
   const storeId = stores?.[0]?._id;
 
   // Fetch created courses (using clerkId)
@@ -146,8 +145,9 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
   );
 
   // Fetch digital products (using storeId)
-  const digitalProducts = useQuery(
-    api.digitalProducts.getProductsByStore,
+  // @ts-ignore - Type instantiation depth issue
+  const digitalProducts: any = useQuery(
+    api.digitalProducts.getProductsByStore as any,
     storeId ? { storeId } : 'skip'
   );
 
@@ -194,7 +194,7 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
   console.log('Products debug:', {
     totalProducts: digitalProducts?.length,
     beats: beats.length,
-    beatProducts: beats.map(b => ({ title: b.title, category: b.productCategory }))
+    beatProducts: beats.map((b: any) => ({ title: b.title, category: b.productCategory }))
   });
   
   // Count by DAW for filtering

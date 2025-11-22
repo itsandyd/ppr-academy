@@ -588,6 +588,7 @@ export const continueWorkflow = internalAction({
           });
         }
       }
+      return null;
     } catch (error) {
       console.error("❌ Failed to continue workflow:", error);
       await ctx.runMutation(internal.emailWorkflows.updateExecutionStatus, {
@@ -595,6 +596,7 @@ export const continueWorkflow = internalAction({
         status: "failed",
         errorMessage: error instanceof Error ? error.message : "Unknown error",
       });
+      return null;
     }
   },
 });

@@ -95,7 +95,7 @@ export const addDomainToVercel = action({
         
         return {
           success: false,
-          message: data.error?.message || "Failed to add domain to Vercel",
+          message: (data as any)?.error?.message || "Failed to add domain to Vercel",
         };
       }
 

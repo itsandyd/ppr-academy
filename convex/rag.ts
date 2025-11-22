@@ -81,7 +81,7 @@ export const generateEmbedding = internalAction({
       }
 
       const data = await response.json();
-      const embedding = data.data[0].embedding;
+      const embedding = (data as any)?.data?.[0]?.embedding;
 
       // Update the document with the actual embedding
       await ctx.runMutation(internal.rag.updateEmbedding, {

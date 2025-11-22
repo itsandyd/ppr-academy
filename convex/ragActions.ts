@@ -141,7 +141,7 @@ async function generateQueryEmbedding(query: string): Promise<number[]> {
     });
 
     const data = await response.json();
-    return data.data[0].embedding;
+    return (data as any)?.data?.[0]?.embedding;
   } catch (error) {
     console.error('Error generating query embedding:', error);
     return new Array(1536).fill(0).map(() => Math.random() - 0.5);

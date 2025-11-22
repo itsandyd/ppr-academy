@@ -99,6 +99,7 @@ import type * as integrations_internal from "../integrations/internal.js";
 import type * as integrations_queries from "../integrations/queries.js";
 import type * as leadSubmissions from "../leadSubmissions.js";
 import type * as leaderboards from "../leaderboards.js";
+import type * as lib_typeValidation from "../lib/typeValidation.js";
 import type * as lib_utils from "../lib/utils.js";
 import type * as library from "../library.js";
 import type * as libraryHelpers from "../libraryHelpers.js";
@@ -249,6 +250,7 @@ declare const fullApi: ApiFromModules<{
   "integrations/queries": typeof integrations_queries;
   leadSubmissions: typeof leadSubmissions;
   leaderboards: typeof leaderboards;
+  "lib/typeValidation": typeof lib_typeValidation;
   "lib/utils": typeof lib_utils;
   library: typeof library;
   libraryHelpers: typeof libraryHelpers;

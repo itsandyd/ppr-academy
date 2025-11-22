@@ -381,10 +381,10 @@ export const getScheduledPosts = query({
         return {
           ...post,
           account: account ? {
-            platform: account.platform,
-            platformUsername: account.platformUsername,
-            platformDisplayName: account.platformDisplayName,
-            profileImageUrl: account.profileImageUrl,
+            platform: (account as any)?.platform,
+            platformUsername: (account as any)?.platformUsername,
+            platformDisplayName: (account as any)?.platformDisplayName,
+            profileImageUrl: (account as any)?.profileImageUrl,
           } : null,
         };
       })

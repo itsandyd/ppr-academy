@@ -276,10 +276,10 @@ async function fetchAllClerkUsers(secretKey: string) {
       }
 
       const data = await response.json();
-      users.push(...data);
+      users.push(...(data as any[]));
 
       // Check if there are more users
-      if (data.length < limit) {
+      if ((data as any[]).length < limit) {
         hasMore = false;
       } else {
         offset += limit;

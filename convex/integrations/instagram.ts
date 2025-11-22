@@ -40,29 +40,29 @@ export const handleOAuthCallback = action({
 
       const tokenData = await tokenResponse.json();
 
-      if (!tokenData.access_token) {
+      if (!(tokenData as any)?.access_token) {
         console.error("❌ Token exchange failed:", tokenData);
-        throw new Error(tokenData.error?.message || "Failed to get access token");
+        throw new Error((tokenData as any)?.error?.message || "Failed to get access token");
       }
 
       console.log("✅ Facebook access token obtained");
 
       // Step 2: Get user's Facebook pages
       const pagesResponse = await fetch(
-        `https://graph.facebook.com/v21.0/me/accounts?access_token=${tokenData.access_token}`
+        `https://graph.facebook.com/v21.0/me/accounts?access_token=${(tokenData as any)?.access_token}`
       );
 
       const pagesData = await pagesResponse.json();
 
-      if (!pagesData.data || pagesData.data.length === 0) {
+      if (!(pagesData as any)?.data || (pagesData as any)?.data?.length === 0) {
         throw new Error("No Facebook pages found. You need a Facebook Page linked to your Instagram Business account.");
       }
 
-      console.log("✅ Facebook pages found:", pagesData.data.length);
+      console.log("✅ Facebook pages found:", (pagesData as any)?.data?.length);
 
       // Step 3: Get Instagram Business account from first page
-      const pageId = pagesData.data[0].id;
-      const pageAccessToken = pagesData.data[0].access_token;
+      const pageId = (pagesData as any)?.data?.[0]?.id;
+      const pageAccessToken = (pagesData as any)?.data?.[0]?.access_token;
 
       const instagramAccountResponse = await fetch(
         `https://graph.facebook.com/v21.0/${pageId}?fields=instagram_business_account&access_token=${pageAccessToken}`
@@ -70,11 +70,11 @@ export const handleOAuthCallback = action({
 
       const instagramAccountData = await instagramAccountResponse.json();
 
-      if (!instagramAccountData.instagram_business_account) {
+      if (!(instagramAccountData as any)?.instagram_business_account) {
         throw new Error("No Instagram Business account linked to this Facebook Page. Link your Instagram in Facebook Page settings.");
       }
 
-      const instagramId = instagramAccountData.instagram_business_account.id;
+      const instagramId = (instagramAccountData as any)?.instagram_business_account?.id;
       console.log("✅ Instagram Business account found:", instagramId);
 
       // Step 4: Get Instagram account details
@@ -98,8 +98,8 @@ export const handleOAuthCallback = action({
       await ctx.runMutation(internal.integrations.internal.saveIntegration, {
         token: pageAccessToken, // Use page access token (not user token)
         expiresAt,
-        instagramId: accountData.id,
-        username: accountData.username,
+        instagramId: (accountData as any)?.id,
+        username: (accountData as any)?.username,
         userId: args.userId,
       });
 
@@ -155,17 +155,17 @@ export const getUserPosts = action({
         console.error("❌ Instagram API error:", errorData);
         return { 
           status: response.status, 
-          data: { error: errorData.error?.message || "Failed to fetch posts" } 
+          data: { error: (errorData as any)?.error?.message || "Failed to fetch posts" } 
         };
       }
 
       const data = await response.json();
 
-      console.log("✅ Instagram posts fetched:", data.data?.length || 0);
+      console.log("✅ Instagram posts fetched:", (data as any)?.data?.length || 0);
 
       return {
         status: 200,
-        data: data.data || [],
+        data: (data as any)?.data || [],
       };
     } catch (error: any) {
       console.error("❌ Get posts error:", error);
@@ -204,7 +204,7 @@ export const refreshAccessToken = internalAction({
 
       const data = await response.json();
 
-      if (!data.access_token) {
+      if (!(data as any)?.access_token) {
         console.error("❌ Token refresh failed");
         return null;
       }
@@ -214,7 +214,7 @@ export const refreshAccessToken = internalAction({
       
       await ctx.runMutation(internal.integrations.internal.updateToken, {
         userId: args.userId,
-        token: data.access_token,
+        token: (data as any)?.access_token,
         expiresAt: newExpiresAt,
       });
 

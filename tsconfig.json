@@ -13,6 +13,13 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
+    // Enhanced type checking (gradually enable these)
+    // "exactOptionalPropertyTypes": true,  // Enable after fixing optional property issues
+    "noUncheckedIndexedAccess": false,     // Start with false, enable gradually
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "forceConsistentCasingInFileNames": true,
     "plugins": [
       {
         "name": "next"

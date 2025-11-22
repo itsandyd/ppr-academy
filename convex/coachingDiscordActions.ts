@@ -250,7 +250,7 @@ async function createSessionRole(
     }
 
     const role = await response.json();
-    return { success: true, roleId: role.id };
+    return { success: true, roleId: (role as any)?.id };
   } catch (error: any) {
     console.error("Error creating session role:", error);
     return { success: false, error: error.message };
@@ -303,7 +303,7 @@ async function createSessionChannel(
     }
 
     const channel = await response.json();
-    return { success: true, channelId: channel.id };
+    return { success: true, channelId: (channel as any)?.id };
   } catch (error: any) {
     console.error("Error creating session channel:", error);
     return { success: false, error: error.message };

@@ -81,7 +81,7 @@ async function publishToInstagram(post: any, account: any): Promise<{ success: b
     }
 
     const uploadData = await uploadResponse.json();
-    const mediaContainerId = uploadData.id;
+    const mediaContainerId = (uploadData as any)?.id;
     console.log('✅ Media container created:', mediaContainerId);
 
     // Wait for media processing
@@ -100,11 +100,11 @@ async function publishToInstagram(post: any, account: any): Promise<{ success: b
         );
         const statusData = await statusResponse.json();
 
-        console.log(`⏳ Video status check ${attempts + 1}/${maxAttempts}:`, statusData.status_code);
+        console.log(`⏳ Video status check ${attempts + 1}/${maxAttempts}:`, (statusData as any)?.status_code);
 
-        if (statusData.status_code === 'FINISHED') {
+        if ((statusData as any)?.status_code === 'FINISHED') {
           processingComplete = true;
-        } else if (statusData.status_code === 'ERROR') {
+        } else if ((statusData as any)?.status_code === 'ERROR') {
           throw new Error('Video processing failed');
         }
 
@@ -145,7 +145,7 @@ async function publishToInstagram(post: any, account: any): Promise<{ success: b
       if (publishResponse.ok) {
         // Success! Parse and return
         const publishData = await publishResponse.json();
-        const postId = publishData.id;
+        const postId = (publishData as any)?.id;
         
         console.log('✅ Instagram post published successfully:', postId);
 
@@ -160,7 +160,7 @@ async function publishToInstagram(post: any, account: any): Promise<{ success: b
       lastError = error;
       
       // Check if it's a "media not ready" error (code 9007)
-      if (error.error?.code === 9007 && publishAttempts < maxPublishAttempts - 1) {
+      if ((error as any)?.error?.code === 9007 && publishAttempts < maxPublishAttempts - 1) {
         console.log(`⏳ Media not ready yet, waiting 3 seconds... (attempt ${publishAttempts + 1}/${maxPublishAttempts})`);
         await new Promise(resolve => setTimeout(resolve, 3000));
         publishAttempts++;
@@ -230,7 +230,7 @@ async function publishToTwitter(post: any, account: any): Promise<{ success: boo
     }
 
     const data = await response.json();
-    const tweetId = data.data.id;
+    const tweetId = (data as any)?.data?.id;
     const username = account.platformUsername || 'unknown';
 
     return {
@@ -292,7 +292,7 @@ async function publishToFacebook(post: any, account: any): Promise<{ success: bo
     }
 
     const data = await response.json();
-    const postId = data.id || data.post_id;
+    const postId = (data as any)?.id || (data as any)?.post_id;
 
     return {
       success: true,
@@ -422,7 +422,7 @@ async function publishToLinkedIn(post: any, account: any): Promise<{ success: bo
     }
 
     const data = await response.json();
-    const postId = data.id;
+    const postId = (data as any)?.id;
 
     return {
       success: true,

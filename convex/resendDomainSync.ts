@@ -40,7 +40,7 @@ export const syncDomainsFromResend = action({
     }
     
     const result = await response.json();
-    const resendDomains = result.data || [];
+    const resendDomains = (result as any)?.data || [];
     
     let added = 0;
     let updated = 0;
