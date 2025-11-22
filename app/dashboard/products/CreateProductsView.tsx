@@ -1,7 +1,9 @@
 'use client';
 
+
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
+import { useUser } from '@clerk/nextjs';
 import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -45,6 +47,7 @@ interface CreateProductsViewProps {
 
 export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
   const router = useRouter();
+  const { user } = useUser();
   
   // Mutations for product actions
   const updateProduct = useMutation(api.digitalProducts.updateProduct);
@@ -58,7 +61,12 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
     const product = allProducts.find(p => p._id === productId);
     if (!product) return;
 
-    if (product.productCategory === 'sample-pack' || product.productCategory === 'preset-pack' || product.productCategory === 'midi-pack') {
+    console.log('Editing product:', product); // Debug log
+
+    // Check for courses first (by type field)
+    if (product.type === 'course') {
+      router.push(`/dashboard/create/course?courseId=${productId}&step=course`);
+    } else if (product.productCategory === 'sample-pack' || product.productCategory === 'preset-pack' || product.productCategory === 'midi-pack') {
       router.push(`/dashboard/create/pack?type=${product.productCategory}&packId=${productId}`);
     } else if (product.productCategory === 'effect-chain' || product.productCategory === 'ableton-rack') {
       router.push(`/dashboard/create/chain?chainId=${productId}`);
@@ -82,9 +90,9 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
         const product = allProducts.find(p => p._id === productId);
         
         if (product?.type === 'course') {
-          await deleteCourse({ id: productId as any });
+          await deleteCourse({ courseId: productId as any, userId: user?.id || '' });
         } else {
-          await deleteProduct({ productId: productId as any });
+          await deleteProduct({ id: productId as any });
         }
         
         toast.success('Product deleted successfully');
@@ -120,15 +128,20 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
   };
   
   // Fetch user's stores
-  const stores = useQuery(
-    api.stores.getStoresByUser,
-    convexUser?.clerkId ? { userId: convexUser.clerkId } : 'skip'
-  );
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const stores: any = (() => {
+    // @ts-ignore TS2589 - Type instantiation is excessively deep (known Convex issue)
+    return useQuery(
+      api.stores.getStoresByUser as any,
+      convexUser?.clerkId ? { userId: convexUser.clerkId } : 'skip'
+    );
+  })();
   const storeId = stores?.[0]?._id;
 
   // Fetch created courses (using clerkId)
-  const userCourses = useQuery(
-    api.courses.getCoursesByUser,
+  // @ts-ignore - Type instantiation depth issue
+  const userCourses: any = useQuery(
+    api.courses.getCoursesByUser as any,
     convexUser?.clerkId ? { userId: convexUser.clerkId } : 'skip'
   );
 
@@ -263,20 +276,20 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
       {/* Product tabs */}
       <TooltipProvider>
         <Tabs defaultValue="all">
-          <TabsList className="w-full justify-start overflow-x-auto">
-            <TabsTrigger value="all" className="flex-shrink-0">
+          <TabsList className="w-full justify-start overflow-x-auto bg-muted/50">
+            <TabsTrigger value="all" className="flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <span>All</span>
             </TabsTrigger>
-            <TabsTrigger value="published" className="flex-shrink-0">
+            <TabsTrigger value="published" className="flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <span>Published</span>
             </TabsTrigger>
-            <TabsTrigger value="drafts" className="flex-shrink-0">
+            <TabsTrigger value="drafts" className="flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <span>Drafts</span>
             </TabsTrigger>
             
             <Tooltip>
               <TooltipTrigger asChild>
-                <TabsTrigger value="courses" className="flex-shrink-0">
+                <TabsTrigger value="courses" className="flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                   <BookOpen className="w-4 h-4" />
                   <span className="ml-2 hidden md:inline">Courses</span>
                 </TabsTrigger>
@@ -288,7 +301,7 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
             
             <Tooltip>
               <TooltipTrigger asChild>
-                <TabsTrigger value="packs" className="flex-shrink-0">
+                <TabsTrigger value="packs" className="flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                   <Music className="w-4 h-4" />
                   <span className="ml-2 hidden md:inline">Packs</span>
                 </TabsTrigger>
@@ -300,7 +313,7 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
             
             <Tooltip>
               <TooltipTrigger asChild>
-                <TabsTrigger value="chains" className="flex-shrink-0">
+                <TabsTrigger value="chains" className="flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                   <Zap className="w-4 h-4" />
                   <span className="ml-2 hidden md:inline">Chains</span>
                 </TabsTrigger>
@@ -312,7 +325,7 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
             
             <Tooltip>
               <TooltipTrigger asChild>
-                <TabsTrigger value="pdfs" className="flex-shrink-0">
+                <TabsTrigger value="pdfs" className="flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                   <FileText className="w-4 h-4" />
                   <span className="ml-2 hidden md:inline">PDFs</span>
                 </TabsTrigger>
@@ -324,7 +337,7 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
             
             <Tooltip>
               <TooltipTrigger asChild>
-                <TabsTrigger value="blogs" className="flex-shrink-0">
+                <TabsTrigger value="blogs" className="flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                   <PenTool className="w-4 h-4" />
                   <span className="ml-2 hidden md:inline">Blogs</span>
                 </TabsTrigger>
@@ -336,7 +349,7 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
             
             <Tooltip>
               <TooltipTrigger asChild>
-                <TabsTrigger value="beats" className="flex-shrink-0">
+                <TabsTrigger value="beats" className="flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                   <Music2 className="w-4 h-4" />
                   <span className="ml-2 hidden md:inline">Beats</span>
                 </TabsTrigger>
@@ -473,7 +486,7 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
                     {daw === 'bitwig' && '⚡ Bitwig'}
                     {daw === 'studio-one' && '🎼 Studio One'}
                     {daw === 'multi-daw' && '🔗 Multi-DAW'}
-                    {' '}({count})
+                    {' '}({String(count)})
                   </Badge>
                 ))}
               </div>

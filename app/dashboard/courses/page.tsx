@@ -66,7 +66,7 @@ export default function CoursesPage() {
   const handleDeleteCourse = async (courseId: string) => {
     if (confirm('Are you sure you want to delete this course? This action cannot be undone.')) {
       try {
-        await deleteCourse({ id: courseId as any });
+        await deleteCourse({ courseId: courseId as any, userId: user?.id || '' });
         toast.success('Course deleted successfully');
       } catch (error) {
         toast.error('Failed to delete course');
