@@ -333,25 +333,39 @@ async function exchangeTikTokCode(code: string) {
 // ============================================================================
 
 async function getInstagramBusinessData(accessToken: string) {
+  // First, let's see who is logged in
+  const meResponse = await fetch(
+    `https://graph.facebook.com/v18.0/me?fields=id,name,email&access_token=${accessToken}`
+  );
+  const meData = await meResponse.json();
+  console.log('🔍 Logged in Facebook user:', JSON.stringify(meData, null, 2));
+
   // Get user's Facebook Pages
   const pagesResponse = await fetch(
     `https://graph.facebook.com/v18.0/me/accounts?access_token=${accessToken}`
   );
   const pagesData = await pagesResponse.json();
 
-  console.log('Facebook Pages API Response:', JSON.stringify(pagesData, null, 2));
+  console.log('📄 Facebook Pages API Response:', JSON.stringify(pagesData, null, 2));
+  console.log('📊 Access Token Scopes (first 100 chars):', accessToken.substring(0, 100));
 
   // Check for API errors
   if (pagesData.error) {
-    console.error('Facebook API Error:', pagesData.error);
-    throw new Error(`Facebook API Error: ${pagesData.error.message}`);
+    console.error('❌ Facebook API Error:', pagesData.error);
+    throw new Error(`Facebook API Error: ${pagesData.error.message} - You may need to re-authorize with correct permissions.`);
   }
 
   if (!pagesData.data || pagesData.data.length === 0) {
-    console.error('No pages found. Full response:', pagesData);
+    console.error('⚠️ No pages found for user:', meData.name, meData.email);
+    console.error('⚠️ Full response:', pagesData);
+    console.error('⚠️ This could mean:');
+    console.error('   1. You are not an Admin of any Facebook Pages');
+    console.error('   2. You need to grant page permissions in Facebook');
+    console.error('   3. You are logged into the wrong Facebook account');
     throw new Error(
-      'No Facebook Pages found. You need a Facebook Page to connect Instagram Business. ' +
-      'Create a Facebook Page first, then connect your Instagram Business account to it.'
+      `No Facebook Pages found for ${meData.name || 'this user'}. ` +
+      'You need to be an Admin of a Facebook Page to connect Instagram Business. ' +
+      'Make sure you are logged into the correct Facebook account that manages your Pages.'
     );
   }
 
@@ -442,25 +456,38 @@ async function getInstagramBusinessData(accessToken: string) {
 }
 
 async function getFacebookUserData(accessToken: string) {
+  // First, let's see who is logged in
+  const meResponse = await fetch(
+    `https://graph.facebook.com/v18.0/me?fields=id,name,email&access_token=${accessToken}`
+  );
+  const meData = await meResponse.json();
+  console.log('🔍 Logged in Facebook user:', JSON.stringify(meData, null, 2));
+
   // Get user's Facebook Pages
   const pagesResponse = await fetch(
     `https://graph.facebook.com/v18.0/me/accounts?fields=id,name,access_token,picture&access_token=${accessToken}`
   );
   const pagesData = await pagesResponse.json();
 
-  console.log('Facebook Pages API Response:', JSON.stringify(pagesData, null, 2));
+  console.log('📄 Facebook Pages API Response:', JSON.stringify(pagesData, null, 2));
 
   // Check for API errors
   if (pagesData.error) {
-    console.error('Facebook API Error:', pagesData.error);
-    throw new Error(`Facebook API Error: ${pagesData.error.message}`);
+    console.error('❌ Facebook API Error:', pagesData.error);
+    throw new Error(`Facebook API Error: ${pagesData.error.message} - You may need to re-authorize with correct permissions.`);
   }
 
   if (!pagesData.data || pagesData.data.length === 0) {
-    console.error('No Facebook Pages found. Full response:', pagesData);
+    console.error('⚠️ No Facebook Pages found for user:', meData.name, meData.email);
+    console.error('⚠️ Full response:', pagesData);
+    console.error('⚠️ This could mean:');
+    console.error('   1. You are not an Admin of any Facebook Pages');
+    console.error('   2. You need to grant page permissions in Facebook');
+    console.error('   3. You are logged into the wrong Facebook account');
     throw new Error(
-      'No Facebook Pages found. You need a Facebook Page to post as a Page. ' +
-      'Create a Facebook Page first to use this feature.'
+      `No Facebook Pages found for ${meData.name || 'this user'}. ` +
+      'You need to be an Admin of a Facebook Page to post as a Page. ' +
+      'Make sure you are logged into the correct Facebook account that manages your Pages.'
     );
   }
 
