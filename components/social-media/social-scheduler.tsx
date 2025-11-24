@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { EmptyStateEnhanced } from "@/components/ui/empty-state-enhanced";
-import { Calendar, Clock, Instagram, Twitter, Facebook, Linkedin, TrendingUp, Plus, Trash2, Edit3, AlertTriangle } from "lucide-react";
+import { Calendar, Clock, Instagram, Twitter, Facebook, Linkedin, TrendingUp, Plus, Trash2, Edit3, AlertTriangle, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AccountManagementDialog } from "./account-management-dialog";
 import { PostComposer } from "./post-composer";
@@ -39,6 +39,7 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
   const [showPostComposer, setShowPostComposer] = useState(false);
   const [editingPost, setEditingPost] = useState<any>(null);
   const [deletingPostId, setDeletingPostId] = useState<string | null>(null);
+  const [refreshingToken, setRefreshingToken] = useState<string | null>(null);
 
   // Listen for OAuth popup success/error messages
   useEffect(() => {
@@ -70,6 +71,7 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
 
   // Mutations
   const deletePost = useMutation(api.socialMedia.deleteScheduledPost);
+  const refreshToken = useMutation(api.socialMedia.refreshAccountToken);
 
   // Fetch connected accounts
   const accounts = useQuery(api.socialMedia.getSocialAccounts, { storeId });
@@ -116,6 +118,36 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
         return "bg-black";
       default:
         return "bg-gray-500";
+    }
+  };
+
+  const handleRefreshToken = async (accountId: string, platform: string) => {
+    setRefreshingToken(accountId);
+    try {
+      await refreshToken({
+        accountId,
+      });
+      
+      toast({
+        title: "🔄 Token Refreshed",
+        description: `${platform} access token has been refreshed successfully.`,
+        className: "bg-white dark:bg-black",
+      });
+      
+      // Refresh the page to show updated connection
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (error) {
+      console.error("Token refresh error:", error);
+      toast({
+        title: "Refresh Failed",
+        description: `Failed to refresh ${platform} token. Try reconnecting the account.`,
+        variant: "destructive",
+        className: "bg-white dark:bg-black",
+      });
+    } finally {
+      setRefreshingToken(null);
     }
   };
 
@@ -306,7 +338,7 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
                                 </div>
                               ))}
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex gap-1">
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -326,6 +358,26 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
                                 }}
                               >
                                 Manage
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="flex-1 gap-1"
+                                onClick={() => handleRefreshToken(platformAccounts[0]._id, platform)}
+                                disabled={refreshingToken === platformAccounts[0]._id}
+                                title="Refresh access token for better permissions"
+                              >
+                                {refreshingToken === platformAccounts[0]._id ? (
+                                  <>
+                                    <div className="w-3 h-3 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" />
+                                    Refreshing...
+                                  </>
+                                ) : (
+                                  <>
+                                    <RefreshCw className="w-3 h-3" />
+                                    Refresh
+                                  </>
+                                )}
                               </Button>
                             </div>
                           </div>

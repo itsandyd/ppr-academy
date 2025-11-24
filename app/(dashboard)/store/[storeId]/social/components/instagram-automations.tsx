@@ -437,9 +437,9 @@ export function InstagramAutomations({ storeId, userId }: InstagramAutomationsPr
                       className="gap-2"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <Settings className="w-4 h-4" />
-                      Edit
-                    </Button>
+                    <Settings className="w-4 h-4" />
+                    Edit
+                  </Button>
                     
                     <AlertDialog>
                       <AlertDialogTrigger asChild>

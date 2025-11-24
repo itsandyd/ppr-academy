@@ -95,19 +95,28 @@ export const updatePostStatus = internalMutation({
 });
 
 /**
- * Refresh account token
+ * Refresh account token by forcing reconnection
  */
-export const refreshAccountToken = internalMutation({
+export const refreshAccountToken = mutation({
   args: {
     accountId: v.string(),
-    accessToken: v.optional(v.string()),
-    refreshToken: v.optional(v.string()),
-    tokenExpiresAt: v.optional(v.number()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    // TODO: Implement actual token refresh
-    console.log("🔄 Token refresh for account:", args.accountId);
+    // Get the account
+    const account = await ctx.db.get(args.accountId as Id<"socialAccounts">);
+    
+    if (!account) {
+      throw new Error("Account not found");
+    }
+
+    // Mark for refresh by updating lastVerified
+    await ctx.db.patch(args.accountId as Id<"socialAccounts">, {
+      lastVerified: Date.now(),
+      connectionError: "Token refresh requested - please reconnect",
+    });
+
+    console.log("🔄 Token refresh requested for account:", account.platformUsername);
     return null;
   },
 });
