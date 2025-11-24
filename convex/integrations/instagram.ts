@@ -126,21 +126,36 @@ export const getUserPosts = action({
   }),
   handler: async (ctx, args) => {
     try {
-      // Get user's Instagram integration
+      // Get user's Instagram connection (use internal query to avoid circular imports)
       const integration: any = await ctx.runQuery(internal.integrations.internal.getIntegration, {
         userId: args.userId,
       });
 
       if (!integration) {
-        console.error("❌ No integration found for user:", args.userId);
-        return { status: 404, data: { error: "No Instagram integration found" } };
+        console.error("❌ No Instagram connection found for user:", args.userId);
+        return { status: 404, data: { error: "No Instagram connection found" } };
       }
 
-      console.log("✅ Integration found. Instagram ID:", integration.instagramId);
+      console.log("✅ Instagram connection found. Username:", integration.platformUsername || integration.username);
 
-      // Use Instagram Business Account ID to fetch media
-      const instagramId = integration.instagramId;
-      const accessToken = integration.token;
+      // Get Instagram Business Account ID and access token
+      let instagramId: string;
+      let accessToken: string;
+
+      if (integration.platformData?.instagramBusinessAccountId) {
+        // New socialAccounts format
+        instagramId = integration.platformData.instagramBusinessAccountId;
+        accessToken = integration.accessToken;
+      } else {
+        // Legacy integrations format
+        instagramId = integration.instagramId;
+        accessToken = integration.token;
+      }
+
+      if (!instagramId || !accessToken) {
+        console.error("❌ Missing Instagram ID or token");
+        return { status: 400, data: { error: "Missing Instagram credentials" } };
+      }
 
       // Fetch posts from Instagram Graph API using the Business Account ID
       // Note: For videos, media_url returns the video file. We need thumbnail_url for display.

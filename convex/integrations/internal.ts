@@ -59,6 +59,38 @@ export const getIntegration = internalQuery({
   },
   returns: v.union(v.any(), v.null()),
   handler: async (ctx, args) => {
+    // Get the user to find their Clerk ID
+    const user = await ctx.db.get(args.userId);
+    if (!user?.clerkId) {
+      return null;
+    }
+
+    // First check new socialAccounts table (preferred) - uses Clerk ID
+    const socialAccount = await ctx.db
+      .query("socialAccounts")
+      .filter((q) => 
+        q.and(
+          q.eq(q.field("userId"), user.clerkId),
+          q.eq(q.field("platform"), "instagram"),
+          q.eq(q.field("isConnected"), true),
+          q.eq(q.field("isActive"), true)
+        )
+      )
+      .first();
+
+    if (socialAccount) {
+      // Convert to legacy format for compatibility
+      return {
+        ...socialAccount,
+        instagramId: socialAccount.platformData?.instagramBusinessAccountId || socialAccount.platformUserId,
+        username: socialAccount.platformUsername,
+        token: socialAccount.accessToken,
+        expiresAt: socialAccount.tokenExpiresAt,
+        isActive: socialAccount.isActive,
+      };
+    }
+
+    // Fallback to legacy integrations table - uses Convex user ID
     const integration = await ctx.db
       .query("integrations")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))

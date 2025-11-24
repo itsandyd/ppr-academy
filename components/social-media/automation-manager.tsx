@@ -908,36 +908,36 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
                       const isComingSoon = platform !== "instagram" && platform !== "facebook";
                       return (
                         <div key={platform} className="flex items-center space-x-3 p-2 border rounded-lg relative">
-                          <input
-                            type="checkbox"
-                            id={platform}
-                            checked={formData.platforms.includes(platform as any)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setFormData(prev => ({
-                                  ...prev,
-                                  platforms: [...prev.platforms, platform as any]
-                                }));
-                              } else {
-                                setFormData(prev => ({
-                                  ...prev,
-                                  platforms: prev.platforms.filter(p => p !== platform)
-                                }));
-                              }
-                            }}
-                            className="w-4 h-4"
+                        <input
+                          type="checkbox"
+                          id={platform}
+                          checked={formData.platforms.includes(platform as any)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setFormData(prev => ({
+                                ...prev,
+                                platforms: [...prev.platforms, platform as any]
+                              }));
+                            } else {
+                              setFormData(prev => ({
+                                ...prev,
+                                platforms: prev.platforms.filter(p => p !== platform)
+                              }));
+                            }
+                          }}
+                          className="w-4 h-4"
                             disabled={isComingSoon}
-                          />
+                        />
                           <Label htmlFor={platform} className={`capitalize flex items-center gap-2 ${isComingSoon ? 'text-muted-foreground' : ''}`}>
-                            <span className="text-base">{getPlatformIcon(platform)}</span>
-                            <span>{platform}</span>
-                          </Label>
+                          <span className="text-base">{getPlatformIcon(platform)}</span>
+                          <span>{platform}</span>
+                        </Label>
                           {isComingSoon && (
                             <Badge variant="secondary" className="absolute top-1 right-1 text-xs bg-orange-100 dark:bg-orange-950 text-orange-700 dark:text-orange-300 border-orange-300 dark:border-orange-800">
                               Soon
                             </Badge>
                           )}
-                        </div>
+                      </div>
                       );
                     })}
                   </div>

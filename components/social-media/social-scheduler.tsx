@@ -264,11 +264,11 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
                                 Coming Soon
                               </Badge>
                             )}
-                            {hasAccounts && (
-                              <Badge variant="default" className="bg-green-500">
-                                Connected
-                              </Badge>
-                            )}
+                          {hasAccounts && (
+                            <Badge variant="default" className="bg-green-500">
+                              Connected
+                            </Badge>
+                          )}
                           </div>
                         </div>
 

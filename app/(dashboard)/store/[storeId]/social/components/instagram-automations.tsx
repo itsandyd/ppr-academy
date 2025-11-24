@@ -418,7 +418,7 @@ export function InstagramAutomations({ storeId, userId }: InstagramAutomationsPr
                 )}
               </CardContent>
 
-              <CardFooter className="border-t pt-4">
+              <CardFooter className="border-t pt-4" onClick={(e) => e.stopPropagation()}>
                 <div className="flex items-center justify-between w-full text-sm text-muted-foreground">
                   <div className="flex items-center gap-4">
                     <div>
