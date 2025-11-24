@@ -18,6 +18,28 @@ export const isInstagramConnected = query({
     v.null()
   ),
   handler: async (ctx, args) => {
+    // First check new socialAccounts table (preferred)
+    const socialAccount = await ctx.db
+      .query("socialAccounts")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .filter((q) => 
+        q.and(
+          q.eq(q.field("platform"), "instagram"),
+          q.eq(q.field("isConnected"), true)
+        )
+      )
+      .first();
+
+    if (socialAccount) {
+      return {
+        connected: true,
+        username: socialAccount.platformUsername,
+        instagramId: socialAccount.platformUserId,
+        expiresAt: socialAccount.tokenExpiresAt,
+      };
+    }
+
+    // Fallback to legacy integrations table
     const integration = await ctx.db
       .query("integrations")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
@@ -45,6 +67,23 @@ export const getInstagramIntegration = query({
   },
   returns: v.union(v.any(), v.null()),
   handler: async (ctx, args) => {
+    // First check new socialAccounts table (preferred)
+    const socialAccount = await ctx.db
+      .query("socialAccounts")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .filter((q) => 
+        q.and(
+          q.eq(q.field("platform"), "instagram"),
+          q.eq(q.field("isConnected"), true)
+        )
+      )
+      .first();
+
+    if (socialAccount) {
+      return socialAccount;
+    }
+
+    // Fallback to legacy integrations table
     const integration = await ctx.db
       .query("integrations")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
