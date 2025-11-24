@@ -431,7 +431,12 @@ export function InstagramAutomations({ storeId, userId }: InstagramAutomationsPr
                   </div>
                   
                   <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm" className="gap-2">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="gap-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <Settings className="w-4 h-4" />
                       Edit
                     </Button>
@@ -443,6 +448,7 @@ export function InstagramAutomations({ storeId, userId }: InstagramAutomationsPr
                           size="sm" 
                           className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
                           disabled={deletingAutomation === automation._id}
+                          onClick={(e) => e.stopPropagation()}
                         >
                           {deletingAutomation === automation._id ? (
                             <>
@@ -482,6 +488,7 @@ export function InstagramAutomations({ storeId, userId }: InstagramAutomationsPr
                           <AlertDialogAction 
                             onClick={(e) => {
                               e.preventDefault();
+                              e.stopPropagation();
                               handleDeleteAutomation(automation._id, automation.name);
                             }}
                             className="bg-red-600 hover:bg-red-700 text-white"
