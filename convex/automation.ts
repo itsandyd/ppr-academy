@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query, internalMutation, internalQuery, internalAction } from "./_generated/server";
+import { mutation, query, action, internalMutation, internalQuery, internalAction } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 
@@ -394,7 +394,7 @@ export const getAutomationFlow = query({
 /**
  * Process incoming social media webhook for automation triggers
  */
-export const processSocialWebhookForAutomation = internalAction({
+export const processSocialWebhookForAutomation = action({
   args: {
     webhookId: v.id("socialWebhooks"),
   },
@@ -2175,7 +2175,7 @@ function checkResponseMatch(responseText: string, expectedResponse: string): boo
 /**
  * Create social webhook record
  */
-export const createSocialWebhook = internalMutation({
+export const createSocialWebhook = mutation({
   args: {
     platform: v.union(
       v.literal("instagram"),

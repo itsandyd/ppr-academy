@@ -4,7 +4,6 @@ import { action } from "./_generated/server";
 import { v } from "convex/values";
 import { api, internal } from "./_generated/api";
 import OpenAI from "openai";
-import { getCourseWithDetails, getUserCoursesForGeneration } from "./model/courses";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || "dummy-key-for-deployment",
@@ -49,11 +48,12 @@ export const generateViralVideoScript = action({
     error?: string;
   }> => {
     try {
-      // Step 1: Get user's course content via internal query
-      const relevantContent = await ctx.runQuery(internal.model.courses.getUserCoursesInternal, {
+      // Step 1: Get user's course content via simplified query
+      const courseDataJson = await ctx.runQuery(internal.model.courses.getSimpleCourseData, {
         userId: args.userId,
       });
       
+      const relevantContent = JSON.parse(courseDataJson);
       console.log(`Found ${relevantContent.length} real courses for content generation`);
 
       if (!relevantContent || relevantContent.length === 0) {
@@ -233,10 +233,11 @@ export const generateCourseFromContent = action({
   }> => {
     try {
       // Step 1: Get user's existing course content for context
-      const relevantContent = await ctx.runQuery(internal.model.courses.getUserCoursesInternal, {
+      const courseDataJson = await ctx.runQuery(internal.model.courses.getSimpleCourseData, {
         userId: args.userId,
       });
       
+      const relevantContent = JSON.parse(courseDataJson);
       console.log(`Found ${relevantContent.length} courses for outline generation`);
 
       // Step 2: Analyze similar courses to learn structure

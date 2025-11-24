@@ -74,7 +74,7 @@ export function InstagramAutomations({ storeId, userId }: InstagramAutomationsPr
     try {
       const result = await createAutomation({
         clerkId: userId,
-        name: "Untitled Automation",
+        name: "Comment Reply Bot",
       });
 
       if (result.status === 201 && result.data) {

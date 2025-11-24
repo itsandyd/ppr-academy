@@ -57,7 +57,7 @@ export const getInstagramToken = query({
     }
 
     return {
-      accessToken: socialAccount.platformData?.facebookPageAccessToken || socialAccount.accessToken,
+      accessToken: socialAccount.accessToken, // Use main Instagram token, not Facebook Page token
       username: socialAccount.platformUsername || "",
       instagramId: socialAccount.platformUserId,
     };

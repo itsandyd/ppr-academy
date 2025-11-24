@@ -106,44 +106,61 @@ export async function getUserCoursesForGeneration(
 }
 
 /**
- * Internal query to get course details (for use in actions)
+ * Simplified course details query (returns JSON string)
  */
-export const getCourseDetailsInternal = internalQuery({
+export const getCourseDetailsSimple = internalQuery({
   args: {
     courseId: v.id("courses"),
     userId: v.string(),
   },
-  returns: v.union(v.any(), v.null()),
+  returns: v.union(v.string(), v.null()),
   handler: async (ctx, args) => {
-    return await getCourseWithDetails(ctx, args);
+    const course = await ctx.db.get(args.courseId);
+    
+    if (!course || course.userId !== args.userId) {
+      return null;
+    }
+
+    // Get modules for this course
+    const modules = await ctx.db
+      .query("courseModules")
+      .filter((q) => q.eq(q.field("courseId"), args.courseId))
+      .take(5);
+
+    const courseData = {
+      ...course,
+      modules: modules.map(m => ({
+        title: m.title,
+        description: m.description,
+      })),
+    };
+
+    return JSON.stringify(courseData);
   },
 });
 
 /**
- * Internal query to get user courses for generation (simplified to avoid circular deps)
+ * Simplified course data query (avoids complex types)
  */
-export const getUserCoursesInternal = internalQuery({
+export const getSimpleCourseData = internalQuery({
   args: {
     userId: v.string(),
   },
-  returns: v.array(v.object({
-    title: v.string(),
-    content: v.string(),
-  })),
+  returns: v.string(), // Return JSON string to avoid complex type inference
   handler: async (ctx, args) => {
     // Get user's courses directly
     const courses = await ctx.db
       .query("courses")
       .filter((q) => q.eq(q.field("userId"), args.userId))
-      .take(10); // Limit for performance
+      .take(10);
 
-    // Get sample chapters for each course
-    const courseContent = await Promise.all(
+    // Build simple course data
+    const courseData = await Promise.all(
       courses.map(async (course) => {
         const chapters = await ctx.db
           .query("courseChapters")
           .filter((q) => q.eq(q.field("courseId"), course._id))
-          .take(3); // Sample chapters for content style
+          .take(3);
 
         const content = chapters
           .map(chapter => `${chapter.title}: ${chapter.description || ''}`)
@@ -156,6 +173,7 @@ export const getUserCoursesInternal = internalQuery({
       })
     );
 
-    return courseContent;
+    // Return as JSON string to avoid complex type issues
+    return JSON.stringify(courseData);
   },
 });
