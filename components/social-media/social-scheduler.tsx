@@ -240,6 +240,7 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
                   // Get all accounts for this platform (supports multiple)
                   const platformAccounts = accounts?.filter((a) => a.platform === platform && a.isConnected) || [];
                   const hasAccounts = platformAccounts.length > 0;
+                  const isComingSoon = platform !== "instagram" && platform !== "facebook";
 
                   return (
                     <Card key={platform} className="relative overflow-hidden">
@@ -257,14 +258,36 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
                               )}
                             </div>
                           </div>
-                          {hasAccounts && (
-                            <Badge variant="default" className="bg-green-500">
-                              Connected
-                            </Badge>
-                          )}
+                          <div className="flex flex-col items-end gap-1">
+                            {isComingSoon && (
+                              <Badge variant="secondary" className="bg-orange-100 dark:bg-orange-950 text-orange-700 dark:text-orange-300 border-orange-300 dark:border-orange-800">
+                                Coming Soon
+                              </Badge>
+                            )}
+                            {hasAccounts && (
+                              <Badge variant="default" className="bg-green-500">
+                                Connected
+                              </Badge>
+                            )}
+                          </div>
                         </div>
 
-                        {hasAccounts ? (
+                        {isComingSoon ? (
+                          <div className="space-y-3">
+                            <p className="text-sm text-muted-foreground">
+                              {platform === "twitter" && "Twitter/X integration is currently in development."}
+                              {platform === "linkedin" && "LinkedIn integration is currently in development."}
+                              {platform === "tiktok" && "TikTok integration is currently in development."}
+                            </p>
+                            <Button
+                              className="w-full"
+                              variant="outline"
+                              disabled
+                            >
+                              Coming Soon
+                            </Button>
+                          </div>
+                        ) : hasAccounts ? (
                           <div className="space-y-2">
                             {/* Show all connected accounts */}
                             <div className="space-y-1 mb-3">
