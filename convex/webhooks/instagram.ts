@@ -150,11 +150,18 @@ async function executeAutomation(
   const listener = automation.listener;
   const userPlan = automation.user?.subscription?.plan || "FREE";
   
-  // TODO: Fix TypeScript circular reference - using hardcoded token for now
-  console.log("🔧 Using hardcoded Instagram token (temporary fix)");
-  
-  // Get the active Instagram token from your connected account
-  const accessToken = "EAAbv3gGV0IMBQG7bx2SXpsEEvXnJHGwgKLk10N9vj1aOfy2BZByz4GeZB7psfwbjZB6bjZAEExrnmL44whniYnQfJsdieC4RjH9Rd5S0ObUH5t4gE20xrfKSBZArsgFGkBYUbZB4Mq31vecoLbjSn9ZBRlugHbD4i6BDt1FcUWy1OKMZCTS1OkgEPXNUMAWhVZCKkeyjzGVXl2fN2sZAck9SQDGsYjiWqjpJCfS3vR64tzQdUHO4TCT2dxqgTgkAoonXlHc9RR8tkX34qzVbxuDobiWeo2Lx327ADaepCB0vp8jIhv2OJTUwZDZD";
+  // Get fresh Instagram token from socialAccounts table
+  const tokenData = await ctx.runQuery(api.socialMedia.getInstagramToken, {
+    userId: automation.userId,
+  });
+
+  if (!tokenData?.accessToken) {
+    console.error("❌ No active Instagram connection found");
+    return;
+  }
+
+  console.log("✅ Found Instagram connection:", tokenData.username);
+  const accessToken = tokenData.accessToken;
 
   // LISTENER TYPE 1: Simple Message
   if (listener.listener === "MESSAGE") {
