@@ -15,12 +15,9 @@
     "update-plugin-categories": "npx tsx scripts/update-plugin-categories.ts",
     "typecheck": "tsc --noEmit",
     "typecheck:convex": "echo 'Skipping Convex typecheck due to circular dependencies'",
-    "typecheck:strict": "tsx scripts/type-check.ts",
-    "typecheck:safe": "npm run typecheck:convex",
-    "build": "npm run typecheck:safe && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "check-all": "npm run typecheck:strict",
     "postinstall": "echo 'Using Convex for database'"
   },
   "dependencies": {

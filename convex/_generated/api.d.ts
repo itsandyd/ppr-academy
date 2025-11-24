@@ -87,6 +87,7 @@ import type * as files from "../files.js";
 import type * as fixes_bulkEnrollmentFix from "../fixes/bulkEnrollmentFix.js";
 import type * as fixes_enrollmentSync from "../fixes/enrollmentSync.js";
 import type * as followGateSubmissions from "../followGateSubmissions.js";
+import type * as helpers_socialMediaHelpers from "../helpers/socialMediaHelpers.js";
 import type * as http from "../http.js";
 import type * as importFans from "../importFans.js";
 import type * as importPlugins from "../importPlugins.js";
@@ -239,6 +240,7 @@ declare const fullApi: ApiFromModules<{
   "fixes/bulkEnrollmentFix": typeof fixes_bulkEnrollmentFix;
   "fixes/enrollmentSync": typeof fixes_enrollmentSync;
   followGateSubmissions: typeof followGateSubmissions;
+  "helpers/socialMediaHelpers": typeof helpers_socialMediaHelpers;
   http: typeof http;
   importFans: typeof importFans;
   importPlugins: typeof importPlugins;

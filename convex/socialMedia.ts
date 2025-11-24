@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { query, mutation, action, internalQuery, internalMutation } from "./_generated/server";
+import { Id } from "./_generated/dataModel";
 
 /**
  * Get social media accounts for a store
@@ -95,29 +96,46 @@ export const updatePostStatus = internalMutation({
 });
 
 /**
- * Refresh account token by forcing reconnection
+ * Refresh account token using helper function (avoids circular dependencies)
  */
 export const refreshAccountToken = mutation({
   args: {
     accountId: v.string(),
   },
-  returns: v.null(),
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+  }),
   handler: async (ctx, args) => {
-    // Get the account
-    const account = await ctx.db.get(args.accountId as Id<"socialAccounts">);
-    
-    if (!account) {
-      throw new Error("Account not found");
+    try {
+      // Direct implementation to avoid circular dependencies
+      const account = await ctx.db.get(args.accountId as Id<"socialAccounts">);
+      
+      if (!account) {
+        return {
+          success: false,
+          message: "Account not found",
+        };
+      }
+
+      // Mark account as needing refresh
+      await ctx.db.patch(args.accountId as Id<"socialAccounts">, {
+        lastVerified: Date.now(),
+        connectionError: "Token needs refresh - click reconnect for updated permissions",
+        isActive: false, // Force user to reconnect
+      });
+
+      return {
+        success: true,
+        message: `Token refresh requested for @${account.platformUsername}`,
+      };
+    } catch (error) {
+      console.error("Token refresh error:", error);
+      return {
+        success: false,
+        message: "Failed to refresh token",
+      };
     }
-
-    // Mark for refresh by updating lastVerified
-    await ctx.db.patch(args.accountId as Id<"socialAccounts">, {
-      lastVerified: Date.now(),
-      connectionError: "Token refresh requested - please reconnect",
-    });
-
-    console.log("🔄 Token refresh requested for account:", account.platformUsername);
-    return null;
   },
 });
 

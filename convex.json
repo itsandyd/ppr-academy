@@ -3,5 +3,6 @@
     "staticApi": true,
     "staticDataModel": true
   },
-  "skipFunctionsTypecheck": true
+  "skipFunctionsTypecheck": true,
+  "staticCodegen": true
 }
