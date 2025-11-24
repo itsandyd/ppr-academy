@@ -8,9 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle2, Image as ImageIcon, Video, Layers, RefreshCw, Play } from "lucide-react";
+import { CheckCircle2, Image as ImageIcon, Video, Layers, RefreshCw, Play, Globe, Check } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface InstagramPost {
   id: string;
@@ -37,6 +39,7 @@ export function InstagramPostSelector({
   const [loading, setLoading] = useState(false);
   const [selectedPosts, setSelectedPosts] = useState<Set<string>>(new Set(selectedPostIds));
   const [saving, setSaving] = useState(false);
+  const [allPostsMode, setAllPostsMode] = useState(false);
 
   // Get Instagram posts
   const fetchPosts = useAction(api.integrations.instagram.getUserPosts);
@@ -56,7 +59,12 @@ export function InstagramPostSelector({
   // Sync selected posts from automation data
   useEffect(() => {
     if (automation?.posts && automation.posts.length > 0) {
-      setSelectedPosts(new Set(automation.posts.map((p: any) => p.postId)));
+      const postIds = automation.posts.map((p: any) => p.postId);
+      setSelectedPosts(new Set(postIds));
+      
+      // Check if this is "all posts" mode
+      const hasAllPostsMarker = postIds.includes("ALL_POSTS_AND_FUTURE");
+      setAllPostsMode(hasAllPostsMarker);
     }
   }, [automation]);
 
@@ -121,23 +129,48 @@ export function InstagramPostSelector({
     });
   };
 
+  const handleToggleAllPosts = (enabled: boolean) => {
+    setAllPostsMode(enabled);
+    if (enabled) {
+      // Select all current posts plus add special marker
+      const allPostIds = new Set(posts.map(p => p.id));
+      allPostIds.add("ALL_POSTS_AND_FUTURE"); // Special marker for backend
+      setSelectedPosts(allPostIds);
+    } else {
+      // Clear selection
+      setSelectedPosts(new Set());
+    }
+  };
+
   const handleSavePosts = async () => {
-    if (selectedPosts.size === 0) {
-      toast.error("Select at least one post");
+    if (!allPostsMode && selectedPosts.size === 0) {
+      toast.error("Select at least one post or enable 'All Posts' mode");
       return;
     }
 
     setSaving(true);
     try {
-      // Get full post data for selected posts
-      const postsToSave = posts
-        .filter((p) => selectedPosts.has(p.id))
-        .map((post) => ({
-          postId: post.id,
-          caption: post.caption,
-          media: post.media_url,
-          mediaType: post.media_type,
-        }));
+      let postsToSave: any[];
+
+      if (allPostsMode) {
+        // Save special "all posts" marker
+        postsToSave = [{
+          postId: "ALL_POSTS_AND_FUTURE",
+          caption: "Monitor all current and future posts",
+          media: "",
+          mediaType: "GLOBAL",
+        }];
+      } else {
+        // Save selected individual posts
+        postsToSave = posts
+          .filter((p) => selectedPosts.has(p.id))
+          .map((post) => ({
+            postId: post.id,
+            caption: post.caption,
+            media: post.media_url,
+            mediaType: post.media_type,
+          }));
+      }
 
       const result = await savePostsMutation({
         automationId,
@@ -145,7 +178,11 @@ export function InstagramPostSelector({
       });
 
       if (result.status === 200) {
-        toast.success(`${postsToSave.length} post${postsToSave.length > 1 ? 's' : ''} attached`);
+        if (allPostsMode) {
+          toast.success("✅ Automation will monitor ALL posts (current + future)");
+        } else {
+          toast.success(`${postsToSave.length} post${postsToSave.length > 1 ? 's' : ''} attached`);
+        }
       } else {
         toast.error("Failed to save posts");
       }
@@ -233,11 +270,64 @@ export function InstagramPostSelector({
 
   return (
     <div className="space-y-6">
+      {/* All Posts Toggle */}
+      <Card className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 border-blue-200 dark:border-blue-800">
+        <div className="p-6">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center">
+                <Globe className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <Label htmlFor="all-posts-toggle" className="text-lg font-semibold cursor-pointer">
+                    All Posts + Future Posts
+                  </Label>
+                  {allPostsMode && <Check className="w-5 h-5 text-green-600" />}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {allPostsMode 
+                    ? "✅ Monitoring ALL posts (current + future). New posts will automatically be included."
+                    : "Monitor all your posts automatically. No need to manually select posts every time you publish."
+                  }
+                </p>
+              </div>
+            </div>
+            
+            <Switch
+              id="all-posts-toggle"
+              checked={allPostsMode}
+              onCheckedChange={handleToggleAllPosts}
+              className="mt-1"
+            />
+          </div>
+          
+          {allPostsMode && (
+            <div className="mt-4 p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
+              <div className="flex items-start gap-2">
+                <Check className="w-4 h-4 text-green-600 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-green-900 dark:text-green-100">
+                    Global Monitoring Active
+                  </p>
+                  <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+                    This automation will trigger on comments to ANY of your posts, including new ones you publish in the future.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-muted-foreground">
-            {selectedPosts.size} of {posts.length} posts selected
+            {allPostsMode 
+              ? `All ${posts.length} posts + future posts`
+              : `${selectedPosts.size} of ${posts.length} posts selected`
+            }
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -253,20 +343,26 @@ export function InstagramPostSelector({
           </Button>
           <Button
             onClick={handleSavePosts}
-            disabled={saving || selectedPosts.size === 0}
-            className="gap-2"
+            disabled={saving || (!allPostsMode && selectedPosts.size === 0)}
+            className={allPostsMode ? "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700" : ""}
           >
-            {saving ? "Saving..." : `Attach ${selectedPosts.size} Post${selectedPosts.size !== 1 ? 's' : ''}`}
+            {saving 
+              ? "Saving..." 
+              : allPostsMode
+                ? "💫 Enable Global Monitoring"
+                : `Attach ${selectedPosts.size} Post${selectedPosts.size !== 1 ? 's' : ''}`
+            }
           </Button>
         </div>
       </div>
 
       {/* Posts Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {posts.map((post) => {
-          const isSelected = selectedPosts.has(post.id);
+      {!allPostsMode && (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {posts.map((post) => {
+            const isSelected = selectedPosts.has(post.id);
 
-          return (
+            return (
             <Card
               key={post.id}
               className={`
@@ -345,29 +441,51 @@ export function InstagramPostSelector({
                 </div>
               )}
             </Card>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Selection Summary */}
-      {selectedPosts.size > 0 && (
-        <div className="bg-purple-50 dark:bg-purple-950 border border-purple-200 dark:border-purple-800 rounded-lg p-4">
+      {(selectedPosts.size > 0 || allPostsMode) && (
+        <div className={`border rounded-lg p-4 ${
+          allPostsMode 
+            ? "bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 border-blue-200 dark:border-blue-800"
+            : "bg-purple-50 dark:bg-purple-950 border-purple-200 dark:border-purple-800"
+        }`}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <CheckCircle2 className="w-5 h-5 text-purple-600" />
+              <CheckCircle2 className={`w-5 h-5 ${allPostsMode ? "text-blue-600" : "text-purple-600"}`} />
               <div>
-                <p className="font-semibold text-purple-900 dark:text-purple-100">
-                  {selectedPosts.size} post{selectedPosts.size !== 1 ? 's' : ''} selected
+                <p className={`font-semibold ${
+                  allPostsMode 
+                    ? "text-blue-900 dark:text-blue-100" 
+                    : "text-purple-900 dark:text-purple-100"
+                }`}>
+                  {allPostsMode 
+                    ? "Global monitoring enabled"
+                    : `${selectedPosts.size} post${selectedPosts.size !== 1 ? 's' : ''} selected`
+                  }
                 </p>
-                <p className="text-sm text-purple-700 dark:text-purple-300">
-                  Comments with your keywords on these posts will trigger this automation
+                <p className={`text-sm ${
+                  allPostsMode 
+                    ? "text-blue-700 dark:text-blue-300" 
+                    : "text-purple-700 dark:text-purple-300"
+                }`}>
+                  {allPostsMode
+                    ? "Will trigger on ALL posts (current + future) when someone comments with your keywords"
+                    : "Comments with your keywords on these posts will trigger this automation"
+                  }
                 </p>
               </div>
             </div>
             <Button
               onClick={handleSavePosts}
               disabled={saving}
-              className="bg-purple-600 hover:bg-purple-700"
+              className={allPostsMode 
+                ? "bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700" 
+                : "bg-purple-600 hover:bg-purple-700"
+              }
             >
               {saving ? "Saving..." : "Save Selection"}
             </Button>
@@ -378,7 +496,11 @@ export function InstagramPostSelector({
       {/* Help Text */}
       <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
         <p className="text-sm text-blue-900 dark:text-blue-100">
-          <strong>💡 Tip:</strong> Select posts where you want to capture leads. When someone comments with your keyword on these posts, they'll automatically receive a DM.
+          <strong>💡 Tip:</strong> 
+          {allPostsMode
+            ? " Global monitoring means this automation works on ALL your posts - no need to manually attach new ones!"
+            : " Select specific posts to monitor, or use 'All Posts' mode to monitor everything automatically."
+          }
         </p>
       </div>
     </div>

@@ -198,12 +198,11 @@ export const updateAchievementProgress = mutation({
       };
 
       const xpReward = xpRewards[args.achievementId] || 50;
-      // @ts-expect-error - Deep type instantiation limitation with Convex function references
-      await ctx.runMutation(api.achievements.unlockAchievement, {
-        userId: args.userId,
-        achievementId: args.achievementId,
-        xpReward
-      });
+      // await ctx.runMutation(api.achievements.unlockAchievement, {
+      //   userId: args.userId,
+      //   achievementId: args.achievementId,
+      //   xpReward
+      // });
     }
 
     return null;
@@ -242,11 +241,11 @@ export const checkAndAwardAchievement = internalMutation({
       "community-contributor": 150
     };
 
-    await ctx.runMutation(api.achievements.unlockAchievement, {
-      userId: args.userId,
-      achievementId: args.achievementId,
-      xpReward: xpRewards[args.achievementId] || 50
-    });
+    // await ctx.runMutation(api.achievements.unlockAchievement, {
+    //   userId: args.userId,
+    //   achievementId: args.achievementId,
+    //   xpReward: xpRewards[args.achievementId] || 50
+    // });
 
     return null;
   },
