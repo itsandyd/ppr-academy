@@ -4,6 +4,7 @@ import { action } from "./_generated/server";
 import { v } from "convex/values";
 import { api, internal } from "./_generated/api";
 import OpenAI from "openai";
+import { getCourseWithDetails, getUserCoursesForGeneration } from "./model/courses";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || "dummy-key-for-deployment",
@@ -48,13 +49,12 @@ export const generateViralVideoScript = action({
     error?: string;
   }> => {
     try {
-      // Step 1: Retrieve relevant course content using RAG
-      const relevantContent: any = await ctx.runAction(api.ragActions.searchSimilar, {
-        query: args.topic,
+      // Step 1: Get user's course content via internal query
+      const relevantContent = await ctx.runQuery(internal.model.courses.getUserCoursesInternal, {
         userId: args.userId,
-        limit: 5,
-        threshold: 0.6,
       });
+      
+      console.log(`Found ${relevantContent.length} real courses for content generation`);
 
       if (!relevantContent || relevantContent.length === 0) {
         return {
@@ -63,18 +63,24 @@ export const generateViralVideoScript = action({
         };
       }
 
-      // Step 2: Get course creator styles (if specific courses provided)
+      // Step 2: Extract writing style from specific courses (if provided)
       let creatorStyles = "";
       if (args.courseIds && args.courseIds.length > 0) {
-        const courses = await Promise.all(
+        const specificCourses = await Promise.all(
           args.courseIds.map(async (courseId) => {
-            return await ctx.runQuery(internal.embeddings.getAllCourses, {});
+            return await ctx.runQuery(internal.model.courses.getCourseDetailsInternal, {
+              courseId,
+              userId: args.userId,
+            });
           })
         );
         
         // Extract writing style characteristics
+        const validCourses = specificCourses.filter(Boolean);
         creatorStyles = "\n\nCourse Creator Writing Styles to Match:\n" +
-          relevantContent.slice(0, 2).map((content: any) => content.content).join("\n\n");
+          validCourses.slice(0, 2).map(course => 
+            `${course!.title}: ${course!.description || ''}`
+          ).join("\n\n");
       }
 
       // Step 3: Build context from retrieved content
@@ -226,20 +232,19 @@ export const generateCourseFromContent = action({
     error?: string;
   }> => {
     try {
-      // Step 1: Get relevant existing course content
-      const relevantContent: any = await ctx.runAction(api.ragActions.searchSimilar, {
-        query: `${args.courseTitle} ${args.courseDescription}`,
+      // Step 1: Get user's existing course content for context
+      const relevantContent = await ctx.runQuery(internal.model.courses.getUserCoursesInternal, {
         userId: args.userId,
-        limit: 10,
-        threshold: 0.6,
       });
+      
+      console.log(`Found ${relevantContent.length} courses for outline generation`);
 
       // Step 2: Analyze similar courses to learn structure
       let courseStructureExamples: string = "";
       if (args.similarCourseIds && args.similarCourseIds.length > 0) {
-        const similarCourses: any = await Promise.all(
+        const similarCourses = await Promise.all(
           args.similarCourseIds.map((courseId) =>
-            ctx.runQuery(api.courses.getCourseForEdit, {
+            ctx.runQuery(internal.model.courses.getCourseDetailsInternal, {
               courseId,
               userId: args.userId,
             })
@@ -248,14 +253,14 @@ export const generateCourseFromContent = action({
 
         courseStructureExamples = similarCourses
           .filter(Boolean)
-          .map((course: any) => {
-            const modules = course.modules || [];
+          .map((course) => {
+            const modules = course!.modules || [];
             return `
-Course: ${course.title}
+Course: ${course!.title}
 Structure: ${modules.length} modules
 Example Module: ${modules[0]?.title || "N/A"}
 - Lessons: ${modules[0]?.lessons?.length || 0}
-Teaching Style: ${course.skillLevel}`;
+Teaching Style: ${course!.skillLevel}`;
           })
           .join("\n\n");
       }
@@ -372,7 +377,7 @@ export const generateLandingPageCopy = action({
   }> => {
     try {
       // Get the full course with all modules, lessons, and chapters
-      const course: any = await ctx.runQuery(api.courses.getCourseForEdit, {
+      const course = await ctx.runQuery(internal.model.courses.getCourseDetailsInternal, {
         courseId: args.courseId,
         userId: args.userId,
       });

@@ -165,28 +165,39 @@ async function executeAutomation(
 
   // LISTENER TYPE 1: Simple Message
   if (listener.listener === "MESSAGE") {
-    console.log("📤 Sending simple message");
+    console.log("📤 Processing message automation");
 
-    const success = await sendInstagramDM({
-      accessToken,
-      recipientId: senderId,
-      message: listener.prompt,
-    });
+    // For now, use comment-only approach due to Instagram API restrictions
+    if (!isDM && listener.commentReply && commentId) {
+      console.log("📝 Replying to comment with link");
+      
+      // Post the link directly in the comment reply
+      const fullMessage = `${listener.commentReply} ${listener.prompt}`;
+      
+      const commentSuccess = await replyToComment({
+        accessToken,
+        commentId,
+        message: fullMessage,
+      });
 
-    if (success) {
-      // Track response (commented out to avoid circular reference)
-      // await ctx.runMutation(api.automations.trackResponse, {
-      //   automationId: automation._id,
-      //   type: isDM ? "DM" : "COMMENT",
-      // });
-
-      // Reply to comment if configured
-      if (!isDM && listener.commentReply && commentId) {
-        await replyToComment({
-          accessToken,
+      if (commentSuccess) {
+        console.log("✅ Comment reply with link posted successfully");
+      } else {
+        console.log("⚠️ Using Instagram Graph API v21.0 direct endpoint...");
+        
+        // Try alternative Instagram comment API
+        const success = await replyToCommentAlt({
+          instagramId: "17841463950870928", // Your Instagram Business ID
           commentId,
-          message: listener.commentReply,
+          message: fullMessage,
+          accessToken,
         });
+        
+        if (success) {
+          console.log("✅ Alternative comment API worked");
+        } else {
+          console.error("❌ All comment reply methods failed");
+        }
       }
     }
 
@@ -430,6 +441,47 @@ async function replyToComment(options: {
     return true;
   } catch (error) {
     console.error("❌ replyToComment error:", error);
+    return false;
+  }
+}
+
+/**
+ * Alternative comment reply using Facebook Graph API
+ */
+async function replyToCommentAlt(options: {
+  instagramId: string;
+  commentId: string;
+  message: string;
+  accessToken: string;
+}): Promise<boolean> {
+  const { instagramId, commentId, message, accessToken } = options;
+
+  try {
+    // Try Facebook Graph API for Instagram comment replies
+    const response = await fetch(
+      `https://graph.facebook.com/v18.0/${commentId}/replies`,
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      console.error("❌ Alt comment reply failed:", error);
+      return false;
+    }
+
+    console.log("✅ Alternative comment reply sent");
+    return true;
+  } catch (error) {
+    console.error("❌ replyToCommentAlt error:", error);
     return false;
   }
 }
