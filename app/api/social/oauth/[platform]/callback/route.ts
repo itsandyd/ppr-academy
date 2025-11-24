@@ -77,7 +77,31 @@ export async function GET(
         );
     }
 
-    // Store the connection in Convex
+    // Check if multiple accounts were found and user needs to select one
+    if (userData.id === 'SELECT_ACCOUNT' && userData.platformData?.multipleAccounts) {
+      // Redirect to account selection page
+      const accounts = userData.platformData.accounts;
+      const accessToken = userData.platformData.accessToken;
+      
+      const selectionUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/social/oauth/${platform}/select-account?` +
+        `storeId=${encodeURIComponent(storeId)}&` +
+        `userId=${encodeURIComponent(userId)}&` +
+        `accessToken=${encodeURIComponent(accessToken)}&` +
+        `accounts=${encodeURIComponent(JSON.stringify(accounts))}`;
+      
+      // Check if this is a popup OAuth flow
+      const isPopupCheck = request.nextUrl.searchParams.get('display') === 'popup' || 
+                     request.headers.get('referer')?.includes('oauth_popup');
+
+      if (isPopupCheck) {
+        // For popup, redirect within the popup
+        return NextResponse.redirect(selectionUrl);
+      } else {
+        return NextResponse.redirect(selectionUrl);
+      }
+    }
+
+    // Store the connection in Convex (single account flow)
     await fetchMutation(api.socialMedia.connectSocialAccount, {
       storeId,
       userId,
@@ -382,13 +406,27 @@ async function getInstagramBusinessData(accessToken: string) {
     );
   }
 
-  // Use the first Instagram account (users can connect more by clicking "Add Another")
-  const { instagram: instagramAccount, page: connectedPage } = instagramAccounts[0];
-  
+  // If multiple accounts, return selection data instead of auto-selecting first one
   if (instagramAccounts.length > 1) {
-    console.log(`Note: You have ${instagramAccounts.length} Instagram accounts available. To connect additional accounts, click "Add Another" and authorize again.`);
+    console.log(`Found ${instagramAccounts.length} Instagram accounts. User will need to select one.`);
     console.log('Available Instagram accounts:', instagramAccounts.map(a => `@${a.instagram.username} (via ${a.page.name})`).join(', '));
+    
+    // Return special marker to trigger account selection flow
+    return {
+      id: 'SELECT_ACCOUNT',
+      username: 'multiple_accounts',
+      displayName: 'Multiple Accounts Available',
+      profileImage: null,
+      platformData: {
+        multipleAccounts: true,
+        accounts: instagramAccounts,
+        accessToken: accessToken,
+      },
+    };
   }
+
+  // Single account - auto-connect
+  const { instagram: instagramAccount, page: connectedPage } = instagramAccounts[0];
 
   return {
     id: instagramAccount.id, // Instagram Business Account ID
@@ -428,13 +466,27 @@ async function getFacebookUserData(accessToken: string) {
 
   console.log(`Found ${pagesData.data.length} Facebook Page(s)`);
 
-  // Use the first Facebook Page (users can connect more by clicking "Add Another")
-  const page = pagesData.data[0];
-  
+  // If multiple pages, return selection data instead of auto-selecting first one
   if (pagesData.data.length > 1) {
-    console.log(`Note: You have ${pagesData.data.length} Facebook Pages available. To connect additional Pages, click "Add Another" and authorize again.`);
+    console.log(`Found ${pagesData.data.length} Facebook Pages. User will need to select one.`);
     console.log('Available Facebook Pages:', pagesData.data.map((p: any) => p.name).join(', '));
+    
+    // Return special marker to trigger account selection flow
+    return {
+      id: 'SELECT_ACCOUNT',
+      username: 'multiple_pages',
+      displayName: 'Multiple Pages Available',
+      profileImage: null,
+      platformData: {
+        multipleAccounts: true,
+        accounts: pagesData.data,
+        accessToken: accessToken,
+      },
+    };
   }
+
+  // Single page - auto-connect
+  const page = pagesData.data[0];
 
   // Get page profile picture
   let profilePicture: string | undefined;
