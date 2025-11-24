@@ -276,6 +276,84 @@ export const updateAutomation = mutation({
 });
 
 /**
+ * Delete automation and all related data
+ */
+export const deleteAutomation = mutation({
+  args: {
+    automationId: v.id("automations"),
+    clerkId: v.string(),
+  },
+  returns: v.object({
+    status: v.number(),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    try {
+      // Get user from clerk ID
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+        .unique();
+
+      if (!user) {
+        return { status: 404, message: "User not found" };
+      }
+
+      // Get automation and verify ownership
+      const automation = await ctx.db.get(args.automationId);
+      if (!automation) {
+        return { status: 404, message: "Automation not found" };
+      }
+
+      if (automation.userId !== user._id) {
+        return { status: 403, message: "Unauthorized" };
+      }
+
+      // Delete related keywords
+      const keywords = await ctx.db
+        .query("keywords")
+        .withIndex("by_automationId", (q) => q.eq("automationId", args.automationId))
+        .collect();
+      
+      for (const keyword of keywords) {
+        await ctx.db.delete(keyword._id);
+      }
+
+      // Delete related triggers
+      const triggers = await ctx.db
+        .query("triggers")
+        .withIndex("by_automationId", (q) => q.eq("automationId", args.automationId))
+        .collect();
+      
+      for (const trigger of triggers) {
+        await ctx.db.delete(trigger._id);
+      }
+
+      // Delete related listeners
+      const listeners = await ctx.db
+        .query("listeners")
+        .withIndex("by_automationId", (q) => q.eq("automationId", args.automationId))
+        .collect();
+      
+      for (const listener of listeners) {
+        await ctx.db.delete(listener._id);
+      }
+
+      // Finally delete the automation itself
+      await ctx.db.delete(args.automationId);
+
+      return {
+        status: 200,
+        message: "Automation deleted successfully",
+      };
+    } catch (error) {
+      console.error("Error deleting automation:", error);
+      return { status: 500, message: "Failed to delete automation" };
+    }
+  },
+});
+
+/**
  * Add keyword to automation
  */
 export const addKeyword = mutation({

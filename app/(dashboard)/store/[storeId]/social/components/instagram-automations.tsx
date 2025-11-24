@@ -18,10 +18,22 @@ import {
   Settings,
   Instagram,
   AlertCircle,
+  Trash2,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { InstagramDebug } from "./instagram-debug";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface InstagramAutomationsProps {
   storeId: string;
@@ -31,6 +43,7 @@ interface InstagramAutomationsProps {
 export function InstagramAutomations({ storeId, userId }: InstagramAutomationsProps) {
   const router = useRouter();
   const [creatingAutomation, setCreatingAutomation] = useState(false);
+  const [deletingAutomation, setDeletingAutomation] = useState<string | null>(null);
 
   // Get Convex user
   const convexUser = useQuery(
@@ -52,8 +65,9 @@ export function InstagramAutomations({ storeId, userId }: InstagramAutomationsPr
 
   const isInstagramConnected = instagramStatus?.connected || false;
 
-  // Create automation mutation
+  // Mutations
   const createAutomation = useMutation(api.automations.createAutomation);
+  const deleteAutomation = useMutation(api.automations.deleteAutomation);
 
   const handleCreateAutomation = async () => {
     setCreatingAutomation(true);
@@ -71,6 +85,27 @@ export function InstagramAutomations({ storeId, userId }: InstagramAutomationsPr
       toast.error("Failed to create automation");
     } finally {
       setCreatingAutomation(false);
+    }
+  };
+
+  const handleDeleteAutomation = async (automationId: string, automationName: string) => {
+    setDeletingAutomation(automationId);
+    try {
+      const result = await deleteAutomation({
+        automationId: automationId as any,
+        clerkId: userId,
+      });
+
+      if (result.status === 200) {
+        toast.success(`Automation "${automationName}" deleted successfully`);
+      } else {
+        toast.error(result.message || "Failed to delete automation");
+      }
+    } catch (error) {
+      console.error("Failed to delete automation:", error);
+      toast.error("Failed to delete automation");
+    } finally {
+      setDeletingAutomation(null);
     }
   };
 
@@ -395,10 +430,69 @@ export function InstagramAutomations({ storeId, userId }: InstagramAutomationsPr
                     </div>
                   </div>
                   
-                  <Button variant="ghost" size="sm" className="gap-2">
-                    <Settings className="w-4 h-4" />
-                    Edit
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="sm" className="gap-2">
+                      <Settings className="w-4 h-4" />
+                      Edit
+                    </Button>
+                    
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                          disabled={deletingAutomation === automation._id}
+                        >
+                          {deletingAutomation === automation._id ? (
+                            <>
+                              <div className="w-4 h-4 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
+                              Deleting...
+                            </>
+                          ) : (
+                            <>
+                              <Trash2 className="w-4 h-4" />
+                              Delete
+                            </>
+                          )}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent className="bg-white dark:bg-black">
+                        <AlertDialogHeader>
+                          <AlertDialogTitle className="flex items-center gap-2">
+                            <AlertCircle className="h-5 w-5 text-red-500" />
+                            Delete Automation
+                          </AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete "{automation.name}"? This will permanently delete:
+                            <div className="mt-3 space-y-1 text-sm">
+                              <div>• All automation rules and keywords</div>
+                              <div>• All trigger history ({automation.totalTriggers || 0} triggers)</div>
+                              <div>• All response data ({automation.totalResponses || 0} messages)</div>
+                            </div>
+                            <div className="mt-3 p-3 bg-red-50 dark:bg-red-950 rounded-lg">
+                              <p className="text-sm font-medium text-red-800 dark:text-red-200">
+                                This action cannot be undone.
+                              </p>
+                            </div>
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Keep Automation</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleDeleteAutomation(automation._id, automation.name);
+                            }}
+                            className="bg-red-600 hover:bg-red-700 text-white"
+                          >
+                            <Trash2 className="mr-1 h-3 w-3" />
+                            Delete Permanently
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 </div>
               </CardFooter>
             </Card>
