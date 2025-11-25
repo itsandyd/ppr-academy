@@ -18,7 +18,7 @@ http.route({
     const challenge = url.searchParams.get("hub.challenge");
 
     // Verify the token matches what you set in Meta Developer Dashboard
-    const VERIFY_TOKEN = process.env.INSTAGRAM_WEBHOOK_VERIFY_TOKEN || "testing";
+    const VERIFY_TOKEN = process.env.INSTAGRAM_VERIFY_TOKEN || "testing";
 
     if (mode === "subscribe" && token === VERIFY_TOKEN) {
       console.log("✅ Instagram webhook verified");
