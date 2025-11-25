@@ -20,6 +20,7 @@ export const getSocialAccounts = query({
 
 /**
  * Get Instagram access token for a user (for webhook use)
+ * Checks both socialAccounts and integrations tables
  */
 export const getInstagramToken = query({
   args: {
@@ -37,10 +38,29 @@ export const getInstagramToken = query({
     // Get the user to find their Clerk ID
     const user = await ctx.db.get(args.userId);
     if (!user?.clerkId) {
+      console.log("❌ getInstagramToken: No user found for ID:", args.userId);
       return null;
     }
 
-    // Fetch current Instagram connection
+    console.log("🔍 getInstagramToken: Looking for Instagram token for user:", user.email || user.clerkId);
+
+    // First, check the integrations table (used by automations)
+    const integration = await ctx.db
+      .query("integrations")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .filter((q) => q.eq(q.field("name"), "INSTAGRAM"))
+      .first();
+
+    if (integration?.token) {
+      console.log("✅ getInstagramToken: Found token in integrations table");
+      return {
+        accessToken: integration.token,
+        username: integration.username || "",
+        instagramId: integration.instagramId || "",
+      };
+    }
+
+    // Fallback: check socialAccounts table (used by scheduling)
     const socialAccount = await ctx.db
       .query("socialAccounts")
       .filter((q) => 
@@ -53,15 +73,17 @@ export const getInstagramToken = query({
       )
       .first();
 
-    if (!socialAccount?.accessToken) {
-      return null;
+    if (socialAccount?.accessToken) {
+      console.log("✅ getInstagramToken: Found token in socialAccounts table");
+      return {
+        accessToken: socialAccount.accessToken,
+        username: socialAccount.platformUsername || "",
+        instagramId: socialAccount.platformUserId,
+      };
     }
 
-    return {
-      accessToken: socialAccount.accessToken, // Use main Instagram token, not Facebook Page token
-      username: socialAccount.platformUsername || "",
-      instagramId: socialAccount.platformUserId,
-    };
+    console.log("❌ getInstagramToken: No Instagram token found in either table");
+    return null;
   },
 });
 
