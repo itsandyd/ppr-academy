@@ -22,6 +22,15 @@ export const processWebhook = internalAction({
     try {
       const entry = args.payload.entry?.[0];
       
+      // Debug logging - log the full payload structure
+      console.log("🔍 DEBUG - Full payload:", JSON.stringify(args.payload, null, 2));
+      console.log("🔍 DEBUG - Entry:", JSON.stringify(entry, null, 2));
+      console.log("🔍 DEBUG - Has messaging?", !!entry?.messaging);
+      console.log("🔍 DEBUG - Has changes?", !!entry?.changes);
+      if (entry?.changes) {
+        console.log("🔍 DEBUG - Changes field:", entry.changes[0]?.field);
+      }
+      
       if (!entry) {
         console.log("⚠️ No entry in webhook payload");
         return null;
