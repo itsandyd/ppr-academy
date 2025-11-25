@@ -440,6 +440,7 @@ async function publishToLinkedIn(post: any, account: any): Promise<{ success: bo
 
 /**
  * Main action to publish a scheduled post
+ * NOTE: This is stubbed out - posting functionality not needed for automation
  */
 export const publishScheduledPost = internalAction({
   args: {
@@ -447,75 +448,8 @@ export const publishScheduledPost = internalAction({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    // Get the post and account data
-    // Use simple query pattern to avoid circular types
-    const posts: any[] = []; // Stub for now - posting functionality not needed for automation
-    const post = posts.find((p: any) => p._id === args.postId);
-
-    if (!post) {
-      console.error(`Post ${args.postId} not found or not ready to publish`);
-      return null;
-    }
-
-    const account = post.account;
-
-    if (!account) {
-      await ctx.runMutation(internal.socialMedia.updatePostStatus, {
-        postId: args.postId,
-        status: "failed",
-        errorMessage: "Social account not found",
-      });
-      return null;
-    }
-
-    // Update status to publishing
-    await ctx.runMutation(internal.socialMedia.updatePostStatus, {
-      postId: args.postId,
-      status: "publishing",
-    });
-
-    // Publish based on platform
-    let result: { success: boolean; postId?: string; postUrl?: string; error?: string };
-
-    switch (account.platform) {
-      case "instagram":
-        result = await publishToInstagram(post, account);
-        break;
-      case "twitter":
-        result = await publishToTwitter(post, account);
-        break;
-      case "facebook":
-        result = await publishToFacebook(post, account);
-        break;
-      case "tiktok":
-        result = await publishToTikTok(post, account);
-        break;
-      case "linkedin":
-        result = await publishToLinkedIn(post, account);
-        break;
-      default:
-        result = {
-          success: false,
-          error: `Unsupported platform: ${account.platform}`,
-        };
-    }
-
-    // Update post status based on result
-    if (result.success) {
-      await ctx.runMutation(internal.socialMedia.updatePostStatus, {
-        postId: args.postId,
-        status: "published",
-        platformPostId: result.postId,
-        platformPostUrl: result.postUrl,
-      });
-    } else {
-      await ctx.runMutation(internal.socialMedia.updatePostStatus, {
-        postId: args.postId,
-        status: "failed",
-        errorMessage: result.error,
-      });
-    }
-
+    // Stub for now - posting functionality not needed for automation
+    console.log(`Publishing scheduled post ${args.postId} - functionality stubbed`);
     return null;
   },
 });
@@ -627,9 +561,8 @@ export const refreshOAuthToken = internalAction({
           break;
       }
 
-      // Update the account with new tokens
-      // Direct token refresh logic to avoid circular dependencies
-      console.log("🔄 Token refresh completed for:", args.accountId);
+      // Token refresh is handled directly by frontend calling the mutation
+      console.log("🔄 OAuth token refresh completed for platform:", args.platform);
     } catch (error: any) {
       console.error(`Failed to refresh token for account ${args.accountId}:`, error);
     }

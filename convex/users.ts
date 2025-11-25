@@ -315,3 +315,34 @@ export const setDashboardPreference = mutation({
     return null;
   },
 });
+
+// Helper query to get user by clerk ID (for actions that can't access db directly)
+export const getUserByClerkId = internalQuery({
+  args: {
+    clerkId: v.string(),
+  },
+  returns: v.union(
+    v.object({
+      _id: v.id("users"),
+      _creationTime: v.number(),
+      email: v.optional(v.string()),
+      name: v.optional(v.string()),
+    }),
+    v.null()
+  ),
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .first();
+
+    if (!user) return null;
+
+    return {
+      _id: user._id,
+      _creationTime: user._creationTime,
+      email: user.email,
+      name: user.name,
+    };
+  },
+});

@@ -553,7 +553,7 @@ export const savePosts = mutation({
 /**
  * Track DM/comment response (for analytics)
  */
-export const trackResponse = mutation({
+export const trackResponse = internalMutation({
   args: {
     automationId: v.id("automations"),
     type: v.union(v.literal("COMMENT"), v.literal("DM")),
@@ -584,7 +584,7 @@ export const trackResponse = mutation({
 /**
  * Create chat history entry (for Smart AI)
  */
-export const createChatHistory = mutation({
+export const createChatHistory = internalMutation({
   args: {
     automationId: v.id("automations"),
     senderId: v.string(),
@@ -626,3 +626,162 @@ export const getChatHistory = query({
   },
 });
 
+// ==================== INTERNAL QUERIES (for webhook) ====================
+
+/**
+ * Get keyword automation details (internal version for webhook)
+ * Matches the original getKeywordAutomation function signature
+ */
+export const getKeywordAutomation = internalQuery({
+  args: {
+    automationId: v.id("automations"),
+    includePosts: v.boolean(),
+  },
+  returns: v.union(v.any(), v.null()),
+  handler: async (ctx, args) => {
+    const automation = await ctx.db.get(args.automationId);
+    
+    if (!automation) return null;
+
+    // Get the trigger
+    const trigger = await ctx.db
+      .query("triggers")
+      .withIndex("by_automationId", (q) => q.eq("automationId", automation._id))
+      .first();
+
+    // Get the listener
+    const listener = await ctx.db
+      .query("listeners")
+      .withIndex("by_automationId", (q) => q.eq("automationId", automation._id))
+      .first();
+
+    // Get user
+    const user = await ctx.db.get(automation.userId);
+
+    let subscription = null;
+    let integrations = [];
+    
+    if (user) {
+      // Get subscription - note: subscriptions use customerId, not userId
+      // For now, we skip subscription fetching since it requires customer mapping
+      // subscription = await ctx.db
+      //   .query("subscriptions")
+      //   .withIndex("by_customerId", (q) => q.eq("customerId", user._id))
+      //   .first();
+
+      // Get Instagram integration
+      integrations = await ctx.db
+        .query("socialAccounts")
+        .filter((q) => 
+          q.and(
+            q.eq(q.field("userId"), user.clerkId),
+            q.eq(q.field("platform"), "instagram"),
+            q.eq(q.field("isConnected"), true)
+          )
+        )
+        .collect();
+    }
+
+    let posts = null;
+    if (args.includePosts) {
+      posts = await ctx.db
+        .query("posts")
+        .withIndex("by_automationId", (q) => q.eq("automationId", automation._id))
+        .collect();
+    }
+
+    return {
+      ...automation,
+      trigger,
+      listener,
+      posts,
+      User: user ? {
+        ...user,
+        subscription,
+        integrations,
+      } : null,
+    };
+  },
+});
+
+/**
+ * Get keyword post (check if post is attached to automation)
+ * Matches the original getKeywordPost function signature
+ */
+export const getKeywordPost = internalQuery({
+  args: {
+    mediaId: v.string(),
+    automationId: v.id("automations"),
+  },
+  returns: v.union(v.any(), v.null()),
+  handler: async (ctx, args) => {
+    // Check for specific post match
+    const post = await ctx.db
+      .query("posts")
+      .withIndex("by_automationId", (q) => q.eq("automationId", args.automationId))
+      .filter((q) => q.eq(q.field("postId"), args.mediaId))
+      .first();
+
+    if (post) return post;
+
+    // Check for global monitoring (ALL_POSTS_AND_FUTURE)
+    const globalPost = await ctx.db
+      .query("posts")
+      .withIndex("by_automationId", (q) => q.eq("automationId", args.automationId))
+      .filter((q) => q.eq(q.field("postId"), "ALL_POSTS_AND_FUTURE"))
+      .first();
+
+    return globalPost;
+  },
+});
+
+/**
+ * Find automation by chat history (for continuing conversations)
+ * Matches the original getChatHistory(receiverId, senderId) function signature
+ */
+export const findAutomationByChatHistory = internalQuery({
+  args: {
+    receiverId: v.string(),
+    senderId: v.string(),
+  },
+  returns: v.union(
+    v.object({
+      automationId: v.id("automations"),
+      history: v.array(v.any()),
+    }),
+    v.null()
+  ),
+  handler: async (ctx, args) => {
+    // Find recent chat history for this sender
+    const recentChat = await ctx.db
+      .query("chatHistory")
+      .filter((q) => 
+        q.and(
+          q.eq(q.field("senderId"), args.senderId),
+          q.eq(q.field("receiverId"), args.receiverId)
+        )
+      )
+      .order("desc")
+      .first();
+
+    if (!recentChat) return null;
+
+    // Get all history for this automation and sender
+    const history = await ctx.db
+      .query("chatHistory")
+      .withIndex("by_automationId_and_sender", (q) =>
+        q.eq("automationId", recentChat.automationId)
+         .eq("senderId", args.senderId)
+      )
+      .order("asc")
+      .collect();
+
+    return {
+      automationId: recentChat.automationId,
+      history: history.map(h => ({
+        role: h.role,
+        content: h.message,
+      })),
+    };
+  },
+});

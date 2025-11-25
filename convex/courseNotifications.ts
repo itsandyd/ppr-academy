@@ -1,6 +1,6 @@
 "use node";
 
-import { action, internalAction } from "./_generated/server";
+import { action, internalAction, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { api, internal } from "./_generated/api";
 import OpenAI from "openai";
@@ -211,9 +211,9 @@ export const sendCourseUpdateEmails = internalAction({
           continue;
         }
 
-        // Get user email
-        const user: any = await ctx.runQuery(
-          api.users.getUserFromClerk,
+        // Get user email via internal query (actions can't access db directly)
+        const user = await ctx.runQuery(
+          internal.users.getUserByClerkId,
           { clerkId: studentId }
         );
 

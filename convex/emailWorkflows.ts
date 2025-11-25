@@ -258,8 +258,9 @@ export const triggerWorkflow = internalAction({
   }),
   handler: async (ctx, args) => {
     try {
-      // Get the workflow
-      const workflow: any = await ctx.runQuery(api.emailWorkflows.getWorkflow, {
+      // @ts-expect-error - Convex circular type instantiation
+      const apiAny: any = api;
+      const workflow: any = await ctx.runQuery(apiAny.emailWorkflows.getWorkflow, {
         workflowId: args.workflowId,
       });
 
@@ -394,6 +395,7 @@ async function executeWorkflowNodes(ctx: any, workflow: any, execution: any) {
     console.log(`🔄 Executing node: ${currentNode.type} (${currentNodeId})`);
 
     // Update current node in execution
+    // @ts-expect-error - Convex circular type instantiation
     await ctx.runMutation(internal.emailWorkflows.updateExecutionStatus, {
       executionId: execution._id,
       currentNodeId: currentNodeId,
