@@ -27,14 +27,14 @@ export const processWebhook = internalAction({
         return null;
       }
 
-      // CASE 1: Direct Message (DM)
+      // CASE 1: Direct Message (DM) via entry.messaging (Facebook Messenger style)
       if (entry.messaging && entry.messaging.length > 0) {
         const message = entry.messaging[0];
         const messageText = message.message?.text;
         
         if (!messageText) return null;
 
-        console.log("💬 DM received:", messageText);
+        console.log("💬 DM received (messaging):", messageText);
 
         // Find automation by keyword match
         const matcher = await ctx.runQuery(api.automations.findAutomationByKeyword, {
@@ -65,10 +65,52 @@ export const processWebhook = internalAction({
         });
       }
 
-      // CASE 2: Comment on Post
+      // CASE 2: Check entry.changes for both comments AND messages
       if (entry.changes && entry.changes.length > 0) {
         const change = entry.changes[0];
         
+        // CASE 2a: Direct Message via entry.changes (Instagram style)
+        if (change.field === "messages") {
+          const messageData = change.value;
+          const messageText = messageData?.message?.text || messageData?.text;
+          const senderId = messageData?.sender?.id || messageData?.from?.id;
+          
+          if (!messageText) {
+            console.log("⚠️ No message text in DM webhook");
+            return null;
+          }
+
+          console.log("💬 DM received (changes):", messageText);
+
+          // Find automation by keyword match
+          const matcher = await ctx.runQuery(api.automations.findAutomationByKeyword, {
+            keyword: messageText.toLowerCase(),
+          });
+
+          if (!matcher || !matcher.trigger) {
+            console.log("❌ No automation found for keyword:", messageText);
+            return null;
+          }
+
+          // Verify it's a DM trigger
+          if (matcher.trigger.type !== "DM") {
+            console.log("⚠️ Automation exists but not DM trigger");
+            return null;
+          }
+
+          // Execute automation
+          await executeAutomation(ctx, {
+            automation: matcher,
+            senderId: senderId,
+            receiverId: entry.id,
+            messageText,
+            isDM: true,
+          });
+          
+          return null;
+        }
+        
+        // CASE 2b: Comment on Post
         if (change.field !== "comments") return null;
 
         const commentText = change.value?.text;
