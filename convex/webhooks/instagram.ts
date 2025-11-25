@@ -151,6 +151,7 @@ async function executeAutomation(
   const userPlan = automation.user?.subscription?.plan || "FREE";
   
   // Get fresh Instagram token via query
+  // @ts-ignore
   const tokenData = await ctx.runQuery(api.socialMedia.getInstagramToken, {
     userId: automation.userId,
   });
@@ -164,66 +165,70 @@ async function executeAutomation(
   console.log("🔧 Using dynamically fetched token");
   const accessToken = tokenData.accessToken;
 
-  // LISTENER TYPE 1: Comment Reply Only (Instagram-friendly approach)
+  // LISTENER TYPE 1: MESSAGE - Send DM with optional comment reply
   if (listener.listener === "MESSAGE") {
-    console.log("📤 Processing comment-only automation");
+    console.log("📤 Processing MESSAGE automation");
+    
+    const dmMessage = listener.prompt || "Thanks for reaching out!";
 
-    // Skip DMs entirely - Instagram restricts unsolicited DMs
-    // Focus on public comment replies which are always allowed and more visible
-    if (!isDM && listener.commentReply && commentId) {
-      console.log("📝 Posting public comment reply with link");
+    // For COMMENT triggers - send private message linked to comment
+    if (!isDM && commentId) {
+      console.log("📱 Comment trigger detected - sending private message");
       
-      // Create engaging comment reply with link
-      const engagingReply = `${listener.commentReply} 🎵\n\n${listener.prompt}\n\n#abletonlive #musicproduction #freetool`;
-      
-      console.log("💬 Reply content:", engagingReply);
-      
-      const commentSuccess = await replyToComment({
+      // Use Instagram's private reply API (links DM to the comment)
+      const dmSuccess = await sendPrivateMessage({
         accessToken,
         commentId,
-        message: engagingReply,
+        message: dmMessage,
       });
 
-      if (commentSuccess) {
-        console.log("✅ Public comment reply posted successfully!");
-        // This is actually better than DMs:
-        // ✅ More visible to other followers
-        // ✅ No Instagram restrictions 
-        // ✅ Creates social proof
-        // ✅ Better for lead generation
+      if (dmSuccess) {
+        console.log("✅ Private message sent successfully!");
       } else {
-        console.log("⚠️ Primary comment API failed, trying alternative...");
+        console.log("⚠️ Private message failed, trying direct DM...");
         
-        // Alternative approach using different endpoint
-        try {
-          const response = await fetch(
-            `https://graph.facebook.com/v18.0/${commentId}/replies`,
-            {
-              method: "POST",
-              headers: {
-                "Authorization": `Bearer ${accessToken}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                message: engagingReply,
-              }),
-            }
-          );
-
-          if (response.ok) {
-            console.log("✅ Alternative comment API worked!");
+        // Fallback: Try sending direct DM to the user
+        if (senderId) {
+          const directDMSuccess = await sendInstagramDM({
+            accessToken,
+            recipientId: senderId,
+            message: dmMessage,
+          });
+          
+          if (directDMSuccess) {
+            console.log("✅ Direct DM sent as fallback!");
           } else {
-            const error = await response.json();
-            console.error("❌ Alternative comment reply failed:", error);
+            console.error("❌ Both private message and direct DM failed");
           }
-        } catch (error) {
-          console.error("❌ All comment reply methods failed:", error);
         }
       }
-    } else {
-      console.log("📱 DM request detected - switching to comment reply for Instagram compliance");
-      // For DM triggers, still reply to original comment if available
-      // This maintains engagement while respecting Instagram's policies
+
+      // Also post a public comment reply if configured
+      if (listener.commentReply) {
+        console.log("📝 Also posting public comment reply");
+        await replyToComment({
+          accessToken,
+          commentId,
+          message: listener.commentReply,
+        });
+      }
+    }
+    
+    // For DM triggers - send direct message
+    if (isDM && senderId) {
+      console.log("📱 DM trigger detected - sending direct message");
+      
+      const dmSuccess = await sendInstagramDM({
+        accessToken,
+        recipientId: senderId,
+        message: dmMessage,
+      });
+
+      if (dmSuccess) {
+        console.log("✅ Direct DM sent successfully!");
+      } else {
+        console.error("❌ Failed to send DM");
+      }
     }
 
     return;

@@ -3361,7 +3361,8 @@ export default defineSchema({
     mediaType: v.union(
       v.literal("IMAGE"),
       v.literal("VIDEO"),
-      v.literal("CAROUSEL_ALBUM")
+      v.literal("CAROUSEL_ALBUM"),
+      v.literal("GLOBAL") // For global monitoring (ALL_POSTS_AND_FUTURE)
     ),
     
     // Metadata
