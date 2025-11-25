@@ -119,18 +119,21 @@ export const getAutomationById = query({
 
 /**
  * Find automation by keyword (for webhook matcher)
+ * Checks if ANY keyword is contained within the text
  */
 export const findAutomationByKeyword = query({
   args: { keyword: v.string() },
   returns: v.union(v.any(), v.null()),
   handler: async (ctx, args) => {
-    // Case-insensitive keyword match
-    const keywordMatch = await ctx.db
-      .query("keywords")
-      .filter((q) => 
-        q.eq(q.field("word"), args.keyword.toLowerCase())
-      )
-      .first();
+    const textLower = args.keyword.toLowerCase();
+    
+    // Get all keywords and check if any are contained in the text
+    const allKeywords = await ctx.db.query("keywords").collect();
+    
+    // Find a keyword that's contained in the text
+    const keywordMatch = allKeywords.find((kw) => 
+      textLower.includes(kw.word.toLowerCase())
+    );
 
     if (!keywordMatch) {
       return null;
