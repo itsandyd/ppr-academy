@@ -429,7 +429,12 @@ export default function AutomationBuilderPage({ params }: AutomationPageProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
               {/* Simple Message */}
               <div
-                onClick={() => setListenerType("MESSAGE")}
+                onClick={() => {
+                  if (listenerType !== "MESSAGE") {
+                    setListenerType("MESSAGE");
+                    // Don't carry over AI prompt to message field
+                  }
+                }}
                 className={`
                   p-4 sm:p-6 rounded-xl border-2 cursor-pointer transition-all
                   ${listenerType === "MESSAGE"
@@ -452,7 +457,13 @@ export default function AutomationBuilderPage({ params }: AutomationPageProps) {
 
               {/* Smart AI */}
               <div
-                onClick={() => isPro && setListenerType("SMART_AI")}
+                onClick={() => {
+                  if (isPro && listenerType !== "SMART_AI") {
+                    setListenerType("SMART_AI");
+                    // Clear AI prompt when switching - don't use the static message as AI instructions
+                    setAiPrompt("");
+                  }
+                }}
                 className={`
                   p-4 sm:p-6 rounded-xl border-2 cursor-pointer transition-all relative
                   ${listenerType === "SMART_AI"
