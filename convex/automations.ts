@@ -598,12 +598,22 @@ export const createChatHistory = internalMutation({
   },
   returns: v.id("chatHistory"),
   handler: async (ctx, args) => {
+    // Count existing messages to determine turn number
+    const existingMessages = await ctx.db
+      .query("chatHistory")
+      .withIndex("by_automationId_and_sender", (q) =>
+        q.eq("automationId", args.automationId).eq("senderId", args.senderId)
+      )
+      .collect();
+
     return await ctx.db.insert("chatHistory", {
       automationId: args.automationId,
       senderId: args.senderId,
       receiverId: args.receiverId,
       message: args.message,
       role: args.role,
+      createdAt: Date.now(),
+      turnNumber: existingMessages.length + 1,
     });
   },
 });
@@ -627,6 +637,94 @@ export const getChatHistory = query({
       .take(10); // Last 10 messages for context
 
     return history.reverse(); // Oldest first for OpenAI
+  },
+});
+
+/**
+ * Get chat history for Smart AI context (Internal version for actions)
+ */
+export const getChatHistoryInternal = internalQuery({
+  args: {
+    automationId: v.id("automations"),
+    instagramUserId: v.string(),
+  },
+  returns: v.array(v.object({
+    role: v.union(v.literal("user"), v.literal("assistant")),
+    message: v.string(),
+  })),
+  handler: async (ctx, args) => {
+    const history = await ctx.db
+      .query("chatHistory")
+      .withIndex("by_automationId_and_sender", (q) =>
+        q.eq("automationId", args.automationId).eq("senderId", args.instagramUserId)
+      )
+      .order("desc")
+      .take(10); // Last 10 messages for context
+
+    // Return oldest first for OpenAI conversation format
+    return history.reverse().map(h => ({
+      role: h.role,
+      message: h.message,
+    }));
+  },
+});
+
+/**
+ * Get automation details by ID (for Smart AI continuation)
+ */
+export const getAutomationWithListener = internalQuery({
+  args: {
+    automationId: v.id("automations"),
+  },
+  returns: v.union(
+    v.object({
+      _id: v.id("automations"),
+      userId: v.id("users"),
+      name: v.optional(v.string()),
+      listener: v.union(
+        v.object({
+          listener: v.string(),
+          prompt: v.optional(v.string()),
+          commentReply: v.optional(v.string()),
+        }),
+        v.null()
+      ),
+      userPlan: v.string(),
+    }),
+    v.null()
+  ),
+  handler: async (ctx, args) => {
+    const automation = await ctx.db.get(args.automationId);
+    if (!automation) return null;
+
+    const listener = await ctx.db
+      .query("listeners")
+      .withIndex("by_automationId", (q) => q.eq("automationId", automation._id))
+      .first();
+
+    // Get user's subscription plan
+    const user = await ctx.db.get(automation.userId);
+    let userPlan = "FREE";
+    
+    if (user) {
+      const subscription = await ctx.db
+        .query("userSubscriptions")
+        .withIndex("by_userId", (q) => q.eq("userId", user._id))
+        .first();
+      userPlan = subscription?.plan || "FREE";
+    }
+
+    return {
+      _id: automation._id,
+      userId: automation.userId,
+      name: automation.name,
+      listener: listener ? {
+        listener: listener.listener,
+        prompt: listener.prompt,
+        commentReply: listener.commentReply,
+      } : null,
+      userPlan,
+    };
   },
 });
 

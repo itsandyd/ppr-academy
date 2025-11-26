@@ -395,7 +395,7 @@ async function executeWorkflowNodes(ctx: any, workflow: any, execution: any) {
     console.log(`🔄 Executing node: ${currentNode.type} (${currentNodeId})`);
 
     // Update current node in execution
-    // @ts-expect-error - Convex circular type instantiation
+    // @ts-expect-error - Convex circular type instantiation issue
     await ctx.runMutation(internal.emailWorkflows.updateExecutionStatus, {
       executionId: execution._id,
       currentNodeId: currentNodeId,

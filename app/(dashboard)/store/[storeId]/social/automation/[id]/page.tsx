@@ -203,7 +203,9 @@ export default function AutomationBuilderPage({ params }: AutomationPageProps) {
     );
   }
 
-  const isPro = automation?.user?.subscription?.plan === "PRO";
+  // TODO: Revert to subscription check when ready for production
+  // const isPro = automation?.user?.subscription?.plan === "PRO";
+  const isPro = true; // Temporarily unlocked for development/testing
   const hasCommentTrigger = selectedTriggers.includes("COMMENT");
 
   return (

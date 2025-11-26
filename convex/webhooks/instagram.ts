@@ -9,6 +9,23 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || "dummy-key-for-deployment",
 });
 
+// System prompt template for Smart AI conversations
+const SMART_AI_SYSTEM_PROMPT = `You are a helpful AI assistant for a music producer/creator on Instagram. 
+
+Your personality:
+- Friendly and conversational
+- Knowledgeable about music production
+- Helpful but not pushy about sales
+- Keep responses SHORT and suitable for Instagram DMs (1-3 sentences max)
+
+Guidelines:
+- Always be helpful and engaging
+- If asked about products/courses, share the relevant links
+- Never pretend to be human - if asked, say you're an AI assistant
+- Use emojis sparingly for personality
+- End conversations naturally, don't force endless dialogue
+`;
+
 /**
  * Process Instagram webhook payload
  * Handles both comments and DMs
@@ -22,14 +39,8 @@ export const processWebhook = internalAction({
     try {
       const entry = args.payload.entry?.[0];
       
-      // Debug logging - log the full payload structure
-      console.log("🔍 DEBUG - Full payload:", JSON.stringify(args.payload, null, 2));
-      console.log("🔍 DEBUG - Entry:", JSON.stringify(entry, null, 2));
-      console.log("🔍 DEBUG - Has messaging?", !!entry?.messaging);
-      console.log("🔍 DEBUG - Has changes?", !!entry?.changes);
-      if (entry?.changes) {
-        console.log("🔍 DEBUG - Changes field:", entry.changes[0]?.field);
-      }
+      // Debug logging
+      console.log("🔍 Instagram webhook received");
       
       if (!entry) {
         console.log("⚠️ No entry in webhook payload");
@@ -40,10 +51,29 @@ export const processWebhook = internalAction({
       if (entry.messaging && entry.messaging.length > 0) {
         const message = entry.messaging[0];
         const messageText = message.message?.text;
+        const senderId = message.sender?.id;
         
-        if (!messageText) return null;
+        if (!messageText || !senderId) return null;
 
-        console.log("💬 DM received (messaging):", messageText);
+        console.log("💬 DM received:", messageText.substring(0, 50) + "...");
+
+        // First, check for existing Smart AI conversation
+        const existingConversation = await ctx.runQuery(
+          internal.automations.findAutomationByChatHistory,
+          { senderId, receiverId: entry.id }
+        );
+
+        if (existingConversation) {
+          console.log("🔄 Continuing existing Smart AI conversation");
+          await continueSmartAIConversation(ctx, {
+            automationId: existingConversation.automationId,
+            senderId,
+            receiverId: entry.id,
+            messageText,
+            history: existingConversation.history,
+          });
+          return null;
+        }
 
         // Find automation by keyword match
         const matcher = await ctx.runQuery(api.automations.findAutomationByKeyword, {
@@ -51,10 +81,7 @@ export const processWebhook = internalAction({
         });
 
         if (!matcher || !matcher.trigger) {
-          console.log("❌ No automation found for keyword:", messageText);
-          
-          // Check for existing conversation (Smart AI continuation)
-          await handleSmartAIContinuation(ctx, entry, messageText);
+          console.log("❌ No automation found for keyword:", messageText.substring(0, 30));
           return null;
         }
 
@@ -67,7 +94,7 @@ export const processWebhook = internalAction({
         // Execute automation
         await executeAutomation(ctx, {
           automation: matcher,
-          senderId: message.sender.id,
+          senderId,
           receiverId: entry.id,
           messageText,
           isDM: true,
@@ -84,12 +111,30 @@ export const processWebhook = internalAction({
           const messageText = messageData?.message?.text || messageData?.text;
           const senderId = messageData?.sender?.id || messageData?.from?.id;
           
-          if (!messageText) {
-            console.log("⚠️ No message text in DM webhook");
+          if (!messageText || !senderId) {
+            console.log("⚠️ No message text or sender in DM webhook");
             return null;
           }
 
-          console.log("💬 DM received (changes):", messageText);
+          console.log("💬 DM received (changes):", messageText.substring(0, 50) + "...");
+
+          // Check for existing Smart AI conversation
+          const existingConversation = await ctx.runQuery(
+            internal.automations.findAutomationByChatHistory,
+            { senderId, receiverId: entry.id }
+          );
+
+          if (existingConversation) {
+            console.log("🔄 Continuing existing Smart AI conversation");
+            await continueSmartAIConversation(ctx, {
+              automationId: existingConversation.automationId,
+              senderId,
+              receiverId: entry.id,
+              messageText,
+              history: existingConversation.history,
+            });
+            return null;
+          }
 
           // Find automation by keyword match
           const matcher = await ctx.runQuery(api.automations.findAutomationByKeyword, {
@@ -97,7 +142,7 @@ export const processWebhook = internalAction({
           });
 
           if (!matcher || !matcher.trigger) {
-            console.log("❌ No automation found for keyword:", messageText);
+            console.log("❌ No automation found for keyword:", messageText.substring(0, 30));
             return null;
           }
 
@@ -110,7 +155,7 @@ export const processWebhook = internalAction({
           // Execute automation
           await executeAutomation(ctx, {
             automation: matcher,
-            senderId: senderId,
+            senderId,
             receiverId: entry.id,
             messageText,
             isDM: true,
@@ -125,7 +170,7 @@ export const processWebhook = internalAction({
         const commentText = change.value?.text;
         if (!commentText) return null;
 
-        console.log("💬 Comment received:", commentText);
+        console.log("💬 Comment received:", commentText.substring(0, 50) + "...");
 
         // Find automation by keyword
         const matcher = await ctx.runQuery(api.automations.findAutomationByKeyword, {
@@ -133,7 +178,7 @@ export const processWebhook = internalAction({
         });
 
         if (!matcher || !matcher.trigger) {
-          console.log("❌ No automation found for keyword:", commentText);
+          console.log("❌ No automation found for keyword:", commentText.substring(0, 30));
           return null;
         }
 
@@ -199,10 +244,9 @@ async function executeAutomation(
   }
 
   const listener = automation.listener;
-  const userPlan = automation.user?.subscription?.plan || "FREE";
+  const userPlan = automation.User?.subscription?.plan || "FREE";
   
   // Get fresh Instagram token via query
-  // @ts-ignore
   const tokenData = await ctx.runQuery(api.socialMedia.getInstagramToken, {
     userId: automation.userId,
   });
@@ -213,7 +257,6 @@ async function executeAutomation(
   }
 
   console.log("✅ Found Instagram connection:", tokenData.username);
-  console.log("🔧 Using dynamically fetched token");
   const accessToken = tokenData.accessToken;
 
   // LISTENER TYPE 1: MESSAGE - Send DM with optional comment reply
@@ -224,7 +267,7 @@ async function executeAutomation(
       
     // For COMMENT triggers - send private message linked to comment
     if (!isDM && commentId) {
-      console.log("📱 Comment trigger detected - sending private message");
+      console.log("📱 Comment trigger - sending private message");
       
       // Use Instagram's private reply API (links DM to the comment)
       const dmSuccess = await sendPrivateMessage({
@@ -240,17 +283,11 @@ async function executeAutomation(
         
         // Fallback: Try sending direct DM to the user
         if (senderId) {
-          const directDMSuccess = await sendInstagramDM({
+          await sendInstagramDM({
             accessToken,
             recipientId: senderId,
             message: dmMessage,
           });
-
-          if (directDMSuccess) {
-            console.log("✅ Direct DM sent as fallback!");
-          } else {
-            console.error("❌ Both private message and direct DM failed");
-          }
         }
       }
 
@@ -262,140 +299,268 @@ async function executeAutomation(
           commentId,
           message: listener.commentReply,
         });
-          }
+      }
     }
     
     // For DM triggers - send direct message
     if (isDM && senderId) {
-      console.log("📱 DM trigger detected - sending direct message");
+      console.log("📱 DM trigger - sending direct message");
       
-      const dmSuccess = await sendInstagramDM({
+      await sendInstagramDM({
         accessToken,
         recipientId: senderId,
         message: dmMessage,
       });
-
-      if (dmSuccess) {
-        console.log("✅ Direct DM sent successfully!");
-    } else {
-        console.error("❌ Failed to send DM");
-      }
     }
+
+    // Track the response
+    await ctx.runMutation(internal.automations.trackResponse, {
+      automationId: automation._id,
+      type: isDM ? "DM" : "COMMENT",
+    });
 
     return;
   }
 
   // LISTENER TYPE 2: Smart AI (Pro feature)
-  if (listener.listener === "SMART_AI") {
-    if (userPlan !== "PRO") {
-      console.log("⚠️ Smart AI requires PRO plan");
-      // Send upgrade message
-      await sendInstagramDM({
-        accessToken,
-        recipientId: senderId,
-        message: "🤖 Smart AI conversations are available on our Pro plan! Upgrade to unlock AI-powered responses.",
-      });
-      return;
-    }
+  if (listener.listener === "SMART_AI" || listener.listener === "SMARTAI") {
+    // TODO: Revert to subscription check when ready for production
+    // if (userPlan !== "PRO") {
+    //   console.log("⚠️ Smart AI requires PRO plan");
+    //   // Send upgrade message
+    //   await sendInstagramDM({
+    //     accessToken,
+    //     recipientId: senderId,
+    //     message: "🤖 Smart AI conversations are available on our Pro plan! Upgrade to unlock AI-powered responses.",
+    //   });
+    //   return;
+    // }
+    console.log("🤖 Smart AI enabled (plan check bypassed for development)");
 
-    console.log("🤖 Activating Smart AI");
+    console.log("🤖 Activating Smart AI conversation");
 
-    // Get conversation history (commented out due to TypeScript issues)
-    // const history = await ctx.runQuery(api.automations.getChatHistory, {
-    //   automationId: automation._id,
-    //   instagramUserId: senderId,
-    // });
-    const history: any[] = [];
+    // Build system prompt with creator's custom prompt
+    const systemPrompt = buildSmartAIPrompt(listener.prompt);
 
-    // Build OpenAI messages
-    const messages: any[] = [
-      {
-        role: "system",
-        content: listener.prompt + "\n\nKeep responses under 2 sentences for Instagram DMs.",
-      },
-    ];
-
-    // Add conversation history
-    for (const msg of history) {
-      messages.push({
-        role: msg.role,
-        content: msg.message,
-      });
-    }
-
-    // Add current message
-    messages.push({
-      role: "user",
-      content: messageText,
-    });
-
-    // Generate AI response
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages,
-      max_tokens: 150,
-      temperature: 0.7,
-    });
-
-    const aiResponse = completion.choices[0]?.message?.content;
+    // Generate AI response (no history yet - this is first message)
+    const aiResponse = await generateAIResponse(systemPrompt, [], messageText);
 
     if (!aiResponse) {
       console.error("❌ No AI response generated");
       return;
     }
 
-    // Save conversation history (commented out due to TypeScript issues)
-    // await ctx.runMutation(api.automations.createChatHistory, {
-    //   automationId: automation._id,
-    //   senderId,
-    //   receiverId,
-    //   message: messageText,
-    //   role: "user",
-    // });
-
-    // await ctx.runMutation(api.automations.createChatHistory, {
-    //   automationId: automation._id,
-    //   senderId: receiverId,
-    //   receiverId: senderId,
-    //   message: aiResponse,
-    //   role: "assistant",
-    // });
-
-    // Send AI-generated message
-    const success = await sendInstagramDM({
-      accessToken,
-      recipientId: senderId,
-      message: aiResponse,
+    // Save user message to history
+    await ctx.runMutation(internal.automations.createChatHistory, {
+      automationId: automation._id,
+      senderId,
+      receiverId,
+      message: messageText,
+      role: "user",
     });
 
-    if (success) {
-      // await ctx.runMutation(api.automations.trackResponse, {
-      //   automationId: automation._id,
-      //   type: isDM ? "DM" : "COMMENT",
-      // });
+    // Save AI response to history
+    await ctx.runMutation(internal.automations.createChatHistory, {
+      automationId: automation._id,
+      senderId: receiverId,
+      receiverId: senderId,
+      message: aiResponse,
+      role: "assistant",
+    });
+
+    // For comments, send private message
+    if (!isDM && commentId) {
+      await sendPrivateMessage({
+        accessToken,
+        commentId,
+        message: aiResponse,
+      });
+
+      // Also reply to comment if configured
+      if (listener.commentReply) {
+        await replyToComment({
+          accessToken,
+          commentId,
+          message: listener.commentReply,
+        });
+      }
+    } else {
+      // For DMs, send direct message
+      await sendInstagramDM({
+        accessToken,
+        recipientId: senderId,
+        message: aiResponse,
+      });
     }
+
+    // Track the response
+    await ctx.runMutation(internal.automations.trackResponse, {
+      automationId: automation._id,
+      type: isDM ? "DM" : "COMMENT",
+    });
+
+    console.log("✅ Smart AI response sent successfully");
   }
 }
 
 /**
- * Handle Smart AI conversation continuation (no keyword match)
- * User is already in a Smart AI conversation
+ * Continue an existing Smart AI conversation
  */
-async function handleSmartAIContinuation(ctx: any, entry: any, messageText: string) {
-  const senderId = entry.messaging[0]?.sender?.id;
-  const receiverId = entry.id;
+async function continueSmartAIConversation(
+  ctx: any,
+  options: {
+    automationId: any;
+    senderId: string;
+    receiverId: string;
+    messageText: string;
+    history: Array<{ role: string; content: string }>;
+  }
+) {
+  const { automationId, senderId, receiverId, messageText, history } = options;
 
-  if (!senderId) return;
+  console.log("🤖 Continuing Smart AI conversation with", history.length, "messages");
 
-  // Find active automation with chat history for this user
-  // This would require a more complex query - placeholder for now
-  console.log("🔄 Checking for existing Smart AI conversation...");
+  // Get automation details
+  const automation = await ctx.runQuery(
+    internal.automations.getAutomationWithListener,
+    { automationId }
+  );
+
+  if (!automation) {
+    console.log("❌ Automation not found for conversation continuation");
+    return;
+  }
+
+  // TODO: Revert to subscription check when ready for production
+  // Check if user still has PRO plan
+  // if (automation.userPlan !== "PRO") {
+  //   console.log("⚠️ User no longer has PRO plan");
+  //   return;
+  // }
+  console.log("🤖 Continuing Smart AI (plan check bypassed for development)");
+
+  // Get Instagram token
+  const tokenData = await ctx.runQuery(api.socialMedia.getInstagramToken, {
+    userId: automation.userId,
+  });
+
+  if (!tokenData?.accessToken) {
+    console.error("❌ No active Instagram connection");
+    return;
+  }
+
+  // Build system prompt
+  const systemPrompt = buildSmartAIPrompt(automation.listener?.prompt);
+
+  // Generate AI response with conversation history
+  const aiResponse = await generateAIResponse(systemPrompt, history, messageText);
+
+  if (!aiResponse) {
+    console.error("❌ No AI response generated");
+    return;
+  }
+
+  // Save user message to history
+  await ctx.runMutation(internal.automations.createChatHistory, {
+    automationId,
+    senderId,
+    receiverId,
+    message: messageText,
+    role: "user",
+  });
+
+  // Save AI response to history
+  await ctx.runMutation(internal.automations.createChatHistory, {
+    automationId,
+    senderId: receiverId,
+    receiverId: senderId,
+    message: aiResponse,
+    role: "assistant",
+  });
+
+  // Send the response
+  await sendInstagramDM({
+    accessToken: tokenData.accessToken,
+    recipientId: senderId,
+    message: aiResponse,
+  });
+
+  // Track the response
+  await ctx.runMutation(internal.automations.trackResponse, {
+    automationId,
+    type: "DM",
+  });
+
+  console.log("✅ Smart AI continuation sent successfully");
+}
+
+/**
+ * Build the system prompt for Smart AI
+ */
+function buildSmartAIPrompt(customPrompt?: string): string {
+  if (customPrompt && customPrompt.trim()) {
+    return `${SMART_AI_SYSTEM_PROMPT}
+
+CREATOR'S CUSTOM INSTRUCTIONS:
+${customPrompt}
+
+Remember: Keep responses SHORT and suitable for Instagram DMs (1-3 sentences max).`;
+  }
   
-  // TODO: Implement conversation continuation logic
-  // 1. Query chatHistory for this senderId
-  // 2. Get associated automation
-  // 3. Check if it's Smart AI and user has PRO plan
-  // 4. Continue conversation
+  return SMART_AI_SYSTEM_PROMPT;
+}
+
+/**
+ * Generate AI response using OpenAI
+ */
+async function generateAIResponse(
+  systemPrompt: string,
+  history: Array<{ role: string; content: string }>,
+  currentMessage: string
+): Promise<string | null> {
+  try {
+    // Build OpenAI messages
+    const messages: any[] = [
+      { role: "system", content: systemPrompt },
+    ];
+
+    // Add conversation history (limit to last 10 for context window)
+    const recentHistory = history.slice(-10);
+    for (const msg of recentHistory) {
+      messages.push({
+        role: msg.role as "user" | "assistant",
+        content: msg.content,
+      });
+    }
+
+    // Add current message
+    messages.push({
+      role: "user",
+      content: currentMessage,
+    });
+
+    console.log("🧠 Generating AI response with", messages.length, "messages");
+
+    // Generate AI response
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini", // Fast and cost-effective for chat
+      messages,
+      max_tokens: 150, // Keep responses short for DMs
+      temperature: 0.7,
+      presence_penalty: 0.1, // Slight penalty to avoid repetition
+    });
+
+    const response = completion.choices[0]?.message?.content;
+
+    if (response) {
+      console.log("✅ AI generated:", response.substring(0, 50) + "...");
+    }
+
+    return response || null;
+  } catch (error) {
+    console.error("❌ OpenAI error:", error);
+    return null;
+  }
 }
 
 /**
@@ -418,12 +583,8 @@ async function sendInstagramDM(options: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          recipient: {
-            id: recipientId,
-          },
-          message: {
-            text: message,
-          },
+          recipient: { id: recipientId },
+          message: { text: message },
         }),
       }
     );
@@ -463,12 +624,8 @@ async function sendPrivateMessage(options: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          recipient: {
-            comment_id: commentId, // Special: links to comment
-          },
-          message: {
-            text: message,
-          },
+          recipient: { comment_id: commentId },
+          message: { text: message },
         }),
       }
     );
@@ -506,9 +663,7 @@ async function replyToComment(options: {
           "Authorization": `Bearer ${accessToken}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          message,
-        }),
+        body: JSON.stringify({ message }),
       }
     );
 
@@ -525,45 +680,3 @@ async function replyToComment(options: {
     return false;
   }
 }
-
-/**
- * Alternative comment reply using Facebook Graph API
- */
-async function replyToCommentAlt(options: {
-  instagramId: string;
-  commentId: string;
-  message: string;
-  accessToken: string;
-}): Promise<boolean> {
-  const { instagramId, commentId, message, accessToken } = options;
-
-  try {
-    // Try Facebook Graph API for Instagram comment replies
-    const response = await fetch(
-      `https://graph.facebook.com/v18.0/${commentId}/replies`,
-      {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message,
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      const error = await response.json();
-      console.error("❌ Alt comment reply failed:", error);
-      return false;
-    }
-
-    console.log("✅ Alternative comment reply sent");
-    return true;
-  } catch (error) {
-    console.error("❌ replyToCommentAlt error:", error);
-    return false;
-  }
-}
-

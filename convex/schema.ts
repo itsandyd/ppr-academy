@@ -3336,12 +3336,20 @@ export default defineSchema({
     automationId: v.id("automations"),
     listener: v.union(
       v.literal("MESSAGE"),    // Send single message
-      v.literal("SMART_AI")     // AI chatbot conversation
+      v.literal("SMART_AI"),   // AI chatbot conversation
+      v.literal("SMARTAI")     // Alternative spelling
     ),
     
     // Message content
     prompt: v.string(), // For SMART_AI: OpenAI system prompt. For MESSAGE: the message to send
     commentReply: v.optional(v.string()), // Optional reply to comment
+    
+    // Smart AI Configuration
+    aiPersonality: v.optional(v.string()), // AI persona description (e.g., "friendly music producer assistant")
+    aiKnowledge: v.optional(v.string()), // Knowledge context (products, pricing, FAQs)
+    aiTemperature: v.optional(v.number()), // OpenAI temperature (0.0 - 1.0, default 0.7)
+    maxConversationTurns: v.optional(v.number()), // Limit conversation length (default unlimited)
+    conversationTimeout: v.optional(v.number()), // Minutes before conversation resets (default 30)
     
     // Analytics counters
     dmCount: v.optional(v.number()),
@@ -3386,6 +3394,10 @@ export default defineSchema({
     
     // Context
     conversationId: v.optional(v.string()), // Group messages by conversation
+    
+    // Timestamps for conversation management
+    createdAt: v.optional(v.number()), // Unix timestamp
+    turnNumber: v.optional(v.number()), // Track turn count in conversation
   })
     .index("by_automationId", ["automationId"])
     .index("by_senderId", ["senderId"])
