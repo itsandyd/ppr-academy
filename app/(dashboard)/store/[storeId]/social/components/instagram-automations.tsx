@@ -78,7 +78,7 @@ export function InstagramAutomations({ storeId, userId }: InstagramAutomationsPr
       });
 
       if (result.status === 201 && result.data) {
-        router.push(`/store/${storeId}/social/automation/${result.data._id}`);
+        router.push(`/dashboard/social/automation/${result.data._id}`);
       }
     } catch (error) {
       console.error("Failed to create automation:", error);
@@ -341,7 +341,7 @@ export function InstagramAutomations({ storeId, userId }: InstagramAutomationsPr
             <Card
               key={automation._id}
               className="hover:shadow-lg transition-shadow cursor-pointer group"
-              onClick={() => router.push(`/store/${storeId}/social/automation/${automation._id}`)}
+              onClick={() => router.push(`/dashboard/social/automation/${automation._id}`)}
             >
               <CardHeader>
                 <div className="flex items-start justify-between">
@@ -437,7 +437,7 @@ export function InstagramAutomations({ storeId, userId }: InstagramAutomationsPr
                       className="gap-2"
                       onClick={(e) => {
                         e.stopPropagation();
-                        router.push(`/store/${storeId}/social/automation/${automation._id}`);
+                        router.push(`/dashboard/social/automation/${automation._id}`);
                       }}
                     >
                     <Settings className="w-4 h-4" />
