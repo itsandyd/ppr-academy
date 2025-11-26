@@ -62,6 +62,9 @@ export async function POST(
     }
 
     // Store the connection in Convex
+    // For Instagram and Facebook, use the Page Access Token (not User Access Token)
+    const accessTokenToStore = userData.platformData?.facebookPageAccessToken || accessToken;
+    
     await fetchMutation(api.socialMedia.connectSocialAccount, {
       storeId,
       userId,
@@ -70,7 +73,7 @@ export async function POST(
       platformUsername: userData.username,
       platformDisplayName: userData.displayName,
       profileImageUrl: userData.profileImage,
-      accessToken: accessToken,
+      accessToken: accessTokenToStore,
       refreshToken: undefined,
       tokenExpiresAt: undefined,
       grantedScopes: [],

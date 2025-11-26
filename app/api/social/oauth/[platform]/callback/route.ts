@@ -102,6 +102,14 @@ export async function GET(
     }
 
     // Store the connection in Convex (single account flow)
+    // For Instagram, use the Page Access Token (not User Access Token)
+    // Page tokens are needed for Instagram Graph API calls
+    const accessTokenToStore = platform === 'instagram' && userData.platformData?.facebookPageAccessToken
+      ? userData.platformData.facebookPageAccessToken
+      : platform === 'facebook' && userData.platformData?.facebookPageAccessToken
+        ? userData.platformData.facebookPageAccessToken
+        : tokenData.access_token;
+    
     await fetchMutation(api.socialMedia.connectSocialAccount, {
       storeId,
       userId,
@@ -110,7 +118,7 @@ export async function GET(
       platformUsername: userData.username,
       platformDisplayName: userData.displayName,
       profileImageUrl: userData.profileImage,
-      accessToken: tokenData.access_token,
+      accessToken: accessTokenToStore,
       refreshToken: tokenData.refresh_token,
       tokenExpiresAt: tokenData.expires_in ? Date.now() + (tokenData.expires_in * 1000) : undefined,
       grantedScopes: tokenData.scope ? tokenData.scope.split(' ') : [],

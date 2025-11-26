@@ -440,9 +440,9 @@ export function InstagramAutomations({ storeId, userId }: InstagramAutomationsPr
                         router.push(`/store/${storeId}/social/automation/${automation._id}`);
                       }}
                     >
-                      <Settings className="w-4 h-4" />
-                      Edit
-                    </Button>
+                    <Settings className="w-4 h-4" />
+                    Edit
+                  </Button>
                     
                     <AlertDialog>
                       <AlertDialogTrigger asChild>

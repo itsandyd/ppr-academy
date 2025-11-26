@@ -219,9 +219,9 @@ async function executeAutomation(
   // LISTENER TYPE 1: MESSAGE - Send DM with optional comment reply
   if (listener.listener === "MESSAGE") {
     console.log("📤 Processing MESSAGE automation");
-    
-    const dmMessage = listener.prompt || "Thanks for reaching out!";
 
+    const dmMessage = listener.prompt || "Thanks for reaching out!";
+      
     // For COMMENT triggers - send private message linked to comment
     if (!isDM && commentId) {
       console.log("📱 Comment trigger detected - sending private message");
@@ -245,7 +245,7 @@ async function executeAutomation(
             recipientId: senderId,
             message: dmMessage,
           });
-          
+
           if (directDMSuccess) {
             console.log("✅ Direct DM sent as fallback!");
           } else {
@@ -262,7 +262,7 @@ async function executeAutomation(
           commentId,
           message: listener.commentReply,
         });
-      }
+          }
     }
     
     // For DM triggers - send direct message
@@ -277,7 +277,7 @@ async function executeAutomation(
 
       if (dmSuccess) {
         console.log("✅ Direct DM sent successfully!");
-      } else {
+    } else {
         console.error("❌ Failed to send DM");
       }
     }

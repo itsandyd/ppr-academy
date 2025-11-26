@@ -75,11 +75,11 @@ export const getInstagramToken = query({
 
     if (socialAccount?.accessToken) {
       console.log("✅ getInstagramToken: Found token in socialAccounts table");
-      return {
+    return {
         accessToken: socialAccount.accessToken,
-        username: socialAccount.platformUsername || "",
-        instagramId: socialAccount.platformUserId,
-      };
+      username: socialAccount.platformUsername || "",
+      instagramId: socialAccount.platformUserId,
+    };
     }
 
     console.log("❌ getInstagramToken: No Instagram token found in either table");
