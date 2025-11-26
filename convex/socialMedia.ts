@@ -228,3 +228,58 @@ export const deleteScheduledPost = mutation({
     return null;
   },
 });
+
+/**
+ * Disconnect/remove a social account
+ */
+export const disconnectSocialAccount = mutation({
+  args: {
+    accountId: v.id("socialAccounts"),
+    userId: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    // Verify the account exists and belongs to this user
+    const account = await ctx.db.get(args.accountId);
+    if (!account) {
+      throw new Error("Account not found");
+    }
+    if (account.userId !== args.userId) {
+      throw new Error("Not authorized to delete this account");
+    }
+    
+    // Delete the social account
+    await ctx.db.delete(args.accountId);
+    
+    return null;
+  },
+});
+
+/**
+ * Update account label
+ */
+export const updateAccountLabel = mutation({
+  args: {
+    accountId: v.id("socialAccounts"),
+    userId: v.string(),
+    label: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    // Verify the account exists and belongs to this user
+    const account = await ctx.db.get(args.accountId);
+    if (!account) {
+      throw new Error("Account not found");
+    }
+    if (account.userId !== args.userId) {
+      throw new Error("Not authorized to update this account");
+    }
+    
+    // Update the label
+    await ctx.db.patch(args.accountId, {
+      accountLabel: args.label,
+    });
+    
+    return null;
+  },
+});

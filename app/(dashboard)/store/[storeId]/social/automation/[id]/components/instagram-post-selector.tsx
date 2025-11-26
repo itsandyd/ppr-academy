@@ -71,10 +71,10 @@ export function InstagramPostSelector({
   const loadPosts = async () => {
     setLoading(true);
     try {
-      console.log("📡 Fetching Instagram posts for user:", userId);
+      // console.log("📡 Fetching Instagram posts for user:", userId);
       const result = await fetchPosts({ userId });
       
-      console.log("📥 Fetch result:", result);
+      // console.log("📥 Fetch result:", result);
       
       if (result.status === 200 && result.data) {
         // Check if data is an array
@@ -96,7 +96,7 @@ export function InstagramPostSelector({
         }));
         
         setPosts(transformedPosts);
-        console.log("✅ Loaded Instagram posts:", transformedPosts.length);
+        // console.log("✅ Loaded Instagram posts:", transformedPosts.length);
         
         if (transformedPosts.length === 0) {
           toast.info("No posts found on your Instagram account");

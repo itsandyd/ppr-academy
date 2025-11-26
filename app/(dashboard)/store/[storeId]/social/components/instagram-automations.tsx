@@ -137,7 +137,7 @@ export function InstagramAutomations({ storeId, userId }: InstagramAutomationsPr
     // Use Facebook OAuth (not Instagram OAuth)
     const oauthUrl = `https://www.facebook.com/v21.0/dialog/oauth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&response_type=code&state=instagram`;
 
-    console.log("🔗 Redirecting to Facebook Login (for Instagram permissions):", oauthUrl);
+    // console.log("🔗 Redirecting to Facebook Login (for Instagram permissions):", oauthUrl);
     window.location.href = oauthUrl;
   };
 
@@ -259,7 +259,7 @@ export function InstagramAutomations({ storeId, userId }: InstagramAutomationsPr
   return (
     <div className="space-y-6">
       {/* Debug Info (remove after testing) */}
-      <InstagramDebug userId={userId} />
+      {/* <InstagramDebug userId={userId} /> */}
 
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -435,11 +435,14 @@ export function InstagramAutomations({ storeId, userId }: InstagramAutomationsPr
                       variant="ghost" 
                       size="sm" 
                       className="gap-2"
-                      onClick={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/store/${storeId}/social/automation/${automation._id}`);
+                      }}
                     >
-                    <Settings className="w-4 h-4" />
-                    Edit
-                  </Button>
+                      <Settings className="w-4 h-4" />
+                      Edit
+                    </Button>
                     
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
