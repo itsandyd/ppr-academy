@@ -162,7 +162,7 @@ export const refreshAccountToken = mutation({
 });
 
 /**
- * Connect social account
+ * Connect social account (upsert - update if exists, create if not)
  */
 export const connectSocialAccount = mutation({
   args: {
@@ -181,7 +181,74 @@ export const connectSocialAccount = mutation({
   },
   returns: v.id("socialAccounts"),
   handler: async (ctx, args) => {
-    return await ctx.db.insert("socialAccounts", {
+    // Check for existing account by user + platform + platformUserId
+    const existing = await ctx.db
+      .query("socialAccounts")
+      .filter((q) => 
+        q.and(
+          q.eq(q.field("userId"), args.userId),
+          q.eq(q.field("platform"), args.platform),
+          q.eq(q.field("platformUserId"), args.platformUserId)
+        )
+      )
+      .first();
+
+    if (existing) {
+      // Update existing account
+      await ctx.db.patch(existing._id, {
+        storeId: args.storeId,
+        platformUsername: args.platformUsername,
+        platformDisplayName: args.platformDisplayName,
+        profileImageUrl: args.profileImageUrl,
+        accessToken: args.accessToken,
+        refreshToken: args.refreshToken,
+        tokenExpiresAt: args.tokenExpiresAt,
+        isActive: true,
+        isConnected: true,
+        lastVerified: Date.now(),
+        connectionError: undefined,
+        grantedScopes: args.grantedScopes,
+        platformData: args.platformData,
+      });
+      console.log("✅ Updated existing socialAccount:", existing._id);
+      return existing._id;
+    }
+
+    // Also check for existing by user + platform only (same platform, different account ID)
+    const existingByPlatform = await ctx.db
+      .query("socialAccounts")
+      .filter((q) => 
+        q.and(
+          q.eq(q.field("userId"), args.userId),
+          q.eq(q.field("platform"), args.platform)
+        )
+      )
+      .first();
+
+    if (existingByPlatform) {
+      // User reconnected with same platform - update existing record
+      await ctx.db.patch(existingByPlatform._id, {
+        storeId: args.storeId,
+        platformUserId: args.platformUserId,
+        platformUsername: args.platformUsername,
+        platformDisplayName: args.platformDisplayName,
+        profileImageUrl: args.profileImageUrl,
+        accessToken: args.accessToken,
+        refreshToken: args.refreshToken,
+        tokenExpiresAt: args.tokenExpiresAt,
+        isActive: true,
+        isConnected: true,
+        lastVerified: Date.now(),
+        connectionError: undefined,
+        grantedScopes: args.grantedScopes,
+        platformData: args.platformData,
+      });
+      console.log("✅ Updated existing platform account:", existingByPlatform._id);
+      return existingByPlatform._id;
+    }
+
+    // Create new account
+    const newId = await ctx.db.insert("socialAccounts", {
       storeId: args.storeId,
       userId: args.userId,
       platform: args.platform,
@@ -194,9 +261,61 @@ export const connectSocialAccount = mutation({
       tokenExpiresAt: args.tokenExpiresAt,
       isActive: true,
       isConnected: true,
+      lastVerified: Date.now(),
       grantedScopes: args.grantedScopes,
       platformData: args.platformData,
     });
+    console.log("✅ Created new socialAccount:", newId);
+    return newId;
+  },
+});
+
+/**
+ * Remove duplicate social accounts (keeps the most recently updated one)
+ */
+export const removeDuplicateSocialAccounts = mutation({
+  args: {
+    userId: v.string(),
+    platform: v.union(v.literal("instagram"), v.literal("facebook"), v.literal("twitter"), v.literal("linkedin"), v.literal("tiktok")),
+  },
+  returns: v.object({
+    removed: v.number(),
+    kept: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    // Find all accounts for this user + platform
+    const accounts = await ctx.db
+      .query("socialAccounts")
+      .filter((q) => 
+        q.and(
+          q.eq(q.field("userId"), args.userId),
+          q.eq(q.field("platform"), args.platform)
+        )
+      )
+      .collect();
+
+    if (accounts.length <= 1) {
+      return { removed: 0, kept: accounts[0]?.platformUsername };
+    }
+
+    // Sort by lastVerified (most recent first), fallback to _creationTime
+    accounts.sort((a, b) => {
+      const aTime = a.lastVerified || a._creationTime;
+      const bTime = b.lastVerified || b._creationTime;
+      return bTime - aTime;
+    });
+
+    // Keep the first (most recent), delete the rest
+    const keep = accounts[0];
+    const toDelete = accounts.slice(1);
+
+    for (const account of toDelete) {
+      await ctx.db.delete(account._id);
+      console.log("🗑️ Deleted duplicate socialAccount:", account._id, account.platformUsername);
+    }
+
+    console.log("✅ Kept socialAccount:", keep._id, keep.platformUsername);
+    return { removed: toDelete.length, kept: keep.platformUsername };
   },
 });
 

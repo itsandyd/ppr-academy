@@ -221,6 +221,7 @@ async function exchangeFacebookCode(code: string, platform: string, requestUrl: 
   const url = new URL(requestUrl);
   const redirectUri = `${url.origin}/api/social/oauth/${platform}/callback`;
   
+  // Step 1: Exchange authorization code for SHORT-LIVED token (~1-2 hours)
   const params = new URLSearchParams({
     client_id: process.env.FACEBOOK_APP_ID!,
     client_secret: process.env.FACEBOOK_APP_SECRET!,
@@ -238,16 +239,53 @@ async function exchangeFacebookCode(code: string, platform: string, requestUrl: 
     throw new Error(`Failed to exchange Facebook code: ${errorData}`);
   }
 
-  const tokenData = await response.json();
-  console.log('Facebook token exchange successful:', { 
+  let tokenData = await response.json();
+  console.log('📝 Short-lived token obtained:', { 
     hasAccessToken: !!tokenData.access_token,
+    expiresIn: tokenData.expires_in,
     scope: tokenData.scope 
   });
 
-  // For business OAuth, extract the client_business_id if present
+  // Step 2: Exchange short-lived token for LONG-LIVED token (~60 days)
+  // This is CRITICAL - without this, tokens expire in ~1-2 hours!
   if (tokenData.access_token) {
     try {
-      // Get user info which includes business context
+      const longLivedParams = new URLSearchParams({
+        grant_type: 'fb_exchange_token',
+        client_id: process.env.FACEBOOK_APP_ID!,
+        client_secret: process.env.FACEBOOK_APP_SECRET!,
+        fb_exchange_token: tokenData.access_token,
+      });
+
+      const longLivedResponse = await fetch(
+        `https://graph.facebook.com/v18.0/oauth/access_token?${longLivedParams}`
+      );
+
+      if (longLivedResponse.ok) {
+        const longLivedData = await longLivedResponse.json();
+        console.log('✅ Long-lived token obtained:', {
+          hasAccessToken: !!longLivedData.access_token,
+          expiresIn: longLivedData.expires_in, // Should be ~5184000 (60 days in seconds)
+        });
+        
+        // Replace with long-lived token
+        tokenData = {
+          ...tokenData,
+          access_token: longLivedData.access_token,
+          expires_in: longLivedData.expires_in || 5184000, // 60 days default
+        };
+      } else {
+        console.warn('⚠️ Could not get long-lived token, using short-lived (will expire soon)');
+      }
+    } catch (error) {
+      console.error('⚠️ Long-lived token exchange failed:', error);
+      // Continue with short-lived token as fallback
+    }
+  }
+
+  // Step 3: Get business context if available
+  if (tokenData.access_token) {
+    try {
       const userResponse = await fetch(
         `https://graph.facebook.com/v18.0/me?access_token=${tokenData.access_token}&fields=id,name,business`
       );
@@ -256,7 +294,6 @@ async function exchangeFacebookCode(code: string, platform: string, requestUrl: 
         const userData = await userResponse.json();
         console.log('User business info:', userData);
         
-        // Store business context if available
         if (userData.business) {
           tokenData.client_business_id = userData.business.id;
           console.log('✅ Business ID found:', userData.business.id);

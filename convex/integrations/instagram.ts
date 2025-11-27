@@ -20,16 +20,15 @@ export const handleOAuthCallback = action({
       // Remove hash fragment if present
       const cleanCode = args.code.split("#")[0];
 
-      console.log("🔄 Step 1: Exchange Facebook code for access token...");
+      console.log("🔄 Step 1: Exchange Facebook code for SHORT-LIVED access token...");
 
       // Construct redirect URI (must be absolute)
-      // Use environment variable or fallback to production URL
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://academy.pauseplayrepeat.com";
       const redirectUri = `${baseUrl}/auth/instagram/callback`;
       
       console.log("🔗 Using redirect URI:", redirectUri);
 
-      // Step 1: Exchange code for Facebook access token
+      // Step 1: Exchange code for SHORT-LIVED Facebook access token (~1-2 hours)
       const tokenResponse = await fetch(
         `https://graph.facebook.com/v21.0/oauth/access_token?` +
         `client_id=${process.env.FACEBOOK_APP_ID || process.env.INSTAGRAM_CLIENT_ID}` +
@@ -38,18 +37,46 @@ export const handleOAuthCallback = action({
         `&code=${cleanCode}`
       );
 
-      const tokenData = await tokenResponse.json();
+      const shortLivedTokenData = await tokenResponse.json();
 
-      if (!(tokenData as any)?.access_token) {
-        console.error("❌ Token exchange failed:", tokenData);
-        throw new Error((tokenData as any)?.error?.message || "Failed to get access token");
+      if (!(shortLivedTokenData as any)?.access_token) {
+        console.error("❌ Token exchange failed:", shortLivedTokenData);
+        throw new Error((shortLivedTokenData as any)?.error?.message || "Failed to get access token");
       }
 
-      console.log("✅ Facebook access token obtained");
+      console.log("✅ Short-lived token obtained (expires in ~1-2 hours)");
 
-      // Step 2: Get user's Facebook pages
+      // Step 2: Exchange short-lived token for LONG-LIVED token (~60 days)
+      // THIS IS CRITICAL - Page tokens derived from long-lived tokens NEVER EXPIRE
+      console.log("🔄 Step 2: Exchanging for LONG-LIVED token...");
+      
+      const longLivedResponse = await fetch(
+        `https://graph.facebook.com/v21.0/oauth/access_token?` +
+        `grant_type=fb_exchange_token` +
+        `&client_id=${process.env.FACEBOOK_APP_ID || process.env.INSTAGRAM_CLIENT_ID}` +
+        `&client_secret=${process.env.FACEBOOK_APP_SECRET || process.env.INSTAGRAM_CLIENT_SECRET}` +
+        `&fb_exchange_token=${(shortLivedTokenData as any)?.access_token}`
+      );
+
+      const longLivedTokenData = await longLivedResponse.json();
+
+      let userAccessToken: string;
+      let tokenExpiresIn: number;
+
+      if ((longLivedTokenData as any)?.access_token) {
+        userAccessToken = (longLivedTokenData as any).access_token;
+        tokenExpiresIn = (longLivedTokenData as any).expires_in || 5184000; // 60 days
+        console.log("✅ Long-lived token obtained (expires in ~60 days)");
+      } else {
+        console.warn("⚠️ Could not get long-lived token, falling back to short-lived");
+        userAccessToken = (shortLivedTokenData as any).access_token;
+        tokenExpiresIn = (shortLivedTokenData as any).expires_in || 3600; // 1 hour
+      }
+
+      // Step 3: Get user's Facebook pages WITH the long-lived token
+      // Page tokens derived from long-lived user tokens NEVER EXPIRE
       const pagesResponse = await fetch(
-        `https://graph.facebook.com/v21.0/me/accounts?access_token=${(tokenData as any)?.access_token}`
+        `https://graph.facebook.com/v21.0/me/accounts?access_token=${userAccessToken}`
       );
 
       const pagesData = await pagesResponse.json();
@@ -60,9 +87,10 @@ export const handleOAuthCallback = action({
 
       console.log("✅ Facebook pages found:", (pagesData as any)?.data?.length);
 
-      // Step 3: Get Instagram Business account from first page
+      // Step 4: Get Instagram Business account from first page
       const pageId = (pagesData as any)?.data?.[0]?.id;
       const pageAccessToken = (pagesData as any)?.data?.[0]?.access_token;
+      // Note: pageAccessToken derived from long-lived user token NEVER EXPIRES
 
       const instagramAccountResponse = await fetch(
         `https://graph.facebook.com/v21.0/${pageId}?fields=instagram_business_account&access_token=${pageAccessToken}`
@@ -77,7 +105,7 @@ export const handleOAuthCallback = action({
       const instagramId = (instagramAccountData as any)?.instagram_business_account?.id;
       console.log("✅ Instagram Business account found:", instagramId);
 
-      // Step 4: Get Instagram account details
+      // Step 5: Get Instagram account details
       const accountResponse = await fetch(
         `https://graph.facebook.com/v21.0/${instagramId}?fields=id,username,profile_picture_url&access_token=${pageAccessToken}`
       );
@@ -86,17 +114,19 @@ export const handleOAuthCallback = action({
 
       console.log("✅ Instagram account info:", accountData);
 
-      // Step 5: Calculate token expiry
-      // Page access tokens don't expire (as long as page exists)
-      const expiresAt = Date.now() + (60 * 24 * 60 * 60 * 1000); // Set to 60 days for safety
+      // Step 6: Calculate token expiry
+      // Page access tokens derived from long-lived user tokens NEVER EXPIRE
+      // But we set a far-future date for tracking purposes
+      const expiresAt = Date.now() + (365 * 24 * 60 * 60 * 1000); // 1 year (effectively never)
 
-      // Step 6: Save integration to database
+      // Step 7: Save integration to database
       if (!args.userId) {
         throw new Error("User ID is required to save integration");
       }
 
+      // @ts-ignore - Deep type instantiation
       await ctx.runMutation(internal.integrations.internal.saveIntegration, {
-        token: pageAccessToken, // Use page access token (not user token)
+        token: pageAccessToken, // Page token derived from long-lived user token (NEVER EXPIRES)
         expiresAt,
         instagramId: (accountData as any)?.id,
         username: (accountData as any)?.username,
@@ -104,7 +134,7 @@ export const handleOAuthCallback = action({
         profilePictureUrl: (accountData as any)?.profile_picture_url,
       });
 
-      console.log("✅ Instagram integration saved for user:", args.userId);
+      console.log("✅ Instagram integration saved with NEVER-EXPIRING page token for user:", args.userId);
       
       return null;
     } catch (error) {
