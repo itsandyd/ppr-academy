@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { EmptyStateEnhanced } from "@/components/ui/empty-state-enhanced";
-import { Calendar, Clock, Instagram, Twitter, Facebook, Linkedin, TrendingUp, Plus, Trash2, Edit3, AlertTriangle, RefreshCw } from "lucide-react";
+import { Calendar, Clock, Instagram, Twitter, Facebook, Linkedin, TrendingUp, Plus, Trash2, Edit3, AlertTriangle, RefreshCw, Users, Send, CheckCircle, Zap, BarChart3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AccountManagementDialog } from "./account-management-dialog";
 import { PostComposer } from "./post-composer";
@@ -264,14 +264,47 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="accounts">Connected Accounts</TabsTrigger>
-          <TabsTrigger value="scheduled">
-            Scheduled ({scheduledPosts?.length || 0})
+        <TabsList className="w-full h-auto grid grid-cols-5 sm:flex sm:flex-nowrap gap-0.5 sm:gap-1 p-1 bg-muted/50">
+          <TabsTrigger 
+            value="accounts" 
+            className="flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 text-[10px] sm:text-sm px-1 sm:px-3 py-2 sm:py-2 min-w-0"
+          >
+            <Users className="h-4 w-4 sm:h-4 sm:w-4 flex-shrink-0" />
+            <span className="truncate">Accounts</span>
           </TabsTrigger>
-          <TabsTrigger value="published">Published</TabsTrigger>
-          <TabsTrigger value="automation">Automation</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger 
+            value="scheduled" 
+            className="flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 text-[10px] sm:text-sm px-1 sm:px-3 py-2 sm:py-2 min-w-0 relative"
+          >
+            <Send className="h-4 w-4 sm:h-4 sm:w-4 flex-shrink-0" />
+            <span className="truncate">Scheduled</span>
+            {(scheduledPosts?.length || 0) > 0 && (
+              <Badge variant="secondary" className="absolute -top-1 -right-1 sm:relative sm:top-0 sm:right-0 sm:ml-1 h-4 sm:h-5 min-w-4 sm:min-w-5 px-1 text-[9px] sm:text-xs flex items-center justify-center">
+                {scheduledPosts?.length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger 
+            value="published" 
+            className="flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 text-[10px] sm:text-sm px-1 sm:px-3 py-2 sm:py-2 min-w-0"
+          >
+            <CheckCircle className="h-4 w-4 sm:h-4 sm:w-4 flex-shrink-0" />
+            <span className="truncate">Published</span>
+          </TabsTrigger>
+          <TabsTrigger 
+            value="automation" 
+            className="flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 text-[10px] sm:text-sm px-1 sm:px-3 py-2 sm:py-2 min-w-0"
+          >
+            <Zap className="h-4 w-4 sm:h-4 sm:w-4 flex-shrink-0" />
+            <span className="truncate">Auto</span>
+          </TabsTrigger>
+          <TabsTrigger 
+            value="analytics" 
+            className="flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 text-[10px] sm:text-sm px-1 sm:px-3 py-2 sm:py-2 min-w-0"
+          >
+            <BarChart3 className="h-4 w-4 sm:h-4 sm:w-4 flex-shrink-0" />
+            <span className="truncate">Stats</span>
+          </TabsTrigger>
         </TabsList>
 
         {/* Connected Accounts Tab */}
