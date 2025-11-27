@@ -122,6 +122,23 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
   };
 
   const handleRefreshToken = async (accountId: string, platform: string) => {
+    // For Instagram, we need to reconnect via OAuth (tokens can't be refreshed programmatically)
+    if (platform === "instagram") {
+      setRefreshingToken(accountId);
+      toast({
+        title: "🔄 Reconnecting Instagram",
+        description: "Redirecting to Facebook Login to get a fresh token...",
+        className: "bg-white dark:bg-black",
+      });
+      
+      // Trigger the OAuth flow
+      setTimeout(() => {
+        connectPlatform("instagram");
+      }, 1000);
+      return;
+    }
+
+    // For other platforms, try the standard refresh
     setRefreshingToken(accountId);
     try {
       await refreshToken({
