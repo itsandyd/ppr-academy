@@ -28,6 +28,7 @@ import {
   Lock,
   ArrowRight,
   ChevronLeft,
+  Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
 import { InstagramPostSelector } from "./components/instagram-post-selector";
@@ -241,12 +242,15 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
               autoFocus
             />
           ) : (
-            <h1
-              className="text-2xl sm:text-3xl font-bold cursor-pointer hover:text-primary transition-colors truncate"
+            <button
+              className="flex items-center gap-2 group text-left"
               onClick={() => setIsEditingName(true)}
             >
-              {automation.name}
-            </h1>
+              <h1 className="text-2xl sm:text-3xl font-bold group-hover:text-primary transition-colors truncate">
+                {automation.name}
+              </h1>
+              <Pencil className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+            </button>
           )}
 
           <Button
