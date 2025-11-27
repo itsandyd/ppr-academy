@@ -264,46 +264,33 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="w-full h-auto grid grid-cols-5 sm:flex sm:flex-nowrap gap-0.5 sm:gap-1 p-1 bg-muted/50">
-          <TabsTrigger 
-            value="accounts" 
-            className="flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 text-[10px] sm:text-sm px-1 sm:px-3 py-2 sm:py-2 min-w-0"
-          >
-            <Users className="h-4 w-4 sm:h-4 sm:w-4 flex-shrink-0" />
-            <span className="truncate">Accounts</span>
+        {/* Mobile: Horizontal scroll with icons + short text */}
+        {/* Desktop: Clean horizontal tabs with full text */}
+        <TabsList className="w-full sm:w-auto h-auto overflow-x-auto flex gap-1 p-1">
+          <TabsTrigger value="accounts" className="gap-2 px-3 py-2 text-sm whitespace-nowrap">
+            <Users className="h-4 w-4 hidden sm:block" />
+            Accounts
           </TabsTrigger>
-          <TabsTrigger 
-            value="scheduled" 
-            className="flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 text-[10px] sm:text-sm px-1 sm:px-3 py-2 sm:py-2 min-w-0 relative"
-          >
-            <Send className="h-4 w-4 sm:h-4 sm:w-4 flex-shrink-0" />
-            <span className="truncate">Scheduled</span>
+          <TabsTrigger value="scheduled" className="gap-2 px-3 py-2 text-sm whitespace-nowrap">
+            <Send className="h-4 w-4 hidden sm:block" />
+            Scheduled
             {(scheduledPosts?.length || 0) > 0 && (
-              <Badge variant="secondary" className="absolute -top-1 -right-1 sm:relative sm:top-0 sm:right-0 sm:ml-1 h-4 sm:h-5 min-w-4 sm:min-w-5 px-1 text-[9px] sm:text-xs flex items-center justify-center">
+              <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
                 {scheduledPosts?.length}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger 
-            value="published" 
-            className="flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 text-[10px] sm:text-sm px-1 sm:px-3 py-2 sm:py-2 min-w-0"
-          >
-            <CheckCircle className="h-4 w-4 sm:h-4 sm:w-4 flex-shrink-0" />
-            <span className="truncate">Published</span>
+          <TabsTrigger value="published" className="gap-2 px-3 py-2 text-sm whitespace-nowrap">
+            <CheckCircle className="h-4 w-4 hidden sm:block" />
+            Published
           </TabsTrigger>
-          <TabsTrigger 
-            value="automation" 
-            className="flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 text-[10px] sm:text-sm px-1 sm:px-3 py-2 sm:py-2 min-w-0"
-          >
-            <Zap className="h-4 w-4 sm:h-4 sm:w-4 flex-shrink-0" />
-            <span className="truncate">Auto</span>
+          <TabsTrigger value="automation" className="gap-2 px-3 py-2 text-sm whitespace-nowrap">
+            <Zap className="h-4 w-4 hidden sm:block" />
+            Automation
           </TabsTrigger>
-          <TabsTrigger 
-            value="analytics" 
-            className="flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1.5 text-[10px] sm:text-sm px-1 sm:px-3 py-2 sm:py-2 min-w-0"
-          >
-            <BarChart3 className="h-4 w-4 sm:h-4 sm:w-4 flex-shrink-0" />
-            <span className="truncate">Stats</span>
+          <TabsTrigger value="analytics" className="gap-2 px-3 py-2 text-sm whitespace-nowrap">
+            <BarChart3 className="h-4 w-4 hidden sm:block" />
+            Analytics
           </TabsTrigger>
         </TabsList>
 
