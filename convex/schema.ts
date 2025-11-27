@@ -1206,6 +1206,70 @@ export default defineSchema({
     .index("by_parentCommentId", ["parentCommentId"])
     .index("by_isResolved", ["isResolved"]),
 
+  // Note Sources - Track external content sources for AI note generation
+  noteSources: defineTable({
+    userId: v.string(), // Clerk ID
+    storeId: v.string(),
+    
+    // Source type and identification
+    sourceType: v.union(
+      v.literal("pdf"),
+      v.literal("youtube"),
+      v.literal("website"),
+      v.literal("audio"),
+      v.literal("text")
+    ),
+    
+    // Source metadata
+    title: v.string(),
+    url: v.optional(v.string()), // For YouTube/website
+    storageId: v.optional(v.id("_storage")), // For uploaded PDFs/audio
+    fileName: v.optional(v.string()),
+    fileSize: v.optional(v.number()),
+    
+    // Extracted content
+    rawContent: v.optional(v.string()), // Full extracted text
+    contentChunks: v.optional(v.array(v.string())), // Split chunks for processing
+    summary: v.optional(v.string()), // AI-generated summary
+    keyPoints: v.optional(v.array(v.string())), // Extracted key points
+    
+    // Processing status
+    status: v.union(
+      v.literal("pending"),
+      v.literal("processing"),
+      v.literal("completed"),
+      v.literal("failed")
+    ),
+    errorMessage: v.optional(v.string()),
+    
+    // YouTube-specific metadata
+    youtubeVideoId: v.optional(v.string()),
+    youtubeDuration: v.optional(v.number()), // In seconds
+    youtubeChannel: v.optional(v.string()),
+    youtubeThumbnail: v.optional(v.string()),
+    
+    // Website-specific metadata
+    websiteDomain: v.optional(v.string()),
+    websiteAuthor: v.optional(v.string()),
+    websitePublishedDate: v.optional(v.string()),
+    
+    // Timestamps
+    createdAt: v.number(),
+    processedAt: v.optional(v.number()),
+    
+    // Generated notes
+    generatedNoteIds: v.optional(v.array(v.id("notes"))),
+    
+    // Tags for organization
+    tags: v.optional(v.array(v.string())),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_storeId", ["storeId"])
+    .index("by_user_and_store", ["userId", "storeId"])
+    .index("by_sourceType", ["sourceType"])
+    .index("by_status", ["status"])
+    .index("by_createdAt", ["createdAt"]),
+
   // Audio Files Storage
   audioFiles: defineTable({
     storageId: v.id("_storage"),

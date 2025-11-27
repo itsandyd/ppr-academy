@@ -288,6 +288,7 @@ export const clearAllPlugins: any = action({
     console.log("Clearing all plugin data...");
 
     // Delete in reverse order of dependencies
+    // @ts-ignore - Type instantiation is excessively deep
     const plugins = await ctx.runMutation(api.plugins.deleteAllPlugins, {
       clerkId: args.clerkId,
     });
@@ -442,7 +443,7 @@ export const updatePluginCategories: any = action({
       for (const plugin of data.plugins || []) {
         try {
           // Find existing plugin by slug from our map
-          const existingPlugin = pluginsBySlug.get(plugin.slug);
+          const existingPlugin = pluginsBySlug.get(plugin.slug) as { _id: Id<"plugins"> } | undefined;
           
           if (!existingPlugin) {
             skippedCount++;

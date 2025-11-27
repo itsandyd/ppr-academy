@@ -22,6 +22,7 @@ import {
   Target,
   Zap,
   Instagram,
+  StickyNote,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -61,6 +62,7 @@ const createLinks = [
   { href: '/dashboard?mode=create', label: 'Dashboard', icon: Home, color: 'text-purple-500' },
   { href: '/dashboard/products?mode=create', label: 'My Products', icon: Package, color: 'text-blue-500' },
   { href: '/dashboard/courses?mode=create', label: 'My Courses', icon: BookOpen, color: 'text-green-500' },
+  { href: '/dashboard/notes?mode=create', label: 'AI Notes', icon: StickyNote, color: 'text-amber-500' },
   { href: '/dashboard/social?mode=create', label: 'Social Media', icon: Instagram, color: 'text-pink-500' },
   { href: '/dashboard/create', label: 'Create New', icon: Plus, color: 'text-indigo-500', highlight: true },
   { href: '/dashboard/analytics?mode=create', label: 'Analytics', icon: BarChart3, color: 'text-orange-500' },

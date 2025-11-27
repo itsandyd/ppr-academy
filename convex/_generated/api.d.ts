@@ -98,6 +98,8 @@ import type * as inboxSync from "../inboxSync.js";
 import type * as integrations_instagram from "../integrations/instagram.js";
 import type * as integrations_internal from "../integrations/internal.js";
 import type * as integrations_queries from "../integrations/queries.js";
+import type * as langchainNotes from "../langchainNotes.js";
+import type * as langchainNotesActions from "../langchainNotesActions.js";
 import type * as leadSubmissions from "../leadSubmissions.js";
 import type * as leaderboards from "../leaderboards.js";
 import type * as lib_typeValidation from "../lib/typeValidation.js";
@@ -251,6 +253,8 @@ declare const fullApi: ApiFromModules<{
   "integrations/instagram": typeof integrations_instagram;
   "integrations/internal": typeof integrations_internal;
   "integrations/queries": typeof integrations_queries;
+  langchainNotes: typeof langchainNotes;
+  langchainNotesActions: typeof langchainNotesActions;
   leadSubmissions: typeof leadSubmissions;
   leaderboards: typeof leaderboards;
   "lib/typeValidation": typeof lib_typeValidation;
