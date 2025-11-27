@@ -3,6 +3,7 @@ import { query } from "../_generated/server";
 
 /**
  * Check if user has Instagram connected
+ * UNIFIED: Primary source is socialAccounts, fallback to legacy integrations
  */
 export const isInstagramConnected = query({
   args: {
@@ -14,6 +15,7 @@ export const isInstagramConnected = query({
       username: v.optional(v.string()),
       instagramId: v.optional(v.string()),
       expiresAt: v.optional(v.number()),
+      source: v.optional(v.string()),
     }),
     v.null()
   ),
@@ -24,7 +26,7 @@ export const isInstagramConnected = query({
       return { connected: false };
     }
 
-    // First check new socialAccounts table (preferred) - uses Clerk ID
+    // Check socialAccounts table (primary source)
     const socialAccount = await ctx.db
       .query("socialAccounts")
       .filter((q) => 
@@ -41,32 +43,35 @@ export const isInstagramConnected = query({
       return {
         connected: true,
         username: socialAccount.platformUsername,
-        instagramId: socialAccount.platformUserId,
+        instagramId: socialAccount.platformData?.instagramBusinessAccountId || socialAccount.platformUserId,
         expiresAt: socialAccount.tokenExpiresAt,
+        source: "socialAccounts",
       };
     }
 
-    // Fallback to legacy integrations table - uses Convex user ID
+    // Fallback to legacy integrations table
     const integration = await ctx.db
       .query("integrations")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .first();
 
-    if (!integration || !integration.isActive) {
-      return { connected: false };
+    if (integration?.isActive) {
+      return {
+        connected: true,
+        username: integration.username,
+        instagramId: integration.instagramId,
+        expiresAt: integration.expiresAt,
+        source: "integrations",
+      };
     }
 
-    return {
-      connected: true,
-      username: integration.username,
-      instagramId: integration.instagramId,
-      expiresAt: integration.expiresAt,
-    };
+    return { connected: false };
   },
 });
 
 /**
  * Get user's Instagram integration details
+ * UNIFIED: Primary source is socialAccounts, fallback to legacy integrations
  */
 export const getInstagramIntegration = query({
   args: {
@@ -80,7 +85,7 @@ export const getInstagramIntegration = query({
       return null;
     }
 
-    // First check new socialAccounts table (preferred) - uses Clerk ID
+    // Check socialAccounts table (primary source)
     const socialAccount = await ctx.db
       .query("socialAccounts")
       .filter((q) => 
@@ -94,16 +99,44 @@ export const getInstagramIntegration = query({
       .first();
 
     if (socialAccount) {
-      return socialAccount;
+      // Return in unified format with legacy compatibility
+      return {
+        _id: socialAccount._id,
+        source: "socialAccounts",
+        // Unified fields
+        platform: socialAccount.platform,
+        platformUserId: socialAccount.platformUserId,
+        platformUsername: socialAccount.platformUsername,
+        profileImageUrl: socialAccount.profileImageUrl,
+        accessToken: socialAccount.accessToken,
+        tokenExpiresAt: socialAccount.tokenExpiresAt,
+        isActive: socialAccount.isActive,
+        isConnected: socialAccount.isConnected,
+        lastVerified: socialAccount.lastVerified,
+        storeId: socialAccount.storeId,
+        platformData: socialAccount.platformData,
+        grantedScopes: socialAccount.grantedScopes,
+        // Legacy compatibility fields
+        instagramId: socialAccount.platformData?.instagramBusinessAccountId || socialAccount.platformUserId,
+        username: socialAccount.platformUsername,
+        token: socialAccount.accessToken,
+        expiresAt: socialAccount.tokenExpiresAt,
+      };
     }
 
-    // Fallback to legacy integrations table - uses Convex user ID
+    // Fallback to legacy integrations table
     const integration = await ctx.db
       .query("integrations")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .first();
 
-    return integration;
+    if (integration) {
+      return {
+        ...integration,
+        source: "integrations",
+      };
+    }
+
+    return null;
   },
 });
-

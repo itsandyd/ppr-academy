@@ -101,6 +101,7 @@ export const handleOAuthCallback = action({
         instagramId: (accountData as any)?.id,
         username: (accountData as any)?.username,
         userId: args.userId,
+        profilePictureUrl: (accountData as any)?.profile_picture_url,
       });
 
       console.log("✅ Instagram integration saved for user:", args.userId);

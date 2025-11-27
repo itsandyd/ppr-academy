@@ -19,6 +19,8 @@ import {
   Instagram,
   AlertCircle,
   Trash2,
+  RefreshCw,
+  Unplug,
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -44,6 +46,7 @@ export function InstagramAutomations({ storeId, userId }: InstagramAutomationsPr
   const router = useRouter();
   const [creatingAutomation, setCreatingAutomation] = useState(false);
   const [deletingAutomation, setDeletingAutomation] = useState<string | null>(null);
+  const [isReconnecting, setIsReconnecting] = useState(false);
 
   // Get Convex user
   const convexUser = useQuery(
@@ -68,6 +71,33 @@ export function InstagramAutomations({ storeId, userId }: InstagramAutomationsPr
   // Mutations
   const createAutomation = useMutation(api.automations.createAutomation);
   const deleteAutomation = useMutation(api.automations.deleteAutomation);
+  const disconnectInstagram = useMutation(api.integrations.internal.disconnectInstagram);
+
+  // Handle reconnect - disconnect then reconnect
+  const handleReconnectInstagram = async () => {
+    if (!convexUser?._id) return;
+    
+    setIsReconnecting(true);
+    try {
+      // First disconnect
+      const result = await disconnectInstagram({ userId: convexUser._id });
+      
+      if (result.success) {
+        toast.success("Disconnected. Redirecting to reconnect...");
+        // Small delay then connect
+        setTimeout(() => {
+          handleConnectInstagram();
+        }, 500);
+      } else {
+        toast.error(result.message);
+        setIsReconnecting(false);
+      }
+    } catch (error) {
+      console.error("Reconnect error:", error);
+      toast.error("Failed to reconnect. Please try again.");
+      setIsReconnecting(false);
+    }
+  };
 
   const handleCreateAutomation = async () => {
     setCreatingAutomation(true);
@@ -270,15 +300,39 @@ export function InstagramAutomations({ storeId, userId }: InstagramAutomationsPr
           </p>
         </div>
 
-        <Button
-          size="lg"
-          onClick={handleCreateAutomation}
-          disabled={creatingAutomation}
-          className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          {creatingAutomation ? "Creating..." : "New Automation"}
-        </Button>
+        <div className="flex items-center gap-3">
+          {/* Reconnect button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleReconnectInstagram}
+            disabled={isReconnecting}
+            className="gap-2"
+            title="Fix token issues by reconnecting"
+          >
+            {isReconnecting ? (
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                Reconnecting...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="w-4 h-4" />
+                Reconnect Instagram
+              </>
+            )}
+          </Button>
+
+          <Button
+            size="lg"
+            onClick={handleCreateAutomation}
+            disabled={creatingAutomation}
+            className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            {creatingAutomation ? "Creating..." : "New Automation"}
+          </Button>
+        </div>
       </div>
 
       {/* Stats Overview */}
