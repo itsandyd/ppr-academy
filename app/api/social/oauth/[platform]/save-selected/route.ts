@@ -29,8 +29,15 @@ export async function POST(
 
     // Process the selected account based on platform
     if (platform === 'instagram' || platformParam === 'instagram') {
+      console.log('Processing Instagram account:', JSON.stringify(selectedAccount, null, 2));
+      
       const instagramAccount = selectedAccount.instagram;
       const connectedPage = selectedAccount.page;
+
+      if (!instagramAccount || !connectedPage) {
+        console.error('Missing Instagram account or page data:', { instagramAccount: !!instagramAccount, connectedPage: !!connectedPage });
+        return NextResponse.json({ error: 'Invalid Instagram account data' }, { status: 400 });
+      }
 
       userData = {
         id: instagramAccount.id,
@@ -43,6 +50,13 @@ export async function POST(
           facebookPageAccessToken: connectedPage.access_token,
         },
       };
+      
+      console.log('Instagram userData created:', {
+        id: userData.id,
+        username: userData.username,
+        displayName: userData.displayName,
+        facebookPageId: userData.platformData.facebookPageId
+      });
     } else if (platform === 'facebook' || platformParam === 'facebook') {
       const page = selectedAccount;
       const profilePicture = page.picture?.data?.url;
