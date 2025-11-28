@@ -3363,6 +3363,9 @@ export default defineSchema({
     name: v.string(),
     active: v.boolean(),
     
+    // Instagram Account Association
+    instagramAccountId: v.optional(v.string()), // Which Instagram account this automation uses
+    
     // Stats (for analytics dashboard)
     totalTriggers: v.optional(v.number()),
     totalResponses: v.optional(v.number()),

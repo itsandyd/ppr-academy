@@ -254,6 +254,7 @@ export const updateAutomation = mutation({
     automationId: v.id("automations"),
     name: v.optional(v.string()),
     active: v.optional(v.boolean()),
+    instagramAccountId: v.optional(v.string()),
   },
   returns: v.object({
     status: v.number(),
@@ -264,6 +265,7 @@ export const updateAutomation = mutation({
       const updateData: any = {};
       if (args.name !== undefined) updateData.name = args.name;
       if (args.active !== undefined) updateData.active = args.active;
+      if (args.instagramAccountId !== undefined) updateData.instagramAccountId = args.instagramAccountId;
 
       await ctx.db.patch(args.automationId, updateData);
 

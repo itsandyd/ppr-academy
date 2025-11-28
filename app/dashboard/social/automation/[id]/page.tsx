@@ -60,11 +60,21 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
   const [message, setMessage] = useState("");
   const [aiPrompt, setAiPrompt] = useState("");
   const [commentReply, setCommentReply] = useState("");
+  const [selectedInstagramAccount, setSelectedInstagramAccount] = useState<string>("");
 
   // Queries
   const automation = useQuery(api.automations.getAutomationById, {
     automationId: id as Id<"automations">,
   });
+
+  // Get Instagram accounts for this store
+  const socialAccounts = useQuery(api.socialMedia.getSocialAccounts, { 
+    storeId: storeId || "" 
+  });
+  
+  const instagramAccounts = socialAccounts?.filter(
+    (account: any) => account.platform === "instagram" && account.isConnected
+  ) || [];
 
   // Mutations
   const updateAutomation = useMutation(api.automations.updateAutomation);
@@ -84,6 +94,13 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
       setMessage(automation.listener.prompt || "");
       setAiPrompt(automation.listener.prompt || "");
       setCommentReply(automation.listener.commentReply || "");
+    }
+    // Set selected Instagram account if available
+    if (automation.instagramAccountId && !selectedInstagramAccount) {
+      setSelectedInstagramAccount(automation.instagramAccountId);
+    } else if (instagramAccounts.length > 0 && !selectedInstagramAccount) {
+      // Default to first account if none selected
+      setSelectedInstagramAccount(instagramAccounts[0]._id);
     }
   }
 
@@ -162,6 +179,11 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
       return;
     }
 
+    if (!selectedInstagramAccount && instagramAccounts.length > 1) {
+      toast.error("Please select an Instagram account for this automation");
+      return;
+    }
+
     try {
       await saveListener({
         automationId: id as Id<"automations">,
@@ -169,6 +191,15 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
         prompt: promptValue,
         reply: commentReply,
       });
+
+      // Save selected Instagram account
+      if (selectedInstagramAccount) {
+        await updateAutomation({
+          automationId: id as Id<"automations">,
+          instagramAccountId: selectedInstagramAccount,
+        });
+      }
+
       toast.success("Action saved");
     } catch (error) {
       toast.error("Failed to save action");
@@ -277,6 +308,64 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
       <p className="text-xs sm:text-sm text-muted-foreground">
         All changes are saved automatically
       </p>
+
+      {/* Instagram Account Selection */}
+      {instagramAccounts.length > 1 && (
+        <Card className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950 border-purple-200 dark:border-purple-800">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Instagram className="w-5 h-5 text-purple-600" />
+              Instagram Account
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Choose which Instagram account this automation should use:
+            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {instagramAccounts.map((account: any) => {
+                const isSelected = selectedInstagramAccount === account._id;
+                return (
+                  <div 
+                    key={account._id}
+                    className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                      isSelected
+                        ? "border-purple-300 dark:border-purple-700 bg-purple-100 dark:bg-purple-900/30"
+                        : "border-border hover:border-purple-200 dark:hover:border-purple-800"
+                    }`}
+                    onClick={() => setSelectedInstagramAccount(account._id)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <img 
+                        src={account.profileImageUrl} 
+                        alt={account.platformUsername}
+                        className="w-8 h-8 rounded-full"
+                      />
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">@{account.platformUsername}</p>
+                        <p className="text-xs text-muted-foreground">{account.platformDisplayName}</p>
+                      </div>
+                      {isSelected && (
+                        <Badge className="bg-purple-600 text-white text-xs">Selected</Badge>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {selectedInstagramAccount && (
+              <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                <p className="text-sm text-green-800 dark:text-green-200">
+                  ✅ This automation will use <strong>@{instagramAccounts.find(a => a._id === selectedInstagramAccount)?.platformUsername}</strong> 
+                  for posting replies and sending messages.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="space-y-4 sm:space-y-6">
         {/* STEP 1: Trigger Configuration */}
