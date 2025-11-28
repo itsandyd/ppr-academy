@@ -84,6 +84,7 @@ import type * as embeddings from "../embeddings.js";
 import type * as enhancePluginDescriptions from "../enhancePluginDescriptions.js";
 import type * as fanCountAggregation from "../fanCountAggregation.js";
 import type * as files from "../files.js";
+import type * as fixAccounts from "../fixAccounts.js";
 import type * as fixes_bulkEnrollmentFix from "../fixes/bulkEnrollmentFix.js";
 import type * as fixes_enrollmentSync from "../fixes/enrollmentSync.js";
 import type * as followGateSubmissions from "../followGateSubmissions.js";
@@ -239,6 +240,7 @@ declare const fullApi: ApiFromModules<{
   enhancePluginDescriptions: typeof enhancePluginDescriptions;
   fanCountAggregation: typeof fanCountAggregation;
   files: typeof files;
+  fixAccounts: typeof fixAccounts;
   "fixes/bulkEnrollmentFix": typeof fixes_bulkEnrollmentFix;
   "fixes/enrollmentSync": typeof fixes_enrollmentSync;
   followGateSubmissions: typeof followGateSubmissions;

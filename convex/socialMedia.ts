@@ -181,17 +181,21 @@ export const connectSocialAccount = mutation({
   },
   returns: v.id("socialAccounts"),
   handler: async (ctx, args) => {
-    // Check for existing account by user + platform + platformUserId
+    // Check for existing account by EXACT platformUserId only (not platform)
+    // This allows multiple Instagram accounts while preventing duplicates of the same account
     const existing = await ctx.db
-      .query("socialAccounts")
+      .query("socialAccounts") 
       .filter((q) => 
         q.and(
-          q.eq(q.field("userId"), args.userId),
+          q.eq(q.field("storeId"), args.storeId),
           q.eq(q.field("platform"), args.platform),
           q.eq(q.field("platformUserId"), args.platformUserId)
         )
       )
       .first();
+
+    console.log(`🔍 Looking for existing account: platform=${args.platform}, storeId=${args.storeId}, platformUserId=${args.platformUserId}`);
+    console.log(`📋 Found existing:`, existing ? `Yes (${existing.platformUsername})` : 'No');
 
     if (existing) {
       // Update existing account
@@ -214,38 +218,7 @@ export const connectSocialAccount = mutation({
       return existing._id;
     }
 
-    // Also check for existing by user + platform only (same platform, different account ID)
-    const existingByPlatform = await ctx.db
-      .query("socialAccounts")
-      .filter((q) => 
-        q.and(
-          q.eq(q.field("userId"), args.userId),
-          q.eq(q.field("platform"), args.platform)
-        )
-      )
-      .first();
-
-    if (existingByPlatform) {
-      // User reconnected with same platform - update existing record
-      await ctx.db.patch(existingByPlatform._id, {
-        storeId: args.storeId,
-        platformUserId: args.platformUserId,
-        platformUsername: args.platformUsername,
-        platformDisplayName: args.platformDisplayName,
-        profileImageUrl: args.profileImageUrl,
-        accessToken: args.accessToken,
-        refreshToken: args.refreshToken,
-        tokenExpiresAt: args.tokenExpiresAt,
-        isActive: true,
-        isConnected: true,
-        lastVerified: Date.now(),
-        connectionError: undefined,
-        grantedScopes: args.grantedScopes,
-        platformData: args.platformData,
-      });
-      console.log("✅ Updated existing platform account:", existingByPlatform._id);
-      return existingByPlatform._id;
-    }
+    // Removed the problematic platform-only check that was overwriting different accounts
 
     // Create new account
     const newId = await ctx.db.insert("socialAccounts", {

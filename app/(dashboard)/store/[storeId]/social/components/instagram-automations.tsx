@@ -66,7 +66,17 @@ export function InstagramAutomations({ storeId, userId }: InstagramAutomationsPr
     convexUser?._id ? { userId: convexUser._id } : "skip"
   );
 
-  const isInstagramConnected = instagramStatus?.connected || false;
+  // Get all Instagram accounts for this store
+  const instagramAccounts = useQuery(
+    api.socialMedia.getSocialAccounts,
+    { storeId }
+  );
+
+  const connectedInstagramAccounts = instagramAccounts?.filter(
+    (account: any) => account.platform === "instagram" && account.isConnected
+  ) || [];
+
+  const isInstagramConnected = connectedInstagramAccounts.length > 0;
 
   // Mutations
   const createAutomation = useMutation(api.automations.createAutomation);
@@ -297,7 +307,40 @@ export function InstagramAutomations({ storeId, userId }: InstagramAutomationsPr
           <h2 className="text-2xl font-bold mb-1">Instagram Automations</h2>
           <p className="text-muted-foreground text-sm">
             Automate your Instagram DMs and comments to capture leads
+            {connectedInstagramAccounts.length > 1 && (
+              <span className="ml-2 text-blue-600">
+                • {connectedInstagramAccounts.length} accounts connected
+              </span>
+            )}
           </p>
+          
+          {/* Account Selector for Multiple Accounts */}
+          {connectedInstagramAccounts.length > 1 && (
+            <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <div className="flex items-center gap-3">
+                <Instagram className="w-5 h-5 text-blue-600" />
+                <div>
+                  <p className="font-medium text-blue-900 dark:text-blue-100 text-sm">
+                    Multiple Instagram Accounts Detected
+                  </p>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {connectedInstagramAccounts.map((account: any) => (
+                      <Badge 
+                        key={account._id} 
+                        variant="outline" 
+                        className="bg-white dark:bg-blue-900 text-blue-700 dark:text-blue-200"
+                      >
+                        @{account.platformUsername}
+                      </Badge>
+                    ))}
+                  </div>
+                  <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+                    Automations will use the most recently verified account. Use "Refresh" to update tokens.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-3">
