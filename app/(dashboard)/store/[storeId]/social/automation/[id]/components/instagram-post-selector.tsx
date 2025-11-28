@@ -28,12 +28,14 @@ interface InstagramPostSelectorProps {
   userId: Id<"users">;
   automationId: Id<"automations">;
   selectedPostIds?: string[];
+  selectedInstagramAccount?: string; // Filter posts by this Instagram account
 }
 
 export function InstagramPostSelector({
   userId,
   automationId,
   selectedPostIds = [],
+  selectedInstagramAccount,
 }: InstagramPostSelectorProps) {
   const [posts, setPosts] = useState<InstagramPost[]>([]);
   const [loading, setLoading] = useState(false);
@@ -55,6 +57,13 @@ export function InstagramPostSelector({
   useEffect(() => {
     loadPosts();
   }, []);
+
+  // Reload posts when selected Instagram account changes
+  useEffect(() => {
+    if (selectedInstagramAccount) {
+      loadPosts();
+    }
+  }, [selectedInstagramAccount]);
 
   // Sync selected posts from automation data
   useEffect(() => {

@@ -96,6 +96,7 @@ import type * as inboxActions from "../inboxActions.js";
 import type * as inboxHelpers from "../inboxHelpers.js";
 import type * as inboxQueries from "../inboxQueries.js";
 import type * as inboxSync from "../inboxSync.js";
+import type * as instagram_debug from "../instagram_debug.js";
 import type * as integrations_instagram from "../integrations/instagram.js";
 import type * as integrations_internal from "../integrations/internal.js";
 import type * as integrations_queries from "../integrations/queries.js";
@@ -252,6 +253,7 @@ declare const fullApi: ApiFromModules<{
   inboxHelpers: typeof inboxHelpers;
   inboxQueries: typeof inboxQueries;
   inboxSync: typeof inboxSync;
+  instagram_debug: typeof instagram_debug;
   "integrations/instagram": typeof integrations_instagram;
   "integrations/internal": typeof integrations_internal;
   "integrations/queries": typeof integrations_queries;

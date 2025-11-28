@@ -711,6 +711,7 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
                 userId={automation.user._id}
                 automationId={id as Id<"automations">}
                 selectedPostIds={automation.posts?.map((p: any) => p.postId) || []}
+                selectedInstagramAccount={selectedInstagramAccount}
               />
             </CardContent>
           </Card>

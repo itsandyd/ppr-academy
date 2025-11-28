@@ -150,6 +150,7 @@ export const handleOAuthCallback = action({
 export const getUserPosts = action({
   args: {
     userId: v.id("users"),
+    instagramAccountId: v.optional(v.string()), // Specific Instagram account to fetch posts from
   },
   returns: v.object({
     status: v.number(),
@@ -157,17 +158,44 @@ export const getUserPosts = action({
   }),
   handler: async (ctx, args) => {
     try {
-      // Get user's Instagram connection (use internal query to avoid circular imports)
-      const integration: any = await ctx.runQuery(internal.integrations.internal.getIntegration, {
-        userId: args.userId,
-      });
+      let integration: any;
 
-      if (!integration) {
-        console.error("❌ No Instagram connection found for user:", args.userId);
-        return { status: 404, data: { error: "No Instagram connection found" } };
+      if (args.instagramAccountId) {
+        console.log("🎯 Fetching posts for specific account:", args.instagramAccountId);
+        
+        // Get specific Instagram account via debug query
+        const accountData = await ctx.runQuery(api.instagram_debug.getAccountData, {
+          accountId: args.instagramAccountId,
+        });
+        
+        if (!accountData) {
+          console.error("❌ Specific Instagram account not found:", args.instagramAccountId);
+          return { status: 404, data: { error: "Instagram account not found" } };
+        }
+
+        integration = {
+          instagramId: accountData.instagramBusinessId,
+          token: accountData.accessToken,
+          username: accountData.username,
+          platformUsername: accountData.username,
+          accessToken: accountData.accessToken,
+        };
+        
+        console.log("✅ Using specific Instagram account:", accountData.username);
+      } else {
+        // Fallback to generic integration lookup
+        console.log("📡 Using generic integration lookup");
+        integration = await ctx.runQuery(internal.integrations.internal.getIntegration, {
+          userId: args.userId,
+        });
+
+        if (!integration) {
+          console.error("❌ No Instagram connection found for user:", args.userId);
+          return { status: 404, data: { error: "No Instagram connection found" } };
+        }
+
+        console.log("✅ Instagram connection found. Username:", integration.platformUsername || integration.username);
       }
-
-      console.log("✅ Instagram connection found. Username:", integration.platformUsername || integration.username);
 
       // Get Instagram Business Account ID and access token
       let instagramId: string;

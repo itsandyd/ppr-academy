@@ -25,6 +25,7 @@ export const getSocialAccounts = query({
 export const getInstagramToken = query({
   args: {
     userId: v.id("users"),
+    accountId: v.optional(v.string()),
   },
   returns: v.union(
     v.object({
