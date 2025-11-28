@@ -266,7 +266,9 @@ async function executeAutomation(
   }
 
   console.log("✅ Found Instagram connection:", tokenData.username, "for business ID:", receiverId);
+  console.log("📄 Facebook Page ID:", tokenData.facebookPageId || "NOT FOUND (using legacy mode)");
   const accessToken = tokenData.accessToken;
+  const facebookPageId = tokenData.facebookPageId;
 
   // LISTENER TYPE 1: MESSAGE - Send DM with optional comment reply
   if (listener.listener === "MESSAGE") {
@@ -278,11 +280,12 @@ async function executeAutomation(
     if (!isDM && commentId) {
       console.log("📱 Comment trigger - sending private message");
       
-      // Use Instagram's private reply API (links DM to the comment)
+      // Use Facebook's private reply API (links DM to the comment)
       const dmSuccess = await sendPrivateMessage({
         accessToken,
         commentId,
         message: dmMessage,
+        facebookPageId,
       });
 
       if (dmSuccess) {
@@ -296,6 +299,7 @@ async function executeAutomation(
             accessToken,
             recipientId: senderId,
             message: dmMessage,
+            facebookPageId,
           });
         }
       }
@@ -307,6 +311,7 @@ async function executeAutomation(
           accessToken,
           commentId,
           message: listener.commentReply,
+          facebookPageId,
         });
       }
     }
@@ -319,6 +324,7 @@ async function executeAutomation(
         accessToken,
         recipientId: senderId,
         message: dmMessage,
+        facebookPageId,
       });
     }
 
@@ -383,6 +389,7 @@ async function executeAutomation(
         accessToken,
         commentId,
         message: aiResponse,
+        facebookPageId,
       });
 
       // Also reply to comment if configured
@@ -391,6 +398,7 @@ async function executeAutomation(
           accessToken,
           commentId,
           message: listener.commentReply,
+          facebookPageId,
         });
       }
     } else {
@@ -399,6 +407,7 @@ async function executeAutomation(
         accessToken,
         recipientId: senderId,
         message: aiResponse,
+        facebookPageId,
       });
     }
 
@@ -500,6 +509,7 @@ async function continueSmartAIConversation(
     accessToken: tokenData.accessToken,
     recipientId: senderId,
     message: aiResponse,
+    facebookPageId: tokenData.facebookPageId,
   });
 
   // Track the response
@@ -587,6 +597,7 @@ async function sendInstagramDM(options: {
   accessToken: string;
   recipientId: string;
   message: string;
+  facebookPageId?: string;
 }): Promise<boolean> {
   const { accessToken, recipientId, message } = options;
 
@@ -628,12 +639,13 @@ async function sendPrivateMessage(options: {
   accessToken: string;
   commentId: string;
   message: string;
+  facebookPageId?: string;
 }): Promise<boolean> {
   const { accessToken, commentId, message } = options;
 
   try {
     const response = await fetch(
-      `https://graph.instagram.com/me/messages`,
+      `https://graph.instagram.com/v21.0/me/messages`,
       {
         method: "POST",
         headers: {
@@ -668,6 +680,7 @@ async function replyToComment(options: {
   accessToken: string;
   commentId: string;
   message: string;
+  facebookPageId?: string;
 }): Promise<boolean> {
   const { accessToken, commentId, message } = options;
 
