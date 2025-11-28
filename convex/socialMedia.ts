@@ -19,6 +19,55 @@ export const getSocialAccounts = query({
 });
 
 /**
+ * Get Instagram access token by Instagram Business Account ID (for webhooks)
+ * This is the preferred method for webhook processing - uses the exact account
+ */
+export const getInstagramTokenByBusinessId = query({
+  args: {
+    instagramBusinessAccountId: v.string(),
+  },
+  returns: v.union(
+    v.object({
+      accessToken: v.string(),
+      username: v.string(),
+      instagramId: v.string(),
+    }),
+    v.null()
+  ),
+  handler: async (ctx, args) => {
+    console.log("🔍 getInstagramTokenByBusinessId: Looking for account with ID:", args.instagramBusinessAccountId);
+
+    // Find the socialAccount by Instagram Business Account ID
+    const socialAccounts = await ctx.db
+      .query("socialAccounts")
+      .filter((q) => 
+        q.and(
+          q.eq(q.field("platform"), "instagram"),
+          q.eq(q.field("isConnected"), true),
+          q.eq(q.field("isActive"), true)
+        )
+      )
+      .collect();
+
+    // Look through accounts to find one with matching instagramBusinessAccountId
+    for (const account of socialAccounts) {
+      const platformData = account.platformData as any;
+      if (platformData?.instagramBusinessAccountId === args.instagramBusinessAccountId) {
+        console.log("✅ getInstagramTokenByBusinessId: Found account:", account.platformUsername);
+        return {
+          accessToken: account.accessToken,
+          username: account.platformUsername || "",
+          instagramId: account.platformUserId,
+        };
+      }
+    }
+
+    console.log("❌ getInstagramTokenByBusinessId: No account found for business ID:", args.instagramBusinessAccountId);
+    return null;
+  },
+});
+
+/**
  * Get Instagram access token for a user (for webhook use)
  * Checks both socialAccounts and integrations tables
  */
@@ -45,23 +94,7 @@ export const getInstagramToken = query({
 
     console.log("🔍 getInstagramToken: Looking for Instagram token for user:", user.email || user.clerkId);
 
-    // First, check the integrations table (used by automations)
-    const integration = await ctx.db
-      .query("integrations")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .filter((q) => q.eq(q.field("name"), "INSTAGRAM"))
-      .first();
-
-    if (integration?.token) {
-      console.log("✅ getInstagramToken: Found token in integrations table");
-      return {
-        accessToken: integration.token,
-        username: integration.username || "",
-        instagramId: integration.instagramId || "",
-      };
-    }
-
-    // Fallback: check socialAccounts table (used by scheduling)
+    // PRIORITY: Check socialAccounts table first (has fresh tokens)
     const socialAccount = await ctx.db
       .query("socialAccounts")
       .filter((q) => 
@@ -75,12 +108,28 @@ export const getInstagramToken = query({
       .first();
 
     if (socialAccount?.accessToken) {
-      console.log("✅ getInstagramToken: Found token in socialAccounts table");
-    return {
+      console.log("✅ getInstagramToken: Found token in socialAccounts table for:", socialAccount.platformUsername);
+      return {
         accessToken: socialAccount.accessToken,
-      username: socialAccount.platformUsername || "",
-      instagramId: socialAccount.platformUserId,
-    };
+        username: socialAccount.platformUsername || "",
+        instagramId: socialAccount.platformUserId,
+      };
+    }
+
+    // Fallback: check integrations table (legacy)
+    const integration = await ctx.db
+      .query("integrations")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .filter((q) => q.eq(q.field("name"), "INSTAGRAM"))
+      .first();
+
+    if (integration?.token) {
+      console.log("⚠️ getInstagramToken: Using legacy integrations table token");
+      return {
+        accessToken: integration.token,
+        username: integration.username || "",
+        instagramId: integration.instagramId || "",
+      };
     }
 
     console.log("❌ getInstagramToken: No Instagram token found in either table");

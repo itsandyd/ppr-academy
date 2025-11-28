@@ -246,17 +246,26 @@ async function executeAutomation(
   const listener = automation.listener;
   const userPlan = automation.User?.subscription?.plan || "FREE";
   
-  // Get fresh Instagram token via query
-  const tokenData = await ctx.runQuery(api.socialMedia.getInstagramToken, {
-    userId: automation.userId,
+  // Get fresh Instagram token - use the exact account that received the webhook
+  // receiverId is the Instagram Business Account ID from the webhook
+  let tokenData = await ctx.runQuery(api.socialMedia.getInstagramTokenByBusinessId, {
+    instagramBusinessAccountId: receiverId,
   });
 
+  // Fallback to user-based lookup if business ID lookup fails
   if (!tokenData?.accessToken) {
-    console.error("❌ No active Instagram connection found");
+    console.log("⚠️ Token not found by business ID, trying user-based lookup...");
+    tokenData = await ctx.runQuery(api.socialMedia.getInstagramToken, {
+      userId: automation.userId,
+    });
+  }
+
+  if (!tokenData?.accessToken) {
+    console.error("❌ No active Instagram connection found for account:", receiverId);
     return;
   }
 
-  console.log("✅ Found Instagram connection:", tokenData.username);
+  console.log("✅ Found Instagram connection:", tokenData.username, "for business ID:", receiverId);
   const accessToken = tokenData.accessToken;
 
   // LISTENER TYPE 1: MESSAGE - Send DM with optional comment reply
@@ -439,13 +448,21 @@ async function continueSmartAIConversation(
   // }
   console.log("🤖 Continuing Smart AI (plan check bypassed for development)");
 
-  // Get Instagram token
-  const tokenData = await ctx.runQuery(api.socialMedia.getInstagramToken, {
-    userId: automation.userId,
+  // Get Instagram token - use the exact account that received the webhook
+  let tokenData = await ctx.runQuery(api.socialMedia.getInstagramTokenByBusinessId, {
+    instagramBusinessAccountId: receiverId,
   });
 
+  // Fallback to user-based lookup if business ID lookup fails
   if (!tokenData?.accessToken) {
-    console.error("❌ No active Instagram connection");
+    console.log("⚠️ Token not found by business ID, trying user-based lookup...");
+    tokenData = await ctx.runQuery(api.socialMedia.getInstagramToken, {
+      userId: automation.userId,
+    });
+  }
+
+  if (!tokenData?.accessToken) {
+    console.error("❌ No active Instagram connection for:", receiverId);
     return;
   }
 
