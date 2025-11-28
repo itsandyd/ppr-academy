@@ -248,6 +248,57 @@ export const updateToken = internalMutation({
 });
 
 /**
+ * Manually update Instagram token with a working token from Graph API Explorer
+ * This bypasses the broken OAuth flow
+ */
+export const updateInstagramToken = mutation({
+  args: {
+    username: v.string(), // "abletonppr" or "pauseplayrepeat"
+    token: v.string(), // The new token from Graph API Explorer
+  },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    try {
+      // Find the integration by username
+      const integration = await ctx.db
+        .query("integrations")
+        .filter((q) => q.eq(q.field("username"), args.username))
+        .first();
+
+      if (!integration) {
+        return {
+          success: false,
+          message: `No integration found for @${args.username}`,
+        };
+      }
+
+      // Update the token (set expiry to 60 days from now for long-lived tokens)
+      const expiresAt = Date.now() + (60 * 24 * 60 * 60 * 1000); // 60 days
+      await ctx.db.patch(integration._id, {
+        token: args.token,
+        expiresAt,
+        lastVerified: Date.now(),
+      });
+
+      console.log(`✅ Token manually updated for @${args.username}`);
+      return {
+        success: true,
+        message: `Token updated for @${args.username}. Will expire in 60 days.`,
+      };
+    } catch (error) {
+      console.error("❌ Token update error:", error);
+      return {
+        success: false,
+        message: "Failed to update token.",
+      };
+    }
+  },
+});
+
+/**
  * Disconnect Instagram integration (public mutation)
  * UNIFIED: Removes from both socialAccounts and legacy integrations
  */

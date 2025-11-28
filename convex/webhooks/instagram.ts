@@ -281,11 +281,12 @@ async function executeAutomation(
       console.log("📱 Comment trigger - sending private message");
       
       // Use Facebook's private reply API (links DM to the comment)
+      // receiverId IS the Instagram Business Account ID from the webhook
       const dmSuccess = await sendPrivateMessage({
         accessToken,
         commentId,
         message: dmMessage,
-        facebookPageId,
+        instagramBusinessAccountId: receiverId,
       });
 
       if (dmSuccess) {
@@ -299,7 +300,7 @@ async function executeAutomation(
             accessToken,
             recipientId: senderId,
             message: dmMessage,
-            facebookPageId,
+            instagramBusinessAccountId: receiverId,
           });
         }
       }
@@ -311,7 +312,6 @@ async function executeAutomation(
           accessToken,
           commentId,
           message: listener.commentReply,
-          facebookPageId,
         });
       }
     }
@@ -324,7 +324,7 @@ async function executeAutomation(
         accessToken,
         recipientId: senderId,
         message: dmMessage,
-        facebookPageId,
+        instagramBusinessAccountId: receiverId,
       });
     }
 
@@ -389,7 +389,7 @@ async function executeAutomation(
         accessToken,
         commentId,
         message: aiResponse,
-        facebookPageId,
+        instagramBusinessAccountId: receiverId,
       });
 
       // Also reply to comment if configured
@@ -398,7 +398,6 @@ async function executeAutomation(
           accessToken,
           commentId,
           message: listener.commentReply,
-          facebookPageId,
         });
       }
     } else {
@@ -407,7 +406,7 @@ async function executeAutomation(
         accessToken,
         recipientId: senderId,
         message: aiResponse,
-        facebookPageId,
+        instagramBusinessAccountId: receiverId,
       });
     }
 
@@ -509,7 +508,7 @@ async function continueSmartAIConversation(
     accessToken: tokenData.accessToken,
     recipientId: senderId,
     message: aiResponse,
-    facebookPageId: tokenData.facebookPageId,
+    instagramBusinessAccountId: receiverId,
   });
 
   // Track the response
@@ -592,30 +591,39 @@ async function generateAIResponse(
 
 /**
  * Send Direct Message via Instagram API
+ * IMPORTANT: Uses graph.facebook.com because we have Facebook Page Access Tokens (EAAb...)
+ * NOT graph.instagram.com which requires Instagram User Access Tokens (IGAA...)
  */
 async function sendInstagramDM(options: {
   accessToken: string;
   recipientId: string;
   message: string;
-  facebookPageId?: string;
+  instagramBusinessAccountId?: string; // The Instagram Business Account ID from the webhook
 }): Promise<boolean> {
-  const { accessToken, recipientId, message } = options;
+  const { accessToken, recipientId, message, instagramBusinessAccountId } = options;
+
+  if (!instagramBusinessAccountId) {
+    console.error("❌ Missing instagramBusinessAccountId for DM");
+    return false;
+  }
 
   try {
-    const response = await fetch(
-      `https://graph.instagram.com/v21.0/me/messages`,
-      {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          recipient: { id: recipientId },
-          message: { text: message },
-        }),
-      }
-    );
+    // Use graph.facebook.com with Instagram Business Account ID
+    // This works with Facebook Page Access Tokens (EAAb...)
+    const url = `https://graph.facebook.com/v21.0/${instagramBusinessAccountId}/messages`;
+    console.log("📤 Sending DM via:", url);
+    
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        recipient: { id: recipientId },
+        message: { text: message },
+        access_token: accessToken,
+      }),
+    });
 
     if (!response.ok) {
       const error = await response.json();
@@ -634,30 +642,37 @@ async function sendInstagramDM(options: {
 /**
  * Send Private Message (for comment triggers)
  * This bypasses the "request message" inbox
+ * Uses graph.facebook.com with Instagram Business Account ID
  */
 async function sendPrivateMessage(options: {
   accessToken: string;
   commentId: string;
   message: string;
-  facebookPageId?: string;
+  instagramBusinessAccountId?: string;
 }): Promise<boolean> {
-  const { accessToken, commentId, message } = options;
+  const { accessToken, commentId, message, instagramBusinessAccountId } = options;
+
+  if (!instagramBusinessAccountId) {
+    console.error("❌ Missing instagramBusinessAccountId for private message");
+    return false;
+  }
 
   try {
-    const response = await fetch(
-      `https://graph.instagram.com/v21.0/me/messages`,
-      {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          recipient: { comment_id: commentId },
-          message: { text: message },
-        }),
-      }
-    );
+    // Use graph.facebook.com with Instagram Business Account ID
+    const url = `https://graph.facebook.com/v21.0/${instagramBusinessAccountId}/messages`;
+    console.log("📤 Sending private message via:", url);
+    
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        recipient: { comment_id: commentId },
+        message: { text: message },
+        access_token: accessToken,
+      }),
+    });
 
     if (!response.ok) {
       const error = await response.json();
@@ -675,27 +690,30 @@ async function sendPrivateMessage(options: {
 
 /**
  * Reply to Instagram comment
+ * Uses graph.facebook.com for Facebook Page Access Tokens
  */
 async function replyToComment(options: {
   accessToken: string;
   commentId: string;
   message: string;
-  facebookPageId?: string;
 }): Promise<boolean> {
   const { accessToken, commentId, message } = options;
 
   try {
-    const response = await fetch(
-      `https://graph.instagram.com/v21.0/${commentId}/replies`,
-      {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ message }),
-      }
-    );
+    // Comment replies work with graph.facebook.com
+    const url = `https://graph.facebook.com/v21.0/${commentId}/replies`;
+    console.log("📤 Replying to comment via:", url);
+    
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ 
+        message,
+        access_token: accessToken,
+      }),
+    });
 
     if (!response.ok) {
       const error = await response.json();
