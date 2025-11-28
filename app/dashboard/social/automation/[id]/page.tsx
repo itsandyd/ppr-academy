@@ -356,11 +356,34 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
             </div>
 
             {selectedInstagramAccount && (
-              <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-3">
+              <div className="flex items-center justify-between gap-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-3">
                 <p className="text-sm text-green-800 dark:text-green-200">
                   ✅ This automation will use <strong>@{instagramAccounts.find(a => a._id === selectedInstagramAccount)?.platformUsername}</strong> 
                   for posting replies and sending messages.
                 </p>
+                {selectedInstagramAccount !== automation?.instagramAccountId && (
+                  <Button
+                    size="sm"
+                    onClick={async () => {
+                      try {
+                        await updateAutomation({
+                          automationId: id as Id<"automations">,
+                          instagramAccountId: selectedInstagramAccount as Id<"socialAccounts">,
+                        });
+                        toast.success("Instagram account saved!");
+                      } catch (error) {
+                        toast.error("Failed to save account");
+                      }
+                    }}
+                    className="bg-green-600 hover:bg-green-700 text-white shrink-0"
+                  >
+                    <Save className="w-4 h-4 mr-1" />
+                    Save
+                  </Button>
+                )}
+                {selectedInstagramAccount === automation?.instagramAccountId && (
+                  <Badge className="bg-green-600 text-white shrink-0">Saved ✓</Badge>
+                )}
               </div>
             )}
           </CardContent>
