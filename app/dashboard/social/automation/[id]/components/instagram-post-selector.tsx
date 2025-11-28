@@ -28,12 +28,14 @@ interface InstagramPostSelectorProps {
   userId: Id<"users">;
   automationId: Id<"automations">;
   selectedPostIds?: string[];
+  selectedInstagramAccount?: string; // Filter posts by this Instagram account
 }
 
 export function InstagramPostSelector({
   userId,
   automationId,
   selectedPostIds = [],
+  selectedInstagramAccount,
 }: InstagramPostSelectorProps) {
   const [posts, setPosts] = useState<InstagramPost[]>([]);
   const [loading, setLoading] = useState(false);
@@ -52,6 +54,13 @@ export function InstagramPostSelector({
     loadPosts();
   }, []);
 
+  // Reload posts when selected Instagram account changes
+  useEffect(() => {
+    if (selectedInstagramAccount) {
+      loadPosts();
+    }
+  }, [selectedInstagramAccount]);
+
   useEffect(() => {
     if (automation?.posts && automation.posts.length > 0) {
       const postIds = automation.posts.map((p: any) => p.postId);
@@ -64,7 +73,11 @@ export function InstagramPostSelector({
   const loadPosts = async () => {
     setLoading(true);
     try {
-      const result = await fetchPosts({ userId });
+      console.log("📡 Fetching Instagram posts for user:", userId, "account:", selectedInstagramAccount);
+      const result = await fetchPosts({ 
+        userId,
+        instagramAccountId: selectedInstagramAccount || undefined,
+      });
       
       if (result.status === 200 && result.data) {
         if (!Array.isArray(result.data)) {
