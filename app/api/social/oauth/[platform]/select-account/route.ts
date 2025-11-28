@@ -189,10 +189,10 @@ export async function GET(
       <body>
         <div class="container">
           <div id="selection-view">
-            <h1>🎯 Select Account to Connect</h1>
+            <h1>🎯 Connect Your Accounts</h1>
             <p>
               You have multiple ${platform === 'instagram' ? 'Instagram' : 'Facebook'} accounts. 
-              Choose which one you'd like to connect to your store:
+              Select which ones you'd like to connect to your store:
             </p>
             
             <div class="account-list" id="accountList">
@@ -225,7 +225,7 @@ export async function GET(
                 Cancel
               </button>
               <button type="button" class="btn-primary" id="connectBtn" onclick="connect()" disabled>
-                Connect Selected Account
+                Select Accounts to Connect
               </button>
             </div>
           </div>
@@ -237,7 +237,7 @@ export async function GET(
         </div>
 
         <script>
-          let selectedIndex = null;
+          let selectedAccounts = new Set();
           const accounts = ${JSON.stringify(accountsData)};
           const platform = '${platform}';
           const storeId = '${storeId}';
@@ -245,67 +245,103 @@ export async function GET(
           const accessToken = '${accessToken}';
 
           function selectAccount(index) {
-            selectedIndex = index;
+            // Toggle selection (multi-select)
+            if (selectedAccounts.has(index)) {
+              selectedAccounts.delete(index);
+            } else {
+              selectedAccounts.add(index);
+            }
             
             // Update UI
             document.querySelectorAll('.account-card').forEach((card, i) => {
-              if (i === index) {
+              if (selectedAccounts.has(i)) {
                 card.classList.add('selected');
               } else {
                 card.classList.remove('selected');
               }
             });
             
-            // Enable connect button
-            document.getElementById('connectBtn').disabled = false;
+            // Update button text and state
+            const connectBtn = document.getElementById('connectBtn');
+            const count = selectedAccounts.size;
+            if (count > 0) {
+              connectBtn.disabled = false;
+              connectBtn.textContent = \`Connect \${count} Account\${count === 1 ? '' : 's'}\`;
+            } else {
+              connectBtn.disabled = true;
+              connectBtn.textContent = 'Select Accounts to Connect';
+            }
           }
 
           async function connect() {
-            if (selectedIndex === null) return;
+            if (selectedAccounts.size === 0) return;
             
             // Show loading
             document.getElementById('selection-view').style.display = 'none';
             document.getElementById('loading').classList.add('active');
 
             try {
-              const selectedAccount = accounts[selectedIndex];
+              let successCount = 0;
+              let errorCount = 0;
               
-              // Call API to save this specific account
-              const response = await fetch('/api/social/oauth/${platform}/save-selected', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  storeId,
-                  userId,
-                  platform,
-                  selectedAccount,
-                  accessToken,
-                }),
-              });
+              // Connect each selected account
+              for (const index of selectedAccounts) {
+                const selectedAccount = accounts[index];
+                
+                try {
+                  const response = await fetch('/api/social/oauth/${platform}/save-selected', {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                      storeId,
+                      userId,
+                      platform,
+                      selectedAccount,
+                      accessToken,
+                    }),
+                  });
 
-              if (response.ok) {
-                // Notify parent window and close
+                  if (response.ok) {
+                    successCount++;
+                  } else {
+                    errorCount++;
+                    console.error(\`Failed to connect account \${index}\`, await response.text());
+                  }
+                } catch (err) {
+                  errorCount++;
+                  console.error(\`Error connecting account \${index}:\`, err);
+                }
+              }
+
+              // Show results
+              if (successCount > 0) {
+                // Notify parent window of successful connections
                 if (window.opener) {
                   window.opener.postMessage({ 
                     type: 'oauth_success', 
                     platform: platform,
-                    storeId: storeId 
+                    storeId: storeId,
+                    accountsConnected: successCount
                   }, '*');
                 }
                 
-                // Show success message briefly before closing
-                document.querySelector('.loading p').textContent = '✅ Connected successfully!';
+                let message = \`✅ Connected \${successCount} account\${successCount === 1 ? '' : 's'} successfully!\`;
+                if (errorCount > 0) {
+                  message += \` (\${errorCount} failed)\`;
+                }
+                
+                document.querySelector('.loading p').textContent = message;
                 setTimeout(() => {
                   window.close();
-                }, 1500);
+                }, 2000);
               } else {
-                throw new Error('Failed to connect account');
+                throw new Error(\`Failed to connect any accounts (\${errorCount} errors)\`);
               }
             } catch (error) {
               console.error('Connection error:', error);
-              alert('Failed to connect account. Please try again.');
+              alert(\`Failed to connect accounts: \${error.message}. Please try again.\`);
               document.getElementById('selection-view').style.display = 'block';
               document.getElementById('loading').classList.remove('active');
             }
@@ -321,10 +357,25 @@ export async function GET(
             window.close();
           }
 
-          // Auto-select if only one account (shouldn't happen, but just in case)
-          if (accounts.length === 1) {
-            selectAccount(0);
-          }
+          // Auto-select all accounts if user wants
+          document.addEventListener('keydown', function(e) {
+            if (e.key === 'a' && (e.ctrlKey || e.metaKey)) {
+              e.preventDefault();
+              // Select all accounts
+              for (let i = 0; i < accounts.length; i++) {
+                selectedAccounts.add(i);
+              }
+              
+              // Update UI
+              document.querySelectorAll('.account-card').forEach(card => {
+                card.classList.add('selected');
+              });
+              
+              const connectBtn = document.getElementById('connectBtn');
+              connectBtn.disabled = false;
+              connectBtn.textContent = \`Connect All \${accounts.length} Accounts\`;
+            }
+          });
         </script>
       </body>
     </html>
