@@ -165,6 +165,7 @@ export function InstagramAutomations({ storeId, userId }: InstagramAutomationsPr
     sessionStorage.setItem("lastStoreId", storeId);
 
     // Use Facebook Login with Instagram permissions
+    // IMPORTANT: pages_messaging is required for Instagram DMs via Facebook Graph API
     const scopes = [
       'instagram_basic',
       'instagram_content_publish',
@@ -172,7 +173,9 @@ export function InstagramAutomations({ storeId, userId }: InstagramAutomationsPr
       'instagram_manage_messages',
       'pages_show_list',
       'pages_read_engagement',
-      'pages_manage_metadata'
+      'pages_manage_metadata',
+      'pages_messaging',           // Required for sending DMs
+      'pages_manage_engagement',   // Required for comment replies
     ].join(',');
 
     // Use Facebook OAuth (not Instagram OAuth)

@@ -170,6 +170,16 @@ export const processWebhook = internalAction({
         const commentText = change.value?.text;
         if (!commentText) return null;
 
+        // IMPORTANT: Ignore self-comments (comments from the same account)
+        // This prevents infinite loops when the bot replies to comments
+        const commentSenderId = change.value?.from?.id;
+        const accountId = entry.id;
+        
+        if (commentSenderId === accountId) {
+          console.log("⏭️ Ignoring self-comment from:", change.value?.from?.username);
+          return null;
+        }
+
         console.log("💬 Comment received:", commentText.substring(0, 50) + "...");
 
         // Find automation by keyword
