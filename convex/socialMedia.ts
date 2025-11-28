@@ -21,6 +21,7 @@ export const getSocialAccounts = query({
 /**
  * Get Instagram access token by Instagram Business Account ID (for webhooks)
  * This is the preferred method for webhook processing - uses the exact account
+ * Checks BOTH integrations table (long-lived tokens) and socialAccounts table
  */
 export const getInstagramTokenByBusinessId = query({
   args: {
@@ -37,7 +38,28 @@ export const getInstagramTokenByBusinessId = query({
   handler: async (ctx, args) => {
     console.log("🔍 getInstagramTokenByBusinessId: Looking for account with ID:", args.instagramBusinessAccountId);
 
-    // Find the socialAccount by Instagram Business Account ID
+    // PRIORITY 1: Check integrations table (has proven long-lived tokens)
+    const integration = await ctx.db
+      .query("integrations")
+      .filter((q) => 
+        q.and(
+          q.eq(q.field("name"), "INSTAGRAM"),
+          q.eq(q.field("instagramId"), args.instagramBusinessAccountId),
+          q.eq(q.field("isActive"), true)
+        )
+      )
+      .first();
+
+    if (integration?.token) {
+      console.log("✅ getInstagramTokenByBusinessId: Found LONG-LIVED token in integrations table for:", integration.username);
+      return {
+        accessToken: integration.token,
+        username: integration.username || "",
+        instagramId: integration.instagramId || args.instagramBusinessAccountId,
+      };
+    }
+
+    // FALLBACK: Check socialAccounts table
     const socialAccounts = await ctx.db
       .query("socialAccounts")
       .filter((q) => 
@@ -53,7 +75,7 @@ export const getInstagramTokenByBusinessId = query({
     for (const account of socialAccounts) {
       const platformData = account.platformData as any;
       if (platformData?.instagramBusinessAccountId === args.instagramBusinessAccountId) {
-        console.log("✅ getInstagramTokenByBusinessId: Found account:", account.platformUsername);
+        console.log("✅ getInstagramTokenByBusinessId: Found account in socialAccounts:", account.platformUsername);
         return {
           accessToken: account.accessToken,
           username: account.platformUsername || "",
