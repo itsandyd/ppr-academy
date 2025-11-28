@@ -46,6 +46,7 @@ export function InstagramAutomations({ storeId, userId }: InstagramAutomationsPr
   const router = useRouter();
   const [creatingAutomation, setCreatingAutomation] = useState(false);
   const [deletingAutomation, setDeletingAutomation] = useState<string | null>(null);
+  const [selectedAccountFilter, setSelectedAccountFilter] = useState<string>("all");
   const [isReconnecting, setIsReconnecting] = useState(false);
 
   // Get Convex user
@@ -314,30 +315,70 @@ export function InstagramAutomations({ storeId, userId }: InstagramAutomationsPr
             )}
           </p>
           
-          {/* Account Selector for Multiple Accounts */}
+          {/* Account Filter for Multiple Accounts */}
           {connectedInstagramAccounts.length > 1 && (
-            <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
-              <div className="flex items-center gap-3">
-                <Instagram className="w-5 h-5 text-blue-600" />
-                <div>
-                  <p className="font-medium text-blue-900 dark:text-blue-100 text-sm">
-                    Multiple Instagram Accounts Detected
-                  </p>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {connectedInstagramAccounts.map((account: any) => (
-                      <Badge 
-                        key={account._id} 
-                        variant="outline" 
-                        className="bg-white dark:bg-blue-900 text-blue-700 dark:text-blue-200"
-                      >
-                        @{account.platformUsername}
-                      </Badge>
-                    ))}
+            <div className="mt-3 p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950 dark:to-purple-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <div className="flex items-center gap-3">
+                  <Instagram className="w-5 h-5 text-blue-600" />
+                  <div>
+                    <p className="font-medium text-blue-900 dark:text-blue-100 text-sm">
+                      Filter by Instagram Account
+                    </p>
+                    <p className="text-xs text-blue-700 dark:text-blue-300">
+                      {connectedInstagramAccounts.length} accounts connected
+                    </p>
                   </div>
-                  <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
-                    Automations will use the most recently verified account. Use "Refresh" to update tokens.
-                  </p>
                 </div>
+                
+                <div className="flex-1 sm:max-w-xs">
+                  <select 
+                    value={selectedAccountFilter}
+                    onChange={(e) => setSelectedAccountFilter(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-blue-200 dark:border-blue-800 rounded-lg bg-white dark:bg-blue-950 text-blue-900 dark:text-blue-100 focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="all">All Automations ({automations?.length || 0})</option>
+                    {connectedInstagramAccounts.map((account: any) => {
+                      const accountAutomations = automations?.filter((auto: any) => 
+                        auto.instagramAccountId === account._id
+                      ) || [];
+                      return (
+                        <option key={account._id} value={account._id}>
+                          @{account.platformUsername} ({accountAutomations.length})
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+              </div>
+              
+              <div className="flex flex-wrap gap-2 mt-3">
+                {connectedInstagramAccounts.map((account: any) => {
+                  const isActive = selectedAccountFilter === account._id;
+                  return (
+                    <button
+                      key={account._id}
+                      onClick={() => setSelectedAccountFilter(account._id)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                        isActive
+                          ? "bg-blue-600 text-white"
+                          : "bg-white dark:bg-blue-900 text-blue-700 dark:text-blue-200 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-800"
+                      }`}
+                    >
+                      @{account.platformUsername}
+                    </button>
+                  );
+                })}
+                <button
+                  onClick={() => setSelectedAccountFilter("all")}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                    selectedAccountFilter === "all"
+                      ? "bg-purple-600 text-white"
+                      : "bg-white dark:bg-purple-900 text-purple-700 dark:text-purple-200 border border-purple-200 dark:border-purple-800 hover:bg-purple-100 dark:hover:bg-purple-800"
+                  }`}
+                >
+                  All
+                </button>
               </div>
             </div>
           )}
@@ -434,7 +475,17 @@ export function InstagramAutomations({ storeId, userId }: InstagramAutomationsPr
       {/* Automations Grid */}
       {automations && automations.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {automations.map((automation: any) => (
+          {automations
+            .filter((automation: any) => {
+              if (selectedAccountFilter === "all") return true;
+              return automation.instagramAccountId === selectedAccountFilter;
+            })
+            .map((automation: any) => {
+              const automationAccount = connectedInstagramAccounts.find(
+                (account: any) => account._id === automation.instagramAccountId
+              );
+
+              return (
             <Card
               key={automation._id}
               className="hover:shadow-lg transition-shadow cursor-pointer group"
@@ -442,9 +493,24 @@ export function InstagramAutomations({ storeId, userId }: InstagramAutomationsPr
             >
               <CardHeader>
                 <div className="flex items-start justify-between">
-                  <CardTitle className="text-xl group-hover:text-primary transition-colors">
-                    {automation.name}
-                  </CardTitle>
+                  <div className="flex-1">
+                    <CardTitle className="text-xl group-hover:text-primary transition-colors">
+                      {automation.name}
+                    </CardTitle>
+                    {/* Show which Instagram account this automation uses */}
+                    {automationAccount && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <img 
+                          src={automationAccount.profileImageUrl} 
+                          alt={automationAccount.platformUsername}
+                          className="w-4 h-4 rounded-full"
+                        />
+                        <span className="text-xs text-muted-foreground">
+                          @{automationAccount.platformUsername}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                   <Badge
                     variant={automation.active ? "default" : "secondary"}
                     className={automation.active ? "bg-green-600" : ""}

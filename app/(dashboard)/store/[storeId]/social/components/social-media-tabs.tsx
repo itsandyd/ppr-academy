@@ -2,7 +2,7 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SocialScheduler } from "@/components/social-media/social-scheduler";
-import { InstagramAutomations } from "./instagram-automations";
+import { InstagramAutomations } from "./instagram-automations-fixed";
 import { Calendar, Zap } from "lucide-react";
 
 interface SocialMediaTabsProps {
