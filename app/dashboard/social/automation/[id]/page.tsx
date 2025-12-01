@@ -95,11 +95,15 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
       setAiPrompt(automation.listener.prompt || "");
       setCommentReply(automation.listener.commentReply || "");
     }
-    // Set selected Instagram account if available
-    if (automation.instagramAccountId && !selectedInstagramAccount) {
+    // Set selected Instagram account if available AND it still exists
+    // (accounts can be deleted when user disconnects and reconnects)
+    const accountStillExists = automation.instagramAccountId && 
+      instagramAccounts.some((acc: any) => acc._id === automation.instagramAccountId);
+    
+    if (accountStillExists && !selectedInstagramAccount) {
       setSelectedInstagramAccount(automation.instagramAccountId);
     } else if (instagramAccounts.length > 0 && !selectedInstagramAccount) {
-      // Default to first account if none selected
+      // Default to first account if none selected or if old account was deleted
       setSelectedInstagramAccount(instagramAccounts[0]._id);
     }
   }
@@ -309,9 +313,33 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
         All changes are saved automatically
       </p>
 
-      {/* Instagram Account Selection */}
-      {instagramAccounts.length > 1 && (
-        <Card className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950 border-purple-200 dark:border-purple-800">
+      {/* Warning when no Instagram accounts are connected */}
+      {instagramAccounts.length === 0 && (
+        <Card className="border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950">
+          <CardContent className="p-6 text-center">
+            <Instagram className="w-12 h-12 mx-auto mb-4 text-red-600" />
+            <h3 className="font-semibold text-red-900 dark:text-red-100 mb-2">Please Connect Your Instagram Account</h3>
+            <p className="text-sm text-red-700 dark:text-red-300 mb-4">
+              You need to connect an Instagram Business account to use automations.
+            </p>
+            <Button 
+              onClick={() => router.push("/dashboard/social?mode=create")}
+              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+            >
+              <Instagram className="w-4 h-4 mr-2" />
+              Connect Instagram
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Instagram Account Selection - Always show so users can change accounts */}
+      {instagramAccounts.length > 0 && (
+        <Card className={`border-2 ${
+          automation?.instagramAccountId && !instagramAccounts.some((acc: any) => acc._id === automation.instagramAccountId)
+            ? "border-orange-300 dark:border-orange-700 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950 dark:to-amber-950"
+            : "border-purple-200 dark:border-purple-800 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950"
+        }`}>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <Instagram className="w-5 h-5 text-purple-600" />
@@ -319,8 +347,24 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            {/* Warning when stored account was deleted */}
+            {automation?.instagramAccountId && 
+             !instagramAccounts.some((acc: any) => acc._id === automation.instagramAccountId) && (
+              <div className="flex items-start gap-3 p-3 bg-orange-100 dark:bg-orange-900/30 border border-orange-300 dark:border-orange-700 rounded-lg mb-3">
+                <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium text-orange-900 dark:text-orange-100 text-sm">Account reconnected</p>
+                  <p className="text-xs text-orange-700 dark:text-orange-300 mt-1">
+                    The previous Instagram account was disconnected. Select an account below and click Save.
+                  </p>
+                </div>
+              </div>
+            )}
+
             <p className="text-sm text-muted-foreground">
-              Choose which Instagram account this automation should use:
+              {instagramAccounts.length > 1 
+                ? "Choose which Instagram account this automation should use:"
+                : "This is the Instagram account this automation will use:"}
             </p>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -356,10 +400,20 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
             </div>
 
             {selectedInstagramAccount && (
-              <div className="flex items-center justify-between gap-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-3">
-                <p className="text-sm text-green-800 dark:text-green-200">
-                  ✅ This automation will use <strong>@{instagramAccounts.find(a => a._id === selectedInstagramAccount)?.platformUsername}</strong> 
-                  for posting replies and sending messages.
+              <div className={`flex items-center justify-between gap-4 rounded-lg p-3 ${
+                selectedInstagramAccount !== automation?.instagramAccountId
+                  ? "bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800"
+                  : "bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800"
+              }`}>
+                <p className={`text-sm ${
+                  selectedInstagramAccount !== automation?.instagramAccountId
+                    ? "text-orange-800 dark:text-orange-200"
+                    : "text-green-800 dark:text-green-200"
+                }`}>
+                  {selectedInstagramAccount !== automation?.instagramAccountId 
+                    ? `⚠️ Click Save to use @${instagramAccounts.find(a => a._id === selectedInstagramAccount)?.platformUsername} for this automation`
+                    : `✅ Using @${instagramAccounts.find(a => a._id === selectedInstagramAccount)?.platformUsername} for replies and messages`
+                  }
                 </p>
                 {selectedInstagramAccount !== automation?.instagramAccountId && (
                   <Button
@@ -375,10 +429,10 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
                         toast.error("Failed to save account");
                       }
                     }}
-                    className="bg-green-600 hover:bg-green-700 text-white shrink-0"
+                    className="bg-orange-600 hover:bg-orange-700 text-white shrink-0"
                   >
                     <Save className="w-4 h-4 mr-1" />
-                    Save
+                    Save Account
                   </Button>
                 )}
                 {selectedInstagramAccount === automation?.instagramAccountId && (
