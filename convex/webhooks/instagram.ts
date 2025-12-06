@@ -59,7 +59,7 @@ export const processWebhook = internalAction({
 
         // First, check for existing Smart AI conversation
         const existingConversation = await ctx.runQuery(
-          internal.automations.findAutomationByChatHistory,
+          (internal as any).automations.findAutomationByChatHistory,
           { senderId, receiverId: entry.id }
         );
 
@@ -76,9 +76,10 @@ export const processWebhook = internalAction({
         }
 
         // Find automation by keyword match
-        const matcher = await ctx.runQuery(api.automations.findAutomationByKeyword, {
-          keyword: messageText.toLowerCase(),
-        });
+        const matcher = await ctx.runQuery(
+          (api as any).automations.findAutomationByKeyword,
+          { keyword: messageText.toLowerCase() }
+        );
 
         if (!matcher || !matcher.trigger) {
           console.log("❌ No automation found for keyword:", messageText.substring(0, 30));
@@ -120,7 +121,7 @@ export const processWebhook = internalAction({
 
           // Check for existing Smart AI conversation
           const existingConversation = await ctx.runQuery(
-            internal.automations.findAutomationByChatHistory,
+            (internal as any).automations.findAutomationByChatHistory,
             { senderId, receiverId: entry.id }
           );
 
@@ -137,9 +138,10 @@ export const processWebhook = internalAction({
           }
 
           // Find automation by keyword match
-          const matcher = await ctx.runQuery(api.automations.findAutomationByKeyword, {
-            keyword: messageText.toLowerCase(),
-          });
+          const matcher = await ctx.runQuery(
+            (api as any).automations.findAutomationByKeyword,
+            { keyword: messageText.toLowerCase() }
+          );
 
           if (!matcher || !matcher.trigger) {
             console.log("❌ No automation found for keyword:", messageText.substring(0, 30));
@@ -183,9 +185,10 @@ export const processWebhook = internalAction({
         console.log("💬 Comment received:", commentText.substring(0, 50) + "...");
 
         // Find automation by keyword
-        const matcher = await ctx.runQuery(api.automations.findAutomationByKeyword, {
-          keyword: commentText.toLowerCase(),
-        });
+        const matcher = await ctx.runQuery(
+          (api as any).automations.findAutomationByKeyword,
+          { keyword: commentText.toLowerCase() }
+        );
 
         if (!matcher || !matcher.trigger) {
           console.log("❌ No automation found for keyword:", commentText.substring(0, 30));
@@ -258,16 +261,25 @@ async function executeAutomation(
   
   // Get fresh Instagram token - use the exact account that received the webhook
   // receiverId is the Instagram Business Account ID from the webhook
-  let tokenData = await ctx.runQuery(api.socialMedia.getInstagramTokenByBusinessId, {
-    instagramBusinessAccountId: receiverId,
-  });
+  type TokenData = {
+    accessToken: string;
+    username: string;
+    instagramId: string;
+    facebookPageId?: string;
+  } | null;
+  
+  let tokenData = await ctx.runQuery(
+    (api as any).socialMedia.getInstagramTokenByBusinessId,
+    { instagramBusinessAccountId: receiverId }
+  ) as TokenData;
 
   // Fallback to user-based lookup if business ID lookup fails
   if (!tokenData?.accessToken) {
     console.log("⚠️ Token not found by business ID, trying user-based lookup...");
-    tokenData = await ctx.runQuery(api.socialMedia.getInstagramToken, {
-      userId: automation.userId,
-    });
+    tokenData = await ctx.runQuery(
+      (api as any).socialMedia.getInstagramToken,
+      { userId: automation.userId }
+    ) as TokenData;
   }
 
   if (!tokenData?.accessToken) {
@@ -339,10 +351,10 @@ async function executeAutomation(
     }
 
     // Track the response
-    await ctx.runMutation(internal.automations.trackResponse, {
-      automationId: automation._id,
-      type: isDM ? "DM" : "COMMENT",
-    });
+    await ctx.runMutation(
+      (internal as any).automations.trackResponse,
+      { automationId: automation._id, type: isDM ? "DM" : "COMMENT" }
+    );
 
     return;
   }
@@ -376,22 +388,16 @@ async function executeAutomation(
     }
 
     // Save user message to history
-    await ctx.runMutation(internal.automations.createChatHistory, {
-      automationId: automation._id,
-      senderId,
-      receiverId,
-      message: messageText,
-      role: "user",
-    });
+    await ctx.runMutation(
+      (internal as any).automations.createChatHistory,
+      { automationId: automation._id, senderId, receiverId, message: messageText, role: "user" }
+    );
 
     // Save AI response to history
-    await ctx.runMutation(internal.automations.createChatHistory, {
-      automationId: automation._id,
-      senderId: receiverId,
-      receiverId: senderId,
-      message: aiResponse,
-      role: "assistant",
-    });
+    await ctx.runMutation(
+      (internal as any).automations.createChatHistory,
+      { automationId: automation._id, senderId: receiverId, receiverId: senderId, message: aiResponse, role: "assistant" }
+    );
 
     // For comments, send private message
     if (!isDM && commentId) {
@@ -421,10 +427,10 @@ async function executeAutomation(
     }
 
     // Track the response
-    await ctx.runMutation(internal.automations.trackResponse, {
-      automationId: automation._id,
-      type: isDM ? "DM" : "COMMENT",
-    });
+    await ctx.runMutation(
+      (internal as any).automations.trackResponse,
+      { automationId: automation._id, type: isDM ? "DM" : "COMMENT" }
+    );
 
     console.log("✅ Smart AI response sent successfully");
   }
@@ -448,10 +454,23 @@ async function continueSmartAIConversation(
   console.log("🤖 Continuing Smart AI conversation with", history.length, "messages");
 
   // Get automation details
+  // Type annotation to avoid "Type instantiation is excessively deep" error
+  type AutomationData = {
+    _id: string;
+    userId: string;
+    name?: string;
+    listener: {
+      listener: string;
+      prompt?: string;
+      commentReply?: string;
+    } | null;
+    userPlan: string;
+  } | null;
+  
   const automation = await ctx.runQuery(
-    internal.automations.getAutomationWithListener,
+    (internal as any).automations.getAutomationWithListener,
     { automationId }
-  );
+  ) as AutomationData;
 
   if (!automation) {
     console.log("❌ Automation not found for conversation continuation");
@@ -467,16 +486,25 @@ async function continueSmartAIConversation(
   console.log("🤖 Continuing Smart AI (plan check bypassed for development)");
 
   // Get Instagram token - use the exact account that received the webhook
-  let tokenData = await ctx.runQuery(api.socialMedia.getInstagramTokenByBusinessId, {
-    instagramBusinessAccountId: receiverId,
-  });
+  type TokenData = {
+    accessToken: string;
+    username: string;
+    instagramId: string;
+    facebookPageId?: string;
+  } | null;
+  
+  let tokenData = await ctx.runQuery(
+    (api as any).socialMedia.getInstagramTokenByBusinessId,
+    { instagramBusinessAccountId: receiverId }
+  ) as TokenData;
 
   // Fallback to user-based lookup if business ID lookup fails
   if (!tokenData?.accessToken) {
     console.log("⚠️ Token not found by business ID, trying user-based lookup...");
-    tokenData = await ctx.runQuery(api.socialMedia.getInstagramToken, {
-      userId: automation.userId,
-    });
+    tokenData = await ctx.runQuery(
+      (api as any).socialMedia.getInstagramToken,
+      { userId: automation.userId }
+    ) as TokenData;
   }
 
   if (!tokenData?.accessToken) {
@@ -496,22 +524,16 @@ async function continueSmartAIConversation(
   }
 
   // Save user message to history
-  await ctx.runMutation(internal.automations.createChatHistory, {
-    automationId,
-    senderId,
-    receiverId,
-    message: messageText,
-    role: "user",
-  });
+  await ctx.runMutation(
+    (internal as any).automations.createChatHistory,
+    { automationId, senderId, receiverId, message: messageText, role: "user" }
+  );
 
   // Save AI response to history
-  await ctx.runMutation(internal.automations.createChatHistory, {
-    automationId,
-    senderId: receiverId,
-    receiverId: senderId,
-    message: aiResponse,
-    role: "assistant",
-  });
+  await ctx.runMutation(
+    (internal as any).automations.createChatHistory,
+    { automationId, senderId: receiverId, receiverId: senderId, message: aiResponse, role: "assistant" }
+  );
 
   // Send the response
   await sendInstagramDM({
@@ -522,10 +544,10 @@ async function continueSmartAIConversation(
   });
 
   // Track the response
-  await ctx.runMutation(internal.automations.trackResponse, {
-    automationId,
-    type: "DM",
-  });
+  await ctx.runMutation(
+    (internal as any).automations.trackResponse,
+    { automationId, type: "DM" }
+  );
 
   console.log("✅ Smart AI continuation sent successfully");
 }

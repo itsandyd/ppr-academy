@@ -14,8 +14,12 @@ import {
   UserCheck,
   GraduationCap,
   ArrowUp,
-  ArrowDown,
+  ArrowUpRight,
   Activity,
+  Loader2,
+  BarChart3,
+  Sparkles,
+  Calendar,
 } from "lucide-react";
 import {
   LineChart,
@@ -37,15 +41,23 @@ import { PlatformFunnels } from "./components/platform-funnels";
 import { CreatorPipelineBoard } from "./components/creator-pipeline-board";
 import { StuckCreatorsAlert } from "./components/stuck-creators-alert";
 import { SystemHealthMonitor } from "./components/system-health-monitor";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
-const COLORS = ['#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6', '#ef4444'];
+const COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))', 'hsl(var(--destructive))'];
 
 type TimeWindow = "7d" | "28d";
 
 export default function AdminAnalyticsPage() {
   const { user } = useUser();
   const [timeWindow, setTimeWindow] = useState<TimeWindow>("7d");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Calculate time range
   const getTimeRange = () => {
@@ -92,10 +104,18 @@ export default function AdminAnalyticsPage() {
 
   if (!overview || !revenueData || !topCourses || !topCreators || !userGrowth || !categoryDist || !recentActivity) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <Activity className="w-12 h-12 animate-spin mx-auto mb-4 text-purple-600" />
-          <p className="text-muted-foreground">Loading analytics...</p>
+      <div className="flex items-center justify-center h-[60vh]">
+        <div className="text-center space-y-4">
+          <div className="relative mx-auto w-16 h-16">
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-chart-1 to-chart-2 animate-pulse" />
+            <div className="absolute inset-[2px] rounded-2xl bg-background flex items-center justify-center">
+              <BarChart3 className="w-6 h-6 text-chart-1" />
+            </div>
+          </div>
+          <div>
+            <p className="font-medium">Loading analytics</p>
+            <p className="text-sm text-muted-foreground">Crunching the numbers...</p>
+          </div>
         </div>
       </div>
     );
@@ -107,72 +127,64 @@ export default function AdminAnalyticsPage() {
       value: overview.totalUsers.toLocaleString(),
       icon: Users,
       change: "+12.5%",
-      changeType: "positive" as const,
-      color: "text-blue-600",
-      bgColor: "bg-blue-100 dark:bg-blue-900/20",
+      gradient: "from-blue-500 to-cyan-500",
+      bgGradient: "from-blue-500/10 to-cyan-500/5",
     },
     {
       title: "Active Users (30d)",
       value: overview.activeUsers.toLocaleString(),
       icon: UserCheck,
       change: "+8.3%",
-      changeType: "positive" as const,
-      color: "text-green-600",
-      bgColor: "bg-green-100 dark:bg-green-900/20",
+      gradient: "from-emerald-500 to-green-500",
+      bgGradient: "from-emerald-500/10 to-green-500/5",
     },
     {
       title: "Total Revenue",
       value: `$${overview.totalRevenue.toLocaleString()}`,
       icon: DollarSign,
       change: "+23.1%",
-      changeType: "positive" as const,
-      color: "text-purple-600",
-      bgColor: "bg-purple-100 dark:bg-purple-900/20",
+      gradient: "from-violet-500 to-purple-500",
+      bgGradient: "from-violet-500/10 to-purple-500/5",
     },
     {
       title: "Total Courses",
       value: overview.totalCourses.toLocaleString(),
       icon: BookOpen,
       change: "+15.2%",
-      changeType: "positive" as const,
-      color: "text-orange-600",
-      bgColor: "bg-orange-100 dark:bg-orange-900/20",
+      gradient: "from-amber-500 to-orange-500",
+      bgGradient: "from-amber-500/10 to-orange-500/5",
     },
     {
       title: "Published Courses",
       value: overview.publishedCourses.toLocaleString(),
       icon: GraduationCap,
       change: "+9.7%",
-      changeType: "positive" as const,
-      color: "text-indigo-600",
-      bgColor: "bg-indigo-100 dark:bg-indigo-900/20",
+      gradient: "from-indigo-500 to-blue-500",
+      bgGradient: "from-indigo-500/10 to-blue-500/5",
     },
     {
       title: "Total Enrollments",
       value: overview.totalEnrollments.toLocaleString(),
       icon: TrendingUp,
       change: "+18.4%",
-      changeType: "positive" as const,
-      color: "text-pink-600",
-      bgColor: "bg-pink-100 dark:bg-pink-900/20",
+      gradient: "from-pink-500 to-rose-500",
+      bgGradient: "from-pink-500/10 to-rose-500/5",
     },
     {
       title: "Digital Products",
       value: overview.totalProducts.toLocaleString(),
       icon: Package,
       change: "+6.9%",
-      changeType: "positive" as const,
-      color: "text-teal-600",
-      bgColor: "bg-teal-100 dark:bg-teal-900/20",
+      gradient: "from-teal-500 to-cyan-500",
+      bgGradient: "from-teal-500/10 to-cyan-500/5",
     },
     {
       title: "Active Stores",
       value: overview.totalStores.toLocaleString(),
       icon: Store,
       change: "+4.2%",
-      changeType: "positive" as const,
-      color: "text-cyan-600",
-      bgColor: "bg-cyan-100 dark:bg-cyan-900/20",
+      gradient: "from-cyan-500 to-sky-500",
+      bgGradient: "from-cyan-500/10 to-sky-500/5",
     },
   ];
 
@@ -185,95 +197,168 @@ export default function AdminAnalyticsPage() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className={cn(
+      "space-y-8",
+      mounted ? "animate-in fade-in-0 duration-500" : "opacity-0"
+    )}>
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-4xl font-bold tracking-tight">Operator Dashboard</h1>
-          <p className="text-muted-foreground mt-2 text-lg">
-            Platform-wide analytics, creator pipeline, and system health
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <h1 className="text-4xl font-bold tracking-tight">Analytics Center</h1>
+            <Badge variant="outline" className="text-chart-1 border-chart-1/30 bg-chart-1/5">
+              <Sparkles className="w-3 h-3 mr-1" />
+              Real-time
+            </Badge>
+          </div>
+          <p className="text-lg text-muted-foreground">
+            Platform-wide analytics, creator pipeline, and system health monitoring
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="text-right">
-            <p className="text-sm text-muted-foreground">Total Revenue</p>
-            <p className="text-2xl font-bold text-purple-600">
-              ${overview.totalRevenue.toLocaleString()}
-            </p>
-          </div>
+        
+        {/* Time window selector */}
+        <div className="flex items-center gap-2 p-1 rounded-xl bg-muted/50 border border-border/50">
+          <Button
+            variant={timeWindow === "7d" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setTimeWindow("7d")}
+            className={cn(
+              "rounded-lg gap-1.5",
+              timeWindow === "7d" && "bg-background shadow-sm"
+            )}
+          >
+            <Calendar className="w-3.5 h-3.5" />
+            7 days
+          </Button>
+          <Button
+            variant={timeWindow === "28d" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setTimeWindow("28d")}
+            className={cn(
+              "rounded-lg gap-1.5",
+              timeWindow === "28d" && "bg-background shadow-sm"
+            )}
+          >
+            <Calendar className="w-3.5 h-3.5" />
+            28 days
+          </Button>
         </div>
       </div>
 
-      {/* NEW: Platform KPIs with time window toggle */}
+      {/* Platform KPIs with time window toggle */}
       <PlatformKPIsOverview />
 
-      {/* NEW: Platform-Wide Funnels (Learner + Creator side-by-side) */}
+      {/* Platform-Wide Funnels */}
       <PlatformFunnels startTime={start} endTime={end} />
 
-      {/* NEW: Creator Pipeline Kanban Board */}
+      {/* Creator Pipeline Kanban Board */}
       <CreatorPipelineBoard />
 
-      {/* NEW: Alerts & System Health Row */}
+      {/* Alerts & System Health Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <StuckCreatorsAlert />
         <SystemHealthMonitor startTime={start} endTime={end} />
       </div>
 
       {/* Divider */}
-      <div className="border-t pt-8">
-        <h2 className="text-2xl font-bold mb-6">Historical Analytics</h2>
+      <div className="relative py-8">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-border/50" />
+        </div>
+        <div className="relative flex justify-center">
+          <span className="px-4 py-2 bg-background text-sm font-medium text-muted-foreground rounded-full border border-border/50">
+            Historical Analytics
+          </span>
+        </div>
       </div>
 
       {/* Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {metrics.map((metric) => (
-          <Card key={metric.title} className="border-2 hover:shadow-lg transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between mb-3">
-                <div className={`rounded-full p-3 ${metric.bgColor}`}>
-                  <metric.icon className={`w-6 h-6 ${metric.color}`} />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {metrics.map((metric, index) => {
+          const Icon = metric.icon;
+          return (
+            <Card 
+              key={metric.title} 
+              className={cn(
+                "group relative overflow-hidden border-border/50 hover:border-border transition-all duration-300",
+                "hover:shadow-lg hover:-translate-y-0.5"
+              )}
+            >
+              {/* Background gradient on hover */}
+              <div className={cn(
+                "absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-500",
+                metric.bgGradient
+              )} />
+              
+              <CardContent className="relative p-5">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-3">
+                    <div className={cn(
+                      "flex items-center justify-center w-11 h-11 rounded-xl",
+                      "bg-gradient-to-br shadow-lg",
+                      metric.gradient
+                    )}>
+                      <Icon className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold tracking-tight">{metric.value}</p>
+                      <p className="text-xs text-muted-foreground font-medium mt-0.5">{metric.title}</p>
+                    </div>
+                  </div>
+                  <Badge className="bg-emerald-500/10 text-emerald-500 border-0 text-[10px]">
+                    <ArrowUpRight className="w-2.5 h-2.5 mr-0.5" />
+                    {metric.change}
+                  </Badge>
                 </div>
-                <div className="flex items-center gap-1 text-xs font-semibold text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-full">
-                  <ArrowUp className="w-3 h-3" />
-                  {metric.change}
-                </div>
-              </div>
-              <div className="space-y-1">
-                <p className="text-3xl font-bold tracking-tight">{metric.value}</p>
-                <p className="text-sm text-muted-foreground font-medium">{metric.title}</p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Charts Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Revenue Over Time */}
-        <Card className="border-2">
+        <Card className="border-border/50">
           <CardHeader className="pb-4">
-            <CardTitle className="text-xl font-bold">Revenue Trend (Last 30 Days)</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center">
+                <DollarSign className="w-4 h-4 text-white" />
+              </div>
+              Revenue Trend
+              <Badge variant="outline" className="ml-auto font-normal text-muted-foreground">
+                Last 30 days
+              </Badge>
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={280}>
               <LineChart data={revenueData}>
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
                 <XAxis 
                   dataKey="date" 
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 11 }}
                   tickFormatter={(date) => new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  className="text-muted-foreground"
                 />
-                <YAxis tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 11 }} className="text-muted-foreground" />
                 <Tooltip 
                   formatter={(value: number) => `$${value.toFixed(2)}`}
                   labelFormatter={(date) => new Date(date).toLocaleDateString()}
+                  contentStyle={{ 
+                    backgroundColor: 'hsl(var(--card))', 
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '12px',
+                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                  }}
                 />
                 <Legend />
                 <Line 
                   type="monotone" 
                   dataKey="revenue" 
-                  stroke="#8b5cf6" 
-                  strokeWidth={2}
+                  stroke="hsl(var(--chart-1))" 
+                  strokeWidth={2.5}
+                  dot={false}
                   name="Revenue ($)"
                 />
               </LineChart>
@@ -282,34 +367,53 @@ export default function AdminAnalyticsPage() {
         </Card>
 
         {/* User Growth */}
-        <Card className="border-2">
+        <Card className="border-border/50">
           <CardHeader className="pb-4">
-            <CardTitle className="text-xl font-bold">User Growth (Last 30 Days)</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center">
+                <TrendingUp className="w-4 h-4 text-white" />
+              </div>
+              User Growth
+              <Badge variant="outline" className="ml-auto font-normal text-muted-foreground">
+                Last 30 days
+              </Badge>
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={280}>
               <LineChart data={userGrowth}>
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
                 <XAxis 
                   dataKey="date" 
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 11 }}
                   tickFormatter={(date) => new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  className="text-muted-foreground"
                 />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip labelFormatter={(date) => new Date(date).toLocaleDateString()} />
+                <YAxis tick={{ fontSize: 11 }} className="text-muted-foreground" />
+                <Tooltip 
+                  labelFormatter={(date) => new Date(date).toLocaleDateString()}
+                  contentStyle={{ 
+                    backgroundColor: 'hsl(var(--card))', 
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '12px',
+                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                  }}
+                />
                 <Legend />
                 <Line 
                   type="monotone" 
                   dataKey="newUsers" 
-                  stroke="#10b981" 
-                  strokeWidth={2}
+                  stroke="hsl(var(--chart-2))" 
+                  strokeWidth={2.5}
+                  dot={false}
                   name="New Users"
                 />
                 <Line 
                   type="monotone" 
                   dataKey="totalUsers" 
-                  stroke="#3b82f6" 
-                  strokeWidth={2}
+                  stroke="hsl(var(--chart-1))" 
+                  strokeWidth={2.5}
+                  dot={false}
                   name="Total Users"
                 />
               </LineChart>
@@ -321,12 +425,17 @@ export default function AdminAnalyticsPage() {
       {/* Charts Row 2 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Category Distribution */}
-        <Card className="border-2">
+        <Card className="border-border/50">
           <CardHeader className="pb-4">
-            <CardTitle className="text-xl font-bold">Course Categories</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center">
+                <BookOpen className="w-4 h-4 text-white" />
+              </div>
+              Course Categories
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={280}>
               <PieChart>
                 <Pie
                   data={categoryDist}
@@ -342,32 +451,56 @@ export default function AdminAnalyticsPage() {
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'hsl(var(--card))', 
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '12px',
+                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                  }}
+                />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
         {/* Top Courses */}
-        <Card className="border-2">
+        <Card className="border-border/50">
           <CardHeader className="pb-4">
-            <CardTitle className="text-xl font-bold">Top Performing Courses</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
+                <GraduationCap className="w-4 h-4 text-white" />
+              </div>
+              Top Performing Courses
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               {topCourses.map((course, index) => (
-                <div key={course.courseId} className="flex items-center gap-4 p-3 rounded-lg hover:bg-muted/50 transition-colors">
-                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center font-bold text-purple-600 text-lg">
+                <div 
+                  key={course.courseId} 
+                  className="flex items-center gap-4 p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors group"
+                >
+                  <div className={cn(
+                    "flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg",
+                    index === 0 
+                      ? "bg-gradient-to-br from-amber-400 to-amber-500 text-white" 
+                      : index === 1 
+                        ? "bg-gradient-to-br from-slate-300 to-slate-400 text-white"
+                        : index === 2
+                          ? "bg-gradient-to-br from-amber-600 to-amber-700 text-white"
+                          : "bg-muted text-muted-foreground"
+                  )}>
                     {index + 1}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold truncate">{course.title}</p>
+                    <p className="font-semibold truncate group-hover:text-chart-1 transition-colors">{course.title}</p>
                     <p className="text-xs text-muted-foreground">
                       {course.enrollments} enrollments · {course.views} views
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-green-600 text-lg">
+                    <p className="font-bold text-emerald-500 text-lg">
                       ${course.revenue.toLocaleString()}
                     </p>
                     <p className="text-xs text-muted-foreground">
@@ -384,42 +517,69 @@ export default function AdminAnalyticsPage() {
       {/* Charts Row 3 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top Creators */}
-        <Card className="border-2">
+        <Card className="border-border/50">
           <CardHeader className="pb-4">
-            <CardTitle className="text-xl font-bold">Top Creators by Revenue</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                <Users className="w-4 h-4 text-white" />
+              </div>
+              Top Creators by Revenue
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={280}>
               <BarChart data={topCreators}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip formatter={(value: number) => `$${value.toLocaleString()}`} />
+                <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
+                <XAxis dataKey="name" tick={{ fontSize: 11 }} className="text-muted-foreground" />
+                <YAxis tick={{ fontSize: 11 }} className="text-muted-foreground" />
+                <Tooltip 
+                  formatter={(value: number) => `$${value.toLocaleString()}`}
+                  contentStyle={{ 
+                    backgroundColor: 'hsl(var(--card))', 
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '12px',
+                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+                  }}
+                />
                 <Legend />
-                <Bar dataKey="totalRevenue" fill="#8b5cf6" name="Revenue ($)" />
+                <Bar 
+                  dataKey="totalRevenue" 
+                  fill="hsl(var(--chart-1))" 
+                  name="Revenue ($)"
+                  radius={[4, 4, 0, 0]}
+                />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
         {/* Recent Activity */}
-        <Card className="border-2">
+        <Card className="border-border/50">
           <CardHeader className="pb-4">
-            <CardTitle className="text-xl font-bold">Recent Activity</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center">
+                <Activity className="w-4 h-4 text-white" />
+              </div>
+              Recent Activity
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-1 max-h-[300px] overflow-y-auto">
+            <div className="space-y-2 max-h-[280px] overflow-y-auto pr-2">
               {recentActivity.slice(0, 10).map((activity, index) => (
-                <div key={index} className="flex items-start gap-3 text-sm p-2 rounded-lg hover:bg-muted/50 transition-colors">
+                <div 
+                  key={index} 
+                  className="flex items-start gap-3 p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors"
+                >
                   <div 
-                    className={`w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0 ${
-                      activity.type === "enrollment" ? "bg-green-500" :
+                    className={cn(
+                      "w-2.5 h-2.5 rounded-full mt-1.5 flex-shrink-0",
+                      activity.type === "enrollment" ? "bg-emerald-500" :
                       activity.type === "course_published" ? "bg-blue-500" :
-                      "bg-gray-500"
-                    }`}
+                      "bg-muted-foreground"
+                    )}
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="truncate font-medium">{activity.description}</p>
+                    <p className="text-sm font-medium truncate">{activity.description}</p>
                     <p className="text-xs text-muted-foreground">
                       {formatTimeAgo(activity.timestamp)}
                     </p>
@@ -433,4 +593,3 @@ export default function AdminAnalyticsPage() {
     </div>
   );
 }
-

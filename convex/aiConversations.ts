@@ -1,0 +1,361 @@
+import { v } from "convex/values";
+import { query, mutation } from "./_generated/server";
+import { Id } from "./_generated/dataModel";
+
+// ============================================================================
+// CONVERSATION QUERIES
+// ============================================================================
+
+/**
+ * Get all conversations for a user, ordered by most recent
+ */
+export const getUserConversations = query({
+  args: {
+    userId: v.string(),
+    limit: v.optional(v.number()),
+    includeArchived: v.optional(v.boolean()),
+  },
+  returns: v.array(v.object({
+    _id: v.id("aiConversations"),
+    _creationTime: v.number(),
+    userId: v.string(),
+    title: v.string(),
+    preview: v.optional(v.string()),
+    lastMessageAt: v.number(),
+    messageCount: v.number(),
+    preset: v.optional(v.string()),
+    responseStyle: v.optional(v.string()),
+    archived: v.optional(v.boolean()),
+    starred: v.optional(v.boolean()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })),
+  handler: async (ctx, args) => {
+    const limit = args.limit || 50;
+    
+    let conversations = await ctx.db
+      .query("aiConversations")
+      .withIndex("by_userId_lastMessageAt", (q) => q.eq("userId", args.userId))
+      .order("desc")
+      .collect();
+
+    // Filter out archived unless requested
+    if (!args.includeArchived) {
+      conversations = conversations.filter(c => !c.archived);
+    }
+
+    return conversations.slice(0, limit);
+  },
+});
+
+/**
+ * Get a single conversation by ID
+ */
+export const getConversation = query({
+  args: {
+    conversationId: v.id("aiConversations"),
+  },
+  returns: v.union(
+    v.object({
+      _id: v.id("aiConversations"),
+      _creationTime: v.number(),
+      userId: v.string(),
+      title: v.string(),
+      preview: v.optional(v.string()),
+      lastMessageAt: v.number(),
+      messageCount: v.number(),
+      preset: v.optional(v.string()),
+      responseStyle: v.optional(v.string()),
+      archived: v.optional(v.boolean()),
+      starred: v.optional(v.boolean()),
+      createdAt: v.number(),
+      updatedAt: v.number(),
+    }),
+    v.null()
+  ),
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.conversationId);
+  },
+});
+
+/**
+ * Get messages for a conversation
+ */
+export const getConversationMessages = query({
+  args: {
+    conversationId: v.id("aiConversations"),
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(v.object({
+    _id: v.id("aiMessages"),
+    _creationTime: v.number(),
+    conversationId: v.id("aiConversations"),
+    userId: v.string(),
+    role: v.union(v.literal("user"), v.literal("assistant")),
+    content: v.string(),
+    citations: v.optional(v.array(v.object({
+      id: v.number(),
+      title: v.string(),
+      sourceType: v.string(),
+      sourceId: v.optional(v.string()),
+    }))),
+    facetsUsed: v.optional(v.array(v.string())),
+    pipelineMetadata: v.optional(v.object({
+      processingTimeMs: v.number(),
+      totalChunksProcessed: v.number(),
+      plannerModel: v.optional(v.string()),
+      summarizerModel: v.optional(v.string()),
+      finalWriterModel: v.optional(v.string()),
+    })),
+    createdAt: v.number(),
+  })),
+  handler: async (ctx, args) => {
+    const limit = args.limit || 100;
+    
+    const messages = await ctx.db
+      .query("aiMessages")
+      .withIndex("by_conversationId_createdAt", (q) => 
+        q.eq("conversationId", args.conversationId)
+      )
+      .order("asc")
+      .take(limit);
+
+    return messages;
+  },
+});
+
+/**
+ * Get recent messages for short-term context (last N messages)
+ */
+export const getRecentContext = query({
+  args: {
+    conversationId: v.id("aiConversations"),
+    messageCount: v.optional(v.number()), // Default 10
+  },
+  returns: v.array(v.object({
+    role: v.union(v.literal("user"), v.literal("assistant")),
+    content: v.string(),
+  })),
+  handler: async (ctx, args) => {
+    const count = args.messageCount || 10;
+    
+    const messages = await ctx.db
+      .query("aiMessages")
+      .withIndex("by_conversationId_createdAt", (q) => 
+        q.eq("conversationId", args.conversationId)
+      )
+      .order("desc")
+      .take(count);
+
+    // Reverse to get chronological order and map to simple format
+    return messages.reverse().map(m => ({
+      role: m.role,
+      content: m.content,
+    }));
+  },
+});
+
+// ============================================================================
+// CONVERSATION MUTATIONS
+// ============================================================================
+
+/**
+ * Create a new conversation
+ */
+export const createConversation = mutation({
+  args: {
+    userId: v.string(),
+    title: v.optional(v.string()),
+    preset: v.optional(v.string()),
+    responseStyle: v.optional(v.string()),
+  },
+  returns: v.id("aiConversations"),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    
+    const conversationId = await ctx.db.insert("aiConversations", {
+      userId: args.userId,
+      title: args.title || "New Conversation",
+      lastMessageAt: now,
+      messageCount: 0,
+      preset: args.preset,
+      responseStyle: args.responseStyle,
+      archived: false,
+      starred: false,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return conversationId;
+  },
+});
+
+/**
+ * Save a message to a conversation
+ */
+export const saveMessage = mutation({
+  args: {
+    conversationId: v.id("aiConversations"),
+    userId: v.string(),
+    role: v.union(v.literal("user"), v.literal("assistant")),
+    content: v.string(),
+    citations: v.optional(v.array(v.object({
+      id: v.number(),
+      title: v.string(),
+      sourceType: v.string(),
+      sourceId: v.optional(v.string()),
+    }))),
+    facetsUsed: v.optional(v.array(v.string())),
+    pipelineMetadata: v.optional(v.object({
+      processingTimeMs: v.number(),
+      totalChunksProcessed: v.number(),
+      plannerModel: v.optional(v.string()),
+      summarizerModel: v.optional(v.string()),
+      finalWriterModel: v.optional(v.string()),
+    })),
+  },
+  returns: v.id("aiMessages"),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    
+    // Save the message
+    const messageId = await ctx.db.insert("aiMessages", {
+      conversationId: args.conversationId,
+      userId: args.userId,
+      role: args.role,
+      content: args.content,
+      citations: args.citations,
+      facetsUsed: args.facetsUsed,
+      pipelineMetadata: args.pipelineMetadata,
+      createdAt: now,
+    });
+
+    // Get conversation to update
+    const conversation = await ctx.db.get(args.conversationId);
+    if (conversation) {
+      // Generate title from first user message if not set
+      let title = conversation.title;
+      let preview = conversation.preview;
+      
+      if (args.role === "user" && conversation.messageCount === 0) {
+        // Auto-generate title from first message
+        title = args.content.length > 50 
+          ? args.content.substring(0, 47) + "..."
+          : args.content;
+        preview = args.content.substring(0, 100);
+      }
+
+      // Update conversation metadata
+      await ctx.db.patch(args.conversationId, {
+        title,
+        preview,
+        lastMessageAt: now,
+        messageCount: conversation.messageCount + 1,
+        updatedAt: now,
+      });
+    }
+
+    return messageId;
+  },
+});
+
+/**
+ * Update conversation title
+ */
+export const updateConversationTitle = mutation({
+  args: {
+    conversationId: v.id("aiConversations"),
+    title: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.conversationId, {
+      title: args.title,
+      updatedAt: Date.now(),
+    });
+    return null;
+  },
+});
+
+/**
+ * Toggle conversation starred status
+ */
+export const toggleStarred = mutation({
+  args: {
+    conversationId: v.id("aiConversations"),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const conversation = await ctx.db.get(args.conversationId);
+    if (conversation) {
+      await ctx.db.patch(args.conversationId, {
+        starred: !conversation.starred,
+        updatedAt: Date.now(),
+      });
+    }
+    return null;
+  },
+});
+
+/**
+ * Archive a conversation
+ */
+export const archiveConversation = mutation({
+  args: {
+    conversationId: v.id("aiConversations"),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.conversationId, {
+      archived: true,
+      updatedAt: Date.now(),
+    });
+    return null;
+  },
+});
+
+/**
+ * Unarchive a conversation
+ */
+export const unarchiveConversation = mutation({
+  args: {
+    conversationId: v.id("aiConversations"),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.conversationId, {
+      archived: false,
+      updatedAt: Date.now(),
+    });
+    return null;
+  },
+});
+
+/**
+ * Delete a conversation and all its messages
+ */
+export const deleteConversation = mutation({
+  args: {
+    conversationId: v.id("aiConversations"),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    // Delete all messages in the conversation
+    const messages = await ctx.db
+      .query("aiMessages")
+      .withIndex("by_conversationId", (q) => 
+        q.eq("conversationId", args.conversationId)
+      )
+      .collect();
+
+    for (const message of messages) {
+      await ctx.db.delete(message._id);
+    }
+
+    // Delete the conversation
+    await ctx.db.delete(args.conversationId);
+    
+    return null;
+  },
+});
+

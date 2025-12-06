@@ -38,7 +38,6 @@ import {
   MoreVertical,
   Mail,
   Shield,
-  Ban,
   CheckCircle,
   Loader2,
   Lock,
@@ -53,13 +52,18 @@ import {
   Package,
   BookOpen,
   Music,
-  FileText,
   Video,
   Clock,
-  ListChecks
+  ListChecks,
+  Users,
+  UserCheck,
+  ShieldCheck,
+  Sparkles,
+  ArrowUpRight,
 } from "lucide-react";
 import { BulkSelectionTable, userBulkActions } from "@/components/admin/bulk-selection-table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
 
 const USERS_PER_PAGE = 1000;
 
@@ -68,9 +72,14 @@ export default function UsersManagementPage() {
   const [paginationCursor, setPaginationCursor] = useState<string | null>(null);
   const [cursorHistory, setCursorHistory] = useState<(string | null)[]>([null]);
   const [currentPage, setCurrentPage] = useState(0);
+  const [mounted, setMounted] = useState(false);
   const { user, isLoaded } = useUser();
   const router = useRouter();
   const { toast } = useToast();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
   // Check if user is admin
   const adminCheck = useQuery(
@@ -114,8 +123,16 @@ export default function UsersManagementPage() {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center space-y-4">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
-          <p className="text-muted-foreground">Loading users...</p>
+          <div className="relative mx-auto w-16 h-16">
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-chart-1 to-chart-2 animate-pulse" />
+            <div className="absolute inset-[2px] rounded-2xl bg-background flex items-center justify-center">
+              <Users className="w-6 h-6 text-chart-1" />
+            </div>
+          </div>
+          <div>
+            <p className="font-medium">Loading users</p>
+            <p className="text-sm text-muted-foreground">Fetching data...</p>
+          </div>
         </div>
       </div>
     );
@@ -125,11 +142,11 @@ export default function UsersManagementPage() {
   if (!adminCheck.isAdmin) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Card className="max-w-md">
+        <Card className="max-w-md border-destructive/50 bg-destructive/5">
           <CardContent className="pt-6">
             <div className="text-center space-y-4">
-              <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mx-auto">
-                <Lock className="w-8 h-8 text-red-600 dark:text-red-400" />
+              <div className="w-16 h-16 bg-destructive/10 rounded-2xl flex items-center justify-center mx-auto">
+                <Lock className="w-8 h-8 text-destructive" />
               </div>
               <div>
                 <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
@@ -174,7 +191,6 @@ export default function UsersManagementPage() {
       title: "View Profile",
       description: `Opening profile for ${userName}`,
     });
-    // Navigate to user profile page
     router.push(`/admin/users/${userId}`);
   };
 
@@ -183,7 +199,6 @@ export default function UsersManagementPage() {
       title: "Edit User",
       description: `Opening editor for ${userName}`,
     });
-    // Navigate to edit page or open modal
     router.push(`/admin/users/${userId}/edit`);
   };
 
@@ -196,7 +211,6 @@ export default function UsersManagementPage() {
       });
       return;
     }
-    // Open email client
     window.location.href = `mailto:${userEmail}`;
     toast({
       title: "Opening Email",
@@ -209,7 +223,6 @@ export default function UsersManagementPage() {
       title: isCurrentlyAdmin ? "Remove Admin" : "Make Admin",
       description: `This will ${isCurrentlyAdmin ? "remove admin access from" : "grant admin access to"} ${userName}`,
     });
-    // TODO: Implement admin toggle mutation
   };
 
   const handleDeleteUser = (userId: string, userName: string) => {
@@ -219,77 +232,109 @@ export default function UsersManagementPage() {
         description: `Deleting ${userName}...`,
         variant: "destructive",
       });
-      // TODO: Implement delete user mutation
     }
   };
 
+  const statCards = [
+    {
+      title: "Total Users",
+      value: userStats?.total || 0,
+      icon: Users,
+      gradient: "from-blue-500 to-cyan-500",
+    },
+    {
+      title: "Owners & Admins",
+      value: userStats?.creators || 0,
+      icon: Crown,
+      gradient: "from-amber-500 to-orange-500",
+    },
+    {
+      title: "Users & Guests",
+      value: userStats?.students || 0,
+      icon: UserCheck,
+      gradient: "from-violet-500 to-purple-500",
+    },
+    {
+      title: "Verified",
+      value: userStats?.verified || 0,
+      icon: ShieldCheck,
+      gradient: "from-emerald-500 to-green-500",
+    },
+  ];
+
   return (
-    <div className="space-y-6">
+    <div className={cn(
+      "space-y-8",
+      mounted ? "animate-in fade-in-0 duration-500" : "opacity-0"
+    )}>
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Users</h1>
-          <p className="text-muted-foreground">
-            Manage all platform users and permissions
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <h1 className="text-4xl font-bold tracking-tight">User Management</h1>
+            <Badge variant="outline" className="text-muted-foreground">
+              {userStats?.total || 0} total
+            </Badge>
+          </div>
+          <p className="text-lg text-muted-foreground">
+            Manage all platform users and their permissions
           </p>
         </div>
-        <Button>
-          <UserPlus className="w-4 h-4 mr-2" />
+        <Button className="gap-2 bg-gradient-to-r from-chart-1 to-chart-2 hover:opacity-90 transition-opacity">
+          <UserPlus className="w-4 h-4" />
           Add User
         </Button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold">{userStats?.total || 0}</div>
-            <div className="text-sm text-muted-foreground">Total Users</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold">
-              {userStats?.creators || 0}
-            </div>
-            <div className="text-sm text-muted-foreground">Owners & Admins</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold">
-              {userStats?.students || 0}
-            </div>
-            <div className="text-sm text-muted-foreground">Users & Guests</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold">
-              {userStats?.verified || 0}
-            </div>
-            <div className="text-sm text-muted-foreground">Verified</div>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {statCards.map((stat) => {
+          const Icon = stat.icon;
+          return (
+            <Card key={stat.title} className="border-border/50 hover:border-border transition-colors">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-4">
+                  <div className={cn(
+                    "flex items-center justify-center w-12 h-12 rounded-xl",
+                    "bg-gradient-to-br shadow-lg",
+                    stat.gradient
+                  )}>
+                    <Icon className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{stat.value.toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">{stat.title}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Search */}
-      <div className="flex items-center gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search users by name or email..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
+      <div className="relative max-w-xl">
+        <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
+          placeholder="Search users by name or email..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-11 h-12 rounded-xl border-border/50 bg-muted/30 focus:bg-background transition-colors"
+        />
       </div>
 
       {/* Users Table with Bulk Selection */}
-      <Card>
-        <CardHeader>
-          <CardTitle>All Users ({filteredUsers.length})</CardTitle>
+      <Card className="border-border/50">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-chart-1 to-chart-2 flex items-center justify-center">
+              <Users className="w-4 h-4 text-white" />
+            </div>
+            All Users
+            <Badge variant="outline" className="ml-2 font-normal">
+              {filteredUsers.length} showing
+            </Badge>
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <BulkSelectionTable
@@ -300,9 +345,9 @@ export default function UsersManagementPage() {
                 label: "Name",
                 render: (user: any) => (
                   <div className="flex items-center gap-3">
-                    <Avatar className="w-10 h-10">
+                    <Avatar className="w-10 h-10 border-2 border-border/50">
                       <AvatarImage src={user.imageUrl} />
-                      <AvatarFallback className="bg-purple-100 dark:bg-purple-900 text-purple-600 dark:text-purple-300">
+                      <AvatarFallback className="bg-gradient-to-br from-chart-1/20 to-chart-2/20 text-foreground font-semibold">
                         {user.name?.charAt(0).toUpperCase() || "?"}
                       </AvatarFallback>
                     </Avatar>
@@ -310,7 +355,7 @@ export default function UsersManagementPage() {
                       <div className="flex items-center gap-2">
                         <span className="font-semibold">{user.name || "Unknown"}</span>
                         {user.emailVerified && (
-                          <CheckCircle className="w-4 h-4 text-green-600" />
+                          <CheckCircle className="w-4 h-4 text-emerald-500" />
                         )}
                       </div>
                       <div className="text-sm text-muted-foreground">{user.email || "No email"}</div>
@@ -322,11 +367,15 @@ export default function UsersManagementPage() {
                 key: "role",
                 label: "Role",
                 render: (user: any) => (
-                  <Badge variant={
-                    user.role === "AGENCY_OWNER" || user.role === "AGENCY_ADMIN" 
-                      ? "default" 
-                      : "secondary"
-                  }>
+                  <Badge 
+                    variant="outline"
+                    className={cn(
+                      user.role === "AGENCY_OWNER" || user.role === "AGENCY_ADMIN" 
+                        ? "border-amber-500/30 bg-amber-500/10 text-amber-600" 
+                        : "border-border"
+                    )}
+                  >
+                    {user.role === "AGENCY_OWNER" && <Crown className="w-3 h-3 mr-1" />}
                     {user.role === "AGENCY_OWNER" ? "Owner" :
                      user.role === "AGENCY_ADMIN" ? "Admin" :
                      user.role === "SUBACCOUNT_GUEST" ? "Guest" :
@@ -338,7 +387,6 @@ export default function UsersManagementPage() {
                 key: "content",
                 label: "Content",
                 render: (user: any) => {
-                  // Fetch the user's store and content counts
                   const CreatorContentStats = ({ clerkId, userName }: { clerkId: string; userName: string }) => {
                     const [isOpen, setIsOpen] = useState(false);
                     const store = useQuery(api.stores.getUserStore, { userId: clerkId });
@@ -371,28 +419,31 @@ export default function UsersManagementPage() {
                         <DialogTrigger asChild>
                           <button className="flex items-center gap-3 text-xs hover:opacity-70 transition-opacity">
                             {courseCount > 0 && (
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-blue-500/10">
                                 <BookOpen className="w-3 h-3 text-blue-500" />
-                                <span>{courseCount}</span>
+                                <span className="text-blue-600 font-medium">{courseCount}</span>
                               </div>
                             )}
                             {productCount > 0 && (
-                              <div className="flex items-center gap-1">
-                                <Package className="w-3 h-3 text-green-500" />
-                                <span>{productCount}</span>
+                              <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-500/10">
+                                <Package className="w-3 h-3 text-emerald-500" />
+                                <span className="text-emerald-600 font-medium">{productCount}</span>
                               </div>
                             )}
                             {packCount > 0 && (
-                              <div className="flex items-center gap-1">
-                                <Music className="w-3 h-3 text-purple-500" />
-                                <span>{packCount}</span>
+                              <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-violet-500/10">
+                                <Music className="w-3 h-3 text-violet-500" />
+                                <span className="text-violet-600 font-medium">{packCount}</span>
                               </div>
                             )}
                           </button>
                         </DialogTrigger>
                         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-white dark:bg-black">
                           <DialogHeader>
-                            <DialogTitle>Content for {userName}</DialogTitle>
+                            <DialogTitle className="flex items-center gap-2">
+                              <Sparkles className="w-5 h-5 text-chart-1" />
+                              Content for {userName}
+                            </DialogTitle>
                             <DialogDescription>
                               View all courses, products, and sample packs by this creator
                             </DialogDescription>
@@ -403,19 +454,20 @@ export default function UsersManagementPage() {
                             {courseCount > 0 && (
                               <div>
                                 <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
-                                  <BookOpen className="w-4 h-4 text-blue-500" />
+                                  <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                                    <BookOpen className="w-3 w-3 text-white" />
+                                  </div>
                                   Courses ({courseCount})
                                 </h3>
                                 <Accordion type="single" collapsible className="space-y-2">
                                   {courses?.map((course: any, idx: number) => {
-                                    // Calculate course completion percentage
                                     const totalChapters = course.chapters?.length || 0;
                                     const completedChapters = course.chapters?.filter((ch: any) => ch.isPublished)?.length || 0;
                                     const completionPercent = totalChapters > 0 ? Math.round((completedChapters / totalChapters) * 100) : 0;
                                     
                                     return (
-                                      <AccordionItem key={course._id} value={`course-${idx}`} className="border rounded-lg">
-                                        <AccordionTrigger className="px-3 py-2 hover:no-underline hover:bg-muted/50">
+                                      <AccordionItem key={course._id} value={`course-${idx}`} className="border rounded-xl overflow-hidden">
+                                        <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-muted/50">
                                           <div className="flex items-center justify-between w-full pr-2">
                                             <div className="flex-1 text-left">
                                               <p className="font-medium text-sm">{course.title}</p>
@@ -436,19 +488,18 @@ export default function UsersManagementPage() {
                                             </div>
                                           </div>
                                         </AccordionTrigger>
-                                        <AccordionContent className="px-3 pb-3">
+                                        <AccordionContent className="px-4 pb-4">
                                           <div className="space-y-2 mt-2">
                                             <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
                                               <span>{totalChapters} chapters total</span>
                                               <span>{completedChapters} published</span>
                                             </div>
                                             
-                                            {/* Chapters List */}
                                             {course.chapters && course.chapters.length > 0 ? (
                                               <div className="space-y-1">
                                                 {course.chapters.map((chapter: any, chIdx: number) => (
-                                                  <div key={chapter._id || chIdx} className="flex items-center gap-2 p-2 bg-muted/30 rounded text-xs">
-                                                    <span className="text-muted-foreground font-mono">{chIdx + 1}</span>
+                                                  <div key={chapter._id || chIdx} className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg text-xs">
+                                                    <span className="text-muted-foreground font-mono w-4">{chIdx + 1}</span>
                                                     <div className="flex-1">
                                                       <p className="font-medium">{chapter.title || "Untitled Chapter"}</p>
                                                       <div className="flex items-center gap-2 mt-0.5">
@@ -476,7 +527,6 @@ export default function UsersManagementPage() {
                                               <p className="text-xs text-muted-foreground italic">No chapters yet</p>
                                             )}
 
-                                            {/* Course Stats */}
                                             {course.description && (
                                               <div className="mt-3 pt-2 border-t">
                                                 <p className="text-xs text-muted-foreground line-clamp-2">
@@ -497,12 +547,14 @@ export default function UsersManagementPage() {
                             {productCount > 0 && (
                               <div>
                                 <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
-                                  <Package className="w-4 h-4 text-green-500" />
+                                  <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center">
+                                    <Package className="w-3 h-3 text-white" />
+                                  </div>
                                   Digital Products ({productCount})
                                 </h3>
                                 <div className="space-y-2">
                                   {products?.map((product: any) => (
-                                    <div key={product._id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
+                                    <div key={product._id} className="flex items-center justify-between p-3 bg-muted/30 rounded-xl border border-border/50">
                                       <div className="flex-1">
                                         <p className="font-medium text-sm">{product.title}</p>
                                         <div className="flex items-center gap-2 mt-1">
@@ -526,12 +578,14 @@ export default function UsersManagementPage() {
                             {packCount > 0 && (
                               <div>
                                 <h3 className="font-semibold text-sm mb-3 flex items-center gap-2">
-                                  <Music className="w-4 h-4 text-purple-500" />
+                                  <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center">
+                                    <Music className="w-3 h-3 text-white" />
+                                  </div>
                                   Sample Packs ({packCount})
                                 </h3>
                                 <div className="space-y-2">
                                   {samplePacks?.map((pack: any) => (
-                                    <div key={pack._id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
+                                    <div key={pack._id} className="flex items-center justify-between p-3 bg-muted/30 rounded-xl border border-border/50">
                                       <div className="flex-1">
                                         <p className="font-medium text-sm">{pack.name}</p>
                                         <div className="flex items-center gap-2 mt-1">
@@ -569,7 +623,8 @@ export default function UsersManagementPage() {
                 label: "Payment Status",
                 render: (user: any) => (
                   user.stripeConnectAccountId ? (
-                    <Badge variant="outline" className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300">
+                    <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600">
+                      <CheckCircle className="w-3 h-3 mr-1" />
                       Stripe Connected
                     </Badge>
                   ) : (
@@ -591,119 +646,9 @@ export default function UsersManagementPage() {
             getItemId={(user: any) => user._id}
           />
           
-          {/* Legacy individual user cards (hidden) */}
-          <div className="hidden">
-            {filteredUsers.map((user) => (
-              <div
-                key={user._id}
-                className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-              >
-                <div className="flex items-center gap-4 flex-1">
-                  <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900 flex items-center justify-center">
-                    <span className="text-purple-600 dark:text-purple-300 font-semibold">
-                      {user.name?.charAt(0).toUpperCase() || "?"}
-                    </span>
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold">{user.name || "Unknown"}</span>
-                      {user.emailVerified && (
-                        <CheckCircle className="w-4 h-4 text-green-600" />
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Mail className="w-3 h-3" />
-                      {user.email || "No email"}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-4">
-                  <Badge variant={
-                    user.role === "AGENCY_OWNER" || user.role === "AGENCY_ADMIN" 
-                      ? "default" 
-                      : "secondary"
-                  }>
-                    {user.role === "AGENCY_OWNER" ? "Owner" :
-                     user.role === "AGENCY_ADMIN" ? "Admin" :
-                     user.role === "SUBACCOUNT_GUEST" ? "Guest" :
-                     "User"}
-                  </Badge>
-                  
-                  {user.stripeConnectAccountId && (
-                    <Badge variant="outline">Stripe Connected</Badge>
-                  )}
-
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="bg-white dark:bg-black">
-                        <MoreVertical className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-white dark:bg-black">
-                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      
-                      <DropdownMenuItem
-                        onClick={() => handleViewProfile(user._id, user.name || "Unknown")}
-                        className="cursor-pointer"
-                      >
-                        <Eye className="w-4 h-4 mr-2" />
-                        View Profile
-                      </DropdownMenuItem>
-                      
-                      <DropdownMenuItem
-                        onClick={() => handleEditUser(user._id, user.name || "Unknown")}
-                        className="cursor-pointer"
-                      >
-                        <Edit className="w-4 h-4 mr-2" />
-                        Edit User
-                      </DropdownMenuItem>
-                      
-                      <DropdownMenuItem
-                        onClick={() => handleEmailUser(user.email || "", user.name || "Unknown")}
-                        className="cursor-pointer"
-                        disabled={!user.email}
-                      >
-                        <Send className="w-4 h-4 mr-2" />
-                        Email User
-                      </DropdownMenuItem>
-                      
-                      <DropdownMenuSeparator />
-                      
-                      <DropdownMenuItem
-                        onClick={() => handleToggleAdmin(user._id, user.name || "Unknown", user.admin || false)}
-                        className="cursor-pointer"
-                      >
-                        <UserCog className="w-4 h-4 mr-2" />
-                        {user.admin ? "Remove Admin" : "Make Admin"}
-                      </DropdownMenuItem>
-                      
-                      <DropdownMenuSeparator />
-                      
-                      <DropdownMenuItem
-                        onClick={() => handleDeleteUser(user._id, user.name || "Unknown")}
-                        className="cursor-pointer text-red-600 dark:text-red-400"
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete User
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
-            ))}
-
-            {filteredUsers.length === 0 && (
-              <div className="text-center py-12 text-muted-foreground">
-                No users found matching your search.
-              </div>
-            )}
-          </div>
-
           {/* Pagination Controls */}
           {!searchQuery && (
-            <div className="flex items-center justify-between pt-4 border-t">
+            <div className="flex items-center justify-between pt-6 border-t border-border/50 mt-6">
               <div className="text-sm text-muted-foreground">
                 Page {currentPage + 1} • Showing {filteredUsers.length} users
               </div>
@@ -713,8 +658,9 @@ export default function UsersManagementPage() {
                   size="sm"
                   onClick={handlePreviousPage}
                   disabled={currentPage === 0}
+                  className="gap-1"
                 >
-                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  <ChevronLeft className="w-4 h-4" />
                   Previous
                 </Button>
                 <Button
@@ -722,9 +668,10 @@ export default function UsersManagementPage() {
                   size="sm"
                   onClick={handleNextPage}
                   disabled={usersResult?.isDone}
+                  className="gap-1"
                 >
                   Next
-                  <ChevronRight className="w-4 h-4 ml-1" />
+                  <ChevronRight className="w-4 h-4" />
                 </Button>
               </div>
             </div>
@@ -734,4 +681,3 @@ export default function UsersManagementPage() {
     </div>
   );
 }
-

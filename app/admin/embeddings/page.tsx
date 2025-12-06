@@ -7,48 +7,129 @@ import { api } from "@/lib/convex-api";
 import { useUser } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Database, Zap, CheckCircle, AlertCircle, RefreshCw } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { 
+  Loader2, 
+  Database, 
+  Zap, 
+  CheckCircle, 
+  AlertCircle, 
+  RefreshCw, 
+  Sparkles, 
+  ArrowUpCircle,
+  BookOpen,
+  Video,
+  Package,
+  FileText,
+  Globe,
+} from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+
+// Content type configuration
+const CONTENT_TYPES = [
+  { id: "courseContent", label: "Course Content", icon: BookOpen, description: "All courses, chapters, modules & lessons" },
+  { id: "products", label: "Digital Products", icon: Package, description: "Sample packs, presets, beats, PDFs, etc." },
+  { id: "plugins", label: "Plugins & Effect Chains", icon: Zap, description: "Ableton Racks, effect chains, audio tools" },
+  { id: "notes", label: "User Notes", icon: FileText, description: "Personal notes and documentation" },
+] as const;
+
+type ContentTypeId = typeof CONTENT_TYPES[number]["id"];
 
 export default function EmbeddingsAdminPage() {
   const { user } = useUser();
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isMigrating, setIsMigrating] = useState(false);
+  const [selectedTypes, setSelectedTypes] = useState<ContentTypeId[]>(["courseContent", "products", "plugins"]);
   const [results, setResults] = useState<{
     success: boolean;
     processed: number;
-    skipped: number;
+    skipped?: number;
+    deleted?: number;
     errors: string[];
+    results?: Record<string, { processed: number; skipped: number; errors: number }>;
   } | null>(null);
 
   // Convex hooks
-  const generateEmbeddings = useAction(api.embeddingActions.generateAllCourseEmbeddings);
+  const generateAllContent = useAction(api.embeddingActions.generateAllContentEmbeddings);
+  const migrateEmbeddings = useAction(api.embeddingActions.migrateToNewEmbeddingModel);
   const embeddingStats = useQuery(api.embeddings.getEmbeddingStats);
 
+  const toggleContentType = (type: ContentTypeId) => {
+    setSelectedTypes(prev => 
+      prev.includes(type) 
+        ? prev.filter(t => t !== type)
+        : [...prev, type]
+    );
+  };
+
   const handleGenerateEmbeddings = async (overwrite: boolean = false) => {
-    if (!user) return;
+    if (!user || selectedTypes.length === 0) return;
 
     setIsGenerating(true);
     setResults(null);
 
     try {
-      const result = await generateEmbeddings({
+      const result = await generateAllContent({
         userId: user.id,
         overwrite,
+        contentTypes: selectedTypes,
       });
 
-      setResults(result);
+      setResults({
+        success: result.success,
+        processed: result.totalProcessed,
+        errors: result.totalErrors,
+        results: result.results,
+      });
     } catch (error) {
       console.error("Error generating embeddings:", error);
       setResults({
         success: false,
         processed: 0,
-        skipped: 0,
         errors: [`Failed to generate embeddings: ${error}`],
       });
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleMigrateEmbeddings = async () => {
+    if (!user) return;
+    
+    if (!confirm(
+      "⚠️ This will DELETE all existing embeddings and regenerate them with the new text-embedding-3-small model.\n\n" +
+      "This is necessary because the old embeddings use a different vector space.\n\n" +
+      "Continue?"
+    )) {
+      return;
+    }
+
+    setIsMigrating(true);
+    setResults(null);
+
+    try {
+      const result = await migrateEmbeddings({
+        userId: user.id,
+      });
+
+      setResults({
+        success: result.success,
+        processed: result.processed,
+        deleted: result.deleted,
+        errors: result.errors,
+      });
+    } catch (error) {
+      console.error("Error migrating embeddings:", error);
+      setResults({
+        success: false,
+        processed: 0,
+        deleted: 0,
+        errors: [`Failed to migrate embeddings: ${error}`],
+      });
+    } finally {
+      setIsMigrating(false);
     }
   };
 
@@ -65,14 +146,16 @@ export default function EmbeddingsAdminPage() {
     );
   }
 
+  const isProcessing = isGenerating || isMigrating;
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center gap-3">
         <Database className="h-8 w-8 text-primary" />
         <div>
-          <h1 className="text-3xl font-bold">Course Embeddings Admin</h1>
+          <h1 className="text-3xl font-bold">Knowledge Base Embeddings</h1>
           <p className="text-muted-foreground">
-            Generate and manage vector embeddings for your course content
+            Generate vector embeddings for your content to power AI search & chat
           </p>
         </div>
       </div>
@@ -82,37 +165,85 @@ export default function EmbeddingsAdminPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CheckCircle className="h-5 w-5" />
-            Current Statistics
-        </CardTitle>
+            Knowledge Base Statistics
+          </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-6">
           {embeddingStats ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold text-primary">{embeddingStats.totalEmbeddings}</div>
-                <div className="text-sm text-muted-foreground">Total Embeddings</div>
+            <>
+              {/* Summary Row */}
+              <div className="flex items-center justify-between p-4 bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg border">
+                <div>
+                  <div className="text-3xl font-bold text-primary">{embeddingStats.totalEmbeddings}</div>
+                  <div className="text-sm text-muted-foreground">Total Embeddings</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-3xl font-bold text-green-600">{embeddingStats.coveragePercentage}%</div>
+                  <div className="text-sm text-muted-foreground">Coverage</div>
+                </div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{embeddingStats.courseEmbeddings}</div>
-                <div className="text-sm text-muted-foreground">Course Embeddings</div>
+
+              {/* Embedded vs Content Breakdown */}
+              <div className="grid md:grid-cols-2 gap-4">
+                {/* Embedded Content */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-muted-foreground">Embedded Content</h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="p-2 bg-blue-50 dark:bg-blue-950/30 rounded-lg text-center">
+                      <div className="text-lg font-bold text-blue-600">{embeddingStats.bySourceType.courses}</div>
+                      <div className="text-xs text-muted-foreground">Courses</div>
+                    </div>
+                    <div className="p-2 bg-green-50 dark:bg-green-950/30 rounded-lg text-center">
+                      <div className="text-lg font-bold text-green-600">{embeddingStats.bySourceType.chapters}</div>
+                      <div className="text-xs text-muted-foreground">Chapters</div>
+                    </div>
+                    <div className="p-2 bg-purple-50 dark:bg-purple-950/30 rounded-lg text-center">
+                      <div className="text-lg font-bold text-purple-600">{embeddingStats.bySourceType.lessons}</div>
+                      <div className="text-xs text-muted-foreground">Lessons</div>
+                    </div>
+                    <div className="p-2 bg-orange-50 dark:bg-orange-950/30 rounded-lg text-center">
+                      <div className="text-lg font-bold text-orange-600">{embeddingStats.bySourceType.products}</div>
+                      <div className="text-xs text-muted-foreground">Products</div>
+                    </div>
+                    <div className="p-2 bg-pink-50 dark:bg-pink-950/30 rounded-lg text-center">
+                      <div className="text-lg font-bold text-pink-600">{embeddingStats.bySourceType.notes}</div>
+                      <div className="text-xs text-muted-foreground">Notes</div>
+                    </div>
+                    <div className="p-2 bg-cyan-50 dark:bg-cyan-950/30 rounded-lg text-center">
+                      <div className="text-lg font-bold text-cyan-600">{embeddingStats.bySourceType.webResearch}</div>
+                      <div className="text-xs text-muted-foreground">Web Research</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Total Content */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-muted-foreground">Total Content Available</h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="p-2 bg-muted/50 rounded-lg text-center">
+                      <div className="text-lg font-bold">{embeddingStats.contentCounts.courses}</div>
+                      <div className="text-xs text-muted-foreground">Courses</div>
+                    </div>
+                    <div className="p-2 bg-muted/50 rounded-lg text-center">
+                      <div className="text-lg font-bold">{embeddingStats.contentCounts.chapters}</div>
+                      <div className="text-xs text-muted-foreground">Chapters</div>
+                    </div>
+                    <div className="p-2 bg-muted/50 rounded-lg text-center">
+                      <div className="text-lg font-bold">{embeddingStats.contentCounts.lessons}</div>
+                      <div className="text-xs text-muted-foreground">Lessons</div>
+                    </div>
+                    <div className="p-2 bg-muted/50 rounded-lg text-center">
+                      <div className="text-lg font-bold">{embeddingStats.contentCounts.products}</div>
+                      <div className="text-xs text-muted-foreground">Products</div>
+                    </div>
+                    <div className="p-2 bg-muted/50 rounded-lg text-center col-span-2">
+                      <div className="text-lg font-bold">{embeddingStats.contentCounts.notes}</div>
+                      <div className="text-xs text-muted-foreground">Notes</div>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">{embeddingStats.chapterEmbeddings}</div>
-                <div className="text-sm text-muted-foreground">Chapter Embeddings</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold">{embeddingStats.totalCourses}</div>
-                <div className="text-sm text-muted-foreground">Total Courses</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold">{embeddingStats.totalChapters}</div>
-                <div className="text-sm text-muted-foreground">Total Chapters</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-purple-600">{embeddingStats.coveragePercentage}%</div>
-                <div className="text-sm text-muted-foreground">Coverage</div>
-              </div>
-            </div>
+            </>
           ) : (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin" />
@@ -122,7 +253,7 @@ export default function EmbeddingsAdminPage() {
         </CardContent>
       </Card>
 
-      {/* Generation Controls */}
+      {/* Content Type Selection */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -130,15 +261,47 @@ export default function EmbeddingsAdminPage() {
             Generate Embeddings
           </CardTitle>
           <CardDescription>
-            Generate vector embeddings for all course titles, descriptions, and chapter content.
-            This will enable semantic search and AI-powered Q&A for your courses.
+            Select which content types to process. More content = smarter AI assistant.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
+          {/* Content Type Checkboxes */}
+          <div className="grid md:grid-cols-2 gap-4">
+            {CONTENT_TYPES.map((type) => {
+              const Icon = type.icon;
+              const isSelected = selectedTypes.includes(type.id);
+              return (
+                <div
+                  key={type.id}
+                  className={`flex items-start gap-3 p-4 rounded-lg border cursor-pointer transition-all ${
+                    isSelected 
+                      ? "border-primary bg-primary/5" 
+                      : "border-border hover:border-muted-foreground/50"
+                  }`}
+                  onClick={() => toggleContentType(type.id)}
+                >
+                  <Checkbox 
+                    checked={isSelected}
+                    onCheckedChange={() => toggleContentType(type.id)}
+                    className="mt-1"
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <Icon className={`h-4 w-4 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
+                      <Label className="font-medium cursor-pointer">{type.label}</Label>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">{type.description}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Action Buttons */}
           <div className="flex gap-3">
             <Button
               onClick={() => handleGenerateEmbeddings(false)}
-              disabled={isGenerating}
+              disabled={isProcessing || selectedTypes.length === 0}
               size="lg"
               className="flex items-center gap-2"
             >
@@ -152,7 +315,7 @@ export default function EmbeddingsAdminPage() {
 
             <Button
               onClick={() => handleGenerateEmbeddings(true)}
-              disabled={isGenerating}
+              disabled={isProcessing || selectedTypes.length === 0}
               variant="outline"
               size="lg"
               className="flex items-center gap-2"
@@ -166,22 +329,79 @@ export default function EmbeddingsAdminPage() {
             </Button>
           </div>
 
-          <div className="text-sm text-muted-foreground space-y-1">
-            <p>• <strong>Generate New:</strong> Only creates embeddings for content that doesn't have them yet</p>
-            <p>• <strong>Regenerate All:</strong> Overwrites existing embeddings with fresh ones</p>
-          </div>
+          {selectedTypes.length === 0 && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Please select at least one content type to generate embeddings.
+              </AlertDescription>
+            </Alert>
+          )}
 
-          {isGenerating && (
-            <div className="space-y-2">
+          {isProcessing && (
+            <div className="space-y-2 p-4 bg-muted/50 rounded-lg">
               <div className="flex items-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                <span className="text-sm">Generating embeddings...</span>
+                <span className="text-sm font-medium">
+                  {isMigrating ? "Migrating embeddings..." : `Generating embeddings for ${selectedTypes.length} content types...`}
+                </span>
               </div>
               <div className="text-xs text-muted-foreground">
-                This may take a few minutes depending on the amount of content.
+                This may take several minutes depending on the amount of content.
               </div>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Model Migration Card */}
+      <Card className="border-2 border-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+            <ArrowUpCircle className="h-5 w-5" />
+            Upgrade Embedding Model
+          </CardTitle>
+          <CardDescription>
+            Migrate to OpenAI's improved embedding model with better quality at lower cost.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-4">
+            <div className="flex-1 p-3 rounded-lg bg-white/80 dark:bg-black/20 border">
+              <div className="text-xs text-muted-foreground">Old Model</div>
+              <div className="font-mono text-sm">text-embedding-ada-002</div>
+              <div className="text-xs text-muted-foreground">$0.10/M tokens</div>
+            </div>
+            <Sparkles className="h-5 w-5 text-amber-500" />
+            <div className="flex-1 p-3 rounded-lg bg-gradient-to-r from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30 border border-amber-300">
+              <div className="text-xs text-amber-600 dark:text-amber-400">New Model</div>
+              <div className="font-mono text-sm font-semibold">text-embedding-3-small</div>
+              <div className="text-xs text-amber-600 dark:text-amber-400">$0.02/M tokens • 5x cheaper!</div>
+            </div>
+          </div>
+
+          <Button
+            onClick={handleMigrateEmbeddings}
+            disabled={isProcessing}
+            variant="outline"
+            className="w-full border-amber-500 text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/50"
+          >
+            {isMigrating ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Migrating...
+              </>
+            ) : (
+              <>
+                <ArrowUpCircle className="h-4 w-4 mr-2" />
+                Migrate All Embeddings
+              </>
+            )}
+          </Button>
+
+          <div className="text-xs text-amber-700 dark:text-amber-400">
+            ⚠️ This will delete all existing embeddings and regenerate them. Required if you previously used the old model.
+          </div>
         </CardContent>
       </Card>
 
@@ -195,18 +415,50 @@ export default function EmbeddingsAdminPage() {
               ) : (
                 <AlertCircle className="h-5 w-5 text-red-600" />
               )}
-              Generation Results
+              Results
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-3 gap-4">
+            {/* Per-type breakdown */}
+            {results.results && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {Object.entries(results.results).map(([type, data]) => {
+                  const config = CONTENT_TYPES.find(t => t.id === type);
+                  const Icon = config?.icon || Database;
+                  return (
+                    <div key={type} className="p-3 bg-muted/50 rounded-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Icon className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm font-medium capitalize">{type}</span>
+                      </div>
+                      <div className="flex gap-2 text-xs">
+                        <Badge variant="secondary" className="bg-green-100 text-green-700">
+                          {data.processed} new
+                        </Badge>
+                        {data.skipped > 0 && (
+                          <Badge variant="outline">{data.skipped} skipped</Badge>
+                        )}
+                        {data.errors > 0 && (
+                          <Badge variant="destructive">{data.errors} errors</Badge>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Summary */}
+            <div className="grid grid-cols-3 gap-4 pt-4 border-t">
+              {results.deleted !== undefined && (
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-orange-600">{results.deleted}</div>
+                  <div className="text-sm text-muted-foreground">Deleted</div>
+                </div>
+              )}
               <div className="text-center">
                 <div className="text-2xl font-bold text-green-600">{results.processed}</div>
-                <div className="text-sm text-muted-foreground">Processed</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-yellow-600">{results.skipped}</div>
-                <div className="text-sm text-muted-foreground">Skipped</div>
+                <div className="text-sm text-muted-foreground">Total Processed</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-red-600">{results.errors.length}</div>
@@ -218,14 +470,14 @@ export default function EmbeddingsAdminPage() {
               <Alert>
                 <CheckCircle className="h-4 w-4" />
                 <AlertDescription>
-                  Embedding generation completed successfully! Processed {results.processed} items, skipped {results.skipped} existing items.
+                  Embedding generation completed successfully! {results.processed} items processed.
                 </AlertDescription>
               </Alert>
             ) : (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
-                  Embedding generation encountered errors. Check the error list below.
+                  Some errors occurred during processing. Check the error list below.
                 </AlertDescription>
               </Alert>
             )}
@@ -233,12 +485,17 @@ export default function EmbeddingsAdminPage() {
             {results.errors.length > 0 && (
               <div className="space-y-2">
                 <h4 className="font-semibold text-red-600">Errors:</h4>
-                <div className="space-y-1">
-                  {results.errors.map((error, index) => (
-                    <div key={index} className="text-sm text-red-600 bg-red-50 p-2 rounded">
+                <div className="max-h-40 overflow-y-auto space-y-1">
+                  {results.errors.slice(0, 10).map((error, index) => (
+                    <div key={index} className="text-sm text-red-600 bg-red-50 dark:bg-red-950/30 p-2 rounded">
                       {error}
                     </div>
                   ))}
+                  {results.errors.length > 10 && (
+                    <div className="text-sm text-muted-foreground">
+                      ...and {results.errors.length - 10} more errors
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -253,17 +510,21 @@ export default function EmbeddingsAdminPage() {
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <p>
-            <strong>1. Content Extraction:</strong> The system reads all your course titles, descriptions, and chapter content.
+            <strong>1. Content Selection:</strong> Choose which types of content to embed (courses, lessons, products, notes).
           </p>
           <p>
-            <strong>2. Embedding Generation:</strong> Each piece of content is converted into a 1536-dimensional vector using OpenAI's embedding model.
+            <strong>2. Vector Embedding:</strong> Each piece of content is converted into a 1536-dimensional vector using OpenAI's <code className="px-1 py-0.5 bg-muted rounded">text-embedding-3-small</code> model.
           </p>
           <p>
-            <strong>3. Vector Storage:</strong> All embeddings are stored in your Convex database for fast semantic search.
+            <strong>3. Smart Storage:</strong> Vectors are stored in Convex with deduplication - existing content won't be re-processed.
           </p>
           <p>
-            <strong>4. AI-Powered Features:</strong> Once generated, you can use these embeddings for semantic search, Q&A systems, and content recommendations.
+            <strong>4. AI Features:</strong> The Master AI Assistant uses these embeddings for semantic search, Q&A, and intelligent recommendations.
           </p>
+          <div className="flex items-center gap-2 pt-2 text-muted-foreground">
+            <Globe className="h-4 w-4" />
+            <span>Web research results are also automatically indexed when using the AI Assistant with web search enabled.</span>
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -3687,4 +3687,146 @@ export default defineSchema({
     .index("by_postId", ["postId"])
     .index("by_authorId", ["authorId"])
     .index("by_approved", ["approved"]),
+
+  // ============================================================================
+  // AI ASSISTANT - Conversations, Messages, and Memories
+  // ============================================================================
+
+  // AI Conversations - stores conversation metadata
+  aiConversations: defineTable({
+    userId: v.string(), // Clerk ID of the user
+    title: v.string(), // Auto-generated or user-edited title
+    preview: v.optional(v.string()), // First message preview
+    lastMessageAt: v.number(), // Timestamp of last message
+    messageCount: v.number(), // Total messages in conversation
+    // Settings used for this conversation
+    preset: v.optional(v.string()),
+    responseStyle: v.optional(v.string()),
+    // Metadata
+    archived: v.optional(v.boolean()),
+    starred: v.optional(v.boolean()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_userId_lastMessageAt", ["userId", "lastMessageAt"])
+    .index("by_userId_archived", ["userId", "archived"])
+    .index("by_userId_starred", ["userId", "starred"]),
+
+  // AI Messages - stores individual messages within conversations
+  aiMessages: defineTable({
+    conversationId: v.id("aiConversations"),
+    userId: v.string(), // Clerk ID
+    role: v.union(v.literal("user"), v.literal("assistant")),
+    content: v.string(),
+    // Assistant-specific fields
+    citations: v.optional(v.array(v.object({
+      id: v.number(),
+      title: v.string(),
+      sourceType: v.string(),
+      sourceId: v.optional(v.string()),
+    }))),
+    facetsUsed: v.optional(v.array(v.string())),
+    // Pipeline metadata for assistant messages
+    pipelineMetadata: v.optional(v.object({
+      processingTimeMs: v.number(),
+      totalChunksProcessed: v.number(),
+      plannerModel: v.optional(v.string()),
+      summarizerModel: v.optional(v.string()),
+      finalWriterModel: v.optional(v.string()),
+    })),
+    // Timestamps
+    createdAt: v.number(),
+  })
+    .index("by_conversationId", ["conversationId"])
+    .index("by_conversationId_createdAt", ["conversationId", "createdAt"])
+    .index("by_userId", ["userId"]),
+
+  // AI Memories - stores long-term memories extracted from conversations
+  aiMemories: defineTable({
+    userId: v.string(), // Clerk ID
+    // Memory content
+    content: v.string(), // The actual memory/fact
+    summary: v.optional(v.string()), // Short summary for display
+    // Memory type
+    type: v.union(
+      v.literal("preference"),   // User preferences (e.g., "prefers conversational responses")
+      v.literal("fact"),         // Facts about the user (e.g., "uses Ableton Live")
+      v.literal("skill_level"),  // Skill assessments (e.g., "intermediate at mixing")
+      v.literal("context"),      // Contextual info (e.g., "working on melodic techno track")
+      v.literal("correction")    // Corrections made by user
+    ),
+    // Source tracking
+    sourceConversationId: v.optional(v.id("aiConversations")),
+    sourceMessageId: v.optional(v.id("aiMessages")),
+    // For vector similarity search (optional)
+    embedding: v.optional(v.array(v.number())),
+    // Importance and recency scoring
+    importance: v.number(), // 1-10 scale
+    accessCount: v.number(), // How often this memory is retrieved
+    lastAccessedAt: v.optional(v.number()),
+    // Lifecycle
+    expiresAt: v.optional(v.number()), // For temporary memories
+    archived: v.optional(v.boolean()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_userId_type", ["userId", "type"])
+    .index("by_userId_importance", ["userId", "importance"])
+    .index("by_sourceConversationId", ["sourceConversationId"]),
+
+  // AI Message Feedback - upvotes/downvotes on responses
+  aiMessageFeedback: defineTable({
+    messageId: v.id("aiMessages"),
+    conversationId: v.id("aiConversations"),
+    userId: v.string(), // Clerk ID
+    vote: v.union(v.literal("up"), v.literal("down")),
+    // Optional detailed feedback
+    reason: v.optional(v.string()), // Why they voted this way
+    tags: v.optional(v.array(v.union(
+      v.literal("accurate"),
+      v.literal("helpful"),
+      v.literal("creative"),
+      v.literal("well_written"),
+      v.literal("inaccurate"),
+      v.literal("unhelpful"),
+      v.literal("off_topic"),
+      v.literal("too_long"),
+      v.literal("too_short")
+    ))),
+    createdAt: v.number(),
+  })
+    .index("by_messageId", ["messageId"])
+    .index("by_userId", ["userId"])
+    .index("by_conversationId", ["conversationId"])
+    .index("by_vote", ["vote"]),
+
+  // Web Research Results - cached Tavily searches that can be added to embeddings
+  webResearch: defineTable({
+    userId: v.string(), // Who triggered the search
+    query: v.string(), // The search query
+    // Results from Tavily
+    results: v.array(v.object({
+      title: v.string(),
+      url: v.string(),
+      content: v.string(),
+      score: v.number(),
+      publishedDate: v.optional(v.string()),
+    })),
+    // Whether this has been added to embeddings
+    addedToEmbeddings: v.boolean(),
+    embeddingIds: v.optional(v.array(v.id("embeddings"))),
+    // Context
+    sourceConversationId: v.optional(v.id("aiConversations")),
+    sourceMessageId: v.optional(v.id("aiMessages")),
+    // Metadata
+    resultCount: v.number(),
+    searchDuration: v.optional(v.number()), // ms
+    createdAt: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_query", ["query"])
+    .index("by_addedToEmbeddings", ["addedToEmbeddings"])
+    .index("by_sourceConversationId", ["sourceConversationId"]),
 }); 

@@ -122,10 +122,13 @@ export const askQuestion = action({
 });
 
 // Helper functions
+// text-embedding-3-small produces 1536-dimensional vectors
+const EMBEDDING_DIMENSIONS = 1536;
+
 async function generateQueryEmbedding(query: string): Promise<number[]> {
   try {
     if (!process.env.OPENAI_API_KEY) {
-      return new Array(1536).fill(0).map(() => Math.random() - 0.5);
+      return new Array(EMBEDDING_DIMENSIONS).fill(0).map(() => Math.random() - 0.5);
     }
 
     const response = await fetch('https://api.openai.com/v1/embeddings', {
@@ -136,7 +139,7 @@ async function generateQueryEmbedding(query: string): Promise<number[]> {
       },
       body: JSON.stringify({
         input: query,
-        model: 'text-embedding-ada-002'
+        model: 'text-embedding-3-small' // Best price/performance embedding model
       })
     });
 
@@ -144,7 +147,7 @@ async function generateQueryEmbedding(query: string): Promise<number[]> {
     return (data as any)?.data?.[0]?.embedding;
   } catch (error) {
     console.error('Error generating query embedding:', error);
-    return new Array(1536).fill(0).map(() => Math.random() - 0.5);
+    return new Array(EMBEDDING_DIMENSIONS).fill(0).map(() => Math.random() - 0.5);
   }
 }
 

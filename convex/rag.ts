@@ -54,9 +54,12 @@ export const generateEmbedding = internalAction({
   returns: v.null(),
   handler: async (ctx, args) => {
     try {
+      // text-embedding-3-small produces 1536-dimensional vectors
+      const EMBEDDING_DIMENSIONS = 1536;
+      
       if (!process.env.OPENAI_API_KEY) {
         console.warn('OpenAI API key not found, using placeholder embeddings');
-        const placeholderEmbedding = new Array(1536).fill(0).map(() => Math.random() - 0.5);
+        const placeholderEmbedding = new Array(EMBEDDING_DIMENSIONS).fill(0).map(() => Math.random() - 0.5);
         await ctx.runMutation(internal.rag.updateEmbedding, {
           embeddingId: args.embeddingId,
           embedding: placeholderEmbedding,
@@ -72,7 +75,7 @@ export const generateEmbedding = internalAction({
         },
         body: JSON.stringify({
           input: args.content,
-          model: 'text-embedding-ada-002'
+          model: 'text-embedding-3-small' // Best price/performance embedding model
         })
       });
 
@@ -91,7 +94,7 @@ export const generateEmbedding = internalAction({
 
     } catch (error) {
       console.error('Error generating embedding:', error);
-      // Use placeholder embedding for development
+      // Use placeholder embedding for development (1536 dims for text-embedding-3-small)
       const placeholderEmbedding = new Array(1536).fill(0).map(() => Math.random() - 0.5);
       await ctx.runMutation(internal.rag.updateEmbedding, {
         embeddingId: args.embeddingId,
