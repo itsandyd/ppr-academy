@@ -50,6 +50,17 @@ import {
   Globe,
   Shield,
   Save,
+  Wand2,
+  Check,
+  X,
+  BookOpen,
+  FileText,
+  LayoutList,
+  Pencil,
+  Trash2,
+  Copy,
+  Link,
+  AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
@@ -80,6 +91,47 @@ interface Message {
   isStreaming?: boolean;
   feedback?: "up" | "down" | null;
   dbId?: Id<"aiMessages">; // Database ID for feedback
+  // NEW: Action-related fields
+  actionProposal?: ActionProposal;
+  executedActions?: ActionsExecuted;
+}
+
+// Action Proposal Types
+interface ProposedAction {
+  tool: string;
+  parameters: Record<string, unknown>;
+  description: string;
+  requiresConfirmation: boolean;
+}
+
+interface ActionProposal {
+  type: "action_proposal";
+  proposedActions: ProposedAction[];
+  message: string;
+  summary: string;
+}
+
+interface ToolCallResult {
+  tool: string;
+  success: boolean;
+  result?: {
+    message?: string;
+    link?: string;
+    courseId?: string;
+    slug?: string;
+    [key: string]: unknown;
+  };
+  error?: string;
+}
+
+interface ActionsExecuted {
+  type: "actions_executed";
+  results: ToolCallResult[];
+  summary: string;
+  links?: Array<{
+    label: string;
+    url: string;
+  }>;
 }
 
 interface PipelineStatus {
@@ -125,11 +177,23 @@ export default function AIAssistantPage() {
   const [currentConversationId, setCurrentConversationId] = useState<Id<"aiConversations"> | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   
+  // Action proposal state
+  const [pendingProposal, setPendingProposal] = useState<{
+    messageId: string;
+    proposal: ActionProposal;
+  } | null>(null);
+  const [isExecutingActions, setIsExecutingActions] = useState(false);
+  
+  // Agentic mode toggle
+  const [agenticMode, setAgenticMode] = useState(true);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Convex action for non-streaming fallback
+  // Convex actions
   const askMasterAI = useAction((api as any).masterAI.index.askMasterAI);
+  const askAgenticAI = useAction((api as any).masterAI.index.askAgenticAI);
+  const executeConfirmedActions = useAction((api as any).masterAI.index.executeConfirmedActions);
   
   // Conversation mutations
   const createConversation = useMutation(api.aiConversations.createConversation);
@@ -251,10 +315,8 @@ export default function AIAssistantPage() {
       content: m.content,
     }));
     
-    // Add long-term memories to context
-    const memoryContext = userMemories?.length
-      ? `\n[User Context - Remember these facts about the user:\n${userMemories.map(m => `- ${m.content}`).join("\n")}\n]`
-      : "";
+    // Note: Long-term memories are now fetched and formatted by the backend pipeline
+    // This is more reliable and doesn't pollute the question text
 
     try {
       // Try streaming endpoint first
@@ -262,9 +324,10 @@ export default function AIAssistantPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          question: userMessage.content + memoryContext,
+          question: userMessage.content, // Clean question, no memory appending
           settings,
           conversationContext,
+          conversationId: currentConversationId, // Pass conversation ID for caching
         }),
       });
 
@@ -345,54 +408,123 @@ export default function AIAssistantPage() {
       
       // Fallback to direct Convex action
       try {
-        const result = await askMasterAI({
-          question: userMessage.content,
-          settings,
-          userId: user.id,
-          conversationContext,
-        });
+        // Use agentic endpoint if enabled, otherwise use standard
+        if (agenticMode) {
+          const result = await askAgenticAI({
+            question: userMessage.content,
+            settings,
+            userId: user.id,
+            storeId: "", // TODO: Get user's store ID
+            userRole: "creator",
+            conversationContext,
+          });
 
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: "assistant",
-          content: result.answer,
-          citations: result.citations,
-          timestamp: new Date(),
-          pipelineMetadata: {
-            processingTimeMs: result.pipelineMetadata.processingTimeMs,
-            totalChunksProcessed: result.pipelineMetadata.totalChunksProcessed,
-            facetsUsed: result.facetsUsed,
-          },
-        };
-
-        // Save assistant message to database
-        if (conversationId) {
-          try {
-            await saveMessage({
-              conversationId,
-              userId: user.id,
+          const assistantMessageId = (Date.now() + 1).toString();
+          
+          // Check if this is an action proposal
+          if (result.type === "action_proposal") {
+            const assistantMessage: Message = {
+              id: assistantMessageId,
+              role: "assistant",
+              content: result.message,
+              timestamp: new Date(),
+              actionProposal: result,
+            };
+            
+            setMessages((prev) => {
+              const filtered = prev.filter((m) => !m.isStreaming);
+              return [...filtered, assistantMessage];
+            });
+            
+            // Set pending proposal for confirmation
+            setPendingProposal({
+              messageId: assistantMessageId,
+              proposal: result,
+            });
+          } else if (result.type === "actions_executed") {
+            const assistantMessage: Message = {
+              id: assistantMessageId,
+              role: "assistant",
+              content: result.summary,
+              timestamp: new Date(),
+              executedActions: result,
+            };
+            
+            setMessages((prev) => {
+              const filtered = prev.filter((m) => !m.isStreaming);
+              return [...filtered, assistantMessage];
+            });
+          } else {
+            // Standard Q&A response
+            const assistantMessage: Message = {
+              id: assistantMessageId,
               role: "assistant",
               content: result.answer,
               citations: result.citations,
-              facetsUsed: result.facetsUsed,
+              timestamp: new Date(),
               pipelineMetadata: {
-                processingTimeMs: result.pipelineMetadata.processingTimeMs,
-                totalChunksProcessed: result.pipelineMetadata.totalChunksProcessed,
-                plannerModel: result.pipelineMetadata.plannerModel,
-                summarizerModel: result.pipelineMetadata.summarizerModel,
-                finalWriterModel: result.pipelineMetadata.finalWriterModel,
+                processingTimeMs: result.pipelineMetadata?.processingTimeMs || 0,
+                totalChunksProcessed: result.pipelineMetadata?.totalChunksProcessed || 0,
+                facetsUsed: result.facetsUsed,
               },
+            };
+            
+            setMessages((prev) => {
+              const filtered = prev.filter((m) => !m.isStreaming);
+              return [...filtered, assistantMessage];
             });
-          } catch (error) {
-            console.error("Failed to save assistant message:", error);
           }
-        }
+        } else {
+          // Standard Q&A mode
+          const result = await askMasterAI({
+            question: userMessage.content,
+            settings,
+            userId: user.id,
+            conversationContext,
+          });
 
-        setMessages((prev) => {
-          // Remove any streaming placeholder
-          const filtered = prev.filter((m) => !m.isStreaming);
-          return [...filtered, assistantMessage];
-        });
+          const assistantMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            role: "assistant",
+            content: result.answer,
+            citations: result.citations,
+            timestamp: new Date(),
+            pipelineMetadata: {
+              processingTimeMs: result.pipelineMetadata.processingTimeMs,
+              totalChunksProcessed: result.pipelineMetadata.totalChunksProcessed,
+              facetsUsed: result.facetsUsed,
+            },
+          };
+
+          // Save assistant message to database
+          if (conversationId) {
+            try {
+              await saveMessage({
+                conversationId,
+                userId: user.id,
+                role: "assistant",
+                content: result.answer,
+                citations: result.citations,
+                facetsUsed: result.facetsUsed,
+                pipelineMetadata: {
+                  processingTimeMs: result.pipelineMetadata.processingTimeMs,
+                  totalChunksProcessed: result.pipelineMetadata.totalChunksProcessed,
+                  plannerModel: result.pipelineMetadata.plannerModel,
+                  summarizerModel: result.pipelineMetadata.summarizerModel,
+                  finalWriterModel: result.pipelineMetadata.finalWriterModel,
+                },
+              });
+            } catch (error) {
+              console.error("Failed to save assistant message:", error);
+            }
+          }
+
+          setMessages((prev) => {
+            // Remove any streaming placeholder
+            const filtered = prev.filter((m) => !m.isStreaming);
+            return [...filtered, assistantMessage];
+          });
+        }
       } catch (fallbackError) {
         console.error("Fallback error:", fallbackError);
         setMessages((prev) => [
@@ -568,6 +700,74 @@ export default function AIAssistantPage() {
     }
   }, [user, currentConversationId, messages, submitFeedback]);
 
+  // Handle confirming proposed actions
+  const handleConfirmActions = useCallback(async () => {
+    if (!pendingProposal || !user) return;
+    
+    setIsExecutingActions(true);
+    
+    try {
+      // Get the user's store ID (you may need to fetch this differently)
+      const storeId = ""; // TODO: Get from user context or query
+      
+      const result = await executeConfirmedActions({
+        actions: pendingProposal.proposal.proposedActions.map(a => ({
+          tool: a.tool,
+          parameters: a.parameters,
+        })),
+        userId: user.id,
+        storeId,
+      });
+
+      // Update the message with executed actions
+      setMessages(prev => prev.map(m => 
+        m.id === pendingProposal.messageId
+          ? {
+              ...m,
+              content: result.summary,
+              actionProposal: undefined,
+              executedActions: result,
+            }
+          : m
+      ));
+      
+      setPendingProposal(null);
+    } catch (error) {
+      console.error("Failed to execute actions:", error);
+      // Add error message
+      setMessages(prev => prev.map(m => 
+        m.id === pendingProposal.messageId
+          ? {
+              ...m,
+              content: `Error executing actions: ${error instanceof Error ? error.message : 'Unknown error'}`,
+              actionProposal: undefined,
+            }
+          : m
+      ));
+      setPendingProposal(null);
+    } finally {
+      setIsExecutingActions(false);
+    }
+  }, [pendingProposal, user, executeConfirmedActions]);
+
+  // Handle canceling proposed actions
+  const handleCancelActions = useCallback(() => {
+    if (!pendingProposal) return;
+    
+    // Update the message to show cancellation
+    setMessages(prev => prev.map(m => 
+      m.id === pendingProposal.messageId
+        ? {
+            ...m,
+            content: "I've cancelled the proposed actions. Let me know if you'd like to try something different!",
+            actionProposal: undefined,
+          }
+        : m
+    ));
+    
+    setPendingProposal(null);
+  }, [pendingProposal]);
+
   // Not loaded yet
   if (!isLoaded) {
     return (
@@ -637,6 +837,18 @@ export default function AIAssistantPage() {
               </Badge>
             )}
             
+            {/* Agentic Mode Toggle */}
+            <div className="flex items-center gap-2">
+              <Label htmlFor="agentic-mode" className="text-xs text-muted-foreground cursor-pointer">
+                Actions
+              </Label>
+              <Switch
+                id="agentic-mode"
+                checked={agenticMode}
+                onCheckedChange={setAgenticMode}
+              />
+            </div>
+            
             {/* Current Preset Badge */}
             <Badge variant="outline" className="flex items-center gap-1.5 px-3 py-1.5">
               {PRESET_ICONS[settings.preset]}
@@ -671,12 +883,28 @@ export default function AIAssistantPage() {
             )}
 
             {messages.map((message) => (
-              <MessageBubble 
-                key={message.id} 
-                message={message}
-                onFeedback={handleFeedback}
-                currentConversationId={currentConversationId}
-              />
+              <div key={message.id}>
+                <MessageBubble 
+                  message={message}
+                  onFeedback={handleFeedback}
+                  currentConversationId={currentConversationId}
+                />
+                
+                {/* Show Action Proposal Card if this message has one */}
+                {message.actionProposal && pendingProposal?.messageId === message.id && (
+                  <ActionProposalCard
+                    proposal={message.actionProposal}
+                    onConfirm={handleConfirmActions}
+                    onCancel={handleCancelActions}
+                    isExecuting={isExecutingActions}
+                  />
+                )}
+                
+                {/* Show Executed Actions if this message has them */}
+                {message.executedActions && (
+                  <ExecutedActionsCard executedActions={message.executedActions} />
+                )}
+              </div>
             ))}
 
             {/* Pipeline Status */}
@@ -1251,3 +1479,243 @@ function SettingsPanel({
   );
 }
 
+// ============================================================================
+// ACTION PROPOSAL CARD
+// ============================================================================
+
+function ActionProposalCard({
+  proposal,
+  onConfirm,
+  onCancel,
+  isExecuting,
+}: {
+  proposal: ActionProposal;
+  onConfirm: () => void;
+  onCancel: () => void;
+  isExecuting: boolean;
+}) {
+  const getToolIcon = (toolName: string) => {
+    if (toolName.includes("Course") || toolName.includes("course")) {
+      return <BookOpen className="w-4 h-4" />;
+    }
+    if (toolName.includes("Lesson") || toolName.includes("lesson")) {
+      return <FileText className="w-4 h-4" />;
+    }
+    if (toolName.includes("Module") || toolName.includes("module")) {
+      return <LayoutList className="w-4 h-4" />;
+    }
+    if (toolName.includes("generate") || toolName.includes("Generate")) {
+      return <Wand2 className="w-4 h-4" />;
+    }
+    if (toolName.includes("update") || toolName.includes("Update")) {
+      return <Pencil className="w-4 h-4" />;
+    }
+    if (toolName.includes("delete") || toolName.includes("Delete")) {
+      return <Trash2 className="w-4 h-4" />;
+    }
+    if (toolName.includes("duplicate") || toolName.includes("Duplicate")) {
+      return <Copy className="w-4 h-4" />;
+    }
+    if (toolName.includes("list") || toolName.includes("List")) {
+      return <LayoutList className="w-4 h-4" />;
+    }
+    return <Wand2 className="w-4 h-4" />;
+  };
+
+  return (
+    <Card className="mt-4 border-amber-500/50 bg-amber-50/10 dark:bg-amber-950/20">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <div className="p-1.5 rounded-md bg-amber-500/10">
+            <Wand2 className="w-5 h-5 text-amber-500" />
+          </div>
+          I'd like to take these actions:
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Proposed Actions List */}
+        <div className="space-y-2">
+          {proposal.proposedActions.map((action, i) => (
+            <div
+              key={i}
+              className="flex items-start gap-3 p-3 rounded-lg bg-background/50 border border-border/50"
+            >
+              <div className="p-1.5 rounded-md bg-primary/10">
+                {getToolIcon(action.tool)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs font-mono">
+                    {action.tool}
+                  </Badge>
+                  {action.requiresConfirmation && (
+                    <Badge variant="secondary" className="text-xs">
+                      Needs confirmation
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-sm mt-1 text-muted-foreground">
+                  {action.description}
+                </p>
+                {/* Show parameters */}
+                {Object.keys(action.parameters).length > 0 && (
+                  <div className="mt-2 p-2 rounded bg-muted/50 text-xs font-mono">
+                    {Object.entries(action.parameters)
+                      .filter(([_, v]) => v !== undefined && v !== null)
+                      .slice(0, 5)
+                      .map(([key, value]) => (
+                        <div key={key} className="flex gap-2">
+                          <span className="text-muted-foreground">{key}:</span>
+                          <span className="truncate">
+                            {typeof value === "string" 
+                              ? `"${value.substring(0, 50)}${value.length > 50 ? '...' : ''}"`
+                              : JSON.stringify(value).substring(0, 50)}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-3 pt-2">
+          <Button
+            onClick={onConfirm}
+            disabled={isExecuting}
+            className="bg-green-600 hover:bg-green-700 text-white"
+          >
+            {isExecuting ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Executing...
+              </>
+            ) : (
+              <>
+                <Check className="w-4 h-4 mr-2" />
+                Confirm & Execute
+              </>
+            )}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={onCancel}
+            disabled={isExecuting}
+          >
+            <X className="w-4 h-4 mr-2" />
+            Cancel
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ============================================================================
+// EXECUTED ACTIONS CARD
+// ============================================================================
+
+function ExecutedActionsCard({ executedActions }: { executedActions: ActionsExecuted }) {
+  const successCount = executedActions.results.filter(r => r.success).length;
+  const failureCount = executedActions.results.length - successCount;
+
+  return (
+    <Card className={cn(
+      "mt-4",
+      failureCount > 0 
+        ? "border-amber-500/50 bg-amber-50/10 dark:bg-amber-950/20"
+        : "border-green-500/50 bg-green-50/10 dark:bg-green-950/20"
+    )}>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <div className={cn(
+            "p-1.5 rounded-md",
+            failureCount > 0 ? "bg-amber-500/10" : "bg-green-500/10"
+          )}>
+            {failureCount > 0 ? (
+              <AlertCircle className="w-5 h-5 text-amber-500" />
+            ) : (
+              <Check className="w-5 h-5 text-green-500" />
+            )}
+          </div>
+          {failureCount === 0 
+            ? `${successCount} action${successCount !== 1 ? 's' : ''} completed successfully`
+            : `${successCount}/${executedActions.results.length} actions completed`}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Results List */}
+        <div className="space-y-2">
+          {executedActions.results.map((result, i) => (
+            <div
+              key={i}
+              className={cn(
+                "flex items-start gap-3 p-3 rounded-lg border",
+                result.success 
+                  ? "bg-green-500/5 border-green-500/20"
+                  : "bg-red-500/5 border-red-500/20"
+              )}
+            >
+              <div className={cn(
+                "p-1 rounded-full",
+                result.success ? "bg-green-500/20 text-green-500" : "bg-red-500/20 text-red-500"
+              )}>
+                {result.success ? (
+                  <Check className="w-4 h-4" />
+                ) : (
+                  <X className="w-4 h-4" />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs font-mono">
+                    {result.tool}
+                  </Badge>
+                  {result.success && result.result?.link && (
+                    <a
+                      href={result.result.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-primary hover:underline flex items-center gap-1"
+                    >
+                      <Link className="w-3 h-3" />
+                      View
+                    </a>
+                  )}
+                </div>
+                <p className="text-sm mt-1">
+                  {result.success 
+                    ? result.result?.message || "Completed successfully"
+                    : result.error || "Failed"}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Quick Links */}
+        {executedActions.links && executedActions.links.length > 0 && (
+          <div className="pt-2 border-t border-border">
+            <p className="text-xs text-muted-foreground mb-2">Quick Links:</p>
+            <div className="flex flex-wrap gap-2">
+              {executedActions.links.map((link, i) => (
+                <a
+                  key={i}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm hover:bg-primary/20 transition-colors"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  {link.label}
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}

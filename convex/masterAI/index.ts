@@ -16,9 +16,24 @@ import {
   type CriticOutput,
 } from "./types";
 import type { FactVerificationOutput } from "./factVerifier";
+import { 
+  formatMemoriesForPrompt, 
+  type MemoryForPipeline,
+} from "./memoryManager";
+import {
+  AI_TOOLS,
+  actionProposalValidator,
+  actionsExecutedValidator,
+  toolCallResultValidator,
+  type ActionProposal,
+  type ActionsExecuted,
+  type ToolCall,
+} from "./tools/schema";
+import { describeToolCalls } from "./planner";
 
 // Re-export types for external use
 export * from "./types";
+export * from "./tools/schema";
 
 // ============================================================================
 // MAIN ORCHESTRATOR
@@ -40,6 +55,7 @@ export const askMasterAI = action({
     question: v.string(),
     settings: v.optional(chatSettingsValidator),
     userId: v.optional(v.string()),
+    conversationId: v.optional(v.string()), // For caching
     conversationContext: v.optional(v.array(v.object({
       role: v.union(v.literal("user"), v.literal("assistant")),
       content: v.string(),
@@ -51,6 +67,28 @@ export const askMasterAI = action({
     const startTime = Date.now();
 
     console.log(`🚀 Master AI Pipeline starting with preset: ${settings.preset}`);
+
+    // ========================================================================
+    // FETCH USER MEMORIES (parallel with planning)
+    // ========================================================================
+    let userMemories: MemoryForPipeline[] = [];
+    if (args.userId) {
+      try {
+        // @ts-ignore - Avoiding deep type instantiation
+        userMemories = await ctx.runQuery(
+          internal.masterAI.queries.getUserMemoriesInternal,
+          { userId: args.userId, limit: 10 }
+        ) as MemoryForPipeline[];
+        if (userMemories.length > 0) {
+          console.log(`🧠 Loaded ${userMemories.length} user memories`);
+        }
+      } catch (err) {
+        console.warn("Failed to load user memories:", err);
+      }
+    }
+
+    // Format memories for prompts
+    const memoryContext = formatMemoriesForPrompt(userMemories);
 
     // ========================================================================
     // STAGE 1: PLANNER
@@ -271,11 +309,28 @@ export const askMasterAI = action({
         settings,
         originalQuestion: args.question,
         conversationContext: args.conversationContext,
+        memoryContext, // Pass formatted user memories
         sourceChunks: allSourceChunks,
         webResearch: webResearchResults,
         factVerification: factVerificationOutput,
       }
     );
+
+    // Background: Extract new memories from this conversation if it was meaningful
+    if (args.userId && args.conversationContext && args.conversationContext.length >= 4 && args.conversationId) {
+      ctx.runAction(
+        internal.masterAI.memoryManager.extractMemoriesFromConversation,
+        {
+          userId: args.userId,
+          conversationId: args.conversationId as any, // Type cast needed for Convex ID
+          messages: [
+            ...args.conversationContext,
+            { role: "user" as const, content: args.question },
+            { role: "assistant" as const, content: finalResponse.answer },
+          ],
+        }
+      ).catch(err => console.error("Background memory extraction failed:", err));
+    }
 
     const totalTime = Date.now() - startTime;
     console.log(`✅ Pipeline complete in ${totalTime}ms`);
@@ -353,7 +408,6 @@ export const quickAsk = action({
       }))
     );
 
-    // @ts-expect-error - Deep type instantiation in Convex
     const response = await ctx.runAction(
       internal.masterAI.finalWriter.generateFinalResponse,
       {
@@ -370,6 +424,347 @@ export const quickAsk = action({
         title: c.title,
         sourceType: c.sourceType,
       })),
+    };
+  },
+});
+
+// ============================================================================
+// AGENTIC AI - Tool-aware endpoint with action proposals
+// ============================================================================
+
+/**
+ * Response type for the agentic AI endpoint
+ */
+const agenticResponseValidator = v.union(
+  // Standard Q&A response
+  masterAIResponseValidator,
+  // Action proposal (needs user confirmation)
+  actionProposalValidator,
+  // Actions executed (after confirmation)
+  actionsExecutedValidator
+);
+
+/**
+ * Agentic AI endpoint - Can both answer questions AND take actions
+ * 
+ * This is the main entry point for the agentic AI system.
+ * It first analyzes the user's intent, then either:
+ * 1. Runs the Q&A pipeline for questions
+ * 2. Returns action proposals for creation/modification requests
+ */
+export const askAgenticAI = action({
+  args: {
+    question: v.string(),
+    settings: v.optional(chatSettingsValidator),
+    userId: v.string(), // Required for agentic mode
+    storeId: v.optional(v.string()), // Required for creating content
+    userRole: v.optional(v.union(
+      v.literal("creator"),
+      v.literal("admin"),
+      v.literal("student")
+    )),
+    conversationId: v.optional(v.string()),
+    conversationContext: v.optional(v.array(v.object({
+      role: v.union(v.literal("user"), v.literal("assistant")),
+      content: v.string(),
+    }))),
+    // For executing confirmed actions
+    executeActions: v.optional(v.boolean()),
+    confirmedActions: v.optional(v.array(v.object({
+      tool: v.string(),
+      parameters: v.any(),
+    }))),
+  },
+  returns: agenticResponseValidator,
+  handler: async (ctx, args) => {
+    const settings: ChatSettings = args.settings || DEFAULT_CHAT_SETTINGS;
+    const startTime = Date.now();
+    const userRole = args.userRole || "creator";
+
+    console.log(`🤖 Agentic AI starting for user: ${args.userId}`);
+
+    // ========================================================================
+    // EXECUTION MODE: Execute confirmed actions
+    // ========================================================================
+    if (args.executeActions && args.confirmedActions && args.confirmedActions.length > 0) {
+      console.log(`⚡ Executing ${args.confirmedActions.length} confirmed actions...`);
+      
+      const result = await ctx.runAction(
+        internal.masterAI.tools.executor.executeTools,
+        {
+          toolCalls: args.confirmedActions,
+          userId: args.userId,
+          storeId: args.storeId,
+        }
+      );
+
+      // Build links from results
+      const links: Array<{ label: string; url: string }> = [];
+      for (const r of result.results) {
+        if (r.success && r.result) {
+          const res = r.result as any;
+          if (res.link) {
+            links.push({
+              label: res.message || `View ${r.tool} result`,
+              url: res.link,
+            });
+          }
+        }
+      }
+
+      return {
+        type: "actions_executed" as const,
+        results: result.results,
+        summary: result.summary,
+        links: links.length > 0 ? links : undefined,
+      };
+    }
+
+    // ========================================================================
+    // STAGE 1: Enhanced Planner (with tool awareness)
+    // ========================================================================
+    console.log("📋 Stage 1: Analyzing intent with tool awareness...");
+    
+    const planResult = await ctx.runAction(
+      internal.masterAI.planner.analyzeQuestionWithTools,
+      {
+        question: args.question,
+        settings,
+        userRole,
+        conversationContext: args.conversationContext,
+      }
+    );
+
+    console.log(`   Intent Type: ${planResult.intentType}`);
+    console.log(`   Is Action: ${planResult.isActionRequest}`);
+    console.log(`   Tool Calls: ${planResult.toolCalls?.length || 0}`);
+
+    // ========================================================================
+    // BRANCH: Action Request -> Return proposal
+    // ========================================================================
+    if (planResult.isActionRequest && planResult.toolCalls && planResult.toolCalls.length > 0) {
+      console.log("🔧 Detected action request, preparing proposal...");
+      
+      const proposedActions = planResult.toolCalls.map(tc => ({
+        tool: tc.tool,
+        parameters: tc.parameters,
+        description: describeToolCalls([tc]),
+        requiresConfirmation: AI_TOOLS[tc.tool]?.requiresConfirmation ?? true,
+      }));
+
+      // Generate a friendly summary message
+      const toolNames = planResult.toolCalls.map(tc => tc.tool);
+      let summaryMessage = "";
+      
+      if (toolNames.includes("createCourseWithModules")) {
+        const tc = planResult.toolCalls.find(t => t.tool === "createCourseWithModules");
+        const params = tc?.parameters as any;
+        const moduleCount = params?.modules?.length || 0;
+        summaryMessage = `I'll create a new course "${params?.title || "Untitled"}" with ${moduleCount} modules for you.`;
+      } else if (toolNames.includes("createCourse")) {
+        const tc = planResult.toolCalls.find(t => t.tool === "createCourse");
+        const params = tc?.parameters as any;
+        summaryMessage = `I'll create a new course "${params?.title || "Untitled"}" for you.`;
+      } else if (toolNames.includes("generateCourseOutline")) {
+        const tc = planResult.toolCalls.find(t => t.tool === "generateCourseOutline");
+        const params = tc?.parameters as any;
+        summaryMessage = `I'll generate a course outline about "${params?.topic}" with ${params?.moduleCount || 5} modules.`;
+      } else if (toolNames.includes("listMyCourses")) {
+        summaryMessage = "I'll fetch your courses for you.";
+      } else if (toolNames.includes("generateLessonContent")) {
+        const tc = planResult.toolCalls.find(t => t.tool === "generateLessonContent");
+        const params = tc?.parameters as any;
+        summaryMessage = `I'll generate lesson content about "${params?.topic}" for you.`;
+      } else {
+        summaryMessage = `I'll perform ${planResult.toolCalls.length} action(s) for you.`;
+      }
+
+      // Check if any actions need confirmation
+      const needsConfirmation = proposedActions.some(a => a.requiresConfirmation);
+      
+      if (!needsConfirmation) {
+        // Auto-execute if no confirmation needed
+        console.log("⚡ Auto-executing non-confirmation actions...");
+        
+        const result = await ctx.runAction(
+          internal.masterAI.tools.executor.executeTools,
+          {
+            toolCalls: planResult.toolCalls.map(tc => ({
+              tool: tc.tool,
+              parameters: tc.parameters,
+            })),
+            userId: args.userId,
+            storeId: args.storeId,
+          }
+        );
+
+        return {
+          type: "actions_executed" as const,
+          results: result.results,
+          summary: result.summary,
+          links: undefined,
+        };
+      }
+
+      // Return proposal for confirmation
+      return {
+        type: "action_proposal" as const,
+        proposedActions,
+        message: `${summaryMessage}\n\nHere's what I'm planning to do:`,
+        summary: describeToolCalls(planResult.toolCalls),
+      };
+    }
+
+    // ========================================================================
+    // BRANCH: Question -> Run Q&A Pipeline
+    // ========================================================================
+    console.log("💬 Processing as question, running Q&A pipeline...");
+    
+    // Convert the enhanced plan back to standard planner output
+    const plannerOutput: PlannerOutput = {
+      intent: planResult.intent,
+      questionType: planResult.questionType,
+      facets: planResult.facets,
+      searchStrategies: planResult.searchStrategies,
+    };
+
+    // Fetch memories
+    let userMemories: MemoryForPipeline[] = [];
+    try {
+      userMemories = await ctx.runQuery(
+        internal.masterAI.queries.getUserMemoriesInternal,
+        { userId: args.userId, limit: 10 }
+      ) as MemoryForPipeline[];
+    } catch (err) {
+      console.warn("Failed to load user memories:", err);
+    }
+    const memoryContext = formatMemoriesForPrompt(userMemories);
+
+    // Run retriever
+    const retrieverOutput: RetrieverOutput = await ctx.runAction(
+      internal.masterAI.retriever.retrieveContent,
+      { plan: plannerOutput, settings }
+    );
+
+    if (retrieverOutput.totalChunksRetrieved === 0) {
+      return {
+        answer: "I couldn't find any relevant content in the knowledge base to answer your question. This might mean the topic isn't covered in the current course materials, or you could try rephrasing your question.",
+        citations: [],
+        facetsUsed: [],
+        pipelineMetadata: {
+          plannerModel: settings.customModels?.planner || settings.preset,
+          summarizerModel: settings.customModels?.summarizer || settings.preset,
+          finalWriterModel: settings.customModels?.finalWriter || settings.preset,
+          totalChunksProcessed: 0,
+          processingTimeMs: Date.now() - startTime,
+        },
+      };
+    }
+
+    // Run summarizer
+    const summarizerOutput: SummarizerOutput = await ctx.runAction(
+      internal.masterAI.summarizer.summarizeContent,
+      { retrieverOutput, settings, originalQuestion: args.question }
+    );
+
+    // Run optional stages
+    let ideaGeneratorOutput: IdeaGeneratorOutput | undefined;
+    if (settings.enableCreativeMode) {
+      ideaGeneratorOutput = await ctx.runAction(
+        internal.masterAI.ideaGenerator.generateIdeas,
+        { summarizerOutput, settings, originalQuestion: args.question }
+      );
+    }
+
+    let criticOutput: CriticOutput | undefined;
+    if (settings.enableCritic) {
+      criticOutput = await ctx.runAction(
+        internal.masterAI.critic.reviewContent,
+        { summarizerOutput, ideaGeneratorOutput, settings, originalQuestion: args.question }
+      );
+    }
+
+    // Generate final response
+    const allSourceChunks = retrieverOutput.buckets.flatMap(bucket =>
+      bucket.chunks.map(chunk => ({
+        id: chunk.id,
+        title: chunk.title,
+        sourceType: chunk.sourceType,
+        sourceId: chunk.sourceId,
+      }))
+    );
+
+    const finalResponse: MasterAIResponse = await ctx.runAction(
+      internal.masterAI.finalWriter.generateFinalResponse,
+      {
+        summarizerOutput,
+        ideaGeneratorOutput,
+        criticOutput,
+        settings,
+        originalQuestion: args.question,
+        conversationContext: args.conversationContext,
+        memoryContext,
+        sourceChunks: allSourceChunks,
+      }
+    );
+
+    const totalTime = Date.now() - startTime;
+    console.log(`✅ Agentic AI complete in ${totalTime}ms`);
+
+    return {
+      ...finalResponse,
+      pipelineMetadata: {
+        ...finalResponse.pipelineMetadata,
+        processingTimeMs: totalTime,
+      },
+    };
+  },
+});
+
+/**
+ * Execute confirmed actions (called after user confirms proposal)
+ */
+export const executeConfirmedActions = action({
+  args: {
+    actions: v.array(v.object({
+      tool: v.string(),
+      parameters: v.any(),
+    })),
+    userId: v.string(),
+    storeId: v.optional(v.string()),
+  },
+  returns: actionsExecutedValidator,
+  handler: async (ctx, args) => {
+    console.log(`⚡ Executing ${args.actions.length} confirmed actions...`);
+    
+    const result = await ctx.runAction(
+      internal.masterAI.tools.executor.executeTools,
+      {
+        toolCalls: args.actions,
+        userId: args.userId,
+        storeId: args.storeId,
+      }
+    );
+
+    // Build links from results
+    const links: Array<{ label: string; url: string }> = [];
+    for (const r of result.results) {
+      if (r.success && r.result) {
+        const res = r.result as any;
+        if (res.link) {
+          links.push({
+            label: res.message || `View ${r.tool} result`,
+            url: res.link,
+          });
+        }
+      }
+    }
+
+    return {
+      type: "actions_executed" as const,
+      results: result.results,
+      summary: result.summary,
+      links: links.length > 0 ? links : undefined,
     };
   },
 });

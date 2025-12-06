@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json();
-    const { question, settings, conversationContext } = body;
+    const { question, settings, conversationContext, conversationId } = body;
 
     if (!question || typeof question !== "string") {
       return NextResponse.json(
@@ -42,14 +42,41 @@ export async function POST(request: NextRequest) {
       ...DEFAULT_CHAT_SETTINGS,
       ...settings,
     };
+    
+    console.log(`[AI Chat] Starting pipeline for conversation: ${conversationId || "new"}`);
+    console.log(`[AI Chat] Settings: preset=${chatSettings.preset}, web=${chatSettings.enableWebResearch}, fact=${chatSettings.enableFactVerification}`);
 
     // Create a streaming response with simulated progress
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       async start(controller) {
+        let isClosed = false;
+        const pendingTimers: NodeJS.Timeout[] = [];
+        
+        // Safe event sender that checks if controller is still open
         const sendEvent = (event: StreamEvent | { type: string; [key: string]: any }) => {
-          const data = `data: ${JSON.stringify(event)}\n\n`;
-          controller.enqueue(encoder.encode(data));
+          if (isClosed) return; // Don't send if already closed
+          try {
+            const data = `data: ${JSON.stringify(event)}\n\n`;
+            controller.enqueue(encoder.encode(data));
+          } catch (e) {
+            // Controller may be closed, ignore
+            console.warn("Failed to send event, controller may be closed");
+          }
+        };
+        
+        // Safe close function
+        const safeClose = () => {
+          if (isClosed) return;
+          isClosed = true;
+          // Clear all pending timers
+          pendingTimers.forEach(timer => clearTimeout(timer));
+          pendingTimers.length = 0;
+          try {
+            controller.close();
+          } catch (e) {
+            // Already closed, ignore
+          }
         };
 
         // Simulated pipeline stages with realistic timing
@@ -65,40 +92,58 @@ export async function POST(request: NextRequest) {
         ];
 
         let currentStageIndex = 0;
-        let stageTimer: NodeJS.Timeout | null = null;
         let actionComplete = false;
 
         // Function to advance to next simulated stage
         const advanceStage = () => {
-          if (actionComplete || currentStageIndex >= stages.length) return;
+          if (actionComplete || isClosed || currentStageIndex >= stages.length) return;
           
           const stage = stages[currentStageIndex];
           sendEvent({ type: "stage_start", stage: stage.stage, model: stage.model });
           
           // Also send some intermediate events for certain stages
           if (stage.stage === "retriever") {
-            setTimeout(() => {
-              if (!actionComplete) sendEvent({ type: "chunks_retrieved", facet: "topic 1", count: 15 });
+            const timer1 = setTimeout(() => {
+              if (!actionComplete && !isClosed) sendEvent({ type: "chunks_retrieved", facet: "topic 1", count: 15 });
             }, 1000);
-            setTimeout(() => {
-              if (!actionComplete) sendEvent({ type: "chunks_retrieved", facet: "topic 2", count: 12 });
+            const timer2 = setTimeout(() => {
+              if (!actionComplete && !isClosed) sendEvent({ type: "chunks_retrieved", facet: "topic 2", count: 12 });
             }, 2000);
+            pendingTimers.push(timer1, timer2);
           }
           
           if (stage.stage === "webResearch") {
-            setTimeout(() => {
-              if (!actionComplete) sendEvent({ type: "web_research_result", facet: "topic 1", count: 3 });
+            const timer = setTimeout(() => {
+              if (!actionComplete && !isClosed) sendEvent({ type: "web_research_result", facet: "topic 1", count: 3 });
             }, 1500);
+            pendingTimers.push(timer);
           }
           
           currentStageIndex++;
           if (currentStageIndex < stages.length) {
-            stageTimer = setTimeout(advanceStage, stage.duration);
+            const stageTimer = setTimeout(advanceStage, stage.duration);
+            pendingTimers.push(stageTimer);
           }
         };
 
         // Start the stage progression
         advanceStage();
+
+        // Add a heartbeat that keeps the connection alive and shows progress
+        let elapsedSeconds = 0;
+        const heartbeatTimer = setInterval(() => {
+          if (isClosed || actionComplete) {
+            clearInterval(heartbeatTimer);
+            return;
+          }
+          elapsedSeconds += 5;
+          sendEvent({ 
+            type: "stage_start", 
+            stage: "processing", 
+            model: `Still working... (${elapsedSeconds}s)` 
+          });
+        }, 5000); // Every 5 seconds
+        pendingTimers.push(heartbeatTimer as unknown as NodeJS.Timeout);
 
         try {
           // Call Convex to run the full pipeline
@@ -108,13 +153,14 @@ export async function POST(request: NextRequest) {
               question,
               settings: chatSettings,
               userId,
+              conversationId: conversationId || undefined,
               conversationContext,
             }
           );
 
           // Mark action as complete to stop simulated progress
           actionComplete = true;
-          if (stageTimer) clearTimeout(stageTimer);
+          clearInterval(heartbeatTimer);
 
           // Send the actual results
           sendEvent({ type: "facets_identified", facets: result.facetsUsed || [] });
@@ -130,17 +176,17 @@ export async function POST(request: NextRequest) {
             response: result,
           });
 
-          controller.close();
+          safeClose();
         } catch (error) {
           actionComplete = true;
-          if (stageTimer) clearTimeout(stageTimer);
+          clearInterval(heartbeatTimer);
           
           console.error("Pipeline error:", error);
           sendEvent({
             type: "error",
             message: error instanceof Error ? error.message : "Pipeline failed",
           });
-          controller.close();
+          safeClose();
         }
       },
     });

@@ -83,6 +83,50 @@ export const getFilteredEmbeddings = internalQuery({
   },
 });
 
+// ============================================================================
+// USER MEMORY QUERIES (for memory manager)
+// ============================================================================
+
+/**
+ * Get user memories for the pipeline (internal query to avoid circular refs)
+ */
+export const getUserMemoriesInternal = internalQuery({
+  args: {
+    userId: v.string(),
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(v.object({
+    content: v.string(),
+    type: v.string(),
+    importance: v.number(),
+  })),
+  handler: async (ctx, args) => {
+    const limit = args.limit || 10;
+    
+    const memories = await ctx.db
+      .query("aiMemories")
+      .withIndex("by_userId_importance", (q) => q.eq("userId", args.userId))
+      .order("desc")
+      .collect();
+
+    // Filter active memories (not archived, not expired)
+    const now = Date.now();
+    const activeMemories = memories.filter(m => 
+      !m.archived && (!m.expiresAt || m.expiresAt > now)
+    );
+
+    return activeMemories.slice(0, limit).map(m => ({
+      content: m.content,
+      type: m.type,
+      importance: m.importance,
+    }));
+  },
+});
+
+// ============================================================================
+// EMBEDDING STATS
+// ============================================================================
+
 /**
  * Get embedding stats for debugging
  */

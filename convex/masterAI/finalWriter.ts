@@ -42,6 +42,8 @@ export const generateFinalResponse = internalAction({
       role: v.union(v.literal("user"), v.literal("assistant")),
       content: v.string(),
     }))),
+    // Long-term user memories (formatted as context string)
+    memoryContext: v.optional(v.string()),
     // Pass through source chunks for citation building
     sourceChunks: v.array(v.object({
       id: v.string(),
@@ -96,6 +98,7 @@ export const generateFinalResponse = internalAction({
       settings, 
       originalQuestion,
       conversationContext,
+      memoryContext,
       sourceChunks,
       webResearch,
       factVerification,
@@ -237,7 +240,7 @@ NEVER do these things:
 
 ${lengthInstructions}
 ${styleInstructions}
-
+${memoryContext ? `\nUSER CONTEXT (remember these facts about this specific user):\n${memoryContext}\n` : ""}
 CITATION FORMAT:
 Use inline citations with numbers in double brackets: [[1]], [[2]], etc.
 Place citations immediately after the relevant statement.
