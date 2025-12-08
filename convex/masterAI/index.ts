@@ -155,8 +155,10 @@ export const askMasterAI = action({
       }>;
     }> | undefined;
 
+    let webResearchCount = 0;
     if (webResearchResult) {
-      console.log(`   🌐 Web results: ${webResearchResult.totalResults}`);
+      webResearchCount = webResearchResult.totalResults;
+      console.log(`   🌐 Web results: ${webResearchCount}`);
       webResearchResults = webResearchResult.research;
 
       // Optionally save to embeddings for future queries (run in background, don't await)
@@ -340,6 +342,7 @@ export const askMasterAI = action({
       pipelineMetadata: {
         ...finalResponse.pipelineMetadata,
         processingTimeMs: totalTime,
+        webResearchResults: webResearchCount,
       },
     };
   },

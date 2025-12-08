@@ -481,6 +481,7 @@ export const masterAIResponseValidator = v.object({
     totalChunksProcessed: v.number(),
     totalTokensUsed: v.optional(v.number()),
     processingTimeMs: v.number(),
+    webResearchResults: v.optional(v.number()),
   }),
 });
 
@@ -497,6 +498,7 @@ export type MasterAIResponse = {
     totalChunksProcessed: number;
     totalTokensUsed?: number;
     processingTimeMs: number;
+    webResearchResults?: number; // Count of web research results
   };
 };
 

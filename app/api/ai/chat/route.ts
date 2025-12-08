@@ -170,6 +170,15 @@ export async function POST(request: NextRequest) {
             count: result.pipelineMetadata?.totalChunksProcessed || 0,
           });
           
+          // Send web research count if available
+          if (result.pipelineMetadata?.webResearchResults !== undefined) {
+            sendEvent({
+              type: "web_research_complete",
+              totalResults: result.pipelineMetadata.webResearchResults,
+              savedToEmbeddings: chatSettings.autoSaveWebResearch || false,
+            });
+          }
+          
           // Send the complete response
           sendEvent({
             type: "complete",
