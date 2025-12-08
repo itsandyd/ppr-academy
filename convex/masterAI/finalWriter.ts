@@ -113,13 +113,17 @@ export const generateFinalResponse = internalAction({
     const citationMap = buildCitationMap(sourceChunks);
     const citationGuide = buildCitationGuide(citationMap);
 
-    // Build context from summaries
+    // Build context from summaries (limit each summary to avoid context overflow)
+    const MAX_SUMMARY_LENGTH = 4000; // ~1000 words per summary
     const summariesContext = summarizerOutput.summaries
       .map(s => {
         const techniques = s.keyTechniques.length > 0 
-          ? `\n**Key Techniques:** ${s.keyTechniques.join(", ")}` 
+          ? `\n**Key Techniques:** ${s.keyTechniques.slice(0, 10).join(", ")}` // Limit to 10 techniques
           : "";
-        return `## ${s.facetName}\n${s.summary}${techniques}`;
+        const truncatedSummary = s.summary.length > MAX_SUMMARY_LENGTH
+          ? s.summary.substring(0, MAX_SUMMARY_LENGTH) + "...\n[Summary truncated for length]"
+          : s.summary;
+        return `## ${s.facetName}\n${truncatedSummary}${techniques}`;
       })
       .join("\n\n");
 
@@ -255,8 +259,13 @@ APPROACH:
 - Include "Pro Tips" that reveal insider knowledge
 - If information is limited, acknowledge it and supplement with your expertise`;
 
-    const userPrompt = `Question: "${originalQuestion}"
+    // Truncate memory context if too long
+    const truncatedMemoryContext = memoryContext && memoryContext.length > 2000
+      ? memoryContext.substring(0, 2000) + "...\n[Memory context truncated]"
+      : memoryContext;
 
+    const userPrompt = `Question: "${originalQuestion}"
+${truncatedMemoryContext ? `\nUser Context:\n${truncatedMemoryContext}\n` : ""}
 Knowledge Base:
 
 ${summariesContext}
@@ -267,20 +276,26 @@ ${factVerificationContext}
 
 Generate a comprehensive, well-structured response with inline citations. If web research was provided, mark those sources as [Web X] citations.`;
 
+    // Estimate total context length (rough token estimate: ~4 chars per token)
+    const estimatedInputTokens = Math.ceil((systemPrompt.length + userPrompt.length) / 4);
+    console.log(`   📊 Estimated input tokens: ~${estimatedInputTokens}`);
+
     try {
       // Build messages array with conversation context
       const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
         { role: "system", content: systemPrompt },
       ];
       
-      // Add conversation history for context (last 4 exchanges)
-      if (conversationContext && conversationContext.length > 0) {
-        const recentContext = conversationContext.slice(-4);
+      // Add conversation history for context (only if we have room - skip if context is very large)
+      if (conversationContext && conversationContext.length > 0 && estimatedInputTokens < 50000) {
+        // Limit to last 2 exchanges if context is already large
+        const maxExchanges = estimatedInputTokens > 30000 ? 2 : 4;
+        const recentContext = conversationContext.slice(-maxExchanges);
         for (const msg of recentContext) {
           messages.push({
             role: msg.role,
-            content: msg.content.length > 2000 
-              ? msg.content.substring(0, 2000) + "..." // Truncate long messages
+            content: msg.content.length > 1500 
+              ? msg.content.substring(0, 1500) + "..." // Truncate long messages more aggressively
               : msg.content,
           });
         }
@@ -317,13 +332,25 @@ Generate a comprehensive, well-structured response with inline citations. If web
         },
       };
     } catch (error) {
-      console.error("Error generating final response:", error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : "";
       
-      // Return a fallback response
+      // Log with console.log to ensure it appears in Convex logs
+      console.log("❌ Error generating final response:", errorMessage);
+      console.log("   Stack trace:", errorStack);
+      console.log("   Model:", modelId);
+      console.log("   Estimated input tokens:", estimatedInputTokens);
+      
+      // Return a fallback response with actual error info for debugging
       const processingTimeMs = Date.now() - startTime;
       
+      // Build a cleaner fallback that doesn't dump raw HTML
+      const cleanSummaries = summarizerOutput.summaries
+        .map(s => `**${s.facetName}**\n${s.summary.substring(0, 500)}...`)
+        .join("\n\n");
+      
       return {
-        answer: `I apologize, but I encountered an error while generating a response. Here's what I found in the knowledge base:\n\n${summariesContext}`,
+        answer: `I encountered an error while generating a detailed response. Error: ${errorMessage}\n\nHere's a summary of what I found:\n\n${cleanSummaries}`,
         citations: [],
         facetsUsed: summarizerOutput.summaries.map(s => s.facetName),
         pipelineMetadata: {
@@ -369,9 +396,18 @@ function buildCitationGuide(map: Map<number, Citation>): string {
   if (map.size === 0) return "";
 
   const lines = ["Available sources for citation:"];
+  // Limit to first 50 citations to avoid context overflow
+  let count = 0;
   map.forEach((citation, id) => {
-    lines.push(`[[${id}]] - ${citation.title} (${citation.sourceType})`);
+    if (count < 50) {
+      lines.push(`[[${id}]] - ${citation.title} (${citation.sourceType})`);
+      count++;
+    }
   });
+  
+  if (map.size > 50) {
+    lines.push(`... and ${map.size - 50} more sources (use [[51]]-[[${map.size}]] as needed)`);
+  }
 
   return lines.join("\n");
 }

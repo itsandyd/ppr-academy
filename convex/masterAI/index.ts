@@ -161,9 +161,9 @@ export const askMasterAI = action({
       console.log(`   🌐 Web results: ${webResearchCount}`);
       webResearchResults = webResearchResult.research;
 
-      // Optionally save to embeddings for future queries (run in background, don't await)
+      // Optionally save to embeddings for future queries (scheduled to run after this action completes)
       if (settings.autoSaveWebResearch && webResearchResult.totalResults > 0 && args.userId) {
-        console.log("   💾 Saving web research to embeddings (background)...");
+        console.log("   💾 Scheduling web research save to embeddings...");
         const researchToSave = webResearchResult.research.flatMap((r: any) => 
           r.results.map((result: any) => ({
             title: result.title,
@@ -173,14 +173,11 @@ export const askMasterAI = action({
           }))
         );
         
-        // Don't await - let it run in background
-        ctx.runAction(
-          internal.masterAI.webResearch.saveResearchToEmbeddings,
-          {
-            userId: args.userId,
-            research: researchToSave,
-          }
-        ).catch(err => console.error("Background save failed:", err));
+        // Schedule to run after this action completes (avoids dangling promise warning)
+        await ctx.scheduler.runAfter(0, internal.masterAI.webResearch.saveResearchToEmbeddings, {
+          userId: args.userId,
+          research: researchToSave,
+        });
       }
     }
 
@@ -318,20 +315,17 @@ export const askMasterAI = action({
       }
     );
 
-    // Background: Extract new memories from this conversation if it was meaningful
+    // Schedule memory extraction to run after this action completes (if conversation is meaningful)
     if (args.userId && args.conversationContext && args.conversationContext.length >= 4 && args.conversationId) {
-      ctx.runAction(
-        internal.masterAI.memoryManager.extractMemoriesFromConversation,
-        {
-          userId: args.userId,
-          conversationId: args.conversationId as any, // Type cast needed for Convex ID
-          messages: [
-            ...args.conversationContext,
-            { role: "user" as const, content: args.question },
-            { role: "assistant" as const, content: finalResponse.answer },
-          ],
-        }
-      ).catch(err => console.error("Background memory extraction failed:", err));
+      await ctx.scheduler.runAfter(0, internal.masterAI.memoryManager.extractMemoriesFromConversation, {
+        userId: args.userId,
+        conversationId: args.conversationId as any, // Type cast needed for Convex ID
+        messages: [
+          ...args.conversationContext,
+          { role: "user" as const, content: args.question },
+          { role: "assistant" as const, content: finalResponse.answer },
+        ],
+      });
     }
 
     const totalTime = Date.now() - startTime;
