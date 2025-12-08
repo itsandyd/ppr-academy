@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo, memo } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useAction, useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -27,6 +27,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Brain,
   Send,
@@ -61,6 +66,8 @@ import {
   Copy,
   Link,
   AlertCircle,
+  RefreshCw,
+  CheckCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
@@ -70,6 +77,7 @@ import {
   type ChatSettings,
   type PresetId,
   type Citation,
+  type ResponseStyle,
 } from "@/convex/masterAI/types";
 import ConversationSidebar from "@/components/ai/ConversationSidebar";
 
@@ -160,13 +168,36 @@ const PRESET_ICONS: Record<PresetId, React.ReactNode> = {
   premium: <Crown className="w-4 h-4" />,
 };
 
+const RESPONSE_STYLE_OPTIONS: Record<ResponseStyle, { name: string; description: string; icon: React.ReactNode }> = {
+  structured: {
+    name: "Structured",
+    description: "Organized with headings and bullet points",
+    icon: <LayoutList className="w-4 h-4" />,
+  },
+  conversational: {
+    name: "Conversational",
+    description: "Natural, flowing responses",
+    icon: <Bot className="w-4 h-4" />,
+  },
+  concise: {
+    name: "Concise",
+    description: "Brief and to the point",
+    icon: <Zap className="w-4 h-4" />,
+  },
+};
+
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
 
+// Performance: Max messages to render at once (older ones are hidden but kept for context)
+const INITIAL_VISIBLE_MESSAGES = 20;
+const LOAD_MORE_INCREMENT = 20;
+
 export default function AIAssistantPage() {
   const { user, isLoaded } = useUser();
   const [messages, setMessages] = useState<Message[]>([]);
+  const [visibleMessageCount, setVisibleMessageCount] = useState(INITIAL_VISIBLE_MESSAGES);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus | null>(null);
@@ -237,16 +268,34 @@ export default function AIAssistantPage() {
   const handleNewConversation = () => {
     setCurrentConversationId(null);
     setMessages([]);
+    setVisibleMessageCount(INITIAL_VISIBLE_MESSAGES);
     inputRef.current?.focus();
   };
   
   // Select an existing conversation
   const handleSelectConversation = (id: Id<"aiConversations"> | null) => {
     setCurrentConversationId(id);
+    setVisibleMessageCount(INITIAL_VISIBLE_MESSAGES);
     if (!id) {
       setMessages([]);
     }
   };
+
+  // Load more messages handler
+  const handleLoadMoreMessages = useCallback(() => {
+    setVisibleMessageCount(prev => prev + LOAD_MORE_INCREMENT);
+  }, []);
+
+  // Compute visible messages (memoized for performance)
+  const visibleMessages = useMemo(() => {
+    if (messages.length <= visibleMessageCount) {
+      return messages;
+    }
+    // Show the most recent messages
+    return messages.slice(-visibleMessageCount);
+  }, [messages, visibleMessageCount]);
+
+  const hasHiddenMessages = messages.length > visibleMessageCount;
 
   // Scroll to bottom when messages change
   const scrollToBottom = useCallback(() => {
@@ -700,6 +749,48 @@ export default function AIAssistantPage() {
     }
   }, [user, currentConversationId, messages, submitFeedback]);
 
+  // Handle regenerating a response
+  const handleRegenerate = useCallback((messageId: string, customSettings?: { preset?: PresetId; responseStyle?: ResponseStyle }) => {
+    if (!user || isLoading) return;
+    
+    // Find the AI message and the preceding user message
+    const messageIndex = messages.findIndex(m => m.id === messageId);
+    if (messageIndex === -1) return;
+    
+    // Look for the user message before this AI message
+    let userMessageIndex = messageIndex - 1;
+    while (userMessageIndex >= 0 && messages[userMessageIndex].role !== "user") {
+      userMessageIndex--;
+    }
+    
+    if (userMessageIndex < 0) {
+      console.warn("Could not find user message to regenerate from");
+      return;
+    }
+    
+    const userMessage = messages[userMessageIndex];
+    
+    // If custom settings provided, update the settings first
+    if (customSettings) {
+      setSettings(prev => ({
+        ...prev,
+        ...(customSettings.preset && { preset: customSettings.preset }),
+        ...(customSettings.responseStyle && { responseStyle: customSettings.responseStyle }),
+      }));
+    }
+    
+    // Remove the AI response we're regenerating (and any responses after it)
+    setMessages(prev => prev.slice(0, messageIndex));
+    
+    // Re-submit the user's question by setting input and triggering form submit
+    setInputValue(userMessage.content);
+    
+    // Use a ref-based approach to submit the form (slight delay to allow settings to update)
+    setTimeout(() => {
+      inputRef.current?.form?.requestSubmit();
+    }, 100);
+  }, [user, isLoading, messages]);
+
   // Handle confirming proposed actions
   const handleConfirmActions = useCallback(async () => {
     if (!pendingProposal || !user) return;
@@ -828,17 +919,73 @@ export default function AIAssistantPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Memory indicator */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Memory indicator - hidden on mobile */}
             {userMemories && userMemories.length > 0 && (
-              <Badge variant="secondary" className="flex items-center gap-1.5">
+              <Badge variant="secondary" className="hidden sm:flex items-center gap-1.5">
                 <Brain className="w-3 h-3" />
                 <span>{userMemories.length} memories</span>
               </Badge>
             )}
             
+            {/* Model Preset Selector */}
+            <Select
+              value={settings.preset}
+              onValueChange={(value: PresetId) => setSettings(prev => ({ ...prev, preset: value }))}
+            >
+              <SelectTrigger className="w-[130px] sm:w-[150px] h-9 bg-background">
+                <div className="flex items-center gap-2">
+                  {PRESET_ICONS[settings.preset]}
+                  <span className="truncate">{MODEL_PRESETS[settings.preset].name}</span>
+                </div>
+              </SelectTrigger>
+              <SelectContent className="bg-white dark:bg-black">
+                {(Object.keys(MODEL_PRESETS) as PresetId[]).map((presetId) => (
+                  <SelectItem key={presetId} value={presetId}>
+                    <div className="flex items-center gap-2">
+                      {PRESET_ICONS[presetId]}
+                      <div className="flex flex-col">
+                        <span className="font-medium">{MODEL_PRESETS[presetId].name}</span>
+                        <span className="text-xs text-muted-foreground hidden sm:block">
+                          {MODEL_PRESETS[presetId].description}
+                        </span>
+                      </div>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Response Style Selector */}
+            <Select
+              value={settings.responseStyle}
+              onValueChange={(value: ResponseStyle) => setSettings(prev => ({ ...prev, responseStyle: value }))}
+            >
+              <SelectTrigger className="w-[120px] sm:w-[140px] h-9 bg-background">
+                <div className="flex items-center gap-2">
+                  {RESPONSE_STYLE_OPTIONS[settings.responseStyle].icon}
+                  <span className="truncate">{RESPONSE_STYLE_OPTIONS[settings.responseStyle].name}</span>
+                </div>
+              </SelectTrigger>
+              <SelectContent className="bg-white dark:bg-black">
+                {(Object.keys(RESPONSE_STYLE_OPTIONS) as ResponseStyle[]).map((style) => (
+                  <SelectItem key={style} value={style}>
+                    <div className="flex items-center gap-2">
+                      {RESPONSE_STYLE_OPTIONS[style].icon}
+                      <div className="flex flex-col">
+                        <span className="font-medium">{RESPONSE_STYLE_OPTIONS[style].name}</span>
+                        <span className="text-xs text-muted-foreground hidden sm:block">
+                          {RESPONSE_STYLE_OPTIONS[style].description}
+                        </span>
+                      </div>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
             {/* Agentic Mode Toggle */}
-            <div className="flex items-center gap-2">
+            <div className="hidden sm:flex items-center gap-2">
               <Label htmlFor="agentic-mode" className="text-xs text-muted-foreground cursor-pointer">
                 Actions
               </Label>
@@ -848,17 +995,11 @@ export default function AIAssistantPage() {
                 onCheckedChange={setAgenticMode}
               />
             </div>
-            
-            {/* Current Preset Badge */}
-            <Badge variant="outline" className="flex items-center gap-1.5 px-3 py-1.5">
-              {PRESET_ICONS[settings.preset]}
-              <span>{MODEL_PRESETS[settings.preset].name}</span>
-            </Badge>
 
             {/* Settings Button */}
             <Sheet open={settingsOpen} onOpenChange={setSettingsOpen}>
               <SheetTrigger asChild>
-                <Button variant="outline" size="icon">
+                <Button variant="outline" size="icon" className="h-9 w-9">
                   <Settings className="w-4 h-4" />
                 </Button>
               </SheetTrigger>
@@ -882,12 +1023,32 @@ export default function AIAssistantPage() {
               <WelcomeMessage />
             )}
 
-            {messages.map((message) => (
+            {/* Load more button for older messages */}
+            {hasHiddenMessages && (
+              <div className="flex justify-center">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleLoadMoreMessages}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <ChevronDown className="w-4 h-4 mr-2 rotate-180" />
+                  Load {Math.min(LOAD_MORE_INCREMENT, messages.length - visibleMessageCount)} older messages
+                  <span className="ml-2 text-xs opacity-60">
+                    ({messages.length - visibleMessageCount} hidden)
+                  </span>
+                </Button>
+              </div>
+            )}
+
+            {visibleMessages.map((message) => (
               <div key={message.id}>
-                <MessageBubble 
+                <MemoizedMessageBubble 
                   message={message}
                   onFeedback={handleFeedback}
                   currentConversationId={currentConversationId}
+                  onRegenerate={message.role === "assistant" ? handleRegenerate : undefined}
+                  currentSettings={settings}
                 />
                 
                 {/* Show Action Proposal Card if this message has one */}
@@ -1052,13 +1213,39 @@ function MessageBubble({
   message, 
   onFeedback,
   currentConversationId,
+  onCopy,
+  onRegenerate,
+  currentSettings,
 }: { 
   message: Message;
   onFeedback?: (messageId: string, vote: "up" | "down") => void;
   currentConversationId?: Id<"aiConversations"> | null;
+  onCopy?: (content: string) => void;
+  onRegenerate?: (messageId: string, settings?: { preset?: PresetId; responseStyle?: ResponseStyle }) => void;
+  currentSettings?: ChatSettings;
 }) {
   const isUser = message.role === "user";
   const [localFeedback, setLocalFeedback] = useState<"up" | "down" | null>(message.feedback || null);
+  const [copied, setCopied] = useState(false);
+  const [regenPopoverOpen, setRegenPopoverOpen] = useState(false);
+  const [selectedPreset, setSelectedPreset] = useState<PresetId>(currentSettings?.preset || "balanced");
+  const [selectedStyle, setSelectedStyle] = useState<ResponseStyle>(currentSettings?.responseStyle || "structured");
+
+  // Sync with current settings when they change (use specific values, not the object)
+  const currentPreset = currentSettings?.preset;
+  const currentResponseStyle = currentSettings?.responseStyle;
+  
+  useEffect(() => {
+    if (currentPreset) {
+      setSelectedPreset(currentPreset);
+    }
+  }, [currentPreset]);
+  
+  useEffect(() => {
+    if (currentResponseStyle) {
+      setSelectedStyle(currentResponseStyle);
+    }
+  }, [currentResponseStyle]);
 
   const handleFeedback = (vote: "up" | "down") => {
     const newVote = localFeedback === vote ? null : vote;
@@ -1066,6 +1253,26 @@ function MessageBubble({
     if (onFeedback && newVote) {
       onFeedback(message.id, vote);
     }
+  };
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(message.content);
+      setCopied(true);
+      onCopy?.(message.content);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
+
+  const handleRegenerate = (withCustomSettings: boolean = false) => {
+    if (withCustomSettings) {
+      onRegenerate?.(message.id, { preset: selectedPreset, responseStyle: selectedStyle });
+    } else {
+      onRegenerate?.(message.id);
+    }
+    setRegenPopoverOpen(false);
   };
 
   return (
@@ -1144,7 +1351,24 @@ function MessageBubble({
           </div>
         )}
 
-        {/* Metadata + Feedback */}
+        {/* Action buttons for user messages */}
+        {isUser && !message.isStreaming && (
+          <div className="mt-2 pt-2 border-t border-white/20 flex items-center justify-end gap-1">
+            <button
+              onClick={handleCopy}
+              className="p-1.5 rounded-md transition-colors text-white/70 hover:bg-white/20 hover:text-white"
+              title="Copy message"
+            >
+              {copied ? (
+                <CheckCheck className="w-3.5 h-3.5" />
+              ) : (
+                <Copy className="w-3.5 h-3.5" />
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* Metadata + Feedback + Actions for AI messages */}
         {!isUser && !message.isStreaming && (
           <div className="mt-3 pt-2 border-t border-border/30 flex items-center justify-between">
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
@@ -1162,8 +1386,126 @@ function MessageBubble({
               )}
             </div>
             
-            {/* Feedback Buttons */}
+            {/* Action Buttons: Copy, Regenerate, Feedback */}
             <div className="flex items-center gap-1">
+              {/* Copy Button */}
+              <button
+                onClick={handleCopy}
+                className={cn(
+                  "p-1.5 rounded-md transition-colors",
+                  copied
+                    ? "bg-green-500/20 text-green-500"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+                title="Copy response"
+              >
+                {copied ? (
+                  <CheckCheck className="w-3.5 h-3.5" />
+                ) : (
+                  <Copy className="w-3.5 h-3.5" />
+                )}
+              </button>
+              
+              {/* Regenerate Button with Options */}
+              {onRegenerate && (
+                <Popover open={regenPopoverOpen} onOpenChange={setRegenPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      className="p-1.5 rounded-md transition-colors text-muted-foreground hover:bg-muted hover:text-foreground"
+                      title="Regenerate response"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-72 p-3 bg-white dark:bg-black" align="end">
+                    <div className="space-y-3">
+                      <div className="font-medium text-sm">Regenerate Response</div>
+                      
+                      {/* Quick regenerate with current settings */}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full justify-start gap-2"
+                        onClick={() => handleRegenerate(false)}
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                        Use current settings
+                      </Button>
+                      
+                      <div className="border-t pt-3 space-y-2">
+                        <div className="text-xs text-muted-foreground font-medium">Or customize:</div>
+                        
+                        {/* Preset selector */}
+                        <div className="space-y-1">
+                          <Label className="text-xs">Model Preset</Label>
+                          <Select
+                            value={selectedPreset}
+                            onValueChange={(v: PresetId) => setSelectedPreset(v)}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <div className="flex items-center gap-2">
+                                {PRESET_ICONS[selectedPreset]}
+                                <span>{MODEL_PRESETS[selectedPreset].name}</span>
+                              </div>
+                            </SelectTrigger>
+                            <SelectContent className="bg-white dark:bg-black">
+                              {(Object.keys(MODEL_PRESETS) as PresetId[]).map((presetId) => (
+                                <SelectItem key={presetId} value={presetId} className="text-xs">
+                                  <div className="flex items-center gap-2">
+                                    {PRESET_ICONS[presetId]}
+                                    <span>{MODEL_PRESETS[presetId].name}</span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        {/* Response style selector */}
+                        <div className="space-y-1">
+                          <Label className="text-xs">Response Style</Label>
+                          <Select
+                            value={selectedStyle}
+                            onValueChange={(v: ResponseStyle) => setSelectedStyle(v)}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <div className="flex items-center gap-2">
+                                {RESPONSE_STYLE_OPTIONS[selectedStyle].icon}
+                                <span>{RESPONSE_STYLE_OPTIONS[selectedStyle].name}</span>
+                              </div>
+                            </SelectTrigger>
+                            <SelectContent className="bg-white dark:bg-black">
+                              {(Object.keys(RESPONSE_STYLE_OPTIONS) as ResponseStyle[]).map((style) => (
+                                <SelectItem key={style} value={style} className="text-xs">
+                                  <div className="flex items-center gap-2">
+                                    {RESPONSE_STYLE_OPTIONS[style].icon}
+                                    <span>{RESPONSE_STYLE_OPTIONS[style].name}</span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        {/* Regenerate with custom settings */}
+                        <Button
+                          size="sm"
+                          className="w-full mt-2 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white"
+                          onClick={() => handleRegenerate(true)}
+                        >
+                          <Sparkles className="w-4 h-4 mr-2" />
+                          Regenerate with these settings
+                        </Button>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              )}
+              
+              {/* Divider */}
+              <div className="w-px h-4 bg-border mx-1" />
+              
+              {/* Feedback Buttons */}
               <button
                 onClick={() => handleFeedback("up")}
                 className={cn(
@@ -1201,6 +1543,20 @@ function MessageBubble({
     </div>
   );
 }
+
+// Memoized version for performance - only re-renders when props actually change
+const MemoizedMessageBubble = memo(MessageBubble, (prevProps, nextProps) => {
+  // Custom comparison - only re-render if these specific things change
+  return (
+    prevProps.message.id === nextProps.message.id &&
+    prevProps.message.content === nextProps.message.content &&
+    prevProps.message.isStreaming === nextProps.message.isStreaming &&
+    prevProps.message.feedback === nextProps.message.feedback &&
+    prevProps.currentConversationId === nextProps.currentConversationId &&
+    prevProps.currentSettings?.preset === nextProps.currentSettings?.preset &&
+    prevProps.currentSettings?.responseStyle === nextProps.currentSettings?.responseStyle
+  );
+});
 
 // ============================================================================
 // SETTINGS PANEL
