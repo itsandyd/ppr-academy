@@ -3699,9 +3699,24 @@ export default defineSchema({
     preview: v.optional(v.string()), // First message preview
     lastMessageAt: v.number(), // Timestamp of last message
     messageCount: v.number(), // Total messages in conversation
-    // Settings used for this conversation
+    // Settings used for this conversation (legacy - single values)
     preset: v.optional(v.string()),
     responseStyle: v.optional(v.string()),
+    // Full settings object (new - complete settings persistence)
+    settings: v.optional(v.object({
+      preset: v.string(),
+      maxFacets: v.number(),
+      chunksPerFacet: v.number(),
+      similarityThreshold: v.number(),
+      enableCritic: v.boolean(),
+      enableCreativeMode: v.boolean(),
+      enableWebResearch: v.boolean(),
+      enableFactVerification: v.boolean(),
+      autoSaveWebResearch: v.boolean(),
+      webSearchMaxResults: v.optional(v.number()),
+      responseStyle: v.string(),
+      agenticMode: v.optional(v.boolean()),
+    })),
     // Metadata
     archived: v.optional(v.boolean()),
     starred: v.optional(v.boolean()),

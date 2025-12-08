@@ -32,6 +32,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Brain,
   Send,
@@ -229,9 +230,16 @@ export default function AIAssistantPage() {
   // Conversation mutations
   const createConversation = useMutation(api.aiConversations.createConversation);
   const saveMessage = useMutation(api.aiConversations.saveMessage);
+  const updateConversationSettings = useMutation(api.aiConversations.updateConversationSettings);
   
   // Feedback mutation
   const submitFeedback = useMutation(api.aiMessageFeedback.submitFeedback);
+  
+  // Query to get conversation details (including settings)
+  const currentConversation = useQuery(
+    api.aiConversations.getConversation,
+    currentConversationId ? { conversationId: currentConversationId } : "skip"
+  );
   
   // Load conversation messages when switching
   const conversationMessages = useQuery(
@@ -263,6 +271,107 @@ export default function AIAssistantPage() {
       setMessages(loadedMessages);
     }
   }, [conversationMessages]);
+  
+  // Load settings when conversation changes
+  useEffect(() => {
+    if (currentConversation?.settings) {
+      // Load full settings object from conversation
+      setSettings({
+        preset: (currentConversation.settings.preset as PresetId) || "balanced",
+        maxFacets: currentConversation.settings.maxFacets ?? DEFAULT_CHAT_SETTINGS.maxFacets,
+        chunksPerFacet: currentConversation.settings.chunksPerFacet ?? DEFAULT_CHAT_SETTINGS.chunksPerFacet,
+        similarityThreshold: currentConversation.settings.similarityThreshold ?? DEFAULT_CHAT_SETTINGS.similarityThreshold,
+        enableCritic: currentConversation.settings.enableCritic ?? DEFAULT_CHAT_SETTINGS.enableCritic,
+        enableCreativeMode: currentConversation.settings.enableCreativeMode ?? DEFAULT_CHAT_SETTINGS.enableCreativeMode,
+        enableWebResearch: currentConversation.settings.enableWebResearch ?? DEFAULT_CHAT_SETTINGS.enableWebResearch,
+        enableFactVerification: currentConversation.settings.enableFactVerification ?? DEFAULT_CHAT_SETTINGS.enableFactVerification,
+        autoSaveWebResearch: currentConversation.settings.autoSaveWebResearch ?? DEFAULT_CHAT_SETTINGS.autoSaveWebResearch,
+        webSearchMaxResults: currentConversation.settings.webSearchMaxResults ?? DEFAULT_CHAT_SETTINGS.webSearchMaxResults,
+        responseStyle: (currentConversation.settings.responseStyle as ResponseStyle) || "structured",
+      });
+      if (currentConversation.settings.agenticMode !== undefined) {
+        setAgenticMode(currentConversation.settings.agenticMode);
+      }
+    } else if (currentConversation && !currentConversation.settings) {
+      // Legacy conversation - use preset/responseStyle if available
+      if (currentConversation.preset) {
+        setSettings(prev => ({
+          ...prev,
+          preset: currentConversation.preset as PresetId,
+        }));
+      }
+      if (currentConversation.responseStyle) {
+        setSettings(prev => ({
+          ...prev,
+          responseStyle: currentConversation.responseStyle as ResponseStyle,
+        }));
+      }
+    }
+  }, [currentConversation]);
+  
+  // Save settings when they change (debounced)
+  const settingsToSaveRef = useRef<ChatSettings | null>(null);
+  const agenticModeRef = useRef(agenticMode);
+  agenticModeRef.current = agenticMode;
+  
+  useEffect(() => {
+    if (!currentConversationId) return;
+    
+    // Store current settings for saving
+    settingsToSaveRef.current = settings;
+    
+    // Debounce the save operation
+    const timeoutId = setTimeout(async () => {
+      if (settingsToSaveRef.current && currentConversationId) {
+        try {
+          await updateConversationSettings({
+            conversationId: currentConversationId,
+            settings: {
+              preset: settingsToSaveRef.current.preset,
+              maxFacets: settingsToSaveRef.current.maxFacets,
+              chunksPerFacet: settingsToSaveRef.current.chunksPerFacet,
+              similarityThreshold: settingsToSaveRef.current.similarityThreshold,
+              enableCritic: settingsToSaveRef.current.enableCritic,
+              enableCreativeMode: settingsToSaveRef.current.enableCreativeMode,
+              enableWebResearch: settingsToSaveRef.current.enableWebResearch,
+              enableFactVerification: settingsToSaveRef.current.enableFactVerification,
+              autoSaveWebResearch: settingsToSaveRef.current.autoSaveWebResearch,
+              webSearchMaxResults: settingsToSaveRef.current.webSearchMaxResults,
+              responseStyle: settingsToSaveRef.current.responseStyle,
+              agenticMode: agenticModeRef.current,
+            },
+          });
+        } catch (error) {
+          console.error("Failed to save settings:", error);
+        }
+      }
+    }, 1000); // 1 second debounce
+    
+    return () => clearTimeout(timeoutId);
+  }, [settings, currentConversationId, updateConversationSettings]);
+  
+  // Also save when agentic mode changes
+  useEffect(() => {
+    if (!currentConversationId) return;
+    
+    const timeoutId = setTimeout(async () => {
+      if (settingsToSaveRef.current && currentConversationId) {
+        try {
+          await updateConversationSettings({
+            conversationId: currentConversationId,
+            settings: {
+              ...settingsToSaveRef.current,
+              agenticMode,
+            },
+          });
+        } catch (error) {
+          console.error("Failed to save agentic mode:", error);
+        }
+      }
+    }, 500);
+    
+    return () => clearTimeout(timeoutId);
+  }, [agenticMode, currentConversationId, updateConversationSettings]);
   
   // Clear messages when starting a new conversation
   const handleNewConversation = () => {
@@ -880,7 +989,7 @@ export default function AIAssistantPage() {
   }
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen bg-background overflow-hidden">
       {/* Conversation Sidebar */}
       {user && (
         <ConversationSidebar
@@ -894,35 +1003,35 @@ export default function AIAssistantPage() {
       )}
       
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Header */}
-        <header className="flex items-center justify-between px-6 py-4 border-b border-border bg-card">
-          <div className="flex items-center gap-3">
+        <header className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 border-b border-border bg-card overflow-x-hidden">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             {/* Mobile sidebar toggle */}
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden"
+              className="md:hidden flex-shrink-0"
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
             >
               {sidebarCollapsed ? <PanelLeft className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
             </Button>
             
-            <div className="p-2 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600">
+            <div className="p-2 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex-shrink-0 hidden sm:flex">
               <Brain className="w-6 h-6 text-white" />
             </div>
-            <div>
-              <h1 className="text-xl font-bold">AI Assistant</h1>
-              <p className="text-sm text-muted-foreground">
-                {currentConversationId ? "Continue your conversation" : "Start a new conversation"}
+            <div className="min-w-0 hidden sm:block">
+              <h1 className="text-xl font-bold truncate">AI Assistant</h1>
+              <p className="text-sm text-muted-foreground truncate">
+                {currentConversationId ? "Continue conversation" : "New conversation"}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
             {/* Memory indicator - hidden on mobile */}
             {userMemories && userMemories.length > 0 && (
-              <Badge variant="secondary" className="hidden sm:flex items-center gap-1.5">
+              <Badge variant="secondary" className="hidden lg:flex items-center gap-1.5">
                 <Brain className="w-3 h-3" />
                 <span>{userMemories.length} memories</span>
               </Badge>
@@ -933,10 +1042,10 @@ export default function AIAssistantPage() {
               value={settings.preset}
               onValueChange={(value: PresetId) => setSettings(prev => ({ ...prev, preset: value }))}
             >
-              <SelectTrigger className="w-[130px] sm:w-[150px] h-9 bg-background">
-                <div className="flex items-center gap-2">
+              <SelectTrigger className="w-[100px] sm:w-[130px] md:w-[150px] h-8 sm:h-9 bg-background text-xs sm:text-sm">
+                <div className="flex items-center gap-1 sm:gap-2">
                   {PRESET_ICONS[settings.preset]}
-                  <span className="truncate">{MODEL_PRESETS[settings.preset].name}</span>
+                  <span className="truncate hidden xs:inline">{MODEL_PRESETS[settings.preset].name}</span>
                 </div>
               </SelectTrigger>
               <SelectContent className="bg-white dark:bg-black">
@@ -956,15 +1065,15 @@ export default function AIAssistantPage() {
               </SelectContent>
             </Select>
 
-            {/* Response Style Selector */}
+            {/* Response Style Selector - hidden on smallest screens */}
             <Select
               value={settings.responseStyle}
               onValueChange={(value: ResponseStyle) => setSettings(prev => ({ ...prev, responseStyle: value }))}
             >
-              <SelectTrigger className="w-[120px] sm:w-[140px] h-9 bg-background">
-                <div className="flex items-center gap-2">
+              <SelectTrigger className="w-[90px] sm:w-[120px] md:w-[140px] h-8 sm:h-9 bg-background text-xs sm:text-sm hidden xs:flex">
+                <div className="flex items-center gap-1 sm:gap-2">
                   {RESPONSE_STYLE_OPTIONS[settings.responseStyle].icon}
-                  <span className="truncate">{RESPONSE_STYLE_OPTIONS[settings.responseStyle].name}</span>
+                  <span className="truncate hidden sm:inline">{RESPONSE_STYLE_OPTIONS[settings.responseStyle].name}</span>
                 </div>
               </SelectTrigger>
               <SelectContent className="bg-white dark:bg-black">
@@ -985,7 +1094,7 @@ export default function AIAssistantPage() {
             </Select>
             
             {/* Agentic Mode Toggle */}
-            <div className="hidden sm:flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-2">
               <Label htmlFor="agentic-mode" className="text-xs text-muted-foreground cursor-pointer">
                 Actions
               </Label>
@@ -999,26 +1108,26 @@ export default function AIAssistantPage() {
             {/* Settings Button */}
             <Sheet open={settingsOpen} onOpenChange={setSettingsOpen}>
               <SheetTrigger asChild>
-                <Button variant="outline" size="icon" className="h-9 w-9">
+                <Button variant="outline" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 flex-shrink-0">
                   <Settings className="w-4 h-4" />
                 </Button>
               </SheetTrigger>
-              <SheetContent className="bg-white dark:bg-black w-[400px]">
+              <SheetContent className="bg-white dark:bg-black w-full sm:w-[400px]">
                 <SheetHeader>
                   <SheetTitle>Chat Settings</SheetTitle>
                   <SheetDescription>
                     Configure the AI pipeline behavior
                   </SheetDescription>
                 </SheetHeader>
-                <SettingsPanel settings={settings} setSettings={setSettings} />
+                <SettingsPanel settings={settings} setSettings={setSettings} agenticMode={agenticMode} setAgenticMode={setAgenticMode} />
               </SheetContent>
             </Sheet>
           </div>
         </header>
 
         {/* Messages Area */}
-        <div className="flex-1 overflow-y-auto px-4 py-6">
-          <div className="max-w-4xl mx-auto space-y-6">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-6">
+          <div className="max-w-4xl mx-auto space-y-6 w-full">
             {messages.length === 0 && (
               <WelcomeMessage />
             )}
@@ -1276,7 +1385,7 @@ function MessageBubble({
   };
 
   return (
-    <div className={cn("flex gap-3", isUser ? "justify-end" : "justify-start")}>
+    <div className={cn("flex gap-3 w-full overflow-hidden", isUser ? "justify-end" : "justify-start")}>
       {!isUser && (
         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0">
           <Bot className="w-4 h-4 text-white" />
@@ -1285,7 +1394,7 @@ function MessageBubble({
 
       <div
         className={cn(
-          "max-w-[80%] rounded-2xl px-4 py-3",
+          "max-w-[85%] sm:max-w-[80%] rounded-2xl px-4 py-3 overflow-hidden break-words",
           isUser
             ? "bg-gradient-to-r from-violet-500 to-purple-600 text-white"
             : "bg-card border border-border"
@@ -1565,42 +1674,64 @@ const MemoizedMessageBubble = memo(MessageBubble, (prevProps, nextProps) => {
 function SettingsPanel({
   settings,
   setSettings,
+  agenticMode,
+  setAgenticMode,
 }: {
   settings: ChatSettings;
   setSettings: React.Dispatch<React.SetStateAction<ChatSettings>>;
+  agenticMode?: boolean;
+  setAgenticMode?: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
   return (
-    <div className="mt-6 space-y-6">
-      {/* Preset Selection */}
-      <div className="space-y-3">
-        <Label>Model Preset</Label>
-        <Select
-          value={settings.preset}
-          onValueChange={(value: PresetId) =>
-            setSettings((prev) => ({ ...prev, preset: value }))
-          }
-        >
-          <SelectTrigger className="bg-background">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="bg-white dark:bg-black">
-            {(Object.keys(MODEL_PRESETS) as PresetId[]).map((presetId) => {
-              const preset = MODEL_PRESETS[presetId];
-              return (
-                <SelectItem key={presetId} value={presetId}>
-                  <div className="flex items-center gap-2">
-                    {PRESET_ICONS[presetId]}
-                    <span>{preset.name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {preset.description}
-                    </span>
-                  </div>
-                </SelectItem>
-              );
-            })}
-          </SelectContent>
-        </Select>
-      </div>
+    <div className="h-[calc(100vh-120px)] mt-4 overflow-y-auto overflow-x-hidden">
+      <div className="space-y-6 pb-8 pr-4">
+        {/* Agentic Mode Toggle (visible on mobile) */}
+        {setAgenticMode && (
+          <div className="flex items-center justify-between md:hidden p-3 rounded-lg bg-muted/50 border border-border">
+            <div>
+              <Label htmlFor="agentic-mode-settings" className="font-medium">Action Mode</Label>
+              <p className="text-xs text-muted-foreground">
+                Allow AI to create courses, lessons, etc.
+              </p>
+            </div>
+            <Switch
+              id="agentic-mode-settings"
+              checked={agenticMode}
+              onCheckedChange={setAgenticMode}
+            />
+          </div>
+        )}
+        
+        {/* Preset Selection */}
+        <div className="space-y-3">
+          <Label>Model Preset</Label>
+          <Select
+            value={settings.preset}
+            onValueChange={(value: PresetId) =>
+              setSettings((prev) => ({ ...prev, preset: value }))
+            }
+          >
+            <SelectTrigger className="bg-background">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-white dark:bg-black">
+              {(Object.keys(MODEL_PRESETS) as PresetId[]).map((presetId) => {
+                const preset = MODEL_PRESETS[presetId];
+                return (
+                  <SelectItem key={presetId} value={presetId}>
+                    <div className="flex items-center gap-2">
+                      {PRESET_ICONS[presetId]}
+                      <span>{preset.name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {preset.description}
+                      </span>
+                    </div>
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
+        </div>
 
       {/* Max Facets */}
       <div className="space-y-3">
@@ -1666,14 +1797,15 @@ function SettingsPanel({
 
       {/* Feature Toggles */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex-1 min-w-0">
             <Label>Critic Stage</Label>
             <p className="text-xs text-muted-foreground">
               Quality review before response
             </p>
           </div>
           <Switch
+            className="flex-shrink-0"
             checked={settings.enableCritic}
             onCheckedChange={(checked) =>
               setSettings((prev) => ({ ...prev, enableCritic: checked }))
@@ -1681,14 +1813,15 @@ function SettingsPanel({
           />
         </div>
 
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex-1 min-w-0">
             <Label>Creative Mode</Label>
             <p className="text-xs text-muted-foreground">
               Generate new ideas beyond sources
             </p>
           </div>
           <Switch
+            className="flex-shrink-0"
             checked={settings.enableCreativeMode}
             onCheckedChange={(checked) =>
               setSettings((prev) => ({ ...prev, enableCreativeMode: checked }))
@@ -1704,14 +1837,15 @@ function SettingsPanel({
           Research & Verification
         </Label>
         
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex-1 min-w-0">
             <Label className="text-sm">Web Research</Label>
             <p className="text-xs text-muted-foreground">
               Search web for additional context (uses Tavily API)
             </p>
           </div>
           <Switch
+            className="flex-shrink-0"
             checked={settings.enableWebResearch}
             onCheckedChange={(checked) =>
               setSettings((prev) => ({ ...prev, enableWebResearch: checked }))
@@ -1721,14 +1855,15 @@ function SettingsPanel({
 
         {settings.enableWebResearch && (
           <div className="ml-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex-1 min-w-0">
                 <Label className="text-sm">Auto-Save to Knowledge</Label>
                 <p className="text-xs text-muted-foreground">
                   Save web findings for future queries
                 </p>
               </div>
               <Switch
+                className="flex-shrink-0"
                 checked={settings.autoSaveWebResearch}
                 onCheckedChange={(checked) =>
                   setSettings((prev) => ({ ...prev, autoSaveWebResearch: checked }))
@@ -1756,14 +1891,15 @@ function SettingsPanel({
           </div>
         )}
 
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex-1 min-w-0">
             <Label className="text-sm">Fact Verification</Label>
             <p className="text-xs text-muted-foreground">
               Cross-check claims against sources
             </p>
           </div>
           <Switch
+            className="flex-shrink-0"
             checked={settings.enableFactVerification}
             onCheckedChange={(checked) =>
               setSettings((prev) => ({ ...prev, enableFactVerification: checked }))
@@ -1830,6 +1966,7 @@ function SettingsPanel({
             );
           })}
         </div>
+      </div>
       </div>
     </div>
   );

@@ -127,6 +127,7 @@ import type * as masterAI_queries from "../masterAI/queries.js";
 import type * as masterAI_retriever from "../masterAI/retriever.js";
 import type * as masterAI_summarizer from "../masterAI/summarizer.js";
 import type * as masterAI_tools_executor from "../masterAI/tools/executor.js";
+import type * as masterAI_tools_mutations from "../masterAI/tools/mutations.js";
 import type * as masterAI_types from "../masterAI/types.js";
 import type * as masterAI_webResearch from "../masterAI/webResearch.js";
 import type * as migrations_backfillCourseCustomers from "../migrations/backfillCourseCustomers.js";
@@ -302,6 +303,7 @@ declare const fullApi: ApiFromModules<{
   "masterAI/retriever": typeof masterAI_retriever;
   "masterAI/summarizer": typeof masterAI_summarizer;
   "masterAI/tools/executor": typeof masterAI_tools_executor;
+  "masterAI/tools/mutations": typeof masterAI_tools_mutations;
   "masterAI/types": typeof masterAI_types;
   "masterAI/webResearch": typeof masterAI_webResearch;
   "migrations/backfillCourseCustomers": typeof migrations_backfillCourseCustomers;

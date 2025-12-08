@@ -25,6 +25,20 @@ export const getUserConversations = query({
     messageCount: v.number(),
     preset: v.optional(v.string()),
     responseStyle: v.optional(v.string()),
+    settings: v.optional(v.object({
+      preset: v.string(),
+      maxFacets: v.number(),
+      chunksPerFacet: v.number(),
+      similarityThreshold: v.number(),
+      enableCritic: v.boolean(),
+      enableCreativeMode: v.boolean(),
+      enableWebResearch: v.boolean(),
+      enableFactVerification: v.boolean(),
+      autoSaveWebResearch: v.boolean(),
+      webSearchMaxResults: v.optional(v.number()),
+      responseStyle: v.string(),
+      agenticMode: v.optional(v.boolean()),
+    })),
     archived: v.optional(v.boolean()),
     starred: v.optional(v.boolean()),
     createdAt: v.number(),
@@ -66,6 +80,20 @@ export const getConversation = query({
       messageCount: v.number(),
       preset: v.optional(v.string()),
       responseStyle: v.optional(v.string()),
+      settings: v.optional(v.object({
+        preset: v.string(),
+        maxFacets: v.number(),
+        chunksPerFacet: v.number(),
+        similarityThreshold: v.number(),
+        enableCritic: v.boolean(),
+        enableCreativeMode: v.boolean(),
+        enableWebResearch: v.boolean(),
+        enableFactVerification: v.boolean(),
+        autoSaveWebResearch: v.boolean(),
+        webSearchMaxResults: v.optional(v.number()),
+        responseStyle: v.string(),
+        agenticMode: v.optional(v.boolean()),
+      })),
       archived: v.optional(v.boolean()),
       starred: v.optional(v.boolean()),
       createdAt: v.number(),
@@ -271,6 +299,40 @@ export const updateConversationTitle = mutation({
   handler: async (ctx, args) => {
     await ctx.db.patch(args.conversationId, {
       title: args.title,
+      updatedAt: Date.now(),
+    });
+    return null;
+  },
+});
+
+/**
+ * Update conversation settings
+ */
+export const updateConversationSettings = mutation({
+  args: {
+    conversationId: v.id("aiConversations"),
+    settings: v.object({
+      preset: v.string(),
+      maxFacets: v.number(),
+      chunksPerFacet: v.number(),
+      similarityThreshold: v.number(),
+      enableCritic: v.boolean(),
+      enableCreativeMode: v.boolean(),
+      enableWebResearch: v.boolean(),
+      enableFactVerification: v.boolean(),
+      autoSaveWebResearch: v.boolean(),
+      webSearchMaxResults: v.optional(v.number()),
+      responseStyle: v.string(),
+      agenticMode: v.optional(v.boolean()),
+    }),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.conversationId, {
+      settings: args.settings,
+      // Also update legacy fields for backward compatibility
+      preset: args.settings.preset,
+      responseStyle: args.settings.responseStyle,
       updatedAt: Date.now(),
     });
     return null;
