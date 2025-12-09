@@ -3844,4 +3844,38 @@ export default defineSchema({
     .index("by_query", ["query"])
     .index("by_addedToEmbeddings", ["addedToEmbeddings"])
     .index("by_sourceConversationId", ["sourceConversationId"]),
+
+  // =============================================================================
+  // Feature Discovery - AI-identified features from course content
+  // =============================================================================
+  suggestedFeatures: defineTable({
+    // Feature details
+    name: v.string(),
+    description: v.string(),
+    category: v.string(), // marketing, automation, content, monetization, engagement, analytics, social, audio, workflow, other
+    
+    // Source tracking
+    sourceCourses: v.array(v.string()), // Course titles
+    sourceChapters: v.array(v.string()), // Chapter titles
+    
+    // Priority and reasoning
+    priority: v.string(), // high, medium, low
+    reasoning: v.string(),
+    existsPartially: v.optional(v.string()), // Name of existing similar feature
+    implementationHint: v.optional(v.string()),
+    cursorPrompt: v.optional(v.string()), // Pre-built prompt for Cursor
+    
+    // Status tracking
+    status: v.string(), // new, reviewing, planned, building, completed, rejected
+    notes: v.optional(v.string()), // Admin notes
+    linkedTaskUrl: v.optional(v.string()), // Link to Linear/GitHub issue
+    
+    // Metadata
+    analysisRunId: v.optional(v.string()), // Which analysis run created this
+    updatedAt: v.number(),
+  })
+    .index("by_status", ["status"])
+    .index("by_category", ["category"])
+    .index("by_priority", ["priority"])
+    .index("by_analysisRunId", ["analysisRunId"]),
 }); 

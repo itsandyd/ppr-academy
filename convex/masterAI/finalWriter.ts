@@ -19,6 +19,10 @@ import {
   type Chunk,
 } from "./types";
 import { callLLM } from "./llmClient";
+import { 
+  getRelevantPlatformFeatures, 
+  formatPlatformKnowledgeForPrompt 
+} from "./platformKnowledge";
 
 // ============================================================================
 // FINAL WRITER STAGE
@@ -194,6 +198,10 @@ export const generateFinalResponse = internalAction({
 
     // Get style-specific instructions
     const styleInstructions = getStyleInstructions(settings.responseStyle || "structured");
+    
+    // Get relevant PPR Academy platform features to mention
+    const relevantFeatures = getRelevantPlatformFeatures(originalQuestion, 3);
+    const platformKnowledgeContext = formatPlatformKnowledgeForPrompt(relevantFeatures);
 
     // Check if user requested a specific word count
     const wordCountMatch = originalQuestion.match(/(\d{2,5})\s*word/i);
@@ -257,7 +265,8 @@ APPROACH:
 - When the knowledge base doesn't have enough detail, ADD your expert knowledge
 - Teach concepts progressively - build understanding
 - Include "Pro Tips" that reveal insider knowledge
-- If information is limited, acknowledge it and supplement with your expertise`;
+- If information is limited, acknowledge it and supplement with your expertise
+${platformKnowledgeContext}`;
 
     // Truncate memory context if too long
     const truncatedMemoryContext = memoryContext && memoryContext.length > 2000

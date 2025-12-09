@@ -24,6 +24,7 @@ import {
   Terminal,
   ChevronRight,
   Zap,
+  Lightbulb,
 } from "lucide-react";
 
 interface NavItem {
@@ -130,19 +131,38 @@ const navSections = [
     ],
   },
   {
-    title: "Tools",
+    title: "AI Platform",
     items: [
+      {
+        title: "AI Flywheel",
+        href: "/admin/ai-flywheel",
+        icon: TrendingUp,
+        description: "Self-improving AI",
+        badge: "✨",
+        badgeColor: "bg-gradient-to-r from-chart-1 to-chart-2",
+      },
+      {
+        title: "Feature Discovery",
+        href: "/admin/feature-discovery",
+        icon: Lightbulb,
+        description: "Course → Product ideas",
+      },
       {
         title: "AI Studio",
         href: "/admin/ai-tools",
         icon: Sparkles,
         description: "AI generation",
       },
+    ],
+  },
+  {
+    title: "Settings",
+    items: [
       {
-        title: "Settings",
+        title: "Configuration",
         href: "/admin/settings",
         icon: Settings,
-        description: "Configuration",
+        description: "Platform settings",
       },
     ],
   },

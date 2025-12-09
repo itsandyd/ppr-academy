@@ -16,6 +16,7 @@ import type {
 import type * as abletonRacks from "../abletonRacks.js";
 import type * as accessControl from "../accessControl.js";
 import type * as achievements from "../achievements.js";
+import type * as admin_featureDiscovery from "../admin/featureDiscovery.js";
 import type * as adminAnalytics from "../adminAnalytics.js";
 import type * as adminEmailMonitoring from "../adminEmailMonitoring.js";
 import type * as adminSetup from "../adminSetup.js";
@@ -24,6 +25,7 @@ import type * as aiConversations from "../aiConversations.js";
 import type * as aiEmailGenerator from "../aiEmailGenerator.js";
 import type * as aiMemories from "../aiMemories.js";
 import type * as aiMessageFeedback from "../aiMessageFeedback.js";
+import type * as aiPlatform_contentFlywheel from "../aiPlatform/contentFlywheel.js";
 import type * as analytics_creatorPipeline from "../analytics/creatorPipeline.js";
 import type * as analytics_errors from "../analytics/errors.js";
 import type * as analytics_funnels from "../analytics/funnels.js";
@@ -123,6 +125,7 @@ import type * as masterAI_llmClient from "../masterAI/llmClient.js";
 import type * as masterAI_memoryManager from "../masterAI/memoryManager.js";
 import type * as masterAI_mutations from "../masterAI/mutations.js";
 import type * as masterAI_planner from "../masterAI/planner.js";
+import type * as masterAI_platformKnowledge from "../masterAI/platformKnowledge.js";
 import type * as masterAI_queries from "../masterAI/queries.js";
 import type * as masterAI_retriever from "../masterAI/retriever.js";
 import type * as masterAI_summarizer from "../masterAI/summarizer.js";
@@ -192,6 +195,7 @@ declare const fullApi: ApiFromModules<{
   abletonRacks: typeof abletonRacks;
   accessControl: typeof accessControl;
   achievements: typeof achievements;
+  "admin/featureDiscovery": typeof admin_featureDiscovery;
   adminAnalytics: typeof adminAnalytics;
   adminEmailMonitoring: typeof adminEmailMonitoring;
   adminSetup: typeof adminSetup;
@@ -200,6 +204,7 @@ declare const fullApi: ApiFromModules<{
   aiEmailGenerator: typeof aiEmailGenerator;
   aiMemories: typeof aiMemories;
   aiMessageFeedback: typeof aiMessageFeedback;
+  "aiPlatform/contentFlywheel": typeof aiPlatform_contentFlywheel;
   "analytics/creatorPipeline": typeof analytics_creatorPipeline;
   "analytics/errors": typeof analytics_errors;
   "analytics/funnels": typeof analytics_funnels;
@@ -299,6 +304,7 @@ declare const fullApi: ApiFromModules<{
   "masterAI/memoryManager": typeof masterAI_memoryManager;
   "masterAI/mutations": typeof masterAI_mutations;
   "masterAI/planner": typeof masterAI_planner;
+  "masterAI/platformKnowledge": typeof masterAI_platformKnowledge;
   "masterAI/queries": typeof masterAI_queries;
   "masterAI/retriever": typeof masterAI_retriever;
   "masterAI/summarizer": typeof masterAI_summarizer;
