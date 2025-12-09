@@ -191,9 +191,29 @@ export async function POST(request: NextRequest) {
           clearInterval(heartbeatTimer);
           
           console.error("Pipeline error:", error);
+          
+          // Extract error message, handling various error types
+          let errorMessage = "Pipeline failed";
+          if (error instanceof Error) {
+            errorMessage = error.message || error.name || "Unknown error";
+            // Check for timeout indicators
+            if (error.message?.includes("timeout") || error.name === "TimeoutError") {
+              errorMessage = "Request timed out. Try a shorter question or simpler settings.";
+            }
+          } else if (typeof error === "string") {
+            errorMessage = error;
+          } else if (error && typeof error === "object") {
+            errorMessage = (error as any).message || (error as any).error || JSON.stringify(error);
+          }
+          
+          // Handle empty error messages
+          if (!errorMessage || errorMessage === "Error" || errorMessage.trim() === "") {
+            errorMessage = "An unexpected error occurred. Please try again.";
+          }
+          
           sendEvent({
             type: "error",
-            message: error instanceof Error ? error.message : "Pipeline failed",
+            message: errorMessage,
           });
           safeClose();
         }

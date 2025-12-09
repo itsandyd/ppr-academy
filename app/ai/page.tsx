@@ -221,6 +221,8 @@ export default function AIAssistantPage() {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const activeConversationRef = useRef<string | null>(null);
 
   // Convex actions
   const askMasterAI = useAction((api as any).masterAI.index.askMasterAI);
@@ -254,6 +256,22 @@ export default function AIAssistantPage() {
     user ? { userId: user.id, limit: 5 } : "skip"
   );
   
+  // Cancel any pending request and reset state when conversation changes
+  useEffect(() => {
+    // Cancel any pending request from previous conversation
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    
+    // Reset loading state
+    setIsLoading(false);
+    setPipelineStatus(null);
+    
+    // Update active conversation ref
+    activeConversationRef.current = currentConversationId;
+  }, [currentConversationId]);
+
   // Load messages from database when conversation changes
   useEffect(() => {
     if (conversationMessages) {
@@ -477,6 +495,18 @@ export default function AIAssistantPage() {
     // Note: Long-term memories are now fetched and formatted by the backend pipeline
     // This is more reliable and doesn't pollute the question text
 
+    // Cancel any existing request before starting a new one
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    
+    // Create new AbortController for this request
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+    
+    // Track which conversation this request is for
+    activeConversationRef.current = conversationId;
+
     try {
       // Try streaming endpoint first
       const response = await fetch("/api/ai/chat", {
@@ -486,12 +516,19 @@ export default function AIAssistantPage() {
           question: userMessage.content, // Clean question, no memory appending
           settings,
           conversationContext,
-          conversationId: currentConversationId, // Pass conversation ID for caching
+          conversationId, // Use local variable (not state) for newly created conversations
         }),
+        signal: abortController.signal, // Allow cancellation
       });
 
       if (!response.ok) {
         throw new Error("API request failed");
+      }
+      
+      // Check if this request is still relevant (conversation hasn't changed)
+      if (activeConversationRef.current !== conversationId) {
+        console.log("Ignoring response - conversation changed");
+        return;
       }
 
       // Create placeholder for assistant message
@@ -563,6 +600,18 @@ export default function AIAssistantPage() {
         }
       }
     } catch (error) {
+      // Check if request was aborted (user switched conversations)
+      if (error instanceof Error && error.name === "AbortError") {
+        console.log("Request cancelled - user switched conversations");
+        return; // Don't show error, just exit
+      }
+      
+      // Check if conversation changed during request
+      if (activeConversationRef.current !== conversationId) {
+        console.log("Ignoring error - conversation changed");
+        return;
+      }
+      
       console.error("Chat error:", error);
       
       // Fallback to direct Convex action

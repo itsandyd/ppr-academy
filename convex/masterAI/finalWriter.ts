@@ -311,6 +311,11 @@ Generate a comprehensive, well-structured response with inline citations. If web
         maxTokens: 8000, // Increased to support longer form content (3000+ words)
       });
 
+      // Log if response was truncated due to token limit
+      if (response.finishReason === "length") {
+        console.warn(`⚠️ Final response was truncated (finish_reason: length). Output tokens: ${response.tokensUsed?.output}`);
+      }
+
       // Extract citations used in the response
       const usedCitations = extractUsedCitations(response.content, citationMap);
 

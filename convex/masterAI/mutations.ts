@@ -30,10 +30,32 @@ export const saveAssistantMessage = internalMutation({
       finalWriterModel: v.optional(v.string()),
     })),
   },
-  returns: v.id("aiMessages"),
+  returns: v.union(v.id("aiMessages"), v.null()), // Can return null if duplicate
   handler: async (ctx, args) => {
     const now = Date.now();
     const conversationId = args.conversationId as any; // Cast string to ID
+    
+    // DEDUPLICATION: Check if this message was already saved
+    // This prevents duplicates when both backend auto-save and frontend save occur
+    const recentMessages = await ctx.db
+      .query("aiMessages")
+      .withIndex("by_conversationId_createdAt", (q) => 
+        q.eq("conversationId", conversationId)
+      )
+      .order("desc")
+      .take(3);
+    
+    const oneMinuteAgo = now - 60000;
+    for (const msg of recentMessages) {
+      if (
+        msg.role === "assistant" &&
+        msg.createdAt > oneMinuteAgo &&
+        msg.content.substring(0, 200) === args.content.substring(0, 200)
+      ) {
+        console.log(`⏭️ Skipping duplicate assistant message (already saved)`);
+        return msg._id;
+      }
+    }
     
     // Save the message
     const messageId = await ctx.db.insert("aiMessages", {

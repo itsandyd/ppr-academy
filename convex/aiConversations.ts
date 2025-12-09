@@ -244,9 +244,32 @@ export const saveMessage = mutation({
       finalWriterModel: v.optional(v.string()),
     })),
   },
-  returns: v.id("aiMessages"),
+  returns: v.union(v.id("aiMessages"), v.null()), // Can return null if duplicate
   handler: async (ctx, args) => {
     const now = Date.now();
+    
+    // DEDUPLICATION: Check if a similar message was recently added (within 60 seconds)
+    // This prevents duplicate saves from both backend auto-save and frontend save
+    const recentMessages = await ctx.db
+      .query("aiMessages")
+      .withIndex("by_conversationId_createdAt", (q) => 
+        q.eq("conversationId", args.conversationId)
+      )
+      .order("desc")
+      .take(5);
+    
+    const oneMinuteAgo = now - 60000;
+    for (const msg of recentMessages) {
+      // Skip if same role, similar content, and within last minute
+      if (
+        msg.role === args.role &&
+        msg.createdAt > oneMinuteAgo &&
+        msg.content.substring(0, 200) === args.content.substring(0, 200)
+      ) {
+        console.log(`⏭️ Skipping duplicate ${args.role} message (already saved)`);
+        return msg._id; // Return existing message ID
+      }
+    }
     
     // Save the message
     const messageId = await ctx.db.insert("aiMessages", {
