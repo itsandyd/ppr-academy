@@ -3,7 +3,7 @@
 import { internalAction } from "../_generated/server";
 import { v } from "convex/values";
 import { internal } from "../_generated/api";
-import { callLLM } from "./llmClient";
+import { callLLM, safeParseJson } from "./llmClient";
 import type { SummarizerOutput } from "./types";
 
 // ============================================================================
@@ -154,10 +154,26 @@ Verify each claim and respond with JSON:
           { role: "user", content: userPrompt },
         ],
         temperature: 0.2, // Low temperature for accuracy
+        maxTokens: 3000, // Increased to handle multiple claims
         responseFormat: "json",
       });
 
-      const parsed = JSON.parse(response.content);
+      let parsed: any;
+      try {
+        parsed = safeParseJson(response.content);
+      } catch (parseError) {
+        console.warn("Fact verifier JSON parsing failed, returning neutral result:", parseError);
+        return {
+          verifiedClaims: claims.map((c) => ({
+            claim: c,
+            status: "unverified" as const,
+            confidence: 0.5,
+            supportingSources: [],
+          })),
+          overallConfidence: 0.5,
+          suggestedCorrections: [],
+        };
+      }
 
       // Validate and return
       return {
@@ -216,7 +232,7 @@ Skip:
         responseFormat: "json",
       });
 
-      const parsed = JSON.parse(response.content);
+      const parsed = safeParseJson(response.content) as any;
       return Array.isArray(parsed.claims) ? parsed.claims : [];
     } catch (error) {
       console.error("Claim extraction error:", error);

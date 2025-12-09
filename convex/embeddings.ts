@@ -243,8 +243,71 @@ export const deleteEmbeddingsBatch = internalMutation({
   },
 });
 
-// Get embedding statistics
-export const getEmbeddingStats = query({
+// Internal query to count embeddings by a specific source type
+// Uses async iteration instead of pagination (Convex only allows 1 paginated query per function)
+export const countEmbeddingsBySourceType = internalQuery({
+  args: { 
+    sourceType: v.union(
+      v.literal("course"),
+      v.literal("chapter"),
+      v.literal("lesson"),
+      v.literal("document"),
+      v.literal("note"),
+      v.literal("custom")
+    )
+  },
+  returns: v.object({
+    count: v.number(),
+    webResearch: v.number(),
+    products: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    let count = 0;
+    let webResearch = 0;
+    let products = 0;
+    
+    // Use async iteration - this streams results and doesn't hit the 16MB limit the same way
+    for await (const e of ctx.db
+      .query("embeddings")
+      .withIndex("by_sourceType", (q) => q.eq("sourceType", args.sourceType))) {
+      count++;
+      
+      // For document type, separate products from web research
+      if (args.sourceType === "document") {
+        const meta = e.metadata as any;
+        if (meta?.type === "web_research") webResearch++;
+        else products++;
+      }
+    }
+    
+    return { count, webResearch, products };
+  },
+});
+
+// Internal query to count documents in a table using async iteration
+export const countTableDocuments = internalQuery({
+  args: { 
+    tableName: v.union(
+      v.literal("courses"),
+      v.literal("courseChapters"),
+      v.literal("courseLessons"),
+      v.literal("digitalProducts"),
+      v.literal("notes")
+    )
+  },
+  returns: v.number(),
+  handler: async (ctx, args) => {
+    let count = 0;
+    for await (const _ of ctx.db.query(args.tableName)) {
+      count++;
+    }
+    return count;
+  },
+});
+
+// Action to get embedding statistics
+// Uses separate query calls to avoid the 16MB read limit per query
+export const getEmbeddingStats = action({
   args: {},
   returns: v.object({
     totalEmbeddings: v.number(),
@@ -267,55 +330,57 @@ export const getEmbeddingStats = query({
     coveragePercentage: v.number(),
   }),
   handler: async (ctx) => {
-    const allEmbeddings = await ctx.db.query("embeddings").collect();
+    // Count embeddings by source type - each runs in its own query with its own limit
+    const [courseResult, chapterResult, lessonResult, noteResult, documentResult, customResult] = 
+      await Promise.all([
+        ctx.runQuery(internal.embeddings.countEmbeddingsBySourceType, { sourceType: "course" }),
+        ctx.runQuery(internal.embeddings.countEmbeddingsBySourceType, { sourceType: "chapter" }),
+        ctx.runQuery(internal.embeddings.countEmbeddingsBySourceType, { sourceType: "lesson" }),
+        ctx.runQuery(internal.embeddings.countEmbeddingsBySourceType, { sourceType: "note" }),
+        ctx.runQuery(internal.embeddings.countEmbeddingsBySourceType, { sourceType: "document" }),
+        ctx.runQuery(internal.embeddings.countEmbeddingsBySourceType, { sourceType: "custom" }),
+      ]);
     
-    // Count embeddings by source type
     const bySourceType = {
-      courses: 0,
-      chapters: 0,
-      lessons: 0,
-      products: 0,
-      notes: 0,
-      webResearch: 0,
-      other: 0,
+      courses: courseResult.count,
+      chapters: chapterResult.count,
+      lessons: lessonResult.count,
+      products: documentResult.products,
+      notes: noteResult.count,
+      webResearch: documentResult.webResearch,
+      other: customResult.count,
     };
     
-    for (const e of allEmbeddings) {
-      if (e.sourceType === "course") bySourceType.courses++;
-      else if (e.sourceType === "chapter") bySourceType.chapters++;
-      else if (e.sourceType === "lesson") bySourceType.lessons++;
-      else if (e.sourceType === "note") bySourceType.notes++;
-      else if (e.sourceType === "document") {
-        // Check metadata for type
-        const meta = e.metadata as any;
-        if (meta?.type === "web_research") bySourceType.webResearch++;
-        else bySourceType.products++;
-      }
-      else bySourceType.other++;
-    }
+    const totalEmbeddings = 
+      courseResult.count + chapterResult.count + lessonResult.count + 
+      noteResult.count + documentResult.count + customResult.count;
     
-    // Count actual content
-    const courses = await ctx.db.query("courses").collect();
-    const chapters = await ctx.db.query("courseChapters").collect();
-    const lessons = await ctx.db.query("courseLessons").collect();
-    const products = await ctx.db.query("digitalProducts").collect();
-    const notes = await ctx.db.query("notes").collect();
+    // Count content items - each runs in its own query
+    const [coursesCount, chaptersCount, lessonsCount, productsCount, notesCount] = 
+      await Promise.all([
+        ctx.runQuery(internal.embeddings.countTableDocuments, { tableName: "courses" }),
+        ctx.runQuery(internal.embeddings.countTableDocuments, { tableName: "courseChapters" }),
+        ctx.runQuery(internal.embeddings.countTableDocuments, { tableName: "courseLessons" }),
+        ctx.runQuery(internal.embeddings.countTableDocuments, { tableName: "digitalProducts" }),
+        ctx.runQuery(internal.embeddings.countTableDocuments, { tableName: "notes" }),
+      ]);
     
     const contentCounts = {
-      courses: courses.length,
-      chapters: chapters.length,
-      lessons: lessons.length,
-      products: products.length,
-      notes: notes.length,
+      courses: coursesCount,
+      chapters: chaptersCount,
+      lessons: lessonsCount,
+      products: productsCount,
+      notes: notesCount,
     };
     
-    // Calculate coverage (embeddings vs total content items)
-    const totalContent = contentCounts.courses + contentCounts.chapters + contentCounts.lessons + contentCounts.products + contentCounts.notes;
-    const embeddedContent = bySourceType.courses + bySourceType.chapters + bySourceType.lessons + bySourceType.products + bySourceType.notes;
+    // Calculate coverage
+    const totalContent = coursesCount + chaptersCount + lessonsCount + productsCount + notesCount;
+    const embeddedContent = bySourceType.courses + bySourceType.chapters + bySourceType.lessons + 
+      bySourceType.products + bySourceType.notes;
     const coveragePercentage = totalContent > 0 ? Math.round((embeddedContent / totalContent) * 100) : 0;
 
     return {
-      totalEmbeddings: allEmbeddings.length,
+      totalEmbeddings,
       bySourceType,
       contentCounts,
       coveragePercentage,

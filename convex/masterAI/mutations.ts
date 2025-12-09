@@ -3,6 +3,66 @@ import { v } from "convex/values";
 import { internal } from "../_generated/api";
 
 // ============================================================================
+// MESSAGE PERSISTENCE (for auto-saving AI responses)
+// ============================================================================
+
+/**
+ * Internal mutation to save an AI response to the conversation
+ * Called from actions to persist responses even if client disconnects
+ */
+export const saveAssistantMessage = internalMutation({
+  args: {
+    conversationId: v.string(), // Passed as string from action, cast to ID internally
+    userId: v.string(),
+    content: v.string(),
+    citations: v.optional(v.array(v.object({
+      id: v.number(),
+      title: v.string(),
+      sourceType: v.string(),
+      sourceId: v.optional(v.string()),
+    }))),
+    facetsUsed: v.optional(v.array(v.string())),
+    pipelineMetadata: v.optional(v.object({
+      processingTimeMs: v.number(),
+      totalChunksProcessed: v.number(),
+      plannerModel: v.optional(v.string()),
+      summarizerModel: v.optional(v.string()),
+      finalWriterModel: v.optional(v.string()),
+    })),
+  },
+  returns: v.id("aiMessages"),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const conversationId = args.conversationId as any; // Cast string to ID
+    
+    // Save the message
+    const messageId = await ctx.db.insert("aiMessages", {
+      conversationId,
+      userId: args.userId,
+      role: "assistant",
+      content: args.content,
+      citations: args.citations,
+      facetsUsed: args.facetsUsed,
+      pipelineMetadata: args.pipelineMetadata,
+      createdAt: now,
+    });
+
+    // Update conversation metadata
+    const conversation = await ctx.db.get(conversationId);
+    if (conversation) {
+      await ctx.db.patch(conversationId, {
+        lastMessageAt: now,
+        messageCount: conversation.messageCount + 1,
+        updatedAt: now,
+      });
+    }
+
+    console.log(`💾 Auto-saved AI response to conversation ${conversationId}`);
+    return messageId;
+  },
+});
+
+// ============================================================================
 // WEB RESEARCH MUTATIONS (non-Node.js)
 // ============================================================================
 

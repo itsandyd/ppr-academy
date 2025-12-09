@@ -242,9 +242,10 @@ export default function AIAssistantPage() {
   );
   
   // Load conversation messages when switching
+  // Use a high limit to ensure all messages are fetched for long conversations
   const conversationMessages = useQuery(
     api.aiConversations.getConversationMessages,
-    currentConversationId ? { conversationId: currentConversationId, limit: 100 } : "skip"
+    currentConversationId ? { conversationId: currentConversationId, limit: 1000 } : "skip"
   );
   
   // Get user's long-term memories for context

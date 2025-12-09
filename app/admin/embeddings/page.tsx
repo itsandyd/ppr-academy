@@ -1,8 +1,8 @@
 // @ts-nocheck - Bypassing deep type instantiation errors with large Convex API
 "use client";
 
-import { useState } from "react";
-import { useAction, useQuery } from "convex/react";
+import { useState, useEffect, useCallback } from "react";
+import { useAction } from "convex/react";
 import { api } from "@/lib/convex-api";
 import { useUser } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
@@ -37,10 +37,35 @@ const CONTENT_TYPES = [
 
 type ContentTypeId = typeof CONTENT_TYPES[number]["id"];
 
+// Stats type definition
+type EmbeddingStats = {
+  totalEmbeddings: number;
+  bySourceType: {
+    courses: number;
+    chapters: number;
+    lessons: number;
+    products: number;
+    notes: number;
+    webResearch: number;
+    other: number;
+  };
+  contentCounts: {
+    courses: number;
+    chapters: number;
+    lessons: number;
+    products: number;
+    notes: number;
+  };
+  coveragePercentage: number;
+};
+
 export default function EmbeddingsAdminPage() {
   const { user } = useUser();
   const [isGenerating, setIsGenerating] = useState(false);
   const [isMigrating, setIsMigrating] = useState(false);
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [embeddingStats, setEmbeddingStats] = useState<EmbeddingStats | null>(null);
+  const [statsError, setStatsError] = useState<string | null>(null);
   const [selectedTypes, setSelectedTypes] = useState<ContentTypeId[]>(["courseContent", "products", "plugins"]);
   const [results, setResults] = useState<{
     success: boolean;
@@ -54,7 +79,27 @@ export default function EmbeddingsAdminPage() {
   // Convex hooks
   const generateAllContent = useAction(api.embeddingActions.generateAllContentEmbeddings);
   const migrateEmbeddings = useAction(api.embeddingActions.migrateToNewEmbeddingModel);
-  const embeddingStats = useQuery(api.embeddings.getEmbeddingStats);
+  const getEmbeddingStats = useAction(api.embeddings.getEmbeddingStats);
+
+  // Fetch embedding stats
+  const fetchStats = useCallback(async () => {
+    setIsLoadingStats(true);
+    setStatsError(null);
+    try {
+      const stats = await getEmbeddingStats({});
+      setEmbeddingStats(stats);
+    } catch (error) {
+      console.error("Error fetching embedding stats:", error);
+      setStatsError(error instanceof Error ? error.message : "Failed to load stats");
+    } finally {
+      setIsLoadingStats(false);
+    }
+  }, [getEmbeddingStats]);
+
+  // Load stats on mount
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
 
   const toggleContentType = (type: ContentTypeId) => {
     setSelectedTypes(prev => 
@@ -83,6 +128,8 @@ export default function EmbeddingsAdminPage() {
         errors: result.totalErrors,
         results: result.results,
       });
+      // Refresh stats after generation
+      await fetchStats();
     } catch (error) {
       console.error("Error generating embeddings:", error);
       setResults({
@@ -120,6 +167,8 @@ export default function EmbeddingsAdminPage() {
         deleted: result.deleted,
         errors: result.errors,
       });
+      // Refresh stats after migration
+      await fetchStats();
     } catch (error) {
       console.error("Error migrating embeddings:", error);
       setResults({
@@ -163,13 +212,33 @@ export default function EmbeddingsAdminPage() {
       {/* Statistics Card */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CheckCircle className="h-5 w-5" />
-            Knowledge Base Statistics
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5" />
+              Knowledge Base Statistics
+            </CardTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={fetchStats}
+              disabled={isLoadingStats}
+            >
+              <RefreshCw className={`h-4 w-4 ${isLoadingStats ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
-          {embeddingStats ? (
+          {statsError ? (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Failed to load statistics: {statsError}
+                <Button variant="link" onClick={fetchStats} className="ml-2 p-0 h-auto">
+                  Try again
+                </Button>
+              </AlertDescription>
+            </Alert>
+          ) : embeddingStats ? (
             <>
               {/* Summary Row */}
               <div className="flex items-center justify-between p-4 bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg border">

@@ -4,6 +4,109 @@ import { internalAction } from "../_generated/server";
 import { v } from "convex/values";
 import { internal } from "../_generated/api";
 import { Id } from "../_generated/dataModel";
+import { callLLM, safeParseJson } from "./llmClient";
+
+// ============================================================================
+// QUERY EXTRACTION - Convert user input into focused search queries
+// ============================================================================
+
+/**
+ * Extract focused search queries from user input using LLM
+ * Turns verbose instructions into concise, effective search terms
+ */
+export const extractSearchQueries = internalAction({
+  args: {
+    userInput: v.string(),
+    facets: v.array(v.object({
+      name: v.string(),
+      queryHint: v.string(),
+    })),
+    maxQueriesPerFacet: v.optional(v.number()),
+  },
+  returns: v.array(v.object({
+    facetName: v.string(),
+    queries: v.array(v.string()),
+  })),
+  handler: async (ctx, args) => {
+    const maxQueries = args.maxQueriesPerFacet || 2;
+    
+    const systemPrompt = `You are a search query optimizer. Given a user's request, extract 1-${maxQueries} focused search queries per topic.
+
+Rules:
+- Generate SHORT search queries (5-10 words max)
+- Remove filler words, instructions, and formatting
+- Focus on the core concepts that would yield useful web results
+- Make queries specific and searchable
+- Remove internal references like [[Web 3]] or [[Source 1]]
+- For creative/writing tasks, extract the TOPIC not the task itself
+
+Example:
+User Input: "Write text for Lesson 56: Breaking the Rules Intentionally. Theory provides guidelines, not laws."
+Facets: [{ name: "theory", queryHint: "music theory" }]
+Output: { "queries": [{ "facetName": "theory", "queries": ["intentional dissonance music theory", "breaking music rules creative composition"] }] }
+
+Return JSON: { "queries": [{ "facetName": "string", "queries": ["query1", "query2"] }] }`;
+
+    const userPrompt = `User Input: "${args.userInput}"
+
+Facets to search:
+${args.facets.map(f => `- ${f.name}: ${f.queryHint}`).join('\n')}
+
+Extract ${maxQueries} focused search queries for each facet.`;
+
+    try {
+      const response = await callLLM({
+        model: "gpt-4o-mini", // Fast and cheap for extraction
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.3,
+        maxTokens: 500,
+        responseFormat: "json",
+      });
+
+      const parsed = safeParseJson(response.content) as any;
+      
+      if (parsed.queries && Array.isArray(parsed.queries)) {
+        return parsed.queries.map((q: any) => ({
+          facetName: q.facetName || "general",
+          queries: Array.isArray(q.queries) ? q.queries.slice(0, maxQueries) : [],
+        }));
+      }
+      
+      // Fallback: use basic extraction
+      return args.facets.map(f => ({
+        facetName: f.name,
+        queries: [extractBasicQuery(args.userInput, f.queryHint)],
+      }));
+    } catch (error) {
+      console.warn("Query extraction failed, using basic extraction:", error);
+      return args.facets.map(f => ({
+        facetName: f.name,
+        queries: [extractBasicQuery(args.userInput, f.queryHint)],
+      }));
+    }
+  },
+});
+
+/**
+ * Basic query extraction fallback (no LLM)
+ */
+function extractBasicQuery(input: string, hint: string): string {
+  // Remove common instruction words and formatting
+  const cleaned = input
+    .replace(/write\s+(text\s+)?(for|about)/gi, '')
+    .replace(/lesson\s+\d+:/gi, '')
+    .replace(/\[\[.*?\]\]/g, '') // Remove [[references]]
+    .replace(/[^\w\s\-.,!?']/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  
+  // Take first 50 chars and add hint
+  const shortened = cleaned.substring(0, 50).trim();
+  return `${shortened} ${hint}`.substring(0, 100);
+}
 
 // ============================================================================
 // TAVILY WEB SEARCH
@@ -64,6 +167,23 @@ export const searchWeb = internalAction({
     }
 
     try {
+      // Sanitize and limit query length (Tavily has a 400 char limit)
+      const sanitizedQuery = args.query
+        .replace(/[^\w\s\-.,!?'"/]/g, ' ') // Remove special chars
+        .replace(/\s+/g, ' ')              // Collapse whitespace
+        .trim()
+        .substring(0, 400);                // Limit length
+
+      if (!sanitizedQuery || sanitizedQuery.length < 3) {
+        return {
+          success: false,
+          results: [],
+          answer: null,
+          searchDuration: Date.now() - startTime,
+          error: "Query too short or empty after sanitization",
+        };
+      }
+
       const response = await fetch("https://api.tavily.com/search", {
         method: "POST",
         headers: {
@@ -71,7 +191,7 @@ export const searchWeb = internalAction({
         },
         body: JSON.stringify({
           api_key: apiKey,
-          query: args.query,
+          query: sanitizedQuery,
           max_results: args.maxResults || 5,
           search_depth: args.searchDepth || "basic",
           include_answer: args.includeAnswer || false,
@@ -81,7 +201,17 @@ export const searchWeb = internalAction({
       });
 
       if (!response.ok) {
-        throw new Error(`Tavily API error: ${response.status}`);
+        const errorBody = await response.text();
+        console.error(`Tavily API error ${response.status}:`, errorBody);
+        
+        // Return gracefully instead of throwing - web search is optional
+        return {
+          success: false,
+          results: [],
+          answer: null,
+          searchDuration: Date.now() - startTime,
+          error: `Tavily API error: ${response.status} - ${errorBody.substring(0, 200)}`,
+        };
       }
 
       const data = await response.json() as TavilyResponse & { answer?: string };
@@ -117,7 +247,7 @@ export const searchWeb = internalAction({
 
 /**
  * Research stage for the AI pipeline
- * Searches the web for additional context
+ * Searches the web for additional context using smart query extraction
  */
 export const researchTopic = internalAction({
   args: {
@@ -127,6 +257,7 @@ export const researchTopic = internalAction({
       queryHint: v.string(),
     })),
     maxResultsPerFacet: v.optional(v.number()),
+    useSmartExtraction: v.optional(v.boolean()), // Use LLM to extract better queries
   },
   returns: v.object({
     research: v.array(v.object({
@@ -146,6 +277,8 @@ export const researchTopic = internalAction({
   handler: async (ctx, args) => {
     const startTime = Date.now();
     const maxResults = args.maxResultsPerFacet || 3;
+    const useSmartExtraction = args.useSmartExtraction !== false; // Default to true
+    
     const research: Array<{
       facetName: string;
       searchQuery: string;
@@ -158,30 +291,85 @@ export const researchTopic = internalAction({
       }>;
     }> = [];
 
-    // Search for each facet in parallel
-    const searchPromises = args.facets.map(async (facet) => {
-      // Craft a search query combining the main query and facet hint
-      const searchQuery = `${args.query} ${facet.queryHint}`;
-      
-      const result = await ctx.runAction(internal.masterAI.webResearch.searchWeb, {
-        query: searchQuery,
-        maxResults,
-        searchDepth: "basic",
-      });
+    // Step 1: Extract optimized search queries
+    let facetQueries: Array<{ facetName: string; queries: string[] }>;
+    
+    if (useSmartExtraction) {
+      try {
+        facetQueries = await ctx.runAction(
+          internal.masterAI.webResearch.extractSearchQueries,
+          {
+            userInput: args.query,
+            facets: args.facets,
+            maxQueriesPerFacet: 2,
+          }
+        );
+        console.log(`🔍 Smart query extraction: ${facetQueries.map(f => f.queries.join(', ')).join(' | ')}`);
+      } catch (error) {
+        console.warn("Smart extraction failed, using basic queries:", error);
+        // Fallback to basic extraction
+        facetQueries = args.facets.map(f => ({
+          facetName: f.name,
+          queries: [extractBasicQuery(args.query, f.queryHint)],
+        }));
+      }
+    } else {
+      // Use basic extraction
+      facetQueries = args.facets.map(f => ({
+        facetName: f.name,
+        queries: [extractBasicQuery(args.query, f.queryHint)],
+      }));
+    }
 
-      return {
-        facetName: facet.name,
-        searchQuery,
-        results: result.results,
-      };
-    });
+    // Step 2: Search for each extracted query
+    const searchPromises: Promise<{
+      facetName: string;
+      searchQuery: string;
+      results: Array<{
+        title: string;
+        url: string;
+        content: string;
+        score: number;
+        publishedDate?: string;
+      }>;
+    }>[] = [];
+
+    for (const facet of facetQueries) {
+      for (const query of facet.queries) {
+        searchPromises.push(
+          ctx.runAction(internal.masterAI.webResearch.searchWeb, {
+            query,
+            maxResults,
+            searchDepth: "basic",
+          }).then(result => ({
+            facetName: facet.facetName,
+            searchQuery: query,
+            results: result.results,
+          }))
+        );
+      }
+    }
 
     const results = await Promise.all(searchPromises);
     
+    // Deduplicate results by URL within each facet
+    const seenUrls = new Set<string>();
     let totalResults = 0;
+    
     for (const r of results) {
-      research.push(r);
-      totalResults += r.results.length;
+      const uniqueResults = r.results.filter(result => {
+        if (seenUrls.has(result.url)) return false;
+        seenUrls.add(result.url);
+        return true;
+      });
+      
+      if (uniqueResults.length > 0) {
+        research.push({
+          ...r,
+          results: uniqueResults,
+        });
+        totalResults += uniqueResults.length;
+      }
     }
 
     console.log(`🌐 Web research complete: ${totalResults} results across ${args.facets.length} facets in ${Date.now() - startTime}ms`);

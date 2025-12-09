@@ -13,7 +13,7 @@ import {
   type Idea,
   type ModelId,
 } from "./types";
-import { callLLM } from "./llmClient";
+import { callLLM, safeParseJson } from "./llmClient";
 
 // ============================================================================
 // IDEA GENERATOR STAGE
@@ -109,11 +109,17 @@ Based on this knowledge, generate creative ideas and techniques that extend beyo
           { role: "user", content: userPrompt },
         ],
         temperature: 0.7, // Higher temperature for creativity
-        maxTokens: 2000,
+        maxTokens: 5000, // Increased further - ideas can have long descriptions
         responseFormat: "json",
       });
 
-      const parsed = JSON.parse(response.content);
+      let parsed: any;
+      try {
+        parsed = safeParseJson(response.content) as any;
+      } catch (parseError) {
+        console.warn("Idea generator JSON parsing failed, returning empty:", parseError);
+        return { ideas: [], crossFacetInsights: [] };
+      }
 
       const ideas: Idea[] = (parsed.ideas || []).map((idea: any) => ({
         technique: idea.technique || "Unnamed technique",

@@ -11,7 +11,7 @@ import {
   type PlannerOutput,
   type ModelId,
 } from "./types";
-import { callLLM } from "./llmClient";
+import { callLLM, safeParseJson } from "./llmClient";
 import { 
   AI_TOOLS, 
   getToolDescriptionsForLLM,
@@ -131,12 +131,24 @@ Respond ONLY with valid JSON matching this structure:
         model: modelId,
         messages,
         temperature: 0.3, // Lower temperature for structured output
-        maxTokens: 1500,
+        maxTokens: 3000, // Increased to handle complex multi-facet responses
         responseFormat: "json",
       });
 
-      // Parse the JSON response
-      const parsed = JSON.parse(response.content);
+      // Parse the JSON response (handles markdown code blocks)
+      let parsed: any;
+      try {
+        parsed = safeParseJson(response.content) as any;
+      } catch (parseError) {
+        // If JSON is truncated, try to extract what we can or use defaults
+        console.warn("Planner JSON parsing failed, using defaults:", parseError);
+        parsed = {
+          intent: "Answer user question",
+          questionType: "technical",
+          facets: [{ name: "general", description: "General search", queryHint: question, tags: [], priority: 3 }],
+          searchStrategies: [],
+        };
+      }
       
       // Validate and ensure we have required fields
       const output: PlannerOutput = {
@@ -392,11 +404,17 @@ User: "Generate an outline for a course on Sound Design"
         model: modelId,
         messages,
         temperature: 0.2, // Low temperature for accurate intent detection
-        maxTokens: 2000,
+        maxTokens: 3000, // Increased to handle complex responses
         responseFormat: "json",
       });
 
-      const parsed = JSON.parse(response.content);
+      let parsed: any;
+      try {
+        parsed = safeParseJson(response.content) as any;
+      } catch (parseError) {
+        console.warn("Agentic planner JSON parsing failed, using defaults:", parseError);
+        parsed = { intentType: "question", isActionRequest: false };
+      }
       
       // Validate intent type
       const validIntentTypes: IntentType[] = ["question", "create", "modify", "delete", "query", "generate"];

@@ -315,6 +315,49 @@ export const askMasterAI = action({
       }
     );
 
+    const totalTime = Date.now() - startTime;
+    console.log(`✅ Pipeline complete in ${totalTime}ms`);
+
+    const fullResponse = {
+      ...finalResponse,
+      pipelineMetadata: {
+        ...finalResponse.pipelineMetadata,
+        processingTimeMs: totalTime,
+        webResearchResults: webResearchCount,
+      },
+    };
+
+    // ========================================================================
+    // AUTO-SAVE RESPONSE TO DATABASE (so it persists even if client disconnects)
+    // ========================================================================
+    if (args.conversationId && args.userId) {
+      try {
+        // @ts-ignore - Avoiding deep type instantiation
+        await ctx.runMutation(internal.masterAI.mutations.saveAssistantMessage, {
+          conversationId: args.conversationId,
+          userId: args.userId,
+          content: fullResponse.answer,
+          citations: fullResponse.citations?.map((c, i) => ({
+            id: i + 1,
+            title: c.title,
+            sourceType: c.sourceType,
+            sourceId: c.sourceId,
+          })),
+          facetsUsed: fullResponse.facetsUsed,
+          pipelineMetadata: {
+            processingTimeMs: totalTime,
+            totalChunksProcessed: fullResponse.pipelineMetadata?.totalChunksProcessed || 0,
+            plannerModel: fullResponse.pipelineMetadata?.plannerModel,
+            summarizerModel: fullResponse.pipelineMetadata?.summarizerModel,
+            finalWriterModel: fullResponse.pipelineMetadata?.finalWriterModel,
+          },
+        });
+      } catch (saveError) {
+        console.error("Failed to auto-save response:", saveError);
+        // Don't throw - the response was still generated successfully
+      }
+    }
+
     // Schedule memory extraction to run after this action completes (if conversation is meaningful)
     if (args.userId && args.conversationContext && args.conversationContext.length >= 4 && args.conversationId) {
       await ctx.scheduler.runAfter(0, internal.masterAI.memoryManager.extractMemoriesFromConversation, {
@@ -323,22 +366,12 @@ export const askMasterAI = action({
         messages: [
           ...args.conversationContext,
           { role: "user" as const, content: args.question },
-          { role: "assistant" as const, content: finalResponse.answer },
+          { role: "assistant" as const, content: fullResponse.answer },
         ],
       });
     }
 
-    const totalTime = Date.now() - startTime;
-    console.log(`✅ Pipeline complete in ${totalTime}ms`);
-
-    return {
-      ...finalResponse,
-      pipelineMetadata: {
-        ...finalResponse.pipelineMetadata,
-        processingTimeMs: totalTime,
-        webResearchResults: webResearchCount,
-      },
-    };
+    return fullResponse;
   },
 });
 

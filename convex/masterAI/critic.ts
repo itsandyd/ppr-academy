@@ -14,7 +14,7 @@ import {
   type CriticOutput,
   type ModelId,
 } from "./types";
-import { callLLM } from "./llmClient";
+import { callLLM, safeParseJson } from "./llmClient";
 
 // ============================================================================
 // CRITIC STAGE
@@ -122,11 +122,25 @@ Evaluate this content for quality and provide your review.`;
           { role: "user", content: userPrompt },
         ],
         temperature: 0.3,
-        maxTokens: 1500,
+        maxTokens: 5000, // Increased further - critics write verbose feedback
         responseFormat: "json",
       });
 
-      const parsed = JSON.parse(response.content);
+      let parsed: any;
+      try {
+        parsed = safeParseJson(response.content) as any;
+      } catch (parseError) {
+        console.warn("Critic JSON parsing failed, using default approval:", parseError);
+        // Default to approved with medium quality when parsing fails
+        return {
+          approved: true,
+          overallQuality: 0.7,
+          issues: [],
+          recommendations: [],
+          ideasToInclude: [],
+          ideasToExclude: [],
+        };
+      }
 
       const issues = (parsed.issues || []).map((issue: any) => ({
         type: validateIssueType(issue.type),

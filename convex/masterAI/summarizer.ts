@@ -13,7 +13,7 @@ import {
   type Summary,
   type ModelId,
 } from "./types";
-import { callLLM } from "./llmClient";
+import { callLLM, safeParseJson } from "./llmClient";
 
 // ============================================================================
 // SUMMARIZER STAGE
@@ -54,36 +54,20 @@ export const summarizeContent = internalAction({
         })
         .join("\n\n---\n\n");
 
-      const systemPrompt = `You are an expert knowledge synthesizer for a music production education platform. Your job is to distill raw content chunks into a focused, actionable summary.
+      const systemPrompt = `You are an expert knowledge synthesizer. Distill raw content chunks into a focused, actionable summary.
 
-Given content chunks related to "${bucket.facetName}" and the user's question:
+For "${bucket.facetName}" facet:
+1. Extract only relevant information for the facet and question
+2. Merge & deduplicate overlapping info
+3. Preserve specifics: techniques, values, device names, routing patterns
+4. Note source references using [1], [2], etc.
 
-1. **Extract Relevant Information**: Pull out only the parts directly relevant to the facet and question
-2. **Merge & Deduplicate**: Combine overlapping information, resolve any conflicts
-3. **Preserve Specifics**: Keep concrete techniques, parameter values, device names, routing patterns
-4. **Structure Clearly**: Organize into a logical flow that's easy to understand
-5. **Note Source References**: Track which chunks contributed to each point (use [1], [2], etc.)
+Focus on actionable knowledge. Include specific values (e.g., "attack: 10-20ms"). Be specific, not generic.
 
-IMPORTANT:
-- Focus on actionable, practical knowledge
-- Include specific values when mentioned (e.g., "set attack to 10-20ms")
-- Don't pad with generic advice - be specific
-- If chunks contain conflicting information, note both perspectives
-- Aim for a summary a producer could skim in 60 seconds
+YOU MUST RESPOND WITH VALID JSON ONLY. No markdown. No explanations. Just the JSON object:
+{"summary":"your summary here","keyTechniques":["technique 1"],"sourceChunkIds":["id1"],"confidence":0.85}
 
-Respond ONLY with valid JSON:
-{
-  "summary": "Dense, well-structured summary of the key knowledge...",
-  "keyTechniques": ["specific technique 1", "specific technique 2"],
-  "sourceChunkIds": ["chunk_id_1", "chunk_id_2"],
-  "confidence": 0.85
-}
-
-Confidence should reflect:
-- 0.9-1.0: Multiple sources agree, comprehensive coverage
-- 0.7-0.9: Good coverage with some gaps
-- 0.5-0.7: Limited or conflicting information
-- <0.5: Very sparse or unclear information`;
+Confidence: 0.9-1.0 = comprehensive, 0.7-0.9 = good with gaps, 0.5-0.7 = limited, <0.5 = sparse`;
 
       const userPrompt = `Original Question: "${originalQuestion}"
 
@@ -103,11 +87,27 @@ Synthesize a focused summary for this facet.`;
             { role: "user", content: userPrompt },
           ],
           temperature: 0.3,
-          maxTokens: 1500,
+          maxTokens: 2500, // Increased to handle longer summaries
           responseFormat: "json",
         });
 
-        const parsed = JSON.parse(response.content);
+        let parsed: any;
+        try {
+          parsed = safeParseJson(response.content) as any;
+        } catch (parseError) {
+          console.warn(`Summarizer JSON parsing failed for ${bucket.facetName}, using fallback:`, parseError);
+          // Create fallback from raw response - clean up markdown formatting
+          const cleanContent = response.content
+            .replace(/^#+\s+.*$/gm, '') // Remove markdown headers
+            .replace(/\*\*/g, '')       // Remove bold markers
+            .replace(/\n{3,}/g, '\n\n') // Collapse multiple newlines
+            .trim();
+          parsed = { 
+            summary: cleanContent.substring(0, 2000), // Keep more content 
+            keyTechniques: [], 
+            confidence: 0.5 
+          };
+        }
 
         return {
           facetName: bucket.facetName,

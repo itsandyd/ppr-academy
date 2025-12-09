@@ -6,6 +6,53 @@ import { AVAILABLE_MODELS, type ModelId } from "./types";
 // LLM CLIENT - OpenAI Direct + OpenRouter for everything else
 // ============================================================================
 
+/**
+ * Clean JSON response from LLM - strips markdown code blocks and fixes common issues
+ */
+export function cleanJsonResponse(content: string): string {
+  let cleaned = content.trim();
+  
+  // Remove markdown code blocks (```json ... ``` or ``` ... ```)
+  if (cleaned.startsWith("```")) {
+    // Find the end of the first line (which might have "json" or other language hint)
+    const firstLineEnd = cleaned.indexOf("\n");
+    if (firstLineEnd !== -1) {
+      cleaned = cleaned.substring(firstLineEnd + 1);
+    }
+    // Remove trailing ```
+    if (cleaned.endsWith("```")) {
+      cleaned = cleaned.slice(0, -3);
+    }
+    cleaned = cleaned.trim();
+  }
+  
+  // Handle case where response starts with ```json on same line as content
+  if (cleaned.startsWith("```json")) {
+    cleaned = cleaned.replace(/^```json\s*/, "");
+    if (cleaned.endsWith("```")) {
+      cleaned = cleaned.slice(0, -3);
+    }
+    cleaned = cleaned.trim();
+  }
+  
+  return cleaned;
+}
+
+/**
+ * Safely parse JSON from LLM response with cleaning and error handling
+ */
+export function safeParseJson<T = unknown>(content: string, fallback?: T): T {
+  try {
+    const cleaned = cleanJsonResponse(content);
+    return JSON.parse(cleaned) as T;
+  } catch (error) {
+    if (fallback !== undefined) {
+      return fallback;
+    }
+    throw new Error(`Failed to parse JSON: ${error instanceof Error ? error.message : 'Unknown error'}\nContent: ${content.substring(0, 200)}...`);
+  }
+}
+
 export interface LLMMessage {
   role: "system" | "user" | "assistant";
   content: string;

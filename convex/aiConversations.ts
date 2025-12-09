@@ -138,7 +138,9 @@ export const getConversationMessages = query({
     createdAt: v.number(),
   })),
   handler: async (ctx, args) => {
-    const limit = args.limit || 100;
+    // Default to 1000 to support long conversations
+    // UI can pass a lower limit for performance if needed
+    const limit = args.limit || 1000;
     
     const messages = await ctx.db
       .query("aiMessages")

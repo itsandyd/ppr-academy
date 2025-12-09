@@ -10,7 +10,7 @@ import {
   toolCallResultValidator,
   type ToolCall,
 } from "./schema";
-import { callLLM } from "../llmClient";
+import { callLLM, safeParseJson } from "../llmClient";
 
 // ============================================================================
 // TOOL EXECUTOR - Runs AI-requested tools securely
@@ -510,7 +510,7 @@ Return as JSON array with: question, options (array of 4 strings), correctIndex 
   });
 
   try {
-    return JSON.parse(response.content);
+    return safeParseJson(response.content, []);
   } catch {
     return [];
   }
@@ -560,7 +560,11 @@ Return as JSON with: title, description, modules (array with title, description,
   });
 
   try {
-    return JSON.parse(response.content);
+    return safeParseJson(response.content, {
+      title: params.topic,
+      description: `A comprehensive course about ${params.topic}`,
+      modules: [],
+    });
   } catch {
     return {
       title: params.topic,
