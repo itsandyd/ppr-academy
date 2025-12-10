@@ -122,6 +122,8 @@ export const updateEmbedding = internalMutation({
 
 
 // Internal query to get embeddings with filters
+// Note: Limited to 100 embeddings max to avoid exceeding 16MB read limit
+// Each embedding is ~6KB (1536 floats * 4 bytes), so 100 = ~600KB
 export const getEmbeddings = internalQuery({
   args: {
     userId: v.optional(v.string()),
@@ -134,6 +136,7 @@ export const getEmbeddings = internalQuery({
       v.literal("note"),
       v.literal("custom")
     )),
+    limit: v.optional(v.number()),
   },
   returns: v.array(v.object({
     _id: v.id("embeddings"),
@@ -155,56 +158,57 @@ export const getEmbeddings = internalQuery({
     metadata: v.optional(v.any()),
   })),
   handler: async (ctx, args) => {
-    // Apply filters using proper query chaining
+    // Limit to prevent exceeding 16MB read limit
+    // Default to 100, max 500 embeddings at a time
+    const maxLimit = Math.min(args.limit || 100, 500);
+    
+    // Helper to filter and limit results
+    const filterAndLimit = (embeddings: any[]) => {
+      return embeddings
+        .filter(item => item.embedding && item.embedding.length > 0)
+        .slice(0, maxLimit);
+    };
+
+    // Apply filters using proper query chaining with .take() for efficiency
     if (args.userId && args.category) {
       const embeddings = await ctx.db
         .query("embeddings")
         .withIndex("by_user_category", (q) => 
           q.eq("userId", args.userId!).eq("category", args.category!)
         )
-        .collect();
-      return embeddings.filter(item => 
-        item.embedding && item.embedding.length > 0
-      );
+        .take(maxLimit + 50); // Fetch extra to account for filtering
+      return filterAndLimit(embeddings);
     } else if (args.userId && args.sourceType) {
       const embeddings = await ctx.db
         .query("embeddings")
         .withIndex("by_user_sourceType", (q) => 
           q.eq("userId", args.userId!).eq("sourceType", args.sourceType!)
         )
-        .collect();
-      return embeddings.filter(item => 
-        item.embedding && item.embedding.length > 0
-      );
+        .take(maxLimit + 50);
+      return filterAndLimit(embeddings);
     } else if (args.userId) {
       const embeddings = await ctx.db
         .query("embeddings")
         .withIndex("by_userId", (q) => q.eq("userId", args.userId!))
-        .collect();
-      return embeddings.filter(item => 
-        item.embedding && item.embedding.length > 0
-      );
+        .take(maxLimit + 50);
+      return filterAndLimit(embeddings);
     } else if (args.category) {
       const embeddings = await ctx.db
         .query("embeddings")
         .withIndex("by_category", (q) => q.eq("category", args.category!))
-        .collect();
-      return embeddings.filter(item => 
-        item.embedding && item.embedding.length > 0
-      );
+        .take(maxLimit + 50);
+      return filterAndLimit(embeddings);
     } else if (args.sourceType) {
       const embeddings = await ctx.db
         .query("embeddings")
         .withIndex("by_sourceType", (q) => q.eq("sourceType", args.sourceType!))
-        .collect();
-      return embeddings.filter(item => 
-        item.embedding && item.embedding.length > 0
-      );
+        .take(maxLimit + 50);
+      return filterAndLimit(embeddings);
     } else {
-      const embeddings = await ctx.db.query("embeddings").collect();
-      return embeddings.filter(item => 
-        item.embedding && item.embedding.length > 0
-      );
+      // Most restrictive case - no filters means potentially huge dataset
+      // Only fetch first 100 by default when no filters
+      const embeddings = await ctx.db.query("embeddings").take(maxLimit + 50);
+      return filterAndLimit(embeddings);
     }
   },
 });

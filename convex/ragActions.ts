@@ -189,11 +189,14 @@ async function performSimilaritySearch(ctx: any, args: {
   // Generate embedding for the query
   const queryEmbedding: number[] = await generateQueryEmbedding(args.query);
 
-  // Get relevant embeddings from Convex
+  // Get relevant embeddings from Convex (limited to avoid 16MB read limit)
+  // We fetch more than needed to account for similarity filtering
+  const fetchLimit = Math.min((args.limit || 5) * 20, 200);
   const embeddings = await ctx.runQuery(internal.rag.getEmbeddings, {
     userId: args.userId,
     category: args.category,
     sourceType: args.sourceType,
+    limit: fetchLimit,
   });
 
   // Calculate similarities and sort
