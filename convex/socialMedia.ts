@@ -21,7 +21,7 @@ export const getSocialAccounts = query({
 /**
  * Get Instagram access token by Instagram Business Account ID (for webhooks)
  * This is the preferred method for webhook processing - uses the exact account
- * PRIORITY: integrations table first (proven working tokens), then socialAccounts
+ * PRIORITY: socialAccounts first (OAuth tokens), then legacy integrations as fallback
  */
 export const getInstagramTokenByBusinessId = query({
   args: {
@@ -39,7 +39,35 @@ export const getInstagramTokenByBusinessId = query({
   handler: async (ctx, args) => {
     console.log("🔍 getInstagramTokenByBusinessId: Looking for account with ID:", args.instagramBusinessAccountId);
 
-    // PRIORITY 1: Check integrations table (proven working tokens!)
+    // PRIORITY 1: Check socialAccounts table (fresh OAuth tokens from reconnection flow)
+    const socialAccounts = await ctx.db
+      .query("socialAccounts")
+      .filter((q) => 
+        q.and(
+          q.eq(q.field("platform"), "instagram"),
+          q.eq(q.field("isConnected"), true),
+          q.eq(q.field("isActive"), true)
+        )
+      )
+      .collect();
+
+    for (const account of socialAccounts) {
+      const platformData = account.platformData as any;
+      if (
+        platformData?.instagramBusinessAccountId === args.instagramBusinessAccountId ||
+        account.platformUserId === args.instagramBusinessAccountId
+      ) {
+        console.log("✅ getInstagramTokenByBusinessId: Using socialAccounts token:", account.platformUsername);
+        return {
+          accessToken: account.accessToken,
+          username: account.platformUsername || "",
+          instagramId: account.platformUserId,
+          facebookPageId: platformData?.facebookPageId,
+        };
+      }
+    }
+
+    // FALLBACK: Check legacy integrations table (for backwards compatibility)
     const integration = await ctx.db
       .query("integrations")
       .filter((q) => 
@@ -52,19 +80,9 @@ export const getInstagramTokenByBusinessId = query({
       .first();
 
     if (integration?.token) {
-      console.log("✅ getInstagramTokenByBusinessId: Using WORKING token from integrations:", integration.username);
+      console.log("⚠️ getInstagramTokenByBusinessId: Using legacy integrations token:", integration.username);
       
       // Try to get Page ID from socialAccounts for this account
-      const socialAccounts = await ctx.db
-        .query("socialAccounts")
-        .filter((q) => 
-          q.and(
-            q.eq(q.field("platform"), "instagram"),
-            q.eq(q.field("isConnected"), true)
-          )
-        )
-        .collect();
-      
       let facebookPageId: string | undefined;
       for (const account of socialAccounts) {
         const platformData = account.platformData as any;
@@ -80,31 +98,6 @@ export const getInstagramTokenByBusinessId = query({
         instagramId: integration.instagramId || args.instagramBusinessAccountId,
         facebookPageId,
       };
-    }
-
-    // FALLBACK: Check socialAccounts table
-    const socialAccounts = await ctx.db
-      .query("socialAccounts")
-      .filter((q) => 
-        q.and(
-          q.eq(q.field("platform"), "instagram"),
-          q.eq(q.field("isConnected"), true),
-          q.eq(q.field("isActive"), true)
-        )
-      )
-      .collect();
-
-    for (const account of socialAccounts) {
-      const platformData = account.platformData as any;
-      if (platformData?.instagramBusinessAccountId === args.instagramBusinessAccountId) {
-        console.log("⚠️ getInstagramTokenByBusinessId: Using socialAccounts token:", account.platformUsername);
-        return {
-          accessToken: account.accessToken,
-          username: account.platformUsername || "",
-          instagramId: account.platformUserId,
-          facebookPageId: platformData?.facebookPageId,
-        };
-      }
     }
 
     console.log("❌ getInstagramTokenByBusinessId: No account found for business ID:", args.instagramBusinessAccountId);
