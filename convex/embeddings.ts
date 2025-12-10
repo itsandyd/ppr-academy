@@ -243,9 +243,9 @@ export const deleteEmbeddingsBatch = internalMutation({
   },
 });
 
-// Internal query to count embeddings by a specific source type
-// Uses async iteration instead of pagination (Convex only allows 1 paginated query per function)
-export const countEmbeddingsBySourceType = internalQuery({
+// Internal query to count embeddings by a specific source type using pagination
+// Each call processes a batch to stay under the 16MB limit
+export const countEmbeddingsBatch = internalQuery({
   args: { 
     sourceType: v.union(
       v.literal("course"),
@@ -254,37 +254,82 @@ export const countEmbeddingsBySourceType = internalQuery({
       v.literal("document"),
       v.literal("note"),
       v.literal("custom")
-    )
+    ),
+    cursor: v.union(v.string(), v.null()),
+    batchSize: v.optional(v.number()),
   },
   returns: v.object({
     count: v.number(),
     webResearch: v.number(),
     products: v.number(),
+    nextCursor: v.union(v.string(), v.null()),
+    isDone: v.boolean(),
   }),
   handler: async (ctx, args) => {
-    let count = 0;
+    const batchSize = args.batchSize ?? 500; // Smaller batch to stay under limit
+    
+    const result = await ctx.db
+      .query("embeddings")
+      .withIndex("by_sourceType", (q) => q.eq("sourceType", args.sourceType))
+      .paginate({ numItems: batchSize, cursor: args.cursor });
+    
+    let count = result.page.length;
     let webResearch = 0;
     let products = 0;
     
-    // Use async iteration - this streams results and doesn't hit the 16MB limit the same way
-    for await (const e of ctx.db
-      .query("embeddings")
-      .withIndex("by_sourceType", (q) => q.eq("sourceType", args.sourceType))) {
-      count++;
-      
-      // For document type, separate products from web research
-      if (args.sourceType === "document") {
+    // For document type, separate products from web research
+    if (args.sourceType === "document") {
+      for (const e of result.page) {
         const meta = e.metadata as any;
         if (meta?.type === "web_research") webResearch++;
         else products++;
       }
     }
     
-    return { count, webResearch, products };
+    return { 
+      count, 
+      webResearch, 
+      products,
+      nextCursor: result.isDone ? null : result.continueCursor,
+      isDone: result.isDone,
+    };
   },
 });
 
-// Internal query to count documents in a table using async iteration
+// Internal query to count documents in a table batch using pagination
+export const countTableDocumentsBatch = internalQuery({
+  args: { 
+    tableName: v.union(
+      v.literal("courses"),
+      v.literal("courseChapters"),
+      v.literal("courseLessons"),
+      v.literal("digitalProducts"),
+      v.literal("notes")
+    ),
+    cursor: v.union(v.string(), v.null()),
+    batchSize: v.optional(v.number()),
+  },
+  returns: v.object({
+    count: v.number(),
+    nextCursor: v.union(v.string(), v.null()),
+    isDone: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    const batchSize = args.batchSize ?? 1000; // Content tables are smaller per-row, can use larger batch
+    
+    const result = await ctx.db
+      .query(args.tableName)
+      .paginate({ numItems: batchSize, cursor: args.cursor });
+    
+    return { 
+      count: result.page.length,
+      nextCursor: result.isDone ? null : result.continueCursor,
+      isDone: result.isDone,
+    };
+  },
+});
+
+// Legacy function for backward compatibility - just returns 0 if it would hit limit
 export const countTableDocuments = internalQuery({
   args: { 
     tableName: v.union(
@@ -297,16 +342,43 @@ export const countTableDocuments = internalQuery({
   },
   returns: v.number(),
   handler: async (ctx, args) => {
-    let count = 0;
-    for await (const _ of ctx.db.query(args.tableName)) {
-      count++;
-    }
-    return count;
+    // Use take to get first batch and estimate
+    const batch = await ctx.db.query(args.tableName).take(1000);
+    return batch.length;
   },
 });
 
+// Helper to count all embeddings of a source type using pagination
+async function countAllEmbeddingsForType(
+  ctx: any,
+  sourceType: "course" | "chapter" | "lesson" | "document" | "note" | "custom"
+): Promise<{ count: number; webResearch: number; products: number }> {
+  let totalCount = 0;
+  let totalWebResearch = 0;
+  let totalProducts = 0;
+  let cursor: string | null = null;
+  
+  // Paginate through all embeddings of this type
+  do {
+    const result = await ctx.runQuery(internal.embeddings.countEmbeddingsBatch, { 
+      sourceType, 
+      cursor,
+      batchSize: 500, // Keep batch small to avoid 16MB limit
+    });
+    
+    totalCount += result.count;
+    totalWebResearch += result.webResearch;
+    totalProducts += result.products;
+    cursor = result.nextCursor;
+    
+    if (result.isDone) break;
+  } while (cursor !== null);
+  
+  return { count: totalCount, webResearch: totalWebResearch, products: totalProducts };
+}
+
 // Action to get embedding statistics
-// Uses separate query calls to avoid the 16MB read limit per query
+// Uses paginated query calls to avoid the 16MB read limit per query
 export const getEmbeddingStats = action({
   args: {},
   returns: v.object({
@@ -330,16 +402,13 @@ export const getEmbeddingStats = action({
     coveragePercentage: v.number(),
   }),
   handler: async (ctx) => {
-    // Count embeddings by source type - each runs in its own query with its own limit
-    const [courseResult, chapterResult, lessonResult, noteResult, documentResult, customResult] = 
-      await Promise.all([
-        ctx.runQuery(internal.embeddings.countEmbeddingsBySourceType, { sourceType: "course" }),
-        ctx.runQuery(internal.embeddings.countEmbeddingsBySourceType, { sourceType: "chapter" }),
-        ctx.runQuery(internal.embeddings.countEmbeddingsBySourceType, { sourceType: "lesson" }),
-        ctx.runQuery(internal.embeddings.countEmbeddingsBySourceType, { sourceType: "note" }),
-        ctx.runQuery(internal.embeddings.countEmbeddingsBySourceType, { sourceType: "document" }),
-        ctx.runQuery(internal.embeddings.countEmbeddingsBySourceType, { sourceType: "custom" }),
-      ]);
+    // Count embeddings by source type using pagination - run sequentially to avoid overwhelming
+    const courseResult = await countAllEmbeddingsForType(ctx, "course");
+    const chapterResult = await countAllEmbeddingsForType(ctx, "chapter");
+    const lessonResult = await countAllEmbeddingsForType(ctx, "lesson");
+    const noteResult = await countAllEmbeddingsForType(ctx, "note");
+    const documentResult = await countAllEmbeddingsForType(ctx, "document");
+    const customResult = await countAllEmbeddingsForType(ctx, "custom");
     
     const bySourceType = {
       courses: courseResult.count,
@@ -355,14 +424,31 @@ export const getEmbeddingStats = action({
       courseResult.count + chapterResult.count + lessonResult.count + 
       noteResult.count + documentResult.count + customResult.count;
     
-    // Count content items - each runs in its own query
+    // Count content items using pagination
+    const countTable = async (tableName: "courses" | "courseChapters" | "courseLessons" | "digitalProducts" | "notes") => {
+      let total = 0;
+      let cursor: string | null = null;
+      do {
+        const result = await ctx.runQuery(internal.embeddings.countTableDocumentsBatch, { 
+          tableName, 
+          cursor,
+          batchSize: 1000,
+        });
+        total += result.count;
+        cursor = result.nextCursor;
+        if (result.isDone) break;
+      } while (cursor !== null);
+      return total;
+    };
+    
+    // Run counts in parallel for speed
     const [coursesCount, chaptersCount, lessonsCount, productsCount, notesCount] = 
       await Promise.all([
-        ctx.runQuery(internal.embeddings.countTableDocuments, { tableName: "courses" }),
-        ctx.runQuery(internal.embeddings.countTableDocuments, { tableName: "courseChapters" }),
-        ctx.runQuery(internal.embeddings.countTableDocuments, { tableName: "courseLessons" }),
-        ctx.runQuery(internal.embeddings.countTableDocuments, { tableName: "digitalProducts" }),
-        ctx.runQuery(internal.embeddings.countTableDocuments, { tableName: "notes" }),
+        countTable("courses"),
+        countTable("courseChapters"),
+        countTable("courseLessons"),
+        countTable("digitalProducts"),
+        countTable("notes"),
       ]);
     
     const contentCounts = {

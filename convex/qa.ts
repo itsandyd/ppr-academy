@@ -13,8 +13,11 @@ export const getQuestionsByLesson = query({
   },
   returns: v.array(v.object({
     _id: v.id("questions"),
+    _creationTime: v.number(),
     courseId: v.id("courses"),
     lessonId: v.string(),
+    chapterIndex: v.optional(v.number()),
+    lessonIndex: v.optional(v.number()),
     title: v.string(),
     content: v.string(),
     authorId: v.string(),
@@ -64,18 +67,23 @@ export const getQuestionsByCourse = query({
   },
   returns: v.array(v.object({
     _id: v.id("questions"),
+    _creationTime: v.number(),
     courseId: v.id("courses"),
     lessonId: v.string(),
+    chapterIndex: v.optional(v.number()),
+    lessonIndex: v.optional(v.number()),
     title: v.string(),
     content: v.string(),
     authorId: v.string(),
     authorName: v.string(),
     authorAvatar: v.optional(v.string()),
     isResolved: v.boolean(),
+    acceptedAnswerId: v.optional(v.id("answers")),
     viewCount: v.number(),
     upvotes: v.number(),
     answerCount: v.number(),
     createdAt: v.number(),
+    updatedAt: v.number(),
     lastActivityAt: v.number(),
   })),
   handler: async (ctx, args) => {
@@ -98,6 +106,7 @@ export const getQuestion = query({
   returns: v.union(
     v.object({
       _id: v.id("questions"),
+      _creationTime: v.number(),
       courseId: v.id("courses"),
       lessonId: v.string(),
       chapterIndex: v.optional(v.number()),
@@ -128,6 +137,7 @@ export const getAnswersByQuestion = query({
   args: { questionId: v.id("questions") },
   returns: v.array(v.object({
     _id: v.id("answers"),
+    _creationTime: v.number(),
     questionId: v.id("questions"),
     courseId: v.id("courses"),
     content: v.string(),

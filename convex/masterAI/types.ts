@@ -29,9 +29,10 @@ export const AVAILABLE_MODELS = {
   "gpt-oss-120b": { provider: "openrouter", apiId: "openai/gpt-oss-120b", costIn: 2, costOut: 8, speed: "medium", reasoning: false },
   
   // ============ Anthropic Claude 4.5 via OpenRouter ============
-  "claude-4.5-sonnet": { provider: "openrouter", apiId: "anthropic/claude-4.5-sonnet-20250929", costIn: 3, costOut: 15, speed: "fast", reasoning: true },
-  "claude-4.5-opus": { provider: "openrouter", apiId: "anthropic/claude-4.5-opus-20251124", costIn: 15, costOut: 75, speed: "medium", reasoning: true },
-  "claude-4-sonnet": { provider: "openrouter", apiId: "anthropic/claude-4-sonnet-20250522", costIn: 3, costOut: 15, speed: "fast", reasoning: true },
+  // See: https://openrouter.ai/anthropic/claude-sonnet-4.5 and https://openrouter.ai/anthropic/claude-opus-4.5
+  "claude-4.5-sonnet": { provider: "openrouter", apiId: "anthropic/claude-sonnet-4.5", costIn: 3, costOut: 15, speed: "fast", reasoning: true },
+  "claude-4.5-opus": { provider: "openrouter", apiId: "anthropic/claude-opus-4.5", costIn: 5, costOut: 25, speed: "medium", reasoning: true },
+  "claude-4-sonnet": { provider: "openrouter", apiId: "anthropic/claude-sonnet-4", costIn: 3, costOut: 15, speed: "fast", reasoning: true },
   // Legacy Claude
   "claude-3.5-sonnet": { provider: "openrouter", apiId: "anthropic/claude-3.5-sonnet", costIn: 3, costOut: 15, speed: "fast", reasoning: false },
   "claude-3.5-haiku": { provider: "openrouter", apiId: "anthropic/claude-3.5-haiku", costIn: 0.25, costOut: 1.25, speed: "very-fast", reasoning: false },
