@@ -81,10 +81,48 @@ import {
   type ResponseStyle,
 } from "@/convex/masterAI/types";
 import ConversationSidebar from "@/components/ai/ConversationSidebar";
+import { AgentPicker, AgentSelector } from "@/components/ai/AgentPicker";
 
 // ============================================================================
 // TYPES
 // ============================================================================
+
+interface Agent {
+  _id: Id<"aiAgents">;
+  name: string;
+  slug: string;
+  description: string;
+  longDescription?: string;
+  icon: string;
+  color?: string;
+  category: string;
+  tags?: string[];
+  welcomeMessage?: string;
+  suggestedQuestions?: string[];
+  enabledTools?: string[];
+  systemPrompt?: string;
+  suggestedQuestions?: string[];
+  systemPrompt?: string;
+  knowledgeFilters?: {
+    categories?: string[];
+    sourceTypes?: string[];
+    tags?: string[];
+  };
+  enabledTools?: string[];
+  defaultSettings?: {
+    preset?: string;
+    responseStyle?: string;
+    maxFacets?: number;
+    chunksPerFacet?: number;
+    enableWebResearch?: boolean;
+    enableCreativeMode?: boolean;
+  };
+  conversationCount: number;
+  rating?: number;
+  ratingCount?: number;
+  isBuiltIn: boolean;
+  isFeatured?: boolean;
+}
 
 interface Message {
   id: string;
@@ -209,6 +247,9 @@ export default function AIAssistantPage() {
   const [currentConversationId, setCurrentConversationId] = useState<Id<"aiConversations"> | null>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   
+  // Agent selection
+  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
+  
   // Action proposal state
   const [pendingProposal, setPendingProposal] = useState<{
     messageId: string;
@@ -241,6 +282,12 @@ export default function AIAssistantPage() {
   const currentConversation = useQuery(
     api.aiConversations.getConversation,
     currentConversationId ? { conversationId: currentConversationId } : "skip"
+  );
+  
+  // Query to get agent details if conversation has an agent
+  const conversationAgent = useQuery(
+    api.aiAgents.getAgent,
+    currentConversation?.agentId ? { agentId: currentConversation.agentId } : "skip"
   );
   
   // Load conversation messages when switching
@@ -290,6 +337,19 @@ export default function AIAssistantPage() {
       setMessages(loadedMessages);
     }
   }, [conversationMessages]);
+  
+  // Sync agent when conversation changes
+  useEffect(() => {
+    if (currentConversation) {
+      if (currentConversation.agentId && conversationAgent) {
+        // Set agent from loaded data
+        setSelectedAgent(conversationAgent as Agent);
+      } else if (!currentConversation.agentId) {
+        // No agent for this conversation
+        setSelectedAgent(null);
+      }
+    }
+  }, [currentConversation, conversationAgent]);
   
   // Load settings when conversation changes
   useEffect(() => {
@@ -393,10 +453,14 @@ export default function AIAssistantPage() {
   }, [agenticMode, currentConversationId, updateConversationSettings]);
   
   // Clear messages when starting a new conversation
-  const handleNewConversation = () => {
+  const handleNewConversation = (agent?: Agent | null) => {
     setCurrentConversationId(null);
     setMessages([]);
     setVisibleMessageCount(INITIAL_VISIBLE_MESSAGES);
+    // If an agent is passed, use it; otherwise keep current or clear
+    if (agent !== undefined) {
+      setSelectedAgent(agent);
+    }
     inputRef.current?.focus();
   };
   
@@ -465,6 +529,10 @@ export default function AIAssistantPage() {
           userId: user.id,
           preset: settings.preset,
           responseStyle: settings.responseStyle,
+          // Include agent info if selected
+          agentId: selectedAgent?._id,
+          agentSlug: selectedAgent?.slug,
+          agentName: selectedAgent?.name,
         });
         setCurrentConversationId(conversationId);
       } catch (error) {
@@ -517,6 +585,10 @@ export default function AIAssistantPage() {
           settings,
           conversationContext,
           conversationId, // Use local variable (not state) for newly created conversations
+          // Agent-specific parameters for tool filtering
+          agentId: selectedAgent?._id,
+          agentEnabledTools: selectedAgent?.enabledTools,
+          agentSystemPrompt: selectedAgent?.systemPrompt,
         }),
         signal: abortController.signal, // Allow cancellation
       });
@@ -625,6 +697,10 @@ export default function AIAssistantPage() {
             storeId: "", // TODO: Get user's store ID
             userRole: "creator",
             conversationContext,
+            // Pass agent-specific parameters
+            agentId: selectedAgent?._id,
+            agentEnabledTools: selectedAgent?.enabledTools,
+            agentSystemPrompt: selectedAgent?.systemPrompt,
           });
 
           const assistantMessageId = (Date.now() + 1).toString();
@@ -849,23 +925,61 @@ export default function AIAssistantPage() {
         break;
 
       case "complete":
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === messageId
-              ? {
-                  ...m,
-                  content: event.response.answer,
-                  citations: event.response.citations,
-                  isStreaming: false,
-                  pipelineMetadata: {
-                    processingTimeMs: event.response.pipelineMetadata.processingTimeMs,
-                    totalChunksProcessed: event.response.pipelineMetadata.totalChunksProcessed,
-                    facetsUsed: event.response.facetsUsed,
-                  },
-                }
-              : m
-          )
-        );
+        // Handle different response types (standard Q&A vs agentic responses)
+        const response = event.response;
+        
+        // Check if this is an action proposal or executed actions (from agentic AI)
+        if (response.type === "action_proposal") {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === messageId
+                ? {
+                    ...m,
+                    content: response.message,
+                    isStreaming: false,
+                    actionProposal: response,
+                  }
+                : m
+            )
+          );
+          // Set pending proposal for confirmation
+          setPendingProposal({
+            messageId,
+            proposal: response,
+          });
+        } else if (response.type === "actions_executed") {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === messageId
+                ? {
+                    ...m,
+                    content: response.summary,
+                    isStreaming: false,
+                    executedActions: response,
+                  }
+                : m
+            )
+          );
+        } else {
+          // Standard Q&A response with pipelineMetadata
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === messageId
+                ? {
+                    ...m,
+                    content: response.answer,
+                    citations: response.citations,
+                    isStreaming: false,
+                    pipelineMetadata: response.pipelineMetadata ? {
+                      processingTimeMs: response.pipelineMetadata.processingTimeMs,
+                      totalChunksProcessed: response.pipelineMetadata.totalChunksProcessed,
+                      facetsUsed: response.facetsUsed,
+                    } : undefined,
+                  }
+                : m
+            )
+          );
+        }
         break;
 
       case "error":
@@ -1079,6 +1193,36 @@ export default function AIAssistantPage() {
           </div>
 
           <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
+            {/* Agent Picker */}
+            <AgentPicker
+              selectedAgentId={selectedAgent?._id}
+              onSelectAgent={(agent) => {
+                if (!currentConversationId) {
+                  // If no active conversation, just set the agent
+                  setSelectedAgent(agent);
+                } else {
+                  // Start new conversation with the agent
+                  handleNewConversation(agent);
+                }
+              }}
+              trigger={
+                <Button variant="outline" size="sm" className="h-8 sm:h-9 gap-2 text-xs sm:text-sm">
+                  {selectedAgent ? (
+                    <>
+                      <span className="text-base">{selectedAgent.icon}</span>
+                      <span className="hidden sm:inline max-w-[100px] truncate">{selectedAgent.name}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Bot className="w-4 h-4" />
+                      <span className="hidden sm:inline">Default</span>
+                    </>
+                  )}
+                  <ChevronDown className="w-3 h-3 opacity-50" />
+                </Button>
+              }
+            />
+            
             {/* Memory indicator - hidden on mobile */}
             {userMemories && userMemories.length > 0 && (
               <Badge variant="secondary" className="hidden lg:flex items-center gap-1.5">
@@ -1179,7 +1323,7 @@ export default function AIAssistantPage() {
         <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-6">
           <div className="max-w-4xl mx-auto space-y-6 w-full">
             {messages.length === 0 && (
-              <WelcomeMessage />
+              <WelcomeMessage agent={selectedAgent} />
             )}
 
             {/* Load more button for older messages */}
@@ -1336,21 +1480,66 @@ export default function AIAssistantPage() {
 // WELCOME MESSAGE
 // ============================================================================
 
-function WelcomeMessage() {
+const COLOR_BG_CLASSES: Record<string, string> = {
+  violet: "from-violet-500/10 to-purple-600/10",
+  amber: "from-amber-500/10 to-orange-600/10",
+  pink: "from-pink-500/10 to-rose-600/10",
+  emerald: "from-emerald-500/10 to-teal-600/10",
+  yellow: "from-yellow-500/10 to-amber-600/10",
+  blue: "from-blue-500/10 to-indigo-600/10",
+  red: "from-red-500/10 to-rose-600/10",
+};
+
+const COLOR_TEXT_CLASSES: Record<string, string> = {
+  violet: "text-violet-500",
+  amber: "text-amber-500",
+  pink: "text-pink-500",
+  emerald: "text-emerald-500",
+  yellow: "text-yellow-500",
+  blue: "text-blue-500",
+  red: "text-red-500",
+};
+
+function WelcomeMessage({ agent }: { agent?: Agent | null }) {
+  const bgColor = agent?.color ? COLOR_BG_CLASSES[agent.color] : "from-violet-500/10 to-purple-600/10";
+  const textColor = agent?.color ? COLOR_TEXT_CLASSES[agent.color] : "text-violet-500";
+  
+  // Default suggestions if no agent or agent has no suggestions
+  const defaultSuggestions = [
+    "How do I create a Rufus Du Sol style lead?",
+    "What are the best mixing techniques for vocals?",
+    "Explain sidechain compression",
+  ];
+  
+  const suggestions = agent?.suggestedQuestions?.length 
+    ? agent.suggestedQuestions 
+    : defaultSuggestions;
+
   return (
     <div className="text-center py-12">
-      <div className="inline-flex p-4 rounded-full bg-gradient-to-br from-violet-500/10 to-purple-600/10 mb-4">
-        <Sparkles className="w-12 h-12 text-violet-500" />
+      <div className={cn("inline-flex p-4 rounded-full bg-gradient-to-br mb-4", bgColor)}>
+        {agent ? (
+          <span className="text-5xl">{agent.icon}</span>
+        ) : (
+          <Sparkles className={cn("w-12 h-12", textColor)} />
+        )}
       </div>
-      <h2 className="text-2xl font-bold mb-2">Welcome to AI Assistant</h2>
+      <h2 className="text-2xl font-bold mb-2">
+        {agent ? `Chat with ${agent.name}` : "Welcome to AI Assistant"}
+      </h2>
       <p className="text-muted-foreground max-w-md mx-auto mb-6">
-        Ask me anything about your courses. I'll search through your knowledge base
-        and provide comprehensive answers with sources.
+        {agent?.welcomeMessage || agent?.description || 
+          "Ask me anything about your courses. I'll search through your knowledge base and provide comprehensive answers with sources."}
       </p>
+      {agent?.longDescription && (
+        <p className="text-sm text-muted-foreground max-w-lg mx-auto mb-6 opacity-80">
+          {agent.longDescription}
+        </p>
+      )}
       <div className="flex flex-wrap justify-center gap-2">
-        <SuggestionChip text="How do I create a Rufus Du Sol style lead?" />
-        <SuggestionChip text="What are the best mixing techniques for vocals?" />
-        <SuggestionChip text="Explain sidechain compression" />
+        {suggestions.map((text, i) => (
+          <SuggestionChip key={i} text={text} />
+        ))}
       </div>
     </div>
   );
@@ -2233,6 +2422,103 @@ function ExecutedActionsCard({ executedActions }: { executedActions: ActionsExec
                     ? result.result?.message || "Completed successfully"
                     : result.error || "Failed"}
                 </p>
+                
+                {/* Display generated content for content-generation tools */}
+                {result.success && result.result?.script && (
+                  <div className="mt-3 space-y-3">
+                    {/* Main Script */}
+                    {result.result.script.script && (
+                      <div className="bg-black/5 dark:bg-white/5 rounded-lg p-4 border border-border">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Script</span>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 text-xs"
+                            onClick={() => {
+                              navigator.clipboard.writeText(result.result.script.script);
+                            }}
+                          >
+                            <Copy className="w-3 h-3 mr-1" />
+                            Copy
+                          </Button>
+                        </div>
+                        <div className="text-sm whitespace-pre-wrap">{result.result.script.script}</div>
+                      </div>
+                    )}
+                    
+                    {/* Hook */}
+                    {result.result.script.hook && (
+                      <div className="bg-amber-500/5 dark:bg-amber-500/10 rounded-lg p-3 border border-amber-500/20">
+                        <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wide">🪝 Hook</span>
+                        <p className="text-sm mt-1">{result.result.script.hook}</p>
+                      </div>
+                    )}
+                    
+                    {/* CTA */}
+                    {result.result.script.cta && (
+                      <div className="bg-blue-500/5 dark:bg-blue-500/10 rounded-lg p-3 border border-blue-500/20">
+                        <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wide">📢 Call to Action</span>
+                        <p className="text-sm mt-1">{result.result.script.cta}</p>
+                      </div>
+                    )}
+                    
+                    {/* Hashtags */}
+                    {result.result.script.hashtags && result.result.script.hashtags.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {result.result.script.hashtags.map((tag: string, tagIndex: number) => (
+                          <Badge key={tagIndex} variant="secondary" className="text-xs">
+                            #{tag.replace(/^#/, '')}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {/* Production Notes */}
+                    {result.result.script.notes && (
+                      <div className="bg-purple-500/5 dark:bg-purple-500/10 rounded-lg p-3 border border-purple-500/20">
+                        <span className="text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wide">📝 Production Notes</span>
+                        <p className="text-sm mt-1 whitespace-pre-wrap">{result.result.script.notes}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {/* Display multi-platform content */}
+                {result.success && result.result?.content && Array.isArray(result.result.content) && (
+                  <div className="mt-3 space-y-3">
+                    {result.result.content.map((item: any, itemIndex: number) => (
+                      <div key={itemIndex} className="bg-black/5 dark:bg-white/5 rounded-lg p-4 border border-border">
+                        <div className="flex items-center justify-between mb-2">
+                          <Badge variant="outline" className="text-xs capitalize">
+                            {item.platform}
+                          </Badge>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 text-xs"
+                            onClick={() => {
+                              navigator.clipboard.writeText(item.content);
+                            }}
+                          >
+                            <Copy className="w-3 h-3 mr-1" />
+                            Copy
+                          </Button>
+                        </div>
+                        <div className="text-sm whitespace-pre-wrap">{item.content}</div>
+                        {item.hashtags && item.hashtags.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {item.hashtags.map((tag: string, tagIdx: number) => (
+                              <Badge key={tagIdx} variant="secondary" className="text-xs">
+                                #{tag.replace(/^#/, '')}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           ))}

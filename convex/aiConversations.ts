@@ -14,6 +14,7 @@ export const getUserConversations = query({
     userId: v.string(),
     limit: v.optional(v.number()),
     includeArchived: v.optional(v.boolean()),
+    agentId: v.optional(v.id("aiAgents")), // Filter by agent
   },
   returns: v.array(v.object({
     _id: v.id("aiConversations"),
@@ -39,6 +40,10 @@ export const getUserConversations = query({
       responseStyle: v.string(),
       agenticMode: v.optional(v.boolean()),
     })),
+    // Agent info
+    agentId: v.optional(v.id("aiAgents")),
+    agentSlug: v.optional(v.string()),
+    agentName: v.optional(v.string()),
     archived: v.optional(v.boolean()),
     starred: v.optional(v.boolean()),
     createdAt: v.number(),
@@ -47,11 +52,24 @@ export const getUserConversations = query({
   handler: async (ctx, args) => {
     const limit = args.limit || 50;
     
-    let conversations = await ctx.db
-      .query("aiConversations")
-      .withIndex("by_userId_lastMessageAt", (q) => q.eq("userId", args.userId))
-      .order("desc")
-      .collect();
+    let conversations;
+    
+    // If filtering by agent, use the agent index
+    if (args.agentId) {
+      conversations = await ctx.db
+        .query("aiConversations")
+        .withIndex("by_userId_agentId", (q) => 
+          q.eq("userId", args.userId).eq("agentId", args.agentId)
+        )
+        .order("desc")
+        .collect();
+    } else {
+      conversations = await ctx.db
+        .query("aiConversations")
+        .withIndex("by_userId_lastMessageAt", (q) => q.eq("userId", args.userId))
+        .order("desc")
+        .collect();
+    }
 
     // Filter out archived unless requested
     if (!args.includeArchived) {
@@ -94,6 +112,10 @@ export const getConversation = query({
         responseStyle: v.string(),
         agenticMode: v.optional(v.boolean()),
       })),
+      // Agent info
+      agentId: v.optional(v.id("aiAgents")),
+      agentSlug: v.optional(v.string()),
+      agentName: v.optional(v.string()),
       archived: v.optional(v.boolean()),
       starred: v.optional(v.boolean()),
       createdAt: v.number(),
@@ -198,18 +220,37 @@ export const createConversation = mutation({
     title: v.optional(v.string()),
     preset: v.optional(v.string()),
     responseStyle: v.optional(v.string()),
+    // Agent support
+    agentId: v.optional(v.id("aiAgents")),
+    agentSlug: v.optional(v.string()),
+    agentName: v.optional(v.string()),
   },
   returns: v.id("aiConversations"),
   handler: async (ctx, args) => {
     const now = Date.now();
     
+    // If agentId provided, fetch agent details
+    let agentSlug = args.agentSlug;
+    let agentName = args.agentName;
+    
+    if (args.agentId && (!agentSlug || !agentName)) {
+      const agent = await ctx.db.get(args.agentId);
+      if (agent) {
+        agentSlug = agent.slug;
+        agentName = agent.name;
+      }
+    }
+    
     const conversationId = await ctx.db.insert("aiConversations", {
       userId: args.userId,
-      title: args.title || "New Conversation",
+      title: args.title || (agentName ? `Chat with ${agentName}` : "New Conversation"),
       lastMessageAt: now,
       messageCount: 0,
       preset: args.preset,
       responseStyle: args.responseStyle,
+      agentId: args.agentId,
+      agentSlug,
+      agentName,
       archived: false,
       starred: false,
       createdAt: now,

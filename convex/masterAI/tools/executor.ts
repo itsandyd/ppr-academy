@@ -11,6 +11,7 @@ import {
   type ToolCall,
 } from "./schema";
 import { callLLM, safeParseJson } from "../llmClient";
+import * as blotato from "./blotato";
 
 // ============================================================================
 // TOOL EXECUTOR - Runs AI-requested tools securely
@@ -367,6 +368,159 @@ export const executeTool = internalAction({
           };
         }
 
+        // ==================================================================
+        // SOCIAL MEDIA TOOLS (Blotato Integration)
+        // ==================================================================
+
+        case "generateSocialScript": {
+          // Normalize platform to lowercase (AI might pass "TikTok" instead of "tiktok")
+          const platform = (parameters.platform as string).toLowerCase();
+          const validPlatforms = ["tiktok", "instagram", "youtube", "twitter", "linkedin", "threads", "facebook"];
+          if (!validPlatforms.includes(platform)) {
+            return {
+              tool: toolName,
+              success: false,
+              error: `Invalid platform "${parameters.platform}". Must be one of: ${validPlatforms.join(", ")}`,
+            };
+          }
+          
+          const script = await generateSocialScriptWithAI({
+            topic: parameters.topic,
+            platform,
+            style: parameters.style || "educational",
+            tone: parameters.tone || "casual",
+          });
+          return {
+            tool: toolName,
+            success: true,
+            result: {
+              script,
+              message: `Generated ${platform} script about "${parameters.topic}"`,
+            },
+          };
+        }
+
+        case "publishSocialPost": {
+          // Normalize platform to lowercase
+          const platform = (parameters.platform as string).toLowerCase();
+          
+          const result = await blotato.publishPost({
+            accountId: parameters.accountId,
+            text: parameters.text,
+            mediaUrls: parameters.mediaUrls,
+          });
+          
+          if (!result.success) {
+            return {
+              tool: toolName,
+              success: false,
+              error: result.error || "Failed to publish post",
+            };
+          }
+          
+          return {
+            tool: toolName,
+            success: true,
+            result: {
+              postId: result.data?.id,
+              message: `Published post to ${platform}`,
+              status: result.data?.status,
+            },
+          };
+        }
+
+        case "scheduleSocialPost": {
+          const result = await blotato.schedulePost({
+            accountId: parameters.accountId,
+            text: parameters.text,
+            scheduledTime: parameters.scheduledTime,
+            mediaUrls: parameters.mediaUrls,
+          });
+          
+          if (!result.success) {
+            return {
+              tool: toolName,
+              success: false,
+              error: result.error || "Failed to schedule post",
+            };
+          }
+          
+          return {
+            tool: toolName,
+            success: true,
+            result: {
+              postId: result.data?.id,
+              message: `Scheduled post for ${parameters.scheduledTime}`,
+              scheduledTime: result.data?.scheduledTime,
+            },
+          };
+        }
+
+        case "createTwitterThread": {
+          const result = await blotato.createThread({
+            accountId: parameters.accountId,
+            tweets: parameters.tweets,
+            scheduledTime: parameters.scheduledTime,
+          });
+          
+          if (!result.success) {
+            return {
+              tool: toolName,
+              success: false,
+              error: result.error || "Failed to create thread",
+            };
+          }
+          
+          return {
+            tool: toolName,
+            success: true,
+            result: {
+              threadId: result.data?.id,
+              message: `Created Twitter thread with ${parameters.tweets.length} tweets`,
+              status: result.data?.status,
+            },
+          };
+        }
+
+        case "generateMultiPlatformContent": {
+          const content = await generateMultiPlatformContentWithAI({
+            topic: parameters.topic,
+            platforms: parameters.platforms,
+            baseContent: parameters.baseContent,
+            style: parameters.style || "engaging",
+          });
+          return {
+            tool: toolName,
+            success: true,
+            result: {
+              content,
+              message: `Generated content for ${parameters.platforms.length} platforms`,
+            },
+          };
+        }
+
+        case "listConnectedSocialAccounts": {
+          const result = await blotato.listAccounts();
+          
+          if (!result.success) {
+            return {
+              tool: toolName,
+              success: false,
+              error: result.error || "Failed to fetch accounts",
+            };
+          }
+          
+          return {
+            tool: toolName,
+            success: true,
+            result: {
+              accounts: result.data,
+              count: result.data?.length || 0,
+              message: `Found ${result.data?.length || 0} connected social accounts`,
+            },
+          };
+        }
+
         default:
           return {
             tool: toolName,
@@ -571,6 +725,116 @@ Return as JSON with: title, description, modules (array with title, description,
       description: `A comprehensive course about ${params.topic}`,
       modules: [],
     };
+  }
+}
+
+// ============================================================================
+// SOCIAL MEDIA CONTENT GENERATION HELPERS
+// ============================================================================
+
+async function generateSocialScriptWithAI(params: {
+  topic: string;
+  platform: string;
+  style: string;
+  tone: string;
+}): Promise<{
+  script: string;
+  hook: string;
+  hashtags: string[];
+  notes: string;
+  cta: string;
+}> {
+  const prompt = blotato.getScriptGenerationPrompt(params);
+  
+  const response = await callLLM({
+    model: "gpt-4o",
+    messages: [
+      {
+        role: "system",
+        content: prompt,
+      },
+      {
+        role: "user",
+        content: `Create a ${params.platform} script about: ${params.topic}
+        
+Return as JSON with:
+{
+  "script": "The full script/content",
+  "hook": "The opening hook line",
+  "hashtags": ["relevant", "hashtags"],
+  "notes": "Production/visual notes",
+  "cta": "Call to action"
+}`,
+      },
+    ],
+    temperature: 0.8,
+    maxTokens: 2000,
+    responseFormat: "json",
+  });
+
+  try {
+    return safeParseJson(response.content, {
+      script: response.content,
+      hook: "",
+      hashtags: [],
+      notes: "",
+      cta: "",
+    });
+  } catch {
+    return {
+      script: response.content,
+      hook: "",
+      hashtags: [],
+      notes: "",
+      cta: "",
+    };
+  }
+}
+
+async function generateMultiPlatformContentWithAI(params: {
+  topic: string;
+  platforms: string[];
+  baseContent?: string;
+  style: string;
+}): Promise<Array<{
+  platform: string;
+  content: string;
+  hashtags: string[];
+  notes: string;
+}>> {
+  const prompt = blotato.getMultiPlatformPrompt(params.topic, params.platforms, params.baseContent);
+  
+  const response = await callLLM({
+    model: "gpt-4o",
+    messages: [
+      {
+        role: "system",
+        content: prompt,
+      },
+      {
+        role: "user",
+        content: `Generate content for: ${params.platforms.join(", ")}
+
+Return as JSON array:
+[
+  {
+    "platform": "platform_name",
+    "content": "optimized content for this platform",
+    "hashtags": ["relevant", "tags"],
+    "notes": "platform-specific tips"
+  }
+]`,
+      },
+    ],
+    temperature: 0.8,
+    maxTokens: 4000,
+    responseFormat: "json",
+  });
+
+  try {
+    return safeParseJson(response.content, []);
+  } catch {
+    return [];
   }
 }
 

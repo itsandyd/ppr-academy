@@ -19,11 +19,13 @@ export interface ToolParameter {
 export interface ToolDefinition {
   name: string;
   description: string;
-  category: "course" | "content" | "product" | "query" | "settings";
+  category: "course" | "content" | "product" | "query" | "settings" | "social";
   parameters: Record<string, ToolParameter>;
   requiresConfirmation: boolean;
   permissions: Array<"creator" | "admin" | "student">;
   examples?: string[];
+  // Optional: which agent tools this is available for (empty = all)
+  agentTools?: string[];
 }
 
 // ============================================================================
@@ -597,6 +599,212 @@ export const AI_TOOLS: Record<string, ToolDefinition> = {
       "Delete my old test course",
     ],
   },
+
+  // ========================================================================
+  // SOCIAL MEDIA TOOLS (Blotato Integration)
+  // ========================================================================
+
+  generateSocialScript: {
+    name: "generateSocialScript",
+    description: "Generate a social media script optimized for a specific platform (TikTok, Instagram, YouTube, Twitter, etc.)",
+    category: "social",
+    parameters: {
+      topic: {
+        type: "string",
+        required: true,
+        description: "The topic or idea for the script",
+      },
+      platform: {
+        type: "string",
+        required: true,
+        description: "Target social media platform",
+        enum: ["tiktok", "instagram", "youtube", "twitter", "linkedin", "threads", "facebook"],
+      },
+      style: {
+        type: "string",
+        required: false,
+        description: "Content style",
+        enum: ["educational", "entertaining", "promotional", "behind-the-scenes", "tutorial"],
+        default: "educational",
+      },
+      tone: {
+        type: "string",
+        required: false,
+        description: "Tone of the content",
+        enum: ["professional", "casual", "humorous", "inspirational"],
+        default: "casual",
+      },
+    },
+    requiresConfirmation: false,
+    permissions: ["creator", "admin"],
+    agentTools: ["blotato"],
+    examples: [
+      "Write a TikTok script about my production process",
+      "Generate an Instagram Reel script about mixing tips",
+      "Create a YouTube Short script about sound design",
+    ],
+  },
+
+  publishSocialPost: {
+    name: "publishSocialPost",
+    description: "Publish a post immediately to a connected social media account via Blotato. Requires the user to have connected their social accounts.",
+    category: "social",
+    parameters: {
+      accountId: {
+        type: "string",
+        required: true,
+        description: "The Blotato account ID to post to",
+      },
+      platform: {
+        type: "string",
+        required: true,
+        description: "The platform to post to",
+        enum: ["twitter", "instagram", "facebook", "linkedin", "tiktok", "youtube", "threads", "bluesky", "pinterest"],
+      },
+      text: {
+        type: "string",
+        required: true,
+        description: "The post content/caption",
+      },
+      mediaUrls: {
+        type: "array",
+        required: false,
+        description: "Optional array of media URLs (images/videos) to attach",
+        items: { type: "string" },
+      },
+    },
+    requiresConfirmation: true,
+    permissions: ["creator", "admin"],
+    agentTools: ["blotato"],
+    examples: [
+      "Post this to my Twitter account",
+      "Publish this caption to my Instagram",
+    ],
+  },
+
+  scheduleSocialPost: {
+    name: "scheduleSocialPost",
+    description: "Schedule a post for a future time on a connected social media account via Blotato",
+    category: "social",
+    parameters: {
+      accountId: {
+        type: "string",
+        required: true,
+        description: "The Blotato account ID to post to",
+      },
+      platform: {
+        type: "string",
+        required: true,
+        description: "The platform to post to",
+        enum: ["twitter", "instagram", "facebook", "linkedin", "tiktok", "youtube", "threads", "bluesky", "pinterest"],
+      },
+      text: {
+        type: "string",
+        required: true,
+        description: "The post content/caption",
+      },
+      scheduledTime: {
+        type: "string",
+        required: true,
+        description: "ISO 8601 datetime for when to publish (e.g., '2025-03-10T15:30:00Z')",
+      },
+      mediaUrls: {
+        type: "array",
+        required: false,
+        description: "Optional array of media URLs to attach",
+        items: { type: "string" },
+      },
+    },
+    requiresConfirmation: true,
+    permissions: ["creator", "admin"],
+    agentTools: ["blotato"],
+    examples: [
+      "Schedule this post for tomorrow at 3pm",
+      "Post this to my Instagram next Monday at 10am",
+    ],
+  },
+
+  createTwitterThread: {
+    name: "createTwitterThread",
+    description: "Create a Twitter/X thread with multiple tweets via Blotato",
+    category: "social",
+    parameters: {
+      accountId: {
+        type: "string",
+        required: true,
+        description: "The Blotato account ID for Twitter",
+      },
+      tweets: {
+        type: "array",
+        required: true,
+        description: "Array of tweets in the thread (each with text and optional mediaUrls)",
+        items: { type: "object" },
+      },
+      scheduledTime: {
+        type: "string",
+        required: false,
+        description: "Optional: ISO 8601 datetime to schedule the thread",
+      },
+    },
+    requiresConfirmation: true,
+    permissions: ["creator", "admin"],
+    agentTools: ["blotato"],
+    examples: [
+      "Create a Twitter thread explaining my production workflow",
+      "Write a 5-tweet thread about sound design tips",
+    ],
+  },
+
+  generateMultiPlatformContent: {
+    name: "generateMultiPlatformContent",
+    description: "Generate optimized content for multiple social platforms at once from a single topic",
+    category: "social",
+    parameters: {
+      topic: {
+        type: "string",
+        required: true,
+        description: "The topic to create content about",
+      },
+      platforms: {
+        type: "array",
+        required: true,
+        description: "List of platforms to generate content for",
+        items: { type: "string" },
+      },
+      baseContent: {
+        type: "string",
+        required: false,
+        description: "Optional existing content to adapt for each platform",
+      },
+      style: {
+        type: "string",
+        required: false,
+        description: "Content style",
+        default: "engaging",
+      },
+    },
+    requiresConfirmation: false,
+    permissions: ["creator", "admin"],
+    agentTools: ["blotato"],
+    examples: [
+      "Create posts about my new release for Twitter, Instagram, and LinkedIn",
+      "Adapt this caption for TikTok and YouTube",
+    ],
+  },
+
+  listConnectedSocialAccounts: {
+    name: "listConnectedSocialAccounts",
+    description: "List all social media accounts connected via Blotato",
+    category: "social",
+    parameters: {},
+    requiresConfirmation: false,
+    permissions: ["creator", "admin"],
+    agentTools: ["blotato"],
+    examples: [
+      "What social accounts do I have connected?",
+      "Show my connected social media accounts",
+    ],
+  },
 } as const;
 
 // ============================================================================
@@ -618,6 +826,36 @@ export function getToolsByCategory(category: ToolDefinition["category"]): string
 export function getToolsForRole(role: "creator" | "admin" | "student"): string[] {
   return Object.entries(AI_TOOLS)
     .filter(([_, tool]) => tool.permissions.includes(role))
+    .map(([name]) => name);
+}
+
+/**
+ * Get tools available for a specific agent (by enabledTools)
+ * If enabledTools is empty/undefined, returns all tools for the role
+ * Otherwise, only returns tools that match the agent's enabledTools
+ */
+export function getToolsForAgent(
+  role: "creator" | "admin" | "student",
+  enabledTools?: string[]
+): string[] {
+  const roleTools = Object.entries(AI_TOOLS)
+    .filter(([_, tool]) => tool.permissions.includes(role));
+  
+  if (!enabledTools || enabledTools.length === 0) {
+    // No agent tool filter, return all role-appropriate tools
+    return roleTools.map(([name]) => name);
+  }
+
+  // Filter to only tools that match the agent's enabledTools
+  return roleTools
+    .filter(([_, tool]) => {
+      // Tool has no agentTools restriction = available to all agents
+      if (!tool.agentTools || tool.agentTools.length === 0) {
+        return true;
+      }
+      // Tool has agentTools restriction = check if agent has one of them enabled
+      return tool.agentTools.some(at => enabledTools.includes(at));
+    })
     .map(([name]) => name);
 }
 
@@ -680,9 +918,13 @@ export function validateToolParameters(
         errors.push(`Parameter ${paramName} must be an array`);
       }
       
-      // Enum validation
-      if (paramDef.enum && !paramDef.enum.includes(value as string)) {
-        errors.push(`Parameter ${paramName} must be one of: ${paramDef.enum.join(", ")}`);
+      // Enum validation (case-insensitive for string enums)
+      if (paramDef.enum) {
+        const normalizedValue = typeof value === "string" ? value.toLowerCase() : value;
+        const normalizedEnum = paramDef.enum.map(e => e.toLowerCase());
+        if (!normalizedEnum.includes(normalizedValue as string)) {
+          errors.push(`Parameter ${paramName} must be one of: ${paramDef.enum.join(", ")}`);
+        }
       }
     }
   }

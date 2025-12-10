@@ -3699,6 +3699,10 @@ export default defineSchema({
     preview: v.optional(v.string()), // First message preview
     lastMessageAt: v.number(), // Timestamp of last message
     messageCount: v.number(), // Total messages in conversation
+    // Agent reference - which AI agent/GPT is this conversation with
+    agentId: v.optional(v.id("aiAgents")), // Optional - null means default assistant
+    agentSlug: v.optional(v.string()), // Cached for display without joins
+    agentName: v.optional(v.string()), // Cached agent name
     // Settings used for this conversation (legacy - single values)
     preset: v.optional(v.string()),
     responseStyle: v.optional(v.string()),
@@ -3726,7 +3730,8 @@ export default defineSchema({
     .index("by_userId", ["userId"])
     .index("by_userId_lastMessageAt", ["userId", "lastMessageAt"])
     .index("by_userId_archived", ["userId", "archived"])
-    .index("by_userId_starred", ["userId", "starred"]),
+    .index("by_userId_starred", ["userId", "starred"])
+    .index("by_userId_agentId", ["userId", "agentId"]),
 
   // AI Messages - stores individual messages within conversations
   aiMessages: defineTable({
@@ -3790,6 +3795,88 @@ export default defineSchema({
     .index("by_userId_type", ["userId", "type"])
     .index("by_userId_importance", ["userId", "importance"])
     .index("by_sourceConversationId", ["sourceConversationId"]),
+
+  // AI Agents - Custom GPT-like agents for specialized conversations
+  aiAgents: defineTable({
+    // Basic info
+    name: v.string(), // e.g., "Brand Marketing Agent", "Mixing & Mastering Pro"
+    slug: v.string(), // URL-friendly identifier
+    description: v.string(), // Short description for the picker
+    longDescription: v.optional(v.string()), // Detailed description
+    
+    // Visual identity
+    icon: v.string(), // Emoji or icon name (e.g., "📣", "🎛️", "sparkles")
+    color: v.optional(v.string()), // Gradient or color theme (e.g., "violet", "amber", "emerald")
+    avatarUrl: v.optional(v.string()), // Custom avatar image
+    
+    // Behavior configuration
+    systemPrompt: v.string(), // The main system prompt that defines the agent's behavior
+    welcomeMessage: v.optional(v.string()), // First message shown when starting a chat
+    suggestedQuestions: v.optional(v.array(v.string())), // Starter questions for users
+    
+    // Knowledge & Capabilities
+    knowledgeFilters: v.optional(v.object({
+      categories: v.optional(v.array(v.string())), // Filter embeddings by category
+      sourceTypes: v.optional(v.array(v.string())), // Filter by source type
+      tags: v.optional(v.array(v.string())), // Custom tags for knowledge filtering
+    })),
+    
+    // External integrations/tools
+    enabledTools: v.optional(v.array(v.string())), // e.g., ["blotato", "course_creator", "stripe"]
+    toolConfigs: v.optional(v.any()), // Tool-specific configuration
+    
+    // Default settings overrides
+    defaultSettings: v.optional(v.object({
+      preset: v.optional(v.string()),
+      responseStyle: v.optional(v.string()),
+      maxFacets: v.optional(v.number()),
+      chunksPerFacet: v.optional(v.number()),
+      enableWebResearch: v.optional(v.boolean()),
+      enableCreativeMode: v.optional(v.boolean()),
+    })),
+    
+    // Access control
+    visibility: v.union(
+      v.literal("public"),      // Available to all users
+      v.literal("subscribers"), // Only for subscribed users
+      v.literal("private")      // Only for owner/admins
+    ),
+    creatorId: v.optional(v.string()), // Clerk ID of creator (for user-created agents)
+    
+    // Categorization
+    category: v.union(
+      v.literal("marketing"),
+      v.literal("audio"),
+      v.literal("business"),
+      v.literal("social"),
+      v.literal("creative"),
+      v.literal("productivity"),
+      v.literal("learning"),
+      v.literal("custom")
+    ),
+    tags: v.optional(v.array(v.string())),
+    
+    // Analytics
+    conversationCount: v.number(), // How many conversations used this agent
+    rating: v.optional(v.number()), // Average rating 1-5
+    ratingCount: v.optional(v.number()),
+    
+    // Status
+    isActive: v.boolean(),
+    isBuiltIn: v.boolean(), // System-provided vs user-created
+    isFeatured: v.optional(v.boolean()),
+    
+    // Timestamps
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_slug", ["slug"])
+    .index("by_visibility", ["visibility"])
+    .index("by_category", ["category"])
+    .index("by_creatorId", ["creatorId"])
+    .index("by_isActive", ["isActive"])
+    .index("by_isFeatured", ["isFeatured"])
+    .index("by_conversationCount", ["conversationCount"]),
 
   // AI Message Feedback - upvotes/downvotes on responses
   aiMessageFeedback: defineTable({

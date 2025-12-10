@@ -21,6 +21,7 @@ import type * as adminAnalytics from "../adminAnalytics.js";
 import type * as adminEmailMonitoring from "../adminEmailMonitoring.js";
 import type * as adminSetup from "../adminSetup.js";
 import type * as affiliates from "../affiliates.js";
+import type * as aiAgents from "../aiAgents.js";
 import type * as aiConversations from "../aiConversations.js";
 import type * as aiEmailGenerator from "../aiEmailGenerator.js";
 import type * as aiMemories from "../aiMemories.js";
@@ -102,6 +103,7 @@ import type * as inboxHelpers from "../inboxHelpers.js";
 import type * as inboxQueries from "../inboxQueries.js";
 import type * as inboxSync from "../inboxSync.js";
 import type * as instagram_debug from "../instagram_debug.js";
+import type * as integrations_blotato from "../integrations/blotato.js";
 import type * as integrations_instagram from "../integrations/instagram.js";
 import type * as integrations_internal from "../integrations/internal.js";
 import type * as integrations_queries from "../integrations/queries.js";
@@ -129,6 +131,7 @@ import type * as masterAI_platformKnowledge from "../masterAI/platformKnowledge.
 import type * as masterAI_queries from "../masterAI/queries.js";
 import type * as masterAI_retriever from "../masterAI/retriever.js";
 import type * as masterAI_summarizer from "../masterAI/summarizer.js";
+import type * as masterAI_tools_blotato from "../masterAI/tools/blotato.js";
 import type * as masterAI_tools_executor from "../masterAI/tools/executor.js";
 import type * as masterAI_tools_mutations from "../masterAI/tools/mutations.js";
 import type * as masterAI_types from "../masterAI/types.js";
@@ -200,6 +203,7 @@ declare const fullApi: ApiFromModules<{
   adminEmailMonitoring: typeof adminEmailMonitoring;
   adminSetup: typeof adminSetup;
   affiliates: typeof affiliates;
+  aiAgents: typeof aiAgents;
   aiConversations: typeof aiConversations;
   aiEmailGenerator: typeof aiEmailGenerator;
   aiMemories: typeof aiMemories;
@@ -281,6 +285,7 @@ declare const fullApi: ApiFromModules<{
   inboxQueries: typeof inboxQueries;
   inboxSync: typeof inboxSync;
   instagram_debug: typeof instagram_debug;
+  "integrations/blotato": typeof integrations_blotato;
   "integrations/instagram": typeof integrations_instagram;
   "integrations/internal": typeof integrations_internal;
   "integrations/queries": typeof integrations_queries;
@@ -308,6 +313,7 @@ declare const fullApi: ApiFromModules<{
   "masterAI/queries": typeof masterAI_queries;
   "masterAI/retriever": typeof masterAI_retriever;
   "masterAI/summarizer": typeof masterAI_summarizer;
+  "masterAI/tools/blotato": typeof masterAI_tools_blotato;
   "masterAI/tools/executor": typeof masterAI_tools_executor;
   "masterAI/tools/mutations": typeof masterAI_tools_mutations;
   "masterAI/types": typeof masterAI_types;

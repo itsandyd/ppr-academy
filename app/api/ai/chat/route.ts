@@ -28,7 +28,16 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body = await request.json();
-    const { question, settings, conversationContext, conversationId } = body;
+    const { 
+      question, 
+      settings, 
+      conversationContext, 
+      conversationId,
+      // Agent-specific parameters
+      agentId,
+      agentEnabledTools,
+      agentSystemPrompt,
+    } = body;
 
     if (!question || typeof question !== "string") {
       return NextResponse.json(
@@ -43,8 +52,14 @@ export async function POST(request: NextRequest) {
       ...settings,
     };
     
+    // Check if we're in agent mode (has specific tools)
+    const isAgentMode = !!agentId || (agentEnabledTools && agentEnabledTools.length > 0);
+    
     console.log(`[AI Chat] Starting pipeline for conversation: ${conversationId || "new"}`);
     console.log(`[AI Chat] Settings: preset=${chatSettings.preset}, web=${chatSettings.enableWebResearch}, fact=${chatSettings.enableFactVerification}`);
+    if (isAgentMode) {
+      console.log(`[AI Chat] Agent mode: ${agentId}, tools: ${agentEnabledTools?.join(", ") || "all"}`);
+    }
 
     // Create a streaming response with simulated progress
     const encoder = new TextEncoder();
@@ -147,16 +162,51 @@ export async function POST(request: NextRequest) {
 
         try {
           // Call Convex to run the full pipeline
-          const result = await convex.action(
-            (api as any).masterAI.index.askMasterAI,
-            {
-              question,
-              settings: chatSettings,
-              userId,
-              conversationId: conversationId || undefined,
-              conversationContext,
+          // Use agentic endpoint if agent is selected or agent has specific tools
+          let result: any;
+          
+          if (isAgentMode) {
+            // Use agentic AI for agents with tools
+            result = await convex.action(
+              (api as any).masterAI.index.askAgenticAI,
+              {
+                question,
+                settings: chatSettings,
+                userId,
+                storeId: "", // TODO: Get user's store ID from profile
+                userRole: "creator",
+                conversationContext,
+                agentId: agentId || undefined,
+                agentEnabledTools: agentEnabledTools || undefined,
+                agentSystemPrompt: agentSystemPrompt || undefined,
+              }
+            );
+            
+            // Handle different response types from agentic AI
+            if (result.type === "action_proposal" || result.type === "actions_executed") {
+              // These are special response types for tool calls
+              actionComplete = true;
+              clearInterval(heartbeatTimer);
+              sendEvent({
+                type: "complete",
+                response: result,
+              });
+              safeClose();
+              return;
             }
-          );
+          } else {
+            // Standard Q&A mode
+            result = await convex.action(
+              (api as any).masterAI.index.askMasterAI,
+              {
+                question,
+                settings: chatSettings,
+                userId,
+                conversationId: conversationId || undefined,
+                conversationContext,
+              }
+            );
+          }
 
           // Mark action as complete to stop simulated progress
           actionComplete = true;

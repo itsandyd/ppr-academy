@@ -25,11 +25,13 @@ import {
   actionProposalValidator,
   actionsExecutedValidator,
   toolCallResultValidator,
+  getToolsForAgent,
   type ActionProposal,
   type ActionsExecuted,
   type ToolCall,
 } from "./tools/schema";
 import { describeToolCalls } from "./planner";
+import { Id } from "../_generated/dataModel";
 
 // Re-export types for external use
 export * from "./types";
@@ -504,6 +506,10 @@ export const askAgenticAI = action({
       tool: v.string(),
       parameters: v.any(),
     }))),
+    // Agent-specific parameters
+    agentId: v.optional(v.id("aiAgents")),
+    agentEnabledTools: v.optional(v.array(v.string())), // Tools enabled for this agent
+    agentSystemPrompt: v.optional(v.string()), // Custom system prompt from agent
   },
   returns: agenticResponseValidator,
   handler: async (ctx, args) => {
@@ -512,6 +518,14 @@ export const askAgenticAI = action({
     const userRole = args.userRole || "creator";
 
     console.log(`🤖 Agentic AI starting for user: ${args.userId}`);
+    if (args.agentId) {
+      console.log(`   Agent ID: ${args.agentId}`);
+      console.log(`   Enabled Tools: ${args.agentEnabledTools?.join(", ") || "all"}`);
+    }
+
+    // Get available tools for this user role + agent
+    const availableTools = getToolsForAgent(userRole, args.agentEnabledTools);
+    console.log(`   Available tools: ${availableTools.length}`);
 
     // ========================================================================
     // EXECUTION MODE: Execute confirmed actions
@@ -561,6 +575,7 @@ export const askAgenticAI = action({
         question: args.question,
         settings,
         userRole,
+        availableTools, // Pass agent-filtered tools
         conversationContext: args.conversationContext,
       }
     );
@@ -605,6 +620,26 @@ export const askAgenticAI = action({
         const tc = planResult.toolCalls.find(t => t.tool === "generateLessonContent");
         const params = tc?.parameters as any;
         summaryMessage = `I'll generate lesson content about "${params?.topic}" for you.`;
+      } else if (toolNames.includes("generateSocialScript")) {
+        const tc = planResult.toolCalls.find(t => t.tool === "generateSocialScript");
+        const params = tc?.parameters as any;
+        summaryMessage = `I'll create a ${params?.platform} script about "${params?.topic}" for you.`;
+      } else if (toolNames.includes("generateMultiPlatformContent")) {
+        const tc = planResult.toolCalls.find(t => t.tool === "generateMultiPlatformContent");
+        const params = tc?.parameters as any;
+        summaryMessage = `I'll create optimized content for ${params?.platforms?.join(", ")} about "${params?.topic}".`;
+      } else if (toolNames.includes("publishSocialPost")) {
+        summaryMessage = `I'll publish this post to your connected social account.`;
+      } else if (toolNames.includes("scheduleSocialPost")) {
+        const tc = planResult.toolCalls.find(t => t.tool === "scheduleSocialPost");
+        const params = tc?.parameters as any;
+        summaryMessage = `I'll schedule this post for ${params?.scheduledTime}.`;
+      } else if (toolNames.includes("createTwitterThread")) {
+        const tc = planResult.toolCalls.find(t => t.tool === "createTwitterThread");
+        const params = tc?.parameters as any;
+        summaryMessage = `I'll create a Twitter thread with ${params?.tweets?.length || 0} tweets.`;
+      } else if (toolNames.includes("listConnectedSocialAccounts")) {
+        summaryMessage = "I'll fetch your connected social media accounts.";
       } else {
         summaryMessage = `I'll perform ${planResult.toolCalls.length} action(s) for you.`;
       }
