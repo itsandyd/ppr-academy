@@ -1,8 +1,6 @@
-"use node";
-
-import { query, action } from "./_generated/server";
+import { query, internalAction } from "./_generated/server";
 import { v } from "convex/values";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 
 /**
  * Debug: Check what permissions a token has
@@ -101,7 +99,7 @@ export const getAccountData = query({
   handler: async (ctx, args) => {
     console.log("🔍 Looking for account:", args.accountId);
     
-    const account = await ctx.db.get(args.accountId as any);
+    const account = await ctx.db.get(args.accountId as any) as any;
     
     if (!account) {
       console.log("❌ Account not found");
@@ -113,10 +111,10 @@ export const getAccountData = query({
     console.log("🔗 Instagram Business ID:", account.platformData?.instagramBusinessAccountId);
 
     return {
-      accountId: account._id,
+      accountId: String(account._id),
       username: account.platformUsername || "",
-      platformUserId: account.platformUserId,
-      instagramBusinessId: account.platformData?.instagramBusinessAccountId || account.platformUserId,
+      platformUserId: account.platformUserId || "",
+      instagramBusinessId: account.platformData?.instagramBusinessAccountId || account.platformUserId || "",
       accessToken: account.accessToken || "",
     };
   },
