@@ -164,22 +164,19 @@ export function InstagramAutomations({ storeId, userId }: InstagramAutomationsPr
     // Store storeId for redirect after OAuth
     sessionStorage.setItem("lastStoreId", storeId);
 
-    // Use Facebook Login with Instagram Business permissions
-    // IMPORTANT: Using instagram_business_* permissions which don't require App Review!
-    // These are for "Business Login for Instagram" flow
+    // Use Facebook Login with Instagram permissions
+    // NOTE: instagram_manage_comments requires App Review approval for webhooks to work
     const scopes = [
-      // Business Login permissions (NO App Review required!)
-      'instagram_business_basic',
-      'instagram_business_manage_comments',
-      'instagram_business_manage_messages',
-      'instagram_business_content_publish',
-      // Page permissions (required for webhooks)
+      'instagram_basic',
+      'instagram_content_publish',
+      'instagram_manage_comments',
+      'instagram_manage_messages',
       'pages_show_list',
       'pages_read_engagement',
       'pages_manage_metadata',     // Required for webhooks!
       'pages_messaging',           // Required for sending DMs
       'pages_manage_engagement',   // Required for comment replies
-      'business_management',       // Required for business operations
+      'business_management',
     ].join(',');
 
     // Use Facebook OAuth (not Instagram OAuth)
