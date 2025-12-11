@@ -77,12 +77,18 @@ export const saveIntegration = internalMutation({
         isConnected: true,
         lastVerified: Date.now(),
         grantedScopes: [
-          "instagram_basic",
-          "instagram_content_publish",
-          "instagram_manage_comments",
-          "instagram_manage_messages",
+          // Business Login permissions (NO App Review required!)
+          "instagram_business_basic",
+          "instagram_business_manage_comments",
+          "instagram_business_manage_messages",
+          "instagram_business_content_publish",
+          // Page permissions
           "pages_show_list",
           "pages_read_engagement",
+          "pages_manage_metadata",
+          "pages_messaging",
+          "pages_manage_engagement",
+          "business_management",
         ],
         platformData: {
           instagramBusinessAccountId: args.instagramId,
