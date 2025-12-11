@@ -61,28 +61,28 @@ export const handleOAuthCallback = action({
         userAccessToken = (shortLivedTokenData as any).access_token;
         tokenExpiresIn = (shortLivedTokenData as any).expires_in || 3600; // 1 hour
       } else {
-        // Step 2: Exchange short-lived token for LONG-LIVED token (~60 days)
-        // THIS IS CRITICAL - Page tokens derived from long-lived tokens NEVER EXPIRE
-        console.log("🔄 Step 2: Exchanging for LONG-LIVED token...");
-        
-        const longLivedResponse = await fetch(
-          `https://graph.facebook.com/v21.0/oauth/access_token?` +
-          `grant_type=fb_exchange_token` +
-          `&client_id=${process.env.FACEBOOK_APP_ID || process.env.INSTAGRAM_CLIENT_ID}` +
-          `&client_secret=${process.env.FACEBOOK_APP_SECRET || process.env.INSTAGRAM_CLIENT_SECRET}` +
-          `&fb_exchange_token=${(shortLivedTokenData as any)?.access_token}`
-        );
+      // Step 2: Exchange short-lived token for LONG-LIVED token (~60 days)
+      // THIS IS CRITICAL - Page tokens derived from long-lived tokens NEVER EXPIRE
+      console.log("🔄 Step 2: Exchanging for LONG-LIVED token...");
+      
+      const longLivedResponse = await fetch(
+        `https://graph.facebook.com/v21.0/oauth/access_token?` +
+        `grant_type=fb_exchange_token` +
+        `&client_id=${process.env.FACEBOOK_APP_ID || process.env.INSTAGRAM_CLIENT_ID}` +
+        `&client_secret=${process.env.FACEBOOK_APP_SECRET || process.env.INSTAGRAM_CLIENT_SECRET}` +
+        `&fb_exchange_token=${(shortLivedTokenData as any)?.access_token}`
+      );
 
-        const longLivedTokenData = await longLivedResponse.json();
+      const longLivedTokenData = await longLivedResponse.json();
 
-        if ((longLivedTokenData as any)?.access_token) {
-          userAccessToken = (longLivedTokenData as any).access_token;
-          tokenExpiresIn = (longLivedTokenData as any).expires_in || 5184000; // 60 days
-          console.log("✅ Long-lived token obtained (expires in ~60 days)");
-        } else {
-          console.warn("⚠️ Could not get long-lived token, falling back to short-lived");
-          userAccessToken = (shortLivedTokenData as any).access_token;
-          tokenExpiresIn = (shortLivedTokenData as any).expires_in || 3600; // 1 hour
+      if ((longLivedTokenData as any)?.access_token) {
+        userAccessToken = (longLivedTokenData as any).access_token;
+        tokenExpiresIn = (longLivedTokenData as any).expires_in || 5184000; // 60 days
+        console.log("✅ Long-lived token obtained (expires in ~60 days)");
+      } else {
+        console.warn("⚠️ Could not get long-lived token, falling back to short-lived");
+        userAccessToken = (shortLivedTokenData as any).access_token;
+        tokenExpiresIn = (shortLivedTokenData as any).expires_in || 3600; // 1 hour
         }
       }
 

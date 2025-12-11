@@ -256,40 +256,40 @@ async function exchangeFacebookCode(code: string, platform: string, requestUrl: 
     console.log('⚡ Token will expire in 1-2 hours but has FULL permissions for test users');
     // Skip long-lived token exchange - use short-lived token directly
   } else {
-    // Step 2: Exchange short-lived token for LONG-LIVED token (~60 days)
-    // This is CRITICAL - without this, tokens expire in ~1-2 hours!
-    if (tokenData.access_token) {
-      try {
-        const longLivedParams = new URLSearchParams({
-          grant_type: 'fb_exchange_token',
-          client_id: process.env.FACEBOOK_APP_ID!,
-          client_secret: process.env.FACEBOOK_APP_SECRET!,
-          fb_exchange_token: tokenData.access_token,
+  // Step 2: Exchange short-lived token for LONG-LIVED token (~60 days)
+  // This is CRITICAL - without this, tokens expire in ~1-2 hours!
+  if (tokenData.access_token) {
+    try {
+      const longLivedParams = new URLSearchParams({
+        grant_type: 'fb_exchange_token',
+        client_id: process.env.FACEBOOK_APP_ID!,
+        client_secret: process.env.FACEBOOK_APP_SECRET!,
+        fb_exchange_token: tokenData.access_token,
+      });
+
+      const longLivedResponse = await fetch(
+        `https://graph.facebook.com/v18.0/oauth/access_token?${longLivedParams}`
+      );
+
+      if (longLivedResponse.ok) {
+        const longLivedData = await longLivedResponse.json();
+        console.log('✅ Long-lived token obtained:', {
+          hasAccessToken: !!longLivedData.access_token,
+          expiresIn: longLivedData.expires_in, // Should be ~5184000 (60 days in seconds)
         });
-
-        const longLivedResponse = await fetch(
-          `https://graph.facebook.com/v18.0/oauth/access_token?${longLivedParams}`
-        );
-
-        if (longLivedResponse.ok) {
-          const longLivedData = await longLivedResponse.json();
-          console.log('✅ Long-lived token obtained:', {
-            hasAccessToken: !!longLivedData.access_token,
-            expiresIn: longLivedData.expires_in, // Should be ~5184000 (60 days in seconds)
-          });
-          
-          // Replace with long-lived token
-          tokenData = {
-            ...tokenData,
-            access_token: longLivedData.access_token,
-            expires_in: longLivedData.expires_in || 5184000, // 60 days default
-          };
-        } else {
-          console.warn('⚠️ Could not get long-lived token, using short-lived (will expire soon)');
-        }
-      } catch (error) {
-        console.error('⚠️ Long-lived token exchange failed:', error);
-        // Continue with short-lived token as fallback
+        
+        // Replace with long-lived token
+        tokenData = {
+          ...tokenData,
+          access_token: longLivedData.access_token,
+          expires_in: longLivedData.expires_in || 5184000, // 60 days default
+        };
+      } else {
+        console.warn('⚠️ Could not get long-lived token, using short-lived (will expire soon)');
+      }
+    } catch (error) {
+      console.error('⚠️ Long-lived token exchange failed:', error);
+      // Continue with short-lived token as fallback
       }
     }
   }
