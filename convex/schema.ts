@@ -3965,4 +3965,104 @@ export default defineSchema({
     .index("by_category", ["category"])
     .index("by_priority", ["priority"])
     .index("by_analysisRunId", ["analysisRunId"]),
+
+  // =============================================================================
+  // Script Illustrations - AI-generated images from script content
+  // =============================================================================
+  scriptIllustrations: defineTable({
+    // Source script information
+    scriptId: v.optional(v.string()), // Reference to parent script/course/lesson
+    sourceType: v.union(
+      v.literal("course"),
+      v.literal("lesson"),
+      v.literal("script"),
+      v.literal("custom")
+    ),
+    
+    // Text content
+    sentence: v.string(), // The original sentence from the script
+    sentenceIndex: v.number(), // Position in the script
+    illustrationPrompt: v.string(), // The AI-generated prompt used for image generation
+    
+    // Image data
+    imageUrl: v.string(), // URL to the generated image (Convex storage)
+    imageStorageId: v.optional(v.id("_storage")), // Convex storage ID
+    
+    // Embeddings for semantic search
+    embedding: v.optional(v.array(v.number())), // Image embedding vector (512 or 1024 dims)
+    embeddingModel: v.optional(v.string()), // Model used for embedding (e.g., "clip-vit-base-patch32")
+    
+    // Generation metadata
+    generationModel: v.string(), // FAL model used (e.g., "fal-ai/flux/schnell")
+    generationParams: v.optional(v.object({
+      seed: v.optional(v.number()),
+      steps: v.optional(v.number()),
+      guidance: v.optional(v.number()),
+    })),
+    generationStatus: v.union(
+      v.literal("pending"),
+      v.literal("generating"),
+      v.literal("completed"),
+      v.literal("failed")
+    ),
+    generationError: v.optional(v.string()),
+    
+    // Ownership
+    userId: v.string(), // Clerk ID
+    storeId: v.optional(v.string()),
+    
+    // Timestamps
+    createdAt: v.number(),
+    generatedAt: v.optional(v.number()),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_scriptId", ["scriptId"])
+    .index("by_sourceType", ["sourceType"])
+    .index("by_status", ["generationStatus"])
+    .index("by_user_and_script", ["userId", "scriptId"])
+    .index("by_sentenceIndex", ["sentenceIndex"]),
+
+  // Script generation jobs - track batch illustration generation
+  scriptIllustrationJobs: defineTable({
+    userId: v.string(),
+    storeId: v.optional(v.string()),
+    
+    // Script content
+    scriptText: v.string(),
+    scriptTitle: v.optional(v.string()),
+    sourceType: v.union(
+      v.literal("course"),
+      v.literal("lesson"),
+      v.literal("script"),
+      v.literal("custom")
+    ),
+    sourceId: v.optional(v.string()),
+    
+    // Processing status
+    status: v.union(
+      v.literal("pending"),
+      v.literal("processing"),
+      v.literal("completed"),
+      v.literal("failed")
+    ),
+    
+    // Progress tracking
+    totalSentences: v.number(),
+    processedSentences: v.number(),
+    failedSentences: v.number(),
+    
+    // Results
+    illustrationIds: v.array(v.id("scriptIllustrations")),
+    
+    // Error tracking
+    errors: v.optional(v.array(v.string())),
+    
+    // Timestamps
+    createdAt: v.number(),
+    startedAt: v.optional(v.number()),
+    completedAt: v.optional(v.number()),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_status", ["status"])
+    .index("by_sourceId", ["sourceId"]),
 }); 
