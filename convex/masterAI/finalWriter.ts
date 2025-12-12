@@ -9,6 +9,7 @@ import {
   criticOutputValidator,
   masterAIResponseValidator,
   MODEL_PRESETS,
+  AVAILABLE_MODELS,
   type ChatSettings,
   type SummarizerOutput,
   type IdeaGeneratorOutput,
@@ -313,11 +314,16 @@ Generate a comprehensive, well-structured response with inline citations. If web
       // Add the current request with knowledge context
       messages.push({ role: "user", content: userPrompt });
 
+      // Get the model's max output token limit
+      const modelConfig = AVAILABLE_MODELS[modelId];
+      const maxOutputTokens = modelConfig?.maxOutputTokens ?? 16000;
+      console.log(`   🎯 Using model ${modelId} with max output tokens: ${maxOutputTokens}`);
+
       const response = await callLLM({
         model: modelId,
         messages,
         temperature: 0.7,
-        maxTokens: 16000, // Increased to support very long form content (6000+ words)
+        maxTokens: maxOutputTokens, // Use model's actual limit for long form content
       });
 
       // Log if response was truncated due to token limit

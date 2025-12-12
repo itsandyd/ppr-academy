@@ -17,46 +17,49 @@ export const modelProviderValidator = v.union(
 // Available models - Real model IDs (Updated Dec 2025)
 // OpenAI models use direct API, everything else goes through OpenRouter
 // See: https://openrouter.ai/rankings for current usage
+// maxOutputTokens: Provider-enforced output token limits (not configurable)
 export const AVAILABLE_MODELS = {
   // ============ OpenAI Direct ============
-  "gpt-4o": { provider: "openai", apiId: "gpt-4o", costIn: 2.5, costOut: 10, speed: "fast", reasoning: false },
-  "gpt-4o-mini": { provider: "openai", apiId: "gpt-4o-mini", costIn: 0.15, costOut: 0.6, speed: "very-fast", reasoning: false },
-  "o1": { provider: "openai", apiId: "o1", costIn: 15, costOut: 60, speed: "slow", reasoning: true },
-  "o1-mini": { provider: "openai", apiId: "o1-mini", costIn: 3, costOut: 12, speed: "medium", reasoning: true },
+  "gpt-4o": { provider: "openai", apiId: "gpt-4o", costIn: 2.5, costOut: 10, speed: "fast", reasoning: false, maxOutputTokens: 16384 },
+  "gpt-4o-mini": { provider: "openai", apiId: "gpt-4o-mini", costIn: 0.15, costOut: 0.6, speed: "very-fast", reasoning: false, maxOutputTokens: 16384 },
+  "o1": { provider: "openai", apiId: "o1", costIn: 15, costOut: 60, speed: "slow", reasoning: true, maxOutputTokens: 32768 },
+  "o1-mini": { provider: "openai", apiId: "o1-mini", costIn: 3, costOut: 12, speed: "medium", reasoning: true, maxOutputTokens: 65536 },
   
   // ============ OpenAI via OpenRouter (newer models) ============
-  "gpt-5-mini": { provider: "openrouter", apiId: "openai/gpt-5-mini-2025-08-07", costIn: 1.5, costOut: 6, speed: "fast", reasoning: true },
-  "gpt-oss-120b": { provider: "openrouter", apiId: "openai/gpt-oss-120b", costIn: 2, costOut: 8, speed: "medium", reasoning: false },
+  "gpt-5-mini": { provider: "openrouter", apiId: "openai/gpt-5-mini-2025-08-07", costIn: 1.5, costOut: 6, speed: "fast", reasoning: true, maxOutputTokens: 32768 },
+  "gpt-oss-120b": { provider: "openrouter", apiId: "openai/gpt-oss-120b", costIn: 2, costOut: 8, speed: "medium", reasoning: false, maxOutputTokens: 16384 },
   
   // ============ Anthropic Claude 4.5 via OpenRouter ============
   // See: https://openrouter.ai/anthropic/claude-sonnet-4.5 and https://openrouter.ai/anthropic/claude-opus-4.5
-  "claude-4.5-sonnet": { provider: "openrouter", apiId: "anthropic/claude-sonnet-4.5", costIn: 3, costOut: 15, speed: "fast", reasoning: true },
-  "claude-4.5-opus": { provider: "openrouter", apiId: "anthropic/claude-opus-4.5", costIn: 5, costOut: 25, speed: "medium", reasoning: true },
-  "claude-4-sonnet": { provider: "openrouter", apiId: "anthropic/claude-sonnet-4", costIn: 3, costOut: 15, speed: "fast", reasoning: true },
+  // Claude 4.5 models: Anthropic/Vertex = 64K output, Bedrock = 32K output
+  // Using 64K as OpenRouter prefers Anthropic/Vertex providers for higher output requests
+  "claude-4.5-sonnet": { provider: "openrouter", apiId: "anthropic/claude-sonnet-4.5", costIn: 3, costOut: 15, speed: "fast", reasoning: true, maxOutputTokens: 64000 },
+  "claude-4.5-opus": { provider: "openrouter", apiId: "anthropic/claude-opus-4.5", costIn: 5, costOut: 25, speed: "medium", reasoning: true, maxOutputTokens: 64000 },
+  "claude-4-sonnet": { provider: "openrouter", apiId: "anthropic/claude-sonnet-4", costIn: 3, costOut: 15, speed: "fast", reasoning: true, maxOutputTokens: 64000 },
   // Legacy Claude
-  "claude-3.5-sonnet": { provider: "openrouter", apiId: "anthropic/claude-3.5-sonnet", costIn: 3, costOut: 15, speed: "fast", reasoning: false },
-  "claude-3.5-haiku": { provider: "openrouter", apiId: "anthropic/claude-3.5-haiku", costIn: 0.25, costOut: 1.25, speed: "very-fast", reasoning: false },
+  "claude-3.5-sonnet": { provider: "openrouter", apiId: "anthropic/claude-3.5-sonnet", costIn: 3, costOut: 15, speed: "fast", reasoning: false, maxOutputTokens: 8192 },
+  "claude-3.5-haiku": { provider: "openrouter", apiId: "anthropic/claude-3.5-haiku", costIn: 0.25, costOut: 1.25, speed: "very-fast", reasoning: false, maxOutputTokens: 8192 },
   
   // ============ Google Gemini 2.5/3.0 via OpenRouter ============
-  "gemini-3-pro": { provider: "openrouter", apiId: "google/gemini-3-pro-preview-20251117", costIn: 1.25, costOut: 5, speed: "fast", reasoning: true },
-  "gemini-2.5-flash": { provider: "openrouter", apiId: "google/gemini-2.5-flash", costIn: 0.15, costOut: 0.6, speed: "very-fast", reasoning: false },
-  "gemini-2.5-flash-lite": { provider: "openrouter", apiId: "google/gemini-2.5-flash-lite", costIn: 0.075, costOut: 0.3, speed: "fastest", reasoning: false },
-  "gemini-2.5-pro": { provider: "openrouter", apiId: "google/gemini-2.5-pro", costIn: 1.25, costOut: 5, speed: "medium", reasoning: true },
-  "gemini-2.0-flash": { provider: "openrouter", apiId: "google/gemini-2.0-flash-001", costIn: 0.1, costOut: 0.4, speed: "very-fast", reasoning: false },
+  "gemini-3-pro": { provider: "openrouter", apiId: "google/gemini-3-pro-preview-20251117", costIn: 1.25, costOut: 5, speed: "fast", reasoning: true, maxOutputTokens: 65536 },
+  "gemini-2.5-flash": { provider: "openrouter", apiId: "google/gemini-2.5-flash", costIn: 0.15, costOut: 0.6, speed: "very-fast", reasoning: false, maxOutputTokens: 65536 },
+  "gemini-2.5-flash-lite": { provider: "openrouter", apiId: "google/gemini-2.5-flash-lite", costIn: 0.075, costOut: 0.3, speed: "fastest", reasoning: false, maxOutputTokens: 32768 },
+  "gemini-2.5-pro": { provider: "openrouter", apiId: "google/gemini-2.5-pro", costIn: 1.25, costOut: 5, speed: "medium", reasoning: true, maxOutputTokens: 65536 },
+  "gemini-2.0-flash": { provider: "openrouter", apiId: "google/gemini-2.0-flash-001", costIn: 0.1, costOut: 0.4, speed: "very-fast", reasoning: false, maxOutputTokens: 8192 },
   
   // ============ DeepSeek via OpenRouter ============
-  "deepseek-chat": { provider: "openrouter", apiId: "deepseek/deepseek-chat", costIn: 0.14, costOut: 0.28, speed: "fast", reasoning: false },
-  "deepseek-r1": { provider: "openrouter", apiId: "deepseek/deepseek-r1", costIn: 0.55, costOut: 2.19, speed: "medium", reasoning: true },
+  "deepseek-chat": { provider: "openrouter", apiId: "deepseek/deepseek-chat", costIn: 0.14, costOut: 0.28, speed: "fast", reasoning: false, maxOutputTokens: 8192 },
+  "deepseek-r1": { provider: "openrouter", apiId: "deepseek/deepseek-r1", costIn: 0.55, costOut: 2.19, speed: "medium", reasoning: true, maxOutputTokens: 16384 },
   
   // ============ xAI Grok via OpenRouter ============
-  "grok-code-fast": { provider: "openrouter", apiId: "x-ai/grok-code-fast-1", costIn: 0.3, costOut: 0.6, speed: "fast", reasoning: false },
-  "grok-4-fast": { provider: "openrouter", apiId: "x-ai/grok-4-fast", costIn: 2, costOut: 8, speed: "fast", reasoning: true },
+  "grok-code-fast": { provider: "openrouter", apiId: "x-ai/grok-code-fast-1", costIn: 0.3, costOut: 0.6, speed: "fast", reasoning: false, maxOutputTokens: 16384 },
+  "grok-4-fast": { provider: "openrouter", apiId: "x-ai/grok-4-fast", costIn: 2, costOut: 8, speed: "fast", reasoning: true, maxOutputTokens: 32768 },
   
   // ============ Meta Llama via OpenRouter ============
-  "llama-3.3-70b": { provider: "openrouter", apiId: "meta-llama/llama-3.3-70b-instruct", costIn: 0.3, costOut: 0.4, speed: "fast", reasoning: false },
+  "llama-3.3-70b": { provider: "openrouter", apiId: "meta-llama/llama-3.3-70b-instruct", costIn: 0.3, costOut: 0.4, speed: "fast", reasoning: false, maxOutputTokens: 8192 },
   
   // ============ Qwen via OpenRouter ============
-  "qwen-2.5-72b": { provider: "openrouter", apiId: "qwen/qwen-2.5-72b-instruct", costIn: 0.35, costOut: 0.4, speed: "fast", reasoning: false },
+  "qwen-2.5-72b": { provider: "openrouter", apiId: "qwen/qwen-2.5-72b-instruct", costIn: 0.35, costOut: 0.4, speed: "fast", reasoning: false, maxOutputTokens: 8192 },
 } as const;
 
 export type ModelId = keyof typeof AVAILABLE_MODELS;
@@ -188,6 +191,10 @@ export const chatSettingsValidator = v.object({
   enableFactVerification: v.boolean(), // Enable fact checking stage
   autoSaveWebResearch: v.boolean(), // Auto-save web results to embeddings
   
+  // Quality control settings
+  qualityThreshold: v.optional(v.number()), // 0-1, minimum quality score (default 0.4)
+  maxRetries: v.optional(v.number()), // Max retry attempts when quality is low (default 1)
+  
   // Web research settings
   webSearchMaxResults: v.optional(v.number()), // Results per facet (default 3)
   
@@ -228,6 +235,9 @@ export type ChatSettings = {
   enableWebResearch: boolean;
   enableFactVerification: boolean;
   autoSaveWebResearch: boolean;
+  // Quality control
+  qualityThreshold?: number; // 0-1, minimum quality score (default 0.4)
+  maxRetries?: number; // Max retry attempts when quality is low (default 1)
   webSearchMaxResults?: number;
   responseStyle: ResponseStyle;
   sourceTypes?: Array<"course" | "chapter" | "lesson" | "document" | "note" | "custom">;
@@ -243,6 +253,8 @@ export const DEFAULT_CHAT_SETTINGS: ChatSettings = {
   enableWebResearch: false, // Off by default (costs money)
   enableFactVerification: false, // Off by default
   autoSaveWebResearch: false, // Off by default
+  qualityThreshold: 0.4, // Minimum quality score before retry
+  maxRetries: 1, // Retry once if quality is below threshold
   webSearchMaxResults: 3,
   responseStyle: "structured",
 };

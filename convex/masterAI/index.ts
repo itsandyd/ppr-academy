@@ -287,6 +287,60 @@ export const askMasterAI = action({
     ]);
 
     // ========================================================================
+    // QUALITY CHECK: Retry if quality is below threshold
+    // ========================================================================
+    const qualityThreshold = settings.qualityThreshold ?? 0.4;
+    const maxRetries = settings.maxRetries ?? 1;
+    
+    let currentSummarizerOutput = summarizerOutput;
+    let currentCriticOutput = criticOutput;
+    let retryCount = 0;
+    
+    // Check if quality is below threshold and we have retries available
+    while (
+      currentCriticOutput && 
+      currentCriticOutput.overallQuality < qualityThreshold && 
+      retryCount < maxRetries
+    ) {
+      retryCount++;
+      console.log(`⚠️ Quality score ${currentCriticOutput.overallQuality} below threshold ${qualityThreshold}, retry ${retryCount}/${maxRetries}...`);
+      console.log(`   Issues identified: ${currentCriticOutput.issues.map(i => `${i.type}: ${i.description}`).join("; ")}`);
+      
+      // Re-run summarizer with critic feedback
+      const enhancedQuestion = `${args.question}
+
+IMPORTANT: Previous response had quality issues. Please address these specifically:
+${currentCriticOutput.recommendations.map((r, i) => `${i + 1}. ${r}`).join("\n")}
+${currentCriticOutput.issues.map(i => `- Fix ${i.type}: ${i.description}`).join("\n")}`;
+      
+      currentSummarizerOutput = await ctx.runAction(
+        internal.masterAI.summarizer.summarizeContent,
+        {
+          retrieverOutput,
+          settings,
+          originalQuestion: enhancedQuestion,
+        }
+      );
+      
+      // Re-run critic to check improved output
+      const newCriticOutput = await ctx.runAction(
+        internal.masterAI.critic.reviewContent,
+        {
+          summarizerOutput: currentSummarizerOutput,
+          ideaGeneratorOutput,
+          settings,
+          originalQuestion: args.question,
+        }
+      );
+      currentCriticOutput = newCriticOutput as CriticOutput;
+      console.log(`   🔬 Retry ${retryCount} Critic: ${currentCriticOutput.approved ? "✓" : "✗"}, Quality: ${currentCriticOutput.overallQuality}`);
+    }
+    
+    if (retryCount > 0) {
+      console.log(`   ✅ After ${retryCount} retries, quality: ${currentCriticOutput?.overallQuality ?? "N/A"}`);
+    }
+
+    // ========================================================================
     // STAGE 7: FINAL WRITER
     // ========================================================================
     console.log("✍️ Stage 7: Writing final response...");
@@ -304,9 +358,9 @@ export const askMasterAI = action({
     const finalResponse: MasterAIResponse = await ctx.runAction(
       internal.masterAI.finalWriter.generateFinalResponse,
       {
-        summarizerOutput,
+        summarizerOutput: currentSummarizerOutput,
         ideaGeneratorOutput,
-        criticOutput,
+        criticOutput: currentCriticOutput,
         settings,
         originalQuestion: args.question,
         conversationContext: args.conversationContext,

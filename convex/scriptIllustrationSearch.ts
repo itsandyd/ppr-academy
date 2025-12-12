@@ -412,7 +412,7 @@ export const getIllustrationsByScript = query({
   handler: async (ctx, args) => {
     return await ctx.db
       .query("scriptIllustrations")
-      .withIndex("by_scriptId", q => q.eq("scriptId", args.scriptId))
+      .withIndex("by_scriptId_and_sentenceIndex", q => q.eq("scriptId", args.scriptId))
       .order("asc")
       .collect();
   },
@@ -453,7 +453,7 @@ export const getUserJobs = query({
   handler: async (ctx, args) => {
     return await ctx.db
       .query("scriptIllustrationJobs")
-      .withIndex("by_userId", q => q.eq("userId", args.userId))
+      .withIndex("by_userId_and_createdAt", q => q.eq("userId", args.userId))
       .order("desc")
       .take(args.limit ?? 20);
   },

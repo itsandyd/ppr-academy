@@ -192,6 +192,16 @@ async function callOpenRouter(options: LLMOptions): Promise<LLMResponse> {
     body.response_format = { type: "json_object" };
   }
 
+  // For Claude 4.5 models, prefer providers with higher output limits (64K)
+  // Anthropic and Google Vertex support 64K, Amazon Bedrock only supports 32K
+  if (apiModelId.includes("claude") && apiModelId.includes("4.5")) {
+    body.provider = {
+      order: ["Anthropic", "Google Vertex"], // Prefer providers with 64K output limit
+      allow_fallbacks: true, // Fall back to Bedrock if needed
+    };
+    console.log(`   🔄 Routing ${apiModelId} to high-output providers (Anthropic/Vertex)`);
+  }
+
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
