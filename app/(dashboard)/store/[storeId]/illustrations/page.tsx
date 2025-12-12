@@ -1,75 +1,40 @@
-import { auth } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
+"use client";
+
 import { ScriptIllustrationGenerator } from "@/components/script-illustration-generator";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from "@/hooks/useAuth";
+import { useParams } from "next/navigation";
 
-export default async function IllustrationsPage({
-  params,
-}: {
-  params: { storeId: string };
-}) {
-  const { userId } = await auth();
+/**
+ * Standalone page for the Script-to-Illustration Generator
+ * Accessible at /store/[storeId]/illustrations
+ */
+export default function IllustrationsPage() {
+  const { user } = useAuth();
+  const params = useParams();
+  const storeId = params?.storeId as string;
 
-  if (!userId) {
-    redirect("/sign-in");
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <p className="text-muted-foreground">Please sign in to generate illustrations</p>
+      </div>
+    );
   }
 
   return (
-    <div className="container max-w-6xl py-8 space-y-8">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold">Script Illustrations</h1>
+    <div className="container max-w-6xl py-8">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-2">AI Illustration Generator</h1>
         <p className="text-muted-foreground">
-          Generate AI-powered illustrations from your scripts and course content.
+          Transform your scripts and course content into beautiful, AI-generated illustrations with semantic search capabilities.
         </p>
       </div>
 
       <ScriptIllustrationGenerator
-        userId={userId}
-        storeId={params.storeId}
+        userId={user.id}
+        storeId={storeId}
         sourceType="custom"
       />
-
-      <Card className="bg-muted/50">
-        <CardHeader>
-          <CardTitle>About This Feature</CardTitle>
-          <CardDescription>
-            Powered by FAL AI and OpenAI
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4 text-sm">
-          <div>
-            <strong>What it does:</strong>
-            <ul className="list-disc list-inside mt-2 space-y-1 text-muted-foreground">
-              <li>Splits your script into individual sentences</li>
-              <li>Generates contextual illustration prompts using GPT-4</li>
-              <li>Creates custom images using FAL AI (FLUX Schnell model)</li>
-              <li>Generates image embeddings for semantic search</li>
-              <li>Stores everything in Convex for easy retrieval</li>
-            </ul>
-          </div>
-
-          <div>
-            <strong>Use cases:</strong>
-            <ul className="list-disc list-inside mt-2 space-y-1 text-muted-foreground">
-              <li>Course lesson visualization</li>
-              <li>Tutorial step-by-step illustrations</li>
-              <li>Documentation and guides</li>
-              <li>Social media content creation</li>
-              <li>Marketing materials</li>
-            </ul>
-          </div>
-
-          <div>
-            <strong>Semantic Search:</strong>
-            <p className="mt-2 text-muted-foreground">
-              All generated illustrations are embedded using OpenAI's vision capabilities,
-              allowing you to search for images by concept, topic, or description. Perfect
-              for finding and reusing relevant visuals across your content.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
-

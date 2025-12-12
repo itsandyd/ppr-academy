@@ -317,12 +317,13 @@ Generate a comprehensive, well-structured response with inline citations. If web
         model: modelId,
         messages,
         temperature: 0.7,
-        maxTokens: 8000, // Increased to support longer form content (3000+ words)
+        maxTokens: 16000, // Increased to support very long form content (6000+ words)
       });
 
       // Log if response was truncated due to token limit
       if (response.finishReason === "length") {
         console.warn(`⚠️ Final response was truncated (finish_reason: length). Output tokens: ${response.tokensUsed?.output}`);
+        console.warn(`   Consider using the "concise" response style for shorter answers.`);
       }
 
       // Extract citations used in the response

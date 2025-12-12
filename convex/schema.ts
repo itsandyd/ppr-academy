@@ -4020,7 +4020,8 @@ export default defineSchema({
     .index("by_sourceType", ["sourceType"])
     .index("by_status", ["generationStatus"])
     .index("by_user_and_script", ["userId", "scriptId"])
-    .index("by_sentenceIndex", ["sentenceIndex"]),
+    .index("by_sentenceIndex", ["sentenceIndex"])
+    .index("by_scriptId_and_sentenceIndex", ["scriptId", "sentenceIndex"]), // For ordered retrieval
 
   // Script generation jobs - track batch illustration generation
   scriptIllustrationJobs: defineTable({
@@ -4064,5 +4065,6 @@ export default defineSchema({
   })
     .index("by_userId", ["userId"])
     .index("by_status", ["status"])
-    .index("by_sourceId", ["sourceId"]),
+    .index("by_sourceId", ["sourceId"])
+    .index("by_userId_and_createdAt", ["userId", "createdAt"]), // For ordered retrieval (newest first)
 }); 
