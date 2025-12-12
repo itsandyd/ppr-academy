@@ -1,4 +1,4 @@
-import { query, internalAction } from "./_generated/server";
+import { query, action, internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { api, internal } from "./_generated/api";
 

@@ -1,8 +1,10 @@
 "use node";
 
-import { action, query } from "./_generated/server";
+import { action } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
+
+// Note: Queries have been moved to scriptIllustrationQueries.ts to allow this file to use "use node";
 import OpenAI from "openai";
 
 // ============================================================================
@@ -48,7 +50,7 @@ export const searchIllustrations = action({
       console.log(`   Generated query embedding (${queryEmbedding.length} dimensions)`);
 
       // Get all illustrations with embeddings
-      const illustrations = await ctx.runQuery(internal.scriptIllustrationSearch.getAllIllustrationsWithEmbeddings, {
+      const illustrations = await ctx.runQuery(internal.scriptIllustrationQueries.getAllIllustrationsWithEmbeddings, {
         userId: args.userId,
         scriptId: args.scriptId,
         sourceType: args.sourceType,
@@ -119,7 +121,7 @@ export const findSimilarIllustrations = action({
 
     try {
       // Get the source illustration
-      const sourceIllustration = await ctx.runQuery(internal.scriptIllustrationSearch.getIllustrationById, {
+      const sourceIllustration = await ctx.runQuery(internal.scriptIllustrationQueries.getIllustrationById, {
         illustrationId: args.illustrationId,
       });
 
@@ -140,7 +142,7 @@ export const findSimilarIllustrations = action({
       }
 
       // Get all other illustrations
-      const allIllustrations = await ctx.runQuery(internal.scriptIllustrationSearch.getAllIllustrationsWithEmbeddings, {
+      const allIllustrations = await ctx.runQuery(internal.scriptIllustrationQueries.getAllIllustrationsWithEmbeddings, {
         limit: 1000,
       });
 
@@ -351,111 +353,6 @@ async function extractKeyConcepts(scriptText: string): Promise<string[]> {
     .filter(c => c.length > 0);
 }
 
-// ============================================================================
-// INTERNAL QUERIES (called by actions)
-// ============================================================================
-
-export const getAllIllustrationsWithEmbeddings = query({
-  args: {
-    userId: v.optional(v.string()),
-    scriptId: v.optional(v.string()),
-    sourceType: v.optional(v.union(
-      v.literal("course"),
-      v.literal("lesson"),
-      v.literal("script"),
-      v.literal("custom")
-    )),
-    limit: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    let query = ctx.db.query("scriptIllustrations");
-
-    // Apply filters
-    if (args.userId) {
-      query = query.withIndex("by_userId", q => q.eq("userId", args.userId));
-    }
-    if (args.scriptId) {
-      query = query.withIndex("by_scriptId", q => q.eq("scriptId", args.scriptId));
-    }
-    if (args.sourceType) {
-      query = query.withIndex("by_sourceType", q => q.eq("sourceType", args.sourceType));
-    }
-
-    const illustrations = await query
-      .filter(q => q.neq(q.field("embedding"), undefined))
-      .take(args.limit ?? 100);
-
-    return illustrations;
-  },
-});
-
-export const getIllustrationById = query({
-  args: {
-    illustrationId: v.id("scriptIllustrations"),
-  },
-  handler: async (ctx, args) => {
-    return await ctx.db.get(args.illustrationId);
-  },
-});
-
-// ============================================================================
-// PUBLIC QUERIES FOR UI
-// ============================================================================
-
-/**
- * Get all illustrations for a script/job
- */
-export const getIllustrationsByScript = query({
-  args: {
-    scriptId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("scriptIllustrations")
-      .withIndex("by_scriptId_and_sentenceIndex", q => q.eq("scriptId", args.scriptId))
-      .order("asc")
-      .collect();
-  },
-});
-
-/**
- * Get illustration job status
- */
-export const getJobStatus = query({
-  args: {
-    jobId: v.id("scriptIllustrationJobs"),
-  },
-  handler: async (ctx, args) => {
-    const job = await ctx.db.get(args.jobId);
-    if (!job) return null;
-
-    return {
-      status: job.status,
-      totalSentences: job.totalSentences,
-      processedSentences: job.processedSentences,
-      failedSentences: job.failedSentences,
-      progress: job.totalSentences > 0 
-        ? Math.round((job.processedSentences / job.totalSentences) * 100)
-        : 0,
-      errors: job.errors || [],
-    };
-  },
-});
-
-/**
- * Get user's illustration jobs
- */
-export const getUserJobs = query({
-  args: {
-    userId: v.string(),
-    limit: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("scriptIllustrationJobs")
-      .withIndex("by_userId_and_createdAt", q => q.eq("userId", args.userId))
-      .order("desc")
-      .take(args.limit ?? 20);
-  },
-});
+// Note: All queries have been moved to scriptIllustrationQueries.ts
+// to allow this file to use "use node";
 

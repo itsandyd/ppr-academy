@@ -1,6 +1,7 @@
 "use node";
 
-import { action, internalAction, internalMutation, internalQuery } from "./_generated/server";
+import { action, internalAction } from "./_generated/server";
+// Note: Mutations and queries have been moved to scriptIllustrationMutations.ts
 import { v } from "convex/values";
 import { api, internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
@@ -65,7 +66,7 @@ export const generateScriptIllustrations = action({
       }
 
       // Create a job to track progress
-      const jobId = await ctx.runMutation(internal.scriptIllustrations.createJob, {
+      const jobId = await ctx.runMutation(internal.scriptIllustrationMutations.createJob, {
         userId: args.userId,
         storeId: args.storeId,
         scriptText: args.scriptText,
@@ -130,7 +131,7 @@ export const processSentences = internalAction({
     console.log(`🔄 Processing ${args.sentences.length} sentences for job ${args.jobId}`);
 
     // Update job status to processing
-    await ctx.runMutation(internal.scriptIllustrations.updateJobStatus, {
+    await ctx.runMutation(internal.scriptIllustrationMutations.updateJobStatus, {
       jobId: args.jobId,
       status: "processing",
     });
@@ -150,7 +151,7 @@ export const processSentences = internalAction({
         console.log(`   Prompt: "${prompt.substring(0, 80)}..."`);
 
         // Create illustration record (pending)
-        const illustrationId = await ctx.runMutation(internal.scriptIllustrations.createIllustration, {
+        const illustrationId = await ctx.runMutation(internal.scriptIllustrationMutations.createIllustration, {
           userId: args.userId,
           storeId: args.storeId,
           scriptId: args.scriptId,
@@ -168,14 +169,14 @@ export const processSentences = internalAction({
 
           // Upload to Convex storage
           const storageId = await uploadImageToConvex(ctx, imageResult.url);
-          const imageUrl = await ctx.runQuery(internal.scriptIllustrations.getStorageUrl, {
+          const imageUrl = await ctx.runQuery(internal.scriptIllustrationMutations.getStorageUrl, {
             storageId,
           });
 
           console.log(`   ☁️ Uploaded to storage: ${storageId}`);
 
           // Update illustration with image
-          await ctx.runMutation(internal.scriptIllustrations.updateIllustrationImage, {
+          await ctx.runMutation(internal.scriptIllustrationMutations.updateIllustrationImage, {
             illustrationId,
             imageUrl,
             storageId,
@@ -186,7 +187,7 @@ export const processSentences = internalAction({
           if (args.generateEmbeddings) {
             try {
               const embedding = await generateImageEmbedding(imageUrl);
-              await ctx.runMutation(internal.scriptIllustrations.updateIllustrationEmbedding, {
+              await ctx.runMutation(internal.scriptIllustrationMutations.updateIllustrationEmbedding, {
                 illustrationId,
                 embedding,
                 embeddingModel: "clip-vit-base-patch32",
@@ -203,7 +204,7 @@ export const processSentences = internalAction({
 
         } catch (genError: any) {
           console.error(`   ❌ Image generation failed: ${genError.message}`);
-          await ctx.runMutation(internal.scriptIllustrations.updateIllustrationStatus, {
+          await ctx.runMutation(internal.scriptIllustrationMutations.updateIllustrationStatus, {
             illustrationId,
             status: "failed",
             error: genError.message,
@@ -212,7 +213,7 @@ export const processSentences = internalAction({
         }
 
         // Update job progress
-        await ctx.runMutation(internal.scriptIllustrations.updateJobProgress, {
+        await ctx.runMutation(internal.scriptIllustrationMutations.updateJobProgress, {
           jobId: args.jobId,
           processedSentences: processed,
           illustrationIds,
@@ -231,7 +232,7 @@ export const processSentences = internalAction({
     }
 
     // Mark job as complete
-    await ctx.runMutation(internal.scriptIllustrations.completeJob, {
+    await ctx.runMutation(internal.scriptIllustrationMutations.completeJob, {
       jobId: args.jobId,
       illustrationIds,
       errors,
@@ -351,7 +352,7 @@ async function uploadImageToConvex(ctx: any, imageUrl: string): Promise<Id<"_sto
   const arrayBuffer = await imageBlob.arrayBuffer();
 
   // Get upload URL
-  const uploadUrl = await ctx.runMutation(internal.scriptIllustrations.generateUploadUrl, {});
+  const uploadUrl = await ctx.runMutation(internal.scriptIllustrationMutations.generateUploadUrl, {});
 
   // Upload to Convex
   const uploadResult = await fetch(uploadUrl, {
@@ -419,196 +420,6 @@ async function generateImageEmbedding(imageUrl: string): Promise<number[]> {
   }
 }
 
-// ============================================================================
-// MUTATIONS & QUERIES
-// ============================================================================
-
-export const createJob = internalMutation({
-  args: {
-    userId: v.string(),
-    storeId: v.optional(v.string()),
-    scriptText: v.string(),
-    scriptTitle: v.optional(v.string()),
-    sourceType: v.union(
-      v.literal("course"),
-      v.literal("lesson"),
-      v.literal("script"),
-      v.literal("custom")
-    ),
-    sourceId: v.optional(v.string()),
-    totalSentences: v.number(),
-  },
-  handler: async (ctx, args) => {
-    return await ctx.db.insert("scriptIllustrationJobs", {
-      userId: args.userId,
-      storeId: args.storeId,
-      scriptText: args.scriptText,
-      scriptTitle: args.scriptTitle,
-      sourceType: args.sourceType,
-      sourceId: args.sourceId,
-      status: "pending",
-      totalSentences: args.totalSentences,
-      processedSentences: 0,
-      failedSentences: 0,
-      illustrationIds: [],
-      createdAt: Date.now(),
-    });
-  },
-});
-
-export const updateJobStatus = internalMutation({
-  args: {
-    jobId: v.id("scriptIllustrationJobs"),
-    status: v.union(
-      v.literal("pending"),
-      v.literal("processing"),
-      v.literal("completed"),
-      v.literal("failed")
-    ),
-  },
-  handler: async (ctx, args) => {
-    await ctx.db.patch(args.jobId, {
-      status: args.status,
-      startedAt: args.status === "processing" ? Date.now() : undefined,
-    });
-  },
-});
-
-export const updateJobProgress = internalMutation({
-  args: {
-    jobId: v.id("scriptIllustrationJobs"),
-    processedSentences: v.number(),
-    illustrationIds: v.array(v.id("scriptIllustrations")),
-    errors: v.array(v.string()),
-  },
-  handler: async (ctx, args) => {
-    await ctx.db.patch(args.jobId, {
-      processedSentences: args.processedSentences,
-      illustrationIds: args.illustrationIds,
-      failedSentences: args.errors.length,
-      errors: args.errors,
-    });
-  },
-});
-
-export const completeJob = internalMutation({
-  args: {
-    jobId: v.id("scriptIllustrationJobs"),
-    illustrationIds: v.array(v.id("scriptIllustrations")),
-    errors: v.array(v.string()),
-  },
-  handler: async (ctx, args) => {
-    await ctx.db.patch(args.jobId, {
-      status: "completed",
-      illustrationIds: args.illustrationIds,
-      errors: args.errors,
-      failedSentences: args.errors.length,
-      completedAt: Date.now(),
-    });
-  },
-});
-
-export const createIllustration = internalMutation({
-  args: {
-    userId: v.string(),
-    storeId: v.optional(v.string()),
-    scriptId: v.optional(v.string()),
-    sourceType: v.union(
-      v.literal("course"),
-      v.literal("lesson"),
-      v.literal("script"),
-      v.literal("custom")
-    ),
-    sentence: v.string(),
-    sentenceIndex: v.number(),
-    illustrationPrompt: v.string(),
-    generationModel: v.string(),
-  },
-  handler: async (ctx, args) => {
-    return await ctx.db.insert("scriptIllustrations", {
-      userId: args.userId,
-      storeId: args.storeId,
-      scriptId: args.scriptId,
-      sourceType: args.sourceType,
-      sentence: args.sentence,
-      sentenceIndex: args.sentenceIndex,
-      illustrationPrompt: args.illustrationPrompt,
-      imageUrl: "", // Will be updated after generation
-      generationModel: args.generationModel,
-      generationStatus: "generating",
-      createdAt: Date.now(),
-    });
-  },
-});
-
-export const updateIllustrationImage = internalMutation({
-  args: {
-    illustrationId: v.id("scriptIllustrations"),
-    imageUrl: v.string(),
-    storageId: v.id("_storage"),
-    status: v.union(
-      v.literal("pending"),
-      v.literal("generating"),
-      v.literal("completed"),
-      v.literal("failed")
-    ),
-  },
-  handler: async (ctx, args) => {
-    await ctx.db.patch(args.illustrationId, {
-      imageUrl: args.imageUrl,
-      imageStorageId: args.storageId,
-      generationStatus: args.status,
-      generatedAt: Date.now(),
-    });
-  },
-});
-
-export const updateIllustrationStatus = internalMutation({
-  args: {
-    illustrationId: v.id("scriptIllustrations"),
-    status: v.union(
-      v.literal("pending"),
-      v.literal("generating"),
-      v.literal("completed"),
-      v.literal("failed")
-    ),
-    error: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    await ctx.db.patch(args.illustrationId, {
-      generationStatus: args.status,
-      generationError: args.error,
-    });
-  },
-});
-
-export const updateIllustrationEmbedding = internalMutation({
-  args: {
-    illustrationId: v.id("scriptIllustrations"),
-    embedding: v.array(v.number()),
-    embeddingModel: v.string(),
-  },
-  handler: async (ctx, args) => {
-    await ctx.db.patch(args.illustrationId, {
-      embedding: args.embedding,
-      embeddingModel: args.embeddingModel,
-    });
-  },
-});
-
-export const generateUploadUrl = internalMutation({
-  args: {},
-  handler: async (ctx) => {
-    return await ctx.storage.generateUploadUrl();
-  },
-});
-
-export const getStorageUrl = internalQuery({
-  args: {
-    storageId: v.id("_storage"),
-  },
-  handler: async (ctx, args) => {
-    return await ctx.storage.getUrl(args.storageId);
-  },
-});
+// Note: All mutations and queries have been moved to scriptIllustrationMutations.ts
+// to allow this file to use "use node";
 
