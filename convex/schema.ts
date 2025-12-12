@@ -3717,6 +3717,8 @@ export default defineSchema({
       enableWebResearch: v.boolean(),
       enableFactVerification: v.boolean(),
       autoSaveWebResearch: v.boolean(),
+      qualityThreshold: v.optional(v.number()),
+      maxRetries: v.optional(v.number()),
       webSearchMaxResults: v.optional(v.number()),
       responseStyle: v.string(),
       agenticMode: v.optional(v.boolean()),
