@@ -175,10 +175,49 @@ Verify each claim and respond with JSON:
         };
       }
 
+      // Normalize and validate the LLM response
+      const normalizedClaims = (parsed.verifiedClaims || []).map((claim: any) => {
+        // Normalize supporting sources - map invalid types to valid ones
+        const normalizedSources = (claim.supportingSources || []).map((source: any) => {
+          let normalizedType: "embedding" | "web" = "embedding";
+          const sourceType = (source.type || "").toLowerCase();
+          
+          // Map various LLM responses to valid types
+          if (sourceType === "web" || sourceType.includes("web") || sourceType.includes("url") || sourceType.includes("http")) {
+            normalizedType = "web";
+          } else {
+            // "embedding", "knowledge base", "database", etc. all map to "embedding"
+            normalizedType = "embedding";
+          }
+          
+          return {
+            type: normalizedType,
+            title: source.title || "Unknown Source",
+            excerpt: source.excerpt,
+          };
+        });
+
+        // Normalize status to valid values
+        const validStatuses = ["verified", "partially_verified", "unverified", "conflicting", "extrapolated"] as const;
+        const normalizedStatus = validStatuses.includes(claim.status) 
+          ? claim.status 
+          : "unverified";
+
+        return {
+          claim: claim.claim || "",
+          status: normalizedStatus,
+          confidence: typeof claim.confidence === "number" ? Math.max(0, Math.min(1, claim.confidence)) : 0.5,
+          supportingSources: normalizedSources,
+          conflictingInfo: claim.conflictingInfo,
+        };
+      });
+
       // Validate and return
       return {
-        verifiedClaims: parsed.verifiedClaims || [],
-        overallConfidence: parsed.overallConfidence || 0.5,
+        verifiedClaims: normalizedClaims,
+        overallConfidence: typeof parsed.overallConfidence === "number" 
+          ? Math.max(0, Math.min(1, parsed.overallConfidence)) 
+          : 0.5,
         suggestedCorrections: parsed.suggestedCorrections || [],
       };
     } catch (error) {
