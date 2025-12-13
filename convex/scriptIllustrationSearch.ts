@@ -50,12 +50,25 @@ export const searchIllustrations = action({
       console.log(`   Generated query embedding (${queryEmbedding.length} dimensions)`);
 
       // Get all illustrations with embeddings
-      const illustrations = await ctx.runQuery(internal.scriptIllustrationQueries.getAllIllustrationsWithEmbeddings, {
-        userId: args.userId,
-        scriptId: args.scriptId,
-        sourceType: args.sourceType,
-        limit: args.limit ?? 100, // Fetch more to filter by similarity
-      });
+      // Type annotation to avoid TypeScript type instantiation depth issues
+      type IllustrationWithEmbedding = {
+        _id: string;
+        sentence: string;
+        illustrationPrompt: string;
+        imageUrl: string;
+        embedding: number[];
+        sentenceIndex: number;
+        sourceType: string;
+      };
+      const illustrations: IllustrationWithEmbedding[] = await ctx.runQuery(
+        internal.scriptIllustrationQueries.getAllIllustrationsWithEmbeddings, 
+        {
+          userId: args.userId,
+          scriptId: args.scriptId,
+          sourceType: args.sourceType,
+          limit: args.limit ?? 100, // Fetch more to filter by similarity
+        }
+      );
 
       console.log(`   Found ${illustrations.length} illustrations with embeddings`);
 
@@ -121,9 +134,15 @@ export const findSimilarIllustrations = action({
 
     try {
       // Get the source illustration
-      const sourceIllustration = await ctx.runQuery(internal.scriptIllustrationQueries.getIllustrationById, {
-        illustrationId: args.illustrationId,
-      });
+      // Type annotation to avoid TypeScript type instantiation depth issues
+      type SourceIllustration = {
+        _id: string;
+        embedding?: number[];
+      } | null;
+      const sourceIllustration: SourceIllustration = await ctx.runQuery(
+        internal.scriptIllustrationQueries.getIllustrationById, 
+        { illustrationId: args.illustrationId }
+      );
 
       if (!sourceIllustration) {
         return {
@@ -142,9 +161,19 @@ export const findSimilarIllustrations = action({
       }
 
       // Get all other illustrations
-      const allIllustrations = await ctx.runQuery(internal.scriptIllustrationQueries.getAllIllustrationsWithEmbeddings, {
-        limit: 1000,
-      });
+      type IllustrationWithEmbeddingInner = {
+        _id: string;
+        sentence: string;
+        illustrationPrompt: string;
+        imageUrl: string;
+        embedding: number[];
+        sentenceIndex: number;
+        sourceType: string;
+      };
+      const allIllustrations: IllustrationWithEmbeddingInner[] = await ctx.runQuery(
+        internal.scriptIllustrationQueries.getAllIllustrationsWithEmbeddings, 
+        { limit: 1000 }
+      );
 
       // Calculate similarity and filter
       const similar = allIllustrations

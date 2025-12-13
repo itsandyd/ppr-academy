@@ -90,14 +90,14 @@ async function blotatoFetch<T>(
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
+      const errorData = await response.json().catch(() => ({})) as { message?: string };
       return {
         success: false,
         error: errorData.message || `Blotato API error: ${response.status} ${response.statusText}`,
       };
     }
 
-    const data = await response.json();
+    const data = await response.json() as T;
     return { success: true, data };
   } catch (error) {
     return {

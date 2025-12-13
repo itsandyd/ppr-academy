@@ -858,18 +858,22 @@ Be thorough - analyze the chapter content, not just titles. Each suggestion shou
           }
           return isValid;
         })
-        .map(s => ({
-          name: String(s.name || "Unnamed Feature"),
-          description: String(s.description || "No description"),
-          category: FEATURE_CATEGORIES.some(c => c.id === s.category) ? s.category : "other",
-          sourceCourse: String(s.sourceCourse || s.source || "Unknown Course"),
-          sourceChapters: Array.isArray(s.sourceChapters) ? s.sourceChapters : (s.chapters ? [s.chapters] : []),
-          priority: (["high", "medium", "low"].includes(s.priority) ? s.priority : "medium") as "high" | "medium" | "low",
-          reasoning: String(s.reasoning || s.reason || s.rationale || "Identified from course content"),
-          existsPartially: s.existsPartially || s.existing || undefined,
-          implementationHint: s.implementationHint || s.hint || s.implementation || undefined,
-          cursorPrompt: s.cursorPrompt || s.prompt || undefined,
-        }));
+        .map(s => {
+          // Use type assertion for lenient parsing of LLM responses
+          const suggestion = s as any;
+          return {
+            name: String(suggestion.name || "Unnamed Feature"),
+            description: String(suggestion.description || "No description"),
+            category: FEATURE_CATEGORIES.some(c => c.id === suggestion.category) ? suggestion.category : "other",
+            sourceCourse: String(suggestion.sourceCourse || suggestion.source || "Unknown Course"),
+            sourceChapters: Array.isArray(suggestion.sourceChapters) ? suggestion.sourceChapters : (suggestion.chapters ? [suggestion.chapters] : []),
+            priority: (["high", "medium", "low"].includes(suggestion.priority) ? suggestion.priority : "medium") as "high" | "medium" | "low",
+            reasoning: String(suggestion.reasoning || suggestion.reason || suggestion.rationale || "Identified from course content"),
+            existsPartially: suggestion.existsPartially || suggestion.existing || undefined,
+            implementationHint: suggestion.implementationHint || suggestion.hint || suggestion.implementation || undefined,
+            cursorPrompt: suggestion.cursorPrompt || suggestion.prompt || undefined,
+          };
+        });
 
       // Optionally save to database
       if (args.saveResults && validSuggestions.length > 0) {

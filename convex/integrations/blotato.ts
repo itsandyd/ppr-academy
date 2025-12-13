@@ -333,7 +333,7 @@ Make it authentic, engaging, and optimized for the platform. Focus on stopping t
         throw new Error(`OpenAI API error: ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as { choices: Array<{ message: { content: string } }> };
       const scriptData = JSON.parse(data.choices[0].message.content);
 
       // Optionally publish to Blotato
@@ -530,7 +530,7 @@ Return JSON with platform names as keys, each containing:
         throw new Error(`OpenAI API error: ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as { choices: Array<{ message: { content: string } }> };
       const content = JSON.parse(data.choices[0].message.content);
 
       return {

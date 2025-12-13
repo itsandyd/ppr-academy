@@ -49,18 +49,23 @@ export const getUserMemories = query({
   handler: async (ctx, args) => {
     const limit = args.limit || 100;
     
-    let query = ctx.db.query("aiMemories");
-    
-    // Filter by type if provided
+    // Use separate query paths to avoid TypeScript issues with query builder reassignment
+    let memories;
     if (args.type) {
-      query = query.withIndex("by_userId_type", (q) => 
-        q.eq("userId", args.userId).eq("type", args.type!)
-      );
+      memories = await ctx.db
+        .query("aiMemories")
+        .withIndex("by_userId_type", (q) => 
+          q.eq("userId", args.userId).eq("type", args.type!)
+        )
+        .order("desc")
+        .collect();
     } else {
-      query = query.withIndex("by_userId", (q) => q.eq("userId", args.userId));
+      memories = await ctx.db
+        .query("aiMemories")
+        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+        .order("desc")
+        .collect();
     }
-
-    let memories = await query.order("desc").collect();
 
     // Filter out archived unless requested
     if (!args.includeArchived) {
@@ -305,17 +310,18 @@ export const clearMemories = mutation({
     deleted: v.number(),
   }),
   handler: async (ctx, args) => {
-    let query = ctx.db.query("aiMemories");
-    
-    if (args.type) {
-      query = query.withIndex("by_userId_type", (q) => 
-        q.eq("userId", args.userId).eq("type", args.type!)
-      );
-    } else {
-      query = query.withIndex("by_userId", (q) => q.eq("userId", args.userId));
-    }
-
-    const memories = await query.collect();
+    // Use separate query paths to avoid TypeScript issues with query builder reassignment
+    const memories = args.type 
+      ? await ctx.db
+          .query("aiMemories")
+          .withIndex("by_userId_type", (q) => 
+            q.eq("userId", args.userId).eq("type", args.type!)
+          )
+          .collect()
+      : await ctx.db
+          .query("aiMemories")
+          .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+          .collect();
     
     for (const memory of memories) {
       await ctx.db.delete(memory._id);

@@ -18,21 +18,36 @@ export const getAllIllustrationsWithEmbeddings = internalQuery({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    let q = ctx.db.query("scriptIllustrations");
-
-    // Apply filters - need to use filter instead of chained withIndex
-    // because we can only use one index at a time
+    const limit = args.limit ?? 100;
+    
+    // Use separate query paths for each filter type
+    // because Convex query builder type changes after withIndex
+    let illustrations;
+    
     if (args.userId) {
-      q = q.withIndex("by_userId", (qb) => qb.eq("userId", args.userId));
+      illustrations = await ctx.db
+        .query("scriptIllustrations")
+        .withIndex("by_userId", (qb) => qb.eq("userId", args.userId))
+        .filter((qf) => qf.neq(qf.field("embedding"), undefined))
+        .take(limit);
     } else if (args.scriptId) {
-      q = q.withIndex("by_scriptId", (qb) => qb.eq("scriptId", args.scriptId));
+      illustrations = await ctx.db
+        .query("scriptIllustrations")
+        .withIndex("by_scriptId", (qb) => qb.eq("scriptId", args.scriptId))
+        .filter((qf) => qf.neq(qf.field("embedding"), undefined))
+        .take(limit);
     } else if (args.sourceType) {
-      q = q.withIndex("by_sourceType", (qb) => qb.eq("sourceType", args.sourceType));
+      illustrations = await ctx.db
+        .query("scriptIllustrations")
+        .withIndex("by_sourceType", (qb) => qb.eq("sourceType", args.sourceType))
+        .filter((qf) => qf.neq(qf.field("embedding"), undefined))
+        .take(limit);
+    } else {
+      illustrations = await ctx.db
+        .query("scriptIllustrations")
+        .filter((qf) => qf.neq(qf.field("embedding"), undefined))
+        .take(limit);
     }
-
-    const illustrations = await q
-      .filter((qf) => qf.neq(qf.field("embedding"), undefined))
-      .take(args.limit ?? 100);
 
     return illustrations;
   },

@@ -72,9 +72,10 @@ export const saveAssistantMessage = internalMutation({
     // Update conversation metadata
     const conversation = await ctx.db.get(conversationId);
     if (conversation) {
+      const currentCount = (conversation as any).messageCount ?? 0;
       await ctx.db.patch(conversationId, {
         lastMessageAt: now,
-        messageCount: conversation.messageCount + 1,
+        messageCount: currentCount + 1,
         updatedAt: now,
       });
     }

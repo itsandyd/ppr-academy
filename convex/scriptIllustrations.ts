@@ -5,7 +5,7 @@ import { action, internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { api, internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
-import * as fal from "@fal-ai/client";
+import { createFalClient } from "@fal-ai/client";
 import OpenAI from "openai";
 
 // ============================================================================
@@ -46,12 +46,11 @@ export const generateScriptIllustrations = action({
     console.log(`🎨 Starting script illustration generation for user ${args.userId}`);
     
     try {
-      // Configure FAL client
+      // Check FAL API key is configured (it's read from FAL_KEY env var automatically)
       const falApiKey = process.env.FAL_KEY;
       if (!falApiKey) {
         throw new Error("FAL_KEY not configured in environment");
       }
-      fal.config({ credentials: falApiKey });
 
       // Split script into sentences
       const sentences = splitIntoSentences(args.scriptText, args.skipEmptySentences ?? true);
@@ -310,14 +309,16 @@ async function generateImageWithFAL(prompt: string, model: string): Promise<{ ur
   console.log(`   🎨 Calling FAL API with model: ${model}`);
   
   try {
-    const result = await fal.subscribe(model, {
+    // Create FAL client - it reads FAL_KEY from environment automatically
+    const falClient = createFalClient();
+    
+    const result = await falClient.run(model, {
       input: {
         prompt,
         image_size: "landscape_16_9", // Good for course materials
         num_inference_steps: 4, // Fast generation (schnell is optimized for this)
         num_images: 1,
       },
-      logs: false,
     });
 
     const imageData = result.data as any;
@@ -365,7 +366,7 @@ async function uploadImageToConvex(ctx: any, imageUrl: string): Promise<Id<"_sto
     throw new Error("Failed to upload to Convex storage");
   }
 
-  const { storageId } = await uploadResult.json();
+  const { storageId } = await uploadResult.json() as { storageId: Id<"_storage"> };
   return storageId;
 }
 
