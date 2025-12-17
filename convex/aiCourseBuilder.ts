@@ -255,6 +255,11 @@ REQUIREMENTS:
 - Module and lesson titles should be specific and descriptive
 - Chapter content should be 2-3 sentences describing what will be taught
 
+IMPORTANT TITLE FORMATTING:
+- Do NOT include "Module #:" prefixes in module titles (e.g., use "Kick Anatomy" not "Module 1: Kick Anatomy")
+- Do NOT include "Lesson #:" prefixes in lesson titles (e.g., use "Understanding Phase" not "Lesson 1: Understanding Phase")
+- Titles should be clean, descriptive names without numbering prefixes
+
 You MUST respond with valid JSON only. No other text.`;
 
   const userPrompt = `Create a course outline for: "${params.topic}"
@@ -796,3 +801,375 @@ export const createCourseFromOutline = action({
 // - expandChapterContent calls api.masterAI.index.askMasterAI for chapter content
 // This ensures the same quality, models, and pipeline stages as the main AI chat
 // =============================================================================
+
+// =============================================================================
+// EXPAND EXISTING COURSE - Generate content for chapters in an existing course
+// =============================================================================
+
+/**
+ * Get course structure for expansion
+ */
+export const getCourseStructureForExpansion = action({
+  args: {
+    courseId: v.id("courses"),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    course: v.optional(v.object({
+      _id: v.id("courses"),
+      title: v.string(),
+      description: v.optional(v.string()),
+      skillLevel: v.optional(v.string()),
+    })),
+    modules: v.optional(v.array(v.object({
+      _id: v.id("courseModules"),
+      title: v.string(),
+      description: v.optional(v.string()),
+      position: v.number(),
+      lessons: v.array(v.object({
+        _id: v.id("courseLessons"),
+        title: v.string(),
+        description: v.optional(v.string()),
+        position: v.number(),
+        chapters: v.array(v.object({
+          _id: v.id("courseChapters"),
+          title: v.string(),
+          description: v.optional(v.string()),
+          position: v.number(),
+          hasContent: v.boolean(),
+          wordCount: v.number(),
+        })),
+      })),
+    }))),
+    totalChapters: v.optional(v.number()),
+    chaptersWithContent: v.optional(v.number()),
+    error: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    try {
+      // Get course
+      const course = await (ctx as any).runQuery(
+        internal.courses.getCourseById,
+        { courseId: args.courseId }
+      ) as { _id: Id<"courses">; title: string; description?: string; skillLevel?: string } | null;
+      
+      if (!course) {
+        return { success: false, error: "Course not found" };
+      }
+      
+      // Get modules
+      const modules = await (ctx as any).runQuery(
+        internal.courses.getModulesByCourseInternal,
+        { courseId: args.courseId }
+      ) as Array<{ _id: Id<"courseModules">; title: string; description?: string; position: number }>;
+      
+      let totalChapters = 0;
+      let chaptersWithContent = 0;
+      
+      // Build full structure
+      const fullModules = await Promise.all(modules.map(async (mod) => {
+        // Get lessons for module
+        const lessons = await (ctx as any).runQuery(
+          internal.courses.getLessonsByModuleInternal,
+          { moduleId: mod._id }
+        ) as Array<{ _id: Id<"courseLessons">; title: string; description?: string; position: number }>;
+        
+        const lessonsWithChapters = await Promise.all(lessons.map(async (lesson) => {
+          // Get chapters for lesson
+          const chapters = await (ctx as any).runQuery(
+            internal.courses.getChaptersByLessonInternal,
+            { lessonId: lesson._id }
+          ) as Array<{ _id: Id<"courseChapters">; title: string; description?: string; position: number }>;
+          
+          const chaptersWithStatus = chapters.map(ch => {
+            const wordCount = ch.description?.split(/\s+/).length || 0;
+            const hasContent = wordCount > 50; // Consider content "real" if > 50 words
+            
+            totalChapters++;
+            if (hasContent) chaptersWithContent++;
+            
+            return {
+              _id: ch._id,
+              title: ch.title,
+              description: ch.description,
+              position: ch.position,
+              hasContent,
+              wordCount,
+            };
+          });
+          
+          return {
+            _id: lesson._id,
+            title: lesson.title,
+            description: lesson.description,
+            position: lesson.position,
+            chapters: chaptersWithStatus,
+          };
+        }));
+        
+        return {
+          _id: mod._id,
+          title: mod.title,
+          description: mod.description,
+          position: mod.position,
+          lessons: lessonsWithChapters,
+        };
+      }));
+      
+      return {
+        success: true,
+        course: {
+          _id: course._id,
+          title: course.title,
+          description: course.description,
+          skillLevel: course.skillLevel,
+        },
+        modules: fullModules,
+        totalChapters,
+        chaptersWithContent,
+      };
+    } catch (error) {
+      console.error("Error getting course structure:", error);
+      return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+    }
+  },
+});
+
+/**
+ * Expand a single chapter in an existing course using the full masterAI pipeline
+ */
+export const expandExistingChapter = action({
+  args: {
+    chapterId: v.id("courseChapters"),
+    courseTitle: v.string(),
+    moduleTitle: v.string(),
+    lessonTitle: v.string(),
+    skillLevel: v.optional(v.string()),
+    settings: v.optional(chatSettingsValidator),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    content: v.optional(v.string()),
+    wordCount: v.optional(v.number()),
+    error: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    const settings: ChatSettings = args.settings || DEFAULT_CHAT_SETTINGS;
+    
+    try {
+      // Get chapter details
+      const chapter = await (ctx as any).runQuery(
+        internal.courses.getChapterByIdInternal,
+        { chapterId: args.chapterId }
+      ) as { _id: Id<"courseChapters">; title: string; description?: string } | null;
+      
+      if (!chapter) {
+        return { success: false, error: "Chapter not found" };
+      }
+      
+      const skillLevel = args.skillLevel || "intermediate";
+      
+      // Build the prompt for the full pipeline
+      const chapterPrompt = `Write comprehensive, engaging educational content for a course chapter.
+
+COURSE: ${args.courseTitle}
+MODULE: ${args.moduleTitle}
+LESSON: ${args.lessonTitle}
+CHAPTER: ${chapter.title}
+SKILL LEVEL: ${skillLevel}
+
+${chapter.description ? `Current outline/notes: ${chapter.description}` : ""}
+
+Create detailed chapter content that:
+1. Explains concepts clearly for ${skillLevel} level students
+2. Provides practical examples and applications
+3. Uses a conversational, expert tone (like an experienced instructor)
+4. Includes specific techniques, tips, and best practices
+5. Is approximately 800-1200 words in length
+6. Flows naturally without excessive bullet points or headers
+
+Write the content directly - no introductions like "In this chapter..." or conclusions like "In summary...".`;
+
+      // Call the FULL masterAI pipeline
+      const result = await (ctx as any).runAction(
+        api.masterAI.index.askMasterAI,
+        {
+          question: chapterPrompt,
+          settings: {
+            ...settings,
+            responseStyle: "conversational" as const,
+          },
+          userId: "system-course-builder",
+          conversationId: `expand-chapter-${args.chapterId}`,
+        }
+      ) as { answer: string };
+      
+      if (!result.answer) {
+        throw new Error("No content generated from AI pipeline");
+      }
+      
+      // Update the chapter with the new content
+      await (ctx as any).runMutation(
+        internal.courses.updateChapterContentInternal,
+        {
+          chapterId: args.chapterId,
+          description: result.answer,
+        }
+      );
+      
+      const wordCount = result.answer.split(/\s+/).length;
+      console.log(`✓ Expanded chapter "${chapter.title}" (${wordCount} words)`);
+      
+      return {
+        success: true,
+        content: result.answer,
+        wordCount,
+      };
+      
+    } catch (error) {
+      console.error("Error expanding chapter:", error);
+      return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+    }
+  },
+});
+
+/**
+ * Expand all chapters in an existing course that don't have content
+ */
+export const expandExistingCourseChapters = action({
+  args: {
+    courseId: v.id("courses"),
+    onlyEmpty: v.optional(v.boolean()), // If true, only expand chapters with < 50 words
+    parallelBatchSize: v.optional(v.number()),
+    settings: v.optional(chatSettingsValidator),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    expandedCount: v.number(),
+    skippedCount: v.number(),
+    failedCount: v.number(),
+    error: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    const settings: ChatSettings = args.settings || DEFAULT_CHAT_SETTINGS;
+    const maxBatchSize = args.parallelBatchSize || 2;
+    const onlyEmpty = args.onlyEmpty !== false; // Default to true
+    
+    try {
+      // Get course structure
+      const structure = await (ctx as any).runAction(
+        api.aiCourseBuilder.getCourseStructureForExpansion,
+        { courseId: args.courseId }
+      ) as {
+        success: boolean;
+        course?: { _id: Id<"courses">; title: string; description?: string; skillLevel?: string };
+        modules?: Array<{
+          _id: Id<"courseModules">;
+          title: string;
+          lessons: Array<{
+            _id: Id<"courseLessons">;
+            title: string;
+            chapters: Array<{
+              _id: Id<"courseChapters">;
+              title: string;
+              hasContent: boolean;
+            }>;
+          }>;
+        }>;
+        totalChapters?: number;
+        chaptersWithContent?: number;
+        error?: string;
+      };
+      
+      if (!structure.success || !structure.course || !structure.modules) {
+        return { 
+          success: false, 
+          expandedCount: 0, 
+          skippedCount: 0, 
+          failedCount: 0, 
+          error: structure.error || "Failed to get course structure" 
+        };
+      }
+      
+      console.log(`\n🚀 Starting chapter expansion for: ${structure.course.title}`);
+      console.log(`   Total chapters: ${structure.totalChapters}, with content: ${structure.chaptersWithContent}`);
+      
+      let expandedCount = 0;
+      let skippedCount = 0;
+      let failedCount = 0;
+      
+      // Process lesson by lesson
+      for (const mod of structure.modules) {
+        for (const lesson of mod.lessons) {
+          // Get chapters needing expansion
+          const chaptersToExpand = lesson.chapters.filter(ch => {
+            if (onlyEmpty && ch.hasContent) {
+              return false;
+            }
+            return true;
+          });
+          
+          if (chaptersToExpand.length === 0) {
+            skippedCount += lesson.chapters.length;
+            continue;
+          }
+          
+          console.log(`\n📖 Processing: ${mod.title} → ${lesson.title} (${chaptersToExpand.length} chapters)`);
+          
+          // Process in batches
+          for (let i = 0; i < chaptersToExpand.length; i += maxBatchSize) {
+            const batch = chaptersToExpand.slice(i, i + maxBatchSize);
+            
+            const batchPromises = batch.map(ch => 
+              (ctx as any).runAction(
+                api.aiCourseBuilder.expandExistingChapter,
+                {
+                  chapterId: ch._id,
+                  courseTitle: structure.course!.title,
+                  moduleTitle: mod.title,
+                  lessonTitle: lesson.title,
+                  skillLevel: structure.course!.skillLevel,
+                  settings,
+                }
+              ) as Promise<{ success: boolean }>
+            );
+            
+            const results = await Promise.allSettled(batchPromises);
+            
+            for (let j = 0; j < results.length; j++) {
+              const result = results[j];
+              if (result.status === "fulfilled" && result.value.success) {
+                expandedCount++;
+              } else {
+                failedCount++;
+                console.error(`   ✗ Failed: ${batch[j].title}`);
+              }
+            }
+          }
+          
+          // Small delay between lessons
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
+      }
+      
+      console.log(`\n✅ Expansion complete: ${expandedCount} expanded, ${skippedCount} skipped, ${failedCount} failed`);
+      
+      return {
+        success: failedCount === 0,
+        expandedCount,
+        skippedCount,
+        failedCount,
+      };
+      
+    } catch (error) {
+      console.error("Error expanding course chapters:", error);
+      return { 
+        success: false, 
+        expandedCount: 0, 
+        skippedCount: 0, 
+        failedCount: 0, 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      };
+    }
+  },
+});

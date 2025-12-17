@@ -27,6 +27,12 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
   Shield,
   Loader2,
   ChevronDown,
@@ -52,6 +58,7 @@ import {
   Play,
   CheckCircle2,
   XCircle,
+  GraduationCap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -95,6 +102,39 @@ interface GenerationStep {
   label: string;
   status: "pending" | "running" | "completed" | "failed";
   detail?: string;
+}
+
+interface ExistingCourseInfo {
+  _id: Id<"courses">;
+  title: string;
+  description?: string;
+  skillLevel?: string;
+  isPublished?: boolean;
+}
+
+interface ExistingCourseStructure {
+  course: {
+    _id: Id<"courses">;
+    title: string;
+    description?: string;
+    skillLevel?: string;
+  };
+  modules: Array<{
+    _id: Id<"courseModules">;
+    title: string;
+    lessons: Array<{
+      _id: Id<"courseLessons">;
+      title: string;
+      chapters: Array<{
+        _id: Id<"courseChapters">;
+        title: string;
+        hasContent: boolean;
+        wordCount: number;
+      }>;
+    }>;
+  }>;
+  totalChapters: number;
+  chaptersWithContent: number;
 }
 
 interface PipelineStatus {
@@ -240,6 +280,16 @@ export default function AdminCourseBuilderPage() {
     processingTimeMs?: number;
   } | null>(null);
 
+  // Tab state
+  const [activeTab, setActiveTab] = useState<"create" | "existing">("create");
+  
+  // Existing course expansion state
+  const [selectedExistingCourseId, setSelectedExistingCourseId] = useState<string>("");
+  const [existingCourseStructure, setExistingCourseStructure] = useState<ExistingCourseStructure | null>(null);
+  const [isLoadingStructure, setIsLoadingStructure] = useState(false);
+  const [isExpandingExisting, setIsExpandingExisting] = useState(false);
+  const [expandExistingSteps, setExpandExistingSteps] = useState<GenerationStep[]>([]);
+
   // Queries
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const adminCheck = useQuery(
@@ -257,6 +307,16 @@ export default function AdminCourseBuilderPage() {
   const generateOutlineAction = useAction(api.aiCourseBuilder.generateOutline);
   const expandAllChaptersAction = useAction(api.aiCourseBuilder.expandAllChapters);
   const createCourseFromOutlineAction = useAction(api.aiCourseBuilder.createCourseFromOutline);
+  
+  // Existing course expansion actions
+  const getCourseStructureAction = useAction(api.aiCourseBuilder.getCourseStructureForExpansion);
+  const expandExistingCourseAction = useAction(api.aiCourseBuilder.expandExistingCourseChapters);
+  
+  // Get courses for the selected store
+  const storeCourses = useQuery(
+    api.courses.getCoursesByStore,
+    selectedStoreId ? { storeId: selectedStoreId } : "skip"
+  ) as ExistingCourseInfo[] | undefined;
 
   // Set default store when stores load
   useEffect(() => {
@@ -942,6 +1002,118 @@ export default function AdminCourseBuilderPage() {
   };
 
   // =============================================================================
+  // EXISTING COURSE EXPANSION
+  // =============================================================================
+  
+  // Load course structure when a course is selected
+  const handleLoadCourseStructure = async () => {
+    if (!selectedExistingCourseId) {
+      toast.error("Please select a course first");
+      return;
+    }
+    
+    setIsLoadingStructure(true);
+    setExistingCourseStructure(null);
+    
+    try {
+      const result = await getCourseStructureAction({
+        courseId: selectedExistingCourseId as Id<"courses">,
+      });
+      
+      if (result.success && result.course && result.modules) {
+        setExistingCourseStructure({
+          course: result.course,
+          modules: result.modules,
+          totalChapters: result.totalChapters || 0,
+          chaptersWithContent: result.chaptersWithContent || 0,
+        });
+        toast.success(`Loaded structure: ${result.totalChapters} chapters (${result.chaptersWithContent} with content)`);
+      } else {
+        throw new Error(result.error || "Failed to load course structure");
+      }
+    } catch (error) {
+      console.error("Error loading course structure:", error);
+      toast.error(`Failed to load course: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setIsLoadingStructure(false);
+    }
+  };
+  
+  // Expand all chapters in an existing course
+  const handleExpandExistingCourse = async (onlyEmpty: boolean = true) => {
+    if (!existingCourseStructure) {
+      toast.error("Please load a course structure first");
+      return;
+    }
+    
+    setIsExpandingExisting(true);
+    
+    const chaptersToExpand = onlyEmpty 
+      ? existingCourseStructure.totalChapters - existingCourseStructure.chaptersWithContent
+      : existingCourseStructure.totalChapters;
+    
+    setExpandExistingSteps([
+      { id: "prepare", label: "📋 Preparing expansion", status: "running" },
+      { id: "expand", label: `📖 Expanding ${chaptersToExpand} chapters`, status: "pending" },
+      { id: "complete", label: "✅ Finishing up", status: "pending" },
+    ]);
+    
+    try {
+      setExpandExistingSteps(prev => prev.map(s => 
+        s.id === "prepare" ? { ...s, status: "completed" as const } :
+        s.id === "expand" ? { ...s, status: "running" as const, detail: `Using ${settings.preset} preset...` } : s
+      ));
+      
+      const result = await expandExistingCourseAction({
+        courseId: existingCourseStructure.course._id,
+        onlyEmpty,
+        parallelBatchSize: settings.parallelBatchSize,
+        settings: {
+          preset: settings.preset,
+          maxFacets: settings.maxFacets,
+          chunksPerFacet: settings.chunksPerFacet,
+          similarityThreshold: settings.similarityThreshold,
+          enableCritic: settings.enableCritic,
+          enableCreativeMode: settings.enableCreativeMode,
+          enableWebResearch: settings.enableWebResearch,
+          enableFactVerification: settings.enableFactVerification,
+          autoSaveWebResearch: settings.autoSaveWebResearch,
+          webSearchMaxResults: settings.webSearchMaxResults,
+          responseStyle: settings.responseStyle,
+        },
+      });
+      
+      setExpandExistingSteps(prev => prev.map(s => 
+        s.id === "expand" ? { 
+          ...s, 
+          status: result.success ? "completed" as const : "failed" as const,
+          detail: `${result.expandedCount} expanded, ${result.skippedCount} skipped, ${result.failedCount} failed`
+        } :
+        s.id === "complete" ? { ...s, status: result.success ? "completed" as const : "failed" as const } : s
+      ));
+      
+      if (result.success) {
+        toast.success(`Expanded ${result.expandedCount} chapters!`, {
+          description: result.skippedCount > 0 ? `${result.skippedCount} already had content` : undefined,
+        });
+        // Reload structure to show updated content
+        await handleLoadCourseStructure();
+      } else {
+        throw new Error(result.error || `${result.failedCount} chapters failed`);
+      }
+    } catch (error) {
+      console.error("Expansion error:", error);
+      toast.error(`Expansion failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+      
+      setExpandExistingSteps(prev => prev.map(s => 
+        s.status === "running" ? { ...s, status: "failed" as const } : s
+      ));
+    } finally {
+      setIsExpandingExisting(false);
+    }
+  };
+
+  // =============================================================================
   // HELPERS
   // =============================================================================
 
@@ -1118,6 +1290,20 @@ export default function AdminCourseBuilderPage() {
         </div>
       </div>
 
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "create" | "existing")} className="space-y-6">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="create" className="flex items-center gap-2">
+            <Wand2 className="w-4 h-4" />
+            Create New Course
+          </TabsTrigger>
+          <TabsTrigger value="existing" className="flex items-center gap-2">
+            <GraduationCap className="w-4 h-4" />
+            Expand Existing
+          </TabsTrigger>
+        </TabsList>
+
+        {/* CREATE NEW COURSE TAB */}
+        <TabsContent value="create">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column - Input & Settings */}
         <div className="lg:col-span-1 space-y-4">
@@ -1814,6 +2000,390 @@ export default function AdminCourseBuilderPage() {
           )}
         </div>
       </div>
+        </TabsContent>
+
+        {/* EXPAND EXISTING COURSE TAB */}
+        <TabsContent value="existing">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Left Column - Course Selection */}
+            <div className="lg:col-span-1 space-y-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <GraduationCap className="w-5 h-5" />
+                    Select Course
+                  </CardTitle>
+                  <CardDescription>
+                    Choose an existing course to expand its chapters
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {/* Store Selection */}
+                  <div className="space-y-2">
+                    <Label className="text-sm">Store</Label>
+                    <Select 
+                      value={selectedStoreId} 
+                      onValueChange={(v) => {
+                        setSelectedStoreId(v);
+                        setSelectedExistingCourseId("");
+                        setExistingCourseStructure(null);
+                      }}
+                      disabled={isExpandingExisting}
+                    >
+                      <SelectTrigger className="bg-background">
+                        <SelectValue placeholder="Select a store" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white dark:bg-black">
+                        {stores?.map(store => (
+                          <SelectItem key={store._id} value={store._id}>
+                            <div className="flex items-center gap-2">
+                              <Store className="w-4 h-4" />
+                              {store.name}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Course Selection */}
+                  <div className="space-y-2">
+                    <Label className="text-sm">Course</Label>
+                    <Select 
+                      value={selectedExistingCourseId} 
+                      onValueChange={(v) => {
+                        setSelectedExistingCourseId(v);
+                        setExistingCourseStructure(null);
+                      }}
+                      disabled={isExpandingExisting || !selectedStoreId}
+                    >
+                      <SelectTrigger className="bg-background">
+                        <SelectValue placeholder={selectedStoreId ? "Select a course" : "Select a store first"} />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white dark:bg-black max-h-[300px]">
+                        {storeCourses?.map(course => (
+                          <SelectItem key={course._id} value={course._id}>
+                            <div className="flex items-center gap-2">
+                              <BookOpen className="w-4 h-4" />
+                              <span className="truncate max-w-[200px]">{course.title}</span>
+                              {course.isPublished && (
+                                <Badge variant="outline" className="text-[10px]">Published</Badge>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                        {(!storeCourses || storeCourses.length === 0) && selectedStoreId && (
+                          <div className="p-2 text-sm text-muted-foreground text-center">
+                            No courses found in this store
+                          </div>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Load Structure Button */}
+                  <Button
+                    onClick={handleLoadCourseStructure}
+                    disabled={!selectedExistingCourseId || isLoadingStructure || isExpandingExisting}
+                    className="w-full"
+                    variant="outline"
+                  >
+                    {isLoadingStructure ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Loading Structure...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Load Course Structure
+                      </>
+                    )}
+                  </Button>
+
+                  {/* Course Stats */}
+                  {existingCourseStructure && (
+                    <div className="p-3 rounded-lg bg-muted/50 space-y-2">
+                      <h4 className="font-medium text-sm">{existingCourseStructure.course.title}</h4>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div className="flex items-center gap-1">
+                          <Layers className="w-3 h-3 text-muted-foreground" />
+                          {existingCourseStructure.modules.length} modules
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <BookOpen className="w-3 h-3 text-muted-foreground" />
+                          {existingCourseStructure.modules.reduce((acc, m) => acc + m.lessons.length, 0)} lessons
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <FileText className="w-3 h-3 text-muted-foreground" />
+                          {existingCourseStructure.totalChapters} chapters
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Check className="w-3 h-3 text-green-500" />
+                          {existingCourseStructure.chaptersWithContent} with content
+                        </div>
+                      </div>
+                      
+                      {existingCourseStructure.totalChapters - existingCourseStructure.chaptersWithContent > 0 ? (
+                        <Badge variant="secondary" className="w-full justify-center py-1">
+                          {existingCourseStructure.totalChapters - existingCourseStructure.chaptersWithContent} chapters need content
+                        </Badge>
+                      ) : (
+                        <Badge variant="default" className="w-full justify-center py-1 bg-green-500">
+                          All chapters have content!
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Expand Buttons */}
+                  {existingCourseStructure && (
+                    <div className="space-y-2">
+                      <Button
+                        onClick={() => handleExpandExistingCourse(true)}
+                        disabled={isExpandingExisting || existingCourseStructure.chaptersWithContent === existingCourseStructure.totalChapters}
+                        className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
+                      >
+                        {isExpandingExisting ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Expanding Chapters...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-4 h-4 mr-2" />
+                            Expand Empty Chapters ({existingCourseStructure.totalChapters - existingCourseStructure.chaptersWithContent})
+                          </>
+                        )}
+                      </Button>
+                      
+                      <Button
+                        onClick={() => handleExpandExistingCourse(false)}
+                        disabled={isExpandingExisting}
+                        variant="outline"
+                        className="w-full"
+                      >
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Regenerate All Chapters ({existingCourseStructure.totalChapters})
+                      </Button>
+                      
+                      <p className="text-xs text-center text-muted-foreground">
+                        Uses your AI settings ({settings.preset} preset)
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* AI Settings (same as create tab) */}
+              <Card>
+                <Collapsible open={showSettings} onOpenChange={setShowSettings}>
+                  <CollapsibleTrigger asChild>
+                    <CardHeader className="pb-3 cursor-pointer hover:bg-muted/50 rounded-t-lg transition-colors">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Settings2 className="w-4 h-4" />
+                          <CardTitle className="text-lg">AI Settings</CardTitle>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs">
+                            {PRESET_DESCRIPTIONS[settings.preset]?.label}
+                          </Badge>
+                          {showSettings ? (
+                            <ChevronDown className="w-4 h-4" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4" />
+                          )}
+                        </div>
+                      </div>
+                    </CardHeader>
+                  </CollapsibleTrigger>
+                  
+                  <CollapsibleContent>
+                    <CardContent className="space-y-4 pt-0">
+                      {/* Preset Selection */}
+                      <div className="space-y-2">
+                        <Label className="text-sm">Model Preset</Label>
+                        <Select 
+                          value={settings.preset} 
+                          onValueChange={(v) => setSettings({...settings, preset: v as AISettings["preset"]})}
+                        >
+                          <SelectTrigger className="bg-background">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white dark:bg-black">
+                            {Object.entries(PRESET_DESCRIPTIONS).map(([key, preset]) => (
+                              <SelectItem key={key} value={key}>
+                                <div className="flex items-center gap-2">
+                                  {preset.icon}
+                                  <span>{preset.label}</span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">
+                          {PRESET_DESCRIPTIONS[settings.preset]?.description}
+                        </p>
+                      </div>
+
+                      {/* Parallel Batch Size */}
+                      <div className="space-y-2">
+                        <Label className="text-sm flex items-center justify-between">
+                          Parallel Chapters
+                          <span className="text-muted-foreground">{settings.parallelBatchSize}</span>
+                        </Label>
+                        <Slider
+                          value={[settings.parallelBatchSize]}
+                          onValueChange={([v]) => setSettings({...settings, parallelBatchSize: v})}
+                          min={1}
+                          max={5}
+                          step={1}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          How many chapters to expand at once (lower = more stable)
+                        </p>
+                      </div>
+                    </CardContent>
+                  </CollapsibleContent>
+                </Collapsible>
+              </Card>
+            </div>
+
+            {/* Right Column - Course Structure Preview */}
+            <div className="lg:col-span-2">
+              {/* Progress Steps */}
+              {expandExistingSteps.length > 0 && (
+                <Card className="mb-4">
+                  <CardContent className="pt-4">
+                    <div className="space-y-2">
+                      {expandExistingSteps.map((step) => (
+                        <div
+                          key={step.id}
+                          className={cn(
+                            "flex items-center gap-3 p-2 rounded-lg transition-colors",
+                            step.status === "running" && "bg-blue-50 dark:bg-blue-950/30",
+                            step.status === "completed" && "bg-green-50 dark:bg-green-950/30",
+                            step.status === "failed" && "bg-red-50 dark:bg-red-950/30"
+                          )}
+                        >
+                          {step.status === "pending" && <div className="w-4 h-4 rounded-full border-2 border-muted" />}
+                          {step.status === "running" && <Loader2 className="w-4 h-4 animate-spin text-blue-500" />}
+                          {step.status === "completed" && <CheckCircle2 className="w-4 h-4 text-green-500" />}
+                          {step.status === "failed" && <XCircle className="w-4 h-4 text-red-500" />}
+                          <span className={cn(
+                            "text-sm flex-1",
+                            step.status === "pending" && "text-muted-foreground"
+                          )}>
+                            {step.label}
+                          </span>
+                          {step.detail && (
+                            <span className="text-xs text-muted-foreground">{step.detail}</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Course Structure Display */}
+              {existingCourseStructure ? (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg">{existingCourseStructure.course.title}</CardTitle>
+                      <Badge variant="outline">
+                        {existingCourseStructure.chaptersWithContent}/{existingCourseStructure.totalChapters} chapters
+                      </Badge>
+                    </div>
+                    {existingCourseStructure.course.description && (
+                      <CardDescription>{existingCourseStructure.course.description}</CardDescription>
+                    )}
+                  </CardHeader>
+                  <ScrollArea className="max-h-[600px]">
+                    <CardContent className="space-y-2">
+                      {existingCourseStructure.modules.map((mod, mi) => (
+                        <Collapsible
+                          key={mi}
+                          open={expandedModules.has(mi)}
+                          onOpenChange={() => toggleModule(mi)}
+                        >
+                          <CollapsibleTrigger asChild>
+                            <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 cursor-pointer hover:bg-muted transition-colors">
+                              {expandedModules.has(mi) ? (
+                                <ChevronDown className="w-4 h-4" />
+                              ) : (
+                                <ChevronRight className="w-4 h-4" />
+                              )}
+                              <Layers className="w-4 h-4 text-violet-500" />
+                              <span className="font-medium flex-1">{mod.title}</span>
+                              <Badge variant="outline" className="text-xs">
+                                {mod.lessons.length} lessons
+                              </Badge>
+                            </div>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="pl-6 mt-2 space-y-2">
+                            {mod.lessons.map((lesson, li) => (
+                              <div key={li} className="space-y-1">
+                                <div className="flex items-center gap-2 p-2 rounded bg-background border">
+                                  <BookOpen className="w-3 h-3 text-muted-foreground" />
+                                  <span className="text-sm flex-1">{lesson.title}</span>
+                                  <Badge variant="outline" className="text-xs">
+                                    {lesson.chapters.length} chapters
+                                  </Badge>
+                                </div>
+                                <div className="pl-6 space-y-1">
+                                  {lesson.chapters.map((ch, ci) => (
+                                    <div
+                                      key={ci}
+                                      className={cn(
+                                        "flex items-center gap-2 p-2 rounded border text-xs",
+                                        ch.hasContent 
+                                          ? "bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900"
+                                          : "bg-background"
+                                      )}
+                                    >
+                                      <FileText className="w-3 h-3 text-muted-foreground" />
+                                      <span className="flex-1">{ch.title}</span>
+                                      {ch.hasContent ? (
+                                        <Badge variant="default" className="text-[10px] px-1.5 bg-green-500">
+                                          <Check className="w-2 h-2 mr-0.5" />
+                                          {ch.wordCount} words
+                                        </Badge>
+                                      ) : (
+                                        <Badge variant="secondary" className="text-[10px] px-1.5">
+                                          No content
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </CollapsibleContent>
+                        </Collapsible>
+                      ))}
+                    </CardContent>
+                  </ScrollArea>
+                </Card>
+              ) : (
+                <Card className="h-full flex items-center justify-center min-h-[400px]">
+                  <CardContent className="text-center">
+                    <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+                      <GraduationCap className="w-10 h-10 text-muted-foreground" />
+                    </div>
+                    <h3 className="font-semibold text-lg mb-2">Select a Course</h3>
+                    <p className="text-muted-foreground max-w-sm">
+                      Choose a course from the dropdown and click &ldquo;Load Course Structure&rdquo; to see its chapters and expand their content.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

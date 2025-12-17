@@ -1,8 +1,11 @@
 import { v } from "convex/values";
 import { mutation, query, action, internalMutation, internalQuery } from "./_generated/server";
-import { internal } from "./_generated/api";
 import { Doc, Id } from "./_generated/dataModel";
 import { QueryCtx, MutationCtx } from "./_generated/server";
+
+// Dynamic import to avoid TypeScript circular type inference issues
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { internal } = require("./_generated/api");
 
 // Helper function to generate slug
 function generateSlug(title: string): string {
@@ -1089,8 +1092,8 @@ export const syncCourseToStripe = action({
   }),
   handler: async (ctx, args) => {
     try {
-      // Get course data
-      const course = await ctx.runQuery(internal.courses.getCourseById, {
+      // Get course data - cast to any to avoid deep type inference issues
+      const course = await (ctx as any).runQuery(internal.courses.getCourseById, {
         courseId: args.courseId,
       });
 
@@ -1475,5 +1478,118 @@ export const getAllCourses = query({
   returns: v.array(v.any()),
   handler: async (ctx) => {
     return await ctx.db.query("courses").collect();
+  },
+});
+
+// =============================================================================
+// INTERNAL QUERIES FOR COURSE STRUCTURE (used by AI Course Builder)
+// =============================================================================
+
+// Internal query to get modules by course
+export const getModulesByCourseInternal = internalQuery({
+  args: { courseId: v.id("courses") },
+  returns: v.array(v.object({
+    _id: v.id("courseModules"),
+    title: v.string(),
+    description: v.optional(v.string()),
+    position: v.number(),
+  })),
+  handler: async (ctx, args) => {
+    const modules = await ctx.db
+      .query("courseModules")
+      .filter((q) => q.eq(q.field("courseId"), args.courseId))
+      .collect();
+    
+    return modules.map(m => ({
+      _id: m._id,
+      title: m.title,
+      description: m.description,
+      position: m.position,
+    })).sort((a, b) => a.position - b.position);
+  },
+});
+
+// Internal query to get lessons by module
+export const getLessonsByModuleInternal = internalQuery({
+  args: { moduleId: v.id("courseModules") },
+  returns: v.array(v.object({
+    _id: v.id("courseLessons"),
+    title: v.string(),
+    description: v.optional(v.string()),
+    position: v.number(),
+  })),
+  handler: async (ctx, args) => {
+    const lessons = await ctx.db
+      .query("courseLessons")
+      .filter((q) => q.eq(q.field("moduleId"), args.moduleId))
+      .collect();
+    
+    return lessons.map(l => ({
+      _id: l._id,
+      title: l.title,
+      description: l.description,
+      position: l.position,
+    })).sort((a, b) => a.position - b.position);
+  },
+});
+
+// Internal query to get chapters by lesson
+export const getChaptersByLessonInternal = internalQuery({
+  args: { lessonId: v.id("courseLessons") },
+  returns: v.array(v.object({
+    _id: v.id("courseChapters"),
+    title: v.string(),
+    description: v.optional(v.string()),
+    position: v.number(),
+  })),
+  handler: async (ctx, args) => {
+    const chapters = await ctx.db
+      .query("courseChapters")
+      .filter((q) => q.eq(q.field("lessonId"), args.lessonId))
+      .collect();
+    
+    return chapters.map(ch => ({
+      _id: ch._id,
+      title: ch.title,
+      description: ch.description,
+      position: ch.position,
+    })).sort((a, b) => a.position - b.position);
+  },
+});
+
+// Internal query to get a chapter by ID
+export const getChapterByIdInternal = internalQuery({
+  args: { chapterId: v.id("courseChapters") },
+  returns: v.union(v.object({
+    _id: v.id("courseChapters"),
+    title: v.string(),
+    description: v.optional(v.string()),
+    position: v.number(),
+  }), v.null()),
+  handler: async (ctx, args) => {
+    const chapter = await ctx.db.get(args.chapterId);
+    if (!chapter) return null;
+    
+    return {
+      _id: chapter._id,
+      title: chapter.title,
+      description: chapter.description,
+      position: chapter.position,
+    };
+  },
+});
+
+// Internal mutation to update chapter content
+export const updateChapterContentInternal = internalMutation({
+  args: {
+    chapterId: v.id("courseChapters"),
+    description: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.chapterId, {
+      description: args.description,
+    });
+    return null;
   },
 });
