@@ -154,7 +154,7 @@ Create exactly ${targetModules} modules with ${targetLessonsPerModule} lessons e
       
       // Call the FULL masterAI pipeline - SAME as AI chat!
       const pipelineResult = await (ctx as any).runAction(
-        api.masterAI.askMasterAI,
+        api.masterAI.index.askMasterAI,
         {
           question: outlinePrompt,
           settings,
@@ -417,7 +417,7 @@ Focus on practical, actionable knowledge that students can immediately apply.`;
 
       // Call the FULL masterAI pipeline - same as AI chat
       const pipelineResult = await (ctx as any).runAction(
-        api.masterAI.askMasterAI,
+        api.masterAI.index.askMasterAI,
         {
           question: chapterPrompt,
           settings,
@@ -740,7 +740,7 @@ export const createCourseFromOutline = action({
 
 // =============================================================================
 // NOTE: All course generation now uses the FULL masterAI pipeline
-// - generateOutline calls api.masterAI.askMasterAI for outline generation
-// - expandChapterContent calls api.masterAI.askMasterAI for chapter content
+// - generateOutline calls api.masterAI.index.askMasterAI for outline generation
+// - expandChapterContent calls api.masterAI.index.askMasterAI for chapter content
 // This ensures the same quality, models, and pipeline stages as the main AI chat
 // =============================================================================
