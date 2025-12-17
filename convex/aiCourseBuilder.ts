@@ -1,15 +1,14 @@
+"use node";
+
 import { v } from "convex/values";
-import {
-  query,
-  mutation,
-  action,
-  internalQuery,
-  internalMutation,
-  internalAction,
-} from "./_generated/server";
-import { api, internal } from "./_generated/api";
+import { action } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import OpenAI from "openai";
+
+// Type-escape hatch to avoid deep type inference issues with Convex API types
+// Using require to bypass TypeScript's eager type evaluation
+// eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
+const { api, internal } = require("./_generated/api") as { api: any; internal: any };
 
 // =============================================================================
 // TYPES
@@ -31,7 +30,7 @@ interface CourseOutlineLesson {
 
 interface CourseOutlineChapter {
   title: string;
-  content: string; // Brief outline or full content
+  content: string;
   duration: number;
   orderIndex: number;
   hasDetailedContent?: boolean;
@@ -50,221 +49,6 @@ interface CourseOutline {
 }
 
 // =============================================================================
-// QUEUE MANAGEMENT - PUBLIC MUTATIONS
-// =============================================================================
-
-/**
- * Add a course creation request to the queue
- */
-export const addToQueue = mutation({
-  args: {
-    userId: v.string(),
-    storeId: v.string(),
-    prompt: v.string(),
-    skillLevel: v.optional(v.union(
-      v.literal("beginner"),
-      v.literal("intermediate"),
-      v.literal("advanced")
-    )),
-    targetModules: v.optional(v.number()),
-    targetLessonsPerModule: v.optional(v.number()),
-    priority: v.optional(v.number()),
-  },
-  returns: v.id("aiCourseQueue"),
-  handler: async (ctx, args) => {
-    // Extract topic from prompt (basic extraction)
-    const topic = extractTopicFromPrompt(args.prompt);
-    
-    const queueId = await ctx.db.insert("aiCourseQueue", {
-      userId: args.userId,
-      storeId: args.storeId,
-      prompt: args.prompt,
-      topic,
-      skillLevel: args.skillLevel || "intermediate",
-      targetModules: args.targetModules || 4,
-      targetLessonsPerModule: args.targetLessonsPerModule || 3,
-      status: "queued",
-      createdAt: Date.now(),
-      priority: args.priority || 0,
-    });
-    
-    return queueId;
-  },
-});
-
-/**
- * Add multiple course requests to the queue at once
- */
-export const addBatchToQueue = mutation({
-  args: {
-    userId: v.string(),
-    storeId: v.string(),
-    prompts: v.array(v.object({
-      prompt: v.string(),
-      skillLevel: v.optional(v.union(
-        v.literal("beginner"),
-        v.literal("intermediate"),
-        v.literal("advanced")
-      )),
-      targetModules: v.optional(v.number()),
-      targetLessonsPerModule: v.optional(v.number()),
-    })),
-  },
-  returns: v.array(v.id("aiCourseQueue")),
-  handler: async (ctx, args) => {
-    const queueIds: Id<"aiCourseQueue">[] = [];
-    
-    for (let i = 0; i < args.prompts.length; i++) {
-      const item = args.prompts[i];
-      const topic = extractTopicFromPrompt(item.prompt);
-      
-      const queueId = await ctx.db.insert("aiCourseQueue", {
-        userId: args.userId,
-        storeId: args.storeId,
-        prompt: item.prompt,
-        topic,
-        skillLevel: item.skillLevel || "intermediate",
-        targetModules: item.targetModules || 4,
-        targetLessonsPerModule: item.targetLessonsPerModule || 3,
-        status: "queued",
-        createdAt: Date.now(),
-        priority: args.prompts.length - i, // Earlier items get higher priority
-      });
-      
-      queueIds.push(queueId);
-    }
-    
-    return queueIds;
-  },
-});
-
-/**
- * Get all queue items for a user
- */
-export const getQueueItems = query({
-  args: {
-    userId: v.string(),
-    status: v.optional(v.string()),
-    limit: v.optional(v.number()),
-  },
-  returns: v.array(v.any()),
-  handler: async (ctx, args) => {
-    let query = ctx.db
-      .query("aiCourseQueue")
-      .withIndex("by_userId_and_createdAt", (q) => q.eq("userId", args.userId))
-      .order("desc");
-    
-    const items = await query.take(args.limit || 50);
-    
-    // Filter by status if provided
-    if (args.status) {
-      return items.filter(item => item.status === args.status);
-    }
-    
-    return items;
-  },
-});
-
-/**
- * Get a specific queue item with its outline
- */
-export const getQueueItemWithOutline = query({
-  args: {
-    queueId: v.id("aiCourseQueue"),
-  },
-  returns: v.any(),
-  handler: async (ctx, args) => {
-    const queueItem = await ctx.db.get(args.queueId);
-    if (!queueItem) return null;
-    
-    let outline = null;
-    if (queueItem.outlineId) {
-      outline = await ctx.db.get(queueItem.outlineId);
-    }
-    
-    let course = null;
-    if (queueItem.courseId) {
-      course = await ctx.db.get(queueItem.courseId);
-    }
-    
-    return {
-      ...queueItem,
-      outline,
-      course,
-    };
-  },
-});
-
-/**
- * Delete a queue item
- */
-export const deleteQueueItem = mutation({
-  args: {
-    queueId: v.id("aiCourseQueue"),
-    userId: v.string(),
-  },
-  returns: v.boolean(),
-  handler: async (ctx, args) => {
-    const queueItem = await ctx.db.get(args.queueId);
-    if (!queueItem || queueItem.userId !== args.userId) {
-      return false;
-    }
-    
-    // Delete associated outline if exists
-    if (queueItem.outlineId) {
-      await ctx.db.delete(queueItem.outlineId);
-    }
-    
-    await ctx.db.delete(args.queueId);
-    return true;
-  },
-});
-
-/**
- * Update queue item status
- */
-export const updateQueueStatus = mutation({
-  args: {
-    queueId: v.id("aiCourseQueue"),
-    status: v.union(
-      v.literal("queued"),
-      v.literal("generating_outline"),
-      v.literal("outline_ready"),
-      v.literal("expanding_content"),
-      v.literal("ready_to_create"),
-      v.literal("creating_course"),
-      v.literal("completed"),
-      v.literal("failed")
-    ),
-    error: v.optional(v.string()),
-    progress: v.optional(v.object({
-      currentStep: v.string(),
-      totalSteps: v.number(),
-      completedSteps: v.number(),
-      currentChapter: v.optional(v.string()),
-    })),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const updates: Record<string, unknown> = { status: args.status };
-    
-    if (args.error) updates.error = args.error;
-    if (args.progress) updates.progress = args.progress;
-    
-    if (args.status === "generating_outline" && !updates.startedAt) {
-      updates.startedAt = Date.now();
-    }
-    
-    if (args.status === "completed" || args.status === "failed") {
-      updates.completedAt = Date.now();
-    }
-    
-    await ctx.db.patch(args.queueId, updates);
-    return null;
-  },
-});
-
-// =============================================================================
 // OUTLINE GENERATION
 // =============================================================================
 
@@ -281,20 +65,21 @@ export const generateOutline = action({
     error: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
-    // Get queue item - cast to any to avoid circular reference
-    const queueItem: any = await ctx.runQuery((internal as any).aiCourseBuilder.getQueueItemInternal, {
-      queueId: args.queueId,
-    });
+    // Get queue item - cast to any to avoid deep type inference
+    const queueItem = await (ctx as any).runQuery(
+      internal.aiCourseBuilderQueries.getQueueItemInternal,
+      { queueId: args.queueId }
+    );
     
     if (!queueItem) {
       return { success: false, error: "Queue item not found" };
     }
     
     // Update status to generating
-    await ctx.runMutation((api as any).aiCourseBuilder.updateQueueStatus, {
-      queueId: args.queueId,
-      status: "generating_outline" as const,
-    });
+    await (ctx as any).runMutation(
+      api.aiCourseBuilderQueries.updateQueueStatus,
+      { queueId: args.queueId, status: "generating_outline" }
+    );
     
     const startTime = Date.now();
     
@@ -330,7 +115,7 @@ export const generateOutline = action({
               lessonIndex: li,
               chapterIndex: ci,
               title: chapter.title,
-              hasDetailedContent: false, // Outline only has brief content
+              hasDetailedContent: false,
               wordCount: chapter.content?.split(' ').length || 0,
             });
             totalChapters++;
@@ -338,39 +123,41 @@ export const generateOutline = action({
         }
       }
       
-      // Save outline to database - type annotation to avoid circular reference
-      const outlineId: Id<"aiCourseOutlines"> = await ctx.runMutation((internal as any).aiCourseBuilder.saveOutline, {
-        queueId: args.queueId,
-        userId: queueItem.userId,
-        storeId: queueItem.storeId,
-        title: outline.course.title,
-        description: outline.course.description,
-        topic: queueItem.topic || queueItem.prompt,
-        skillLevel: outline.course.skillLevel,
-        estimatedDuration: outline.course.estimatedDuration,
-        outline: outline,
-        totalChapters,
-        chapterStatus,
-        generationModel: "gpt-4o",
-        generationTimeMs: Date.now() - startTime,
-      });
+      // Save outline to database
+      const outlineId = await (ctx as any).runMutation(
+        internal.aiCourseBuilderQueries.saveOutline,
+        {
+          queueId: args.queueId,
+          userId: queueItem.userId,
+          storeId: queueItem.storeId,
+          title: outline.course.title,
+          description: outline.course.description,
+          topic: queueItem.topic || queueItem.prompt,
+          skillLevel: outline.course.skillLevel,
+          estimatedDuration: outline.course.estimatedDuration,
+          outline: outline,
+          totalChapters,
+          chapterStatus,
+          generationModel: "gpt-4o",
+          generationTimeMs: Date.now() - startTime,
+        }
+      ) as Id<"aiCourseOutlines">;
       
       // Update queue item with outline ID and status
-      const _linkResult: null = await ctx.runMutation((internal as any).aiCourseBuilder.linkOutlineToQueue, {
-        queueId: args.queueId,
-        outlineId,
-      });
+      await (ctx as any).runMutation(
+        internal.aiCourseBuilderQueries.linkOutlineToQueue,
+        { queueId: args.queueId, outlineId }
+      );
       
       return { success: true, outlineId };
       
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       
-      await ctx.runMutation((api as any).aiCourseBuilder.updateQueueStatus, {
-        queueId: args.queueId,
-        status: "failed" as const,
-        error: errorMessage,
-      });
+      await (ctx as any).runMutation(
+        api.aiCourseBuilderQueries.updateQueueStatus,
+        { queueId: args.queueId, status: "failed", error: errorMessage }
+      );
       
       return { success: false, error: errorMessage };
     }
@@ -390,19 +177,21 @@ export const processNextInQueue = action({
     error: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
-    // Get next queued item - type annotation to avoid circular reference
-    const nextItem: any = await ctx.runQuery((internal as any).aiCourseBuilder.getNextQueuedItem, {
-      userId: args.userId,
-    });
+    // Get next queued item - cast to any to avoid deep type inference
+    const nextItem = await (ctx as any).runQuery(
+      internal.aiCourseBuilderQueries.getNextQueuedItem,
+      { userId: args.userId }
+    );
     
     if (!nextItem) {
       return { processed: false, error: "No items in queue" };
     }
     
-    // Generate outline for this item - type annotation to avoid circular reference
-    const result: { success: boolean; outlineId?: Id<"aiCourseOutlines">; error?: string } = await ctx.runAction((api as any).aiCourseBuilder.generateOutline, {
-      queueId: nextItem._id,
-    });
+    // Generate outline for this item
+    const result = await (ctx as any).runAction(
+      api.aiCourseBuilder.generateOutline,
+      { queueId: nextItem._id }
+    ) as { success: boolean; outlineId?: Id<"aiCourseOutlines">; error?: string };
     
     return {
       processed: result.success,
@@ -433,10 +222,11 @@ export const expandChapterContent = action({
     error: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
-    // Get outline - type annotation to avoid circular reference
-    const outline: any = await ctx.runQuery((internal as any).aiCourseBuilder.getOutlineInternal, {
-      outlineId: args.outlineId,
-    });
+    // Get outline - cast to any to avoid deep type inference
+    const outline = await (ctx as any).runQuery(
+      internal.aiCourseBuilderQueries.getOutlineInternal,
+      { outlineId: args.outlineId }
+    );
     
     if (!outline) {
       return { success: false, error: "Outline not found" };
@@ -494,13 +284,16 @@ export const expandChapterContent = action({
         };
       }
       
-      // Save updated outline - type annotation to avoid circular reference
-      const _updateResult: null = await ctx.runMutation((internal as any).aiCourseBuilder.updateOutlineContent, {
-        outlineId: args.outlineId,
-        outline: outlineData,
-        chapterStatus,
-        expandedChapters: chapterStatus.filter(s => s.hasDetailedContent).length,
-      });
+      // Save updated outline
+      await (ctx as any).runMutation(
+        internal.aiCourseBuilderQueries.updateOutlineContent,
+        {
+          outlineId: args.outlineId,
+          outline: outlineData,
+          chapterStatus,
+          expandedChapters: chapterStatus.filter(s => s.hasDetailedContent).length,
+        }
+      );
       
       return {
         success: true,
@@ -530,20 +323,21 @@ export const expandAllChapters = action({
     error: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
-    // Get outline - type annotation to avoid circular reference
-    const outline: any = await ctx.runQuery((internal as any).aiCourseBuilder.getOutlineInternal, {
-      outlineId: args.outlineId,
-    });
+    // Get outline - cast to any to avoid deep type inference
+    const outline = await (ctx as any).runQuery(
+      internal.aiCourseBuilderQueries.getOutlineInternal,
+      { outlineId: args.outlineId }
+    );
     
     if (!outline) {
       return { success: false, expandedCount: 0, failedCount: 0, error: "Outline not found" };
     }
     
     // Update queue status
-    await ctx.runMutation((api as any).aiCourseBuilder.updateQueueStatus, {
-      queueId: args.queueId,
-      status: "expanding_content" as const,
-    });
+    await (ctx as any).runMutation(
+      api.aiCourseBuilderQueries.updateQueueStatus,
+      { queueId: args.queueId, status: "expanding_content" }
+    );
     
     const outlineData = outline.outline as CourseOutline;
     let expandedCount = 0;
@@ -565,25 +359,30 @@ export const expandAllChapters = action({
           }
           
           // Update progress
-          await ctx.runMutation((api as any).aiCourseBuilder.updateQueueStatus, {
-            queueId: args.queueId,
-            status: "expanding_content" as const,
-            progress: {
-              currentStep: "Expanding content",
-              totalSteps: totalChapters,
-              completedSteps: expandedCount + failedCount,
-              currentChapter: chapter.title,
-            },
-          });
+          await (ctx as any).runMutation(
+            api.aiCourseBuilderQueries.updateQueueStatus,
+            {
+              queueId: args.queueId,
+              status: "expanding_content",
+              progress: {
+                currentStep: "Expanding content",
+                totalSteps: totalChapters,
+                completedSteps: expandedCount + failedCount,
+                currentChapter: chapter.title,
+              },
+            }
+          );
           
           try {
-            // Type annotation to avoid circular reference
-            const result: { success: boolean; content?: string; wordCount?: number; error?: string } = await ctx.runAction((api as any).aiCourseBuilder.expandChapterContent, {
-              outlineId: args.outlineId,
-              moduleIndex: mi,
-              lessonIndex: li,
-              chapterIndex: ci,
-            });
+            const result = await (ctx as any).runAction(
+              api.aiCourseBuilder.expandChapterContent,
+              {
+                outlineId: args.outlineId,
+                moduleIndex: mi,
+                lessonIndex: li,
+                chapterIndex: ci,
+              }
+            ) as { success: boolean; content?: string; wordCount?: number; error?: string };
             
             if (result.success) {
               expandedCount++;
@@ -603,10 +402,13 @@ export const expandAllChapters = action({
     }
     
     // Update queue status
-    await ctx.runMutation((api as any).aiCourseBuilder.updateQueueStatus, {
-      queueId: args.queueId,
-      status: (failedCount === 0 ? "ready_to_create" : "outline_ready") as "ready_to_create" | "outline_ready",
-    });
+    await (ctx as any).runMutation(
+      api.aiCourseBuilderQueries.updateQueueStatus,
+      {
+        queueId: args.queueId,
+        status: failedCount === 0 ? "ready_to_create" : "outline_ready",
+      }
+    );
     
     return {
       success: failedCount === 0,
@@ -637,51 +439,55 @@ export const createCourseFromOutline = action({
     error: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
-    // Get outline - type annotation to avoid circular reference
-    const outline: any = await ctx.runQuery((internal as any).aiCourseBuilder.getOutlineInternal, {
-      outlineId: args.outlineId,
-    });
+    // Get outline - cast to any to avoid deep type inference
+    const outline = await (ctx as any).runQuery(
+      internal.aiCourseBuilderQueries.getOutlineInternal,
+      { outlineId: args.outlineId }
+    );
     
     if (!outline) {
       return { success: false, error: "Outline not found" };
     }
     
     // Update queue status
-    await ctx.runMutation((api as any).aiCourseBuilder.updateQueueStatus, {
-      queueId: args.queueId,
-      status: "creating_course" as const,
-    });
+    await (ctx as any).runMutation(
+      api.aiCourseBuilderQueries.updateQueueStatus,
+      { queueId: args.queueId, status: "creating_course" }
+    );
     
     try {
       const outlineData = outline.outline as CourseOutline;
       
-      // Create course using existing mutation - type annotation
-      const result: { success: boolean; courseId?: Id<"courses">; slug?: string; message?: string } = await ctx.runMutation(api.courses.createCourseWithData, {
-        userId: outline.userId,
-        storeId: outline.storeId,
-        data: {
-          title: outlineData.course.title,
-          description: outlineData.course.description,
-          category: outlineData.course.category,
-          skillLevel: outlineData.course.skillLevel,
-          price: String(args.price || 0),
-          checkoutHeadline: `Master ${outline.topic} with this comprehensive course`,
-          modules: outlineData.modules,
-        },
-      });
+      // Create course using existing mutation
+      const result = await (ctx as any).runMutation(
+        api.courses.createCourseWithData,
+        {
+          userId: outline.userId,
+          storeId: outline.storeId,
+          data: {
+            title: outlineData.course.title,
+            description: outlineData.course.description,
+            category: outlineData.course.category,
+            skillLevel: outlineData.course.skillLevel,
+            price: String(args.price || 0),
+            checkoutHeadline: `Master ${outline.topic} with this comprehensive course`,
+            modules: outlineData.modules,
+          },
+        }
+      ) as { success: boolean; courseId?: Id<"courses">; slug?: string; message?: string };
       
       if (result.success && result.courseId) {
-        // Link course to queue item - type annotation
-        const _linkResult: null = await ctx.runMutation((internal as any).aiCourseBuilder.linkCourseToQueue, {
-          queueId: args.queueId,
-          courseId: result.courseId,
-        });
+        // Link course to queue item
+        await (ctx as any).runMutation(
+          internal.aiCourseBuilderQueries.linkCourseToQueue,
+          { queueId: args.queueId, courseId: result.courseId }
+        );
         
         // Update queue status
-        await ctx.runMutation((api as any).aiCourseBuilder.updateQueueStatus, {
-          queueId: args.queueId,
-          status: "completed" as const,
-        });
+        await (ctx as any).runMutation(
+          api.aiCourseBuilderQueries.updateQueueStatus,
+          { queueId: args.queueId, status: "completed" }
+        );
         
         return {
           success: true,
@@ -695,11 +501,10 @@ export const createCourseFromOutline = action({
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       
-      await ctx.runMutation((api as any).aiCourseBuilder.updateQueueStatus, {
-        queueId: args.queueId,
-        status: "failed" as const,
-        error: errorMessage,
-      });
+      await (ctx as any).runMutation(
+        api.aiCourseBuilderQueries.updateQueueStatus,
+        { queueId: args.queueId, status: "failed", error: errorMessage }
+      );
       
       return { success: false, error: errorMessage };
     }
@@ -707,247 +512,8 @@ export const createCourseFromOutline = action({
 });
 
 // =============================================================================
-// OUTLINE MANAGEMENT
+// AI HELPER FUNCTIONS
 // =============================================================================
-
-/**
- * Get an outline by ID
- */
-export const getOutline = query({
-  args: {
-    outlineId: v.id("aiCourseOutlines"),
-  },
-  returns: v.any(),
-  handler: async (ctx, args) => {
-    return await ctx.db.get(args.outlineId);
-  },
-});
-
-/**
- * Update outline (user edits)
- */
-export const updateOutline = mutation({
-  args: {
-    outlineId: v.id("aiCourseOutlines"),
-    outline: v.any(),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    await ctx.db.patch(args.outlineId, {
-      outline: args.outline,
-      isEdited: true,
-      lastEditedAt: Date.now(),
-    });
-    return null;
-  },
-});
-
-/**
- * Export outline as JSON
- */
-export const exportOutlineAsJson = query({
-  args: {
-    outlineId: v.id("aiCourseOutlines"),
-  },
-  returns: v.any(),
-  handler: async (ctx, args) => {
-    const outline = await ctx.db.get(args.outlineId);
-    if (!outline) return null;
-    
-    return {
-      title: outline.title,
-      description: outline.description,
-      topic: outline.topic,
-      skillLevel: outline.skillLevel,
-      estimatedDuration: outline.estimatedDuration,
-      totalChapters: outline.totalChapters,
-      expandedChapters: outline.expandedChapters,
-      outline: outline.outline,
-      chapterStatus: outline.chapterStatus,
-      generatedAt: new Date(outline.createdAt).toISOString(),
-    };
-  },
-});
-
-// =============================================================================
-// INTERNAL QUERIES & MUTATIONS
-// =============================================================================
-
-export const getQueueItemInternal = internalQuery({
-  args: {
-    queueId: v.id("aiCourseQueue"),
-  },
-  returns: v.any(),
-  handler: async (ctx, args) => {
-    return await ctx.db.get(args.queueId);
-  },
-});
-
-export const getNextQueuedItem = internalQuery({
-  args: {
-    userId: v.optional(v.string()),
-  },
-  returns: v.any(),
-  handler: async (ctx, args) => {
-    let query = ctx.db
-      .query("aiCourseQueue")
-      .withIndex("by_status", (q) => q.eq("status", "queued"));
-    
-    const items = await query.take(10);
-    
-    // Filter by userId if provided
-    const filtered = args.userId 
-      ? items.filter(item => item.userId === args.userId)
-      : items;
-    
-    // Sort by priority (descending) then by createdAt (ascending)
-    filtered.sort((a, b) => {
-      const priorityDiff = (b.priority || 0) - (a.priority || 0);
-      if (priorityDiff !== 0) return priorityDiff;
-      return a.createdAt - b.createdAt;
-    });
-    
-    return filtered[0] || null;
-  },
-});
-
-export const getOutlineInternal = internalQuery({
-  args: {
-    outlineId: v.id("aiCourseOutlines"),
-  },
-  returns: v.any(),
-  handler: async (ctx, args) => {
-    return await ctx.db.get(args.outlineId);
-  },
-});
-
-export const saveOutline = internalMutation({
-  args: {
-    queueId: v.id("aiCourseQueue"),
-    userId: v.string(),
-    storeId: v.string(),
-    title: v.string(),
-    description: v.string(),
-    topic: v.string(),
-    skillLevel: v.union(
-      v.literal("beginner"),
-      v.literal("intermediate"),
-      v.literal("advanced")
-    ),
-    estimatedDuration: v.optional(v.number()),
-    outline: v.any(),
-    totalChapters: v.number(),
-    chapterStatus: v.array(v.object({
-      moduleIndex: v.number(),
-      lessonIndex: v.number(),
-      chapterIndex: v.number(),
-      title: v.string(),
-      hasDetailedContent: v.boolean(),
-      wordCount: v.optional(v.number()),
-    })),
-    generationModel: v.optional(v.string()),
-    generationTimeMs: v.optional(v.number()),
-  },
-  returns: v.id("aiCourseOutlines"),
-  handler: async (ctx, args) => {
-    return await ctx.db.insert("aiCourseOutlines", {
-      queueId: args.queueId,
-      userId: args.userId,
-      storeId: args.storeId,
-      title: args.title,
-      description: args.description,
-      topic: args.topic,
-      skillLevel: args.skillLevel,
-      estimatedDuration: args.estimatedDuration,
-      outline: args.outline,
-      totalChapters: args.totalChapters,
-      expandedChapters: 0,
-      chapterStatus: args.chapterStatus,
-      generationModel: args.generationModel,
-      generationTimeMs: args.generationTimeMs,
-      isEdited: false,
-      createdAt: Date.now(),
-    });
-  },
-});
-
-export const linkOutlineToQueue = internalMutation({
-  args: {
-    queueId: v.id("aiCourseQueue"),
-    outlineId: v.id("aiCourseOutlines"),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    await ctx.db.patch(args.queueId, {
-      outlineId: args.outlineId,
-      status: "outline_ready",
-    });
-    return null;
-  },
-});
-
-export const linkCourseToQueue = internalMutation({
-  args: {
-    queueId: v.id("aiCourseQueue"),
-    courseId: v.id("courses"),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    await ctx.db.patch(args.queueId, {
-      courseId: args.courseId,
-    });
-    return null;
-  },
-});
-
-export const updateOutlineContent = internalMutation({
-  args: {
-    outlineId: v.id("aiCourseOutlines"),
-    outline: v.any(),
-    chapterStatus: v.array(v.object({
-      moduleIndex: v.number(),
-      lessonIndex: v.number(),
-      chapterIndex: v.number(),
-      title: v.string(),
-      hasDetailedContent: v.boolean(),
-      wordCount: v.optional(v.number()),
-    })),
-    expandedChapters: v.number(),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    await ctx.db.patch(args.outlineId, {
-      outline: args.outline,
-      chapterStatus: args.chapterStatus,
-      expandedChapters: args.expandedChapters,
-    });
-    return null;
-  },
-});
-
-// =============================================================================
-// AI GENERATION HELPERS
-// =============================================================================
-
-function extractTopicFromPrompt(prompt: string): string {
-  // Extract topic from common prompt patterns
-  const patterns = [
-    /create\s+(?:me\s+)?a?\s*course\s+(?:on|about|for)\s+(.+?)(?:\s+in\s+ableton|\s+using|\s+with|\.|$)/i,
-    /course\s+(?:on|about|for)\s+(.+?)(?:\s+in\s+ableton|\s+using|\s+with|\.|$)/i,
-    /how\s+to\s+(.+?)(?:\s+in\s+ableton|\s+using|\s+with|\.|$)/i,
-    /teach\s+(?:me\s+)?(?:about\s+)?(.+?)(?:\.|$)/i,
-  ];
-  
-  for (const pattern of patterns) {
-    const match = prompt.match(pattern);
-    if (match && match[1]) {
-      return match[1].trim();
-    }
-  }
-  
-  // Fallback: use the whole prompt
-  return prompt.slice(0, 100);
-}
 
 async function generateCourseOutlineWithAI(params: {
   topic: string;
@@ -959,30 +525,23 @@ async function generateCourseOutlineWithAI(params: {
   const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
   });
-  
-  const systemPrompt = `You are a world-class music production educator and curriculum designer. Create comprehensive, professional course outlines for music production education.
 
-IMPORTANT:
-- Focus exclusively on the specified topic
-- Create logical, progressive learning structures
-- Balance theory with practical application
-- Include specific, actionable chapter content outlines
-- Each chapter outline should be 50-100 words describing what will be covered`;
+  const systemPrompt = `You are a master music production educator creating comprehensive course outlines. Generate detailed, professional course structures.
 
-  const userPrompt = `Create a course outline for: "${params.prompt}"
+GUIDELINES:
+- Create exactly ${params.targetModules} modules
+- Each module should have ${params.targetLessonsPerModule} lessons
+- Each lesson should have 2-4 chapters
+- Content should be appropriate for ${params.skillLevel} level
+- Be specific to the topic and provide actionable learning
+- Chapter content should be a brief outline (2-3 sentences) describing what will be covered`;
 
-Requirements:
-- Topic: ${params.topic}
-- Skill Level: ${params.skillLevel}
-- Number of Modules: ${params.targetModules}
-- Lessons per Module: ${params.targetLessonsPerModule}
-- Chapters per Lesson: 3
+  const userPrompt = `Create a course outline for: ${params.prompt}
 
-Generate a complete course structure with:
-1. Course title and description
-2. ${params.targetModules} modules with progressive difficulty
-3. ${params.targetLessonsPerModule} lessons per module
-4. 3 chapters per lesson with brief content outlines`;
+Topic: ${params.topic}
+Skill Level: ${params.skillLevel}
+
+Generate a complete course structure with modules, lessons, and chapters.`;
 
   const completion = await openai.chat.completions.create({
     model: "gpt-4o",
@@ -991,67 +550,8 @@ Generate a complete course structure with:
       { role: "user", content: userPrompt },
     ],
     temperature: 0.7,
+    response_format: { type: "json_object" },
     max_tokens: 4000,
-    response_format: {
-      type: "json_schema",
-      json_schema: {
-        name: "course_outline",
-        schema: {
-          type: "object",
-          properties: {
-            course: {
-              type: "object",
-              properties: {
-                title: { type: "string" },
-                description: { type: "string" },
-                category: { type: "string" },
-                skillLevel: { type: "string", enum: ["beginner", "intermediate", "advanced"] },
-                estimatedDuration: { type: "number" },
-              },
-              required: ["title", "description", "category", "skillLevel", "estimatedDuration"],
-            },
-            modules: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  title: { type: "string" },
-                  description: { type: "string" },
-                  orderIndex: { type: "number" },
-                  lessons: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        title: { type: "string" },
-                        description: { type: "string" },
-                        orderIndex: { type: "number" },
-                        chapters: {
-                          type: "array",
-                          items: {
-                            type: "object",
-                            properties: {
-                              title: { type: "string" },
-                              content: { type: "string" },
-                              duration: { type: "number" },
-                              orderIndex: { type: "number" },
-                            },
-                            required: ["title", "content", "duration", "orderIndex"],
-                          },
-                        },
-                      },
-                      required: ["title", "description", "orderIndex", "chapters"],
-                    },
-                  },
-                },
-                required: ["title", "description", "orderIndex", "lessons"],
-              },
-            },
-          },
-          required: ["course", "modules"],
-        },
-      },
-    },
   });
 
   const content = completion.choices[0].message.content;
@@ -1114,4 +614,3 @@ Write comprehensive, educational content that covers this chapter thoroughly.`;
 
   return content;
 }
-

@@ -568,24 +568,24 @@ export default function AdminCourseBuilderPage() {
   const stores = useQuery(api.stores.getAllStores) as StoreInfo[] | undefined;
 
   const queueItems = useQuery(
-    api.aiCourseBuilder.getQueueItems,
+    api.aiCourseBuilderQueries.getQueueItems,
     user?.id && adminCheck?.isAdmin ? { userId: user.id } : "skip"
   ) as QueueItem[] | undefined;
 
   const viewingOutline = useQuery(
-    api.aiCourseBuilder.getOutline,
+    api.aiCourseBuilderQueries.getOutline,
     viewingOutlineId ? { outlineId: viewingOutlineId } : "skip"
   ) as CourseOutline | null | undefined;
 
   // Mutations & Actions
-  const addBatchToQueue = useMutation(api.aiCourseBuilder.addBatchToQueue);
-  const deleteQueueItem = useMutation(api.aiCourseBuilder.deleteQueueItem);
+  const addBatchToQueue = useMutation(api.aiCourseBuilderQueries.addBatchToQueue);
+  const deleteQueueItem = useMutation(api.aiCourseBuilderQueries.deleteQueueItem);
   const generateOutline = useAction(api.aiCourseBuilder.generateOutline);
   const expandAllChapters = useAction(api.aiCourseBuilder.expandAllChapters);
   const expandChapterContent = useAction(api.aiCourseBuilder.expandChapterContent);
   const createCourseFromOutline = useAction(api.aiCourseBuilder.createCourseFromOutline);
   const exportOutlineAsJson = useQuery(
-    api.aiCourseBuilder.exportOutlineAsJson,
+    api.aiCourseBuilderQueries.exportOutlineAsJson,
     viewingOutlineId ? { outlineId: viewingOutlineId } : "skip"
   );
 

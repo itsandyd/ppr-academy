@@ -24,6 +24,7 @@ import type * as affiliates from "../affiliates.js";
 import type * as aiAgents from "../aiAgents.js";
 import type * as aiConversations from "../aiConversations.js";
 import type * as aiCourseBuilder from "../aiCourseBuilder.js";
+import type * as aiCourseBuilderQueries from "../aiCourseBuilderQueries.js";
 import type * as aiEmailGenerator from "../aiEmailGenerator.js";
 import type * as aiMemories from "../aiMemories.js";
 import type * as aiMessageFeedback from "../aiMessageFeedback.js";
@@ -215,6 +216,7 @@ declare const fullApi: ApiFromModules<{
   aiAgents: typeof aiAgents;
   aiConversations: typeof aiConversations;
   aiCourseBuilder: typeof aiCourseBuilder;
+  aiCourseBuilderQueries: typeof aiCourseBuilderQueries;
   aiEmailGenerator: typeof aiEmailGenerator;
   aiMemories: typeof aiMemories;
   aiMessageFeedback: typeof aiMessageFeedback;
