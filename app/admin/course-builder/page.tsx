@@ -62,9 +62,11 @@ import {
   Eye,
   EyeOff,
   RotateCcw,
+  Type,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import ReactMarkdown from "react-markdown";
 
 // =============================================================================
 // TYPES
@@ -318,10 +320,14 @@ export default function AdminCourseBuilderPage() {
   const getCourseStructureAction = useAction(api.aiCourseBuilder.getCourseStructureForExpansion);
   const expandExistingCourseAction = useAction(api.aiCourseBuilder.expandExistingCourseChapters);
   const expandSingleChapterAction = useAction(api.aiCourseBuilder.expandExistingChapter);
+  const reformatSingleChapterAction = useAction(api.aiCourseBuilder.reformatChapterContent);
+  const reformatAllChaptersAction = useAction(api.aiCourseBuilder.reformatCourseChapters);
   
   // State for chapter preview and regeneration
   const [expandedChapterPreviews, setExpandedChapterPreviews] = useState<Set<string>>(new Set());
   const [regeneratingChapterId, setRegeneratingChapterId] = useState<string | null>(null);
+  const [reformattingChapterId, setReformattingChapterId] = useState<string | null>(null);
+  const [isReformattingAll, setIsReformattingAll] = useState(false);
   
   // Get courses for the selected store
   const storeCourses = useQuery(
@@ -1170,6 +1176,68 @@ export default function AdminCourseBuilderPage() {
       toast.error(`Failed to regenerate: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setRegeneratingChapterId(null);
+    }
+  };
+
+  // Reformat a single chapter (just add markdown formatting, don't regenerate)
+  const handleReformatSingleChapter = async (
+    chapterId: Id<"courseChapters">,
+    chapterTitle: string
+  ) => {
+    if (!existingCourseStructure) return;
+    
+    setReformattingChapterId(chapterId);
+    
+    try {
+      const result = await reformatSingleChapterAction({
+        chapterId,
+        chapterTitle,
+      });
+      
+      if (result.success) {
+        toast.success(`Chapter reformatted! (${result.wordCount} words)`);
+        // Reload the structure to show updated content
+        await handleLoadCourseStructure();
+        // Expand the preview to show the formatted content
+        setExpandedChapterPreviews(prev => new Set(prev).add(chapterId));
+      } else {
+        throw new Error(result.error || "Failed to reformat chapter");
+      }
+    } catch (error) {
+      console.error("Error reformatting chapter:", error);
+      toast.error(`Failed to reformat: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setReformattingChapterId(null);
+    }
+  };
+
+  // Reformat all chapters in the course
+  const handleReformatAllChapters = async () => {
+    if (!selectedExistingCourseId || !existingCourseStructure) {
+      toast.error("No course loaded");
+      return;
+    }
+    
+    setIsReformattingAll(true);
+    
+    try {
+      const result = await reformatAllChaptersAction({
+        courseId: selectedExistingCourseId,
+        parallelBatchSize: 3, // Can be higher since reformatting is cheaper
+      });
+      
+      if (result.success) {
+        toast.success(`Reformatted ${result.reformattedCount} chapters!`);
+        // Reload the structure to show updated content
+        await handleLoadCourseStructure();
+      } else {
+        toast.warning(`Reformatted ${result.reformattedCount} chapters, ${result.failedCount} failed`);
+      }
+    } catch (error) {
+      console.error("Error reformatting all chapters:", error);
+      toast.error(`Failed to reformat: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setIsReformattingAll(false);
     }
   };
 
@@ -2232,13 +2300,37 @@ export default function AdminCourseBuilderPage() {
                       
                       <Button
                         onClick={() => handleExpandExistingCourse(false)}
-                        disabled={isExpandingExisting}
+                        disabled={isExpandingExisting || isReformattingAll}
                         variant="outline"
                         className="w-full"
                       >
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Regenerate All Chapters ({existingCourseStructure.totalChapters})
                       </Button>
+                      
+                      <div className="border-t pt-3 mt-1">
+                        <Button
+                          onClick={handleReformatAllChapters}
+                          disabled={isExpandingExisting || isReformattingAll}
+                          variant="secondary"
+                          className="w-full"
+                        >
+                          {isReformattingAll ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Reformatting...
+                            </>
+                          ) : (
+                            <>
+                              <Type className="w-4 h-4 mr-2" />
+                              Reformat All (Add Markdown)
+                            </>
+                          )}
+                        </Button>
+                        <p className="text-[10px] text-center text-muted-foreground mt-1.5">
+                          Adds proper # headers, ## sections, **bold** etc. without regenerating content
+                        </p>
+                      </div>
                       
                       <p className="text-xs text-center text-muted-foreground">
                         Uses your AI settings ({settings.preset} preset)
@@ -2603,6 +2695,25 @@ export default function AdminCourseBuilderPage() {
                                             </Button>
                                           )}
                                           
+                                          {/* Reformat Button (just add markdown) */}
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            className="h-6 w-6 p-0"
+                                            onClick={() => handleReformatSingleChapter(
+                                              ch._id as Id<"courseChapters">,
+                                              ch.title
+                                            )}
+                                            disabled={reformattingChapterId === ch._id || isExpandingExisting || isReformattingAll || !ch.hasContent}
+                                            title="Reformat with markdown (keeps content, adds structure)"
+                                          >
+                                            {reformattingChapterId === ch._id ? (
+                                              <Loader2 className="w-3 h-3 animate-spin" />
+                                            ) : (
+                                              <Type className="w-3 h-3" />
+                                            )}
+                                          </Button>
+
                                           {/* Regenerate Button */}
                                           <Button
                                             size="sm"
@@ -2613,8 +2724,8 @@ export default function AdminCourseBuilderPage() {
                                               mod.title,
                                               lesson.title
                                             )}
-                                            disabled={isRegenerating || isExpandingExisting}
-                                            title="Regenerate chapter content"
+                                            disabled={isRegenerating || isExpandingExisting || isReformattingAll}
+                                            title="Regenerate chapter content (full AI pipeline)"
                                           >
                                             {isRegenerating ? (
                                               <Loader2 className="w-3 h-3 animate-spin" />
@@ -2627,16 +2738,16 @@ export default function AdminCourseBuilderPage() {
                                         {/* Content Preview */}
                                         {isExpanded && ch.description && (
                                           <div className="ml-5 p-3 rounded bg-muted/50 border text-xs">
-                                            <div className="prose prose-sm dark:prose-invert max-w-none">
-                                              <p className="whitespace-pre-wrap text-muted-foreground leading-relaxed">
-                                                {ch.description.length > 2000 
-                                                  ? ch.description.substring(0, 2000) + "..." 
+                                            <div className="prose prose-sm dark:prose-invert max-w-none prose-headings:text-foreground prose-headings:font-semibold prose-h1:text-base prose-h1:mt-4 prose-h1:mb-2 prose-h2:text-sm prose-h2:mt-3 prose-h2:mb-1.5 prose-h3:text-xs prose-h3:mt-2 prose-h3:mb-1 prose-p:text-muted-foreground prose-p:text-xs prose-p:leading-relaxed prose-p:mb-2 prose-strong:text-foreground prose-ul:my-2 prose-ul:text-xs prose-li:my-0.5 prose-code:bg-background prose-code:px-1 prose-code:rounded prose-code:text-[10px] prose-blockquote:border-l-primary prose-blockquote:text-xs prose-hr:my-4">
+                                              <ReactMarkdown>
+                                                {ch.description.length > 3000 
+                                                  ? ch.description.substring(0, 3000) + "\n\n---\n\n*Content truncated for preview...*" 
                                                   : ch.description}
-                                              </p>
+                                              </ReactMarkdown>
                                             </div>
-                                            {ch.description.length > 2000 && (
+                                            {ch.description.length > 3000 && (
                                               <p className="text-[10px] text-muted-foreground mt-2 italic">
-                                                Content truncated for preview. Full content: {ch.wordCount} words
+                                                Full content: {ch.wordCount} words
                                               </p>
                                             )}
                                           </div>

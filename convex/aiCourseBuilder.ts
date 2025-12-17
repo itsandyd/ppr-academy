@@ -1173,3 +1173,251 @@ export const expandExistingCourseChapters = action({
     }
   },
 });
+
+/**
+ * Reformat existing chapter content to add proper markdown structure
+ * This is MUCH faster than regenerating since it just adds formatting
+ */
+export const reformatChapterContent = action({
+  args: {
+    chapterId: v.id("courseChapters"),
+    chapterTitle: v.string(),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    content: v.optional(v.string()),
+    wordCount: v.optional(v.number()),
+    error: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    try {
+      // Get chapter details
+      const chapter = await (ctx as any).runQuery(
+        internal.courses.getChapterByIdInternal,
+        { chapterId: args.chapterId }
+      ) as { _id: Id<"courseChapters">; title: string; description?: string } | null;
+      
+      if (!chapter) {
+        return { success: false, error: "Chapter not found" };
+      }
+      
+      if (!chapter.description || chapter.description.trim().length < 100) {
+        return { success: false, error: "Chapter has no content to reformat" };
+      }
+      
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      
+      const systemPrompt = `You are a content formatter. Your ONLY job is to add proper markdown formatting to existing educational content.
+
+DO NOT:
+- Change the actual content or meaning
+- Add new information
+- Remove any information
+- Rewrite sentences
+- Change the tone or style
+
+DO:
+- Add a main # header with a compelling chapter title (based on the content, not just the chapter name)
+- Add ## subheadings to break content into logical sections
+- Add ### for sub-sections where appropriate
+- Use **bold** for key terms and important concepts
+- Use *italics* for emphasis where natural
+- Convert appropriate content to bullet points or numbered lists
+- Add > blockquotes for important tips or callouts
+- Add \`code\` formatting for technical terms, settings, or values
+- Add horizontal rules (---) between major sections if helpful
+- Ensure proper paragraph spacing
+
+Keep ALL the original content - just make it beautifully formatted and easy to read.`;
+
+      const userPrompt = `Please reformat this chapter content with proper markdown structure:
+
+CHAPTER TITLE: ${args.chapterTitle}
+
+CONTENT TO REFORMAT:
+${chapter.description}
+
+Remember: Keep all the original content, just add markdown formatting to make it well-structured and readable.`;
+
+      console.log(`🔄 Reformatting: "${args.chapterTitle}" (${chapter.description.length} chars)`);
+
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini", // Fast and cheap for formatting tasks
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.3, // Low temperature for consistent formatting
+        max_tokens: 8000,
+      });
+
+      const formattedContent = completion.choices[0].message?.content;
+      
+      if (!formattedContent) {
+        return { success: false, error: "No formatted content returned" };
+      }
+
+      // Save the formatted content
+      await (ctx as any).runMutation(
+        internal.courses.updateChapterDescription,
+        { chapterId: args.chapterId, description: formattedContent }
+      );
+
+      const wordCount = formattedContent.split(/\s+/).length;
+      console.log(`✓ Reformatted "${args.chapterTitle}" (${wordCount} words)`);
+
+      return {
+        success: true,
+        content: formattedContent,
+        wordCount,
+      };
+
+    } catch (error) {
+      console.error("Error reformatting chapter:", error);
+      return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
+    }
+  },
+});
+
+/**
+ * Reformat all chapters in a course to add proper markdown structure
+ */
+export const reformatCourseChapters = action({
+  args: {
+    courseId: v.id("courses"),
+    parallelBatchSize: v.optional(v.number()),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    reformattedCount: v.number(),
+    skippedCount: v.number(),
+    failedCount: v.number(),
+    error: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    const maxBatchSize = args.parallelBatchSize || 3; // Can be higher since reformatting is cheaper
+    
+    try {
+      // Get course structure
+      const structure = await (ctx as any).runAction(
+        api.aiCourseBuilder.getCourseStructureForExpansion,
+        { courseId: args.courseId }
+      ) as {
+        success: boolean;
+        course?: { _id: Id<"courses">; title: string };
+        modules?: Array<{
+          _id: Id<"courseModules">;
+          title: string;
+          lessons: Array<{
+            _id: Id<"courseLessons">;
+            title: string;
+            chapters: Array<{
+              _id: Id<"courseChapters">;
+              title: string;
+              hasContent: boolean;
+              wordCount: number;
+            }>;
+          }>;
+        }>;
+        error?: string;
+      };
+      
+      if (!structure.success || !structure.course || !structure.modules) {
+        return { 
+          success: false, 
+          reformattedCount: 0, 
+          skippedCount: 0, 
+          failedCount: 0, 
+          error: structure.error || "Failed to get course structure" 
+        };
+      }
+      
+      console.log(`\n📝 Starting reformat for: ${structure.course.title}`);
+      
+      let reformattedCount = 0;
+      let skippedCount = 0;
+      let failedCount = 0;
+      
+      // Collect all chapters with content
+      const chaptersToReformat: Array<{
+        chapterId: Id<"courseChapters">;
+        title: string;
+        wordCount: number;
+      }> = [];
+      
+      for (const mod of structure.modules) {
+        for (const lesson of mod.lessons) {
+          for (const ch of lesson.chapters) {
+            if (ch.hasContent && ch.wordCount > 50) {
+              chaptersToReformat.push({
+                chapterId: ch._id,
+                title: ch.title,
+                wordCount: ch.wordCount,
+              });
+            } else {
+              skippedCount++;
+            }
+          }
+        }
+      }
+      
+      console.log(`   Found ${chaptersToReformat.length} chapters to reformat, ${skippedCount} skipped (no content)`);
+      
+      // Process in batches
+      for (let i = 0; i < chaptersToReformat.length; i += maxBatchSize) {
+        const batch = chaptersToReformat.slice(i, i + maxBatchSize);
+        
+        console.log(`\n   Batch ${Math.floor(i / maxBatchSize) + 1}/${Math.ceil(chaptersToReformat.length / maxBatchSize)}`);
+        
+        const results = await Promise.allSettled(
+          batch.map(ch =>
+            (ctx as any).runAction(
+              api.aiCourseBuilder.reformatChapterContent,
+              { chapterId: ch.chapterId, chapterTitle: ch.title }
+            ) as Promise<{ success: boolean; error?: string }>
+          )
+        );
+        
+        for (let j = 0; j < results.length; j++) {
+          const result = results[j];
+          const ch = batch[j];
+          
+          if (result.status === "fulfilled" && result.value.success) {
+            reformattedCount++;
+            console.log(`   ✓ ${ch.title}`);
+          } else {
+            failedCount++;
+            const error = result.status === "rejected" 
+              ? result.reason?.message 
+              : result.value?.error;
+            console.log(`   ✗ ${ch.title}: ${error}`);
+          }
+        }
+        
+        // Small delay between batches
+        if (i + maxBatchSize < chaptersToReformat.length) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
+      }
+      
+      console.log(`\n✅ Reformat complete: ${reformattedCount} reformatted, ${skippedCount} skipped, ${failedCount} failed`);
+      
+      return {
+        success: failedCount === 0,
+        reformattedCount,
+        skippedCount,
+        failedCount,
+      };
+      
+    } catch (error) {
+      console.error("Error reformatting course chapters:", error);
+      return { 
+        success: false, 
+        reformattedCount: 0, 
+        skippedCount: 0, 
+        failedCount: 0, 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      };
+    }
+  },
+});

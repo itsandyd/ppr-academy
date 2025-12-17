@@ -1579,6 +1579,23 @@ export const getChapterByIdInternal = internalQuery({
   },
 });
 
+/**
+ * Update chapter description (for reformatting existing content)
+ */
+export const updateChapterDescription = internalMutation({
+  args: { 
+    chapterId: v.id("courseChapters"), 
+    description: v.string() 
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.chapterId, { 
+      description: args.description,
+    });
+    return null;
+  },
+});
+
 // Internal mutation to update chapter content
 export const updateChapterContentInternal = internalMutation({
   args: {

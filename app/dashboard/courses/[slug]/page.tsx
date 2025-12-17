@@ -32,6 +32,7 @@ import { LessonQASection } from "@/components/qa/LessonQASection";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { Id } from "@/convex/_generated/dataModel";
+import ReactMarkdown from "react-markdown";
 
 export default function CoursePlayerPage() {
   const { user } = useUser();
@@ -379,8 +380,8 @@ export default function CoursePlayerPage() {
                     {currentChapter.title}
                   </h1>
                   {currentChapter.description && (
-                    <div className="prose prose-base lg:prose-lg dark:prose-invert max-w-3xl prose-headings:text-foreground prose-p:text-muted-foreground prose-strong:text-foreground prose-a:text-primary prose-a:no-underline hover:prose-a:underline">
-                      <div dangerouslySetInnerHTML={{ __html: currentChapter.description }} />
+                    <div className="prose prose-base lg:prose-lg dark:prose-invert max-w-3xl prose-headings:text-foreground prose-headings:font-bold prose-h1:text-2xl prose-h1:mt-8 prose-h1:mb-4 prose-h2:text-xl prose-h2:mt-6 prose-h2:mb-3 prose-h3:text-lg prose-h3:mt-4 prose-h3:mb-2 prose-p:text-muted-foreground prose-p:leading-relaxed prose-p:mb-4 prose-strong:text-foreground prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-ul:my-4 prose-li:my-1 prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-blockquote:border-l-primary prose-blockquote:bg-muted/30 prose-blockquote:py-1 prose-hr:my-8">
+                      <ReactMarkdown>{currentChapter.description}</ReactMarkdown>
                     </div>
                   )}
                 </div>
