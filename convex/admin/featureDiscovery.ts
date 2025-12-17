@@ -12,10 +12,14 @@
 
 import { v } from "convex/values";
 import { action, mutation, query, internalMutation, internalQuery } from "../_generated/server";
-import { internal } from "../_generated/api";
 import { PPR_ACADEMY_FEATURES } from "../masterAI/platformKnowledge";
 import { callLLM } from "../masterAI/llmClient";
 import { Id } from "../_generated/dataModel";
+
+// Type-escape hatch to avoid deep type inference issues with Convex API types
+// Using require to bypass TypeScript's eager type evaluation
+// eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-require-imports
+const { internal } = require("../_generated/api") as { internal: any };
 
 // Current platform capabilities (for comparison)
 const EXISTING_CAPABILITIES = PPR_ACADEMY_FEATURES.map(f => ({
@@ -916,9 +920,10 @@ export const generateCursorPrompt = action({
   },
   returns: v.string(),
   handler: async (ctx, args) => {
-    const suggestion = await ctx.runQuery(internal.admin.featureDiscovery.getSuggestionByIdInternal, {
-      suggestionId: args.suggestionId,
-    });
+    const suggestion = await (ctx as any).runQuery(
+      internal.admin.featureDiscovery.getSuggestionByIdInternal, 
+      { suggestionId: args.suggestionId }
+    );
     
     if (!suggestion) {
       throw new Error("Suggestion not found");

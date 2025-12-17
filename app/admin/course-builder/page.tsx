@@ -97,12 +97,27 @@ interface GenerationStep {
   detail?: string;
 }
 
+interface PipelineStatus {
+  stage: string;
+  model: string;
+  isActive: boolean;
+  description?: string;
+  facets?: string[];
+  chunksRetrieved?: number;
+  webResults?: number;
+  summariesGenerated?: number;
+  ideasGenerated?: number;
+}
+
 // Course Builder Settings
 interface AISettings {
   // Course structure settings
   skillLevel: "beginner" | "intermediate" | "advanced";
   targetModules: number;
   targetLessonsPerModule: number;
+  // Content expansion settings
+  liteMode: boolean; // Generate shorter chapter content (faster, 300-500 words vs 800-1200)
+  parallelBatchSize: number; // How many chapters to expand in parallel
   // AI pipeline settings (for future use if we add agentic features back)
   preset: "speed" | "balanced" | "quality" | "deepReasoning" | "premium";
   maxFacets: number;
@@ -122,6 +137,9 @@ const DEFAULT_AI_SETTINGS: AISettings = {
   skillLevel: "intermediate",
   targetModules: 4,
   targetLessonsPerModule: 3,
+  // Content expansion defaults
+  liteMode: true, // Default to lite mode for speed
+  parallelBatchSize: 5, // 5 chapters at a time
   // AI pipeline defaults
   preset: "premium",
   maxFacets: 5,
@@ -214,10 +232,20 @@ export default function AdminCourseBuilderPage() {
 
   // Track current IDs for real-time updates (must be declared before queries that use them)
   const [currentOutlineId, setCurrentOutlineId] = useState<Id<"aiCourseOutlines"> | null>(null);
+  
+  // Pipeline status for real-time progress
+  const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus | null>(null);
+  const [pipelineMetadata, setPipelineMetadata] = useState<{
+    facetsUsed?: string[];
+    totalChunksProcessed?: number;
+    webResearchResults?: number;
+    processingTimeMs?: number;
+  } | null>(null);
 
   // Queries
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const adminCheck = useQuery(
-    api.users.checkIsAdmin,
+    api.users.checkIsAdmin as any,
     user?.id ? { clerkId: user.id } : "skip"
   );
   const stores = useQuery(api.stores.getAllStores) as StoreInfo[] | undefined;
@@ -256,7 +284,8 @@ export default function AdminCourseBuilderPage() {
   }, []);
 
   // =============================================================================
-  // FULL AUTO - Generate complete course in one click using backend JSON actions
+  // FULL AUTO - Generate complete course using the full AI pipeline (streaming)
+  // Uses: Planner → Retriever → Web Research → Summarizer → Idea Generator → Course Writer
   // =============================================================================
   const handleFullAutoGenerate = async () => {
     if (!prompt.trim()) {
@@ -274,22 +303,25 @@ export default function AdminCourseBuilderPage() {
     setCreatedCourseId(null);
     setCreatedCourseSlug(null);
     setCurrentOutlineId(null);
+    setPipelineStatus(null);
+    setPipelineMetadata(null);
 
-    // Initialize all steps
+    // Initialize pipeline steps
     setGenerationSteps([
-      { id: "queue", label: "Adding to queue", status: "pending" },
-      { id: "outline", label: "Generating course outline (JSON)", status: "pending" },
-      { id: "expand", label: "Expanding all chapters", status: "pending" },
-      { id: "create", label: "Creating course", status: "pending" },
+      { id: "planner", label: "📋 Analyzing course topic", status: "pending" },
+      { id: "retriever", label: "🔍 Searching knowledge base", status: "pending" },
+      ...(settings.enableWebResearch ? [{ id: "webResearch", label: "🌐 Researching the web", status: "pending" as const }] : []),
+      { id: "summarizer", label: "📝 Synthesizing information", status: "pending" },
+      ...(settings.enableCreativeMode ? [{ id: "ideaGenerator", label: "💡 Generating ideas", status: "pending" as const }] : []),
+      ...(settings.enableCritic ? [{ id: "critic", label: "🎯 Quality review", status: "pending" as const }] : []),
+      { id: "courseWriter", label: "✍️ Creating course outline", status: "pending" },
+      { id: "expand", label: "📖 Expanding chapters", status: "pending" },
+      { id: "create", label: "🚀 Creating course", status: "pending" },
     ]);
 
     try {
-      // Step 0: Add to queue
-      updateStep("queue", { status: "running", detail: "Creating queue item..." });
-      
-      // Extract topic from prompt
-      const topicMatch = prompt.match(/(?:course (?:on|about) |create (?:me )?a course (?:on|about) )(.+)/i);
-      const topic = topicMatch?.[1]?.trim() || prompt.slice(0, 100);
+      // Step 0: Add to queue first
+      updateStep("planner", { status: "running", detail: "Initializing pipeline..." });
       
       const queueId = await addToQueue({
         userId: user!.id,
@@ -300,35 +332,98 @@ export default function AdminCourseBuilderPage() {
         targetLessonsPerModule: settings.targetLessonsPerModule || 3,
       });
       
-      updateStep("queue", { status: "completed", detail: "Queue item created" });
+      setCurrentQueueId(queueId);
       console.log("✅ Added to queue:", queueId);
 
-      // Step 1: Generate outline using the dedicated backend action (guaranteed JSON)
-      updateStep("outline", { status: "running", detail: "Calling OpenAI with JSON mode..." });
-      
-      const outlineResult = await generateOutlineAction({ queueId });
-      
-      if (!outlineResult.success || !outlineResult.outlineId) {
-        throw new Error(outlineResult.error || "Failed to generate outline");
+      // Use streaming endpoint for full pipeline
+      const response = await fetch("/api/ai/course-builder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt,
+          settings: {
+            preset: settings.preset,
+            maxFacets: settings.maxFacets,
+            chunksPerFacet: settings.chunksPerFacet,
+            similarityThreshold: settings.similarityThreshold,
+            enableCritic: settings.enableCritic,
+            enableCreativeMode: settings.enableCreativeMode,
+            enableWebResearch: settings.enableWebResearch,
+            enableFactVerification: settings.enableFactVerification,
+            autoSaveWebResearch: settings.autoSaveWebResearch,
+            webSearchMaxResults: settings.webSearchMaxResults,
+            responseStyle: settings.responseStyle,
+          },
+          storeId: selectedStoreId,
+          queueId,
+          mode: "outline",
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("API request failed");
+      }
+
+      // Handle SSE stream
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("No response body");
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let outlineResult: any = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try {
+              const event = JSON.parse(line.replace("data: ", ""));
+              handlePipelineStreamEvent(event);
+              
+              if (event.type === "complete") {
+                outlineResult = event.response;
+              }
+            } catch {
+              // Skip malformed JSON
+            }
+          }
+        }
+      }
+
+      if (!outlineResult?.success || !outlineResult?.outlineId) {
+        throw new Error(outlineResult?.error || "Failed to generate outline with pipeline");
       }
       
       setCurrentOutlineId(outlineResult.outlineId);
-      console.log("✅ Outline generated:", outlineResult.outlineId);
+      setPipelineMetadata(outlineResult.pipelineMetadata || null);
       
-      // Fetch the outline to display
-      // Note: The getOutline query will update automatically via Convex reactivity
-      // For now, we'll just update the step status
-      updateStep("outline", { 
+      // Update the outline display from the result
+      if (outlineResult.outline) {
+        const displayOutline = convertOutlineForDisplay({ outline: outlineResult.outline });
+        if (displayOutline) {
+          setGeneratedOutline(displayOutline);
+        }
+      }
+      
+      updateStep("courseWriter", { 
         status: "completed", 
-        detail: "Course structure created successfully" 
+        detail: `Course structure created (${outlineResult.pipelineMetadata?.totalChunksProcessed || 0} sources used)` 
       });
 
-      // Step 2: Expand all chapters using the dedicated backend action
-      updateStep("expand", { status: "running", detail: "Expanding chapter content..." });
+      // Step 2: Expand all chapters (in parallel batches for speed)
+      updateStep("expand", { status: "running", detail: `Expanding chapters (${settings.liteMode ? "lite" : "detailed"} mode, ${settings.parallelBatchSize} parallel)...` });
       
       const expandResult = await expandAllChaptersAction({ 
         outlineId: outlineResult.outlineId, 
-        queueId 
+        queueId,
+        parallelBatchSize: settings.parallelBatchSize,
+        liteMode: settings.liteMode,
       });
       
       updateStep("expand", { 
@@ -340,7 +435,9 @@ export default function AdminCourseBuilderPage() {
         throw new Error(`Too many chapters failed to expand: ${expandResult.failedCount}/${expandResult.expandedCount + expandResult.failedCount}`);
       }
 
-      // Step 3: Create the course using the dedicated backend action
+      // Step 3: Create the course
+      updateStep("create", { status: "running", detail: "Creating course in database..." });
+      
       const createResult = await createCourseFromOutlineAction({
         outlineId: outlineResult.outlineId,
         queueId,
@@ -357,7 +454,7 @@ export default function AdminCourseBuilderPage() {
         });
         
         toast.success("🎉 Course created successfully!", {
-          description: "Your AI-generated course is ready",
+          description: `Used ${outlineResult.pipelineMetadata?.totalChunksProcessed || 0} knowledge sources${outlineResult.pipelineMetadata?.webResearchResults ? ` and ${outlineResult.pipelineMetadata.webResearchResults} web results` : ""}`,
           action: createResult.slug ? {
             label: "View Course",
             onClick: () => window.open(`/courses/${createResult.courseId}`, "_blank"),
@@ -384,6 +481,102 @@ export default function AdminCourseBuilderPage() {
     } finally {
       setIsGenerating(false);
       setIsFullAuto(false);
+      setPipelineStatus(null);
+    }
+  };
+
+  // Handle streaming events from the pipeline
+  const handlePipelineStreamEvent = (event: any) => {
+    switch (event.type) {
+      case "stage_start":
+        setPipelineStatus({
+          stage: event.stage,
+          model: event.model,
+          isActive: true,
+          description: event.description,
+        });
+        // Map pipeline stage to generation step
+        const stageMap: Record<string, string> = {
+          planner: "planner",
+          retriever: "retriever",
+          webResearch: "webResearch",
+          summarizer: "summarizer",
+          ideaGenerator: "ideaGenerator",
+          factVerifier: "factVerifier",
+          critic: "critic",
+          courseWriter: "courseWriter",
+        };
+        const stepId = stageMap[event.stage];
+        if (stepId) {
+          updateStep(stepId, { status: "running", detail: event.description || event.model });
+        }
+        break;
+
+      case "facets_identified":
+        setPipelineStatus(prev => prev ? { ...prev, facets: event.facets } : null);
+        break;
+
+      case "chunks_retrieved":
+        setPipelineStatus(prev => prev ? { 
+          ...prev, 
+          chunksRetrieved: (prev.chunksRetrieved || 0) + event.count,
+        } : null);
+        updateStep("retriever", { 
+          status: "running", 
+          detail: `Retrieved ${event.count} sources from ${event.facet}` 
+        });
+        break;
+
+      case "web_research_result":
+        setPipelineStatus(prev => prev ? { 
+          ...prev, 
+          webResults: (prev.webResults || 0) + event.count,
+        } : null);
+        updateStep("webResearch", { 
+          status: "running", 
+          detail: `Found ${event.count} web results for ${event.facet}` 
+        });
+        break;
+
+      case "web_research_complete":
+        setPipelineStatus(prev => prev ? { 
+          ...prev, 
+          webResults: event.totalResults,
+        } : null);
+        updateStep("webResearch", { 
+          status: "completed", 
+          detail: `${event.totalResults} web results${event.savedToEmbeddings ? " (saved to knowledge)" : ""}` 
+        });
+        break;
+
+      case "summary_generated":
+        setPipelineStatus(prev => prev ? { 
+          ...prev, 
+          summariesGenerated: (prev.summariesGenerated || 0) + 1,
+        } : null);
+        break;
+
+      case "heartbeat":
+        // Keep connection alive
+        break;
+
+      case "complete":
+        // Mark all running steps as completed
+        setGenerationSteps(prev => prev.map(step => {
+          if (step.status === "running" && ["planner", "retriever", "webResearch", "summarizer", "ideaGenerator", "critic"].includes(step.id)) {
+            return { ...step, status: "completed" };
+          }
+          return step;
+        }));
+        break;
+
+      case "error":
+        setGenerationSteps(prev => prev.map(step => 
+          step.status === "running" 
+            ? { ...step, status: "failed", detail: event.message }
+            : step
+        ));
+        break;
     }
   };
 
@@ -433,7 +626,7 @@ export default function AdminCourseBuilderPage() {
 
   // =============================================================================
   // GENERATE COURSE (Outline Only - for manual review)
-  // Uses backend JSON actions for guaranteed structured output
+  // Uses the full AI pipeline for rich, context-aware course generation
   // =============================================================================
   const handleGenerateCourse = async () => {
     if (!prompt.trim()) {
@@ -452,16 +645,22 @@ export default function AdminCourseBuilderPage() {
     setCreatedCourseSlug(null);
     setCurrentOutlineId(null);
     setCurrentQueueId(null);
+    setPipelineStatus(null);
+    setPipelineMetadata(null);
     
-    // Initialize steps
+    // Initialize pipeline steps
     setGenerationSteps([
-      { id: "queue", label: "Adding to queue", status: "pending" },
-      { id: "outline", label: "Generating course outline (JSON)", status: "pending" },
+      { id: "planner", label: "📋 Analyzing course topic", status: "pending" },
+      { id: "retriever", label: "🔍 Searching knowledge base", status: "pending" },
+      ...(settings.enableWebResearch ? [{ id: "webResearch", label: "🌐 Researching the web", status: "pending" as const }] : []),
+      { id: "summarizer", label: "📝 Synthesizing information", status: "pending" },
+      ...(settings.enableCreativeMode ? [{ id: "ideaGenerator", label: "💡 Generating ideas", status: "pending" as const }] : []),
+      { id: "courseWriter", label: "✍️ Creating course outline", status: "pending" },
     ]);
 
     try {
-      // Step 1: Add to queue
-      updateStep("queue", { status: "running", detail: "Creating queue item..." });
+      // Add to queue first
+      updateStep("planner", { status: "running", detail: "Initializing pipeline..." });
       
       const queueId = await addToQueue({
         userId: user!.id,
@@ -473,27 +672,91 @@ export default function AdminCourseBuilderPage() {
       });
       
       setCurrentQueueId(queueId);
-      updateStep("queue", { status: "completed", detail: "Queue item created" });
 
-      // Step 2: Generate outline using backend action (guaranteed JSON)
-      updateStep("outline", { status: "running", detail: "Calling OpenAI with JSON mode..." });
+      // Use streaming endpoint for full pipeline
+      const response = await fetch("/api/ai/course-builder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt,
+          settings: {
+            preset: settings.preset,
+            maxFacets: settings.maxFacets,
+            chunksPerFacet: settings.chunksPerFacet,
+            similarityThreshold: settings.similarityThreshold,
+            enableCritic: settings.enableCritic,
+            enableCreativeMode: settings.enableCreativeMode,
+            enableWebResearch: settings.enableWebResearch,
+            enableFactVerification: settings.enableFactVerification,
+            autoSaveWebResearch: settings.autoSaveWebResearch,
+            webSearchMaxResults: settings.webSearchMaxResults,
+            responseStyle: settings.responseStyle,
+          },
+          storeId: selectedStoreId,
+          queueId,
+          mode: "outline",
+        }),
+      });
 
-      const outlineResult = await generateOutlineAction({ queueId });
-      
-      if (!outlineResult.success || !outlineResult.outlineId) {
-        throw new Error(outlineResult.error || "Failed to generate outline");
+      if (!response.ok) {
+        throw new Error("API request failed");
+      }
+
+      // Handle SSE stream
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("No response body");
+
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let outlineResult: any = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (line.startsWith("data: ")) {
+            try {
+              const event = JSON.parse(line.replace("data: ", ""));
+              handlePipelineStreamEvent(event);
+              
+              if (event.type === "complete") {
+                outlineResult = event.response;
+              }
+            } catch {
+              // Skip malformed JSON
+            }
+          }
+        }
+      }
+
+      if (!outlineResult?.success || !outlineResult?.outlineId) {
+        throw new Error(outlineResult?.error || "Failed to generate outline with pipeline");
       }
       
       setCurrentOutlineId(outlineResult.outlineId);
+      setPipelineMetadata(outlineResult.pipelineMetadata || null);
       
-      // The outline will be fetched automatically via the getOutline query
-      // and converted via the useEffect above
-      updateStep("outline", { 
+      // Update the outline display from the result
+      if (outlineResult.outline) {
+        const displayOutline = convertOutlineForDisplay({ outline: outlineResult.outline });
+        if (displayOutline) {
+          setGeneratedOutline(displayOutline);
+        }
+      }
+      
+      updateStep("courseWriter", { 
         status: "completed", 
-        detail: "Course structure created - review below" 
+        detail: `Generated with ${outlineResult.pipelineMetadata?.totalChunksProcessed || 0} sources - review below` 
       });
       
-      toast.success("Course outline generated! Review and expand chapters, then create.");
+      toast.success("Course outline generated!", {
+        description: `Used ${outlineResult.pipelineMetadata?.totalChunksProcessed || 0} knowledge sources${outlineResult.pipelineMetadata?.webResearchResults ? ` and ${outlineResult.pipelineMetadata.webResearchResults} web results` : ""}`,
+      });
 
     } catch (error) {
       console.error("Generation error:", error);
@@ -511,6 +774,7 @@ export default function AdminCourseBuilderPage() {
       toast.error(`Generation failed: ${errorMessage}`);
     } finally {
       setIsGenerating(false);
+      setPipelineStatus(null);
     }
   };
 
@@ -1039,6 +1303,46 @@ export default function AdminCourseBuilderPage() {
                     <p className="text-xs text-muted-foreground">Minimum relevance score for sources</p>
                   </div>
 
+                  {/* Content Expansion Settings */}
+                  <div className="space-y-3 pt-3 border-t">
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <Zap className="w-4 h-4" />
+                      Content Expansion (Speed vs Quality)
+                    </Label>
+                    
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <Label className="text-sm">Lite Mode (Recommended)</Label>
+                        <p className="text-xs text-muted-foreground">
+                          {settings.liteMode 
+                            ? "300-500 words per chapter, uses GPT-4o-mini (faster)" 
+                            : "800-1200 words per chapter, uses GPT-4o (slower)"}
+                        </p>
+                      </div>
+                      <Switch
+                        checked={settings.liteMode}
+                        onCheckedChange={(v) => setSettings(s => ({ ...s, liteMode: v }))}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm">Parallel Batch Size</Label>
+                        <span className="text-sm text-muted-foreground">{settings.parallelBatchSize} chapters</span>
+                      </div>
+                      <Slider
+                        value={[settings.parallelBatchSize]}
+                        onValueChange={([v]) => setSettings(s => ({ ...s, parallelBatchSize: v }))}
+                        min={1}
+                        max={10}
+                        step={1}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        How many chapters to expand simultaneously (higher = faster, but may hit rate limits)
+                      </p>
+                    </div>
+                  </div>
+
                   {/* Feature Toggles */}
                   <div className="space-y-3 pt-2">
                     <div className="flex items-center justify-between gap-4">
@@ -1172,7 +1476,14 @@ export default function AdminCourseBuilderPage() {
           {generationSteps.length > 0 && (
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-lg">Progress</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">Pipeline Progress</CardTitle>
+                  {pipelineStatus?.isActive && (
+                    <Badge variant="secondary" className="text-xs animate-pulse">
+                      {pipelineStatus.model}
+                    </Badge>
+                  )}
+                </div>
               </CardHeader>
               <CardContent className="space-y-2">
                 {generationSteps.map((step) => (
@@ -1204,6 +1515,32 @@ export default function AdminCourseBuilderPage() {
                     </div>
                   </div>
                 ))}
+                
+                {/* Pipeline metadata summary */}
+                {pipelineMetadata && (
+                  <div className="mt-3 pt-3 border-t flex flex-wrap gap-2">
+                    {pipelineMetadata.facetsUsed && pipelineMetadata.facetsUsed.length > 0 && (
+                      <Badge variant="outline" className="text-xs">
+                        📚 {pipelineMetadata.facetsUsed.length} topics analyzed
+                      </Badge>
+                    )}
+                    {pipelineMetadata.totalChunksProcessed !== undefined && pipelineMetadata.totalChunksProcessed > 0 && (
+                      <Badge variant="outline" className="text-xs">
+                        📖 {pipelineMetadata.totalChunksProcessed} knowledge sources
+                      </Badge>
+                    )}
+                    {pipelineMetadata.webResearchResults !== undefined && pipelineMetadata.webResearchResults > 0 && (
+                      <Badge variant="outline" className="text-xs">
+                        🌐 {pipelineMetadata.webResearchResults} web results
+                      </Badge>
+                    )}
+                    {pipelineMetadata.processingTimeMs !== undefined && (
+                      <Badge variant="outline" className="text-xs">
+                        ⏱️ {(pipelineMetadata.processingTimeMs / 1000).toFixed(1)}s
+                      </Badge>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
           )}
