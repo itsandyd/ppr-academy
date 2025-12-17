@@ -59,6 +59,9 @@ import {
   CheckCircle2,
   XCircle,
   GraduationCap,
+  Eye,
+  EyeOff,
+  RotateCcw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -122,12 +125,15 @@ interface ExistingCourseStructure {
   modules: Array<{
     _id: Id<"courseModules">;
     title: string;
+    description?: string;
     lessons: Array<{
       _id: Id<"courseLessons">;
       title: string;
+      description?: string;
       chapters: Array<{
         _id: Id<"courseChapters">;
         title: string;
+        description?: string;
         hasContent: boolean;
         wordCount: number;
       }>;
@@ -311,6 +317,11 @@ export default function AdminCourseBuilderPage() {
   // Existing course expansion actions
   const getCourseStructureAction = useAction(api.aiCourseBuilder.getCourseStructureForExpansion);
   const expandExistingCourseAction = useAction(api.aiCourseBuilder.expandExistingCourseChapters);
+  const expandSingleChapterAction = useAction(api.aiCourseBuilder.expandExistingChapter);
+  
+  // State for chapter preview and regeneration
+  const [expandedChapterPreviews, setExpandedChapterPreviews] = useState<Set<string>>(new Set());
+  const [regeneratingChapterId, setRegeneratingChapterId] = useState<string | null>(null);
   
   // Get courses for the selected store
   const storeCourses = useQuery(
@@ -1111,6 +1122,68 @@ export default function AdminCourseBuilderPage() {
     } finally {
       setIsExpandingExisting(false);
     }
+  };
+
+  // Regenerate a single chapter
+  const handleRegenerateSingleChapter = async (
+    chapterId: Id<"courseChapters">,
+    moduleTitle: string,
+    lessonTitle: string
+  ) => {
+    if (!existingCourseStructure) return;
+    
+    setRegeneratingChapterId(chapterId);
+    
+    try {
+      const result = await expandSingleChapterAction({
+        chapterId,
+        courseTitle: existingCourseStructure.course.title,
+        moduleTitle,
+        lessonTitle,
+        skillLevel: existingCourseStructure.course.skillLevel,
+        settings: {
+          preset: settings.preset,
+          maxFacets: settings.maxFacets,
+          chunksPerFacet: settings.chunksPerFacet,
+          similarityThreshold: settings.similarityThreshold,
+          enableCritic: settings.enableCritic,
+          enableCreativeMode: settings.enableCreativeMode,
+          enableWebResearch: settings.enableWebResearch,
+          enableFactVerification: settings.enableFactVerification,
+          autoSaveWebResearch: settings.autoSaveWebResearch,
+          webSearchMaxResults: settings.webSearchMaxResults,
+          responseStyle: settings.responseStyle,
+        },
+      });
+      
+      if (result.success) {
+        toast.success(`Chapter regenerated! (${result.wordCount} words)`);
+        // Reload the structure to show updated content
+        await handleLoadCourseStructure();
+        // Expand the preview to show the new content
+        setExpandedChapterPreviews(prev => new Set(prev).add(chapterId));
+      } else {
+        throw new Error(result.error || "Failed to regenerate chapter");
+      }
+    } catch (error) {
+      console.error("Error regenerating chapter:", error);
+      toast.error(`Failed to regenerate: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setRegeneratingChapterId(null);
+    }
+  };
+
+  // Toggle chapter content preview
+  const toggleChapterPreview = (chapterId: string) => {
+    setExpandedChapterPreviews(prev => {
+      const next = new Set(prev);
+      if (next.has(chapterId)) {
+        next.delete(chapterId);
+      } else {
+        next.add(chapterId);
+      }
+      return next;
+    });
   };
 
   // =============================================================================
@@ -2175,7 +2248,7 @@ export default function AdminCourseBuilderPage() {
                 </CardContent>
               </Card>
 
-              {/* AI Settings (same as create tab) */}
+              {/* Full AI Settings - Same as Create Tab */}
               <Card>
                 <Collapsible open={showSettings} onOpenChange={setShowSettings}>
                   <CollapsibleTrigger asChild>
@@ -2201,48 +2274,190 @@ export default function AdminCourseBuilderPage() {
                   
                   <CollapsibleContent>
                     <CardContent className="space-y-4 pt-0">
-                      {/* Preset Selection */}
+                      {/* Preset */}
                       <div className="space-y-2">
                         <Label className="text-sm">Model Preset</Label>
                         <Select 
                           value={settings.preset} 
-                          onValueChange={(v) => setSettings({...settings, preset: v as AISettings["preset"]})}
+                          onValueChange={(v: any) => setSettings(s => ({ ...s, preset: v }))}
                         >
                           <SelectTrigger className="bg-background">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent className="bg-white dark:bg-black">
-                            {Object.entries(PRESET_DESCRIPTIONS).map(([key, preset]) => (
+                            {Object.entries(PRESET_DESCRIPTIONS).map(([key, { icon, label, description }]) => (
                               <SelectItem key={key} value={key}>
                                 <div className="flex items-center gap-2">
-                                  {preset.icon}
-                                  <span>{preset.label}</span>
+                                  {icon}
+                                  <span>{label}</span>
+                                  <span className="text-xs text-muted-foreground">- {description}</span>
                                 </div>
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
-                        <p className="text-xs text-muted-foreground">
-                          {PRESET_DESCRIPTIONS[settings.preset]?.description}
-                        </p>
                       </div>
 
-                      {/* Parallel Batch Size */}
+                      {/* Max Facets */}
                       <div className="space-y-2">
-                        <Label className="text-sm flex items-center justify-between">
-                          Parallel Chapters
-                          <span className="text-muted-foreground">{settings.parallelBatchSize}</span>
-                        </Label>
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm">Max Facets</Label>
+                          <span className="text-sm text-muted-foreground">{settings.maxFacets}</span>
+                        </div>
+                        <Slider
+                          value={[settings.maxFacets]}
+                          onValueChange={([v]) => setSettings(s => ({ ...s, maxFacets: v }))}
+                          min={1}
+                          max={5}
+                          step={1}
+                        />
+                        <p className="text-xs text-muted-foreground">Number of sub-topics to analyze</p>
+                      </div>
+
+                      {/* Chunks per Facet */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm">Chunks per Facet</Label>
+                          <span className="text-sm text-muted-foreground">{settings.chunksPerFacet}</span>
+                        </div>
+                        <Slider
+                          value={[settings.chunksPerFacet]}
+                          onValueChange={([v]) => setSettings(s => ({ ...s, chunksPerFacet: v }))}
+                          min={5}
+                          max={50}
+                          step={5}
+                        />
+                        <p className="text-xs text-muted-foreground">Amount of knowledge per topic</p>
+                      </div>
+
+                      {/* Similarity Threshold */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm">Similarity Threshold</Label>
+                          <span className="text-sm text-muted-foreground">{settings.similarityThreshold.toFixed(2)}</span>
+                        </div>
+                        <Slider
+                          value={[settings.similarityThreshold]}
+                          onValueChange={([v]) => setSettings(s => ({ ...s, similarityThreshold: v }))}
+                          min={0.5}
+                          max={0.95}
+                          step={0.05}
+                        />
+                      </div>
+
+                      {/* Parallel Processing */}
+                      <div className="space-y-2 pt-2 border-t">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm">Parallel Chapters</Label>
+                          <span className="text-sm text-muted-foreground">{settings.parallelBatchSize} at a time</span>
+                        </div>
                         <Slider
                           value={[settings.parallelBatchSize]}
-                          onValueChange={([v]) => setSettings({...settings, parallelBatchSize: v})}
+                          onValueChange={([v]) => setSettings(s => ({ ...s, parallelBatchSize: v }))}
                           min={1}
                           max={5}
                           step={1}
                         />
                         <p className="text-xs text-muted-foreground">
-                          How many chapters to expand at once (lower = more stable)
+                          Each chapter runs the full AI pipeline
                         </p>
+                      </div>
+
+                      {/* Feature Toggles */}
+                      <div className="space-y-3 pt-2 border-t">
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex-1">
+                            <Label className="text-sm">Critic Stage</Label>
+                            <p className="text-xs text-muted-foreground">Quality review</p>
+                          </div>
+                          <Switch
+                            checked={settings.enableCritic}
+                            onCheckedChange={(v) => setSettings(s => ({ ...s, enableCritic: v }))}
+                          />
+                        </div>
+
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex-1">
+                            <Label className="text-sm">Creative Mode</Label>
+                            <p className="text-xs text-muted-foreground">Generate ideas beyond sources</p>
+                          </div>
+                          <Switch
+                            checked={settings.enableCreativeMode}
+                            onCheckedChange={(v) => setSettings(s => ({ ...s, enableCreativeMode: v }))}
+                          />
+                        </div>
+
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex-1">
+                            <Label className="text-sm">Web Research</Label>
+                            <p className="text-xs text-muted-foreground">Search web via Tavily API</p>
+                          </div>
+                          <Switch
+                            checked={settings.enableWebResearch}
+                            onCheckedChange={(v) => setSettings(s => ({ ...s, enableWebResearch: v }))}
+                          />
+                        </div>
+
+                        {settings.enableWebResearch && (
+                          <div className="ml-4 space-y-2 p-2 bg-muted/30 rounded">
+                            <div className="flex items-center justify-between gap-4">
+                              <Label className="text-xs">Auto-Save to Knowledge</Label>
+                              <Switch
+                                checked={settings.autoSaveWebResearch}
+                                onCheckedChange={(v) => setSettings(s => ({ ...s, autoSaveWebResearch: v }))}
+                              />
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <Label className="text-xs">Results per Topic</Label>
+                              <span className="text-xs text-muted-foreground">{settings.webSearchMaxResults}</span>
+                            </div>
+                            <Slider
+                              value={[settings.webSearchMaxResults]}
+                              onValueChange={([v]) => setSettings(s => ({ ...s, webSearchMaxResults: v }))}
+                              min={1}
+                              max={10}
+                              step={1}
+                            />
+                          </div>
+                        )}
+
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex-1">
+                            <Label className="text-sm">Fact Verification</Label>
+                            <p className="text-xs text-muted-foreground">Cross-check claims</p>
+                          </div>
+                          <Switch
+                            checked={settings.enableFactVerification}
+                            onCheckedChange={(v) => setSettings(s => ({ ...s, enableFactVerification: v }))}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Response Style */}
+                      <div className="space-y-2 pt-2 border-t">
+                        <Label className="text-sm">Response Style</Label>
+                        <div className="grid gap-1">
+                          {RESPONSE_STYLES.map((style) => {
+                            const isSelected = settings.responseStyle === style.value;
+                            return (
+                              <button
+                                key={style.value}
+                                type="button"
+                                onClick={() => setSettings(s => ({ ...s, responseStyle: style.value }))}
+                                className={cn(
+                                  "flex items-center gap-2 p-2 rounded border text-left text-xs transition-all",
+                                  isSelected
+                                    ? "border-primary bg-primary/5"
+                                    : "border-border hover:bg-muted/30"
+                                )}
+                              >
+                                <span>{style.icon}</span>
+                                <span className="font-medium">{style.label}</span>
+                                <span className="text-muted-foreground">{style.description}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
                     </CardContent>
                   </CollapsibleContent>
@@ -2289,20 +2504,20 @@ export default function AdminCourseBuilderPage() {
 
               {/* Course Structure Display */}
               {existingCourseStructure ? (
-                <Card>
-                  <CardHeader className="pb-3">
+                <Card className="flex flex-col max-h-[calc(100vh-200px)]">
+                  <CardHeader className="pb-3 flex-shrink-0">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg">{existingCourseStructure.course.title}</CardTitle>
-                      <Badge variant="outline">
+                      <CardTitle className="text-lg truncate">{existingCourseStructure.course.title}</CardTitle>
+                      <Badge variant="outline" className="flex-shrink-0">
                         {existingCourseStructure.chaptersWithContent}/{existingCourseStructure.totalChapters} chapters
                       </Badge>
                     </div>
                     {existingCourseStructure.course.description && (
-                      <CardDescription>{existingCourseStructure.course.description}</CardDescription>
+                      <CardDescription className="line-clamp-3">{existingCourseStructure.course.description}</CardDescription>
                     )}
                   </CardHeader>
-                  <ScrollArea className="max-h-[600px]">
-                    <CardContent className="space-y-2">
+                  <ScrollArea className="flex-1 min-h-0">
+                    <CardContent className="space-y-2 pb-6">
                       {existingCourseStructure.modules.map((mod, mi) => (
                         <Collapsible
                           key={mi}
@@ -2334,30 +2549,101 @@ export default function AdminCourseBuilderPage() {
                                   </Badge>
                                 </div>
                                 <div className="pl-6 space-y-1">
-                                  {lesson.chapters.map((ch, ci) => (
-                                    <div
-                                      key={ci}
-                                      className={cn(
-                                        "flex items-center gap-2 p-2 rounded border text-xs",
-                                        ch.hasContent 
-                                          ? "bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900"
-                                          : "bg-background"
-                                      )}
-                                    >
-                                      <FileText className="w-3 h-3 text-muted-foreground" />
-                                      <span className="flex-1">{ch.title}</span>
-                                      {ch.hasContent ? (
-                                        <Badge variant="default" className="text-[10px] px-1.5 bg-green-500">
-                                          <Check className="w-2 h-2 mr-0.5" />
-                                          {ch.wordCount} words
-                                        </Badge>
-                                      ) : (
-                                        <Badge variant="secondary" className="text-[10px] px-1.5">
-                                          No content
-                                        </Badge>
-                                      )}
-                                    </div>
-                                  ))}
+                                  {lesson.chapters.map((ch, ci) => {
+                                    const isExpanded = expandedChapterPreviews.has(ch._id);
+                                    const isRegenerating = regeneratingChapterId === ch._id;
+                                    
+                                    return (
+                                      <div key={ci} className="space-y-1">
+                                        <div
+                                          className={cn(
+                                            "flex items-center gap-2 p-2 rounded border text-xs",
+                                            ch.hasContent 
+                                              ? ch.wordCount < 100 
+                                                ? "bg-yellow-50 dark:bg-yellow-950/30 border-yellow-200 dark:border-yellow-900"
+                                                : "bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900"
+                                              : "bg-background"
+                                          )}
+                                        >
+                                          <FileText className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                                          <span className="flex-1 truncate">{ch.title}</span>
+                                          
+                                          {/* Content Status Badge */}
+                                          {ch.hasContent ? (
+                                            ch.wordCount < 100 ? (
+                                              <Badge variant="outline" className="text-[10px] px-1.5 border-yellow-500 text-yellow-700 dark:text-yellow-400">
+                                                {ch.wordCount} words (short)
+                                              </Badge>
+                                            ) : (
+                                              <Badge variant="default" className="text-[10px] px-1.5 bg-green-500">
+                                                <Check className="w-2 h-2 mr-0.5" />
+                                                {ch.wordCount} words
+                                              </Badge>
+                                            )
+                                          ) : (
+                                            <Badge variant="secondary" className="text-[10px] px-1.5">
+                                              No content
+                                            </Badge>
+                                          )}
+                                          
+                                          {/* Preview Toggle Button */}
+                                          {ch.hasContent && (
+                                            <Button
+                                              size="sm"
+                                              variant="ghost"
+                                              className="h-6 w-6 p-0"
+                                              onClick={() => toggleChapterPreview(ch._id)}
+                                              title={isExpanded ? "Hide preview" : "Show preview"}
+                                            >
+                                              {isExpanded ? (
+                                                <EyeOff className="w-3 h-3" />
+                                              ) : (
+                                                <Eye className="w-3 h-3" />
+                                              )}
+                                            </Button>
+                                          )}
+                                          
+                                          {/* Regenerate Button */}
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            className="h-6 w-6 p-0"
+                                            onClick={() => handleRegenerateSingleChapter(
+                                              ch._id as Id<"courseChapters">,
+                                              mod.title,
+                                              lesson.title
+                                            )}
+                                            disabled={isRegenerating || isExpandingExisting}
+                                            title="Regenerate chapter content"
+                                          >
+                                            {isRegenerating ? (
+                                              <Loader2 className="w-3 h-3 animate-spin" />
+                                            ) : (
+                                              <RotateCcw className="w-3 h-3" />
+                                            )}
+                                          </Button>
+                                        </div>
+                                        
+                                        {/* Content Preview */}
+                                        {isExpanded && ch.description && (
+                                          <div className="ml-5 p-3 rounded bg-muted/50 border text-xs">
+                                            <div className="prose prose-sm dark:prose-invert max-w-none">
+                                              <p className="whitespace-pre-wrap text-muted-foreground leading-relaxed">
+                                                {ch.description.length > 2000 
+                                                  ? ch.description.substring(0, 2000) + "..." 
+                                                  : ch.description}
+                                              </p>
+                                            </div>
+                                            {ch.description.length > 2000 && (
+                                              <p className="text-[10px] text-muted-foreground mt-2 italic">
+                                                Content truncated for preview. Full content: {ch.wordCount} words
+                                              </p>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
                                 </div>
                               </div>
                             ))}
