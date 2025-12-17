@@ -104,66 +104,50 @@ export const generateOutline = action({
     const targetLessonsPerModule = queueItem.targetLessonsPerModule || 3;
     
     try {
-      // Build the prompt for the masterAI pipeline
-      const outlinePrompt = `Create a comprehensive music production course outline.
-
-**Course Topic:** ${topic}
-**Skill Level:** ${skillLevel}
-**Structure:** ${targetModules} modules, each with ${targetLessonsPerModule} lessons, each lesson with 2-4 chapters
-
-Please research this topic thoroughly and create a well-structured course outline. Use your knowledge base and web research to ensure the content is accurate and comprehensive.
-
-**IMPORTANT:** Your response MUST be valid JSON in this exact format:
-\`\`\`json
-{
-  "course": {
-    "title": "Course Title Here",
-    "description": "A compelling course description that explains what students will learn",
-    "category": "Music Production",
-    "skillLevel": "${skillLevel}",
-    "estimatedDuration": 120
-  },
-  "modules": [
-    {
-      "title": "Module 1 Title",
-      "description": "What this module covers",
-      "orderIndex": 0,
-      "lessons": [
-        {
-          "title": "Lesson 1 Title",
-          "description": "What this lesson covers",
-          "orderIndex": 0,
-          "chapters": [
-            {
-              "title": "Chapter Title",
-              "content": "Brief 2-3 sentence description of what this chapter will teach",
-              "duration": 10,
-              "orderIndex": 0
-            }
-          ]
-        }
-      ]
-    }
-  ]
-}
-\`\`\`
-
-Create exactly ${targetModules} modules with ${targetLessonsPerModule} lessons each. Each lesson should have 2-4 chapters. Make the content specific to ${topic} and appropriate for ${skillLevel} level students.`;
-
-      console.log(`🎓 Generating course outline using FULL masterAI pipeline (preset: ${settings.preset})`);
+      // =======================================================================
+      // STEP 1: Use masterAI pipeline to gather knowledge and research
+      // =======================================================================
+      const researchPrompt = `I'm creating a comprehensive music production course about: ${topic}
       
-      // Call the FULL masterAI pipeline - SAME as AI chat!
+Skill Level: ${skillLevel}
+
+Please research this topic thoroughly and provide:
+1. Key concepts and skills that should be covered
+2. The logical learning progression for ${skillLevel} students
+3. Common challenges and how to address them
+4. Practical techniques and tips
+5. Industry best practices
+
+This research will be used to structure a ${targetModules}-module course.`;
+
+      console.log(`🎓 Step 1: Gathering knowledge with masterAI pipeline (preset: ${settings.preset})`);
+      
+      // Call the FULL masterAI pipeline for research and knowledge gathering
       const pipelineResult = await (ctx as any).runAction(
         api.masterAI.index.askMasterAI,
         {
-          question: outlinePrompt,
+          question: researchPrompt,
           settings,
           userId: queueItem.userId,
         }
       ) as { answer: string; citations?: any[]; facetsUsed?: string[]; pipelineMetadata?: any };
       
-      // Parse the JSON from the response
-      const outline = parseOutlineFromResponse(pipelineResult.answer, topic, skillLevel);
+      console.log(`   ✅ Pipeline research complete. Got ${pipelineResult.answer.length} chars of context`);
+      console.log(`   📊 Chunks: ${pipelineResult.pipelineMetadata?.totalChunksProcessed || 0}, Facets: ${pipelineResult.facetsUsed?.join(", ") || "none"}`);
+
+      // =======================================================================
+      // STEP 2: Generate structured JSON outline using direct OpenAI call
+      // =======================================================================
+      console.log(`🎓 Step 2: Generating structured course outline with JSON mode`);
+      
+      const outline = await generateStructuredOutline({
+        topic,
+        skillLevel,
+        targetModules,
+        targetLessonsPerModule,
+        pipelineContext: pipelineResult.answer,
+        facets: pipelineResult.facetsUsed || [],
+      });
       
       // Calculate chapter status
       const chapterStatus: Array<{
@@ -245,64 +229,109 @@ Create exactly ${targetModules} modules with ${targetLessonsPerModule} lessons e
 });
 
 /**
- * Parse course outline JSON from the AI response
- * Handles various response formats and extracts the JSON
+ * Generate a structured course outline using OpenAI's JSON mode
+ * Uses context from the masterAI pipeline for informed content
  */
-function parseOutlineFromResponse(response: string, topic: string, skillLevel: string): CourseOutline {
-  // Try to extract JSON from the response
-  let jsonStr = response;
-  
-  // Look for JSON code block
-  const jsonMatch = response.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (jsonMatch) {
-    jsonStr = jsonMatch[1].trim();
-  } else {
-    // Try to find JSON object in the response
-    const objectMatch = response.match(/\{[\s\S]*"course"[\s\S]*"modules"[\s\S]*\}/);
-    if (objectMatch) {
-      jsonStr = objectMatch[0];
+async function generateStructuredOutline(params: {
+  topic: string;
+  skillLevel: string;
+  targetModules: number;
+  targetLessonsPerModule: number;
+  pipelineContext: string;
+  facets: string[];
+}): Promise<CourseOutline> {
+  const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+
+  const systemPrompt = `You are an expert course curriculum designer. Create a comprehensive, well-structured course outline based on the provided research and context.
+
+REQUIREMENTS:
+- Create exactly ${params.targetModules} modules
+- Each module should have exactly ${params.targetLessonsPerModule} lessons
+- Each lesson should have 2-4 chapters
+- Content should be appropriate for ${params.skillLevel} level students
+- Use the research context to inform your outline with accurate, relevant content
+- Module and lesson titles should be specific and descriptive
+- Chapter content should be 2-3 sentences describing what will be taught
+
+You MUST respond with valid JSON only. No other text.`;
+
+  const userPrompt = `Create a course outline for: "${params.topic}"
+
+=== RESEARCH CONTEXT FROM KNOWLEDGE BASE ===
+${params.pipelineContext}
+=== END OF RESEARCH CONTEXT ===
+
+${params.facets.length > 0 ? `Key topics identified: ${params.facets.join(", ")}` : ""}
+
+Generate a JSON course outline with this EXACT structure:
+{
+  "course": {
+    "title": "Descriptive Course Title",
+    "description": "A compelling 2-3 sentence description of what students will learn",
+    "category": "Music Production",
+    "skillLevel": "${params.skillLevel}",
+    "estimatedDuration": 120
+  },
+  "modules": [
+    {
+      "title": "Module Title",
+      "description": "What this module covers",
+      "orderIndex": 0,
+      "lessons": [
+        {
+          "title": "Lesson Title",
+          "description": "What this lesson covers",
+          "orderIndex": 0,
+          "chapters": [
+            {
+              "title": "Chapter Title",
+              "content": "2-3 sentences describing what this chapter teaches",
+              "duration": 10,
+              "orderIndex": 0
+            }
+          ]
+        }
+      ]
     }
+  ]
+}`;
+
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ],
+    temperature: 0.7,
+    response_format: { type: "json_object" },
+    max_tokens: 6000,
+  });
+
+  const content = completion.choices[0].message.content;
+  if (!content) {
+    throw new Error("No content generated from OpenAI");
   }
-  
+
   try {
-    const parsed = JSON.parse(jsonStr);
+    const parsed = JSON.parse(content);
     
-    // Validate basic structure
+    // Validate structure
     if (!parsed.course || !parsed.modules || !Array.isArray(parsed.modules)) {
+      console.error("Invalid outline structure:", content.substring(0, 500));
       throw new Error("Invalid outline structure - missing course or modules");
     }
+    
+    // Log what we got
+    console.log(`   📚 Generated outline: "${parsed.course.title}"`);
+    console.log(`   📦 ${parsed.modules.length} modules, ${parsed.modules.reduce((acc: number, m: any) => acc + (m.lessons?.length || 0), 0)} lessons`);
     
     return parsed as CourseOutline;
   } catch (parseError) {
     console.error("Failed to parse outline JSON:", parseError);
-    console.error("Response was:", response.substring(0, 500));
-    
-    // Return a fallback structure
-    return {
-      course: {
-        title: `Course: ${topic}`,
-        description: `A comprehensive course about ${topic}`,
-        category: "Music Production",
-        skillLevel: skillLevel as "beginner" | "intermediate" | "advanced",
-        estimatedDuration: 120,
-      },
-      modules: [{
-        title: "Introduction",
-        description: "Getting started",
-        orderIndex: 0,
-        lessons: [{
-          title: "Overview",
-          description: "Course overview",
-          orderIndex: 0,
-          chapters: [{
-            title: "Welcome",
-            content: "Welcome to this course",
-            duration: 5,
-            orderIndex: 0,
-          }],
-        }],
-      }],
-    };
+    console.error("Raw response:", content.substring(0, 1000));
+    throw new Error("Failed to parse course outline from AI response");
   }
 }
 
@@ -685,6 +714,27 @@ export const createCourseFromOutline = action({
     try {
       const outlineData = outline.outline as CourseOutline;
       
+      // Debug logging
+      console.log("=== CREATE COURSE FROM OUTLINE ===");
+      console.log("📋 Outline data received:");
+      console.log("   Title:", outlineData.course?.title);
+      console.log("   Description:", outlineData.course?.description?.substring(0, 100) + "...");
+      console.log("   Category:", outlineData.course?.category);
+      console.log("   Skill Level:", outlineData.course?.skillLevel);
+      console.log("   Modules count:", outlineData.modules?.length);
+      
+      if (outlineData.modules && outlineData.modules.length > 0) {
+        console.log("   First module:", outlineData.modules[0]?.title);
+        console.log("   First module lessons:", outlineData.modules[0]?.lessons?.length);
+        if (outlineData.modules[0]?.lessons?.[0]) {
+          console.log("   First lesson:", outlineData.modules[0].lessons[0].title);
+          console.log("   First lesson chapters:", outlineData.modules[0].lessons[0].chapters?.length);
+        }
+      } else {
+        console.log("⚠️ NO MODULES IN OUTLINE DATA!");
+        console.log("   Raw outline:", JSON.stringify(outline.outline).substring(0, 500));
+      }
+      
       // Create course using existing mutation
       const result = await (ctx as any).runMutation(
         api.courses.createCourseWithData,
@@ -702,6 +752,8 @@ export const createCourseFromOutline = action({
           },
         }
       ) as { success: boolean; courseId?: Id<"courses">; slug?: string; message?: string };
+      
+      console.log("✅ Course creation result:", result);
       
       if (result.success && result.courseId) {
         // Link course to queue item

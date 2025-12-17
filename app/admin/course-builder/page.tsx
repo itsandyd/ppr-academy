@@ -468,9 +468,9 @@ export default function AdminCourseBuilderPage() {
         
         toast.success("🎉 Course created successfully!", {
           description: `Used ${outlineResult.pipelineMetadata?.totalChunksProcessed || 0} knowledge sources${outlineResult.pipelineMetadata?.webResearchResults ? ` and ${outlineResult.pipelineMetadata.webResearchResults} web results` : ""}`,
-          action: createResult.slug ? {
-            label: "View Course",
-            onClick: () => window.open(`/courses/${createResult.courseId}`, "_blank"),
+          action: createResult.courseId ? {
+            label: "Edit Course",
+            onClick: () => window.open(`/store/${selectedStoreId}/courses/${createResult.courseId}`, "_blank"),
           } : undefined,
           duration: 10000,
         });
@@ -926,8 +926,8 @@ export default function AdminCourseBuilderPage() {
         setCreatedCourseSlug(result.slug || null);
         toast.success("Course created successfully!", {
           action: {
-            label: "View Course",
-            onClick: () => window.open(`/courses/${result.courseId}`, "_blank"),
+            label: "Edit Course",
+            onClick: () => window.open(`/store/${selectedStoreId}/courses/${result.courseId}`, "_blank"),
           },
         });
       } else {
@@ -1623,23 +1623,67 @@ export default function AdminCourseBuilderPage() {
                       </>
                     )}
                   </Button>
-                  {(createdCourseId || createdCourseSlug) && (
+                  {createdCourseId && selectedStoreId && (
                     <Button
                       variant="outline"
                       size="sm"
                       asChild
                     >
                       <a 
-                        href={createdCourseSlug ? `/course/${createdCourseSlug}` : `/courses/${createdCourseId}`} 
+                        href={`/store/${selectedStoreId}/courses/${createdCourseId}`} 
                         target="_blank" 
                         rel="noopener noreferrer"
                       >
                         <ExternalLink className="w-4 h-4 mr-1" />
-                        View Course
+                        Edit Course
                       </a>
                     </Button>
                   )}
                 </div>
+
+                {/* Success Banner */}
+                {createdCourseId && selectedStoreId && (
+                  <div className="mt-4 p-4 rounded-lg bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5" />
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-green-800 dark:text-green-200">
+                          Course Created Successfully!
+                        </h4>
+                        <p className="text-sm text-green-700 dark:text-green-300 mt-1">
+                          Your course has been created with all modules, lessons, and chapters. Click below to view and edit it in the course dashboard.
+                        </p>
+                        <div className="flex gap-2 mt-3">
+                          <Button
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700"
+                            asChild
+                          >
+                            <a 
+                              href={`/store/${selectedStoreId}/courses/${createdCourseId}`}
+                            >
+                              Open Course Editor
+                            </a>
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            asChild
+                          >
+                            <a 
+                              href={createdCourseSlug ? `/courses/${createdCourseSlug}` : `/courses/${createdCourseId}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <ExternalLink className="w-4 h-4 mr-1" />
+                              Preview Public Page
+                            </a>
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </CardHeader>
 
               <ScrollArea className="h-[calc(100vh-400px)] min-h-[400px]">
