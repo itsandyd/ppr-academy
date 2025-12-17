@@ -558,6 +558,7 @@ export default function AdminCourseBuilderPage() {
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
   const [viewingOutlineId, setViewingOutlineId] = useState<Id<"aiCourseOutlines"> | null>(null);
   const [isExpandingChapter, setIsExpandingChapter] = useState(false);
+  const [activeTab, setActiveTab] = useState("queue");
 
   // Queries
   const adminCheck = useQuery(
@@ -857,7 +858,7 @@ export default function AdminCourseBuilderPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="queue" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="queue">Queue</TabsTrigger>
           <TabsTrigger value="add">Add Courses</TabsTrigger>
@@ -1001,10 +1002,7 @@ Create me a course on music theory for producers`}
                 <p className="text-sm text-muted-foreground mb-4">
                   Add some course prompts to get started
                 </p>
-                <Button variant="outline" onClick={() => {
-                  const tab = document.querySelector('[data-state="inactive"][value="add"]') as HTMLElement;
-                  tab?.click();
-                }}>
+                <Button variant="outline" onClick={() => setActiveTab("add")}>
                   <Plus className="w-4 h-4 mr-2" />
                   Add Courses
                 </Button>
