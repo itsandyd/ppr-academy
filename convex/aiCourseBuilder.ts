@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { action } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import OpenAI from "openai";
+import { marked } from "marked";
 import { 
   chatSettingsValidator, 
   DEFAULT_CHAT_SETTINGS,
@@ -13,6 +14,27 @@ import {
   type SummarizerOutput,
   type IdeaGeneratorOutput,
 } from "./masterAI/types";
+
+// Configure marked for safe HTML output
+marked.setOptions({
+  gfm: true, // GitHub Flavored Markdown
+  breaks: true, // Convert \n to <br>
+});
+
+/**
+ * Convert markdown to HTML for storage
+ * This ensures AI-generated content is compatible with TipTap/WYSIWYG editors
+ */
+function markdownToHtml(markdown: string): string {
+  try {
+    const html = marked.parse(markdown);
+    // marked.parse returns string | Promise<string>, but with sync options it's string
+    return typeof html === 'string' ? html : markdown;
+  } catch (error) {
+    console.error("Error converting markdown to HTML:", error);
+    return markdown; // Fallback to original if conversion fails
+  }
+}
 
 // Type-escape hatch to avoid deep type inference issues with Convex API types
 // Using require to bypass TypeScript's eager type evaluation
@@ -1008,17 +1030,20 @@ Write the content directly - no introductions like "In this chapter..." or concl
         throw new Error("No content generated from AI pipeline");
       }
       
-      // Update the chapter with the new content
+      // Convert markdown to HTML for compatibility with TipTap editor
+      const htmlContent = markdownToHtml(result.answer);
+      
+      // Update the chapter with the new content (as HTML)
       await (ctx as any).runMutation(
         internal.courses.updateChapterContentInternal,
         {
           chapterId: args.chapterId,
-          description: result.answer,
+          description: htmlContent,
         }
       );
       
       const wordCount = result.answer.split(/\s+/).length;
-      console.log(`✓ Expanded chapter "${chapter.title}" (${wordCount} words)`);
+      console.log(`✓ Expanded chapter "${chapter.title}" (${wordCount} words, converted to HTML)`);
       
       return {
         success: true,
@@ -1257,14 +1282,17 @@ Remember: Keep all the original content, just add markdown formatting to make it
         return { success: false, error: "No formatted content returned" };
       }
 
-      // Save the formatted content
+      // Convert markdown to HTML for compatibility with TipTap editor
+      const htmlContent = markdownToHtml(formattedContent);
+
+      // Save the formatted content (as HTML)
       await (ctx as any).runMutation(
         internal.courses.updateChapterDescription,
-        { chapterId: args.chapterId, description: formattedContent }
+        { chapterId: args.chapterId, description: htmlContent }
       );
 
       const wordCount = formattedContent.split(/\s+/).length;
-      console.log(`✓ Reformatted "${args.chapterTitle}" (${wordCount} words)`);
+      console.log(`✓ Reformatted "${args.chapterTitle}" (${wordCount} words, converted to HTML)`);
 
       return {
         success: true,

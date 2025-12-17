@@ -66,7 +66,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import ReactMarkdown from "react-markdown";
 
 // =============================================================================
 // TYPES
@@ -2738,14 +2737,15 @@ export default function AdminCourseBuilderPage() {
                                         {/* Content Preview */}
                                         {isExpanded && ch.description && (
                                           <div className="ml-5 p-3 rounded bg-muted/50 border text-xs">
-                                            <div className="prose prose-sm dark:prose-invert max-w-none prose-headings:text-foreground prose-headings:font-semibold prose-h1:text-base prose-h1:mt-4 prose-h1:mb-2 prose-h2:text-sm prose-h2:mt-3 prose-h2:mb-1.5 prose-h3:text-xs prose-h3:mt-2 prose-h3:mb-1 prose-p:text-muted-foreground prose-p:text-xs prose-p:leading-relaxed prose-p:mb-2 prose-strong:text-foreground prose-ul:my-2 prose-ul:text-xs prose-li:my-0.5 prose-code:bg-background prose-code:px-1 prose-code:rounded prose-code:text-[10px] prose-blockquote:border-l-primary prose-blockquote:text-xs prose-hr:my-4">
-                                              <ReactMarkdown>
-                                                {ch.description.length > 3000 
-                                                  ? ch.description.substring(0, 3000) + "\n\n---\n\n*Content truncated for preview...*" 
-                                                  : ch.description}
-                                              </ReactMarkdown>
-                                            </div>
-                                            {ch.description.length > 3000 && (
+                                            <div 
+                                              className="prose prose-sm dark:prose-invert max-w-none prose-headings:text-foreground prose-headings:font-semibold prose-h1:text-base prose-h1:mt-4 prose-h1:mb-2 prose-h2:text-sm prose-h2:mt-3 prose-h2:mb-1.5 prose-h3:text-xs prose-h3:mt-2 prose-h3:mb-1 prose-p:text-muted-foreground prose-p:text-xs prose-p:leading-relaxed prose-p:mb-2 prose-strong:text-foreground prose-ul:my-2 prose-ul:text-xs prose-li:my-0.5 prose-code:bg-background prose-code:px-1 prose-code:rounded prose-code:text-[10px] prose-blockquote:border-l-primary prose-blockquote:text-xs prose-hr:my-4 max-h-[400px] overflow-y-auto"
+                                              dangerouslySetInnerHTML={{ 
+                                                __html: ch.description.length > 5000 
+                                                  ? ch.description.substring(0, 5000) + "<p><em>Content truncated for preview...</em></p>" 
+                                                  : ch.description 
+                                              }}
+                                            />
+                                            {ch.description.length > 5000 && (
                                               <p className="text-[10px] text-muted-foreground mt-2 italic">
                                                 Full content: {ch.wordCount} words
                                               </p>
