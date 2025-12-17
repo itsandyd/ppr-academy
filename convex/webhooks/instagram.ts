@@ -379,8 +379,32 @@ async function executeAutomation(
     // Build system prompt with creator's custom prompt
     const systemPrompt = buildSmartAIPrompt(listener.prompt);
 
+    // Fetch relevant social post context for better responses
+    let socialPostContext = "";
+    try {
+      // Get the user to find their clerkId
+      const user = await ctx.runQuery(
+        (api as any).users.getById,
+        { id: automation.userId }
+      ) as { clerkId?: string } | null;
+      
+      if (user?.clerkId) {
+        const contextResult = await ctx.runAction(
+          (internal as any).socialPostEmbeddings.searchSocialPostContext,
+          { userId: user.clerkId, query: messageText, limit: 3 }
+        ) as { context: string; matchCount: number };
+        
+        if (contextResult.matchCount > 0) {
+          socialPostContext = contextResult.context;
+          console.log(`📊 Found ${contextResult.matchCount} relevant social posts for context`);
+        }
+      }
+    } catch (error) {
+      console.warn("⚠️ Could not fetch social post context:", error);
+    }
+
     // Generate AI response (no history yet - this is first message)
-    const aiResponse = await generateAIResponse(systemPrompt, [], messageText);
+    const aiResponse = await generateAIResponse(systemPrompt, [], messageText, socialPostContext);
 
     if (!aiResponse) {
       console.error("❌ No AI response generated");
@@ -515,8 +539,32 @@ async function continueSmartAIConversation(
   // Build system prompt
   const systemPrompt = buildSmartAIPrompt(automation.listener?.prompt);
 
-  // Generate AI response with conversation history
-  const aiResponse = await generateAIResponse(systemPrompt, history, messageText);
+  // Fetch relevant social post context for better responses
+  let socialPostContext = "";
+  try {
+    // Get the user to find their clerkId
+    const user = await ctx.runQuery(
+      (api as any).users.getById,
+      { id: automation.userId }
+    ) as { clerkId?: string } | null;
+    
+    if (user?.clerkId) {
+      const contextResult = await ctx.runAction(
+        (internal as any).socialPostEmbeddings.searchSocialPostContext,
+        { userId: user.clerkId, query: messageText, limit: 3 }
+      ) as { context: string; matchCount: number };
+      
+      if (contextResult.matchCount > 0) {
+        socialPostContext = contextResult.context;
+        console.log(`📊 Found ${contextResult.matchCount} relevant social posts for context`);
+      }
+    }
+  } catch (error) {
+    console.warn("⚠️ Could not fetch social post context:", error);
+  }
+
+  // Generate AI response with conversation history and social context
+  const aiResponse = await generateAIResponse(systemPrompt, history, messageText, socialPostContext);
 
   if (!aiResponse) {
     console.error("❌ No AI response generated");
@@ -570,16 +618,30 @@ Remember: Keep responses SHORT and suitable for Instagram DMs (1-3 sentences max
 
 /**
  * Generate AI response using OpenAI
+ * Now includes social post context from embeddings for better responses
  */
 async function generateAIResponse(
   systemPrompt: string,
   history: Array<{ role: string; content: string }>,
-  currentMessage: string
+  currentMessage: string,
+  socialPostContext?: string
 ): Promise<string | null> {
   try {
+    // Build system prompt with social post context if available
+    let enhancedSystemPrompt = systemPrompt;
+    
+    if (socialPostContext && socialPostContext.trim()) {
+      enhancedSystemPrompt = `${systemPrompt}
+
+RELEVANT CONTENT FROM CREATOR'S POSTS:
+${socialPostContext}
+
+Use this context to give accurate, personalized responses when relevant. Don't mention that you have this context unless directly asked.`;
+    }
+
     // Build OpenAI messages
     const messages: any[] = [
-      { role: "system", content: systemPrompt },
+      { role: "system", content: enhancedSystemPrompt },
     ];
 
     // Add conversation history (limit to last 10 for context window)
@@ -597,7 +659,7 @@ async function generateAIResponse(
       content: currentMessage,
     });
 
-    console.log("🧠 Generating AI response with", messages.length, "messages");
+    console.log("🧠 Generating AI response with", messages.length, "messages", socialPostContext ? "(with social context)" : "");
 
     // Generate AI response
     const completion = await openai.chat.completions.create({

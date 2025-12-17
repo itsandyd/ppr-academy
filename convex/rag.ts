@@ -16,7 +16,8 @@ export const addContent = mutation({
       v.literal("lesson"),
       v.literal("document"),
       v.literal("note"),
-      v.literal("custom")
+      v.literal("custom"),
+      v.literal("socialPost")
     )),
     sourceId: v.optional(v.string()),
     metadata: v.optional(v.any()),
@@ -134,7 +135,8 @@ export const getEmbeddings = internalQuery({
       v.literal("lesson"),
       v.literal("document"),
       v.literal("note"),
-      v.literal("custom")
+      v.literal("custom"),
+      v.literal("socialPost")
     )),
     limit: v.optional(v.number()),
   },
@@ -152,7 +154,8 @@ export const getEmbeddings = internalQuery({
       v.literal("lesson"),
       v.literal("document"),
       v.literal("note"),
-      v.literal("custom")
+      v.literal("custom"),
+      v.literal("socialPost")
     )),
     sourceId: v.optional(v.string()),
     metadata: v.optional(v.any()),

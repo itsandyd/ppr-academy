@@ -458,3 +458,4 @@ See inline TypeScript documentation in:
 - [Embeddings System](./EMBEDDINGS_SYSTEM.md)
 - [FAL AI Integration](./FAL_INTEGRATION.md)
 - [Convex Schema](../../convex/schema.ts)
+

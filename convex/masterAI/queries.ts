@@ -17,7 +17,8 @@ export const getFilteredEmbeddings = internalQuery({
       v.literal("lesson"),
       v.literal("document"),
       v.literal("note"),
-      v.literal("custom")
+      v.literal("custom"),
+      v.literal("socialPost")
     ))),
     categories: v.optional(v.array(v.string())),
     limit: v.optional(v.number()), // Optional limit for performance
@@ -35,7 +36,8 @@ export const getFilteredEmbeddings = internalQuery({
       v.literal("lesson"),
       v.literal("document"),
       v.literal("note"),
-      v.literal("custom")
+      v.literal("custom"),
+      v.literal("socialPost")
     )),
     sourceId: v.optional(v.string()),
     metadata: v.optional(v.any()),

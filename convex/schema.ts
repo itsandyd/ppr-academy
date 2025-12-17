@@ -1072,7 +1072,8 @@ export default defineSchema({
       v.literal("lesson"),
       v.literal("document"),
       v.literal("note"),
-      v.literal("custom")
+      v.literal("custom"),
+      v.literal("socialPost") // Instagram post captions + video transcriptions
     )),
     sourceId: v.optional(v.string()), // ID of the source (courseId, chapterId, etc.)
   })

@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query, internalMutation, internalQuery } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
+import { internal } from "./_generated/api";
 
 // ==================== QUERIES ====================
 
@@ -524,7 +525,17 @@ export const savePosts = mutation({
   }),
   handler: async (ctx, args) => {
     try {
-      // Delete existing posts
+      // Get the automation to find the owner
+      const automation = await ctx.db.get(args.automationId);
+      if (!automation) {
+        return { status: 404, message: "Automation not found" };
+      }
+
+      // Get the user to find their clerkId (used for embeddings)
+      const user = await ctx.db.get(automation.userId);
+      const userClerkId = user?.clerkId;
+
+      // Delete existing posts and their embeddings
       const existingPosts = await ctx.db
         .query("posts")
         .withIndex("by_automationId", (q) => q.eq("automationId", args.automationId))
@@ -532,6 +543,16 @@ export const savePosts = mutation({
 
       for (const post of existingPosts) {
         await ctx.db.delete(post._id);
+      }
+      
+      // Schedule deletion of associated embeddings (batch after loop to avoid type depth issues)
+      const postIdsToDelete = existingPosts
+        .filter(p => p.postId !== "ALL_POSTS_AND_FUTURE")
+        .map(p => p.postId);
+      
+      for (const postId of postIdsToDelete) {
+        // @ts-ignore - Type instantiation too deep, but this is correct
+        ctx.scheduler.runAfter(0, internal.socialPostEmbeddings.deleteSocialPostEmbedding, { postId });
       }
 
       // Create new posts
@@ -547,6 +568,17 @@ export const savePosts = mutation({
       }
 
       console.log(`✅ Attached ${args.posts.length} posts to automation ${args.automationId}`);
+      
+      // Schedule embedding generation for the posts
+      // This transcribes videos and creates AI-searchable embeddings
+      if (userClerkId) {
+        // @ts-ignore - Type instantiation too deep, but this is correct
+        ctx.scheduler.runAfter(1000, internal.socialPostEmbeddings.processAutomationPosts, {
+          automationId: args.automationId,
+          userId: userClerkId,
+        });
+        console.log(`📊 Scheduled embedding generation for ${args.posts.length} posts`);
+      }
       
       return { status: 200, message: `${args.posts.length} post${args.posts.length > 1 ? 's' : ''} attached successfully` };
     } catch (error) {
