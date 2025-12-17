@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useQuery, useMutation, useAction } from "convex/react";
@@ -8,12 +8,12 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -22,15 +22,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
@@ -38,12 +29,6 @@ import {
 import {
   Shield,
   Loader2,
-  Plus,
-  Play,
-  Pause,
-  Trash2,
-  Download,
-  RefreshCw,
   ChevronDown,
   ChevronRight,
   BookOpen,
@@ -53,12 +38,20 @@ import {
   Check,
   X,
   AlertCircle,
-  Clock,
   Store,
   Wand2,
+  Settings2,
+  Globe,
+  Brain,
+  Zap,
+  Crown,
   Copy,
   ExternalLink,
   ArrowRight,
+  RefreshCw,
+  Play,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -67,76 +60,6 @@ import { toast } from "sonner";
 // TYPES
 // =============================================================================
 
-interface QueueItem {
-  _id: Id<"aiCourseQueue">;
-  userId: string;
-  storeId: string;
-  prompt: string;
-  topic?: string;
-  skillLevel?: string;
-  targetModules?: number;
-  targetLessonsPerModule?: number;
-  status: string;
-  progress?: {
-    currentStep: string;
-    totalSteps: number;
-    completedSteps: number;
-    currentChapter?: string;
-  };
-  outlineId?: Id<"aiCourseOutlines">;
-  courseId?: Id<"courses">;
-  error?: string;
-  createdAt: number;
-  startedAt?: number;
-  completedAt?: number;
-}
-
-interface CourseOutline {
-  _id: Id<"aiCourseOutlines">;
-  title: string;
-  description: string;
-  topic: string;
-  skillLevel: string;
-  totalChapters: number;
-  expandedChapters: number;
-  outline: {
-    course: {
-      title: string;
-      description: string;
-      category: string;
-      skillLevel: string;
-      estimatedDuration: number;
-    };
-    modules: Array<{
-      title: string;
-      description: string;
-      orderIndex: number;
-      lessons: Array<{
-        title: string;
-        description: string;
-        orderIndex: number;
-        chapters: Array<{
-          title: string;
-          content: string;
-          duration: number;
-          orderIndex: number;
-          hasDetailedContent?: boolean;
-          wordCount?: number;
-        }>;
-      }>;
-    }>;
-  };
-  chapterStatus?: Array<{
-    moduleIndex: number;
-    lessonIndex: number;
-    chapterIndex: number;
-    title: string;
-    hasDetailedContent: boolean;
-    wordCount?: number;
-  }>;
-  createdAt: number;
-}
-
 interface StoreInfo {
   _id: Id<"stores">;
   name: string;
@@ -144,404 +67,89 @@ interface StoreInfo {
   userId: string;
 }
 
-// =============================================================================
-// STATUS BADGE COMPONENT
-// =============================================================================
-
-function StatusBadge({ status }: { status: string }) {
-  const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ReactNode }> = {
-    queued: { label: "Queued", variant: "secondary", icon: <Clock className="w-3 h-3" /> },
-    generating_outline: { label: "Generating", variant: "default", icon: <Loader2 className="w-3 h-3 animate-spin" /> },
-    outline_ready: { label: "Outline Ready", variant: "outline", icon: <FileText className="w-3 h-3" /> },
-    expanding_content: { label: "Expanding", variant: "default", icon: <Loader2 className="w-3 h-3 animate-spin" /> },
-    ready_to_create: { label: "Ready", variant: "outline", icon: <Check className="w-3 h-3" /> },
-    creating_course: { label: "Creating", variant: "default", icon: <Loader2 className="w-3 h-3 animate-spin" /> },
-    completed: { label: "Completed", variant: "default", icon: <Check className="w-3 h-3" /> },
-    failed: { label: "Failed", variant: "destructive", icon: <X className="w-3 h-3" /> },
-  };
-
-  const config = statusConfig[status] || { label: status, variant: "secondary" as const, icon: null };
-
-  return (
-    <Badge variant={config.variant} className="flex items-center gap-1">
-      {config.icon}
-      {config.label}
-    </Badge>
-  );
+interface CourseOutline {
+  title: string;
+  description: string;
+  category?: string;
+  skillLevel?: string;
+  estimatedDuration?: number;
+  modules: Array<{
+    title: string;
+    description: string;
+    lessons: Array<{
+      title: string;
+      description: string;
+      chapters: Array<{
+        title: string;
+        content: string;
+        duration?: number;
+        expanded?: boolean;
+        expandedContent?: string;
+      }>;
+    }>;
+  }>;
 }
 
-// =============================================================================
-// QUEUE ITEM CARD COMPONENT
-// =============================================================================
-
-function QueueItemCard({
-  item,
-  stores,
-  onGenerateOutline,
-  onExpandContent,
-  onCreateCourse,
-  onDelete,
-  onViewOutline,
-  isProcessing,
-}: {
-  item: QueueItem;
-  stores: StoreInfo[];
-  onGenerateOutline: (queueId: Id<"aiCourseQueue">) => void;
-  onExpandContent: (queueId: Id<"aiCourseQueue">, outlineId: Id<"aiCourseOutlines">) => void;
-  onCreateCourse: (queueId: Id<"aiCourseQueue">, outlineId: Id<"aiCourseOutlines">) => void;
-  onDelete: (queueId: Id<"aiCourseQueue">) => void;
-  onViewOutline: (outlineId: Id<"aiCourseOutlines">) => void;
-  isProcessing: boolean;
-}) {
-  const store = stores.find(s => s._id === item.storeId);
-
-  return (
-    <Card className="relative overflow-hidden">
-      {/* Processing indicator */}
-      {isProcessing && (
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-violet-500 via-purple-500 to-violet-500 animate-pulse" />
-      )}
-
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            {/* Prompt/Topic */}
-            <p className="font-medium text-sm line-clamp-2 mb-2">
-              {item.topic || item.prompt}
-            </p>
-
-            {/* Meta info */}
-            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <Store className="w-3 h-3" />
-                <span>{store?.name || "Unknown Store"}</span>
-              </div>
-              <span>•</span>
-              <span className="capitalize">{item.skillLevel || "intermediate"}</span>
-              <span>•</span>
-              <span>{item.targetModules || 4} modules</span>
-            </div>
-
-            {/* Progress */}
-            {item.progress && (
-              <div className="mt-2 p-2 rounded bg-muted/50 text-xs">
-                <div className="flex items-center justify-between mb-1">
-                  <span>{item.progress.currentStep}</span>
-                  <span>{item.progress.completedSteps}/{item.progress.totalSteps}</span>
-                </div>
-                <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-primary transition-all"
-                    style={{ width: `${(item.progress.completedSteps / item.progress.totalSteps) * 100}%` }}
-                  />
-                </div>
-                {item.progress.currentChapter && (
-                  <p className="mt-1 text-muted-foreground truncate">
-                    {item.progress.currentChapter}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Error */}
-            {item.error && (
-              <div className="mt-2 p-2 rounded bg-destructive/10 text-destructive text-xs flex items-start gap-2">
-                <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                <span>{item.error}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Status and Actions */}
-          <div className="flex flex-col items-end gap-2">
-            <StatusBadge status={item.status} />
-
-            <div className="flex items-center gap-1">
-              {/* Generate Outline */}
-              {item.status === "queued" && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => onGenerateOutline(item._id)}
-                  disabled={isProcessing}
-                >
-                  <Wand2 className="w-3 h-3 mr-1" />
-                  Generate
-                </Button>
-              )}
-
-              {/* View Outline */}
-              {item.outlineId && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => onViewOutline(item.outlineId!)}
-                >
-                  <FileText className="w-3 h-3 mr-1" />
-                  View
-                </Button>
-              )}
-
-              {/* Expand Content */}
-              {item.status === "outline_ready" && item.outlineId && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => onExpandContent(item._id, item.outlineId!)}
-                  disabled={isProcessing}
-                >
-                  <Sparkles className="w-3 h-3 mr-1" />
-                  Expand
-                </Button>
-              )}
-
-              {/* Create Course */}
-              {(item.status === "outline_ready" || item.status === "ready_to_create") && item.outlineId && (
-                <Button
-                  size="sm"
-                  onClick={() => onCreateCourse(item._id, item.outlineId!)}
-                  disabled={isProcessing}
-                  className="bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700"
-                >
-                  <BookOpen className="w-3 h-3 mr-1" />
-                  Create
-                </Button>
-              )}
-
-              {/* View Course */}
-              {item.status === "completed" && item.courseId && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  asChild
-                >
-                  <a href={`/courses/${item.courseId}`} target="_blank" rel="noopener noreferrer">
-                    <ExternalLink className="w-3 h-3 mr-1" />
-                    View Course
-                  </a>
-                </Button>
-              )}
-
-              {/* Delete */}
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => onDelete(item._id)}
-                disabled={isProcessing}
-                className="text-destructive hover:text-destructive"
-              >
-                <Trash2 className="w-3 h-3" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+interface GenerationStep {
+  id: string;
+  label: string;
+  status: "pending" | "running" | "completed" | "failed";
+  detail?: string;
 }
 
-// =============================================================================
-// OUTLINE VIEWER COMPONENT
-// =============================================================================
-
-function OutlineViewer({
-  outline,
-  onExpandChapter,
-  onClose,
-  onExport,
-  isExpanding,
-}: {
-  outline: CourseOutline | null;
-  onExpandChapter: (moduleIndex: number, lessonIndex: number, chapterIndex: number) => void;
-  onClose: () => void;
-  onExport: () => void;
-  isExpanding: boolean;
-}) {
-  const [expandedModules, setExpandedModules] = useState<Set<number>>(new Set([0]));
-  const [expandedLessons, setExpandedLessons] = useState<Set<string>>(new Set());
-
-  if (!outline) return null;
-
-  const toggleModule = (index: number) => {
-    setExpandedModules(prev => {
-      const next = new Set(prev);
-      if (next.has(index)) {
-        next.delete(index);
-      } else {
-        next.add(index);
-      }
-      return next;
-    });
-  };
-
-  const toggleLesson = (moduleIndex: number, lessonIndex: number) => {
-    const key = `${moduleIndex}-${lessonIndex}`;
-    setExpandedLessons(prev => {
-      const next = new Set(prev);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
-      return next;
-    });
-  };
-
-  return (
-    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-4xl max-h-[90vh] flex flex-col">
-        <CardHeader className="border-b flex-shrink-0">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>{outline.outline.course.title}</CardTitle>
-              <CardDescription className="mt-1">
-                {outline.totalChapters} chapters • {outline.expandedChapters} expanded
-              </CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={onExport}>
-                <Download className="w-4 h-4 mr-2" />
-                Export JSON
-              </Button>
-              <Button variant="ghost" size="sm" onClick={onClose}>
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-
-        <ScrollArea className="flex-1 p-4">
-          <div className="space-y-4">
-            {/* Course Info */}
-            <div className="p-4 rounded-lg bg-muted/50">
-              <p className="text-sm text-muted-foreground">{outline.outline.course.description}</p>
-              <div className="flex gap-4 mt-2 text-xs">
-                <Badge variant="outline">{outline.outline.course.skillLevel}</Badge>
-                <span>~{outline.outline.course.estimatedDuration} min</span>
-              </div>
-            </div>
-
-            {/* Modules */}
-            {outline.outline.modules.map((module, mi) => (
-              <Collapsible
-                key={mi}
-                open={expandedModules.has(mi)}
-                onOpenChange={() => toggleModule(mi)}
-              >
-                <CollapsibleTrigger asChild>
-                  <div className="flex items-center gap-2 p-3 rounded-lg bg-card border cursor-pointer hover:bg-muted/50 transition-colors">
-                    {expandedModules.has(mi) ? (
-                      <ChevronDown className="w-4 h-4" />
-                    ) : (
-                      <ChevronRight className="w-4 h-4" />
-                    )}
-                    <Layers className="w-4 h-4 text-primary" />
-                    <span className="font-medium">Module {mi + 1}: {module.title}</span>
-                    <Badge variant="secondary" className="ml-auto">
-                      {module.lessons.length} lessons
-                    </Badge>
-                  </div>
-                </CollapsibleTrigger>
-
-                <CollapsibleContent className="pl-6 mt-2 space-y-2">
-                  <p className="text-sm text-muted-foreground px-3">{module.description}</p>
-
-                  {/* Lessons */}
-                  {module.lessons.map((lesson, li) => {
-                    const lessonKey = `${mi}-${li}`;
-                    return (
-                      <Collapsible
-                        key={li}
-                        open={expandedLessons.has(lessonKey)}
-                        onOpenChange={() => toggleLesson(mi, li)}
-                      >
-                        <CollapsibleTrigger asChild>
-                          <div className="flex items-center gap-2 p-2 rounded bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors">
-                            {expandedLessons.has(lessonKey) ? (
-                              <ChevronDown className="w-3 h-3" />
-                            ) : (
-                              <ChevronRight className="w-3 h-3" />
-                            )}
-                            <BookOpen className="w-3 h-3 text-muted-foreground" />
-                            <span className="text-sm">Lesson {li + 1}: {lesson.title}</span>
-                            <Badge variant="outline" className="ml-auto text-xs">
-                              {lesson.chapters.length} chapters
-                            </Badge>
-                          </div>
-                        </CollapsibleTrigger>
-
-                        <CollapsibleContent className="pl-6 mt-1 space-y-1">
-                          {/* Chapters */}
-                          {lesson.chapters.map((chapter, ci) => {
-                            const chapterStatus = outline.chapterStatus?.find(
-                              s => s.moduleIndex === mi && s.lessonIndex === li && s.chapterIndex === ci
-                            );
-                            const hasContent = chapterStatus?.hasDetailedContent || (chapter.wordCount && chapter.wordCount > 500);
-
-                            return (
-                              <div
-                                key={ci}
-                                className="flex items-start gap-2 p-2 rounded bg-background border text-xs"
-                              >
-                                <FileText className="w-3 h-3 mt-0.5 text-muted-foreground flex-shrink-0" />
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium">{chapter.title}</span>
-                                    {hasContent ? (
-                                      <Badge variant="default" className="text-[10px] px-1.5">
-                                        <Check className="w-2 h-2 mr-0.5" />
-                                        {chapter.wordCount || chapterStatus?.wordCount} words
-                                      </Badge>
-                                    ) : (
-                                      <Badge variant="secondary" className="text-[10px] px-1.5">
-                                        Outline only
-                                      </Badge>
-                                    )}
-                                  </div>
-                                  <p className="text-muted-foreground mt-0.5 line-clamp-2">
-                                    {chapter.content?.substring(0, 150)}...
-                                  </p>
-                                </div>
-                                {!hasContent && (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-6 text-xs"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      onExpandChapter(mi, li, ci);
-                                    }}
-                                    disabled={isExpanding}
-                                  >
-                                    {isExpanding ? (
-                                      <Loader2 className="w-3 h-3 animate-spin" />
-                                    ) : (
-                                      <>
-                                        <Sparkles className="w-3 h-3 mr-1" />
-                                        Expand
-                                      </>
-                                    )}
-                                  </Button>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </CollapsibleContent>
-                      </Collapsible>
-                    );
-                  })}
-                </CollapsibleContent>
-              </Collapsible>
-            ))}
-          </div>
-        </ScrollArea>
-      </Card>
-    </div>
-  );
+// AI Settings that mirror the chat settings
+interface AISettings {
+  preset: "speed" | "balanced" | "quality" | "deepReasoning" | "premium";
+  maxFacets: number;
+  chunksPerFacet: number;
+  similarityThreshold: number;
+  enableCritic: boolean;
+  enableCreativeMode: boolean;
+  enableWebResearch: boolean;
+  responseStyle: "structured" | "conversational" | "concise";
 }
 
+const DEFAULT_AI_SETTINGS: AISettings = {
+  preset: "premium",
+  maxFacets: 5,
+  chunksPerFacet: 50,
+  similarityThreshold: 0.7,
+  enableCritic: true,
+  enableCreativeMode: true,
+  enableWebResearch: true,
+  responseStyle: "structured",
+};
+
+const PRESET_DESCRIPTIONS: Record<string, { icon: React.ReactNode; label: string; description: string }> = {
+  speed: { 
+    icon: <Zap className="w-4 h-4" />, 
+    label: "Speed", 
+    description: "Fast responses, basic analysis" 
+  },
+  balanced: { 
+    icon: <Brain className="w-4 h-4" />, 
+    label: "Balanced", 
+    description: "Good balance of speed and quality" 
+  },
+  quality: { 
+    icon: <Sparkles className="w-4 h-4" />, 
+    label: "Quality", 
+    description: "Higher quality, more thorough" 
+  },
+  deepReasoning: { 
+    icon: <Brain className="w-4 h-4" />, 
+    label: "Deep Reasoning", 
+    description: "Complex analysis and reasoning" 
+  },
+  premium: { 
+    icon: <Crown className="w-4 h-4" />, 
+    label: "Premium", 
+    description: "Claude 4.5 Opus + Gemini 3 Pro" 
+  },
+};
+
 // =============================================================================
-// MAIN PAGE COMPONENT
+// MAIN COMPONENT
 // =============================================================================
 
 export default function AdminCourseBuilderPage() {
@@ -549,46 +157,34 @@ export default function AdminCourseBuilderPage() {
   const router = useRouter();
 
   // State
+  const [prompt, setPrompt] = useState("");
   const [selectedStoreId, setSelectedStoreId] = useState<string>("");
-  const [newPrompts, setNewPrompts] = useState("");
-  const [skillLevel, setSkillLevel] = useState<"beginner" | "intermediate" | "advanced">("intermediate");
-  const [targetModules, setTargetModules] = useState(4);
-  const [targetLessonsPerModule, setTargetLessonsPerModule] = useState(3);
-  const [isAddingToQueue, setIsAddingToQueue] = useState(false);
-  const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
-  const [viewingOutlineId, setViewingOutlineId] = useState<Id<"aiCourseOutlines"> | null>(null);
-  const [isExpandingChapter, setIsExpandingChapter] = useState(false);
-  const [activeTab, setActiveTab] = useState("queue");
+  const [settings, setSettings] = useState<AISettings>(DEFAULT_AI_SETTINGS);
+  const [showSettings, setShowSettings] = useState(false);
+  
+  // Generation state
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isFullAuto, setIsFullAuto] = useState(false);
+  const [generationSteps, setGenerationSteps] = useState<GenerationStep[]>([]);
+  const [generatedOutline, setGeneratedOutline] = useState<CourseOutline | null>(null);
+  const [expandedModules, setExpandedModules] = useState<Set<number>>(new Set([0]));
+  const [expandedLessons, setExpandedLessons] = useState<Set<string>>(new Set());
+  
+  // Creation state
+  const [isCreatingCourse, setIsCreatingCourse] = useState(false);
+  const [createdCourseId, setCreatedCourseId] = useState<string | null>(null);
+  const [createdCourseSlug, setCreatedCourseSlug] = useState<string | null>(null);
 
   // Queries
   const adminCheck = useQuery(
     api.users.checkIsAdmin,
     user?.id ? { clerkId: user.id } : "skip"
   );
-
   const stores = useQuery(api.stores.getAllStores) as StoreInfo[] | undefined;
 
-  const queueItems = useQuery(
-    api.aiCourseBuilderQueries.getQueueItems,
-    user?.id && adminCheck?.isAdmin ? { userId: user.id } : "skip"
-  ) as QueueItem[] | undefined;
-
-  const viewingOutline = useQuery(
-    api.aiCourseBuilderQueries.getOutline,
-    viewingOutlineId ? { outlineId: viewingOutlineId } : "skip"
-  ) as CourseOutline | null | undefined;
-
-  // Mutations & Actions
-  const addBatchToQueue = useMutation(api.aiCourseBuilderQueries.addBatchToQueue);
-  const deleteQueueItem = useMutation(api.aiCourseBuilderQueries.deleteQueueItem);
-  const generateOutline = useAction(api.aiCourseBuilder.generateOutline);
-  const expandAllChapters = useAction(api.aiCourseBuilder.expandAllChapters);
-  const expandChapterContent = useAction(api.aiCourseBuilder.expandChapterContent);
-  const createCourseFromOutline = useAction(api.aiCourseBuilder.createCourseFromOutline);
-  const exportOutlineAsJson = useQuery(
-    api.aiCourseBuilderQueries.exportOutlineAsJson,
-    viewingOutlineId ? { outlineId: viewingOutlineId } : "skip"
-  );
+  // Actions
+  const askAgenticAI = useAction(api.masterAI.index.askAgenticAI);
+  const executeConfirmedActions = useAction(api.masterAI.index.executeConfirmedActions);
 
   // Set default store when stores load
   useEffect(() => {
@@ -606,7 +202,665 @@ export default function AdminCourseBuilderPage() {
     }
   }, [isLoaded, user, adminCheck, router]);
 
-  // Loading state
+  // Update step status
+  const updateStep = useCallback((stepId: string, updates: Partial<GenerationStep>) => {
+    setGenerationSteps(prev => 
+      prev.map(step => step.id === stepId ? { ...step, ...updates } : step)
+    );
+  }, []);
+
+  // =============================================================================
+  // FULL AUTO - Generate complete course in one click
+  // =============================================================================
+  const handleFullAutoGenerate = async () => {
+    if (!prompt.trim()) {
+      toast.error("Please enter a course topic or description");
+      return;
+    }
+    if (!selectedStoreId) {
+      toast.error("Please select a store");
+      return;
+    }
+
+    setIsGenerating(true);
+    setIsFullAuto(true);
+    setGeneratedOutline(null);
+    setCreatedCourseId(null);
+    setCreatedCourseSlug(null);
+
+    // Initialize all steps
+    setGenerationSteps([
+      { id: "outline", label: "Generating course outline", status: "pending" },
+      { id: "expand", label: "Expanding all chapters", status: "pending" },
+      { id: "create", label: "Creating course", status: "pending" },
+    ]);
+
+    try {
+      // Step 1: Generate outline
+      updateStep("outline", { status: "running", detail: "Analyzing topic and creating structure..." });
+      
+      const outline = await generateOutlineInternal();
+      if (!outline) {
+        throw new Error("Failed to generate outline");
+      }
+      
+      setGeneratedOutline(outline);
+      updateStep("outline", { 
+        status: "completed", 
+        detail: `${outline.modules.length} modules, ${outline.modules.reduce((acc, m) => acc + m.lessons.reduce((a, l) => a + l.chapters.length, 0), 0)} chapters` 
+      });
+
+      // Step 2: Expand all chapters
+      updateStep("expand", { status: "running", detail: "Starting chapter expansion..." });
+      
+      const expandedOutline = await expandAllChaptersInternal(outline);
+      setGeneratedOutline(expandedOutline);
+      
+      const totalChapters = expandedOutline.modules.reduce((acc, m) => 
+        acc + m.lessons.reduce((a, l) => a + l.chapters.length, 0), 0
+      );
+      const expandedCount = expandedOutline.modules.reduce((acc, m) => 
+        acc + m.lessons.reduce((a, l) => a + l.chapters.filter(c => c.expanded).length, 0), 0
+      );
+      
+      updateStep("expand", { 
+        status: "completed", 
+        detail: `${expandedCount}/${totalChapters} chapters expanded` 
+      });
+
+      // Step 3: Create the course
+      updateStep("create", { status: "running", detail: "Building course in database..." });
+      
+      const result = await createCourseInternal(expandedOutline);
+      
+      if (result.success) {
+        setCreatedCourseId(result.courseId || null);
+        setCreatedCourseSlug(result.slug || null);
+        updateStep("create", { 
+          status: "completed", 
+          detail: "Course created successfully!" 
+        });
+        
+        toast.success("🎉 Course created successfully!", {
+          description: `"${expandedOutline.title}" is ready`,
+          action: result.link ? {
+            label: "View Course",
+            onClick: () => window.open(result.link, "_blank"),
+          } : undefined,
+          duration: 10000,
+        });
+      } else {
+        throw new Error(result.error || "Failed to create course");
+      }
+
+    } catch (error) {
+      console.error("Full auto generation error:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      
+      setGenerationSteps(prev => 
+        prev.map(step => 
+          step.status === "running" 
+            ? { ...step, status: "failed", detail: errorMessage }
+            : step
+        )
+      );
+      
+      toast.error(`Generation failed: ${errorMessage}`);
+    } finally {
+      setIsGenerating(false);
+      setIsFullAuto(false);
+    }
+  };
+
+  // Internal helper for outline generation
+  const generateOutlineInternal = async (): Promise<CourseOutline | null> => {
+    const outlineResponse = await askAgenticAI({
+      question: prompt,
+      userId: user!.id,
+      storeId: selectedStoreId,
+      userRole: "admin",
+      settings: {
+        preset: settings.preset,
+        maxFacets: settings.maxFacets,
+        chunksPerFacet: settings.chunksPerFacet,
+        similarityThreshold: settings.similarityThreshold,
+        enableCritic: settings.enableCritic,
+        enableCreativeMode: settings.enableCreativeMode,
+        enableWebResearch: settings.enableWebResearch,
+        enableFactVerification: false,
+        autoSaveWebResearch: false,
+        responseStyle: settings.responseStyle,
+      },
+    });
+
+    if (outlineResponse.type === "action_proposal") {
+      const executeResult = await executeConfirmedActions({
+        actions: outlineResponse.proposedActions.map(a => ({
+          tool: a.tool,
+          parameters: a.parameters,
+        })),
+        userId: user!.id,
+        storeId: selectedStoreId,
+      });
+
+      if (executeResult.results?.[0]?.success) {
+        const outlineData = executeResult.results[0].result as any;
+        if (outlineData.outline) {
+          return outlineData.outline;
+        }
+      }
+    } else if ("answer" in outlineResponse) {
+      return parseOutlineFromText(outlineResponse.answer, prompt);
+    }
+
+    return null;
+  };
+
+  // Internal helper for expanding all chapters
+  const expandAllChaptersInternal = async (outline: CourseOutline): Promise<CourseOutline> => {
+    const updatedOutline = JSON.parse(JSON.stringify(outline)) as CourseOutline;
+    let chapterIndex = 0;
+    const totalChapters = outline.modules.reduce((acc, m) => 
+      acc + m.lessons.reduce((a, l) => a + l.chapters.length, 0), 0
+    );
+
+    for (let mi = 0; mi < updatedOutline.modules.length; mi++) {
+      for (let li = 0; li < updatedOutline.modules[mi].lessons.length; li++) {
+        for (let ci = 0; ci < updatedOutline.modules[mi].lessons[li].chapters.length; ci++) {
+          chapterIndex++;
+          const chapter = updatedOutline.modules[mi].lessons[li].chapters[ci];
+          
+          updateStep("expand", { 
+            status: "running", 
+            detail: `Expanding chapter ${chapterIndex}/${totalChapters}: "${chapter.title}"` 
+          });
+
+          try {
+            const response = await askAgenticAI({
+              question: `Write detailed educational content for this chapter: "${chapter.title}". 
+Context: This is part of a course about "${outline.title}". 
+The chapter should cover: ${chapter.content}
+Write 800-1200 words of comprehensive, video-script-ready content suitable for ${outline.skillLevel || "intermediate"} level learners.`,
+              userId: user!.id,
+              userRole: "admin",
+              settings: {
+                preset: settings.preset,
+                maxFacets: 3,
+                chunksPerFacet: 30,
+                similarityThreshold: 0.65,
+                enableCritic: false, // Faster
+                enableCreativeMode: true,
+                enableWebResearch: settings.enableWebResearch,
+                enableFactVerification: false,
+                autoSaveWebResearch: false,
+                responseStyle: "conversational",
+              },
+            });
+
+            let expandedContent = "";
+            if ("answer" in response) {
+              expandedContent = response.answer;
+            } else if (response.type === "actions_executed" && response.results?.[0]?.result) {
+              expandedContent = (response.results[0].result as any).content || "";
+            }
+
+            if (expandedContent) {
+              updatedOutline.modules[mi].lessons[li].chapters[ci] = {
+                ...chapter,
+                expanded: true,
+                expandedContent,
+              };
+            }
+
+            // Rate limiting to avoid API throttling
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+          } catch (error) {
+            console.error(`Failed to expand chapter "${chapter.title}":`, error);
+            // Continue with other chapters even if one fails
+          }
+        }
+      }
+    }
+
+    return updatedOutline;
+  };
+
+  // Internal helper for course creation
+  const createCourseInternal = async (outline: CourseOutline): Promise<{ 
+    success: boolean; 
+    courseId?: string; 
+    slug?: string;
+    link?: string;
+    error?: string; 
+  }> => {
+    const modules = outline.modules.map((module, mi) => ({
+      title: module.title,
+      description: module.description,
+      orderIndex: mi,
+      lessons: module.lessons.map((lesson, li) => ({
+        title: lesson.title,
+        description: lesson.description,
+        orderIndex: li,
+        chapters: lesson.chapters.map((chapter, ci) => ({
+          title: chapter.title,
+          content: chapter.expandedContent || chapter.content,
+          duration: chapter.duration || 10,
+          orderIndex: ci,
+        })),
+      })),
+    }));
+
+    const result = await executeConfirmedActions({
+      actions: [{
+        tool: "createCourseWithModules",
+        parameters: {
+          title: outline.title,
+          description: outline.description,
+          category: outline.category || "Music Production",
+          skillLevel: outline.skillLevel || "intermediate",
+          price: 0,
+          checkoutHeadline: `Master ${outline.title}`,
+          modules,
+        },
+      }],
+      userId: user!.id,
+      storeId: selectedStoreId,
+    });
+
+    if (result.results?.[0]?.success) {
+      const courseResult = result.results[0].result as any;
+      return {
+        success: true,
+        courseId: courseResult.courseId || courseResult.id,
+        slug: courseResult.slug,
+        link: courseResult.link,
+      };
+    }
+
+    return {
+      success: false,
+      error: result.results?.[0]?.error || "Failed to create course",
+    };
+  };
+
+  // =============================================================================
+  // GENERATE COURSE (Outline Only - for manual review)
+  // =============================================================================
+  const handleGenerateCourse = async () => {
+    if (!prompt.trim()) {
+      toast.error("Please enter a course topic or description");
+      return;
+    }
+
+    setIsGenerating(true);
+    setIsFullAuto(false);
+    setGeneratedOutline(null);
+    setCreatedCourseId(null);
+    setCreatedCourseSlug(null);
+    
+    // Initialize steps
+    setGenerationSteps([
+      { id: "outline", label: "Generating course outline", status: "pending" },
+    ]);
+
+    try {
+      // Generate course outline using the AI
+      updateStep("outline", { status: "running", detail: "Analyzing topic and creating structure..." });
+
+      const outline = await generateOutlineInternal();
+      
+      if (outline) {
+        setGeneratedOutline(outline);
+        const totalChapters = outline.modules.reduce((acc, m) => 
+          acc + m.lessons.reduce((a, l) => a + l.chapters.length, 0), 0
+        );
+        updateStep("outline", { 
+          status: "completed", 
+          detail: `${outline.modules.length} modules, ${totalChapters} chapters` 
+        });
+        toast.success("Course outline generated! Review and expand chapters, then create.");
+      } else {
+        throw new Error("Could not generate course outline. Try rephrasing as: 'Create me a course about [topic]'");
+      }
+
+    } catch (error) {
+      console.error("Generation error:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      
+      // Mark current step as failed
+      setGenerationSteps(prev => 
+        prev.map(step => 
+          step.status === "running" 
+            ? { ...step, status: "failed", detail: errorMessage }
+            : step
+        )
+      );
+      
+      toast.error(`Generation failed: ${errorMessage}`);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // =============================================================================
+  // EXPAND CHAPTER
+  // =============================================================================
+  const handleExpandChapter = async (
+    moduleIndex: number, 
+    lessonIndex: number, 
+    chapterIndex: number
+  ) => {
+    if (!generatedOutline) return;
+    
+    const chapter = generatedOutline.modules[moduleIndex].lessons[lessonIndex].chapters[chapterIndex];
+    
+    toast.promise(
+      (async () => {
+        const response = await askAgenticAI({
+          question: `Write detailed educational content for this chapter: "${chapter.title}". 
+Context: This is part of a course about "${generatedOutline.title}". 
+The chapter should cover: ${chapter.content}
+Write 800-1200 words of comprehensive, video-script-ready content suitable for ${generatedOutline.skillLevel || "intermediate"} level learners.`,
+          userId: user!.id,
+          userRole: "admin",
+          settings: {
+            preset: settings.preset,
+            maxFacets: 3,
+            chunksPerFacet: 30,
+            similarityThreshold: 0.65,
+            enableCritic: settings.enableCritic,
+            enableCreativeMode: true,
+            enableWebResearch: settings.enableWebResearch,
+            enableFactVerification: false,
+            autoSaveWebResearch: false,
+            responseStyle: "conversational",
+          },
+        });
+
+        let expandedContent = "";
+        
+        if ("answer" in response) {
+          expandedContent = response.answer;
+        } else if (response.type === "actions_executed" && response.results?.[0]?.result) {
+          expandedContent = (response.results[0].result as any).content || "";
+        }
+
+        if (!expandedContent) {
+          throw new Error("No content generated");
+        }
+
+        // Update the outline with expanded content
+        setGeneratedOutline(prev => {
+          if (!prev) return null;
+          const updated = { ...prev };
+          updated.modules = [...prev.modules];
+          updated.modules[moduleIndex] = { ...prev.modules[moduleIndex] };
+          updated.modules[moduleIndex].lessons = [...prev.modules[moduleIndex].lessons];
+          updated.modules[moduleIndex].lessons[lessonIndex] = { 
+            ...prev.modules[moduleIndex].lessons[lessonIndex] 
+          };
+          updated.modules[moduleIndex].lessons[lessonIndex].chapters = [
+            ...prev.modules[moduleIndex].lessons[lessonIndex].chapters
+          ];
+          updated.modules[moduleIndex].lessons[lessonIndex].chapters[chapterIndex] = {
+            ...chapter,
+            expanded: true,
+            expandedContent,
+          };
+          return updated;
+        });
+
+        return expandedContent.split(" ").length;
+      })(),
+      {
+        loading: `Expanding "${chapter.title}"...`,
+        success: (wordCount) => `Expanded with ${wordCount} words`,
+        error: (err) => `Failed: ${err.message}`,
+      }
+    );
+  };
+
+  // =============================================================================
+  // EXPAND ALL CHAPTERS
+  // =============================================================================
+  const handleExpandAllChapters = async () => {
+    if (!generatedOutline) return;
+
+    const chaptersToExpand: Array<{
+      moduleIndex: number;
+      lessonIndex: number;
+      chapterIndex: number;
+      chapter: CourseOutline["modules"][0]["lessons"][0]["chapters"][0];
+    }> = [];
+
+    generatedOutline.modules.forEach((module, mi) => {
+      module.lessons.forEach((lesson, li) => {
+        lesson.chapters.forEach((chapter, ci) => {
+          if (!chapter.expanded) {
+            chaptersToExpand.push({
+              moduleIndex: mi,
+              lessonIndex: li,
+              chapterIndex: ci,
+              chapter,
+            });
+          }
+        });
+      });
+    });
+
+    if (chaptersToExpand.length === 0) {
+      toast.info("All chapters are already expanded");
+      return;
+    }
+
+    toast.info(`Expanding ${chaptersToExpand.length} chapters...`);
+
+    for (let i = 0; i < chaptersToExpand.length; i++) {
+      const { moduleIndex, lessonIndex, chapterIndex } = chaptersToExpand[i];
+      await handleExpandChapter(moduleIndex, lessonIndex, chapterIndex);
+      // Rate limiting
+      await new Promise(resolve => setTimeout(resolve, 1500));
+    }
+
+    toast.success("All chapters expanded!");
+  };
+
+  // =============================================================================
+  // CREATE COURSE
+  // =============================================================================
+  const handleCreateCourse = async () => {
+    if (!generatedOutline || !selectedStoreId) {
+      toast.error("No outline to create or store not selected");
+      return;
+    }
+
+    setIsCreatingCourse(true);
+
+    try {
+      // Format the outline for the createCourseWithModules tool
+      const modules = generatedOutline.modules.map((module, mi) => ({
+        title: module.title,
+        description: module.description,
+        orderIndex: mi,
+        lessons: module.lessons.map((lesson, li) => ({
+          title: lesson.title,
+          description: lesson.description,
+          orderIndex: li,
+          chapters: lesson.chapters.map((chapter, ci) => ({
+            title: chapter.title,
+            content: chapter.expandedContent || chapter.content,
+            duration: chapter.duration || 10,
+            orderIndex: ci,
+          })),
+        })),
+      }));
+
+      const result = await executeConfirmedActions({
+        actions: [{
+          tool: "createCourseWithModules",
+          parameters: {
+            title: generatedOutline.title,
+            description: generatedOutline.description,
+            category: generatedOutline.category || "Music Production",
+            skillLevel: generatedOutline.skillLevel || "intermediate",
+            price: 0,
+            checkoutHeadline: `Master ${generatedOutline.title}`,
+            modules,
+          },
+        }],
+        userId: user!.id,
+        storeId: selectedStoreId,
+      });
+
+      if (result.results?.[0]?.success) {
+        const courseResult = result.results[0].result as any;
+        setCreatedCourseId(courseResult.courseId || courseResult.id);
+        toast.success("Course created successfully!", {
+          action: courseResult.link ? {
+            label: "View Course",
+            onClick: () => window.open(courseResult.link, "_blank"),
+          } : undefined,
+        });
+      } else {
+        throw new Error(result.results?.[0]?.error || "Failed to create course");
+      }
+    } catch (error) {
+      console.error("Course creation error:", error);
+      toast.error(`Failed to create course: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setIsCreatingCourse(false);
+    }
+  };
+
+  // =============================================================================
+  // HELPERS
+  // =============================================================================
+
+  const toggleModule = (index: number) => {
+    setExpandedModules(prev => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  };
+
+  const toggleLesson = (moduleIndex: number, lessonIndex: number) => {
+    const key = `${moduleIndex}-${lessonIndex}`;
+    setExpandedLessons(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  // Parse outline from text response (fallback)
+  const parseOutlineFromText = (text: string, topic: string): CourseOutline | null => {
+    try {
+      // Try to find JSON in the response
+      const jsonMatch = text.match(/```json\n?([\s\S]*?)\n?```/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[1]);
+      }
+
+      // Try to parse if the whole thing is JSON
+      if (text.trim().startsWith("{")) {
+        return JSON.parse(text);
+      }
+
+      // Manual parsing from structured text
+      const modules: CourseOutline["modules"] = [];
+      const lines = text.split("\n").filter(l => l.trim());
+      
+      let currentModule: CourseOutline["modules"][0] | null = null;
+      let currentLesson: CourseOutline["modules"][0]["lessons"][0] | null = null;
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        
+        // Module header (e.g., "## Module 1: Introduction" or "**Module 1:**")
+        if (/^(#{1,2}|module\s+\d+:|\*\*module)/i.test(trimmed)) {
+          if (currentModule) {
+            if (currentLesson) currentModule.lessons.push(currentLesson);
+            modules.push(currentModule);
+          }
+          currentModule = {
+            title: trimmed.replace(/^#+\s*|module\s+\d+:\s*|\*\*/gi, "").trim(),
+            description: "",
+            lessons: [],
+          };
+          currentLesson = null;
+        }
+        // Lesson header (e.g., "### Lesson 1:" or "- Lesson 1:")
+        else if (/^(###|lesson\s+\d+:|-\s*lesson)/i.test(trimmed)) {
+          if (currentModule && currentLesson) {
+            currentModule.lessons.push(currentLesson);
+          }
+          currentLesson = {
+            title: trimmed.replace(/^#+\s*|lesson\s+\d+:\s*|-\s*/gi, "").trim(),
+            description: "",
+            chapters: [],
+          };
+        }
+        // Chapter (e.g., "- Chapter:" or numbered item)
+        else if (currentLesson && /^(-|\d+\.|\*)\s+/i.test(trimmed)) {
+          currentLesson.chapters.push({
+            title: trimmed.replace(/^(-|\d+\.|\*)\s+/, "").trim(),
+            content: "",
+          });
+        }
+      }
+
+      // Add last items
+      if (currentModule) {
+        if (currentLesson) currentModule.lessons.push(currentLesson);
+        modules.push(currentModule);
+      }
+
+      if (modules.length > 0) {
+        return {
+          title: topic.replace(/^create\s+(me\s+)?a?\s*course\s+(on|about)\s*/i, "").trim(),
+          description: `A comprehensive course covering ${topic}`,
+          modules,
+        };
+      }
+
+      return null;
+    } catch (e) {
+      console.error("Failed to parse outline:", e);
+      return null;
+    }
+  };
+
+  // Count stats
+  const getOutlineStats = () => {
+    if (!generatedOutline) return { modules: 0, lessons: 0, chapters: 0, expanded: 0 };
+    
+    let lessons = 0;
+    let chapters = 0;
+    let expanded = 0;
+    
+    generatedOutline.modules.forEach(m => {
+      lessons += m.lessons.length;
+      m.lessons.forEach(l => {
+        chapters += l.chapters.length;
+        l.chapters.forEach(c => {
+          if (c.expanded) expanded++;
+        });
+      });
+    });
+    
+    return { modules: generatedOutline.modules.length, lessons, chapters, expanded };
+  };
+
+  const stats = getOutlineStats();
+
+  // =============================================================================
+  // LOADING & ACCESS CHECK
+  // =============================================================================
+  
   if (!isLoaded || adminCheck === undefined) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -614,16 +868,12 @@ export default function AdminCourseBuilderPage() {
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center mx-auto animate-pulse">
             <Shield className="w-8 h-8 text-white" />
           </div>
-          <div>
-            <p className="font-medium">Verifying admin access</p>
-            <p className="text-sm text-muted-foreground">Please wait...</p>
-          </div>
+          <p className="font-medium">Verifying admin access...</p>
         </div>
       </div>
     );
   }
 
-  // Access denied
   if (!adminCheck.isAdmin) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -631,9 +881,7 @@ export default function AdminCourseBuilderPage() {
           <CardContent className="pt-6 text-center space-y-4">
             <AlertCircle className="w-12 h-12 text-destructive mx-auto" />
             <h2 className="text-xl font-bold">Access Denied</h2>
-            <p className="text-muted-foreground">
-              You don&apos;t have permission to access this page.
-            </p>
+            <p className="text-muted-foreground">Admin access required.</p>
             <Button onClick={() => router.push("/")}>Go Home</Button>
           </CardContent>
         </Card>
@@ -641,188 +889,12 @@ export default function AdminCourseBuilderPage() {
     );
   }
 
-  // Handlers
-  const handleAddToQueue = async () => {
-    if (!newPrompts.trim() || !selectedStoreId) {
-      toast.error("Please enter prompts and select a store");
-      return;
-    }
-
-    setIsAddingToQueue(true);
-
-    try {
-      // Parse prompts (one per line)
-      const prompts = newPrompts
-        .split("\n")
-        .map(p => p.trim())
-        .filter(p => p.length > 0)
-        .map(prompt => ({
-          prompt,
-          skillLevel,
-          targetModules,
-          targetLessonsPerModule,
-        }));
-
-      if (prompts.length === 0) {
-        toast.error("No valid prompts found");
-        return;
-      }
-
-      const queueIds = await addBatchToQueue({
-        userId: user!.id,
-        storeId: selectedStoreId,
-        prompts,
-      });
-
-      toast.success(`Added ${queueIds.length} course(s) to the queue`);
-      setNewPrompts("");
-    } catch (error) {
-      toast.error("Failed to add to queue");
-      console.error(error);
-    } finally {
-      setIsAddingToQueue(false);
-    }
-  };
-
-  const handleGenerateOutline = async (queueId: Id<"aiCourseQueue">) => {
-    setProcessingIds(prev => new Set(prev).add(queueId));
-
-    try {
-      const result = await generateOutline({ queueId });
-      if (result.success) {
-        toast.success("Outline generated successfully");
-      } else {
-        toast.error(result.error || "Failed to generate outline");
-      }
-    } catch (error) {
-      toast.error("Failed to generate outline");
-      console.error(error);
-    } finally {
-      setProcessingIds(prev => {
-        const next = new Set(prev);
-        next.delete(queueId);
-        return next;
-      });
-    }
-  };
-
-  const handleExpandContent = async (queueId: Id<"aiCourseQueue">, outlineId: Id<"aiCourseOutlines">) => {
-    setProcessingIds(prev => new Set(prev).add(queueId));
-
-    try {
-      const result = await expandAllChapters({ outlineId, queueId });
-      if (result.success) {
-        toast.success(`Expanded ${result.expandedCount} chapters`);
-      } else {
-        toast.error(`Expanded ${result.expandedCount} chapters, ${result.failedCount} failed`);
-      }
-    } catch (error) {
-      toast.error("Failed to expand content");
-      console.error(error);
-    } finally {
-      setProcessingIds(prev => {
-        const next = new Set(prev);
-        next.delete(queueId);
-        return next;
-      });
-    }
-  };
-
-  const handleExpandSingleChapter = async (moduleIndex: number, lessonIndex: number, chapterIndex: number) => {
-    if (!viewingOutlineId) return;
-
-    setIsExpandingChapter(true);
-
-    try {
-      const result = await expandChapterContent({
-        outlineId: viewingOutlineId,
-        moduleIndex,
-        lessonIndex,
-        chapterIndex,
-      });
-
-      if (result.success) {
-        toast.success(`Chapter expanded (${result.wordCount} words)`);
-      } else {
-        toast.error(result.error || "Failed to expand chapter");
-      }
-    } catch (error) {
-      toast.error("Failed to expand chapter");
-      console.error(error);
-    } finally {
-      setIsExpandingChapter(false);
-    }
-  };
-
-  const handleCreateCourse = async (queueId: Id<"aiCourseQueue">, outlineId: Id<"aiCourseOutlines">) => {
-    setProcessingIds(prev => new Set(prev).add(queueId));
-
-    try {
-      const result = await createCourseFromOutline({
-        outlineId,
-        queueId,
-        price: 0, // Free by default
-        publish: false,
-      });
-
-      if (result.success) {
-        toast.success("Course created successfully!", {
-          action: result.slug ? {
-            label: "View Course",
-            onClick: () => window.open(`/courses/${result.courseId}`, "_blank"),
-          } : undefined,
-        });
-      } else {
-        toast.error(result.error || "Failed to create course");
-      }
-    } catch (error) {
-      toast.error("Failed to create course");
-      console.error(error);
-    } finally {
-      setProcessingIds(prev => {
-        const next = new Set(prev);
-        next.delete(queueId);
-        return next;
-      });
-    }
-  };
-
-  const handleDelete = async (queueId: Id<"aiCourseQueue">) => {
-    try {
-      await deleteQueueItem({ queueId, userId: user!.id });
-      toast.success("Removed from queue");
-    } catch (error) {
-      toast.error("Failed to delete");
-      console.error(error);
-    }
-  };
-
-  const handleExportJson = () => {
-    if (!exportOutlineAsJson) return;
-
-    const blob = new Blob([JSON.stringify(exportOutlineAsJson, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `course-outline-${viewingOutlineId}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success("Outline exported");
-  };
-
-  // Stats
-  const stats = {
-    queued: queueItems?.filter(i => i.status === "queued").length || 0,
-    processing: queueItems?.filter(i => ["generating_outline", "expanding_content", "creating_course"].includes(i.status)).length || 0,
-    ready: queueItems?.filter(i => ["outline_ready", "ready_to_create"].includes(i.status)).length || 0,
-    completed: queueItems?.filter(i => i.status === "completed").length || 0,
-    failed: queueItems?.filter(i => i.status === "failed").length || 0,
-  };
+  // =============================================================================
+  // RENDER
+  // =============================================================================
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-6xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -833,196 +905,506 @@ export default function AdminCourseBuilderPage() {
             AI Course Builder
           </h1>
           <p className="text-muted-foreground mt-1">
-            Batch create courses with AI-generated outlines and content
+            Generate complete courses using your AI settings
           </p>
-        </div>
-
-        {/* Stats */}
-        <div className="flex items-center gap-4">
-          <div className="text-center px-4 py-2 rounded-lg bg-muted">
-            <div className="text-2xl font-bold">{stats.queued}</div>
-            <div className="text-xs text-muted-foreground">Queued</div>
-          </div>
-          <div className="text-center px-4 py-2 rounded-lg bg-blue-500/10 text-blue-600">
-            <div className="text-2xl font-bold">{stats.processing}</div>
-            <div className="text-xs">Processing</div>
-          </div>
-          <div className="text-center px-4 py-2 rounded-lg bg-amber-500/10 text-amber-600">
-            <div className="text-2xl font-bold">{stats.ready}</div>
-            <div className="text-xs">Ready</div>
-          </div>
-          <div className="text-center px-4 py-2 rounded-lg bg-green-500/10 text-green-600">
-            <div className="text-2xl font-bold">{stats.completed}</div>
-            <div className="text-xs">Completed</div>
-          </div>
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="queue">Queue</TabsTrigger>
-          <TabsTrigger value="add">Add Courses</TabsTrigger>
-        </TabsList>
-
-        {/* Add Courses Tab */}
-        <TabsContent value="add" className="space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column - Input & Settings */}
+        <div className="lg:col-span-1 space-y-4">
+          {/* Topic Input */}
           <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Add Courses to Queue</CardTitle>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Course Topic</CardTitle>
               <CardDescription>
-                Enter one prompt per line. Each prompt will generate a separate course outline.
+                Describe the course you want to create
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <Textarea
+                placeholder="Create me a course on how to make a tour style track in Ableton Live 12..."
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                className="min-h-[120px] bg-background"
+                disabled={isGenerating}
+              />
+
               {/* Store Selection */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Target Store</Label>
-                  <Select value={selectedStoreId} onValueChange={setSelectedStoreId}>
-                    <SelectTrigger className="bg-background">
-                      <SelectValue placeholder="Select a store" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white dark:bg-black">
-                      {stores?.map(store => (
-                        <SelectItem key={store._id} value={store._id}>
-                          <div className="flex items-center gap-2">
-                            <Store className="w-4 h-4" />
-                            <span>{store.name}</span>
-                            <span className="text-muted-foreground">(@{store.slug})</span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Skill Level</Label>
-                  <Select value={skillLevel} onValueChange={(v: any) => setSkillLevel(v)}>
-                    <SelectTrigger className="bg-background">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white dark:bg-black">
-                      <SelectItem value="beginner">Beginner</SelectItem>
-                      <SelectItem value="intermediate">Intermediate</SelectItem>
-                      <SelectItem value="advanced">Advanced</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Modules per Course</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={10}
-                    value={targetModules}
-                    onChange={(e) => setTargetModules(parseInt(e.target.value) || 4)}
-                    className="bg-background"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Lessons per Module</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={10}
-                    value={targetLessonsPerModule}
-                    onChange={(e) => setTargetLessonsPerModule(parseInt(e.target.value) || 3)}
-                    className="bg-background"
-                  />
-                </div>
-              </div>
-
-              {/* Prompts Textarea */}
               <div className="space-y-2">
-                <Label>Course Prompts (one per line)</Label>
-                <Textarea
-                  placeholder={`Create me a course on how to make a tour style track in Ableton Live 12
-Create me a course on how to use Serum for bass design
-Create me a course on mixing and mastering EDM
-Create me a course on music theory for producers`}
-                  value={newPrompts}
-                  onChange={(e) => setNewPrompts(e.target.value)}
-                  className="min-h-[200px] bg-background font-mono text-sm"
-                />
-                <p className="text-xs text-muted-foreground">
-                  {newPrompts.split("\n").filter(p => p.trim()).length} course(s) will be added
+                <Label className="text-sm">Target Store</Label>
+                <Select 
+                  value={selectedStoreId} 
+                  onValueChange={setSelectedStoreId}
+                  disabled={isGenerating}
+                >
+                  <SelectTrigger className="bg-background">
+                    <SelectValue placeholder="Select a store" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white dark:bg-black">
+                    {stores?.map(store => (
+                      <SelectItem key={store._id} value={store._id}>
+                        <div className="flex items-center gap-2">
+                          <Store className="w-4 h-4" />
+                          {store.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Generate Buttons */}
+              <div className="space-y-2">
+                {/* Full Auto Button - One click, complete course */}
+                <Button
+                  onClick={handleFullAutoGenerate}
+                  disabled={isGenerating || !prompt.trim() || !selectedStoreId}
+                  className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 h-12"
+                >
+                  {isGenerating && isFullAuto ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Creating Course...
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="w-4 h-4 mr-2" />
+                      Generate Complete Course
+                    </>
+                  )}
+                </Button>
+                <p className="text-xs text-center text-muted-foreground">
+                  One click → Outline + Expand All + Create
                 </p>
               </div>
 
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">or</span>
+                </div>
+              </div>
+
+              {/* Manual Mode Button - Just outline */}
               <Button
-                onClick={handleAddToQueue}
-                disabled={isAddingToQueue || !newPrompts.trim() || !selectedStoreId}
-                className="w-full bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700"
+                onClick={handleGenerateCourse}
+                disabled={isGenerating || !prompt.trim() || !selectedStoreId}
+                variant="outline"
+                className="w-full"
               >
-                {isAddingToQueue ? (
+                {isGenerating && !isFullAuto ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Adding to Queue...
+                    Generating Outline...
                   </>
                 ) : (
                   <>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add to Queue
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Generate Outline Only
                   </>
                 )}
               </Button>
             </CardContent>
           </Card>
-        </TabsContent>
 
-        {/* Queue Tab */}
-        <TabsContent value="queue" className="space-y-4">
-          {queueItems && queueItems.length > 0 ? (
-            <div className="space-y-3">
-              {queueItems.map(item => (
-                <QueueItemCard
-                  key={item._id}
-                  item={item}
-                  stores={stores || []}
-                  onGenerateOutline={handleGenerateOutline}
-                  onExpandContent={handleExpandContent}
-                  onCreateCourse={handleCreateCourse}
-                  onDelete={handleDelete}
-                  onViewOutline={setViewingOutlineId}
-                  isProcessing={processingIds.has(item._id)}
-                />
-              ))}
-            </div>
-          ) : (
+          {/* AI Settings */}
+          <Card>
+            <Collapsible open={showSettings} onOpenChange={setShowSettings}>
+              <CollapsibleTrigger asChild>
+                <CardHeader className="pb-3 cursor-pointer hover:bg-muted/50 rounded-t-lg transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Settings2 className="w-4 h-4" />
+                      <CardTitle className="text-lg">AI Settings</CardTitle>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-xs">
+                        {PRESET_DESCRIPTIONS[settings.preset]?.label}
+                      </Badge>
+                      {showSettings ? (
+                        <ChevronDown className="w-4 h-4" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4" />
+                      )}
+                    </div>
+                  </div>
+                </CardHeader>
+              </CollapsibleTrigger>
+              
+              <CollapsibleContent>
+                <CardContent className="space-y-4 pt-0">
+                  {/* Preset */}
+                  <div className="space-y-2">
+                    <Label className="text-sm">Model Preset</Label>
+                    <Select 
+                      value={settings.preset} 
+                      onValueChange={(v: any) => setSettings(s => ({ ...s, preset: v }))}
+                    >
+                      <SelectTrigger className="bg-background">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white dark:bg-black">
+                        {Object.entries(PRESET_DESCRIPTIONS).map(([key, { icon, label, description }]) => (
+                          <SelectItem key={key} value={key}>
+                            <div className="flex items-center gap-2">
+                              {icon}
+                              <span>{label}</span>
+                              <span className="text-xs text-muted-foreground">- {description}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Facets */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm">Max Facets</Label>
+                      <span className="text-sm text-muted-foreground">{settings.maxFacets}</span>
+                    </div>
+                    <Slider
+                      value={[settings.maxFacets]}
+                      onValueChange={([v]) => setSettings(s => ({ ...s, maxFacets: v }))}
+                      min={1}
+                      max={10}
+                      step={1}
+                    />
+                  </div>
+
+                  {/* Chunks per Facet */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm">Chunks per Facet</Label>
+                      <span className="text-sm text-muted-foreground">{settings.chunksPerFacet}</span>
+                    </div>
+                    <Slider
+                      value={[settings.chunksPerFacet]}
+                      onValueChange={([v]) => setSettings(s => ({ ...s, chunksPerFacet: v }))}
+                      min={5}
+                      max={100}
+                      step={5}
+                    />
+                  </div>
+
+                  {/* Similarity Threshold */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm">Similarity Threshold</Label>
+                      <span className="text-sm text-muted-foreground">{settings.similarityThreshold.toFixed(2)}</span>
+                    </div>
+                    <Slider
+                      value={[settings.similarityThreshold]}
+                      onValueChange={([v]) => setSettings(s => ({ ...s, similarityThreshold: v }))}
+                      min={0.5}
+                      max={0.95}
+                      step={0.05}
+                    />
+                  </div>
+
+                  {/* Toggles */}
+                  <div className="space-y-3 pt-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Brain className="w-4 h-4 text-muted-foreground" />
+                        <Label className="text-sm">Critic Stage</Label>
+                      </div>
+                      <Switch
+                        checked={settings.enableCritic}
+                        onCheckedChange={(v) => setSettings(s => ({ ...s, enableCritic: v }))}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-muted-foreground" />
+                        <Label className="text-sm">Creative Mode</Label>
+                      </div>
+                      <Switch
+                        checked={settings.enableCreativeMode}
+                        onCheckedChange={(v) => setSettings(s => ({ ...s, enableCreativeMode: v }))}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Globe className="w-4 h-4 text-muted-foreground" />
+                        <Label className="text-sm">Web Research</Label>
+                      </div>
+                      <Switch
+                        checked={settings.enableWebResearch}
+                        onCheckedChange={(v) => setSettings(s => ({ ...s, enableWebResearch: v }))}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </CollapsibleContent>
+            </Collapsible>
+          </Card>
+
+          {/* Generation Progress */}
+          {generationSteps.length > 0 && (
             <Card>
-              <CardContent className="py-12 text-center">
-                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
-                  <BookOpen className="w-8 h-8 text-muted-foreground" />
-                </div>
-                <h3 className="font-semibold mb-1">No courses in queue</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Add some course prompts to get started
-                </p>
-                <Button variant="outline" onClick={() => setActiveTab("add")}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Courses
-                </Button>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg">Progress</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {generationSteps.map((step) => (
+                  <div key={step.id} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
+                    {step.status === "pending" && (
+                      <div className="w-5 h-5 rounded-full border-2 border-muted-foreground/30" />
+                    )}
+                    {step.status === "running" && (
+                      <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                    )}
+                    {step.status === "completed" && (
+                      <CheckCircle2 className="w-5 h-5 text-green-500" />
+                    )}
+                    {step.status === "failed" && (
+                      <XCircle className="w-5 h-5 text-destructive" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className={cn(
+                        "text-sm font-medium",
+                        step.status === "pending" && "text-muted-foreground"
+                      )}>
+                        {step.label}
+                      </p>
+                      {step.detail && (
+                        <p className="text-xs text-muted-foreground truncate">
+                          {step.detail}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </CardContent>
             </Card>
           )}
-        </TabsContent>
-      </Tabs>
+        </div>
 
-      {/* Outline Viewer Modal */}
-      {viewingOutlineId && viewingOutline && (
-        <OutlineViewer
-          outline={viewingOutline}
-          onExpandChapter={handleExpandSingleChapter}
-          onClose={() => setViewingOutlineId(null)}
-          onExport={handleExportJson}
-          isExpanding={isExpandingChapter}
-        />
-      )}
+        {/* Right Column - Outline Preview */}
+        <div className="lg:col-span-2">
+          {generatedOutline ? (
+            <Card className="h-full">
+              <CardHeader className="pb-3 border-b">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>{generatedOutline.title}</CardTitle>
+                    <CardDescription className="mt-1">
+                      {generatedOutline.description}
+                    </CardDescription>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {generatedOutline.skillLevel && (
+                      <Badge variant="outline">{generatedOutline.skillLevel}</Badge>
+                    )}
+                    {generatedOutline.category && (
+                      <Badge variant="secondary">{generatedOutline.category}</Badge>
+                    )}
+                  </div>
+                </div>
+
+                {/* Stats */}
+                <div className="flex items-center gap-4 mt-4 text-sm">
+                  <div className="flex items-center gap-1">
+                    <Layers className="w-4 h-4 text-primary" />
+                    <span>{stats.modules} modules</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <BookOpen className="w-4 h-4 text-primary" />
+                    <span>{stats.lessons} lessons</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <FileText className="w-4 h-4 text-primary" />
+                    <span>{stats.chapters} chapters</span>
+                  </div>
+                  {stats.expanded > 0 && (
+                    <Badge variant="default" className="bg-green-500">
+                      {stats.expanded}/{stats.chapters} expanded
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-2 mt-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExpandAllChapters}
+                    disabled={isGenerating || stats.expanded === stats.chapters}
+                  >
+                    <Sparkles className="w-4 h-4 mr-1" />
+                    Expand All Chapters
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleCreateCourse}
+                    disabled={isCreatingCourse}
+                    className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
+                  >
+                    {isCreatingCourse ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-4 h-4 mr-1" />
+                        Create Course
+                      </>
+                    )}
+                  </Button>
+                  {(createdCourseId || createdCourseSlug) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      asChild
+                    >
+                      <a 
+                        href={createdCourseSlug ? `/course/${createdCourseSlug}` : `/courses/${createdCourseId}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="w-4 h-4 mr-1" />
+                        View Course
+                      </a>
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+
+              <ScrollArea className="h-[calc(100vh-400px)] min-h-[400px]">
+                <CardContent className="pt-4 space-y-3">
+                  {generatedOutline.modules.map((module, mi) => (
+                    <Collapsible
+                      key={mi}
+                      open={expandedModules.has(mi)}
+                      onOpenChange={() => toggleModule(mi)}
+                    >
+                      <CollapsibleTrigger asChild>
+                        <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 cursor-pointer hover:bg-muted transition-colors">
+                          {expandedModules.has(mi) ? (
+                            <ChevronDown className="w-4 h-4" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4" />
+                          )}
+                          <Layers className="w-4 h-4 text-primary" />
+                          <span className="font-medium flex-1">
+                            Module {mi + 1}: {module.title}
+                          </span>
+                          <Badge variant="secondary" className="text-xs">
+                            {module.lessons.length} lessons
+                          </Badge>
+                        </div>
+                      </CollapsibleTrigger>
+
+                      <CollapsibleContent className="pl-6 mt-2 space-y-2">
+                        {module.description && (
+                          <p className="text-sm text-muted-foreground px-3 py-1">
+                            {module.description}
+                          </p>
+                        )}
+
+                        {module.lessons.map((lesson, li) => {
+                          const lessonKey = `${mi}-${li}`;
+                          return (
+                            <Collapsible
+                              key={li}
+                              open={expandedLessons.has(lessonKey)}
+                              onOpenChange={() => toggleLesson(mi, li)}
+                            >
+                              <CollapsibleTrigger asChild>
+                                <div className="flex items-center gap-2 p-2 rounded bg-background border cursor-pointer hover:bg-muted/30 transition-colors">
+                                  {expandedLessons.has(lessonKey) ? (
+                                    <ChevronDown className="w-3 h-3" />
+                                  ) : (
+                                    <ChevronRight className="w-3 h-3" />
+                                  )}
+                                  <BookOpen className="w-3 h-3 text-muted-foreground" />
+                                  <span className="text-sm flex-1">
+                                    Lesson {li + 1}: {lesson.title}
+                                  </span>
+                                  <Badge variant="outline" className="text-xs">
+                                    {lesson.chapters.length} chapters
+                                  </Badge>
+                                </div>
+                              </CollapsibleTrigger>
+
+                              <CollapsibleContent className="pl-6 mt-1 space-y-1">
+                                {lesson.chapters.map((chapter, ci) => (
+                                  <div
+                                    key={ci}
+                                    className={cn(
+                                      "flex items-start gap-2 p-2 rounded border text-xs",
+                                      chapter.expanded 
+                                        ? "bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900"
+                                        : "bg-background"
+                                    )}
+                                  >
+                                    <FileText className="w-3 h-3 mt-0.5 text-muted-foreground flex-shrink-0" />
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-medium">{chapter.title}</span>
+                                        {chapter.expanded ? (
+                                          <Badge variant="default" className="text-[10px] px-1.5 bg-green-500">
+                                            <Check className="w-2 h-2 mr-0.5" />
+                                            Expanded
+                                          </Badge>
+                                        ) : (
+                                          <Badge variant="secondary" className="text-[10px] px-1.5">
+                                            Outline
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <p className="text-muted-foreground mt-0.5 line-clamp-2">
+                                        {chapter.content}
+                                      </p>
+                                    </div>
+                                    {!chapter.expanded && (
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-6 text-xs flex-shrink-0"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleExpandChapter(mi, li, ci);
+                                        }}
+                                      >
+                                        <Sparkles className="w-3 h-3 mr-1" />
+                                        Expand
+                                      </Button>
+                                    )}
+                                  </div>
+                                ))}
+                              </CollapsibleContent>
+                            </Collapsible>
+                          );
+                        })}
+                      </CollapsibleContent>
+                    </Collapsible>
+                  ))}
+                </CardContent>
+              </ScrollArea>
+            </Card>
+          ) : (
+            <Card className="h-full flex items-center justify-center min-h-[400px]">
+              <CardContent className="text-center">
+                <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+                  <BookOpen className="w-10 h-10 text-muted-foreground" />
+                </div>
+                <h3 className="font-semibold text-lg mb-2">No Course Generated Yet</h3>
+                <p className="text-muted-foreground max-w-sm">
+                  Enter a topic like &ldquo;Create me a course on how to make a tour style track in Ableton Live 12&rdquo; and click Generate Course.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
-
