@@ -25,6 +25,7 @@ import {
   ChevronRight,
   Zap,
   Lightbulb,
+  Wand2,
 } from "lucide-react";
 
 interface NavItem {
@@ -133,6 +134,14 @@ const navSections = [
   {
     title: "AI Platform",
     items: [
+      {
+        title: "Course Builder",
+        href: "/admin/course-builder",
+        icon: Wand2,
+        description: "Batch AI course generation",
+        badge: "NEW",
+        badgeColor: "bg-gradient-to-r from-violet-500 to-purple-600",
+      },
       {
         title: "AI Flywheel",
         href: "/admin/ai-flywheel",

@@ -4078,4 +4078,116 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_sourceId", ["sourceId"])
     .index("by_userId_and_createdAt", ["userId", "createdAt"]), // For ordered retrieval (newest first)
+
+  // =============================================================================
+  // AI Course Builder - Batch course generation queue and outlines
+  // =============================================================================
+  
+  // Queue for batch course creation requests
+  aiCourseQueue: defineTable({
+    userId: v.string(), // Clerk ID
+    storeId: v.string(),
+    
+    // Course request details
+    prompt: v.string(), // e.g., "Create me a course on how to make a tour style track in Ableton Live 12"
+    topic: v.optional(v.string()), // Extracted topic
+    skillLevel: v.optional(v.union(
+      v.literal("beginner"),
+      v.literal("intermediate"),
+      v.literal("advanced")
+    )),
+    targetModules: v.optional(v.number()), // Default 4
+    targetLessonsPerModule: v.optional(v.number()), // Default 3
+    
+    // Processing status
+    status: v.union(
+      v.literal("queued"), // Waiting to be processed
+      v.literal("generating_outline"), // AI is generating the outline
+      v.literal("outline_ready"), // Outline generated, ready for review
+      v.literal("expanding_content"), // Detailed content being generated
+      v.literal("ready_to_create"), // All content ready, waiting to create course
+      v.literal("creating_course"), // Creating the actual course
+      v.literal("completed"), // Course created successfully
+      v.literal("failed") // Something went wrong
+    ),
+    
+    // Progress tracking
+    progress: v.optional(v.object({
+      currentStep: v.string(),
+      totalSteps: v.number(),
+      completedSteps: v.number(),
+      currentChapter: v.optional(v.string()),
+    })),
+    
+    // Results
+    outlineId: v.optional(v.id("aiCourseOutlines")), // Link to generated outline
+    courseId: v.optional(v.id("courses")), // Link to created course
+    
+    // Error tracking
+    error: v.optional(v.string()),
+    
+    // Timestamps
+    createdAt: v.number(),
+    startedAt: v.optional(v.number()),
+    completedAt: v.optional(v.number()),
+    
+    // Priority for queue processing
+    priority: v.optional(v.number()), // Higher = processed first
+  })
+    .index("by_userId", ["userId"])
+    .index("by_storeId", ["storeId"])
+    .index("by_status", ["status"])
+    .index("by_userId_and_status", ["userId", "status"])
+    .index("by_userId_and_createdAt", ["userId", "createdAt"])
+    .index("by_priority_and_createdAt", ["priority", "createdAt"]),
+
+  // Generated course outlines (JSON structure)
+  aiCourseOutlines: defineTable({
+    queueId: v.id("aiCourseQueue"), // Reference to queue item
+    userId: v.string(),
+    storeId: v.string(),
+    
+    // Course metadata
+    title: v.string(),
+    description: v.string(),
+    topic: v.string(),
+    skillLevel: v.union(
+      v.literal("beginner"),
+      v.literal("intermediate"),
+      v.literal("advanced")
+    ),
+    estimatedDuration: v.optional(v.number()), // In minutes
+    
+    // The full outline structure as JSON
+    outline: v.any(), // Full course structure with modules, lessons, chapters
+    
+    // Content expansion tracking
+    totalChapters: v.number(),
+    expandedChapters: v.number(), // How many chapters have detailed content
+    
+    // Chapter content status - tracks which chapters need expansion
+    chapterStatus: v.optional(v.array(v.object({
+      moduleIndex: v.number(),
+      lessonIndex: v.number(),
+      chapterIndex: v.number(),
+      title: v.string(),
+      hasDetailedContent: v.boolean(),
+      wordCount: v.optional(v.number()),
+    }))),
+    
+    // Generation metadata
+    generationModel: v.optional(v.string()),
+    generationTimeMs: v.optional(v.number()),
+    
+    // User edits
+    isEdited: v.boolean(), // Has user manually edited the outline?
+    lastEditedAt: v.optional(v.number()),
+    
+    // Timestamps
+    createdAt: v.number(),
+  })
+    .index("by_queueId", ["queueId"])
+    .index("by_userId", ["userId"])
+    .index("by_storeId", ["storeId"])
+    .index("by_userId_and_createdAt", ["userId", "createdAt"]),
 }); 
