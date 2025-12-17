@@ -106,6 +106,9 @@ interface AISettings {
   enableCritic: boolean;
   enableCreativeMode: boolean;
   enableWebResearch: boolean;
+  enableFactVerification: boolean;
+  autoSaveWebResearch: boolean;
+  webSearchMaxResults: number;
   responseStyle: "structured" | "conversational" | "concise";
 }
 
@@ -117,6 +120,9 @@ const DEFAULT_AI_SETTINGS: AISettings = {
   enableCritic: true,
   enableCreativeMode: true,
   enableWebResearch: true,
+  enableFactVerification: false,
+  autoSaveWebResearch: false,
+  webSearchMaxResults: 10,
   responseStyle: "structured",
 };
 
@@ -144,9 +150,30 @@ const PRESET_DESCRIPTIONS: Record<string, { icon: React.ReactNode; label: string
   premium: { 
     icon: <Crown className="w-4 h-4" />, 
     label: "Premium", 
-    description: "Claude 4.5 Opus + Gemini 3 Pro" 
+    description: "Claude 4.5 Opus + Gemini 3 Pro (~$0.50/query)" 
   },
 };
+
+const RESPONSE_STYLES = [
+  {
+    value: "structured" as const,
+    icon: "📋",
+    label: "Structured",
+    description: "Bullet points, numbered lists, clear sections",
+  },
+  {
+    value: "conversational" as const,
+    icon: "💬",
+    label: "Conversational",
+    description: "Flowing paragraphs, essay-style prose",
+  },
+  {
+    value: "concise" as const,
+    icon: "⚡",
+    label: "Concise",
+    description: "Brief, direct answers without fluff",
+  },
+];
 
 // =============================================================================
 // MAIN COMPONENT
@@ -327,8 +354,9 @@ export default function AdminCourseBuilderPage() {
         enableCritic: settings.enableCritic,
         enableCreativeMode: settings.enableCreativeMode,
         enableWebResearch: settings.enableWebResearch,
-        enableFactVerification: false,
-        autoSaveWebResearch: false,
+        enableFactVerification: settings.enableFactVerification,
+        autoSaveWebResearch: settings.autoSaveWebResearch,
+        webSearchMaxResults: settings.webSearchMaxResults,
         responseStyle: settings.responseStyle,
       },
     });
@@ -1060,7 +1088,7 @@ Write 800-1200 words of comprehensive, video-script-ready content suitable for $
                     </Select>
                   </div>
 
-                  {/* Facets */}
+                  {/* Max Facets */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label className="text-sm">Max Facets</Label>
@@ -1070,9 +1098,10 @@ Write 800-1200 words of comprehensive, video-script-ready content suitable for $
                       value={[settings.maxFacets]}
                       onValueChange={([v]) => setSettings(s => ({ ...s, maxFacets: v }))}
                       min={1}
-                      max={10}
+                      max={5}
                       step={1}
                     />
+                    <p className="text-xs text-muted-foreground">Number of sub-topics to analyze</p>
                   </div>
 
                   {/* Chunks per Facet */}
@@ -1085,9 +1114,10 @@ Write 800-1200 words of comprehensive, video-script-ready content suitable for $
                       value={[settings.chunksPerFacet]}
                       onValueChange={([v]) => setSettings(s => ({ ...s, chunksPerFacet: v }))}
                       min={5}
-                      max={100}
+                      max={50}
                       step={5}
                     />
+                    <p className="text-xs text-muted-foreground">Amount of knowledge to retrieve per topic</p>
                   </div>
 
                   {/* Similarity Threshold */}
@@ -1103,14 +1133,15 @@ Write 800-1200 words of comprehensive, video-script-ready content suitable for $
                       max={0.95}
                       step={0.05}
                     />
+                    <p className="text-xs text-muted-foreground">Minimum relevance score for sources</p>
                   </div>
 
-                  {/* Toggles */}
+                  {/* Feature Toggles */}
                   <div className="space-y-3 pt-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Brain className="w-4 h-4 text-muted-foreground" />
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex-1 min-w-0">
                         <Label className="text-sm">Critic Stage</Label>
+                        <p className="text-xs text-muted-foreground">Quality review before response</p>
                       </div>
                       <Switch
                         checked={settings.enableCritic}
@@ -1118,26 +1149,115 @@ Write 800-1200 words of comprehensive, video-script-ready content suitable for $
                       />
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Sparkles className="w-4 h-4 text-muted-foreground" />
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex-1 min-w-0">
                         <Label className="text-sm">Creative Mode</Label>
+                        <p className="text-xs text-muted-foreground">Generate new ideas beyond sources</p>
                       </div>
                       <Switch
                         checked={settings.enableCreativeMode}
                         onCheckedChange={(v) => setSettings(s => ({ ...s, enableCreativeMode: v }))}
                       />
                     </div>
+                  </div>
 
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Globe className="w-4 h-4 text-muted-foreground" />
+                  {/* Research & Verification Section */}
+                  <div className="space-y-3 pt-3 border-t">
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <Globe className="w-4 h-4" />
+                      Research & Verification
+                    </Label>
+
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex-1 min-w-0">
                         <Label className="text-sm">Web Research</Label>
+                        <p className="text-xs text-muted-foreground">Search web for additional context (uses Tavily API)</p>
                       </div>
                       <Switch
                         checked={settings.enableWebResearch}
                         onCheckedChange={(v) => setSettings(s => ({ ...s, enableWebResearch: v }))}
                       />
+                    </div>
+
+                    {settings.enableWebResearch && (
+                      <div className="ml-4 space-y-3 p-3 bg-muted/30 rounded-lg">
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <Label className="text-sm">Auto-Save to Knowledge</Label>
+                            <p className="text-xs text-muted-foreground">Save web findings for future queries</p>
+                          </div>
+                          <Switch
+                            checked={settings.autoSaveWebResearch}
+                            onCheckedChange={(v) => setSettings(s => ({ ...s, autoSaveWebResearch: v }))}
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-xs">Results per Topic</Label>
+                            <span className="text-xs text-muted-foreground font-mono">{settings.webSearchMaxResults}</span>
+                          </div>
+                          <Slider
+                            value={[settings.webSearchMaxResults]}
+                            onValueChange={([v]) => setSettings(s => ({ ...s, webSearchMaxResults: v }))}
+                            min={1}
+                            max={10}
+                            step={1}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <Label className="text-sm">Fact Verification</Label>
+                        <p className="text-xs text-muted-foreground">Cross-check claims against sources</p>
+                      </div>
+                      <Switch
+                        checked={settings.enableFactVerification}
+                        onCheckedChange={(v) => setSettings(s => ({ ...s, enableFactVerification: v }))}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Response Style */}
+                  <div className="space-y-3 pt-3 border-t">
+                    <Label className="text-sm font-medium">Response Style</Label>
+                    <div className="grid gap-2">
+                      {RESPONSE_STYLES.map((style) => {
+                        const isSelected = settings.responseStyle === style.value;
+                        return (
+                          <button
+                            key={style.value}
+                            type="button"
+                            onClick={() => setSettings(s => ({ ...s, responseStyle: style.value }))}
+                            className={cn(
+                              "flex items-start gap-3 p-3 rounded-lg border text-left transition-all",
+                              isSelected
+                                ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                                : "border-border hover:border-muted-foreground/30 hover:bg-muted/30"
+                            )}
+                          >
+                            <span className="text-lg">{style.icon}</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className={cn(
+                                  "font-medium text-sm",
+                                  isSelected && "text-primary"
+                                )}>
+                                  {style.label}
+                                </span>
+                                {isSelected && (
+                                  <div className="w-2 h-2 rounded-full bg-primary" />
+                                )}
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                {style.description}
+                              </p>
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 </CardContent>
