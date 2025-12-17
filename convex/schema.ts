@@ -3700,6 +3700,14 @@ export default defineSchema({
     preview: v.optional(v.string()), // First message preview
     lastMessageAt: v.number(), // Timestamp of last message
     messageCount: v.number(), // Total messages in conversation
+    // CONVERSATION GOAL ANCHOR - Prevents context drift in long conversations
+    // Extracted from the first message and injected into every AI call
+    conversationGoal: v.optional(v.object({
+      originalIntent: v.string(), // "Create a course about Tourist's production style"
+      deliverableType: v.optional(v.string()), // "course", "outline", "lesson", etc.
+      keyConstraints: v.optional(v.array(v.string())), // ["Tourist style", "Ableton Live 12", "UKG"]
+      extractedAt: v.number(), // When the goal was extracted
+    })),
     // Agent reference - which AI agent/GPT is this conversation with
     agentId: v.optional(v.id("aiAgents")), // Optional - null means default assistant
     agentSlug: v.optional(v.string()), // Cached for display without joins

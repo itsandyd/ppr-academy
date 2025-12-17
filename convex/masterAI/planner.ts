@@ -20,6 +20,11 @@ import {
   type IntentType,
   type ToolCall,
 } from "./tools/schema";
+import { 
+  conversationGoalValidator, 
+  formatGoalForPrompt,
+  type ConversationGoal,
+} from "./goalExtractor";
 
 /**
  * Planner Stage
@@ -35,19 +40,25 @@ export const analyzeQuestion = internalAction({
       role: v.union(v.literal("user"), v.literal("assistant")),
       content: v.string(),
     }))),
+    // NEW: Conversation goal anchor to prevent context drift
+    conversationGoal: v.optional(conversationGoalValidator),
   },
   returns: plannerOutputValidator,
   handler: async (ctx, args): Promise<PlannerOutput> => {
-    const { question, settings, conversationContext } = args;
+    const { question, settings, conversationContext, conversationGoal } = args;
     
     // Get the model for this stage
     const modelId = getModelForStage("planner", settings);
+
+    // Format goal context if available
+    const goalContext = formatGoalForPrompt(conversationGoal);
     
     const systemPrompt = `You are an expert question analyzer for a music production education platform. Your job is to decompose complex questions into searchable facets.
-
+${goalContext}
 Given a user's question about music production, sound design, mixing, or related topics:
 
 1. **Identify the Intent**: What is the user ultimately trying to achieve?
+   ${conversationGoal ? `IMPORTANT: This question is part of a conversation about "${conversationGoal.originalIntent}". Frame your analysis in that context.` : ""}
 
 2. **Classify the Question Type**:
    - "technical": Specific how-to about tools, parameters, techniques
@@ -59,6 +70,7 @@ Given a user's question about music production, sound design, mixing, or related
 
 3. **Decompose into Facets** (max ${settings.maxFacets} facets):
    Each facet should represent a distinct knowledge area needed to fully answer the question.
+   ${conversationGoal?.keyConstraints ? `MUST INCLUDE facets related to: ${conversationGoal.keyConstraints.join(", ")}` : ""}
    For each facet, provide:
    - name: Short identifier (e.g., "sound_design", "mixing", "arrangement")
    - description: What this facet covers
@@ -74,6 +86,7 @@ IMPORTANT:
 - Prioritize facets that directly address the core question
 - Include practical/technique facets alongside conceptual ones
 - Consider the user's likely skill level based on question complexity
+${conversationGoal ? `- NEVER lose sight of the original conversation goal: "${conversationGoal.originalIntent}"` : ""}
 
 Respond ONLY with valid JSON matching this structure:
 {

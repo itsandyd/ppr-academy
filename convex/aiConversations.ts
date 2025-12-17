@@ -98,6 +98,13 @@ export const getConversation = query({
       preview: v.optional(v.string()),
       lastMessageAt: v.number(),
       messageCount: v.number(),
+      // Conversation goal anchor - prevents context drift in long conversations
+      conversationGoal: v.optional(v.object({
+        originalIntent: v.string(),
+        deliverableType: v.optional(v.string()),
+        keyConstraints: v.optional(v.array(v.string())),
+        extractedAt: v.number(),
+      })),
       preset: v.optional(v.string()),
       responseStyle: v.optional(v.string()),
       settings: v.optional(v.object({

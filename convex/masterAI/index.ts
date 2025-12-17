@@ -2,7 +2,7 @@
 
 import { action, internalAction } from "../_generated/server";
 import { v } from "convex/values";
-import { internal } from "../_generated/api";
+import { internal, api } from "../_generated/api";
 import {
   chatSettingsValidator,
   masterAIResponseValidator,
@@ -20,6 +20,10 @@ import {
   formatMemoriesForPrompt, 
   type MemoryForPipeline,
 } from "./memoryManager";
+import {
+  conversationGoalValidator,
+  type ConversationGoal,
+} from "./goalExtractor";
 import {
   AI_TOOLS,
   actionProposalValidator,
@@ -62,6 +66,8 @@ export const askMasterAI = action({
       role: v.union(v.literal("user"), v.literal("assistant")),
       content: v.string(),
     }))),
+    // NEW: Conversation goal to prevent context drift in long conversations
+    conversationGoal: v.optional(conversationGoalValidator),
   },
   returns: masterAIResponseValidator,
   handler: async (ctx, args): Promise<MasterAIResponse> => {
@@ -69,6 +75,45 @@ export const askMasterAI = action({
     const startTime = Date.now();
 
     console.log(`🚀 Master AI Pipeline starting with preset: ${settings.preset}`);
+
+    // ========================================================================
+    // GOAL EXTRACTION (prevents context drift in long conversations)
+    // ========================================================================
+    let conversationGoal: ConversationGoal | undefined = args.conversationGoal;
+    
+    // If no goal provided but we have a conversationId, try to fetch existing goal
+    if (!conversationGoal && args.conversationId) {
+      try {
+        // @ts-ignore - Type instantiation is excessively deep
+        const conversation = await ctx.runQuery(
+          api.aiConversations.getConversation,
+          { conversationId: args.conversationId as Id<"aiConversations"> }
+        );
+        if (conversation?.conversationGoal) {
+          conversationGoal = conversation.conversationGoal;
+          console.log(`🎯 Using existing conversation goal: "${conversationGoal.originalIntent}"`);
+        }
+      } catch (err) {
+        console.warn("Failed to fetch conversation goal:", err);
+      }
+    }
+    
+    // If still no goal and this looks like a new conversation, extract it from the first message
+    if (!conversationGoal && (!args.conversationContext || args.conversationContext.length === 0)) {
+      try {
+        console.log("🎯 Extracting conversation goal from first message...");
+        conversationGoal = await ctx.runAction(
+          internal.masterAI.goalExtractor.extractGoalFromMessage,
+          { 
+            message: args.question,
+            conversationId: args.conversationId as Id<"aiConversations"> | undefined,
+          }
+        );
+        console.log(`   ✅ Goal: "${conversationGoal.originalIntent}"`);
+      } catch (err) {
+        console.warn("Failed to extract conversation goal:", err);
+      }
+    }
 
     // ========================================================================
     // FETCH USER MEMORIES (parallel with planning)
@@ -103,6 +148,7 @@ export const askMasterAI = action({
         question: args.question,
         settings,
         conversationContext: args.conversationContext,
+        conversationGoal, // Pass goal to prevent context drift
       }
     );
 
@@ -368,6 +414,7 @@ ${currentCriticOutput.issues.map(i => `- Fix ${i.type}: ${i.description}`).join(
         sourceChunks: allSourceChunks,
         webResearch: webResearchResults,
         factVerification: factVerificationOutput,
+        conversationGoal, // Pass goal to prevent context drift
       }
     );
 

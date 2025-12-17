@@ -24,6 +24,11 @@ import {
   getRelevantPlatformFeatures, 
   formatPlatformKnowledgeForPrompt 
 } from "./platformKnowledge";
+import { 
+  conversationGoalValidator, 
+  formatGoalForPrompt,
+  type ConversationGoal,
+} from "./goalExtractor";
 
 // ============================================================================
 // FINAL WRITER STAGE
@@ -93,6 +98,8 @@ export const generateFinalResponse = internalAction({
         reason: v.string(),
       })),
     })),
+    // NEW: Conversation goal anchor to prevent context drift
+    conversationGoal: v.optional(conversationGoalValidator),
   },
   returns: masterAIResponseValidator,
   handler: async (ctx, args): Promise<MasterAIResponse> => {
@@ -107,7 +114,11 @@ export const generateFinalResponse = internalAction({
       sourceChunks,
       webResearch,
       factVerification,
+      conversationGoal,
     } = args;
+
+    // Format conversation goal for injection into prompt
+    const goalContext = formatGoalForPrompt(conversationGoal);
 
     const startTime = Date.now();
     
@@ -222,8 +233,9 @@ The user specifically requested approximately ${requestedWordCount} words. You M
     }
 
     const systemPrompt = `You are Andrew, an expert music production educator with 15+ years of experience teaching producers at all levels. You're known for giving REAL, actionable knowledge - not generic overviews.
-
+${goalContext}
 FIRST: UNDERSTAND WHAT THE USER IS ACTUALLY ASKING FOR
+${conversationGoal ? `REMEMBER: This conversation is about "${conversationGoal.originalIntent}". Every response must serve this goal.` : ""}
 Before writing, identify the TYPE of response needed:
 - If they want a DELIVERABLE (outline, plan, template, list, cheat sheet) → CREATE the actual thing, don't describe it
 - If they want an EXPLANATION → Teach the concept in depth
@@ -232,6 +244,7 @@ Before writing, identify the TYPE of response needed:
 - If they want CREATIVE OUTPUT → Actually write/create it
 
 Match your format to their request. If they ask you to "create a course outline" → produce actual modules and lessons, not a paragraph about what an outline might contain.
+${conversationGoal?.keyConstraints ? `\nKEY CONSTRAINTS TO MAINTAIN: ${conversationGoal.keyConstraints.join(", ")}` : ""}
 
 QUALITY STANDARDS - THIS IS CRITICAL:
 Your response must provide genuine educational value. Do NOT write surface-level content that sounds like AI filler. Instead:
