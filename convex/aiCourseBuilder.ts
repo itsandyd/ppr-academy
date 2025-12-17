@@ -534,14 +534,47 @@ GUIDELINES:
 - Each lesson should have 2-4 chapters
 - Content should be appropriate for ${params.skillLevel} level
 - Be specific to the topic and provide actionable learning
-- Chapter content should be a brief outline (2-3 sentences) describing what will be covered`;
+- Chapter content should be a brief outline (2-3 sentences) describing what will be covered
+
+IMPORTANT: You must respond with valid JSON in the following format:
+{
+  "course": {
+    "title": "Course Title",
+    "description": "Course description",
+    "category": "Music Production",
+    "skillLevel": "beginner|intermediate|advanced",
+    "estimatedDuration": 120
+  },
+  "modules": [
+    {
+      "title": "Module Title",
+      "description": "Module description",
+      "orderIndex": 0,
+      "lessons": [
+        {
+          "title": "Lesson Title",
+          "description": "Lesson description",
+          "orderIndex": 0,
+          "chapters": [
+            {
+              "title": "Chapter Title",
+              "content": "Brief outline of what this chapter covers (2-3 sentences)",
+              "duration": 10,
+              "orderIndex": 0
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}`;
 
   const userPrompt = `Create a course outline for: ${params.prompt}
 
 Topic: ${params.topic}
 Skill Level: ${params.skillLevel}
 
-Generate a complete course structure with modules, lessons, and chapters.`;
+Generate a complete course structure with modules, lessons, and chapters. Respond with valid JSON only.`;
 
   const completion = await openai.chat.completions.create({
     model: "gpt-4o",
