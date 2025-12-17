@@ -115,11 +115,10 @@ interface AISettings {
   skillLevel: "beginner" | "intermediate" | "advanced";
   targetModules: number;
   targetLessonsPerModule: number;
-  // Content expansion settings
-  liteMode: boolean; // Generate shorter chapter content (faster, 300-500 words vs 800-1200)
-  parallelBatchSize: number; // How many chapters to expand in parallel
-  // AI pipeline settings (for future use if we add agentic features back)
-  preset: "speed" | "balanced" | "quality" | "deepReasoning" | "premium";
+  // Parallel processing
+  parallelBatchSize: number; // How many chapters to expand in parallel (lower for full pipeline)
+  // AI pipeline settings - SAME as main AI chat!
+  preset: "budget" | "speed" | "balanced" | "deepReasoning" | "premium";
   maxFacets: number;
   chunksPerFacet: number;
   similarityThreshold: number;
@@ -137,10 +136,9 @@ const DEFAULT_AI_SETTINGS: AISettings = {
   skillLevel: "intermediate",
   targetModules: 4,
   targetLessonsPerModule: 3,
-  // Content expansion defaults
-  liteMode: true, // Default to lite mode for speed
-  parallelBatchSize: 5, // 5 chapters at a time
-  // AI pipeline defaults
+  // Parallel processing - lower for full pipeline (each chapter runs entire pipeline)
+  parallelBatchSize: 2, // 2 chapters at a time (full pipeline is heavier)
+  // AI pipeline defaults - SAME as main AI chat!
   preset: "premium",
   maxFacets: 5,
   chunksPerFacet: 50,
@@ -416,14 +414,29 @@ export default function AdminCourseBuilderPage() {
         detail: `Course structure created (${outlineResult.pipelineMetadata?.totalChunksProcessed || 0} sources used)` 
       });
 
-      // Step 2: Expand all chapters (in parallel batches for speed)
-      updateStep("expand", { status: "running", detail: `Expanding chapters (${settings.liteMode ? "lite" : "detailed"} mode, ${settings.parallelBatchSize} parallel)...` });
+      // Step 2: Expand all chapters BY LESSON using FULL masterAI pipeline
+      updateStep("expand", { 
+        status: "running", 
+        detail: `Expanding chapters using full AI pipeline (${settings.preset} preset)...` 
+      });
       
       const expandResult = await expandAllChaptersAction({ 
         outlineId: outlineResult.outlineId, 
         queueId,
         parallelBatchSize: settings.parallelBatchSize,
-        liteMode: settings.liteMode,
+        settings: {
+          preset: settings.preset,
+          maxFacets: settings.maxFacets,
+          chunksPerFacet: settings.chunksPerFacet,
+          similarityThreshold: settings.similarityThreshold,
+          enableCritic: settings.enableCritic,
+          enableCreativeMode: settings.enableCreativeMode,
+          enableWebResearch: settings.enableWebResearch,
+          enableFactVerification: settings.enableFactVerification,
+          autoSaveWebResearch: settings.autoSaveWebResearch,
+          webSearchMaxResults: settings.webSearchMaxResults,
+          responseStyle: settings.responseStyle,
+        },
       });
       
       updateStep("expand", { 
@@ -1303,42 +1316,34 @@ export default function AdminCourseBuilderPage() {
                     <p className="text-xs text-muted-foreground">Minimum relevance score for sources</p>
                   </div>
 
-                  {/* Content Expansion Settings */}
+                  {/* Parallel Processing */}
                   <div className="space-y-3 pt-3 border-t">
                     <Label className="text-sm font-medium flex items-center gap-2">
                       <Zap className="w-4 h-4" />
-                      Content Expansion (Speed vs Quality)
+                      Processing Speed
                     </Label>
-                    
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <Label className="text-sm">Lite Mode (Recommended)</Label>
-                        <p className="text-xs text-muted-foreground">
-                          {settings.liteMode 
-                            ? "300-500 words per chapter, uses GPT-4o-mini (faster)" 
-                            : "800-1200 words per chapter, uses GPT-4o (slower)"}
-                        </p>
-                      </div>
-                      <Switch
-                        checked={settings.liteMode}
-                        onCheckedChange={(v) => setSettings(s => ({ ...s, liteMode: v }))}
-                      />
-                    </div>
 
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <Label className="text-sm">Parallel Batch Size</Label>
-                        <span className="text-sm text-muted-foreground">{settings.parallelBatchSize} chapters</span>
+                        <Label className="text-sm">Parallel Chapters</Label>
+                        <span className="text-sm text-muted-foreground">{settings.parallelBatchSize} at a time</span>
                       </div>
                       <Slider
                         value={[settings.parallelBatchSize]}
                         onValueChange={([v]) => setSettings(s => ({ ...s, parallelBatchSize: v }))}
                         min={1}
-                        max={10}
+                        max={5}
                         step={1}
                       />
                       <p className="text-xs text-muted-foreground">
-                        How many chapters to expand simultaneously (higher = faster, but may hit rate limits)
+                        Each chapter runs the full AI pipeline. Keep low (1-3) to avoid rate limits.
+                      </p>
+                    </div>
+                    
+                    <div className="p-3 bg-muted/50 rounded-lg">
+                      <p className="text-xs text-muted-foreground">
+                        💡 Chapter content now uses the <strong>same full AI pipeline</strong> as the main AI chat:
+                        Planner → Retriever → Web Research → Summarizer → Idea Generator → Critic → Final Writer
                       </p>
                     </div>
                   </div>

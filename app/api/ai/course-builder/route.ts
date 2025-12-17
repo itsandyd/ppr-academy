@@ -176,14 +176,12 @@ export async function POST(request: NextRequest) {
 
         try {
           // Run the full pipeline through Convex
+          // generateOutline now uses the FULL masterAI pipeline internally
           const result = await convex.action(
-            (api as any).aiCourseBuilder.generateOutlineWithPipeline,
+            (api as any).aiCourseBuilder.generateOutline,
             {
-              prompt,
+              queueId, // Required - must be created before calling this
               settings: chatSettings,
-              userId,
-              storeId: storeId || "",
-              queueId: queueId || undefined,
             }
           );
 

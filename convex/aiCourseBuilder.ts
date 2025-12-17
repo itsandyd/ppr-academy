@@ -58,20 +58,24 @@ interface CourseOutline {
 }
 
 // =============================================================================
-// OUTLINE GENERATION
+// OUTLINE GENERATION - Uses FULL masterAI pipeline (same as AI chat)
 // =============================================================================
 
 /**
- * Generate a course outline for a queue item (action)
+ * Generate a course outline for a queue item using the FULL masterAI pipeline
+ * (Planner → Retriever → Web Research → Summarizer → Idea Generator → Critic → Final Writer)
  */
 export const generateOutline = action({
   args: {
     queueId: v.id("aiCourseQueue"),
+    settings: v.optional(chatSettingsValidator), // User's AI settings
   },
   returns: v.object({
     success: v.boolean(),
     outlineId: v.optional(v.id("aiCourseOutlines")),
+    outline: v.optional(v.any()),
     error: v.optional(v.string()),
+    pipelineMetadata: v.optional(v.any()),
   }),
   handler: async (ctx, args) => {
     // Get queue item - cast to any to avoid deep type inference
@@ -84,6 +88,9 @@ export const generateOutline = action({
       return { success: false, error: "Queue item not found" };
     }
     
+    // Use provided settings or defaults
+    const settings: ChatSettings = args.settings || DEFAULT_CHAT_SETTINGS;
+    
     // Update status to generating
     await (ctx as any).runMutation(
       api.aiCourseBuilderQueries.updateQueueStatus,
@@ -91,16 +98,72 @@ export const generateOutline = action({
     );
     
     const startTime = Date.now();
+    const topic = queueItem.topic || queueItem.prompt;
+    const skillLevel = queueItem.skillLevel || "intermediate";
+    const targetModules = queueItem.targetModules || 4;
+    const targetLessonsPerModule = queueItem.targetLessonsPerModule || 3;
     
     try {
-      // Generate outline using OpenAI
-      const outline = await generateCourseOutlineWithAI({
-        topic: queueItem.topic || queueItem.prompt,
-        skillLevel: queueItem.skillLevel || "intermediate",
-        targetModules: queueItem.targetModules || 4,
-        targetLessonsPerModule: queueItem.targetLessonsPerModule || 3,
-        prompt: queueItem.prompt,
-      });
+      // Build the prompt for the masterAI pipeline
+      const outlinePrompt = `Create a comprehensive music production course outline.
+
+**Course Topic:** ${topic}
+**Skill Level:** ${skillLevel}
+**Structure:** ${targetModules} modules, each with ${targetLessonsPerModule} lessons, each lesson with 2-4 chapters
+
+Please research this topic thoroughly and create a well-structured course outline. Use your knowledge base and web research to ensure the content is accurate and comprehensive.
+
+**IMPORTANT:** Your response MUST be valid JSON in this exact format:
+\`\`\`json
+{
+  "course": {
+    "title": "Course Title Here",
+    "description": "A compelling course description that explains what students will learn",
+    "category": "Music Production",
+    "skillLevel": "${skillLevel}",
+    "estimatedDuration": 120
+  },
+  "modules": [
+    {
+      "title": "Module 1 Title",
+      "description": "What this module covers",
+      "orderIndex": 0,
+      "lessons": [
+        {
+          "title": "Lesson 1 Title",
+          "description": "What this lesson covers",
+          "orderIndex": 0,
+          "chapters": [
+            {
+              "title": "Chapter Title",
+              "content": "Brief 2-3 sentence description of what this chapter will teach",
+              "duration": 10,
+              "orderIndex": 0
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+\`\`\`
+
+Create exactly ${targetModules} modules with ${targetLessonsPerModule} lessons each. Each lesson should have 2-4 chapters. Make the content specific to ${topic} and appropriate for ${skillLevel} level students.`;
+
+      console.log(`🎓 Generating course outline using FULL masterAI pipeline (preset: ${settings.preset})`);
+      
+      // Call the FULL masterAI pipeline - SAME as AI chat!
+      const pipelineResult = await (ctx as any).runAction(
+        api.masterAI.askMasterAI,
+        {
+          question: outlinePrompt,
+          settings,
+          userId: queueItem.userId,
+        }
+      ) as { answer: string; citations?: any[]; facetsUsed?: string[]; pipelineMetadata?: any };
+      
+      // Parse the JSON from the response
+      const outline = parseOutlineFromResponse(pipelineResult.answer, topic, skillLevel);
       
       // Calculate chapter status
       const chapterStatus: Array<{
@@ -141,13 +204,13 @@ export const generateOutline = action({
           storeId: queueItem.storeId,
           title: outline.course.title,
           description: outline.course.description,
-          topic: queueItem.topic || queueItem.prompt,
+          topic,
           skillLevel: outline.course.skillLevel,
           estimatedDuration: outline.course.estimatedDuration,
           outline: outline,
           totalChapters,
           chapterStatus,
-          generationModel: "gpt-4o",
+          generationModel: `masterAI-${settings.preset}`,
           generationTimeMs: Date.now() - startTime,
         }
       ) as Id<"aiCourseOutlines">;
@@ -158,10 +221,18 @@ export const generateOutline = action({
         { queueId: args.queueId, outlineId }
       );
       
-      return { success: true, outlineId };
+      console.log(`✅ Course outline generated in ${Date.now() - startTime}ms using full pipeline`);
+      
+      return { 
+        success: true, 
+        outlineId,
+        outline,
+        pipelineMetadata: pipelineResult.pipelineMetadata,
+      };
       
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      console.error("Outline generation failed:", errorMessage);
       
       await (ctx as any).runMutation(
         api.aiCourseBuilderQueries.updateQueueStatus,
@@ -173,297 +244,70 @@ export const generateOutline = action({
   },
 });
 
-// =============================================================================
-// OUTLINE GENERATION WITH FULL AI PIPELINE
-// =============================================================================
-
 /**
- * Generate a course outline using the full AI pipeline
- * (Planner → Retriever → Web Research → Summarizer → Idea Generator → Critic)
- * 
- * This uses the same pipeline as the AI chat for rich, context-aware content generation
+ * Parse course outline JSON from the AI response
+ * Handles various response formats and extracts the JSON
  */
-export const generateOutlineWithPipeline = action({
-  args: {
-    prompt: v.string(),
-    settings: v.optional(chatSettingsValidator),
-    userId: v.string(),
-    storeId: v.string(),
-    queueId: v.optional(v.id("aiCourseQueue")),
-  },
-  returns: v.object({
-    success: v.boolean(),
-    outlineId: v.optional(v.id("aiCourseOutlines")),
-    outline: v.optional(v.any()),
-    error: v.optional(v.string()),
-    pipelineMetadata: v.optional(v.object({
-      plannerModel: v.optional(v.string()),
-      summarizerModel: v.optional(v.string()),
-      finalWriterModel: v.optional(v.string()),
-      totalChunksProcessed: v.optional(v.number()),
-      processingTimeMs: v.optional(v.number()),
-      facetsUsed: v.optional(v.array(v.string())),
-      webResearchResults: v.optional(v.number()),
-    })),
-  }),
-  handler: async (ctx, args) => {
-    const settings: ChatSettings = args.settings || DEFAULT_CHAT_SETTINGS;
-    const startTime = Date.now();
-    
-    console.log(`🎓 Course Builder Pipeline starting with preset: ${settings.preset}`);
-    console.log(`📝 Prompt: ${args.prompt.substring(0, 100)}...`);
-    
-    // Extract topic from prompt
-    const topicMatch = args.prompt.match(/(?:course (?:on|about) |create (?:me )?a course (?:on|about) )(.+)/i);
-    const topic = topicMatch?.[1]?.trim() || args.prompt.slice(0, 100);
-    
-    // Extract skill level and targets from prompt or use defaults
-    const skillLevelMatch = args.prompt.match(/(?:for )?(beginners?|intermediate|advanced)/i);
-    const skillLevel = skillLevelMatch ? skillLevelMatch[1].toLowerCase() : "intermediate";
-    const targetModules = 4;
-    const targetLessonsPerModule = 3;
-
-    try {
-      // ========================================================================
-      // STAGE 1: PLANNER - Decompose the course topic into facets
-      // ========================================================================
-      console.log("📋 Stage 1: Planning course structure...");
-      
-      const plannerOutput: PlannerOutput = await (ctx as any).runAction(
-        internal.masterAI.planner.analyzeQuestion,
-        {
-          question: `Create a comprehensive course curriculum about: ${args.prompt}. What are the key areas, concepts, and skills that should be covered?`,
-          settings,
-        }
-      );
-      
-      console.log(`   Intent: ${plannerOutput.intent}`);
-      console.log(`   Facets: ${plannerOutput.facets.map(f => f.name).join(", ")}`);
-      
-      // ========================================================================
-      // STAGE 2 + 2.5: RETRIEVER + WEB RESEARCH (IN PARALLEL)
-      // ========================================================================
-      console.log("🔍 Stage 2: Retrieving knowledge + Web research...");
-      
-      const [retrieverOutput, webResearchResult] = await Promise.all([
-        // Retriever
-        (ctx as any).runAction(
-          internal.masterAI.retriever.retrieveContent,
-          { plan: plannerOutput, settings }
-        ) as Promise<RetrieverOutput>,
-        
-        // Web Research (if enabled)
-        settings.enableWebResearch
-          ? (ctx as any).runAction(
-              internal.masterAI.webResearch.researchTopic,
-              {
-                query: args.prompt,
-                facets: plannerOutput.facets.map(f => ({
-                  name: f.name,
-                  queryHint: f.queryHint,
-                })),
-                maxResultsPerFacet: settings.webSearchMaxResults || 3,
-              }
-            )
-          : Promise.resolve(null),
-      ]);
-      
-      console.log(`   Total chunks retrieved: ${retrieverOutput.totalChunksRetrieved}`);
-      
-      let webResearchContext = "";
-      let webResearchCount = 0;
-      if (webResearchResult) {
-        webResearchCount = webResearchResult.totalResults;
-        console.log(`   🌐 Web results: ${webResearchCount}`);
-        
-        // Build web research context string
-        for (const facetResults of webResearchResult.research || []) {
-          for (const result of facetResults.results || []) {
-            webResearchContext += `\n[Web Source: ${result.title}]\n${result.content}\n`;
-          }
-        }
-      }
-      
-      // ========================================================================
-      // STAGE 3: SUMMARIZER - Synthesize retrieved content
-      // ========================================================================
-      console.log("📝 Stage 3: Summarizing knowledge...");
-      
-      let summarizerOutput: SummarizerOutput | undefined;
-      if (retrieverOutput.totalChunksRetrieved > 0) {
-        summarizerOutput = await (ctx as any).runAction(
-          internal.masterAI.summarizer.summarizeContent,
-          {
-            retrieverOutput,
-            settings,
-            originalQuestion: args.prompt,
-          }
-        );
-        console.log(`   Summaries generated: ${summarizerOutput?.summaries.length || 0}`);
-      }
-      
-      // ========================================================================
-      // STAGE 4: IDEA GENERATOR (if creative mode enabled)
-      // ========================================================================
-      let ideaGeneratorOutput: IdeaGeneratorOutput | undefined;
-      if (settings.enableCreativeMode && summarizerOutput) {
-        console.log("💡 Stage 4: Generating creative ideas...");
-        ideaGeneratorOutput = await (ctx as any).runAction(
-          internal.masterAI.ideaGenerator.generateIdeas,
-          {
-            summarizerOutput,
-            settings,
-            originalQuestion: args.prompt,
-          }
-        );
-        console.log(`   Ideas generated: ${ideaGeneratorOutput?.ideas?.length || 0}`);
-      }
-      
-      // ========================================================================
-      // BUILD RICH CONTEXT FROM PIPELINE
-      // ========================================================================
-      let pipelineContext = "";
-      
-      // Add summarizer insights
-      if (summarizerOutput?.summaries) {
-        pipelineContext += "\n\n## KNOWLEDGE BASE INSIGHTS:\n";
-        for (const summary of summarizerOutput.summaries) {
-          pipelineContext += `\n### ${summary.facetName}:\n${summary.summary}\n`;
-          if (summary.keyTechniques?.length > 0) {
-            pipelineContext += `Key Points: ${summary.keyTechniques.join(", ")}\n`;
-          }
-        }
-      }
-      
-      // Add web research insights
-      if (webResearchContext) {
-        pipelineContext += "\n\n## WEB RESEARCH INSIGHTS:\n" + webResearchContext;
-      }
-      
-      // Add creative ideas
-      if (ideaGeneratorOutput?.ideas?.length) {
-        pipelineContext += "\n\n## CREATIVE IDEAS TO INCORPORATE:\n";
-        for (const idea of ideaGeneratorOutput.ideas) {
-          pipelineContext += `- ${idea.technique}: ${idea.description}\n`;
-        }
-      }
-      
-      // Cross-facet insights
-      if (ideaGeneratorOutput?.crossFacetInsights?.length) {
-        pipelineContext += "\n## CROSS-TOPIC CONNECTIONS:\n";
-        for (const insight of ideaGeneratorOutput.crossFacetInsights) {
-          pipelineContext += `- ${insight}\n`;
-        }
-      }
-      
-      console.log(`   Pipeline context built: ${pipelineContext.length} chars`);
-      
-      // ========================================================================
-      // STAGE 5: GENERATE COURSE OUTLINE WITH ENRICHED CONTEXT
-      // ========================================================================
-      console.log("✍️ Stage 5: Generating course outline with enriched context...");
-      
-      const outline = await generateCourseOutlineWithPipelineContext({
-        topic,
-        skillLevel,
-        targetModules,
-        targetLessonsPerModule,
-        prompt: args.prompt,
-        pipelineContext,
-        facets: plannerOutput.facets.map(f => f.name),
-      });
-      
-      // Calculate chapter status
-      const chapterStatus: Array<{
-        moduleIndex: number;
-        lessonIndex: number;
-        chapterIndex: number;
-        title: string;
-        hasDetailedContent: boolean;
-        wordCount: number;
-      }> = [];
-      let totalChapters = 0;
-      
-      for (let mi = 0; mi < outline.modules.length; mi++) {
-        const module = outline.modules[mi];
-        for (let li = 0; li < module.lessons.length; li++) {
-          const lesson = module.lessons[li];
-          for (let ci = 0; ci < lesson.chapters.length; ci++) {
-            const chapter = lesson.chapters[ci];
-            chapterStatus.push({
-              moduleIndex: mi,
-              lessonIndex: li,
-              chapterIndex: ci,
-              title: chapter.title,
-              hasDetailedContent: false,
-              wordCount: chapter.content?.split(' ').length || 0,
-            });
-            totalChapters++;
-          }
-        }
-      }
-      
-      // Save outline to database
-      const outlineId = await (ctx as any).runMutation(
-        internal.aiCourseBuilderQueries.saveOutline,
-        {
-          queueId: args.queueId || undefined,
-          userId: args.userId,
-          storeId: args.storeId,
-          title: outline.course.title,
-          description: outline.course.description,
-          topic,
-          skillLevel: outline.course.skillLevel,
-          estimatedDuration: outline.course.estimatedDuration,
-          outline: outline,
-          totalChapters,
-          chapterStatus,
-          generationModel: "gpt-4o (pipeline-enriched)",
-          generationTimeMs: Date.now() - startTime,
-        }
-      ) as Id<"aiCourseOutlines">;
-      
-      // Link to queue if provided
-      if (args.queueId) {
-        await (ctx as any).runMutation(
-          internal.aiCourseBuilderQueries.linkOutlineToQueue,
-          { queueId: args.queueId, outlineId }
-        );
-      }
-      
-      const totalTime = Date.now() - startTime;
-      console.log(`✅ Course outline generated in ${totalTime}ms`);
-      
-      return {
-        success: true,
-        outlineId,
-        outline,
-        pipelineMetadata: {
-          plannerModel: settings.preset,
-          summarizerModel: settings.preset,
-          finalWriterModel: "gpt-4o",
-          totalChunksProcessed: retrieverOutput.totalChunksRetrieved,
-          processingTimeMs: totalTime,
-          facetsUsed: plannerOutput.facets.map(f => f.name),
-          webResearchResults: webResearchCount,
-        },
-      };
-      
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      console.error("Pipeline error:", errorMessage);
-      
-      if (args.queueId) {
-        await (ctx as any).runMutation(
-          api.aiCourseBuilderQueries.updateQueueStatus,
-          { queueId: args.queueId, status: "failed", error: errorMessage }
-        );
-      }
-      
-      return { success: false, error: errorMessage };
+function parseOutlineFromResponse(response: string, topic: string, skillLevel: string): CourseOutline {
+  // Try to extract JSON from the response
+  let jsonStr = response;
+  
+  // Look for JSON code block
+  const jsonMatch = response.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (jsonMatch) {
+    jsonStr = jsonMatch[1].trim();
+  } else {
+    // Try to find JSON object in the response
+    const objectMatch = response.match(/\{[\s\S]*"course"[\s\S]*"modules"[\s\S]*\}/);
+    if (objectMatch) {
+      jsonStr = objectMatch[0];
     }
-  },
-});
+  }
+  
+  try {
+    const parsed = JSON.parse(jsonStr);
+    
+    // Validate basic structure
+    if (!parsed.course || !parsed.modules || !Array.isArray(parsed.modules)) {
+      throw new Error("Invalid outline structure - missing course or modules");
+    }
+    
+    return parsed as CourseOutline;
+  } catch (parseError) {
+    console.error("Failed to parse outline JSON:", parseError);
+    console.error("Response was:", response.substring(0, 500));
+    
+    // Return a fallback structure
+    return {
+      course: {
+        title: `Course: ${topic}`,
+        description: `A comprehensive course about ${topic}`,
+        category: "Music Production",
+        skillLevel: skillLevel as "beginner" | "intermediate" | "advanced",
+        estimatedDuration: 120,
+      },
+      modules: [{
+        title: "Introduction",
+        description: "Getting started",
+        orderIndex: 0,
+        lessons: [{
+          title: "Overview",
+          description: "Course overview",
+          orderIndex: 0,
+          chapters: [{
+            title: "Welcome",
+            content: "Welcome to this course",
+            duration: 5,
+            orderIndex: 0,
+          }],
+        }],
+      }],
+    };
+  }
+}
+
+// NOTE: generateOutlineWithPipeline has been removed - use generateOutline instead
+// The main generateOutline action now uses the full masterAI pipeline
 
 /**
  * Process the next queued item (called by scheduler or manually)
@@ -508,6 +352,7 @@ export const processNextInQueue = action({
 
 /**
  * Expand a specific chapter with detailed content
+ * Uses the FULL masterAI pipeline (Planner → Retriever → Summarizer → Idea Gen → Critic → Final Writer)
  */
 export const expandChapterContent = action({
   args: {
@@ -515,7 +360,7 @@ export const expandChapterContent = action({
     moduleIndex: v.number(),
     lessonIndex: v.number(),
     chapterIndex: v.number(),
-    liteMode: v.optional(v.boolean()), // Generate shorter content for speed
+    settings: v.optional(chatSettingsValidator), // Pass through user's AI settings
   },
   returns: v.object({
     success: v.boolean(),
@@ -524,8 +369,6 @@ export const expandChapterContent = action({
     error: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
-    const liteMode = args.liteMode ?? false;
-    
     // Get outline - cast to any to avoid deep type inference
     const outline = await (ctx as any).runQuery(
       internal.aiCourseBuilderQueries.getOutlineInternal,
@@ -545,17 +388,44 @@ export const expandChapterContent = action({
       return { success: false, error: "Chapter not found" };
     }
     
+    // Use user's settings or defaults
+    const settings: ChatSettings = args.settings || DEFAULT_CHAT_SETTINGS;
+    
     try {
-      // Generate detailed content
-      const detailedContent = await generateChapterContentWithAI({
-        topic: outline.topic,
-        skillLevel: outline.skillLevel,
-        moduleTitle: module.title,
-        lessonTitle: lesson.title,
-        chapterTitle: chapter.title,
-        chapterOutline: chapter.content,
-        liteMode, // Pass lite mode for faster generation
-      });
+      // Build a detailed prompt for the masterAI pipeline
+      const chapterPrompt = `Write detailed educational content for this music production course chapter.
+
+**Course:** ${outline.topic}
+**Skill Level:** ${outline.skillLevel}
+**Module:** ${module.title}
+**Lesson:** ${lesson.title}
+**Chapter:** ${chapter.title}
+
+**Chapter Overview:**
+${chapter.content}
+
+---
+
+Write 800-1200 words of detailed, educational content for this chapter. The content should:
+- Sound like a knowledgeable producer teaching a friend, not like AI-generated text
+- Include specific techniques, tips, and real-world examples
+- Be appropriate for ${outline.skillLevel} level students
+- Be structured with clear sections but flow naturally
+- Include any relevant DAW-specific instructions or plugin recommendations
+
+Focus on practical, actionable knowledge that students can immediately apply.`;
+
+      // Call the FULL masterAI pipeline - same as AI chat
+      const pipelineResult = await (ctx as any).runAction(
+        api.masterAI.askMasterAI,
+        {
+          question: chapterPrompt,
+          settings,
+          userId: outline.userId,
+        }
+      ) as { answer: string; citations?: any[]; facetsUsed?: string[]; pipelineMetadata?: any };
+      
+      const detailedContent = pipelineResult.answer;
       
       // Update the outline with the new content
       outlineData.modules[args.moduleIndex].lessons[args.lessonIndex].chapters[args.chapterIndex] = {
@@ -615,14 +485,15 @@ export const expandChapterContent = action({
 
 /**
  * Expand all chapters in an outline (PARALLEL batch operation)
- * Processes chapters in parallel batches to avoid timeouts
+ * Processes chapters BY LESSON - all chapters in a lesson expand together
+ * Uses the FULL masterAI pipeline for each chapter
  */
 export const expandAllChapters = action({
   args: {
     outlineId: v.id("aiCourseOutlines"),
     queueId: v.id("aiCourseQueue"),
-    parallelBatchSize: v.optional(v.number()), // How many chapters to process in parallel (default: 5)
-    liteMode: v.optional(v.boolean()), // Generate shorter content for faster processing
+    parallelBatchSize: v.optional(v.number()), // Max chapters per batch (default: 3 for pipeline calls)
+    settings: v.optional(chatSettingsValidator), // User's AI settings from the chat
   },
   returns: v.object({
     success: v.boolean(),
@@ -631,8 +502,9 @@ export const expandAllChapters = action({
     error: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
-    const BATCH_SIZE = args.parallelBatchSize || 5; // Process 5 chapters at once
-    const liteMode = args.liteMode ?? true; // Default to lite mode for speed
+    // Lower default batch size since each chapter now runs full pipeline
+    const maxBatchSize = args.parallelBatchSize || 3; 
+    const settings = args.settings || DEFAULT_CHAT_SETTINGS;
     
     // Get outline - cast to any to avoid deep type inference
     const outline = await (ctx as any).runQuery(
@@ -653,102 +525,108 @@ export const expandAllChapters = action({
     const outlineData = outline.outline as CourseOutline;
     const totalChapters = outline.totalChapters;
     
-    // Collect all chapters that need expansion
-    interface ChapterTask {
-      moduleIndex: number;
-      lessonIndex: number;
-      chapterIndex: number;
-      chapter: CourseOutlineChapter;
-    }
-    const chaptersToExpand: ChapterTask[] = [];
+    console.log(`📚 Expanding chapters BY LESSON using FULL masterAI pipeline (preset: ${settings.preset})`);
     
+    let expandedCount = 0;
+    let failedCount = 0;
+    let lessonCount = 0;
+    
+    // Process BY LESSON - all chapters in a lesson expand together
     for (let mi = 0; mi < outlineData.modules.length; mi++) {
       const module = outlineData.modules[mi];
+      
       for (let li = 0; li < module.lessons.length; li++) {
         const lesson = module.lessons[li];
+        lessonCount++;
+        
+        // Collect chapters for this lesson that need expansion
+        interface ChapterTask {
+          chapterIndex: number;
+          chapter: CourseOutlineChapter;
+        }
+        const lessonChapters: ChapterTask[] = [];
+        
         for (let ci = 0; ci < lesson.chapters.length; ci++) {
           const chapter = lesson.chapters[ci];
           // Skip if already has detailed content
-          if (!(chapter.hasDetailedContent && chapter.wordCount && chapter.wordCount > 500)) {
-            chaptersToExpand.push({
-              moduleIndex: mi,
-              lessonIndex: li,
-              chapterIndex: ci,
-              chapter,
-            });
+          if (!(chapter.hasDetailedContent && chapter.wordCount && chapter.wordCount > 300)) {
+            lessonChapters.push({ chapterIndex: ci, chapter });
+          } else {
+            expandedCount++; // Already expanded
           }
         }
-      }
-    }
-    
-    console.log(`📚 Expanding ${chaptersToExpand.length} chapters in parallel batches of ${BATCH_SIZE}`);
-    
-    let expandedCount = totalChapters - chaptersToExpand.length; // Count already-expanded
-    let failedCount = 0;
-    
-    // Process chapters in parallel batches
-    for (let batchStart = 0; batchStart < chaptersToExpand.length; batchStart += BATCH_SIZE) {
-      const batch = chaptersToExpand.slice(batchStart, batchStart + BATCH_SIZE);
-      const batchNum = Math.floor(batchStart / BATCH_SIZE) + 1;
-      const totalBatches = Math.ceil(chaptersToExpand.length / BATCH_SIZE);
-      
-      console.log(`⚡ Processing batch ${batchNum}/${totalBatches} (${batch.length} chapters)`);
-      
-      // Update progress
-      await (ctx as any).runMutation(
-        api.aiCourseBuilderQueries.updateQueueStatus,
-        {
-          queueId: args.queueId,
-          status: "expanding_content",
-          progress: {
-            currentStep: `Batch ${batchNum}/${totalBatches}`,
-            totalSteps: totalChapters,
-            completedSteps: expandedCount + failedCount,
-            currentChapter: batch.map(t => t.chapter.title).join(", "),
-          },
+        
+        if (lessonChapters.length === 0) {
+          console.log(`  ✓ Lesson "${lesson.title}" - all chapters already expanded`);
+          continue;
         }
-      );
-      
-      // Process batch in parallel
-      const batchPromises = batch.map(async (task) => {
-        try {
-          const result = await (ctx as any).runAction(
-            api.aiCourseBuilder.expandChapterContent,
-            {
-              outlineId: args.outlineId,
-              moduleIndex: task.moduleIndex,
-              lessonIndex: task.lessonIndex,
-              chapterIndex: task.chapterIndex,
-              liteMode,
+        
+        console.log(`📖 Module ${mi + 1}, Lesson ${li + 1}: "${lesson.title}" - expanding ${lessonChapters.length} chapters in parallel`);
+        
+        // Update progress
+        await (ctx as any).runMutation(
+          api.aiCourseBuilderQueries.updateQueueStatus,
+          {
+            queueId: args.queueId,
+            status: "expanding_content",
+            progress: {
+              currentStep: `Module ${mi + 1}, Lesson ${li + 1}`,
+              totalSteps: totalChapters,
+              completedSteps: expandedCount + failedCount,
+              currentChapter: `${lesson.title} (${lessonChapters.length} chapters)`,
+            },
+          }
+        );
+        
+        // Process all chapters in this lesson in parallel (up to maxBatchSize)
+        const batches: ChapterTask[][] = [];
+        for (let i = 0; i < lessonChapters.length; i += maxBatchSize) {
+          batches.push(lessonChapters.slice(i, i + maxBatchSize));
+        }
+        
+        for (const batch of batches) {
+          const batchPromises = batch.map(async (task) => {
+            try {
+              // Run the FULL masterAI pipeline for each chapter
+              const result = await (ctx as any).runAction(
+                api.aiCourseBuilder.expandChapterContent,
+                {
+                  outlineId: args.outlineId,
+                  moduleIndex: mi,
+                  lessonIndex: li,
+                  chapterIndex: task.chapterIndex,
+                  settings, // Pass through user's AI settings
+                }
+              ) as { success: boolean; content?: string; wordCount?: number; error?: string };
+              
+              return { success: result.success, chapter: task.chapter.title };
+            } catch (error) {
+              console.error(`Failed to expand chapter: ${task.chapter.title}`, error);
+              return { success: false, chapter: task.chapter.title, error };
             }
-          ) as { success: boolean; content?: string; wordCount?: number; error?: string };
+          });
           
-          return { success: result.success, chapter: task.chapter.title };
-        } catch (error) {
-          console.error(`Failed to expand chapter: ${task.chapter.title}`, error);
-          return { success: false, chapter: task.chapter.title, error };
+          // Wait for all in batch to complete
+          const batchResults = await Promise.allSettled(batchPromises);
+          
+          // Count results
+          for (const result of batchResults) {
+            if (result.status === "fulfilled" && result.value.success) {
+              expandedCount++;
+              console.log(`    ✓ ${result.value.chapter}`);
+            } else {
+              failedCount++;
+              console.log(`    ✗ Failed: ${result.status === "fulfilled" ? result.value.chapter : "unknown"}`);
+            }
+          }
         }
-      });
-      
-      // Wait for all in batch to complete
-      const batchResults = await Promise.allSettled(batchPromises);
-      
-      // Count results
-      for (const result of batchResults) {
-        if (result.status === "fulfilled" && result.value.success) {
-          expandedCount++;
-        } else {
-          failedCount++;
-        }
-      }
-      
-      // Small delay between batches to avoid overwhelming the API
-      if (batchStart + BATCH_SIZE < chaptersToExpand.length) {
-        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Small delay between lessons to avoid rate limits
+        await new Promise(resolve => setTimeout(resolve, 300));
       }
     }
     
-    console.log(`✅ Expansion complete: ${expandedCount} expanded, ${failedCount} failed`);
+    console.log(`✅ Expansion complete: ${expandedCount} expanded, ${failedCount} failed across ${lessonCount} lessons`);
     
     // Update queue status
     await (ctx as any).runMutation(
@@ -861,235 +739,8 @@ export const createCourseFromOutline = action({
 });
 
 // =============================================================================
-// AI HELPER FUNCTIONS
+// NOTE: All course generation now uses the FULL masterAI pipeline
+// - generateOutline calls api.masterAI.askMasterAI for outline generation
+// - expandChapterContent calls api.masterAI.askMasterAI for chapter content
+// This ensures the same quality, models, and pipeline stages as the main AI chat
 // =============================================================================
-
-async function generateCourseOutlineWithAI(params: {
-  topic: string;
-  skillLevel: string;
-  targetModules: number;
-  targetLessonsPerModule: number;
-  prompt: string;
-}): Promise<CourseOutline> {
-  const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-  });
-
-  const systemPrompt = `You are a master music production educator creating comprehensive course outlines. Generate detailed, professional course structures.
-
-GUIDELINES:
-- Create exactly ${params.targetModules} modules
-- Each module should have ${params.targetLessonsPerModule} lessons
-- Each lesson should have 2-4 chapters
-- Content should be appropriate for ${params.skillLevel} level
-- Be specific to the topic and provide actionable learning
-- Chapter content should be a brief outline (2-3 sentences) describing what will be covered
-
-IMPORTANT: You must respond with valid JSON in the following format:
-{
-  "course": {
-    "title": "Course Title",
-    "description": "Course description",
-    "category": "Music Production",
-    "skillLevel": "beginner|intermediate|advanced",
-    "estimatedDuration": 120
-  },
-  "modules": [
-    {
-      "title": "Module Title",
-      "description": "Module description",
-      "orderIndex": 0,
-      "lessons": [
-        {
-          "title": "Lesson Title",
-          "description": "Lesson description",
-          "orderIndex": 0,
-          "chapters": [
-            {
-              "title": "Chapter Title",
-              "content": "Brief outline of what this chapter covers (2-3 sentences)",
-              "duration": 10,
-              "orderIndex": 0
-            }
-          ]
-        }
-      ]
-    }
-  ]
-}`;
-
-  const userPrompt = `Create a course outline for: ${params.prompt}
-
-Topic: ${params.topic}
-Skill Level: ${params.skillLevel}
-
-Generate a complete course structure with modules, lessons, and chapters. Respond with valid JSON only.`;
-
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt },
-    ],
-    temperature: 0.7,
-    response_format: { type: "json_object" },
-    max_tokens: 4000,
-  });
-
-  const content = completion.choices[0].message.content;
-  if (!content) {
-    throw new Error("No content generated from OpenAI");
-  }
-
-  return JSON.parse(content) as CourseOutline;
-}
-
-/**
- * Generate course outline with enriched context from the full AI pipeline
- */
-async function generateCourseOutlineWithPipelineContext(params: {
-  topic: string;
-  skillLevel: string;
-  targetModules: number;
-  targetLessonsPerModule: number;
-  prompt: string;
-  pipelineContext: string;
-  facets: string[];
-}): Promise<CourseOutline> {
-  const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-  });
-
-  const systemPrompt = `You are a master music production educator creating comprehensive course outlines. You have been provided with rich context from knowledge bases and web research.
-
-GUIDELINES:
-- Create exactly ${params.targetModules} modules
-- Each module should have ${params.targetLessonsPerModule} lessons  
-- Each lesson should have 2-4 chapters
-- Content should be appropriate for ${params.skillLevel} level
-- INCORPORATE the insights from the provided knowledge base and web research
-- Structure modules around the identified facets/topics: ${params.facets.join(", ")}
-- Be specific and provide actionable learning
-- Chapter content should describe what will be covered (2-3 sentences)
-
-IMPORTANT: You must respond with valid JSON in the following format:
-{
-  "course": {
-    "title": "Course Title",
-    "description": "Course description that incorporates research insights",
-    "category": "Music Production",
-    "skillLevel": "beginner|intermediate|advanced",
-    "estimatedDuration": 120
-  },
-  "modules": [
-    {
-      "title": "Module Title",
-      "description": "Module description",
-      "orderIndex": 0,
-      "lessons": [
-        {
-          "title": "Lesson Title",
-          "description": "Lesson description",
-          "orderIndex": 0,
-          "chapters": [
-            {
-              "title": "Chapter Title",
-              "content": "Brief outline of what this chapter covers (2-3 sentences)",
-              "duration": 10,
-              "orderIndex": 0
-            }
-          ]
-        }
-      ]
-    }
-  ]
-}`;
-
-  const userPrompt = `Create a comprehensive course outline for: ${params.prompt}
-
-Topic: ${params.topic}
-Skill Level: ${params.skillLevel}
-
-=== ENRICHED CONTEXT FROM AI PIPELINE ===
-${params.pipelineContext || "(No additional context available)"}
-=== END OF CONTEXT ===
-
-Using the above context, generate a well-structured course that incorporates the key insights, techniques, and ideas. Make sure the course content is informed by the research and knowledge base insights. Respond with valid JSON only.`;
-
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt },
-    ],
-    temperature: 0.7,
-    response_format: { type: "json_object" },
-    max_tokens: 5000,
-  });
-
-  const content = completion.choices[0].message.content;
-  if (!content) {
-    throw new Error("No content generated from OpenAI");
-  }
-
-  return JSON.parse(content) as CourseOutline;
-}
-
-async function generateChapterContentWithAI(params: {
-  topic: string;
-  skillLevel: string;
-  moduleTitle: string;
-  lessonTitle: string;
-  chapterTitle: string;
-  chapterOutline: string;
-  liteMode?: boolean;
-}): Promise<string> {
-  const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-  });
-
-  // Use lite mode for faster generation with shorter content
-  const isLite = params.liteMode ?? false;
-  const wordTarget = isLite ? "300-500" : "800-1200";
-  const model = isLite ? "gpt-4o-mini" : "gpt-4o"; // Use faster model for lite mode
-
-  const systemPrompt = `You are a master music production educator creating ${isLite ? "concise" : "detailed"} lesson content. Write ${isLite ? "focused" : "comprehensive"}, video-script-ready educational content.
-
-STYLE GUIDELINES:
-- Write ${wordTarget} words of ${isLite ? "focused" : "detailed"}, educational content
-- Use conversational tone suitable for video production
-- Include specific technical details and ${isLite ? "key" : "step-by-step"} instructions
-- ${isLite ? "Highlight key examples" : "Provide practical examples and real-world applications"}
-- Structure with clear sections and learning points
-- Focus exclusively on the chapter topic`;
-
-  const userPrompt = `Create ${isLite ? "concise" : "detailed"} content for this chapter:
-
-Course Topic: ${params.topic}
-Skill Level: ${params.skillLevel}
-Module: ${params.moduleTitle}
-Lesson: ${params.lessonTitle}
-Chapter: ${params.chapterTitle}
-
-Chapter Outline:
-${params.chapterOutline}
-
-Write ${isLite ? "focused, concise" : "comprehensive"}, educational content that covers this chapter${isLite ? " efficiently" : " thoroughly"}.`;
-
-  const completion = await openai.chat.completions.create({
-    model,
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt },
-    ],
-    temperature: isLite ? 0.6 : 0.8,
-    max_tokens: 3000,
-  });
-
-  const content = completion.choices[0].message.content;
-  if (!content) {
-    throw new Error("No content generated from OpenAI");
-  }
-
-  return content;
-}
