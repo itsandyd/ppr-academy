@@ -281,8 +281,8 @@ export const generateOutline = action({
     error: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
-    // Get queue item
-    const queueItem = await ctx.runQuery(internal.aiCourseBuilder.getQueueItemInternal, {
+    // Get queue item - cast to any to avoid circular reference
+    const queueItem: any = await ctx.runQuery((internal as any).aiCourseBuilder.getQueueItemInternal, {
       queueId: args.queueId,
     });
     
@@ -291,9 +291,9 @@ export const generateOutline = action({
     }
     
     // Update status to generating
-    await ctx.runMutation(api.aiCourseBuilder.updateQueueStatus, {
+    await ctx.runMutation((api as any).aiCourseBuilder.updateQueueStatus, {
       queueId: args.queueId,
-      status: "generating_outline",
+      status: "generating_outline" as const,
     });
     
     const startTime = Date.now();
@@ -309,7 +309,14 @@ export const generateOutline = action({
       });
       
       // Calculate chapter status
-      const chapterStatus = [];
+      const chapterStatus: Array<{
+        moduleIndex: number;
+        lessonIndex: number;
+        chapterIndex: number;
+        title: string;
+        hasDetailedContent: boolean;
+        wordCount: number;
+      }> = [];
       let totalChapters = 0;
       
       for (let mi = 0; mi < outline.modules.length; mi++) {
@@ -331,8 +338,8 @@ export const generateOutline = action({
         }
       }
       
-      // Save outline to database
-      const outlineId = await ctx.runMutation(internal.aiCourseBuilder.saveOutline, {
+      // Save outline to database - type annotation to avoid circular reference
+      const outlineId: Id<"aiCourseOutlines"> = await ctx.runMutation((internal as any).aiCourseBuilder.saveOutline, {
         queueId: args.queueId,
         userId: queueItem.userId,
         storeId: queueItem.storeId,
@@ -349,7 +356,7 @@ export const generateOutline = action({
       });
       
       // Update queue item with outline ID and status
-      await ctx.runMutation(internal.aiCourseBuilder.linkOutlineToQueue, {
+      const _linkResult: null = await ctx.runMutation((internal as any).aiCourseBuilder.linkOutlineToQueue, {
         queueId: args.queueId,
         outlineId,
       });
@@ -359,9 +366,9 @@ export const generateOutline = action({
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       
-      await ctx.runMutation(api.aiCourseBuilder.updateQueueStatus, {
+      await ctx.runMutation((api as any).aiCourseBuilder.updateQueueStatus, {
         queueId: args.queueId,
-        status: "failed",
+        status: "failed" as const,
         error: errorMessage,
       });
       
@@ -383,8 +390,8 @@ export const processNextInQueue = action({
     error: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
-    // Get next queued item
-    const nextItem = await ctx.runQuery(internal.aiCourseBuilder.getNextQueuedItem, {
+    // Get next queued item - type annotation to avoid circular reference
+    const nextItem: any = await ctx.runQuery((internal as any).aiCourseBuilder.getNextQueuedItem, {
       userId: args.userId,
     });
     
@@ -392,8 +399,8 @@ export const processNextInQueue = action({
       return { processed: false, error: "No items in queue" };
     }
     
-    // Generate outline for this item
-    const result = await ctx.runAction(api.aiCourseBuilder.generateOutline, {
+    // Generate outline for this item - type annotation to avoid circular reference
+    const result: { success: boolean; outlineId?: Id<"aiCourseOutlines">; error?: string } = await ctx.runAction((api as any).aiCourseBuilder.generateOutline, {
       queueId: nextItem._id,
     });
     
@@ -426,8 +433,8 @@ export const expandChapterContent = action({
     error: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
-    // Get outline
-    const outline = await ctx.runQuery(internal.aiCourseBuilder.getOutlineInternal, {
+    // Get outline - type annotation to avoid circular reference
+    const outline: any = await ctx.runQuery((internal as any).aiCourseBuilder.getOutlineInternal, {
       outlineId: args.outlineId,
     });
     
@@ -487,8 +494,8 @@ export const expandChapterContent = action({
         };
       }
       
-      // Save updated outline
-      await ctx.runMutation(internal.aiCourseBuilder.updateOutlineContent, {
+      // Save updated outline - type annotation to avoid circular reference
+      const _updateResult: null = await ctx.runMutation((internal as any).aiCourseBuilder.updateOutlineContent, {
         outlineId: args.outlineId,
         outline: outlineData,
         chapterStatus,
@@ -523,8 +530,8 @@ export const expandAllChapters = action({
     error: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
-    // Get outline
-    const outline = await ctx.runQuery(internal.aiCourseBuilder.getOutlineInternal, {
+    // Get outline - type annotation to avoid circular reference
+    const outline: any = await ctx.runQuery((internal as any).aiCourseBuilder.getOutlineInternal, {
       outlineId: args.outlineId,
     });
     
@@ -533,9 +540,9 @@ export const expandAllChapters = action({
     }
     
     // Update queue status
-    await ctx.runMutation(api.aiCourseBuilder.updateQueueStatus, {
+    await ctx.runMutation((api as any).aiCourseBuilder.updateQueueStatus, {
       queueId: args.queueId,
-      status: "expanding_content",
+      status: "expanding_content" as const,
     });
     
     const outlineData = outline.outline as CourseOutline;
@@ -558,9 +565,9 @@ export const expandAllChapters = action({
           }
           
           // Update progress
-          await ctx.runMutation(api.aiCourseBuilder.updateQueueStatus, {
+          await ctx.runMutation((api as any).aiCourseBuilder.updateQueueStatus, {
             queueId: args.queueId,
-            status: "expanding_content",
+            status: "expanding_content" as const,
             progress: {
               currentStep: "Expanding content",
               totalSteps: totalChapters,
@@ -570,7 +577,8 @@ export const expandAllChapters = action({
           });
           
           try {
-            const result = await ctx.runAction(api.aiCourseBuilder.expandChapterContent, {
+            // Type annotation to avoid circular reference
+            const result: { success: boolean; content?: string; wordCount?: number; error?: string } = await ctx.runAction((api as any).aiCourseBuilder.expandChapterContent, {
               outlineId: args.outlineId,
               moduleIndex: mi,
               lessonIndex: li,
@@ -595,9 +603,9 @@ export const expandAllChapters = action({
     }
     
     // Update queue status
-    await ctx.runMutation(api.aiCourseBuilder.updateQueueStatus, {
+    await ctx.runMutation((api as any).aiCourseBuilder.updateQueueStatus, {
       queueId: args.queueId,
-      status: failedCount === 0 ? "ready_to_create" : "outline_ready",
+      status: (failedCount === 0 ? "ready_to_create" : "outline_ready") as "ready_to_create" | "outline_ready",
     });
     
     return {
@@ -629,8 +637,8 @@ export const createCourseFromOutline = action({
     error: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
-    // Get outline
-    const outline = await ctx.runQuery(internal.aiCourseBuilder.getOutlineInternal, {
+    // Get outline - type annotation to avoid circular reference
+    const outline: any = await ctx.runQuery((internal as any).aiCourseBuilder.getOutlineInternal, {
       outlineId: args.outlineId,
     });
     
@@ -639,16 +647,16 @@ export const createCourseFromOutline = action({
     }
     
     // Update queue status
-    await ctx.runMutation(api.aiCourseBuilder.updateQueueStatus, {
+    await ctx.runMutation((api as any).aiCourseBuilder.updateQueueStatus, {
       queueId: args.queueId,
-      status: "creating_course",
+      status: "creating_course" as const,
     });
     
     try {
       const outlineData = outline.outline as CourseOutline;
       
-      // Create course using existing mutation
-      const result = await ctx.runMutation(api.courses.createCourseWithData, {
+      // Create course using existing mutation - type annotation
+      const result: { success: boolean; courseId?: Id<"courses">; slug?: string; message?: string } = await ctx.runMutation(api.courses.createCourseWithData, {
         userId: outline.userId,
         storeId: outline.storeId,
         data: {
@@ -663,16 +671,16 @@ export const createCourseFromOutline = action({
       });
       
       if (result.success && result.courseId) {
-        // Link course to queue item
-        await ctx.runMutation(internal.aiCourseBuilder.linkCourseToQueue, {
+        // Link course to queue item - type annotation
+        const _linkResult: null = await ctx.runMutation((internal as any).aiCourseBuilder.linkCourseToQueue, {
           queueId: args.queueId,
           courseId: result.courseId,
         });
         
         // Update queue status
-        await ctx.runMutation(api.aiCourseBuilder.updateQueueStatus, {
+        await ctx.runMutation((api as any).aiCourseBuilder.updateQueueStatus, {
           queueId: args.queueId,
-          status: "completed",
+          status: "completed" as const,
         });
         
         return {
@@ -687,9 +695,9 @@ export const createCourseFromOutline = action({
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       
-      await ctx.runMutation(api.aiCourseBuilder.updateQueueStatus, {
+      await ctx.runMutation((api as any).aiCourseBuilder.updateQueueStatus, {
         queueId: args.queueId,
-        status: "failed",
+        status: "failed" as const,
         error: errorMessage,
       });
       

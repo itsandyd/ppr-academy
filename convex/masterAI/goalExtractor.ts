@@ -1,6 +1,6 @@
 "use node";
 
-import { internalAction, internalMutation } from "../_generated/server";
+import { internalAction } from "../_generated/server";
 import { v } from "convex/values";
 import { internal } from "../_generated/api";
 import { callLLM, safeParseJson } from "./llmClient";
@@ -14,15 +14,8 @@ import { callLLM, safeParseJson } from "./llmClient";
 // never "forgets" what the conversation is about.
 // ============================================================================
 
-/**
- * Validator for the conversation goal structure
- */
-export const conversationGoalValidator = v.object({
-  originalIntent: v.string(),
-  deliverableType: v.optional(v.string()),
-  keyConstraints: v.optional(v.array(v.string())),
-  extractedAt: v.number(),
-});
+// Re-export validator from mutations file for convenience
+export { conversationGoalValidator } from "./goalExtractorMutations";
 
 export type ConversationGoal = {
   originalIntent: string;
@@ -30,6 +23,16 @@ export type ConversationGoal = {
   keyConstraints?: string[];
   extractedAt: number;
 };
+
+/**
+ * Validator for the conversation goal structure (local copy for this file)
+ */
+const goalValidator = v.object({
+  originalIntent: v.string(),
+  deliverableType: v.optional(v.string()),
+  keyConstraints: v.optional(v.array(v.string())),
+  extractedAt: v.number(),
+});
 
 /**
  * Extract the core goal from the first message of a conversation.
@@ -40,7 +43,7 @@ export const extractGoalFromMessage = internalAction({
     message: v.string(),
     conversationId: v.optional(v.id("aiConversations")),
   },
-  returns: conversationGoalValidator,
+  returns: goalValidator,
   handler: async (ctx, args): Promise<ConversationGoal> => {
     console.log("🎯 Extracting conversation goal from first message...");
 
@@ -96,7 +99,7 @@ RESPOND ONLY WITH VALID JSON:
 
       // If we have a conversationId, save the goal
       if (args.conversationId) {
-        await ctx.runMutation(internal.masterAI.goalExtractor.saveConversationGoal, {
+        await ctx.runMutation(internal.masterAI.goalExtractorMutations.saveConversationGoal, {
           conversationId: args.conversationId,
           goal,
         });
@@ -114,37 +117,8 @@ RESPOND ONLY WITH VALID JSON:
   },
 });
 
-/**
- * Save the extracted goal to a conversation
- */
-export const saveConversationGoal = internalMutation({
-  args: {
-    conversationId: v.id("aiConversations"),
-    goal: conversationGoalValidator,
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    await ctx.db.patch(args.conversationId, {
-      conversationGoal: args.goal,
-    });
-    console.log(`💾 Saved conversation goal to ${args.conversationId}`);
-    return null;
-  },
-});
-
-/**
- * Get the goal for a conversation (for use in queries)
- */
-export const getConversationGoal = internalMutation({
-  args: {
-    conversationId: v.id("aiConversations"),
-  },
-  returns: v.union(conversationGoalValidator, v.null()),
-  handler: async (ctx, args) => {
-    const conversation = await ctx.db.get(args.conversationId);
-    return conversation?.conversationGoal || null;
-  },
-});
+// Note: saveConversationGoal and getConversationGoal are defined in goalExtractorMutations.ts
+// because mutations cannot be defined in Node.js files (with "use node")
 
 /**
  * Format the conversation goal for injection into system prompts.
@@ -179,7 +153,7 @@ export function formatGoalForPrompt(goal: ConversationGoal | null | undefined): 
  */
 export const checkForGoalDrift = internalAction({
   args: {
-    goal: conversationGoalValidator,
+    goal: goalValidator,
     response: v.string(),
     currentQuestion: v.string(),
   },
