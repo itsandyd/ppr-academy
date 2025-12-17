@@ -97,8 +97,13 @@ interface GenerationStep {
   detail?: string;
 }
 
-// AI Settings that mirror the chat settings
+// Course Builder Settings
 interface AISettings {
+  // Course structure settings
+  skillLevel: "beginner" | "intermediate" | "advanced";
+  targetModules: number;
+  targetLessonsPerModule: number;
+  // AI pipeline settings (for future use if we add agentic features back)
   preset: "speed" | "balanced" | "quality" | "deepReasoning" | "premium";
   maxFacets: number;
   chunksPerFacet: number;
@@ -113,6 +118,11 @@ interface AISettings {
 }
 
 const DEFAULT_AI_SETTINGS: AISettings = {
+  // Course structure defaults
+  skillLevel: "intermediate",
+  targetModules: 4,
+  targetLessonsPerModule: 3,
+  // AI pipeline defaults
   preset: "premium",
   maxFacets: 5,
   chunksPerFacet: 50,
@@ -202,16 +212,25 @@ export default function AdminCourseBuilderPage() {
   const [createdCourseId, setCreatedCourseId] = useState<string | null>(null);
   const [createdCourseSlug, setCreatedCourseSlug] = useState<string | null>(null);
 
+  // Track current IDs for real-time updates (must be declared before queries that use them)
+  const [currentOutlineId, setCurrentOutlineId] = useState<Id<"aiCourseOutlines"> | null>(null);
+
   // Queries
   const adminCheck = useQuery(
     api.users.checkIsAdmin,
     user?.id ? { clerkId: user.id } : "skip"
   );
   const stores = useQuery(api.stores.getAllStores) as StoreInfo[] | undefined;
+  const getOutline = useQuery(
+    api.aiCourseBuilderQueries.getOutline,
+    currentOutlineId ? { outlineId: currentOutlineId } : "skip"
+  );
 
-  // Actions
-  const askAgenticAI = useAction(api.masterAI.index.askAgenticAI);
-  const executeConfirmedActions = useAction(api.masterAI.index.executeConfirmedActions);
+  // Mutations & Actions - Use the dedicated aiCourseBuilder backend functions (guaranteed JSON output)
+  const addToQueue = useMutation(api.aiCourseBuilderQueries.addToQueue);
+  const generateOutlineAction = useAction(api.aiCourseBuilder.generateOutline);
+  const expandAllChaptersAction = useAction(api.aiCourseBuilder.expandAllChapters);
+  const createCourseFromOutlineAction = useAction(api.aiCourseBuilder.createCourseFromOutline);
 
   // Set default store when stores load
   useEffect(() => {
@@ -237,7 +256,7 @@ export default function AdminCourseBuilderPage() {
   }, []);
 
   // =============================================================================
-  // FULL AUTO - Generate complete course in one click
+  // FULL AUTO - Generate complete course in one click using backend JSON actions
   // =============================================================================
   const handleFullAutoGenerate = async () => {
     if (!prompt.trim()) {
@@ -254,70 +273,99 @@ export default function AdminCourseBuilderPage() {
     setGeneratedOutline(null);
     setCreatedCourseId(null);
     setCreatedCourseSlug(null);
+    setCurrentOutlineId(null);
 
     // Initialize all steps
     setGenerationSteps([
-      { id: "outline", label: "Generating course outline", status: "pending" },
+      { id: "queue", label: "Adding to queue", status: "pending" },
+      { id: "outline", label: "Generating course outline (JSON)", status: "pending" },
       { id: "expand", label: "Expanding all chapters", status: "pending" },
       { id: "create", label: "Creating course", status: "pending" },
     ]);
 
     try {
-      // Step 1: Generate outline
-      updateStep("outline", { status: "running", detail: "Analyzing topic and creating structure..." });
+      // Step 0: Add to queue
+      updateStep("queue", { status: "running", detail: "Creating queue item..." });
       
-      const outline = await generateOutlineInternal();
-      if (!outline) {
-        throw new Error("Failed to generate outline");
+      // Extract topic from prompt
+      const topicMatch = prompt.match(/(?:course (?:on|about) |create (?:me )?a course (?:on|about) )(.+)/i);
+      const topic = topicMatch?.[1]?.trim() || prompt.slice(0, 100);
+      
+      const queueId = await addToQueue({
+        userId: user!.id,
+        storeId: selectedStoreId,
+        prompt: prompt,
+        skillLevel: settings.skillLevel || "intermediate",
+        targetModules: settings.targetModules || 4,
+        targetLessonsPerModule: settings.targetLessonsPerModule || 3,
+      });
+      
+      updateStep("queue", { status: "completed", detail: "Queue item created" });
+      console.log("✅ Added to queue:", queueId);
+
+      // Step 1: Generate outline using the dedicated backend action (guaranteed JSON)
+      updateStep("outline", { status: "running", detail: "Calling OpenAI with JSON mode..." });
+      
+      const outlineResult = await generateOutlineAction({ queueId });
+      
+      if (!outlineResult.success || !outlineResult.outlineId) {
+        throw new Error(outlineResult.error || "Failed to generate outline");
       }
       
-      setGeneratedOutline(outline);
+      setCurrentOutlineId(outlineResult.outlineId);
+      console.log("✅ Outline generated:", outlineResult.outlineId);
+      
+      // Fetch the outline to display
+      // Note: The getOutline query will update automatically via Convex reactivity
+      // For now, we'll just update the step status
       updateStep("outline", { 
         status: "completed", 
-        detail: `${outline.modules.length} modules, ${outline.modules.reduce((acc, m) => acc + m.lessons.reduce((a, l) => a + l.chapters.length, 0), 0)} chapters` 
+        detail: "Course structure created successfully" 
       });
 
-      // Step 2: Expand all chapters
-      updateStep("expand", { status: "running", detail: "Starting chapter expansion..." });
+      // Step 2: Expand all chapters using the dedicated backend action
+      updateStep("expand", { status: "running", detail: "Expanding chapter content..." });
       
-      const expandedOutline = await expandAllChaptersInternal(outline);
-      setGeneratedOutline(expandedOutline);
-      
-      const totalChapters = expandedOutline.modules.reduce((acc, m) => 
-        acc + m.lessons.reduce((a, l) => a + l.chapters.length, 0), 0
-      );
-      const expandedCount = expandedOutline.modules.reduce((acc, m) => 
-        acc + m.lessons.reduce((a, l) => a + l.chapters.filter(c => c.expanded).length, 0), 0
-      );
+      const expandResult = await expandAllChaptersAction({ 
+        outlineId: outlineResult.outlineId, 
+        queueId 
+      });
       
       updateStep("expand", { 
-        status: "completed", 
-        detail: `${expandedCount}/${totalChapters} chapters expanded` 
+        status: expandResult.success ? "completed" : "failed", 
+        detail: `${expandResult.expandedCount} chapters expanded${expandResult.failedCount > 0 ? `, ${expandResult.failedCount} failed` : ""}` 
       });
+      
+      if (!expandResult.success && expandResult.failedCount > expandResult.expandedCount) {
+        throw new Error(`Too many chapters failed to expand: ${expandResult.failedCount}/${expandResult.expandedCount + expandResult.failedCount}`);
+      }
 
-      // Step 3: Create the course
-      updateStep("create", { status: "running", detail: "Building course in database..." });
+      // Step 3: Create the course using the dedicated backend action
+      const createResult = await createCourseFromOutlineAction({
+        outlineId: outlineResult.outlineId,
+        queueId,
+        price: 0,
+        publish: false,
+      });
       
-      const result = await createCourseInternal(expandedOutline);
-      
-      if (result.success) {
-        setCreatedCourseId(result.courseId || null);
-        setCreatedCourseSlug(result.slug || null);
+      if (createResult.success && createResult.courseId) {
+        setCreatedCourseId(createResult.courseId);
+        setCreatedCourseSlug(createResult.slug || null);
         updateStep("create", { 
           status: "completed", 
           detail: "Course created successfully!" 
         });
         
         toast.success("🎉 Course created successfully!", {
-          description: `"${expandedOutline.title}" is ready`,
-          action: result.link ? {
+          description: "Your AI-generated course is ready",
+          action: createResult.slug ? {
             label: "View Course",
-            onClick: () => window.open(result.link, "_blank"),
+            onClick: () => window.open(`/courses/${createResult.courseId}`, "_blank"),
           } : undefined,
           duration: 10000,
         });
       } else {
-        throw new Error(result.error || "Failed to create course");
+        throw new Error(createResult.error || "Failed to create course");
       }
 
     } catch (error) {
@@ -339,185 +387,61 @@ export default function AdminCourseBuilderPage() {
     }
   };
 
-  // Internal helper for outline generation
-  const generateOutlineInternal = async (): Promise<CourseOutline | null> => {
-    const outlineResponse = await askAgenticAI({
-      question: prompt,
-      userId: user!.id,
-      storeId: selectedStoreId,
-      userRole: "admin",
-      settings: {
-        preset: settings.preset,
-        maxFacets: settings.maxFacets,
-        chunksPerFacet: settings.chunksPerFacet,
-        similarityThreshold: settings.similarityThreshold,
-        enableCritic: settings.enableCritic,
-        enableCreativeMode: settings.enableCreativeMode,
-        enableWebResearch: settings.enableWebResearch,
-        enableFactVerification: settings.enableFactVerification,
-        autoSaveWebResearch: settings.autoSaveWebResearch,
-        webSearchMaxResults: settings.webSearchMaxResults,
-        responseStyle: settings.responseStyle,
-      },
-    });
+  // Track queue item for step-by-step mode
+  const [currentQueueId, setCurrentQueueId] = useState<Id<"aiCourseQueue"> | null>(null);
 
-    if (outlineResponse.type === "action_proposal") {
-      const executeResult = await executeConfirmedActions({
-        actions: outlineResponse.proposedActions.map(a => ({
-          tool: a.tool,
-          parameters: a.parameters,
-        })),
-        userId: user!.id,
-        storeId: selectedStoreId,
-      });
-
-      if (executeResult.results?.[0]?.success) {
-        const outlineData = executeResult.results[0].result as any;
-        if (outlineData.outline) {
-          return outlineData.outline;
-        }
-      }
-    } else if ("answer" in outlineResponse) {
-      return parseOutlineFromText(outlineResponse.answer, prompt);
-    }
-
-    return null;
-  };
-
-  // Internal helper for expanding all chapters
-  const expandAllChaptersInternal = async (outline: CourseOutline): Promise<CourseOutline> => {
-    const updatedOutline = JSON.parse(JSON.stringify(outline)) as CourseOutline;
-    let chapterIndex = 0;
-    const totalChapters = outline.modules.reduce((acc, m) => 
-      acc + m.lessons.reduce((a, l) => a + l.chapters.length, 0), 0
-    );
-
-    for (let mi = 0; mi < updatedOutline.modules.length; mi++) {
-      for (let li = 0; li < updatedOutline.modules[mi].lessons.length; li++) {
-        for (let ci = 0; ci < updatedOutline.modules[mi].lessons[li].chapters.length; ci++) {
-          chapterIndex++;
-          const chapter = updatedOutline.modules[mi].lessons[li].chapters[ci];
-          
-          updateStep("expand", { 
-            status: "running", 
-            detail: `Expanding chapter ${chapterIndex}/${totalChapters}: "${chapter.title}"` 
-          });
-
-          try {
-            const response = await askAgenticAI({
-              question: `Write detailed educational content for this chapter: "${chapter.title}". 
-Context: This is part of a course about "${outline.title}". 
-The chapter should cover: ${chapter.content}
-Write 800-1200 words of comprehensive, video-script-ready content suitable for ${outline.skillLevel || "intermediate"} level learners.`,
-              userId: user!.id,
-              userRole: "admin",
-              settings: {
-                preset: settings.preset,
-                maxFacets: 3,
-                chunksPerFacet: 30,
-                similarityThreshold: 0.65,
-                enableCritic: false, // Faster
-                enableCreativeMode: true,
-                enableWebResearch: settings.enableWebResearch,
-                enableFactVerification: false,
-                autoSaveWebResearch: false,
-                responseStyle: "conversational",
-              },
-            });
-
-            let expandedContent = "";
-            if ("answer" in response) {
-              expandedContent = response.answer;
-            } else if (response.type === "actions_executed" && response.results?.[0]?.result) {
-              expandedContent = (response.results[0].result as any).content || "";
-            }
-
-            if (expandedContent) {
-              updatedOutline.modules[mi].lessons[li].chapters[ci] = {
-                ...chapter,
-                expanded: true,
-                expandedContent,
-              };
-            }
-
-            // Rate limiting to avoid API throttling
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-          } catch (error) {
-            console.error(`Failed to expand chapter "${chapter.title}":`, error);
-            // Continue with other chapters even if one fails
-          }
-        }
-      }
-    }
-
-    return updatedOutline;
-  };
-
-  // Internal helper for course creation
-  const createCourseInternal = async (outline: CourseOutline): Promise<{ 
-    success: boolean; 
-    courseId?: string; 
-    slug?: string;
-    link?: string;
-    error?: string; 
-  }> => {
-    const modules = outline.modules.map((module, mi) => ({
-      title: module.title,
-      description: module.description,
-      orderIndex: mi,
-      lessons: module.lessons.map((lesson, li) => ({
-        title: lesson.title,
-        description: lesson.description,
-        orderIndex: li,
-        chapters: lesson.chapters.map((chapter, ci) => ({
-          title: chapter.title,
-          content: chapter.expandedContent || chapter.content,
-          duration: chapter.duration || 10,
-          orderIndex: ci,
+  // Convert backend outline to frontend format for display
+  const convertOutlineForDisplay = useCallback((backendOutline: any): CourseOutline | null => {
+    if (!backendOutline?.outline) return null;
+    
+    const data = backendOutline.outline;
+    const course = data.course || data;
+    
+    return {
+      title: course.title || backendOutline.title || "Untitled Course",
+      description: course.description || backendOutline.description || "",
+      category: course.category || backendOutline.category,
+      skillLevel: course.skillLevel || backendOutline.skillLevel,
+      estimatedDuration: course.estimatedDuration || backendOutline.estimatedDuration,
+      modules: (data.modules || []).map((module: any) => ({
+        title: module.title || "Untitled Module",
+        description: module.description || "",
+        lessons: (module.lessons || []).map((lesson: any) => ({
+          title: lesson.title || "Untitled Lesson",
+          description: lesson.description || "",
+          chapters: (lesson.chapters || []).map((chapter: any) => ({
+            title: chapter.title || "Untitled Chapter",
+            content: chapter.content || chapter.description || "",
+            duration: chapter.duration,
+            expanded: chapter.hasDetailedContent || (chapter.wordCount && chapter.wordCount > 500),
+            expandedContent: chapter.hasDetailedContent ? chapter.content : undefined,
+          })),
         })),
       })),
-    }));
-
-    const result = await executeConfirmedActions({
-      actions: [{
-        tool: "createCourseWithModules",
-        parameters: {
-          title: outline.title,
-          description: outline.description,
-          category: outline.category || "Music Production",
-          skillLevel: outline.skillLevel || "intermediate",
-          price: 0,
-          checkoutHeadline: `Master ${outline.title}`,
-          modules,
-        },
-      }],
-      userId: user!.id,
-      storeId: selectedStoreId,
-    });
-
-    if (result.results?.[0]?.success) {
-      const courseResult = result.results[0].result as any;
-      return {
-        success: true,
-        courseId: courseResult.courseId || courseResult.id,
-        slug: courseResult.slug,
-        link: courseResult.link,
-      };
-    }
-
-    return {
-      success: false,
-      error: result.results?.[0]?.error || "Failed to create course",
     };
-  };
+  }, []);
+
+  // Update displayed outline when backend outline changes
+  useEffect(() => {
+    if (getOutline) {
+      const converted = convertOutlineForDisplay(getOutline);
+      if (converted) {
+        setGeneratedOutline(converted);
+      }
+    }
+  }, [getOutline, convertOutlineForDisplay]);
 
   // =============================================================================
   // GENERATE COURSE (Outline Only - for manual review)
+  // Uses backend JSON actions for guaranteed structured output
   // =============================================================================
   const handleGenerateCourse = async () => {
     if (!prompt.trim()) {
       toast.error("Please enter a course topic or description");
+      return;
+    }
+    if (!selectedStoreId) {
+      toast.error("Please select a store");
       return;
     }
 
@@ -526,31 +450,50 @@ Write 800-1200 words of comprehensive, video-script-ready content suitable for $
     setGeneratedOutline(null);
     setCreatedCourseId(null);
     setCreatedCourseSlug(null);
+    setCurrentOutlineId(null);
+    setCurrentQueueId(null);
     
     // Initialize steps
     setGenerationSteps([
-      { id: "outline", label: "Generating course outline", status: "pending" },
+      { id: "queue", label: "Adding to queue", status: "pending" },
+      { id: "outline", label: "Generating course outline (JSON)", status: "pending" },
     ]);
 
     try {
-      // Generate course outline using the AI
-      updateStep("outline", { status: "running", detail: "Analyzing topic and creating structure..." });
-
-      const outline = await generateOutlineInternal();
+      // Step 1: Add to queue
+      updateStep("queue", { status: "running", detail: "Creating queue item..." });
       
-      if (outline) {
-        setGeneratedOutline(outline);
-        const totalChapters = outline.modules.reduce((acc, m) => 
-          acc + m.lessons.reduce((a, l) => a + l.chapters.length, 0), 0
-        );
-        updateStep("outline", { 
-          status: "completed", 
-          detail: `${outline.modules.length} modules, ${totalChapters} chapters` 
-        });
-        toast.success("Course outline generated! Review and expand chapters, then create.");
-      } else {
-        throw new Error("Could not generate course outline. Try rephrasing as: 'Create me a course about [topic]'");
+      const queueId = await addToQueue({
+        userId: user!.id,
+        storeId: selectedStoreId,
+        prompt: prompt,
+        skillLevel: settings.skillLevel || "intermediate",
+        targetModules: settings.targetModules || 4,
+        targetLessonsPerModule: settings.targetLessonsPerModule || 3,
+      });
+      
+      setCurrentQueueId(queueId);
+      updateStep("queue", { status: "completed", detail: "Queue item created" });
+
+      // Step 2: Generate outline using backend action (guaranteed JSON)
+      updateStep("outline", { status: "running", detail: "Calling OpenAI with JSON mode..." });
+
+      const outlineResult = await generateOutlineAction({ queueId });
+      
+      if (!outlineResult.success || !outlineResult.outlineId) {
+        throw new Error(outlineResult.error || "Failed to generate outline");
       }
+      
+      setCurrentOutlineId(outlineResult.outlineId);
+      
+      // The outline will be fetched automatically via the getOutline query
+      // and converted via the useEffect above
+      updateStep("outline", { 
+        status: "completed", 
+        detail: "Course structure created - review below" 
+      });
+      
+      toast.success("Course outline generated! Review and expand chapters, then create.");
 
     } catch (error) {
       console.error("Generation error:", error);
@@ -572,53 +515,36 @@ Write 800-1200 words of comprehensive, video-script-ready content suitable for $
   };
 
   // =============================================================================
-  // EXPAND CHAPTER
+  // EXPAND CHAPTER - Uses backend action for JSON-guaranteed content
   // =============================================================================
+  const expandChapterAction = useAction(api.aiCourseBuilder.expandChapterContent);
+  
   const handleExpandChapter = async (
     moduleIndex: number, 
     lessonIndex: number, 
     chapterIndex: number
   ) => {
-    if (!generatedOutline) return;
+    if (!generatedOutline || !currentOutlineId) {
+      toast.error("No outline loaded - please generate an outline first");
+      return;
+    }
     
     const chapter = generatedOutline.modules[moduleIndex].lessons[lessonIndex].chapters[chapterIndex];
     
     toast.promise(
       (async () => {
-        const response = await askAgenticAI({
-          question: `Write detailed educational content for this chapter: "${chapter.title}". 
-Context: This is part of a course about "${generatedOutline.title}". 
-The chapter should cover: ${chapter.content}
-Write 800-1200 words of comprehensive, video-script-ready content suitable for ${generatedOutline.skillLevel || "intermediate"} level learners.`,
-          userId: user!.id,
-          userRole: "admin",
-          settings: {
-            preset: settings.preset,
-            maxFacets: 3,
-            chunksPerFacet: 30,
-            similarityThreshold: 0.65,
-            enableCritic: settings.enableCritic,
-            enableCreativeMode: true,
-            enableWebResearch: settings.enableWebResearch,
-            enableFactVerification: false,
-            autoSaveWebResearch: false,
-            responseStyle: "conversational",
-          },
+        const result = await expandChapterAction({
+          outlineId: currentOutlineId,
+          moduleIndex,
+          lessonIndex,
+          chapterIndex,
         });
 
-        let expandedContent = "";
-        
-        if ("answer" in response) {
-          expandedContent = response.answer;
-        } else if (response.type === "actions_executed" && response.results?.[0]?.result) {
-          expandedContent = (response.results[0].result as any).content || "";
+        if (!result.success || !result.content) {
+          throw new Error(result.error || "No content generated");
         }
 
-        if (!expandedContent) {
-          throw new Error("No content generated");
-        }
-
-        // Update the outline with expanded content
+        // Update local state (the getOutline query will also update, but this is faster for UI)
         setGeneratedOutline(prev => {
           if (!prev) return null;
           const updated = { ...prev };
@@ -634,17 +560,17 @@ Write 800-1200 words of comprehensive, video-script-ready content suitable for $
           updated.modules[moduleIndex].lessons[lessonIndex].chapters[chapterIndex] = {
             ...chapter,
             expanded: true,
-            expandedContent,
+            expandedContent: result.content,
           };
           return updated;
         });
 
-        return expandedContent.split(" ").length;
+        return result.wordCount || result.content.split(" ").length;
       })(),
       {
         loading: `Expanding "${chapter.title}"...`,
         success: (wordCount) => `Expanded with ${wordCount} words`,
-        error: (err) => `Failed: ${err.message}`,
+        error: (err) => `Failed: ${err instanceof Error ? err.message : "Unknown error"}`,
       }
     );
   };
@@ -695,63 +621,40 @@ Write 800-1200 words of comprehensive, video-script-ready content suitable for $
   };
 
   // =============================================================================
-  // CREATE COURSE
+  // CREATE COURSE - Uses backend action for course creation
   // =============================================================================
   const handleCreateCourse = async () => {
     if (!generatedOutline || !selectedStoreId) {
       toast.error("No outline to create or store not selected");
       return;
     }
+    
+    if (!currentOutlineId || !currentQueueId) {
+      toast.error("Outline context missing - please regenerate the outline");
+      return;
+    }
 
     setIsCreatingCourse(true);
 
     try {
-      // Format the outline for the createCourseWithModules tool
-      const modules = generatedOutline.modules.map((module, mi) => ({
-        title: module.title,
-        description: module.description,
-        orderIndex: mi,
-        lessons: module.lessons.map((lesson, li) => ({
-          title: lesson.title,
-          description: lesson.description,
-          orderIndex: li,
-          chapters: lesson.chapters.map((chapter, ci) => ({
-            title: chapter.title,
-            content: chapter.expandedContent || chapter.content,
-            duration: chapter.duration || 10,
-            orderIndex: ci,
-          })),
-        })),
-      }));
-
-      const result = await executeConfirmedActions({
-        actions: [{
-          tool: "createCourseWithModules",
-          parameters: {
-            title: generatedOutline.title,
-            description: generatedOutline.description,
-            category: generatedOutline.category || "Music Production",
-            skillLevel: generatedOutline.skillLevel || "intermediate",
-            price: 0,
-            checkoutHeadline: `Master ${generatedOutline.title}`,
-            modules,
-          },
-        }],
-        userId: user!.id,
-        storeId: selectedStoreId,
+      const result = await createCourseFromOutlineAction({
+        outlineId: currentOutlineId,
+        queueId: currentQueueId,
+        price: 0,
+        publish: false,
       });
 
-      if (result.results?.[0]?.success) {
-        const courseResult = result.results[0].result as any;
-        setCreatedCourseId(courseResult.courseId || courseResult.id);
+      if (result.success && result.courseId) {
+        setCreatedCourseId(result.courseId);
+        setCreatedCourseSlug(result.slug || null);
         toast.success("Course created successfully!", {
-          action: courseResult.link ? {
+          action: {
             label: "View Course",
-            onClick: () => window.open(courseResult.link, "_blank"),
-          } : undefined,
+            onClick: () => window.open(`/courses/${result.courseId}`, "_blank"),
+          },
         });
       } else {
-        throw new Error(result.results?.[0]?.error || "Failed to create course");
+        throw new Error(result.error || "Failed to create course");
       }
     } catch (error) {
       console.error("Course creation error:", error);
