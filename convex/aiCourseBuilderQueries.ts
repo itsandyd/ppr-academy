@@ -225,6 +225,142 @@ export const exportOutlineAsJson = query({
   },
 });
 
+/**
+ * Get course structure for expansion - REACTIVE QUERY
+ * This is a query (not action) so Convex will auto-update the UI when chapters change
+ */
+export const getCourseStructure = query({
+  args: {
+    courseId: v.id("courses"),
+  },
+  returns: v.union(
+    v.object({
+      success: v.literal(true),
+      course: v.object({
+        _id: v.id("courses"),
+        title: v.string(),
+        description: v.optional(v.string()),
+        skillLevel: v.optional(v.string()),
+      }),
+      modules: v.array(v.object({
+        _id: v.id("courseModules"),
+        title: v.string(),
+        description: v.optional(v.string()),
+        position: v.number(),
+        lessons: v.array(v.object({
+          _id: v.id("courseLessons"),
+          title: v.string(),
+          description: v.optional(v.string()),
+          position: v.number(),
+          chapters: v.array(v.object({
+            _id: v.id("courseChapters"),
+            title: v.string(),
+            description: v.optional(v.string()),
+            position: v.number(),
+            hasContent: v.boolean(),
+            wordCount: v.number(),
+          })),
+        })),
+      })),
+      totalChapters: v.number(),
+      chaptersWithContent: v.number(),
+    }),
+    v.object({
+      success: v.literal(false),
+      error: v.string(),
+    }),
+    v.null()
+  ),
+  handler: async (ctx, args) => {
+    // Get course
+    const course = await ctx.db.get(args.courseId);
+    if (!course) {
+      return { success: false as const, error: "Course not found" };
+    }
+    
+    // Get modules for this course
+    const modules = await ctx.db
+      .query("courseModules")
+      .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId))
+      .collect();
+    
+    // Sort by position
+    modules.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+    
+    let totalChapters = 0;
+    let chaptersWithContent = 0;
+    
+    // Build full structure with lessons and chapters
+    const fullModules = await Promise.all(modules.map(async (mod) => {
+      // Get lessons for this module
+      const lessons = await ctx.db
+        .query("courseLessons")
+        .withIndex("by_moduleId", (q) => q.eq("moduleId", mod._id))
+        .collect();
+      
+      // Sort by position
+      lessons.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+      
+      const lessonsWithChapters = await Promise.all(lessons.map(async (lesson) => {
+        // Get chapters for this lesson
+        const chapters = await ctx.db
+          .query("courseChapters")
+          .withIndex("by_lessonId", (q) => q.eq("lessonId", lesson._id))
+          .collect();
+        
+        // Sort by position
+        chapters.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+        
+        const chaptersWithStatus = chapters.map(ch => {
+          const wordCount = ch.description?.split(/\s+/).length || 0;
+          const hasContent = wordCount > 50; // Consider content "real" if > 50 words
+          
+          totalChapters++;
+          if (hasContent) chaptersWithContent++;
+          
+          return {
+            _id: ch._id,
+            title: ch.title,
+            description: ch.description,
+            position: ch.position ?? 0,
+            hasContent,
+            wordCount,
+          };
+        });
+        
+        return {
+          _id: lesson._id,
+          title: lesson.title,
+          description: lesson.description,
+          position: lesson.position ?? 0,
+          chapters: chaptersWithStatus,
+        };
+      }));
+      
+      return {
+        _id: mod._id,
+        title: mod.title,
+        description: mod.description,
+        position: mod.position ?? 0,
+        lessons: lessonsWithChapters,
+      };
+    }));
+    
+    return {
+      success: true as const,
+      course: {
+        _id: course._id,
+        title: course.title,
+        description: course.description,
+        skillLevel: course.skillLevel,
+      },
+      modules: fullModules,
+      totalChapters,
+      chaptersWithContent,
+    };
+  },
+});
+
 // =============================================================================
 // PUBLIC MUTATIONS
 // =============================================================================

@@ -199,6 +199,24 @@ const DEFAULT_AI_SETTINGS: AISettings = {
   responseStyle: "structured",
 };
 
+const SETTINGS_STORAGE_KEY = "ppr-course-builder-settings";
+
+// Load settings from localStorage
+const loadSavedSettings = (): AISettings => {
+  if (typeof window === "undefined") return DEFAULT_AI_SETTINGS;
+  try {
+    const saved = localStorage.getItem(SETTINGS_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Merge with defaults to ensure all keys exist
+      return { ...DEFAULT_AI_SETTINGS, ...parsed };
+    }
+  } catch (e) {
+    console.error("Failed to load saved settings:", e);
+  }
+  return DEFAULT_AI_SETTINGS;
+};
+
 const PRESET_DESCRIPTIONS: Record<string, { icon: React.ReactNode; label: string; description: string }> = {
   speed: { 
     icon: <Zap className="w-4 h-4" />, 
@@ -259,8 +277,17 @@ export default function AdminCourseBuilderPage() {
   // State
   const [prompt, setPrompt] = useState("");
   const [selectedStoreId, setSelectedStoreId] = useState<string>("");
-  const [settings, setSettings] = useState<AISettings>(DEFAULT_AI_SETTINGS);
+  const [settings, setSettings] = useState<AISettings>(loadSavedSettings);
   const [showSettings, setShowSettings] = useState(false);
+  
+  // Persist settings to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+    } catch (e) {
+      console.error("Failed to save settings:", e);
+    }
+  }, [settings]);
   
   // Generation state
   const [isGenerating, setIsGenerating] = useState(false);
@@ -292,8 +319,7 @@ export default function AdminCourseBuilderPage() {
   
   // Existing course expansion state
   const [selectedExistingCourseId, setSelectedExistingCourseId] = useState<string>("");
-  const [existingCourseStructure, setExistingCourseStructure] = useState<ExistingCourseStructure | null>(null);
-  const [isLoadingStructure, setIsLoadingStructure] = useState(false);
+  // Note: existingCourseStructure is now derived from courseStructureQuery (reactive!)
   const [isExpandingExisting, setIsExpandingExisting] = useState(false);
   const [expandExistingSteps, setExpandExistingSteps] = useState<GenerationStep[]>([]);
 
@@ -316,17 +342,33 @@ export default function AdminCourseBuilderPage() {
   const createCourseFromOutlineAction = useAction(api.aiCourseBuilder.createCourseFromOutline);
   
   // Existing course expansion actions
-  const getCourseStructureAction = useAction(api.aiCourseBuilder.getCourseStructureForExpansion);
   const expandExistingCourseAction = useAction(api.aiCourseBuilder.expandExistingCourseChapters);
   const expandSingleChapterAction = useAction(api.aiCourseBuilder.expandExistingChapter);
   const reformatSingleChapterAction = useAction(api.aiCourseBuilder.reformatChapterContent);
   const reformatAllChaptersAction = useAction(api.aiCourseBuilder.reformatCourseChapters);
+  
+  // Use reactive query for course structure - auto-updates when chapters change!
+  const courseStructureQuery = useQuery(
+    api.aiCourseBuilderQueries.getCourseStructure,
+    selectedExistingCourseId ? { courseId: selectedExistingCourseId as Id<"courses"> } : "skip"
+  );
   
   // State for chapter preview and regeneration
   const [expandedChapterPreviews, setExpandedChapterPreviews] = useState<Set<string>>(new Set());
   const [regeneratingChapterId, setRegeneratingChapterId] = useState<string | null>(null);
   const [reformattingChapterId, setReformattingChapterId] = useState<string | null>(null);
   const [isReformattingAll, setIsReformattingAll] = useState(false);
+  
+  // Derive existingCourseStructure from reactive query (auto-updates!)
+  const existingCourseStructure: ExistingCourseStructure | null = 
+    courseStructureQuery && courseStructureQuery.success === true
+      ? {
+          course: courseStructureQuery.course,
+          modules: courseStructureQuery.modules,
+          totalChapters: courseStructureQuery.totalChapters,
+          chaptersWithContent: courseStructureQuery.chaptersWithContent,
+        }
+      : null;
   
   // Track individual chapter expansion loading states (allows parallel expansion)
   const [expandingChapterKeys, setExpandingChapterKeys] = useState<Set<string>>(new Set());
@@ -714,11 +756,10 @@ export default function AdminCourseBuilderPage() {
           });
         } else if (queueItemStatus.courseId && activeTab === "existing") {
           // This was an expansion of an existing course
+          // No need to manually reload - Convex reactive query auto-updates!
           toast.success("🎉 Chapter expansion completed!", {
             description: "All chapters have been expanded.",
           });
-          // Reload the course structure to show updated content
-          handleLoadCourseStructure();
         }
         break;
         
@@ -1080,39 +1121,9 @@ export default function AdminCourseBuilderPage() {
   // EXISTING COURSE EXPANSION
   // =============================================================================
   
-  // Load course structure when a course is selected
-  const handleLoadCourseStructure = async () => {
-    if (!selectedExistingCourseId) {
-      toast.error("Please select a course first");
-      return;
-    }
-    
-    setIsLoadingStructure(true);
-    setExistingCourseStructure(null);
-    
-    try {
-      const result = await getCourseStructureAction({
-        courseId: selectedExistingCourseId as Id<"courses">,
-      });
-      
-      if (result.success && result.course && result.modules) {
-        setExistingCourseStructure({
-          course: result.course,
-          modules: result.modules,
-          totalChapters: result.totalChapters || 0,
-          chaptersWithContent: result.chaptersWithContent || 0,
-        });
-        toast.success(`Loaded structure: ${result.totalChapters} chapters (${result.chaptersWithContent} with content)`);
-      } else {
-        throw new Error(result.error || "Failed to load course structure");
-      }
-    } catch (error) {
-      console.error("Error loading course structure:", error);
-      toast.error(`Failed to load course: ${error instanceof Error ? error.message : "Unknown error"}`);
-    } finally {
-      setIsLoadingStructure(false);
-    }
-  };
+  // Course structure is now loaded automatically via reactive query!
+  // This is just for showing loading state while query is pending
+  const isLoadingStructure = selectedExistingCourseId && courseStructureQuery === undefined;
   
   // Expand all chapters in an existing course (BACKGROUND PROCESSING)
   // ✅ Runs completely server-side - you can navigate away!
@@ -1221,8 +1232,7 @@ export default function AdminCourseBuilderPage() {
       
       if (result.success) {
         toast.success(`Chapter regenerated! (${result.wordCount} words)`);
-        // Reload the structure to show updated content
-        await handleLoadCourseStructure();
+        // No need to reload - Convex reactive query auto-updates!
         // Expand the preview to show the new content
         setExpandedChapterPreviews(prev => new Set(prev).add(chapterId));
       } else {
@@ -1253,8 +1263,7 @@ export default function AdminCourseBuilderPage() {
       
       if (result.success) {
         toast.success(`Chapter reformatted! (${result.wordCount} words)`);
-        // Reload the structure to show updated content
-        await handleLoadCourseStructure();
+        // No need to reload - Convex reactive query auto-updates!
         // Expand the preview to show the formatted content
         setExpandedChapterPreviews(prev => new Set(prev).add(chapterId));
       } else {
@@ -1284,9 +1293,8 @@ export default function AdminCourseBuilderPage() {
       });
       
       if (result.success) {
+        // No need to reload - Convex reactive query auto-updates!
         toast.success(`Reformatted ${result.reformattedCount} chapters!`);
-        // Reload the structure to show updated content
-        await handleLoadCourseStructure();
       } else {
         toast.warning(`Reformatted ${result.reformattedCount} chapters, ${result.failedCount} failed`);
       }
@@ -1472,39 +1480,39 @@ export default function AdminCourseBuilderPage() {
   // =============================================================================
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
+    <div className="space-y-4 sm:space-y-6 max-w-6xl mx-auto px-2 sm:px-4 lg:px-0">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600">
-              <Wand2 className="w-6 h-6 text-white" />
+          <h1 className="text-xl sm:text-3xl font-bold flex items-center gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600">
+              <Wand2 className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
             AI Course Builder
           </h1>
-          <p className="text-muted-foreground mt-1">
-            Generate complete courses using your AI settings
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">
+            Generate complete courses using AI
           </p>
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "create" | "existing")} className="space-y-6">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="create" className="flex items-center gap-2">
-            <Wand2 className="w-4 h-4" />
-            Create New Course
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "create" | "existing")} className="space-y-4 sm:space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="create" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4">
+            <Wand2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="hidden xs:inline">Create </span>New
           </TabsTrigger>
-          <TabsTrigger value="existing" className="flex items-center gap-2">
-            <GraduationCap className="w-4 h-4" />
-            Expand Existing
+          <TabsTrigger value="existing" className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm px-2 sm:px-4">
+            <GraduationCap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <span className="hidden xs:inline">Expand </span>Existing
           </TabsTrigger>
         </TabsList>
 
         {/* CREATE NEW COURSE TAB */}
         <TabsContent value="create">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Left Column - Input & Settings */}
-        <div className="lg:col-span-1 space-y-4">
+        <div className="lg:col-span-1 space-y-3 sm:space-y-4">
           {/* Topic Input */}
           <Card>
             <CardHeader className="pb-3">
@@ -1548,31 +1556,31 @@ export default function AdminCourseBuilderPage() {
 
               {/* Active Background Jobs Indicator */}
               {activeJobs && activeJobs.length > 0 && (
-                <div className="rounded-lg border border-amber-500/30 bg-amber-50/50 dark:bg-amber-950/20 p-3 space-y-2">
+                <div className="rounded-lg border border-amber-500/30 bg-amber-50/50 dark:bg-amber-950/20 p-2 sm:p-3 space-y-1.5 sm:space-y-2">
                   <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span className="text-sm font-medium">
-                      {activeJobs.length} background job{activeJobs.length > 1 ? "s" : ""} running
+                    <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin flex-shrink-0" />
+                    <span className="text-xs sm:text-sm font-medium">
+                      {activeJobs.length} job{activeJobs.length > 1 ? "s" : ""} running
                     </span>
                   </div>
                   <div className="space-y-1">
                     {activeJobs.slice(0, 3).map((job: any) => (
                       <div 
                         key={job._id} 
-                        className="text-xs text-muted-foreground flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded px-2 py-1"
+                        className="text-[10px] sm:text-xs text-muted-foreground flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded px-1.5 sm:px-2 py-1"
                         onClick={() => setCurrentQueueId(job._id)}
                       >
-                        <span className="truncate max-w-[200px]">
-                          {job.topic || job.prompt?.slice(0, 40)}...
+                        <span className="truncate max-w-[140px] sm:max-w-[200px]">
+                          {job.topic || job.prompt?.slice(0, 30)}...
                         </span>
-                        <Badge variant="secondary" className="text-[10px]">
+                        <Badge variant="secondary" className="text-[9px] sm:text-[10px] ml-1">
                           {job.status.replace(/_/g, " ")}
                         </Badge>
                       </div>
                     ))}
                   </div>
-                  <p className="text-[10px] text-muted-foreground">
-                    ✨ You can navigate away - jobs will continue running!
+                  <p className="text-[9px] sm:text-[10px] text-muted-foreground">
+                    ✨ Navigate away - jobs continue!
                   </p>
                 </div>
               )}
@@ -1583,22 +1591,24 @@ export default function AdminCourseBuilderPage() {
                 <Button
                   onClick={handleFullAutoGenerate}
                   disabled={isGenerating || !prompt.trim() || !selectedStoreId}
-                  className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 h-12"
+                  className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 h-10 sm:h-12 text-sm sm:text-base"
                 >
                   {isGenerating && isFullAuto ? (
                     <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Creating Course (Background)...
+                      <Loader2 className="w-4 h-4 mr-1.5 sm:mr-2 animate-spin" />
+                      <span className="hidden sm:inline">Creating Course (Background)...</span>
+                      <span className="sm:hidden">Creating...</span>
                     </>
                   ) : (
                     <>
-                      <Zap className="w-4 h-4 mr-2" />
-                      Generate Complete Course
+                      <Zap className="w-4 h-4 mr-1.5 sm:mr-2" />
+                      <span className="hidden sm:inline">Generate Complete Course</span>
+                      <span className="sm:hidden">Generate Course</span>
                     </>
                   )}
                 </Button>
-                <p className="text-xs text-center text-muted-foreground">
-                  ✨ Runs in background - you can navigate away!
+                <p className="text-[10px] sm:text-xs text-center text-muted-foreground">
+                  ✨ Runs in background - navigate away anytime!
                 </p>
               </div>
 
@@ -1989,52 +1999,54 @@ export default function AdminCourseBuilderPage() {
                 </div>
 
                 {/* Stats */}
-                <div className="flex items-center gap-4 mt-4 text-sm">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-3 sm:mt-4 text-xs sm:text-sm">
                   <div className="flex items-center gap-1">
-                    <Layers className="w-4 h-4 text-primary" />
+                    <Layers className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
                     <span>{stats.modules} modules</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <BookOpen className="w-4 h-4 text-primary" />
+                    <BookOpen className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
                     <span>{stats.lessons} lessons</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <FileText className="w-4 h-4 text-primary" />
+                    <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
                     <span>{stats.chapters} chapters</span>
                   </div>
                   {stats.expanded > 0 && (
-                    <Badge variant="default" className="bg-green-500">
+                    <Badge variant="default" className="bg-green-500 text-[10px] sm:text-xs">
                       {stats.expanded}/{stats.chapters} expanded
                     </Badge>
                   )}
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-2 mt-4">
+                <div className="flex flex-wrap items-center gap-2 mt-3 sm:mt-4">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={handleExpandAllChapters}
                     disabled={isGenerating || stats.expanded === stats.chapters}
+                    className="text-xs sm:text-sm h-8 sm:h-9"
                   >
-                    <Sparkles className="w-4 h-4 mr-1" />
-                    Expand All Chapters
+                    <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" />
+                    <span className="hidden sm:inline">Expand All</span>
+                    <span className="sm:hidden">Expand</span>
                   </Button>
                   <Button
                     size="sm"
                     onClick={handleCreateCourse}
                     disabled={isCreatingCourse}
-                    className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
+                    className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-xs sm:text-sm h-8 sm:h-9"
                   >
                     {isCreatingCourse ? (
                       <>
-                        <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                        <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 animate-spin" />
                         Creating...
                       </>
                     ) : (
                       <>
-                        <Play className="w-4 h-4 mr-1" />
-                        Create Course
+                        <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" />
+                        Create
                       </>
                     )}
                   </Button>
@@ -2043,14 +2055,16 @@ export default function AdminCourseBuilderPage() {
                       variant="outline"
                       size="sm"
                       asChild
+                      className="text-xs sm:text-sm h-8 sm:h-9"
                     >
                       <a 
                         href={`/store/${selectedStoreId}/courses/${createdCourseId}`} 
                         target="_blank" 
                         rel="noopener noreferrer"
                       >
-                        <ExternalLink className="w-4 h-4 mr-1" />
-                        Edit Course
+                        <ExternalLink className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" />
+                        <span className="hidden sm:inline">Edit Course</span>
+                        <span className="sm:hidden">Edit</span>
                       </a>
                     </Button>
                   )}
@@ -2243,9 +2257,9 @@ export default function AdminCourseBuilderPage() {
 
         {/* EXPAND EXISTING COURSE TAB */}
         <TabsContent value="existing">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
             {/* Left Column - Course Selection */}
-            <div className="lg:col-span-1 space-y-4">
+            <div className="lg:col-span-1 space-y-3 sm:space-y-4">
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg flex items-center gap-2">
@@ -2264,8 +2278,7 @@ export default function AdminCourseBuilderPage() {
                       value={selectedStoreId} 
                       onValueChange={(v) => {
                         setSelectedStoreId(v);
-                        setSelectedExistingCourseId("");
-                        setExistingCourseStructure(null);
+                        setSelectedExistingCourseId(""); // Clear course when store changes
                       }}
                       disabled={isExpandingExisting}
                     >
@@ -2285,15 +2298,12 @@ export default function AdminCourseBuilderPage() {
                     </Select>
                   </div>
 
-                  {/* Course Selection */}
+                  {/* Course Selection - structure auto-loads when selected! */}
                   <div className="space-y-2">
                     <Label className="text-sm">Course</Label>
                     <Select 
                       value={selectedExistingCourseId} 
-                      onValueChange={(v) => {
-                        setSelectedExistingCourseId(v);
-                        setExistingCourseStructure(null);
-                      }}
+                      onValueChange={setSelectedExistingCourseId}
                       disabled={isExpandingExisting || !selectedStoreId}
                     >
                       <SelectTrigger className="bg-background">
@@ -2320,25 +2330,13 @@ export default function AdminCourseBuilderPage() {
                     </Select>
                   </div>
 
-                  {/* Load Structure Button */}
-                  <Button
-                    onClick={handleLoadCourseStructure}
-                    disabled={!selectedExistingCourseId || isLoadingStructure || isExpandingExisting}
-                    className="w-full"
-                    variant="outline"
-                  >
-                    {isLoadingStructure ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Loading Structure...
-                      </>
-                    ) : (
-                      <>
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                        Load Course Structure
-                      </>
-                    )}
-                  </Button>
+                  {/* Loading indicator - structure loads automatically when course is selected */}
+                  {isLoadingStructure && (
+                    <div className="flex items-center justify-center gap-2 p-3 text-sm text-muted-foreground">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Loading course structure...
+                    </div>
+                  )}
 
                   {/* Course Stats */}
                   {existingCourseStructure && (
@@ -2381,17 +2379,20 @@ export default function AdminCourseBuilderPage() {
                       <Button
                         onClick={() => handleExpandExistingCourse(true)}
                         disabled={isExpandingExisting || existingCourseStructure.chaptersWithContent === existingCourseStructure.totalChapters}
-                        className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
+                        className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-xs sm:text-sm h-9 sm:h-10"
                       >
                         {isExpandingExisting ? (
                           <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Expanding Chapters...
+                            <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 animate-spin" />
+                            <span className="hidden sm:inline">Expanding Chapters...</span>
+                            <span className="sm:hidden">Expanding...</span>
                           </>
                         ) : (
                           <>
-                            <Sparkles className="w-4 h-4 mr-2" />
-                            Expand Empty Chapters ({existingCourseStructure.totalChapters - existingCourseStructure.chaptersWithContent})
+                            <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+                            <span className="hidden sm:inline">Expand Empty Chapters</span>
+                            <span className="sm:hidden">Expand Empty</span>
+                            <span className="ml-1">({existingCourseStructure.totalChapters - existingCourseStructure.chaptersWithContent})</span>
                           </>
                         )}
                       </Button>
@@ -2400,38 +2401,41 @@ export default function AdminCourseBuilderPage() {
                         onClick={() => handleExpandExistingCourse(false)}
                         disabled={isExpandingExisting || isReformattingAll}
                         variant="outline"
-                        className="w-full"
+                        className="w-full text-xs sm:text-sm h-9 sm:h-10"
                       >
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                        Regenerate All Chapters ({existingCourseStructure.totalChapters})
+                        <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+                        <span className="hidden sm:inline">Regenerate All</span>
+                        <span className="sm:hidden">Regen All</span>
+                        <span className="ml-1">({existingCourseStructure.totalChapters})</span>
                       </Button>
                       
-                      <div className="border-t pt-3 mt-1">
+                      <div className="border-t pt-2 sm:pt-3 mt-1">
                         <Button
                           onClick={handleReformatAllChapters}
                           disabled={isExpandingExisting || isReformattingAll}
                           variant="secondary"
-                          className="w-full"
+                          className="w-full text-xs sm:text-sm h-9 sm:h-10"
                         >
                           {isReformattingAll ? (
                             <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2 animate-spin" />
                               Reformatting...
                             </>
                           ) : (
                             <>
-                              <Type className="w-4 h-4 mr-2" />
-                              Reformat All (Add Markdown)
+                              <Type className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" />
+                              <span className="hidden sm:inline">Reformat All (Add Markdown)</span>
+                              <span className="sm:hidden">Reformat All</span>
                             </>
                           )}
                         </Button>
-                        <p className="text-[10px] text-center text-muted-foreground mt-1.5">
-                          Adds proper # headers, ## sections, **bold** etc. without regenerating content
+                        <p className="text-[10px] text-center text-muted-foreground mt-1.5 hidden sm:block">
+                          Adds # headers, ## sections, **bold** etc. without regenerating
                         </p>
                       </div>
                       
-                      <p className="text-xs text-center text-muted-foreground">
-                        Uses your AI settings ({settings.preset} preset)
+                      <p className="text-[10px] sm:text-xs text-center text-muted-foreground">
+                        Uses {settings.preset} preset
                       </p>
                     </div>
                   )}
@@ -2694,20 +2698,20 @@ export default function AdminCourseBuilderPage() {
 
               {/* Course Structure Display */}
               {existingCourseStructure ? (
-                <Card className="flex flex-col max-h-[calc(100vh-200px)]">
-                  <CardHeader className="pb-3 flex-shrink-0">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg truncate">{existingCourseStructure.course.title}</CardTitle>
-                      <Badge variant="outline" className="flex-shrink-0">
-                        {existingCourseStructure.chaptersWithContent}/{existingCourseStructure.totalChapters} chapters
+                <Card className="flex flex-col max-h-[60vh] sm:max-h-[calc(100vh-200px)]">
+                  <CardHeader className="pb-2 sm:pb-3 flex-shrink-0 px-3 sm:px-6">
+                    <div className="flex items-center justify-between gap-2">
+                      <CardTitle className="text-sm sm:text-lg truncate">{existingCourseStructure.course.title}</CardTitle>
+                      <Badge variant="outline" className="flex-shrink-0 text-[10px] sm:text-xs">
+                        {existingCourseStructure.chaptersWithContent}/{existingCourseStructure.totalChapters}
                       </Badge>
                     </div>
                     {existingCourseStructure.course.description && (
-                      <CardDescription className="line-clamp-3">{existingCourseStructure.course.description}</CardDescription>
+                      <CardDescription className="line-clamp-2 sm:line-clamp-3 text-xs sm:text-sm">{existingCourseStructure.course.description}</CardDescription>
                     )}
                   </CardHeader>
                   <ScrollArea className="flex-1 min-h-0">
-                    <CardContent className="space-y-2 pb-6">
+                    <CardContent className="space-y-1.5 sm:space-y-2 pb-4 sm:pb-6 px-2 sm:px-6">
                       {existingCourseStructure.modules.map((mod, mi) => (
                         <Collapsible
                           key={mi}
@@ -2715,30 +2719,30 @@ export default function AdminCourseBuilderPage() {
                           onOpenChange={() => toggleModule(mi)}
                         >
                           <CollapsibleTrigger asChild>
-                            <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 cursor-pointer hover:bg-muted transition-colors">
+                            <div className="flex items-center gap-1.5 sm:gap-2 p-2 sm:p-3 rounded-lg bg-muted/50 cursor-pointer hover:bg-muted transition-colors">
                               {expandedModules.has(mi) ? (
-                                <ChevronDown className="w-4 h-4" />
+                                <ChevronDown className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
                               ) : (
-                                <ChevronRight className="w-4 h-4" />
+                                <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
                               )}
-                              <Layers className="w-4 h-4 text-violet-500" />
-                              <span className="font-medium flex-1">{mod.title}</span>
-                              <Badge variant="outline" className="text-xs">
-                                {mod.lessons.length} lessons
+                              <Layers className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-violet-500 flex-shrink-0" />
+                              <span className="font-medium flex-1 text-xs sm:text-sm truncate">{mod.title}</span>
+                              <Badge variant="outline" className="text-[10px] sm:text-xs flex-shrink-0">
+                                {mod.lessons.length}
                               </Badge>
                             </div>
                           </CollapsibleTrigger>
-                          <CollapsibleContent className="pl-6 mt-2 space-y-2">
+                          <CollapsibleContent className="pl-3 sm:pl-6 mt-1.5 sm:mt-2 space-y-1.5 sm:space-y-2">
                             {mod.lessons.map((lesson, li) => (
                               <div key={li} className="space-y-1">
-                                <div className="flex items-center gap-2 p-2 rounded bg-background border">
-                                  <BookOpen className="w-3 h-3 text-muted-foreground" />
-                                  <span className="text-sm flex-1">{lesson.title}</span>
-                                  <Badge variant="outline" className="text-xs">
-                                    {lesson.chapters.length} chapters
+                                <div className="flex items-center gap-1.5 sm:gap-2 p-1.5 sm:p-2 rounded bg-background border">
+                                  <BookOpen className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                                  <span className="text-xs sm:text-sm flex-1 truncate">{lesson.title}</span>
+                                  <Badge variant="outline" className="text-[10px] sm:text-xs flex-shrink-0">
+                                    {lesson.chapters.length}
                                   </Badge>
                                 </div>
-                                <div className="pl-6 space-y-1">
+                                <div className="pl-3 sm:pl-6 space-y-1">
                                   {lesson.chapters.map((ch, ci) => {
                                     const isExpanded = expandedChapterPreviews.has(ch._id);
                                     const isRegenerating = regeneratingChapterId === ch._id;
@@ -2747,7 +2751,7 @@ export default function AdminCourseBuilderPage() {
                                       <div key={ci} className="space-y-1">
                                         <div
                                           className={cn(
-                                            "flex items-center gap-2 p-2 rounded border text-xs",
+                                            "flex items-center gap-1 sm:gap-2 p-1.5 sm:p-2 rounded border text-[10px] sm:text-xs",
                                             ch.hasContent 
                                               ? ch.wordCount < 100 
                                                 ? "bg-yellow-50 dark:bg-yellow-950/30 border-yellow-200 dark:border-yellow-900"
@@ -2755,82 +2759,85 @@ export default function AdminCourseBuilderPage() {
                                               : "bg-background"
                                           )}
                                         >
-                                          <FileText className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                                          <span className="flex-1 truncate">{ch.title}</span>
+                                          <FileText className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-muted-foreground flex-shrink-0" />
+                                          <span className="flex-1 truncate min-w-0">{ch.title}</span>
                                           
-                                          {/* Content Status Badge */}
+                                          {/* Content Status Badge - hide word count on mobile */}
                                           {ch.hasContent ? (
                                             ch.wordCount < 100 ? (
-                                              <Badge variant="outline" className="text-[10px] px-1.5 border-yellow-500 text-yellow-700 dark:text-yellow-400">
-                                                {ch.wordCount} words (short)
+                                              <Badge variant="outline" className="text-[9px] sm:text-[10px] px-1 sm:px-1.5 border-yellow-500 text-yellow-700 dark:text-yellow-400 flex-shrink-0">
+                                                <span className="hidden sm:inline">{ch.wordCount} </span>short
                                               </Badge>
                                             ) : (
-                                              <Badge variant="default" className="text-[10px] px-1.5 bg-green-500">
-                                                <Check className="w-2 h-2 mr-0.5" />
-                                                {ch.wordCount} words
+                                              <Badge variant="default" className="text-[9px] sm:text-[10px] px-1 sm:px-1.5 bg-green-500 flex-shrink-0">
+                                                <Check className="w-2 h-2 sm:mr-0.5" />
+                                                <span className="hidden sm:inline">{ch.wordCount}</span>
                                               </Badge>
                                             )
                                           ) : (
-                                            <Badge variant="secondary" className="text-[10px] px-1.5">
-                                              No content
+                                            <Badge variant="secondary" className="text-[9px] sm:text-[10px] px-1 sm:px-1.5 flex-shrink-0">
+                                              Empty
                                             </Badge>
                                           )}
                                           
-                                          {/* Preview Toggle Button */}
-                                          {ch.hasContent && (
+                                          {/* Action buttons - grouped together */}
+                                          <div className="flex items-center gap-0.5 flex-shrink-0">
+                                            {/* Preview Toggle Button */}
+                                            {ch.hasContent && (
+                                              <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="h-5 w-5 sm:h-6 sm:w-6 p-0"
+                                                onClick={() => toggleChapterPreview(ch._id)}
+                                                title={isExpanded ? "Hide preview" : "Show preview"}
+                                              >
+                                                {isExpanded ? (
+                                                  <EyeOff className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                                                ) : (
+                                                  <Eye className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                                                )}
+                                              </Button>
+                                            )}
+                                            
+                                            {/* Reformat Button (just add markdown) */}
                                             <Button
                                               size="sm"
                                               variant="ghost"
-                                              className="h-6 w-6 p-0"
-                                              onClick={() => toggleChapterPreview(ch._id)}
-                                              title={isExpanded ? "Hide preview" : "Show preview"}
+                                              className="h-5 w-5 sm:h-6 sm:w-6 p-0"
+                                              onClick={() => handleReformatSingleChapter(
+                                                ch._id as Id<"courseChapters">,
+                                                ch.title
+                                              )}
+                                              disabled={reformattingChapterId === ch._id || isExpandingExisting || isReformattingAll || !ch.hasContent}
+                                              title="Reformat with markdown"
                                             >
-                                              {isExpanded ? (
-                                                <EyeOff className="w-3 h-3" />
+                                              {reformattingChapterId === ch._id ? (
+                                                <Loader2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 animate-spin" />
                                               ) : (
-                                                <Eye className="w-3 h-3" />
+                                                <Type className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                                               )}
                                             </Button>
-                                          )}
-                                          
-                                          {/* Reformat Button (just add markdown) */}
-                                          <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            className="h-6 w-6 p-0"
-                                            onClick={() => handleReformatSingleChapter(
-                                              ch._id as Id<"courseChapters">,
-                                              ch.title
-                                            )}
-                                            disabled={reformattingChapterId === ch._id || isExpandingExisting || isReformattingAll || !ch.hasContent}
-                                            title="Reformat with markdown (keeps content, adds structure)"
-                                          >
-                                            {reformattingChapterId === ch._id ? (
-                                              <Loader2 className="w-3 h-3 animate-spin" />
-                                            ) : (
-                                              <Type className="w-3 h-3" />
-                                            )}
-                                          </Button>
 
-                                          {/* Regenerate Button */}
-                                          <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            className="h-6 w-6 p-0"
-                                            onClick={() => handleRegenerateSingleChapter(
-                                              ch._id as Id<"courseChapters">,
-                                              mod.title,
-                                              lesson.title
-                                            )}
-                                            disabled={isRegenerating || isExpandingExisting || isReformattingAll}
-                                            title="Regenerate chapter content (full AI pipeline)"
-                                          >
-                                            {isRegenerating ? (
-                                              <Loader2 className="w-3 h-3 animate-spin" />
-                                            ) : (
-                                              <RotateCcw className="w-3 h-3" />
-                                            )}
-                                          </Button>
+                                            {/* Regenerate Button */}
+                                            <Button
+                                              size="sm"
+                                              variant="ghost"
+                                              className="h-5 w-5 sm:h-6 sm:w-6 p-0"
+                                              onClick={() => handleRegenerateSingleChapter(
+                                                ch._id as Id<"courseChapters">,
+                                                mod.title,
+                                                lesson.title
+                                              )}
+                                              disabled={isRegenerating || isExpandingExisting || isReformattingAll}
+                                              title="Regenerate chapter"
+                                            >
+                                              {isRegenerating ? (
+                                                <Loader2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 animate-spin" />
+                                              ) : (
+                                                <RotateCcw className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                                              )}
+                                            </Button>
+                                          </div>
                                         </div>
                                         
                                         {/* Content Preview */}
