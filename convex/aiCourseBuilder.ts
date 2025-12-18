@@ -1481,39 +1481,76 @@ export const processOutlineInBackground = internalAction({
         }
       );
 
-      // Run the full pipeline
-      const result = await (ctx as any).runAction(
-        api.aiCourseBuilder.generateOutline,
-        {
-          queueId: args.queueId,
-          settings: args.settings || DEFAULT_CHAT_SETTINGS,
+      // Run the full pipeline - generateOutline updates the queue status itself
+      // We wrap in try-catch to handle large response issues
+      let success = false;
+      let errorMessage = "";
+      
+      try {
+        const result = await (ctx as any).runAction(
+          api.aiCourseBuilder.generateOutline,
+          {
+            queueId: args.queueId,
+            settings: args.settings || DEFAULT_CHAT_SETTINGS,
+          }
+        ) as { success: boolean; outlineId?: Id<"aiCourseOutlines">; error?: string };
+        
+        success = result.success;
+        errorMessage = result.error || "";
+        
+        if (success) {
+          console.log(`✅ [Background] Outline generation completed: ${result.outlineId}`);
         }
-      ) as { success: boolean; outlineId?: Id<"aiCourseOutlines">; error?: string };
+      } catch (actionError) {
+        // The action might have succeeded but the response was too large
+        // Check the queue item status to see if it actually worked
+        console.log(`⚠️ [Background] Action call error, checking queue status...`);
+        
+        const queueItem = await (ctx as any).runQuery(
+          internal.aiCourseBuilderQueries.getQueueItemInternal,
+          { queueId: args.queueId }
+        ) as { status: string; outlineId?: Id<"aiCourseOutlines">; error?: string } | null;
+        
+        if (queueItem?.status === "outline_ready" && queueItem?.outlineId) {
+          // The action actually succeeded! The error was just in returning the result
+          console.log(`✅ [Background] Outline generation actually succeeded (status check): ${queueItem.outlineId}`);
+          success = true;
+        } else if (queueItem?.status === "failed") {
+          success = false;
+          errorMessage = queueItem.error || "Generation failed";
+        } else {
+          // Unknown state, re-throw the error
+          throw actionError;
+        }
+      }
 
-      if (result.success) {
-        console.log(`✅ [Background] Outline generation completed: ${result.outlineId}`);
-        // Status is already updated by generateOutline
-      } else {
-        console.error(`❌ [Background] Outline generation failed: ${result.error}`);
+      if (!success && errorMessage) {
+        console.error(`❌ [Background] Outline generation failed: ${errorMessage}`);
         await (ctx as any).runMutation(
           internal.aiCourseBuilderQueries.updateQueueStatus,
           {
             queueId: args.queueId,
             status: "failed",
-            error: result.error || "Unknown error during generation",
+            error: errorMessage || "Unknown error during generation",
           }
         );
       }
     } catch (error) {
       console.error(`❌ [Background] Fatal error:`, error);
-      await (ctx as any).runMutation(
-        internal.aiCourseBuilderQueries.updateQueueStatus,
-        {
-          queueId: args.queueId,
-          status: "failed",
-          error: error instanceof Error ? error.message : "Unknown error",
-        }
-      );
+      
+      // Try to update status, but don't fail if this also errors
+      try {
+        await (ctx as any).runMutation(
+          internal.aiCourseBuilderQueries.updateQueueStatus,
+          {
+            queueId: args.queueId,
+            status: "failed",
+            error: error instanceof Error ? error.message : "Unknown error",
+          }
+        );
+      } catch (updateError) {
+        console.error(`❌ [Background] Failed to update status:`, updateError);
+      }
     }
   },
 });
@@ -1541,26 +1578,51 @@ export const processChapterExpansionInBackground = internalAction({
           status: "expanding_content",
           progress: {
             currentStep: "Expanding chapters...",
-            totalSteps: 100, // Will be updated
+            totalSteps: 100,
             completedSteps: 0,
           },
         }
       );
 
-      // Run chapter expansion
-      const result = await (ctx as any).runAction(
-        api.aiCourseBuilder.expandAllChapters,
-        {
-          outlineId: args.outlineId,
-          settings: args.settings,
-          parallelBatchSize: args.parallelBatchSize,
-          // Pass callback info for progress updates
-          queueId: args.queueId,
+      // Run chapter expansion with error recovery
+      let success = false;
+      let expandedCount = 0;
+      let errorMessage = "";
+      
+      try {
+        const result = await (ctx as any).runAction(
+          api.aiCourseBuilder.expandAllChapters,
+          {
+            outlineId: args.outlineId,
+            settings: args.settings,
+            parallelBatchSize: args.parallelBatchSize,
+            queueId: args.queueId,
+          }
+        ) as { success: boolean; expandedCount?: number; error?: string };
+        
+        success = result.success;
+        expandedCount = result.expandedCount || 0;
+        errorMessage = result.error || "";
+      } catch (actionError) {
+        // Check if expansion actually worked despite the error
+        console.log(`⚠️ [Background] Action call error, checking outline status...`);
+        
+        const outline = await (ctx as any).runQuery(
+          internal.aiCourseBuilderQueries.getOutlineInternal,
+          { outlineId: args.outlineId }
+        ) as { expandedChapters?: number; totalChapters?: number } | null;
+        
+        if (outline && outline.expandedChapters && outline.expandedChapters > 0) {
+          success = true;
+          expandedCount = outline.expandedChapters;
+          console.log(`✅ [Background] Expansion actually succeeded: ${expandedCount} chapters`);
+        } else {
+          throw actionError;
         }
-      ) as { success: boolean; expandedCount?: number; error?: string };
+      }
 
-      if (result.success) {
-        console.log(`✅ [Background] Chapter expansion completed: ${result.expandedCount} chapters`);
+      if (success) {
+        console.log(`✅ [Background] Chapter expansion completed: ${expandedCount} chapters`);
         await (ctx as any).runMutation(
           internal.aiCourseBuilderQueries.updateQueueStatus,
           {
@@ -1568,32 +1630,36 @@ export const processChapterExpansionInBackground = internalAction({
             status: "ready_to_create",
             progress: {
               currentStep: "All chapters expanded",
-              totalSteps: result.expandedCount || 0,
-              completedSteps: result.expandedCount || 0,
+              totalSteps: expandedCount,
+              completedSteps: expandedCount,
             },
           }
         );
       } else {
-        console.error(`❌ [Background] Chapter expansion failed: ${result.error}`);
+        console.error(`❌ [Background] Chapter expansion failed: ${errorMessage}`);
         await (ctx as any).runMutation(
           internal.aiCourseBuilderQueries.updateQueueStatus,
           {
             queueId: args.queueId,
             status: "failed",
-            error: result.error || "Unknown error during expansion",
+            error: errorMessage || "Unknown error during expansion",
           }
         );
       }
     } catch (error) {
       console.error(`❌ [Background] Fatal error:`, error);
-      await (ctx as any).runMutation(
-        internal.aiCourseBuilderQueries.updateQueueStatus,
-        {
-          queueId: args.queueId,
-          status: "failed",
-          error: error instanceof Error ? error.message : "Unknown error",
-        }
-      );
+      try {
+        await (ctx as any).runMutation(
+          internal.aiCourseBuilderQueries.updateQueueStatus,
+          {
+            queueId: args.queueId,
+            status: "failed",
+            error: error instanceof Error ? error.message : "Unknown error",
+          }
+        );
+      } catch (updateError) {
+        console.error(`❌ [Background] Failed to update status:`, updateError);
+      }
     }
   },
 });
@@ -1626,19 +1692,47 @@ export const processExistingCourseExpansionInBackground = internalAction({
         }
       );
 
-      // Run expansion
-      const result = await (ctx as any).runAction(
-        api.aiCourseBuilder.expandExistingCourseChapters,
-        {
-          courseId: args.courseId,
-          settings: args.settings,
-          parallelBatchSize: args.parallelBatchSize,
-          queueId: args.queueId, // For progress tracking
+      // Run expansion with error recovery
+      let success = false;
+      let expandedCount = 0;
+      let skippedCount = 0;
+      let errorMessage = "";
+      
+      try {
+        const result = await (ctx as any).runAction(
+          api.aiCourseBuilder.expandExistingCourseChapters,
+          {
+            courseId: args.courseId,
+            settings: args.settings,
+            parallelBatchSize: args.parallelBatchSize,
+            queueId: args.queueId,
+          }
+        ) as { success: boolean; expandedCount?: number; skippedCount?: number; error?: string };
+        
+        success = result.success;
+        expandedCount = result.expandedCount || 0;
+        skippedCount = result.skippedCount || 0;
+        errorMessage = result.error || "";
+      } catch (actionError) {
+        // Check if expansion actually worked
+        console.log(`⚠️ [Background] Action call error, checking queue status...`);
+        
+        const queueItem = await (ctx as any).runQuery(
+          internal.aiCourseBuilderQueries.getQueueItemInternal,
+          { queueId: args.queueId }
+        ) as { status: string; progress?: { completedSteps?: number } } | null;
+        
+        if (queueItem?.progress?.completedSteps && queueItem.progress.completedSteps > 0) {
+          success = true;
+          expandedCount = queueItem.progress.completedSteps;
+          console.log(`✅ [Background] Expansion actually succeeded: ${expandedCount} chapters`);
+        } else {
+          throw actionError;
         }
-      ) as { success: boolean; expandedCount?: number; skippedCount?: number; error?: string };
+      }
 
-      if (result.success) {
-        console.log(`✅ [Background] Existing course expansion completed: ${result.expandedCount} expanded, ${result.skippedCount} skipped`);
+      if (success) {
+        console.log(`✅ [Background] Existing course expansion completed: ${expandedCount} expanded, ${skippedCount} skipped`);
         await (ctx as any).runMutation(
           internal.aiCourseBuilderQueries.updateQueueStatus,
           {
@@ -1646,8 +1740,8 @@ export const processExistingCourseExpansionInBackground = internalAction({
             status: "completed",
             progress: {
               currentStep: "Expansion complete",
-              totalSteps: (result.expandedCount || 0) + (result.skippedCount || 0),
-              completedSteps: (result.expandedCount || 0) + (result.skippedCount || 0),
+              totalSteps: expandedCount + skippedCount,
+              completedSteps: expandedCount + skippedCount,
             },
           }
         );
@@ -1657,20 +1751,24 @@ export const processExistingCourseExpansionInBackground = internalAction({
           {
             queueId: args.queueId,
             status: "failed",
-            error: result.error || "Unknown error",
+            error: errorMessage || "Unknown error",
           }
         );
       }
     } catch (error) {
       console.error(`❌ [Background] Fatal error:`, error);
-      await (ctx as any).runMutation(
-        internal.aiCourseBuilderQueries.updateQueueStatus,
-        {
-          queueId: args.queueId,
-          status: "failed",
-          error: error instanceof Error ? error.message : "Unknown error",
-        }
-      );
+      try {
+        await (ctx as any).runMutation(
+          internal.aiCourseBuilderQueries.updateQueueStatus,
+          {
+            queueId: args.queueId,
+            status: "failed",
+            error: error instanceof Error ? error.message : "Unknown error",
+          }
+        );
+      } catch (updateError) {
+        console.error(`❌ [Background] Failed to update status:`, updateError);
+      }
     }
   },
 });
