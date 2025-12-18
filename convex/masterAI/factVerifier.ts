@@ -70,6 +70,7 @@ export const verifyFacts = internalAction({
     })),
     webResearch: v.optional(v.array(v.object({
       facetName: v.string(),
+      searchQuery: v.string(),
       results: v.array(v.object({
         title: v.string(),
         url: v.string(),

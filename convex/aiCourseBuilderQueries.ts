@@ -843,7 +843,7 @@ export const startBackgroundOutlineGeneration = mutation({
       });
 
       // Schedule the background action (runs immediately, 0ms delay)
-      // @ts-expect-error - Deep type inference issue with scheduler
+      // @ts-ignore - Deep type inference issue with scheduler
       await ctx.scheduler.runAfter(0, internal.aiCourseBuilder.processOutlineInBackground, {
         queueId,
         settings: args.settings,

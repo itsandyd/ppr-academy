@@ -85,12 +85,24 @@ export interface LLMResponse {
  */
 export async function callLLM(options: LLMOptions): Promise<LLMResponse> {
   const modelConfig = AVAILABLE_MODELS[options.model];
+  const provider = modelConfig.provider === "openai" ? "OpenAI" : "OpenRouter";
+  const apiModel = modelConfig.apiId;
+  
+  console.log(`🤖 LLM Call: ${options.model} (${apiModel}) via ${provider}`);
+  
+  const startTime = Date.now();
+  let response: LLMResponse;
   
   if (modelConfig.provider === "openai") {
-    return callOpenAI(options);
+    response = await callOpenAI(options);
   } else {
-    return callOpenRouter(options);
+    response = await callOpenRouter(options);
   }
+  
+  const duration = Date.now() - startTime;
+  console.log(`   ✓ ${options.model}: ${response.tokensUsed?.total || '?'} tokens in ${duration}ms`);
+  
+  return response;
 }
 
 // ============================================================================

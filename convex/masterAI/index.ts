@@ -74,7 +74,17 @@ export const askMasterAI = action({
     const settings: ChatSettings = args.settings || DEFAULT_CHAT_SETTINGS;
     const startTime = Date.now();
 
+    // Import MODEL_PRESETS dynamically to avoid circular deps
+    const { MODEL_PRESETS, AVAILABLE_MODELS } = await import("./types");
+    const presetConfig = MODEL_PRESETS[settings.preset];
+    
     console.log(`🚀 Master AI Pipeline starting with preset: ${settings.preset}`);
+    console.log(`📊 Models for this request:`);
+    console.log(`   • Planner: ${presetConfig.planner} (${AVAILABLE_MODELS[presetConfig.planner]?.apiId || presetConfig.planner})`);
+    console.log(`   • Summarizer: ${presetConfig.summarizer} (${AVAILABLE_MODELS[presetConfig.summarizer]?.apiId || presetConfig.summarizer})`);
+    console.log(`   • Idea Generator: ${presetConfig.ideaGenerator} (${AVAILABLE_MODELS[presetConfig.ideaGenerator]?.apiId || presetConfig.ideaGenerator})`);
+    console.log(`   • Critic: ${presetConfig.critic} (${AVAILABLE_MODELS[presetConfig.critic]?.apiId || presetConfig.critic})`);
+    console.log(`   • Final Writer: ${presetConfig.finalWriter} (${AVAILABLE_MODELS[presetConfig.finalWriter]?.apiId || presetConfig.finalWriter})`);
 
     // ========================================================================
     // GOAL EXTRACTION (prevents context drift in long conversations)
@@ -195,6 +205,7 @@ export const askMasterAI = action({
     // Process web research results
     let webResearchResults: Array<{
       facetName: string;
+      searchQuery: string;
       results: Array<{
         title: string;
         url: string;
@@ -301,6 +312,7 @@ export const askMasterAI = action({
               })),
               webResearch: webResearchResults?.map(wr => ({
                 facetName: wr.facetName,
+                searchQuery: wr.searchQuery,
                 results: wr.results.map(r => ({
                   title: r.title,
                   url: r.url,
@@ -401,6 +413,7 @@ ${currentCriticOutput.issues.map(i => `- Fix ${i.type}: ${i.description}`).join(
       }))
     );
 
+    // @ts-ignore - Type instantiation is excessively deep
     const finalResponse: MasterAIResponse = await ctx.runAction(
       internal.masterAI.finalWriter.generateFinalResponse,
       {
@@ -541,6 +554,7 @@ export const quickAsk = action({
       }))
     );
 
+    // @ts-ignore - Type instantiation is excessively deep
     const response = await ctx.runAction(
       internal.masterAI.finalWriter.generateFinalResponse,
       {
