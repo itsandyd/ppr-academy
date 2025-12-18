@@ -1,7 +1,7 @@
 "use node";
 
 import { v } from "convex/values";
-import { action } from "./_generated/server";
+import { action, internalAction } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import OpenAI from "openai";
 import { marked } from "marked";
@@ -1446,6 +1446,231 @@ export const reformatCourseChapters = action({
         failedCount: 0, 
         error: error instanceof Error ? error.message : "Unknown error" 
       };
+    }
+  },
+});
+
+// =============================================================================
+// BACKGROUND JOB SYSTEM - Runs in background without browser connection
+// =============================================================================
+
+/**
+ * Internal action to process outline generation in the background
+ * This is called by the scheduler and runs completely server-side
+ */
+export const processOutlineInBackground = internalAction({
+  args: {
+    queueId: v.id("aiCourseQueue"),
+    settings: v.optional(chatSettingsValidator),
+  },
+  handler: async (ctx, args) => {
+    console.log(`\n🚀 [Background] Starting outline generation for queue ${args.queueId}`);
+    
+    try {
+      // Update status to generating
+      await (ctx as any).runMutation(
+        internal.aiCourseBuilderQueries.updateQueueStatus,
+        {
+          queueId: args.queueId,
+          status: "generating_outline",
+          progress: {
+            currentStep: "Starting pipeline...",
+            totalSteps: 8,
+            completedSteps: 0,
+          },
+        }
+      );
+
+      // Run the full pipeline
+      const result = await (ctx as any).runAction(
+        api.aiCourseBuilder.generateOutline,
+        {
+          queueId: args.queueId,
+          settings: args.settings || DEFAULT_CHAT_SETTINGS,
+        }
+      ) as { success: boolean; outlineId?: Id<"aiCourseOutlines">; error?: string };
+
+      if (result.success) {
+        console.log(`✅ [Background] Outline generation completed: ${result.outlineId}`);
+        // Status is already updated by generateOutline
+      } else {
+        console.error(`❌ [Background] Outline generation failed: ${result.error}`);
+        await (ctx as any).runMutation(
+          internal.aiCourseBuilderQueries.updateQueueStatus,
+          {
+            queueId: args.queueId,
+            status: "failed",
+            error: result.error || "Unknown error during generation",
+          }
+        );
+      }
+    } catch (error) {
+      console.error(`❌ [Background] Fatal error:`, error);
+      await (ctx as any).runMutation(
+        internal.aiCourseBuilderQueries.updateQueueStatus,
+        {
+          queueId: args.queueId,
+          status: "failed",
+          error: error instanceof Error ? error.message : "Unknown error",
+        }
+      );
+    }
+  },
+});
+
+/**
+ * Internal action to expand all chapters in background
+ * This runs completely server-side without browser connection
+ */
+export const processChapterExpansionInBackground = internalAction({
+  args: {
+    queueId: v.id("aiCourseQueue"),
+    outlineId: v.id("aiCourseOutlines"),
+    settings: v.optional(chatSettingsValidator),
+    parallelBatchSize: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    console.log(`\n🚀 [Background] Starting chapter expansion for queue ${args.queueId}`);
+    
+    try {
+      // Update status
+      await (ctx as any).runMutation(
+        internal.aiCourseBuilderQueries.updateQueueStatus,
+        {
+          queueId: args.queueId,
+          status: "expanding_content",
+          progress: {
+            currentStep: "Expanding chapters...",
+            totalSteps: 100, // Will be updated
+            completedSteps: 0,
+          },
+        }
+      );
+
+      // Run chapter expansion
+      const result = await (ctx as any).runAction(
+        api.aiCourseBuilder.expandAllChapters,
+        {
+          outlineId: args.outlineId,
+          settings: args.settings,
+          parallelBatchSize: args.parallelBatchSize,
+          // Pass callback info for progress updates
+          queueId: args.queueId,
+        }
+      ) as { success: boolean; expandedCount?: number; error?: string };
+
+      if (result.success) {
+        console.log(`✅ [Background] Chapter expansion completed: ${result.expandedCount} chapters`);
+        await (ctx as any).runMutation(
+          internal.aiCourseBuilderQueries.updateQueueStatus,
+          {
+            queueId: args.queueId,
+            status: "ready_to_create",
+            progress: {
+              currentStep: "All chapters expanded",
+              totalSteps: result.expandedCount || 0,
+              completedSteps: result.expandedCount || 0,
+            },
+          }
+        );
+      } else {
+        console.error(`❌ [Background] Chapter expansion failed: ${result.error}`);
+        await (ctx as any).runMutation(
+          internal.aiCourseBuilderQueries.updateQueueStatus,
+          {
+            queueId: args.queueId,
+            status: "failed",
+            error: result.error || "Unknown error during expansion",
+          }
+        );
+      }
+    } catch (error) {
+      console.error(`❌ [Background] Fatal error:`, error);
+      await (ctx as any).runMutation(
+        internal.aiCourseBuilderQueries.updateQueueStatus,
+        {
+          queueId: args.queueId,
+          status: "failed",
+          error: error instanceof Error ? error.message : "Unknown error",
+        }
+      );
+    }
+  },
+});
+
+/**
+ * Internal action to process existing course chapter expansion in background
+ */
+export const processExistingCourseExpansionInBackground = internalAction({
+  args: {
+    queueId: v.id("aiCourseQueue"),
+    courseId: v.id("courses"),
+    settings: v.optional(chatSettingsValidator),
+    parallelBatchSize: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    console.log(`\n🚀 [Background] Starting existing course expansion for queue ${args.queueId}`);
+    
+    try {
+      // Update status
+      await (ctx as any).runMutation(
+        internal.aiCourseBuilderQueries.updateQueueStatus,
+        {
+          queueId: args.queueId,
+          status: "expanding_content",
+          progress: {
+            currentStep: "Expanding existing course chapters...",
+            totalSteps: 100,
+            completedSteps: 0,
+          },
+        }
+      );
+
+      // Run expansion
+      const result = await (ctx as any).runAction(
+        api.aiCourseBuilder.expandExistingCourseChapters,
+        {
+          courseId: args.courseId,
+          settings: args.settings,
+          parallelBatchSize: args.parallelBatchSize,
+          queueId: args.queueId, // For progress tracking
+        }
+      ) as { success: boolean; expandedCount?: number; skippedCount?: number; error?: string };
+
+      if (result.success) {
+        console.log(`✅ [Background] Existing course expansion completed: ${result.expandedCount} expanded, ${result.skippedCount} skipped`);
+        await (ctx as any).runMutation(
+          internal.aiCourseBuilderQueries.updateQueueStatus,
+          {
+            queueId: args.queueId,
+            status: "completed",
+            progress: {
+              currentStep: "Expansion complete",
+              totalSteps: (result.expandedCount || 0) + (result.skippedCount || 0),
+              completedSteps: (result.expandedCount || 0) + (result.skippedCount || 0),
+            },
+          }
+        );
+      } else {
+        await (ctx as any).runMutation(
+          internal.aiCourseBuilderQueries.updateQueueStatus,
+          {
+            queueId: args.queueId,
+            status: "failed",
+            error: result.error || "Unknown error",
+          }
+        );
+      }
+    } catch (error) {
+      console.error(`❌ [Background] Fatal error:`, error);
+      await (ctx as any).runMutation(
+        internal.aiCourseBuilderQueries.updateQueueStatus,
+        {
+          queueId: args.queueId,
+          status: "failed",
+          error: error instanceof Error ? error.message : "Unknown error",
+        }
+      );
     }
   },
 });

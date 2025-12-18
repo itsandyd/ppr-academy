@@ -6,6 +6,8 @@ import {
   internalMutation,
 } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { internal } from "./_generated/api";
+import { chatSettingsValidator } from "./masterAI/types";
 
 // =============================================================================
 // HELPER FUNCTIONS
@@ -790,6 +792,251 @@ export const repairCourseFromOutline = mutation({
         error: error instanceof Error ? error.message : "Unknown error",
       };
     }
+  },
+});
+
+// =============================================================================
+// BACKGROUND JOB STARTERS - Mutations that schedule background work
+// =============================================================================
+
+/**
+ * Start outline generation in the background
+ * Creates a queue item and schedules the background action
+ * Returns immediately - UI subscribes to queue status for updates
+ */
+export const startBackgroundOutlineGeneration = mutation({
+  args: {
+    userId: v.string(),
+    storeId: v.string(),
+    prompt: v.string(),
+    skillLevel: v.optional(v.union(
+      v.literal("beginner"),
+      v.literal("intermediate"),
+      v.literal("advanced")
+    )),
+    targetModules: v.optional(v.number()),
+    targetLessonsPerModule: v.optional(v.number()),
+    settings: v.optional(chatSettingsValidator),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    queueId: v.optional(v.id("aiCourseQueue")),
+    error: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    try {
+      // Extract topic from prompt
+      const topic = extractTopicFromPrompt(args.prompt);
+      
+      // Create queue item
+      const queueId = await ctx.db.insert("aiCourseQueue", {
+        userId: args.userId,
+        storeId: args.storeId,
+        prompt: args.prompt,
+        topic,
+        skillLevel: args.skillLevel || "intermediate",
+        targetModules: args.targetModules || 4,
+        targetLessonsPerModule: args.targetLessonsPerModule || 3,
+        status: "queued",
+        createdAt: Date.now(),
+        priority: 10, // High priority for user-initiated
+      });
+
+      // Schedule the background action (runs immediately, 0ms delay)
+      // @ts-expect-error - Deep type inference issue with scheduler
+      await ctx.scheduler.runAfter(0, internal.aiCourseBuilder.processOutlineInBackground, {
+        queueId,
+        settings: args.settings,
+      });
+
+      console.log(`🚀 Started background outline generation: ${queueId}`);
+      
+      return { success: true, queueId };
+    } catch (error) {
+      console.error("Error starting background generation:", error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      };
+    }
+  },
+});
+
+/**
+ * Start chapter expansion in the background for an existing outline
+ * Returns immediately - UI subscribes to queue status for updates
+ */
+export const startBackgroundChapterExpansion = mutation({
+  args: {
+    queueId: v.id("aiCourseQueue"),
+    outlineId: v.id("aiCourseOutlines"),
+    settings: v.optional(chatSettingsValidator),
+    parallelBatchSize: v.optional(v.number()),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    error: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    try {
+      // Update queue status
+      await ctx.db.patch(args.queueId, {
+        status: "expanding_content",
+        progress: {
+          currentStep: "Queued for expansion...",
+          totalSteps: 100,
+          completedSteps: 0,
+        },
+      });
+
+      // Schedule the background action
+      await ctx.scheduler.runAfter(0, internal.aiCourseBuilder.processChapterExpansionInBackground, {
+        queueId: args.queueId,
+        outlineId: args.outlineId,
+        settings: args.settings,
+        parallelBatchSize: args.parallelBatchSize,
+      });
+
+      console.log(`🚀 Started background chapter expansion: ${args.queueId}`);
+      
+      return { success: true };
+    } catch (error) {
+      console.error("Error starting background expansion:", error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      };
+    }
+  },
+});
+
+/**
+ * Start expansion for an existing course (no outline needed)
+ * Creates a queue item and schedules the background action
+ */
+export const startBackgroundExistingCourseExpansion = mutation({
+  args: {
+    userId: v.string(),
+    storeId: v.string(),
+    courseId: v.id("courses"),
+    settings: v.optional(chatSettingsValidator),
+    parallelBatchSize: v.optional(v.number()),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    queueId: v.optional(v.id("aiCourseQueue")),
+    error: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    try {
+      // Get course info
+      const course = await ctx.db.get(args.courseId);
+      if (!course) {
+        return { success: false, error: "Course not found" };
+      }
+
+      // Create queue item for tracking
+      const queueId = await ctx.db.insert("aiCourseQueue", {
+        userId: args.userId,
+        storeId: args.storeId,
+        prompt: `Expand chapters for: ${course.title}`,
+        topic: course.title,
+        skillLevel: (course.skillLevel as "beginner" | "intermediate" | "advanced") || "intermediate",
+        targetModules: 0, // Not creating new modules
+        targetLessonsPerModule: 0,
+        status: "expanding_content",
+        courseId: args.courseId, // Link to existing course
+        createdAt: Date.now(),
+        priority: 10,
+        progress: {
+          currentStep: "Queued for expansion...",
+          totalSteps: 100,
+          completedSteps: 0,
+        },
+      });
+
+      // Schedule the background action
+      await ctx.scheduler.runAfter(0, internal.aiCourseBuilder.processExistingCourseExpansionInBackground, {
+        queueId,
+        courseId: args.courseId,
+        settings: args.settings,
+        parallelBatchSize: args.parallelBatchSize,
+      });
+
+      console.log(`🚀 Started background existing course expansion: ${queueId}`);
+      
+      return { success: true, queueId };
+    } catch (error) {
+      console.error("Error starting background expansion:", error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : "Unknown error" 
+      };
+    }
+  },
+});
+
+/**
+ * Subscribe to a queue item's status (real-time updates)
+ */
+export const subscribeToQueueItem = query({
+  args: {
+    queueId: v.id("aiCourseQueue"),
+  },
+  returns: v.any(),
+  handler: async (ctx, args) => {
+    const item = await ctx.db.get(args.queueId);
+    if (!item) return null;
+
+    // Get associated outline if available
+    let outline = null;
+    if (item.outlineId) {
+      outline = await ctx.db.get(item.outlineId);
+    }
+
+    // Get associated course if available
+    let course = null;
+    if (item.courseId) {
+      course = await ctx.db.get(item.courseId);
+    }
+
+    return {
+      ...item,
+      outline: outline ? {
+        _id: outline._id,
+        title: outline.title,
+        description: outline.description,
+        totalChapters: outline.totalChapters,
+        expandedChapters: outline.expandedChapters,
+        outline: outline.outline,
+        chapterStatus: outline.chapterStatus,
+      } : null,
+      course: course ? {
+        _id: course._id,
+        title: course.title,
+        slug: course.slug,
+      } : null,
+    };
+  },
+});
+
+/**
+ * Get all active (running) queue items for a user
+ */
+export const getActiveQueueItems = query({
+  args: {
+    userId: v.string(),
+  },
+  returns: v.array(v.any()),
+  handler: async (ctx, args) => {
+    const activeStatuses = ["queued", "generating_outline", "expanding_content", "creating_course"];
+    
+    const items = await ctx.db
+      .query("aiCourseQueue")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    return items.filter(item => activeStatuses.includes(item.status));
   },
 });
 

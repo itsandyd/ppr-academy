@@ -358,7 +358,8 @@ export default function AdminCourseBuilderPage() {
   }, []);
 
   // =============================================================================
-  // FULL AUTO - Generate complete course using the full AI pipeline (streaming)
+  // FULL AUTO - Generate complete course using BACKGROUND PROCESSING
+  // ✅ Runs completely server-side - you can navigate away!
   // Uses: Planner → Retriever → Web Research → Summarizer → Idea Generator → Course Writer
   // =============================================================================
   const handleFullAutoGenerate = async () => {
@@ -377,6 +378,7 @@ export default function AdminCourseBuilderPage() {
     setCreatedCourseId(null);
     setCreatedCourseSlug(null);
     setCurrentOutlineId(null);
+    setCurrentQueueId(null);
     setPipelineStatus(null);
     setPipelineMetadata(null);
 
@@ -394,112 +396,16 @@ export default function AdminCourseBuilderPage() {
     ]);
 
     try {
-      // Step 0: Add to queue first
-      updateStep("planner", { status: "running", detail: "Initializing pipeline..." });
+      // Start background generation - returns immediately!
+      updateStep("planner", { status: "running", detail: "Starting background generation..." });
       
-      const queueId = await addToQueue({
+      const result = await startBackgroundOutline({
         userId: user!.id,
         storeId: selectedStoreId,
         prompt: prompt,
         skillLevel: settings.skillLevel || "intermediate",
         targetModules: settings.targetModules || 4,
         targetLessonsPerModule: settings.targetLessonsPerModule || 3,
-      });
-      
-      setCurrentQueueId(queueId);
-      console.log("✅ Added to queue:", queueId);
-
-      // Use streaming endpoint for full pipeline
-      const response = await fetch("/api/ai/course-builder", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prompt,
-          settings: {
-            preset: settings.preset,
-            maxFacets: settings.maxFacets,
-            chunksPerFacet: settings.chunksPerFacet,
-            similarityThreshold: settings.similarityThreshold,
-            enableCritic: settings.enableCritic,
-            enableCreativeMode: settings.enableCreativeMode,
-            enableWebResearch: settings.enableWebResearch,
-            enableFactVerification: settings.enableFactVerification,
-            autoSaveWebResearch: settings.autoSaveWebResearch,
-            webSearchMaxResults: settings.webSearchMaxResults,
-            responseStyle: settings.responseStyle,
-          },
-          storeId: selectedStoreId,
-          queueId,
-          mode: "outline",
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("API request failed");
-      }
-
-      // Handle SSE stream
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error("No response body");
-
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let outlineResult: any = null;
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n\n");
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            try {
-              const event = JSON.parse(line.replace("data: ", ""));
-              handlePipelineStreamEvent(event);
-              
-              if (event.type === "complete") {
-                outlineResult = event.response;
-              }
-            } catch {
-              // Skip malformed JSON
-            }
-          }
-        }
-      }
-
-      if (!outlineResult?.success || !outlineResult?.outlineId) {
-        throw new Error(outlineResult?.error || "Failed to generate outline with pipeline");
-      }
-      
-      setCurrentOutlineId(outlineResult.outlineId);
-      setPipelineMetadata(outlineResult.pipelineMetadata || null);
-      
-      // Update the outline display from the result
-      if (outlineResult.outline) {
-        const displayOutline = convertOutlineForDisplay({ outline: outlineResult.outline });
-        if (displayOutline) {
-          setGeneratedOutline(displayOutline);
-        }
-      }
-      
-      updateStep("courseWriter", { 
-        status: "completed", 
-        detail: `Course structure created (${outlineResult.pipelineMetadata?.totalChunksProcessed || 0} sources used)` 
-      });
-
-      // Step 2: Expand all chapters BY LESSON using FULL masterAI pipeline
-      updateStep("expand", { 
-        status: "running", 
-        detail: `Expanding chapters using full AI pipeline (${settings.preset} preset)...` 
-      });
-      
-      const expandResult = await expandAllChaptersAction({ 
-        outlineId: outlineResult.outlineId, 
-        queueId,
-        parallelBatchSize: settings.parallelBatchSize,
         settings: {
           preset: settings.preset,
           maxFacets: settings.maxFacets,
@@ -515,47 +421,24 @@ export default function AdminCourseBuilderPage() {
         },
       });
       
-      updateStep("expand", { 
-        status: expandResult.success ? "completed" : "failed", 
-        detail: `${expandResult.expandedCount} chapters expanded${expandResult.failedCount > 0 ? `, ${expandResult.failedCount} failed` : ""}` 
+      if (!result.success || !result.queueId) {
+        throw new Error(result.error || "Failed to start background generation");
+      }
+      
+      // Set queue ID to enable real-time subscription
+      setCurrentQueueId(result.queueId);
+      console.log("🚀 Background generation started:", result.queueId);
+      
+      toast.success("Background generation started!", {
+        description: "You can navigate away - generation will continue in the background.",
+        duration: 5000,
       });
       
-      if (!expandResult.success && expandResult.failedCount > expandResult.expandedCount) {
-        throw new Error(`Too many chapters failed to expand: ${expandResult.failedCount}/${expandResult.expandedCount + expandResult.failedCount}`);
-      }
-
-      // Step 3: Create the course
-      updateStep("create", { status: "running", detail: "Creating course in database..." });
-      
-      const createResult = await createCourseFromOutlineAction({
-        outlineId: outlineResult.outlineId,
-        queueId,
-        price: 0,
-        publish: false,
-      });
-      
-      if (createResult.success && createResult.courseId) {
-        setCreatedCourseId(createResult.courseId);
-        setCreatedCourseSlug(createResult.slug || null);
-        updateStep("create", { 
-          status: "completed", 
-          detail: "Course created successfully!" 
-        });
-        
-        toast.success("🎉 Course created successfully!", {
-          description: `Used ${outlineResult.pipelineMetadata?.totalChunksProcessed || 0} knowledge sources${outlineResult.pipelineMetadata?.webResearchResults ? ` and ${outlineResult.pipelineMetadata.webResearchResults} web results` : ""}`,
-          action: createResult.courseId ? {
-            label: "Edit Course",
-            onClick: () => window.open(`/store/${selectedStoreId}/courses/${createResult.courseId}`, "_blank"),
-          } : undefined,
-          duration: 10000,
-        });
-      } else {
-        throw new Error(createResult.error || "Failed to create course");
-      }
+      // The useEffect watching queueItemStatus will handle all progress updates!
+      // No need for SSE streaming or keeping the browser tab open
 
     } catch (error) {
-      console.error("Full auto generation error:", error);
+      console.error("Failed to start background generation:", error);
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       
       setGenerationSteps(prev => 
@@ -566,12 +449,11 @@ export default function AdminCourseBuilderPage() {
         )
       );
       
-      toast.error(`Generation failed: ${errorMessage}`);
-    } finally {
       setIsGenerating(false);
       setIsFullAuto(false);
-      setPipelineStatus(null);
+      toast.error(`Failed to start generation: ${errorMessage}`);
     }
+    // Note: We don't setIsGenerating(false) here - the subscription effect handles that
   };
 
   // Handle streaming events from the pipeline
@@ -669,8 +551,25 @@ export default function AdminCourseBuilderPage() {
     }
   };
 
-  // Track queue item for step-by-step mode
+  // Track queue item for step-by-step mode and background processing
   const [currentQueueId, setCurrentQueueId] = useState<Id<"aiCourseQueue"> | null>(null);
+  
+  // Background job mutations
+  const startBackgroundOutline = useMutation(api.aiCourseBuilderQueries.startBackgroundOutlineGeneration);
+  const startBackgroundExpansion = useMutation(api.aiCourseBuilderQueries.startBackgroundChapterExpansion);
+  const startBackgroundExistingExpansion = useMutation(api.aiCourseBuilderQueries.startBackgroundExistingCourseExpansion);
+  
+  // Real-time subscription to queue item status (enables background processing!)
+  const queueItemStatus = useQuery(
+    api.aiCourseBuilderQueries.subscribeToQueueItem,
+    currentQueueId ? { queueId: currentQueueId } : "skip"
+  );
+  
+  // Get active background jobs for this user
+  const activeJobs = useQuery(
+    api.aiCourseBuilderQueries.getActiveQueueItems,
+    user?.id ? { userId: user.id } : "skip"
+  );
 
   // Convert backend outline to frontend format for display
   const convertOutlineForDisplay = useCallback((backendOutline: any): CourseOutline | null => {
@@ -712,6 +611,135 @@ export default function AdminCourseBuilderPage() {
       }
     }
   }, [getOutline, convertOutlineForDisplay]);
+
+  // React to background job status changes (enables background processing!)
+  useEffect(() => {
+    if (!queueItemStatus) return;
+    
+    const status = queueItemStatus.status;
+    const progress = queueItemStatus.progress;
+    
+    // Update generation steps based on queue status
+    switch (status) {
+      case "queued":
+        updateStep("planner", { status: "pending", detail: "Waiting to start..." });
+        break;
+        
+      case "generating_outline":
+        setIsGenerating(true);
+        updateStep("planner", { status: "running", detail: progress?.currentStep || "Analyzing topic..." });
+        // Update pipeline status display
+        setPipelineStatus({
+          stage: "outline",
+          model: "Full Pipeline",
+          isActive: true,
+          description: progress?.currentStep || "Generating outline...",
+        });
+        break;
+        
+      case "outline_ready":
+        updateStep("planner", { status: "completed" });
+        updateStep("retriever", { status: "completed" });
+        if (settings.enableWebResearch) updateStep("webResearch", { status: "completed" });
+        updateStep("summarizer", { status: "completed" });
+        if (settings.enableCreativeMode) updateStep("ideaGenerator", { status: "completed" });
+        if (settings.enableCritic) updateStep("critic", { status: "completed" });
+        updateStep("courseWriter", { status: "completed" });
+        
+        // Update outline display if available
+        if (queueItemStatus.outline) {
+          setCurrentOutlineId(queueItemStatus.outlineId);
+          const converted = convertOutlineForDisplay({ outline: queueItemStatus.outline.outline });
+          if (converted) {
+            setGeneratedOutline(converted);
+          }
+        }
+        
+        // Stop generating indicator for outline phase (will restart for expansion if auto)
+        if (!isFullAuto) {
+          setIsGenerating(false);
+          setPipelineStatus(null);
+          toast.success("Course outline generated!", {
+            description: "You can now review and expand the chapters.",
+          });
+        }
+        break;
+        
+      case "expanding_content":
+        updateStep("expand", { 
+          status: "running", 
+          detail: progress?.currentChapter 
+            ? `Expanding: ${progress.currentChapter} (${progress.completedSteps}/${progress.totalSteps})`
+            : `Expanding chapters... (${progress?.completedSteps || 0}/${progress?.totalSteps || "?"})`,
+        });
+        setPipelineStatus({
+          stage: "expansion",
+          model: "Full Pipeline",
+          isActive: true,
+          description: progress?.currentStep || "Expanding chapters...",
+        });
+        break;
+        
+      case "ready_to_create":
+        updateStep("expand", { status: "completed", detail: "All chapters expanded" });
+        break;
+        
+      case "creating_course":
+        updateStep("create", { status: "running", detail: "Creating course in database..." });
+        break;
+        
+      case "completed":
+        setIsGenerating(false);
+        setIsFullAuto(false);
+        setIsExpandingExisting(false);
+        setPipelineStatus(null);
+        
+        // Mark all steps as completed
+        setGenerationSteps(prev => prev.map(step => ({ ...step, status: "completed" as const })));
+        setExpandExistingSteps(prev => prev.map(step => ({ ...step, status: "completed" as const })));
+        
+        // Update with created course info
+        if (queueItemStatus.course) {
+          setCreatedCourseId(queueItemStatus.course._id);
+          setCreatedCourseSlug(queueItemStatus.course.slug || null);
+          toast.success("🎉 Course created successfully!", {
+            description: "Your course is ready for review.",
+            action: {
+              label: "Edit Course",
+              onClick: () => window.open(`/store/${selectedStoreId}/courses/${queueItemStatus.course._id}`, "_blank"),
+            },
+          });
+        } else if (queueItemStatus.courseId && activeTab === "existing") {
+          // This was an expansion of an existing course
+          toast.success("🎉 Chapter expansion completed!", {
+            description: "All chapters have been expanded.",
+          });
+          // Reload the course structure to show updated content
+          handleLoadCourseStructure();
+        }
+        break;
+        
+      case "failed":
+        setIsGenerating(false);
+        setIsFullAuto(false);
+        setIsExpandingExisting(false);
+        setPipelineStatus(null);
+        
+        // Mark current running step as failed
+        setGenerationSteps(prev => prev.map(step => 
+          step.status === "running" ? { ...step, status: "failed" as const, detail: queueItemStatus.error } : step
+        ));
+        setExpandExistingSteps(prev => prev.map(step => 
+          step.status === "running" ? { ...step, status: "failed" as const, detail: queueItemStatus.error } : step
+        ));
+        
+        toast.error("Generation failed", {
+          description: queueItemStatus.error || "An unknown error occurred",
+        });
+        break;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queueItemStatus, updateStep, convertOutlineForDisplay, isFullAuto, settings, selectedStoreId, activeTab]);
 
   // =============================================================================
   // GENERATE COURSE (Outline Only - for manual review)
@@ -1055,7 +1083,8 @@ export default function AdminCourseBuilderPage() {
     }
   };
   
-  // Expand all chapters in an existing course
+  // Expand all chapters in an existing course (BACKGROUND PROCESSING)
+  // ✅ Runs completely server-side - you can navigate away!
   const handleExpandExistingCourse = async (onlyEmpty: boolean = true) => {
     if (!existingCourseStructure) {
       toast.error("Please load a course structure first");
@@ -1069,21 +1098,17 @@ export default function AdminCourseBuilderPage() {
       : existingCourseStructure.totalChapters;
     
     setExpandExistingSteps([
-      { id: "prepare", label: "📋 Preparing expansion", status: "running" },
+      { id: "prepare", label: "📋 Starting background job", status: "running" },
       { id: "expand", label: `📖 Expanding ${chaptersToExpand} chapters`, status: "pending" },
       { id: "complete", label: "✅ Finishing up", status: "pending" },
     ]);
     
     try {
-      setExpandExistingSteps(prev => prev.map(s => 
-        s.id === "prepare" ? { ...s, status: "completed" as const } :
-        s.id === "expand" ? { ...s, status: "running" as const, detail: `Using ${settings.preset} preset...` } : s
-      ));
-      
-      const result = await expandExistingCourseAction({
+      // Start background expansion - returns immediately!
+      const result = await startBackgroundExistingExpansion({
+        userId: user!.id,
+        storeId: selectedStoreId,
         courseId: existingCourseStructure.course._id,
-        onlyEmpty,
-        parallelBatchSize: settings.parallelBatchSize,
         settings: {
           preset: settings.preset,
           maxFacets: settings.maxFacets,
@@ -1097,36 +1122,38 @@ export default function AdminCourseBuilderPage() {
           webSearchMaxResults: settings.webSearchMaxResults,
           responseStyle: settings.responseStyle,
         },
+        parallelBatchSize: settings.parallelBatchSize,
       });
       
+      if (!result.success || !result.queueId) {
+        throw new Error(result.error || "Failed to start background expansion");
+      }
+      
+      // Set queue ID to enable real-time subscription
+      setCurrentQueueId(result.queueId);
+      
       setExpandExistingSteps(prev => prev.map(s => 
-        s.id === "expand" ? { 
-          ...s, 
-          status: result.success ? "completed" as const : "failed" as const,
-          detail: `${result.expandedCount} expanded, ${result.skippedCount} skipped, ${result.failedCount} failed`
-        } :
-        s.id === "complete" ? { ...s, status: result.success ? "completed" as const : "failed" as const } : s
+        s.id === "prepare" ? { ...s, status: "completed" as const } :
+        s.id === "expand" ? { ...s, status: "running" as const, detail: "Running in background..." } : s
       ));
       
-      if (result.success) {
-        toast.success(`Expanded ${result.expandedCount} chapters!`, {
-          description: result.skippedCount > 0 ? `${result.skippedCount} already had content` : undefined,
-        });
-        // Reload structure to show updated content
-        await handleLoadCourseStructure();
-      } else {
-        throw new Error(result.error || `${result.failedCount} chapters failed`);
-      }
+      toast.success("Background expansion started!", {
+        description: "You can navigate away - expansion will continue in the background.",
+        duration: 5000,
+      });
+      
+      // The useEffect watching queueItemStatus will handle all progress updates!
+      
     } catch (error) {
-      console.error("Expansion error:", error);
-      toast.error(`Expansion failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+      console.error("Failed to start background expansion:", error);
+      toast.error(`Failed to start expansion: ${error instanceof Error ? error.message : "Unknown error"}`);
       
       setExpandExistingSteps(prev => prev.map(s => 
         s.status === "running" ? { ...s, status: "failed" as const } : s
       ));
-    } finally {
       setIsExpandingExisting(false);
     }
+    // Note: We don't setIsExpandingExisting(false) here - the subscription effect handles that
   };
 
   // Regenerate a single chapter
@@ -1488,6 +1515,37 @@ export default function AdminCourseBuilderPage() {
                 </Select>
               </div>
 
+              {/* Active Background Jobs Indicator */}
+              {activeJobs && activeJobs.length > 0 && (
+                <div className="rounded-lg border border-amber-500/30 bg-amber-50/50 dark:bg-amber-950/20 p-3 space-y-2">
+                  <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="text-sm font-medium">
+                      {activeJobs.length} background job{activeJobs.length > 1 ? "s" : ""} running
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    {activeJobs.slice(0, 3).map((job: any) => (
+                      <div 
+                        key={job._id} 
+                        className="text-xs text-muted-foreground flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded px-2 py-1"
+                        onClick={() => setCurrentQueueId(job._id)}
+                      >
+                        <span className="truncate max-w-[200px]">
+                          {job.topic || job.prompt?.slice(0, 40)}...
+                        </span>
+                        <Badge variant="secondary" className="text-[10px]">
+                          {job.status.replace(/_/g, " ")}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    ✨ You can navigate away - jobs will continue running!
+                  </p>
+                </div>
+              )}
+
               {/* Generate Buttons */}
               <div className="space-y-2">
                 {/* Full Auto Button - One click, complete course */}
@@ -1499,7 +1557,7 @@ export default function AdminCourseBuilderPage() {
                   {isGenerating && isFullAuto ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Creating Course...
+                      Creating Course (Background)...
                     </>
                   ) : (
                     <>
@@ -1509,7 +1567,7 @@ export default function AdminCourseBuilderPage() {
                   )}
                 </Button>
                 <p className="text-xs text-center text-muted-foreground">
-                  One click → Outline + Expand All + Create
+                  ✨ Runs in background - you can navigate away!
                 </p>
               </div>
 
