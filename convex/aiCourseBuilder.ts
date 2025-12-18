@@ -266,113 +266,61 @@ async function generateStructuredOutline(params: {
     apiKey: process.env.OPENAI_API_KEY,
   });
 
-  const systemPrompt = `You are an expert course curriculum designer. Create a comprehensive, well-structured course outline based on the provided research and context.
+  const systemPrompt = `You are an expert course curriculum designer. Create COMPREHENSIVE course outlines with detailed chapter descriptions.
 
-REQUIREMENTS:
-- Create exactly ${params.targetModules + 1} modules total (1 Introduction module + ${params.targetModules} content modules)
-- The FIRST module MUST be an "Introduction" or "Getting Started" module that includes:
-  * A welcome lesson with course overview, what students will learn, and learning objectives
-  * Prerequisites and recommended prior knowledge
-  * Tools/software/materials needed for the course
-  * How to get the most out of this course
-- The remaining ${params.targetModules} modules contain the actual course content
-- Each module should have exactly ${params.targetLessonsPerModule} lessons
-- Each lesson should have 2-4 chapters
-- Content should be appropriate for ${params.skillLevel} level students
-- Use the research context to inform your outline with accurate, relevant content
-- Module and lesson titles should be specific and descriptive
+STRUCTURE REQUIREMENTS:
+- ${params.targetModules + 1} modules total: 1 Introduction module + ${params.targetModules} content modules
+- ${params.targetLessonsPerModule} lessons per module (no exceptions)
+- 3 chapters per lesson (2-4 acceptable)
+- Skill level: ${params.skillLevel}
 
-CRITICAL - CHAPTER CONTENT REQUIREMENTS:
-Each chapter's "content" field must be a DETAILED 4-6 sentence description that includes:
-1. SPECIFIC techniques, tools, settings, or concepts to be covered (with actual names/values)
-2. CONCRETE actions the student will take (e.g., "You will create a...", "We'll configure the...")
-3. KEY parameters, values, or settings to be taught (e.g., specific frequencies, ratios, plugin names)
-4. EXPECTED OUTCOME - what the student will have created or understood by the end
-5. WHY this matters - connect to the overall learning goal
+CHAPTER CONTENT: Each chapter needs a detailed 4-6 sentence description including:
+- Specific techniques, tools, plugin names, frequency values, settings
+- Concrete actions the student will take
+- Expected outcome/deliverable
+- Why it matters
 
-BAD example (too generic): "Learn about EQ techniques and how to apply them to your mix."
-GOOD example: "Master surgical EQ techniques using a parametric EQ to identify and remove problematic frequencies between 200-500Hz that cause muddiness. You'll use a narrow Q (2-4) to sweep and locate resonances, then apply precise cuts of 2-6dB. By the end, your kick and bass will have distinct frequency spaces, eliminating masking issues."
+NO numbering prefixes in titles (not "Module 1:" or "Lesson 1:").
 
-IMPORTANT TITLE FORMATTING:
-- Do NOT include "Module #:" prefixes in module titles (e.g., use "Kick Anatomy" not "Module 1: Kick Anatomy")
-- Do NOT include "Lesson #:" prefixes in lesson titles (e.g., use "Understanding Phase" not "Lesson 1: Understanding Phase")
-- Titles should be clean, descriptive names without numbering prefixes
+Output valid JSON only.`;
 
-You MUST respond with valid JSON only. No other text.`;
+  const userPrompt = `Create a comprehensive course outline for: "${params.topic}"
 
-  const userPrompt = `Create a course outline for: "${params.topic}"
+RESEARCH CONTEXT:
+${params.pipelineContext.slice(0, 4000)}
 
-=== RESEARCH CONTEXT FROM KNOWLEDGE BASE ===
-${params.pipelineContext}
-=== END OF RESEARCH CONTEXT ===
+${params.facets.length > 0 ? `Topics: ${params.facets.join(", ")}` : ""}
 
-${params.facets.length > 0 ? `Key topics identified: ${params.facets.join(", ")}` : ""}
-
-Generate a JSON course outline with this EXACT structure. IMPORTANT: The FIRST module must be an Introduction module!
-
+JSON STRUCTURE:
 {
-  "course": {
-    "title": "Descriptive Course Title",
-    "description": "A compelling 2-3 sentence description of what students will learn",
-    "category": "Music Production",
-    "skillLevel": "${params.skillLevel}",
-    "estimatedDuration": 120
-  },
+  "course": {"title": "...", "description": "2-3 sentences", "category": "Music Production", "skillLevel": "${params.skillLevel}", "estimatedDuration": 120},
   "modules": [
     {
       "title": "Introduction",
-      "description": "Welcome to the course - overview, objectives, and getting started",
+      "description": "Course overview and getting started",
       "orderIndex": 0,
       "lessons": [
         {
-          "title": "Course Overview",
-          "description": "Welcome and introduction to what you'll learn",
+          "title": "Welcome and Course Overview",
+          "description": "...",
           "orderIndex": 0,
           "chapters": [
-            {
-              "title": "Welcome to the Course",
-              "content": "Introduction to the course, instructor introduction, and overview of the exciting journey ahead.",
-              "duration": 5,
-              "orderIndex": 0
-            },
-            {
-              "title": "What You'll Learn",
-              "content": "Detailed breakdown of learning objectives and skills you'll gain by the end of this course.",
-              "duration": 5,
-              "orderIndex": 1
-            },
-            {
-              "title": "Prerequisites and Requirements",
-              "content": "Required software, tools, and prior knowledge needed to get the most out of this course.",
-              "duration": 5,
-              "orderIndex": 2
-            }
+            {"title": "...", "content": "DETAILED 4-6 sentence description with specifics...", "duration": 5, "orderIndex": 0},
+            {"title": "...", "content": "...", "duration": 5, "orderIndex": 1},
+            {"title": "...", "content": "...", "duration": 5, "orderIndex": 2}
           ]
-        }
+        },
+        // ... ${params.targetLessonsPerModule - 1} more lessons with 3 chapters each
       ]
     },
-    {
-      "title": "Core Techniques and Sound Design",
-      "description": "Deep dive into the fundamental production techniques that define this genre",
-      "orderIndex": 1,
-      "lessons": [
-        {
-          "title": "Crafting the Perfect Drum Foundation",
-          "description": "Building punchy, genre-appropriate drum patterns from scratch",
-          "orderIndex": 0,
-          "chapters": [
-            {
-              "title": "Layering Kicks for Weight and Character",
-              "content": "Build a powerful kick drum by layering 3 elements: a sub layer (sine wave at 40-60Hz for weight), a mid punch layer (sampled acoustic kick filtered at 80-200Hz), and a click/transient layer (short noise burst or stick hit). You'll use Ableton's Drum Rack to organize layers, adjust each layer's volume and ADSR envelope, and apply sidechain compression to glue them together. The result is a kick with sub-bass weight, mid-range punch, and crisp attack that cuts through any mix. This foundational technique is essential for achieving professional low-end impact.",
-              "duration": 15,
-              "orderIndex": 0
-            }
-          ]
-        }
-      ]
-    }
+    // ... ${params.targetModules} more content modules
   ]
-}`;
+}
+
+EXAMPLE CHAPTER CONTENT (this level of detail required):
+"Build a powerful kick by layering 3 elements: sub layer (sine at 40-60Hz), mid punch (filtered 80-200Hz), and click/transient. Use Drum Rack to organize, adjust ADSR envelopes, apply sidechain compression at 4:1 ratio with fast attack. Result: kick with weight, punch, and crisp attack."
+
+Generate the COMPLETE outline with ALL ${params.targetModules + 1} modules, ${params.targetLessonsPerModule} lessons each, 3 chapters per lesson.`;
 
   const completion = await openai.chat.completions.create({
     model: "gpt-4o",
@@ -382,7 +330,7 @@ Generate a JSON course outline with this EXACT structure. IMPORTANT: The FIRST m
     ],
     temperature: 0.7,
     response_format: { type: "json_object" },
-    max_tokens: 6000,
+    max_tokens: 16000, // Increased for comprehensive outlines with detailed chapter content
   });
 
   const content = completion.choices[0].message.content;
@@ -399,9 +347,53 @@ Generate a JSON course outline with this EXACT structure. IMPORTANT: The FIRST m
       throw new Error("Invalid outline structure - missing course or modules");
     }
     
-    // Log what we got
+    // Detailed structure validation and logging
+    const expectedModules = params.targetModules + 1;
+    const expectedLessonsPerModule = params.targetLessonsPerModule;
+    
+    let totalLessons = 0;
+    let totalChapters = 0;
+    const structureIssues: string[] = [];
+    
+    parsed.modules.forEach((module: any, mi: number) => {
+      const lessonCount = module.lessons?.length || 0;
+      totalLessons += lessonCount;
+      
+      if (lessonCount < expectedLessonsPerModule) {
+        structureIssues.push(`Module ${mi + 1} "${module.title}" has ${lessonCount} lessons (expected ${expectedLessonsPerModule})`);
+      }
+      
+      module.lessons?.forEach((lesson: any, li: number) => {
+        const chapterCount = lesson.chapters?.length || 0;
+        totalChapters += chapterCount;
+        
+        if (chapterCount < 2) {
+          structureIssues.push(`Lesson ${mi + 1}.${li + 1} "${lesson.title}" has ${chapterCount} chapters (expected 2-4)`);
+        }
+        
+        // Check for short chapter content
+        lesson.chapters?.forEach((chapter: any, ci: number) => {
+          const contentLength = chapter.content?.length || 0;
+          if (contentLength < 200) {
+            structureIssues.push(`Chapter ${mi + 1}.${li + 1}.${ci + 1} "${chapter.title}" has short content (${contentLength} chars)`);
+          }
+        });
+      });
+    });
+    
+    // Log summary
     console.log(`   📚 Generated outline: "${parsed.course.title}"`);
-    console.log(`   📦 ${parsed.modules.length} modules, ${parsed.modules.reduce((acc: number, m: any) => acc + (m.lessons?.length || 0), 0)} lessons`);
+    console.log(`   📦 ${parsed.modules.length}/${expectedModules} modules, ${totalLessons} lessons, ${totalChapters} chapters`);
+    
+    if (structureIssues.length > 0) {
+      console.warn(`   ⚠️ STRUCTURE ISSUES (${structureIssues.length}):`);
+      structureIssues.slice(0, 10).forEach(issue => console.warn(`      - ${issue}`));
+      if (structureIssues.length > 10) {
+        console.warn(`      ... and ${structureIssues.length - 10} more issues`);
+      }
+    } else {
+      console.log(`   ✅ Outline structure meets all requirements`);
+    }
     
     return parsed as CourseOutline;
   } catch (parseError) {
