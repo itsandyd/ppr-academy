@@ -920,7 +920,9 @@ export default function AdminCourseBuilderPage() {
       return; // Already expanding, don't start another
     }
     
-    const chapter = generatedOutline.modules[moduleIndex].lessons[lessonIndex].chapters[chapterIndex];
+    // Capture chapter title for toast messages only - NOT for state updates
+    // State updates must read from `prev` to avoid race conditions in parallel expansions
+    const chapterTitle = generatedOutline.modules[moduleIndex].lessons[lessonIndex].chapters[chapterIndex].title;
     
     // Add to expanding set
     setExpandingChapterKeys(prev => new Set(prev).add(chapterKey));
@@ -940,8 +942,12 @@ export default function AdminCourseBuilderPage() {
           }
 
           // Update local state (the getOutline query will also update, but this is faster for UI)
+          // IMPORTANT: Read current chapter from prev state, NOT the captured `chapter` variable
+          // to avoid race conditions when multiple chapters expand in parallel
           setGeneratedOutline(prev => {
             if (!prev) return null;
+            
+            // Deep clone only the parts we need to modify
             const updated = { ...prev };
             updated.modules = [...prev.modules];
             updated.modules[moduleIndex] = { ...prev.modules[moduleIndex] };
@@ -952,8 +958,11 @@ export default function AdminCourseBuilderPage() {
             updated.modules[moduleIndex].lessons[lessonIndex].chapters = [
               ...prev.modules[moduleIndex].lessons[lessonIndex].chapters
             ];
+            
+            // Read the CURRENT chapter from prev state, not the stale captured variable
+            const currentChapter = prev.modules[moduleIndex].lessons[lessonIndex].chapters[chapterIndex];
             updated.modules[moduleIndex].lessons[lessonIndex].chapters[chapterIndex] = {
-              ...chapter,
+              ...currentChapter,
               expanded: true,
               expandedContent: result.content,
             };
@@ -971,7 +980,7 @@ export default function AdminCourseBuilderPage() {
         }
       })(),
       {
-        loading: `Expanding "${chapter.title}"...`,
+        loading: `Expanding "${chapterTitle}"...`,
         success: (wordCount) => `Expanded with ${wordCount} words`,
         error: (err) => `Failed: ${err instanceof Error ? err.message : "Unknown error"}`,
       }
