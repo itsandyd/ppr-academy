@@ -63,6 +63,7 @@ import {
   EyeOff,
   RotateCcw,
   Type,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -327,6 +328,9 @@ export default function AdminCourseBuilderPage() {
   const [regeneratingChapterId, setRegeneratingChapterId] = useState<string | null>(null);
   const [reformattingChapterId, setReformattingChapterId] = useState<string | null>(null);
   const [isReformattingAll, setIsReformattingAll] = useState(false);
+  
+  // Track individual chapter expansion loading states (allows parallel expansion)
+  const [expandingChapterKeys, setExpandingChapterKeys] = useState<Set<string>>(new Set());
   
   // Get courses for the selected store
   const storeCourses = useQuery(
@@ -910,43 +914,62 @@ export default function AdminCourseBuilderPage() {
       return;
     }
     
+    const chapterKey = `${moduleIndex}-${lessonIndex}-${chapterIndex}`;
+    
+    // Check if already expanding this chapter
+    if (expandingChapterKeys.has(chapterKey)) {
+      return; // Already expanding, don't start another
+    }
+    
     const chapter = generatedOutline.modules[moduleIndex].lessons[lessonIndex].chapters[chapterIndex];
+    
+    // Add to expanding set
+    setExpandingChapterKeys(prev => new Set(prev).add(chapterKey));
     
     toast.promise(
       (async () => {
-        const result = await expandChapterAction({
-          outlineId: currentOutlineId,
-          moduleIndex,
-          lessonIndex,
-          chapterIndex,
-        });
+        try {
+          const result = await expandChapterAction({
+            outlineId: currentOutlineId,
+            moduleIndex,
+            lessonIndex,
+            chapterIndex,
+          });
 
-        if (!result.success || !result.content) {
-          throw new Error(result.error || "No content generated");
+          if (!result.success || !result.content) {
+            throw new Error(result.error || "No content generated");
+          }
+
+          // Update local state (the getOutline query will also update, but this is faster for UI)
+          setGeneratedOutline(prev => {
+            if (!prev) return null;
+            const updated = { ...prev };
+            updated.modules = [...prev.modules];
+            updated.modules[moduleIndex] = { ...prev.modules[moduleIndex] };
+            updated.modules[moduleIndex].lessons = [...prev.modules[moduleIndex].lessons];
+            updated.modules[moduleIndex].lessons[lessonIndex] = { 
+              ...prev.modules[moduleIndex].lessons[lessonIndex] 
+            };
+            updated.modules[moduleIndex].lessons[lessonIndex].chapters = [
+              ...prev.modules[moduleIndex].lessons[lessonIndex].chapters
+            ];
+            updated.modules[moduleIndex].lessons[lessonIndex].chapters[chapterIndex] = {
+              ...chapter,
+              expanded: true,
+              expandedContent: result.content,
+            };
+            return updated;
+          });
+
+          return result.wordCount || result.content.split(" ").length;
+        } finally {
+          // Always remove from expanding set when done
+          setExpandingChapterKeys(prev => {
+            const next = new Set(prev);
+            next.delete(chapterKey);
+            return next;
+          });
         }
-
-        // Update local state (the getOutline query will also update, but this is faster for UI)
-        setGeneratedOutline(prev => {
-          if (!prev) return null;
-          const updated = { ...prev };
-          updated.modules = [...prev.modules];
-          updated.modules[moduleIndex] = { ...prev.modules[moduleIndex] };
-          updated.modules[moduleIndex].lessons = [...prev.modules[moduleIndex].lessons];
-          updated.modules[moduleIndex].lessons[lessonIndex] = { 
-            ...prev.modules[moduleIndex].lessons[lessonIndex] 
-          };
-          updated.modules[moduleIndex].lessons[lessonIndex].chapters = [
-            ...prev.modules[moduleIndex].lessons[lessonIndex].chapters
-          ];
-          updated.modules[moduleIndex].lessons[lessonIndex].chapters[chapterIndex] = {
-            ...chapter,
-            expanded: true,
-            expandedContent: result.content,
-          };
-          return updated;
-        });
-
-        return result.wordCount || result.content.split(" ").length;
       })(),
       {
         loading: `Expanding "${chapter.title}"...`,
@@ -957,7 +980,7 @@ export default function AdminCourseBuilderPage() {
   };
 
   // =============================================================================
-  // EXPAND ALL CHAPTERS
+  // EXPAND ALL CHAPTERS (Parallel with controlled concurrency)
   // =============================================================================
   const handleExpandAllChapters = async () => {
     if (!generatedOutline) return;
@@ -989,16 +1012,16 @@ export default function AdminCourseBuilderPage() {
       return;
     }
 
-    toast.info(`Expanding ${chaptersToExpand.length} chapters...`);
+    toast.info(`Expanding ${chaptersToExpand.length} chapters in parallel...`);
 
-    for (let i = 0; i < chaptersToExpand.length; i++) {
-      const { moduleIndex, lessonIndex, chapterIndex } = chaptersToExpand[i];
-      await handleExpandChapter(moduleIndex, lessonIndex, chapterIndex);
-      // Rate limiting
-      await new Promise(resolve => setTimeout(resolve, 1500));
-    }
-
-    toast.success("All chapters expanded!");
+    // Start all chapter expansions in parallel
+    // Each handleExpandChapter call manages its own loading state
+    chaptersToExpand.forEach(({ moduleIndex, lessonIndex, chapterIndex }) => {
+      // Don't await - let them run in parallel
+      handleExpandChapter(moduleIndex, lessonIndex, chapterIndex);
+    });
+    
+    // Note: Success toasts are handled individually by handleExpandChapter
   };
 
   // =============================================================================
@@ -2162,13 +2185,23 @@ export default function AdminCourseBuilderPage() {
                                         size="sm"
                                         variant="ghost"
                                         className="h-6 text-xs flex-shrink-0"
+                                        disabled={expandingChapterKeys.has(`${mi}-${li}-${ci}`)}
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           handleExpandChapter(mi, li, ci);
                                         }}
                                       >
-                                        <Sparkles className="w-3 h-3 mr-1" />
-                                        Expand
+                                        {expandingChapterKeys.has(`${mi}-${li}-${ci}`) ? (
+                                          <>
+                                            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                            Expanding...
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Sparkles className="w-3 h-3 mr-1" />
+                                            Expand
+                                          </>
+                                        )}
                                       </Button>
                                     )}
                                   </div>

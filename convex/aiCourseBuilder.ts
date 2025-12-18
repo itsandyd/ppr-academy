@@ -269,13 +269,29 @@ async function generateStructuredOutline(params: {
   const systemPrompt = `You are an expert course curriculum designer. Create a comprehensive, well-structured course outline based on the provided research and context.
 
 REQUIREMENTS:
-- Create exactly ${params.targetModules} modules
+- Create exactly ${params.targetModules + 1} modules total (1 Introduction module + ${params.targetModules} content modules)
+- The FIRST module MUST be an "Introduction" or "Getting Started" module that includes:
+  * A welcome lesson with course overview, what students will learn, and learning objectives
+  * Prerequisites and recommended prior knowledge
+  * Tools/software/materials needed for the course
+  * How to get the most out of this course
+- The remaining ${params.targetModules} modules contain the actual course content
 - Each module should have exactly ${params.targetLessonsPerModule} lessons
 - Each lesson should have 2-4 chapters
 - Content should be appropriate for ${params.skillLevel} level students
 - Use the research context to inform your outline with accurate, relevant content
 - Module and lesson titles should be specific and descriptive
-- Chapter content should be 2-3 sentences describing what will be taught
+
+CRITICAL - CHAPTER CONTENT REQUIREMENTS:
+Each chapter's "content" field must be a DETAILED 4-6 sentence description that includes:
+1. SPECIFIC techniques, tools, settings, or concepts to be covered (with actual names/values)
+2. CONCRETE actions the student will take (e.g., "You will create a...", "We'll configure the...")
+3. KEY parameters, values, or settings to be taught (e.g., specific frequencies, ratios, plugin names)
+4. EXPECTED OUTCOME - what the student will have created or understood by the end
+5. WHY this matters - connect to the overall learning goal
+
+BAD example (too generic): "Learn about EQ techniques and how to apply them to your mix."
+GOOD example: "Master surgical EQ techniques using a parametric EQ to identify and remove problematic frequencies between 200-500Hz that cause muddiness. You'll use a narrow Q (2-4) to sweep and locate resonances, then apply precise cuts of 2-6dB. By the end, your kick and bass will have distinct frequency spaces, eliminating masking issues."
 
 IMPORTANT TITLE FORMATTING:
 - Do NOT include "Module #:" prefixes in module titles (e.g., use "Kick Anatomy" not "Module 1: Kick Anatomy")
@@ -292,7 +308,8 @@ ${params.pipelineContext}
 
 ${params.facets.length > 0 ? `Key topics identified: ${params.facets.join(", ")}` : ""}
 
-Generate a JSON course outline with this EXACT structure:
+Generate a JSON course outline with this EXACT structure. IMPORTANT: The FIRST module must be an Introduction module!
+
 {
   "course": {
     "title": "Descriptive Course Title",
@@ -303,19 +320,51 @@ Generate a JSON course outline with this EXACT structure:
   },
   "modules": [
     {
-      "title": "Module Title",
-      "description": "What this module covers",
+      "title": "Introduction",
+      "description": "Welcome to the course - overview, objectives, and getting started",
       "orderIndex": 0,
       "lessons": [
         {
-          "title": "Lesson Title",
-          "description": "What this lesson covers",
+          "title": "Course Overview",
+          "description": "Welcome and introduction to what you'll learn",
           "orderIndex": 0,
           "chapters": [
             {
-              "title": "Chapter Title",
-              "content": "2-3 sentences describing what this chapter teaches",
-              "duration": 10,
+              "title": "Welcome to the Course",
+              "content": "Introduction to the course, instructor introduction, and overview of the exciting journey ahead.",
+              "duration": 5,
+              "orderIndex": 0
+            },
+            {
+              "title": "What You'll Learn",
+              "content": "Detailed breakdown of learning objectives and skills you'll gain by the end of this course.",
+              "duration": 5,
+              "orderIndex": 1
+            },
+            {
+              "title": "Prerequisites and Requirements",
+              "content": "Required software, tools, and prior knowledge needed to get the most out of this course.",
+              "duration": 5,
+              "orderIndex": 2
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Core Techniques and Sound Design",
+      "description": "Deep dive into the fundamental production techniques that define this genre",
+      "orderIndex": 1,
+      "lessons": [
+        {
+          "title": "Crafting the Perfect Drum Foundation",
+          "description": "Building punchy, genre-appropriate drum patterns from scratch",
+          "orderIndex": 0,
+          "chapters": [
+            {
+              "title": "Layering Kicks for Weight and Character",
+              "content": "Build a powerful kick drum by layering 3 elements: a sub layer (sine wave at 40-60Hz for weight), a mid punch layer (sampled acoustic kick filtered at 80-200Hz), and a click/transient layer (short noise burst or stick hit). You'll use Ableton's Drum Rack to organize layers, adjust each layer's volume and ADSR envelope, and apply sidechain compression to glue them together. The result is a kick with sub-bass weight, mid-range punch, and crisp attack that cuts through any mix. This foundational technique is essential for achieving professional low-end impact.",
+              "duration": 15,
               "orderIndex": 0
             }
           ]
