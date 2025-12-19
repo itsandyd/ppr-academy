@@ -2698,7 +2698,7 @@ export default function AdminCourseBuilderPage() {
 
               {/* Course Structure Display */}
               {existingCourseStructure ? (
-                <Card className="flex flex-col max-h-[60vh] sm:max-h-[calc(100vh-200px)]">
+                <Card className="flex flex-col h-[calc(100vh-280px)] min-h-[400px] sm:h-auto sm:max-h-[calc(100vh-200px)]">
                   <CardHeader className="pb-2 sm:pb-3 flex-shrink-0 px-3 sm:px-6">
                     <div className="flex items-center justify-between gap-2">
                       <CardTitle className="text-sm sm:text-lg truncate">{existingCourseStructure.course.title}</CardTitle>
@@ -2710,8 +2710,8 @@ export default function AdminCourseBuilderPage() {
                       <CardDescription className="line-clamp-2 sm:line-clamp-3 text-xs sm:text-sm">{existingCourseStructure.course.description}</CardDescription>
                     )}
                   </CardHeader>
-                  <ScrollArea className="flex-1 min-h-0">
-                    <CardContent className="space-y-1.5 sm:space-y-2 pb-4 sm:pb-6 px-2 sm:px-6">
+                  <ScrollArea className="flex-1 min-h-0 overflow-auto">
+                    <CardContent className="space-y-1.5 sm:space-y-2 pb-6 sm:pb-6 px-2 sm:px-6">
                       {existingCourseStructure.modules.map((mod, mi) => (
                         <Collapsible
                           key={mi}
