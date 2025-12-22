@@ -23,6 +23,9 @@ import {
   Zap,
   Instagram,
   StickyNote,
+  Rocket,
+  ArrowRight,
+  DollarSign,
 } from 'lucide-react';
 import {
   Sidebar,
@@ -201,6 +204,52 @@ export function DashboardSidebar({ mode, onModeChange }: DashboardSidebarProps) 
           </SidebarGroup>
         )}
 
+        {/* Learn mode: Become a Creator CTA */}
+        {mode === 'learn' && (
+          <SidebarGroup className="mt-4">
+            <Card className="bg-gradient-to-br from-purple-500/20 via-pink-500/15 to-orange-500/10 border-purple-500/30 overflow-hidden relative">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(168,85,247,0.15),transparent_50%)]" />
+              <CardContent className="p-4 relative">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                      <Rocket className="w-4 h-4 text-white" />
+                    </div>
+                    <div>
+                      <span className="text-sm font-bold">Become a Creator</span>
+                      <p className="text-[10px] text-muted-foreground">Share your knowledge</p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <DollarSign className="w-3 h-3 text-green-500" />
+                      <span>Earn from your music skills</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Package className="w-3 h-3 text-blue-500" />
+                      <span>Sell courses, packs & presets</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Users className="w-3 h-3 text-purple-500" />
+                      <span>Build your audience</span>
+                    </div>
+                  </div>
+
+                  <Button 
+                    onClick={() => handleModeChange('create')}
+                    size="sm"
+                    className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white border-0 group"
+                  >
+                    <span>Start Creating</span>
+                    <ArrowRight className="w-3 h-3 ml-2 group-hover:translate-x-0.5 transition-transform" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </SidebarGroup>
+        )}
+
         {/* Create mode: Quick create widget */}
         {mode === 'create' && (
           <SidebarGroup className="mt-6">
@@ -264,7 +313,7 @@ export function DashboardSidebar({ mode, onModeChange }: DashboardSidebarProps) 
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">
                   {mode === 'learn' 
-                    ? 'Complete courses to earn XP and unlock achievements!'
+                    ? 'Ready to share what you\'ve learned? Switch to Creator mode and start selling your own content!'
                     : 'Free products with download gates help build your email list.'}
                 </p>
               </div>
