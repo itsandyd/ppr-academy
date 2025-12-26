@@ -816,26 +816,43 @@ This is the most important instruction. ALL images MUST follow this style:
 - Excalidraw-style illustration (like the popular whiteboard tool)
 - Slightly wobbly, imperfect outlines (not perfectly straight lines)
 - Hand-sketched look with organic, natural line quality
-- Flat pastel colors with soft, muted tones
+- Flat colors from our brand palette (see below)
 - Minimal to no shading - keep it flat and simple
 - Pure white or very light off-white background
 - 16:9 aspect ratio
 - Clean, uncluttered composition with breathing room
 
-**Pastel Color Palette:**
-- Soft coral/salmon (#FFB6C1, #FFA07A)
-- Muted lavender/purple (#DDA0DD, #B19CD9)
-- Gentle mint/seafoam (#98FB98, #7FFFD4)
-- Warm peach/apricot (#FFDAB9, #FFE4B5)
-- Soft sky blue (#87CEEB, #ADD8E6)
-- Dusty rose (#D8BFD8)
-- Light sage green (#90EE90)
+**PPR Academy Brand Color Palette (USE THESE COLORS):**
+
+Primary Colors (use for main elements, key concepts):
+- Indigo Blue (#818CF8) - Primary brand color, use for main shapes and focal points
+- Rich Purple (#7C6CEF) - Use for secondary elements and accents
+- Deep Purple (#6366F1) - Use for contrast and emphasis
+
+Accent Colors (use for highlights, callouts, important details):
+- Sky Cyan (#7DD3FC) - Use for highlights and interactive elements
+- Vibrant Pink (#EC4899) - Use sparingly for attention-grabbing accents
+- Bright Purple (#A855F7) - Use for creative/artistic elements
+- Warm Orange (#F97316) - Use for energy, action, warnings
+
+Supporting Colors (use for backgrounds, fills, subtle elements):
+- Light Lavender (#F5E6F5) - Soft background fills
+- Muted Gray (#E5E5E5) - Neutral elements, outlines
+- Soft Indigo (#C7D2FE) - Light fills, subtle accents
+
+**Color Usage Guidelines:**
+- Use Indigo Blue (#818CF8) as the dominant color (40-50% of colored elements)
+- Use Purple tones for variety and depth
+- Add Cyan or Pink accents sparingly for visual interest
+- Keep backgrounds white or very light lavender
+- Maintain good contrast between elements
 
 **Line Quality:**
 - Hand-drawn wobbly lines, not perfectly geometric
 - Varying line thickness for organic feel
 - Rounded corners on shapes
 - Sketchy, not clinical or sterile
+- Use dark gray (#374151) or deep indigo (#3730A3) for outlines
 
 **What to AVOID:**
 - Photorealistic rendering
@@ -844,6 +861,7 @@ This is the most important instruction. ALL images MUST follow this style:
 - Perfectly straight geometric lines
 - Overly complex or busy compositions
 - 3D effects or heavy shadows
+- Colors outside the brand palette
 `;
 
 /**
@@ -972,13 +990,13 @@ ${categoryGuide}
 
 1. **STYLE IS PARAMOUNT**: Hand-drawn, Excalidraw aesthetic with wobbly lines
 2. **KEEP IT SIMPLE**: Don't overcomplicate - clarity over detail
-3. **PASTEL COLORS**: Soft, muted, friendly color palette
-4. **WHITE BACKGROUND**: Pure white or very light background
+3. **BRAND COLORS**: Use PPR Academy colors - Indigo (#818CF8) as primary, Purple tones, Cyan/Pink accents
+4. **WHITE BACKGROUND**: Pure white or very light lavender background
 5. **16:9 RATIO**: Landscape orientation
 6. **FLAT DESIGN**: No complex shading or 3D effects
 7. **FRIENDLY & APPROACHABLE**: Should feel hand-drawn and human
 
-Generate one cohesive illustration that captures the concept in a simple, hand-drawn Excalidraw style. The image should feel like a quick whiteboard sketch - clear, friendly, and instantly understandable.`;
+Generate one cohesive illustration that captures the concept in a simple, hand-drawn Excalidraw style using the PPR Academy brand colors. The image should feel like a quick whiteboard sketch - clear, friendly, and instantly understandable.`;
 }
 
 /**
@@ -1026,7 +1044,7 @@ export const generateVisualImage = action({
       // Create FAL client - it reads FAL_KEY from environment automatically
       const falClient = createFalClient();
       
-      console.log(`   🎨 Calling FAL API with Nano Banana Pro (Gemini 3 Pro Image)...`);
+      console.log(`   🎨 Calling FAL API with Nano Banana Pro (Gemini 3 Pro Image) + Web Search...`);
       
       // Use fal.subscribe for better handling of long-running requests
       const result = await falClient.subscribe("fal-ai/nano-banana-pro", {
@@ -1036,6 +1054,7 @@ export const generateVisualImage = action({
           aspect_ratio: "16:9", // Good for course materials / lead magnets
           output_format: "png",
           resolution: "1K", // Good quality without being too large
+          enable_web_search: true, // Let model search for reference images/context
         },
         logs: true,
         onQueueUpdate: (update) => {

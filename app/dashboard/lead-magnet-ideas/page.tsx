@@ -521,6 +521,15 @@ export default function LeadMagnetIdeasPage() {
     setGeneratingIndex(imageKey);
     setImageError(null);
     
+    // Clear saved state if regenerating - so it goes back to review mode
+    if (savedImages.has(imageKey)) {
+      setSavedImages(prev => {
+        const next = new Set(prev);
+        next.delete(imageKey);
+        return next;
+      });
+    }
+    
     try {
       // Pass rich context for better image generation (taking advantage of 65K context)
       const result = await generateImageAction({
