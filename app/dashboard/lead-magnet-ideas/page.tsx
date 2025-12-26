@@ -500,6 +500,7 @@ export default function LeadMagnetIdeasPage() {
     createdAt: number;
   }> | undefined;
 
+
   // Mutations for saving/deleting analyses
   const saveAnalysisMutation = useMutation(savedAnalysesApi.saveAnalysis);
   const deleteAnalysisMutation = useMutation(savedAnalysesApi.deleteAnalysis);
@@ -812,9 +813,45 @@ export default function LeadMagnetIdeasPage() {
         if (fullAnalysis.chapters.length > 0) {
           setExpandedChapters(new Set([fullAnalysis.chapters[0].chapterId]));
         }
-        // Clear image state
-        setGeneratedImages({});
-        setSavedImages(new Set());
+        
+        // Populate saved images from illustrations
+        // We need to match illustrations back to visual ideas by sentence
+        const imageMap: Record<string, string> = {};
+        const savedSet = new Set<string>();
+        
+        // Fetch saved illustrations for this course
+        try {
+          const illustrationsResponse = await fetch(`/api/illustrations/${savedAnalysis.courseId}`);
+          if (illustrationsResponse.ok) {
+            const illustrations = await illustrationsResponse.json() as Array<{
+              sentence: string;
+              imageUrl: string;
+            }>;
+            
+            // Create a map of sentence -> imageUrl
+            const sentenceToImage = new Map<string, string>();
+            for (const ill of illustrations) {
+              sentenceToImage.set(ill.sentence, ill.imageUrl);
+            }
+            
+            // Match to visual ideas
+            for (const chapter of fullAnalysis.chapters as ChapterAnalysis[]) {
+              chapter.visualIdeas.forEach((idea: VisualIdea, idx: number) => {
+                const imageUrl = sentenceToImage.get(idea.sentenceOrConcept);
+                if (imageUrl) {
+                  const imageKey = `${chapter.chapterId}-${idx}`;
+                  imageMap[imageKey] = imageUrl;
+                  savedSet.add(imageKey);
+                }
+              });
+            }
+          }
+        } catch (e) {
+          console.log("No saved illustrations to load:", e);
+        }
+        
+        setGeneratedImages(imageMap);
+        setSavedImages(savedSet);
       }
     } catch (error) {
       console.error("Failed to load analysis:", error);
