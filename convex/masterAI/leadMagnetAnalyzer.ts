@@ -2,10 +2,11 @@
 
 import { action, internalAction } from "../_generated/server";
 import { v } from "convex/values";
-import { api } from "../_generated/api";
+import { api, internal } from "../_generated/api";
 import { Id } from "../_generated/dataModel";
 import { callLLM, safeParseJson } from "./llmClient";
 import { type ModelId } from "./types";
+import { createFalClient } from "@fal-ai/client";
 
 // Workaround for TypeScript deep instantiation issue with internal references
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -981,11 +982,9 @@ Generate one cohesive illustration that captures the concept in a simple, hand-d
 }
 
 /**
- * Generate an image from an illustration prompt using Google's Gemini 3 Pro (Nano Banana Pro)
- * via OpenRouter. Returns base64 image data.
- * 
- * Gemini 3 Pro has 65,536 token context - we take advantage of this by providing
- * rich, detailed prompts with full context for better image generation.
+ * Generate an image from an illustration prompt using FAL AI
+ * Uses Nano Banana Pro (Gemini 3 Pro Image) for high-quality image generation
+ * with Excalidraw-style aesthetic (hand-drawn, pastel, white background)
  */
 export const generateVisualImage = action({
   args: {
@@ -1002,7 +1001,7 @@ export const generateVisualImage = action({
   },
   returns: v.object({
     success: v.boolean(),
-    imageData: v.optional(v.string()), // Base64 data URL
+    imageData: v.optional(v.string()), // URL to generated image
     storageId: v.optional(v.id("_storage")),
     imageUrl: v.optional(v.string()),
     error: v.optional(v.string()),
@@ -1010,140 +1009,124 @@ export const generateVisualImage = action({
   handler: async (ctx, args) => {
     console.log(`🎨 Generating visual image for prompt: ${args.prompt.substring(0, 100)}...`);
     
-    const apiKey = process.env.OPENROUTER_API_KEY;
-    if (!apiKey) {
+    // Check FAL API key
+    const falApiKey = process.env.FAL_KEY;
+    if (!falApiKey) {
       return {
         success: false,
-        error: "OPENROUTER_API_KEY not configured",
+        error: "FAL_KEY not configured in environment",
       };
     }
 
-    // Build a rich, detailed prompt taking advantage of 65K context
+    // Build a rich prompt with Excalidraw style and full context
+    // Nano Banana Pro has large context - we can provide detailed instructions
     const richPrompt = buildRichImagePrompt(args);
 
     try {
-      // Call OpenRouter with Gemini 3 Pro Image Preview
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-          "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "https://ppr-academy.com",
-          "X-Title": "PPR Academy Lead Magnet Generator",
+      // Create FAL client - it reads FAL_KEY from environment automatically
+      const falClient = createFalClient();
+      
+      console.log(`   🎨 Calling FAL API with Nano Banana Pro (Gemini 3 Pro Image)...`);
+      
+      // Use fal.subscribe for better handling of long-running requests
+      const result = await falClient.subscribe("fal-ai/nano-banana-pro", {
+        input: {
+          prompt: richPrompt,
+          num_images: 1,
+          aspect_ratio: "16:9", // Good for course materials / lead magnets
+          output_format: "png",
+          resolution: "1K", // Good quality without being too large
         },
-        body: JSON.stringify({
-          model: "google/gemini-3-pro-image-preview",
-          modalities: ["image", "text"],
-          messages: [
-            {
-              role: "user",
-              content: richPrompt,
-            },
-          ],
-          max_tokens: 4096,
-        }),
+        logs: true,
+        onQueueUpdate: (update) => {
+          if (update.status === "IN_PROGRESS" && update.logs) {
+            update.logs.map((log) => log.message).forEach((msg) => console.log(`   📝 ${msg}`));
+          }
+        },
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`OpenRouter error (${response.status}):`, errorText);
-        return {
-          success: false,
-          error: `Image generation failed: ${response.status} - ${errorText.substring(0, 200)}`,
-        };
-      }
-
-      const data = await response.json() as {
-        choices: Array<{
-          message: {
-            content: string | Array<{
-              type: string;
-              image_url?: { url: string };
-              text?: string;
-            }>;
-          };
-        }>;
+      const imageData = result.data as {
+        images?: Array<{ url: string; width?: number; height?: number }>;
+        description?: string;
       };
-
-      // Extract image from response
-      const messageContent = data.choices?.[0]?.message?.content;
       
-      if (!messageContent) {
+      if (!imageData?.images?.[0]?.url) {
+        console.error("❌ No image URL in FAL response:", JSON.stringify(result, null, 2).substring(0, 500));
         return {
           success: false,
-          error: "No content in response",
+          error: "No image URL in FAL response",
         };
       }
 
-      // Handle array content (multimodal response)
-      if (Array.isArray(messageContent)) {
-        for (const part of messageContent) {
-          if (part.type === "image_url" && part.image_url?.url) {
-            const imageData = part.image_url.url;
-            
-            // If it's a base64 data URL, upload to Convex storage
-            if (imageData.startsWith("data:image")) {
-              try {
-                const storageResult = await uploadBase64ToStorage(ctx, imageData);
-                const imageUrl = await ctx.storage.getUrl(storageResult);
-                
-                return {
-                  success: true,
-                  imageData,
-                  storageId: storageResult,
-                  imageUrl: imageUrl || undefined,
-                };
-              } catch (uploadError) {
-                console.warn("Failed to upload to storage, returning base64:", uploadError);
-                return {
-                  success: true,
-                  imageData,
-                };
-              }
-            }
-            
-            return {
-              success: true,
-              imageData,
-            };
-          }
-        }
+      const imageUrl = imageData.images[0].url;
+      console.log(`   ✅ Image generated: ${imageUrl.substring(0, 80)}...`);
+      if (imageData.description) {
+        console.log(`   📝 Model description: ${imageData.description.substring(0, 100)}...`);
       }
 
-      // Handle string content (might contain base64 or URL)
-      if (typeof messageContent === "string") {
-        // Check if it's a data URL
-        if (messageContent.includes("data:image")) {
-          const match = messageContent.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/);
-          if (match) {
-            return {
-              success: true,
-              imageData: match[0],
-            };
-          }
-        }
+      // Upload to Convex storage for persistence
+      try {
+        const storageId = await uploadImageUrlToStorage(ctx, imageUrl);
+        const convexUrl = await ctx.storage.getUrl(storageId);
         
-        // Otherwise it might be a text response explaining inability to generate
         return {
-          success: false,
-          error: `Model returned text instead of image: ${messageContent.substring(0, 200)}`,
+          success: true,
+          imageData: convexUrl || imageUrl, // Prefer Convex URL for persistence
+          storageId,
+          imageUrl: convexUrl || imageUrl,
+        };
+      } catch (uploadError) {
+        console.warn("Failed to upload to Convex storage, returning FAL URL:", uploadError);
+        return {
+          success: true,
+          imageData: imageUrl,
+          imageUrl,
         };
       }
-
-      return {
-        success: false,
-        error: "Could not extract image from response",
-      };
 
     } catch (error) {
-      console.error("Image generation error:", error);
+      console.error("❌ FAL API error:", error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: error instanceof Error ? error.message : "Unknown FAL error",
       };
     }
   },
 });
+
+/**
+ * Helper to upload image from URL to Convex storage
+ */
+async function uploadImageUrlToStorage(ctx: any, imageUrl: string): Promise<Id<"_storage">> {
+  console.log(`   📥 Downloading image from: ${imageUrl.substring(0, 60)}...`);
+  
+  // Fetch the image
+  const response = await fetch(imageUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to download image: ${response.statusText}`);
+  }
+
+  const imageBlob = await response.blob();
+  const arrayBuffer = await imageBlob.arrayBuffer();
+
+  // Get upload URL using the internal mutation
+  const uploadUrl = await ctx.runMutation(internalRef.scriptIllustrationMutations.generateUploadUrl, {});
+
+  // Upload to Convex
+  const uploadResult = await fetch(uploadUrl, {
+    method: "POST",
+    headers: { "Content-Type": imageBlob.type || "image/png" },
+    body: arrayBuffer,
+  });
+
+  if (!uploadResult.ok) {
+    throw new Error("Failed to upload to Convex storage");
+  }
+
+  const { storageId } = await uploadResult.json() as { storageId: Id<"_storage"> };
+  console.log(`   ✅ Uploaded to Convex storage: ${storageId}`);
+  return storageId;
+}
 
 /**
  * Helper to upload base64 image data to Convex storage
