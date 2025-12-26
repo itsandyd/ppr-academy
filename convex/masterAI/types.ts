@@ -202,7 +202,8 @@ export const chatSettingsValidator = v.object({
   responseStyle: v.union(
     v.literal("structured"),    // Bullet points, numbered lists (default)
     v.literal("conversational"), // Flowing paragraphs, essay-style
-    v.literal("concise")         // Brief, to-the-point answers
+    v.literal("concise"),        // Brief, to-the-point answers
+    v.literal("educational")     // Premium course content - textbook quality
   ),
   
   // Source type filters
@@ -216,7 +217,7 @@ export const chatSettingsValidator = v.object({
   ))),
 });
 
-export type ResponseStyle = "structured" | "conversational" | "concise";
+export type ResponseStyle = "structured" | "conversational" | "concise" | "educational";
 
 export type ChatSettings = {
   preset: PresetId;

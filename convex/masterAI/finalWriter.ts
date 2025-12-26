@@ -246,8 +246,52 @@ Before writing, identify the TYPE of response needed:
 Match your format to their request. If they ask you to "create a course outline" → produce actual modules and lessons, not a paragraph about what an outline might contain.
 ${conversationGoal?.keyConstraints ? `\nKEY CONSTRAINTS TO MAINTAIN: ${conversationGoal.keyConstraints.join(", ")}` : ""}
 
-QUALITY STANDARDS - THIS IS CRITICAL:
-Your response must provide genuine educational value. Do NOT write surface-level content that sounds like AI filler. Instead:
+===============================================================================
+WRITING QUALITY STANDARDS - READ CAREFULLY
+===============================================================================
+
+Your content must read like premium educational material, not like an AI blog post.
+
+LANGUAGE PRECISION - CRITICAL:
+- Use hedged language for technical claims: "often", "typically", "can", "tends to" instead of "always", "never", "will"
+- Avoid hyperbole: phrases like "night and day difference", "completely transforms", "universal rule" read salesy and trigger skepticism
+- Be confident but credible. State facts directly, qualify uncertain claims appropriately
+- Examples of BAD language: "The sonic difference is night and day", "You'll never confuse again", "This will completely transform", "Every producer knows"
+- Examples of GOOD language: "The tonal character differs noticeably", "With practice you'll recognize the difference", "This typically improves", "Many producers find"
+
+TECHNICAL ACCURACY - NON-NEGOTIABLE:
+- Be technically precise - avoid oversimplified explanations that experts would correct
+- Specify actual ranges and values (e.g., "attack: 10-30ms" not just "fast attack")
+- When unsure about a technical detail, phrase it as "typically" or "often" rather than stating it as absolute fact
+- Classify devices/examples as "often behaves like..." rather than "is a textbook example of..."
+- Avoid technically fragile claims that invite pedantic correction
+- If a concept has nuance or exceptions, acknowledge them briefly rather than stating universal rules
+
+STRUCTURE & LENGTH - ESSENTIAL:
+- Each section should cover ONE concept thoroughly, then move on
+- Do NOT repeat the same idea in 3-4 places with different words
+- Aim for 25-35% shorter than your first instinct. Tight writing = professional writing
+- Structure for course content:
+  1. Concept (brief - what it is)
+  2. What you'll hear (brief - recognition)
+  3. Hands-on exercise (detailed - the learning)
+  4. Practical use cases (brief - when to use)
+  5. Common mistakes (brief - pitfalls)
+  6. Recap (very brief)
+
+METAPHOR USAGE:
+- Use ONE vivid metaphor early to anchor understanding
+- Then switch to clean, direct technical language
+- Do NOT stack metaphors ("persuasion vs coercion", "scissors cutting", "anything that dares cross the threshold" in the same paragraph)
+- Metaphors that accumulate feel like "content writing" not education
+
+EXERCISES & PRACTICAL ELEMENTS:
+- For A/B comparisons: ALWAYS include precise level matching (use Utility plugin, match RMS/LUFS)
+- Include "Decision Rule" boxes: simple if/then guidance (e.g., "For peak control + tone → soft clip first")
+- Include "What to Listen For" checklists with specific sonic descriptors
+- Include at least one real-world mix example (not just test tones)
+
+DEPTH OVER BREADTH:
 - Go DEEP on each concept - explain the "why" behind everything
 - Include SPECIFIC numbers, settings, frequencies, ratios, and parameters
 - Share professional techniques and industry secrets
@@ -263,6 +307,9 @@ NEVER do these things:
 - Don't use vague language like "experiment with settings" - be SPECIFIC
 - Don't list topics without explaining them in depth
 - Don't be shallow to seem comprehensive - depth beats breadth
+- Don't use absolute language that invites skepticism
+- Don't stack multiple metaphors in quick succession
+- Don't repeat the same concept with different wording
 
 ${lengthInstructions}
 ${styleInstructions}
@@ -482,12 +529,58 @@ function getModelForStage(
 }
 
 // Get style-specific instructions for the response
-function getStyleInstructions(style: "structured" | "conversational" | "concise"): string {
+function getStyleInstructions(style: "structured" | "conversational" | "concise" | "educational"): string {
   switch (style) {
+    case "educational":
+      return `RESPONSE STYLE: EDUCATIONAL (Premium Course Content)
+
+Write like a textbook chapter from a respected educator - authoritative but not preachy, technical but accessible.
+
+TONE:
+- Confident but hedged appropriately ("typically", "often", "in most cases")
+- Direct technical language after the opening metaphor
+- No salesmanship or hype - let the knowledge speak for itself
+- Assume the reader is intelligent and willing to learn
+
+STRUCTURE (follow this order):
+1. **Opening Hook** (1-2 sentences): Why this matters, what you'll learn. Use ONE metaphor if helpful, then move on.
+2. **Core Concept** (brief): The fundamental principle, stated clearly with technical precision
+3. **What You'll Hear** (brief): Specific sonic descriptors for recognition
+4. **Hands-On Exercise** (detailed): Step-by-step with EXACT values. Include level-matching instructions for A/B tests.
+5. **Practical Use Cases** (brief): When to use each approach, with real-world examples
+6. **Common Mistakes** (brief): What to avoid, stated directly
+7. **Decision Rules** (callout box format):
+   - If [condition] → [action]
+   - If [other condition] → [other action]
+8. **Quick Reference Checklist** (bullet points): What to listen for
+
+LENGTH DISCIPLINE:
+- Say it once, say it well, move on
+- If you catch yourself rephrasing the same idea, delete the repetition
+- Target 800-1200 words for a chapter-length piece (not 2000+)
+- Each section should earn its place - no filler
+
+TECHNICAL CLAIMS:
+- Hedge appropriately: "often produces", "typically results in", "can create"
+- Classify devices as behavioral descriptions, not textbook definitions ("often behaves like a soft clipper" not "is a soft clipper")
+- When physics/electronics are involved, be precise or acknowledge simplification
+
+EXERCISES MUST INCLUDE:
+- Specific plugin/device names in the DAW
+- Exact parameter starting values
+- Level-matching instructions (use Utility, match LUFS/RMS)
+- What specifically to listen for at each step
+- One real-world application (not just sine wave tests)`;
+
     case "conversational":
       return `RESPONSE STYLE: CONVERSATIONAL (Essay-Style Educational)
 
 Write in flowing, natural paragraphs like a master teacher explaining concepts in depth. This is educational content - it should teach, not just inform.
+
+TONE:
+- Confident but appropriately hedged ("typically", "often", "in many cases")
+- Avoid absolute claims and hyperbole
+- One metaphor to anchor, then clean technical language
 
 STRUCTURE:
 1. Open by framing why this topic matters and what the reader will learn
@@ -503,7 +596,12 @@ EDUCATIONAL APPROACH:
 - Include concrete examples ("For a bass-heavy kick at 120 BPM, you might boost at 60Hz...")
 - Explain the science/theory behind techniques when relevant
 - Build from fundamentals to advanced applications within each section
-- Anticipate questions and address them proactively`;
+- Anticipate questions and address them proactively
+
+AVOID:
+- Repeating the same concept multiple times with different wording
+- Stacking metaphors (one is enough)
+- Absolute language ("always", "never", "will completely transform")`;
 
     case "concise":
       return `RESPONSE STYLE: CONCISE (Brief & Direct)
@@ -522,7 +620,8 @@ GUIDELINES:
 - Only use lists for truly list-like content
 - Omit "filler" phrases and pleasantries
 - Focus on what, not why (unless asked)
-- Be direct, not curt`;
+- Be direct, not curt
+- Hedge technical claims appropriately`;
 
     case "structured":
     default:
@@ -530,21 +629,28 @@ GUIDELINES:
 
 Create a well-organized educational reference with clear sections. This should be something a producer could bookmark and return to.
 
+TONE:
+- Confident but appropriately hedged ("typically", "often")
+- No hyperbole or sales language
+- Technical precision over vague generalizations
+
 STRUCTURE:
 1. Start with "Key Concepts" - the 2-3 most important takeaways
 2. Break content into logical sections with descriptive headers
-3. Each section should go DEEP - not just list items but explain them thoroughly
+3. Each section should cover ONE concept thoroughly, then move on
 4. Use bullet points for quick-reference items (settings, parameters)
 5. Use numbered lists for step-by-step processes with EXACT values
 6. Include "Pro Tips" or "Common Mistakes" callouts
-7. End with "Putting It All Together" synthesis
+7. Include a "Decision Rules" section with if/then guidance
+8. End with "Putting It All Together" synthesis
 
 QUALITY REQUIREMENTS:
 - Every bullet point should provide ACTIONABLE information
 - Include specific numbers: "Set attack to 10-30ms" not "adjust attack to taste"
 - Headers should be informative: "Understanding Attack Time (10-100ms Range)" not just "Attack"
 - Each section should answer "why" not just "what"
-- Include practical examples throughout`;
+- Include practical examples throughout
+- Do NOT repeat the same information in multiple sections`;
   }
 }
 

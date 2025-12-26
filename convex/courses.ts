@@ -1610,3 +1610,99 @@ export const updateChapterContentInternal = internalMutation({
     return null;
   },
 });
+
+// ============================================================================
+// LEAD MAGNET ANALYZER SUPPORT QUERIES
+// ============================================================================
+
+/**
+ * Get course info for lead magnet analysis
+ */
+export const getCourseForLeadMagnet = internalQuery({
+  args: {
+    courseId: v.id("courses"),
+  },
+  returns: v.union(
+    v.object({
+      _id: v.id("courses"),
+      title: v.string(),
+    }),
+    v.null()
+  ),
+  handler: async (ctx, args) => {
+    const course = await ctx.db.get(args.courseId);
+    if (!course) return null;
+    return {
+      _id: course._id,
+      title: course.title,
+    };
+  },
+});
+
+/**
+ * Get all chapters for a course with enriched lesson/module info
+ */
+export const getChaptersForLeadMagnet = internalQuery({
+  args: {
+    courseId: v.id("courses"),
+  },
+  returns: v.array(v.object({
+    _id: v.id("courseChapters"),
+    title: v.string(),
+    description: v.optional(v.string()),
+    position: v.number(),
+    lessonId: v.optional(v.string()),
+    lessonTitle: v.optional(v.string()),
+    moduleTitle: v.optional(v.string()),
+  })),
+  handler: async (ctx, args) => {
+    // Get all chapters for this course
+    const chapters = await ctx.db
+      .query("courseChapters")
+      .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId))
+      .collect();
+
+    // Get lesson and module info for each chapter
+    const enrichedChapters = await Promise.all(
+      chapters.map(async (chapter) => {
+        let lessonTitle: string | undefined;
+        let moduleTitle: string | undefined;
+
+        if (chapter.lessonId) {
+          // Try to get lesson info
+          const lesson = await ctx.db
+            .query("courseLessons")
+            .filter((q) => q.eq(q.field("_id"), chapter.lessonId as any))
+            .first();
+
+          if (lesson) {
+            lessonTitle = lesson.title;
+
+            // Try to get module info from lesson
+            if (lesson.moduleId) {
+              const module = await ctx.db
+                .query("courseModules")
+                .filter((q) => q.eq(q.field("_id"), lesson.moduleId as any))
+                .first();
+              if (module) {
+                moduleTitle = module.title;
+              }
+            }
+          }
+        }
+
+        return {
+          _id: chapter._id,
+          title: chapter.title,
+          description: chapter.description,
+          position: chapter.position,
+          lessonId: chapter.lessonId,
+          lessonTitle,
+          moduleTitle,
+        };
+      })
+    );
+
+    return enrichedChapters;
+  },
+});

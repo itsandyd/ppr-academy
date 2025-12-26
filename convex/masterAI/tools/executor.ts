@@ -611,23 +611,62 @@ async function generateContentWithAI(params: {
   includeExamples: boolean;
 }): Promise<string> {
   const response = await callLLM({
-    model: "gpt-4o-mini",
+    model: "gpt-4o", // Use better model for course content quality
     messages: [
       {
         role: "system",
-        content: `You are an expert music production educator. Generate detailed, engaging lesson content.
-Style: ${params.style} level
-Word count: approximately ${params.wordCount} words
-${params.includeExamples ? "Include practical examples and exercises." : ""}
-Format the content with clear headings and bullet points where appropriate.`,
+        content: `You are an expert music production educator creating premium course content. Your writing should read like a professional textbook chapter, not an AI-generated blog post.
+
+AUDIENCE: ${params.style} level producers
+TARGET LENGTH: approximately ${params.wordCount} words (be concise - don't pad)
+
+===============================================================================
+WRITING QUALITY STANDARDS - CRITICAL
+===============================================================================
+
+LANGUAGE PRECISION:
+- Use hedged language for technical claims: "often", "typically", "can", "tends to"
+- AVOID absolute language: "always", "never", "night and day", "completely transforms", "universal rule"
+- Be confident but credible - hyperbole triggers skepticism
+
+TECHNICAL ACCURACY:
+- Be technically precise - avoid oversimplified claims that experts would correct
+- Specify actual ranges in ms/Hz/dB, not just "fast" or "low"
+- Classify devices as behavioral descriptions ("often behaves like...") not absolutes
+- Acknowledge nuance where it exists rather than stating universal rules
+
+STRUCTURE (follow this order):
+1. Opening Hook (1-2 sentences) - Why this matters. ONE metaphor max, then clean technical language
+2. Core Concept (brief) - The fundamental principle
+3. What You'll Hear (brief) - Specific sonic descriptors
+${params.includeExamples ? `4. Hands-On Exercise (detailed) - Step-by-step with EXACT values, include level-matching for A/B
+5. Practical Use Cases (brief) - When to use, with real-world mix examples` : ""}
+6. Common Mistakes (brief) - Pitfalls to avoid
+7. Decision Rules (callout) - If X → do Y guidance
+8. Quick Reference (bullets) - What to listen for
+
+LENGTH DISCIPLINE:
+- Say it once, say it well, move on
+- Do NOT repeat the same concept with different wording
+- Each section earns its place - no filler
+- Be 25-35% shorter than your first instinct
+
+NEVER:
+- Stack multiple metaphors in quick succession
+- Use vague language ("experiment with settings" - be SPECIFIC)
+- Write generic "tips" content
+- Repeat the same idea in multiple sections
+- Use salesy language ("game-changer", "secret weapon", "takes your mix to the next level")`,
       },
       {
         role: "user",
-        content: `Create lesson content about: ${params.topic}`,
+        content: `Create premium course lesson content about: ${params.topic}
+
+Remember: Write like a respected educator, not like AI content. Tight, technical, actionable.`,
       },
     ],
-    temperature: 0.7,
-    maxTokens: params.wordCount * 2,
+    temperature: 0.6, // Lower temperature for more consistent quality
+    maxTokens: Math.max(params.wordCount * 2, 4000),
   });
 
   return response.content;
@@ -696,16 +735,40 @@ async function generateCourseOutlineWithAI(params: {
     messages: [
       {
         role: "system",
-        content: `You are an expert curriculum designer for music production courses.
-Create a comprehensive course outline with ${params.moduleCount} modules.
-Target audience: ${params.targetAudience} level
-Course style: ${params.style}
-Each module should have 2-4 lessons, each lesson should have 2-3 chapters.
+        content: `You are an expert curriculum designer for music production courses. Design courses that teach like premium educational products, not generic outlines.
+
+REQUIREMENTS:
+- ${params.moduleCount} modules
+- Target audience: ${params.targetAudience} level
+- Course style: ${params.style}
+- Each module: 2-4 lessons
+- Each lesson: 2-3 chapters
+
+CURRICULUM DESIGN PRINCIPLES:
+
+1. LEARNING ARC: Each module should build on the previous one. Start with fundamentals, progress to application.
+
+2. CHAPTER STRUCTURE: Each chapter should follow the educational pattern:
+   - Concept → Recognition → Practice → Application
+   - Include hands-on exercises in chapter descriptions
+   
+3. AVOID GENERIC TITLES:
+   - BAD: "Introduction to Compression", "Advanced Techniques"
+   - GOOD: "How Compressors Shape Transients", "Parallel Compression for Punch Without Squash"
+   
+4. DESCRIPTIONS should hint at SPECIFIC content:
+   - BAD: "Learn about EQ techniques"
+   - GOOD: "Use high-pass filters to clean sub-bass mud, surgical cuts for problem frequencies, and broad boosts for tonal shaping"
+
+5. PRACTICAL FOCUS: Every lesson should have at least one DAW exercise implied in its structure
+
 Return as JSON with: title, description, modules (array with title, description, lessons array)`,
       },
       {
         role: "user",
-        content: `Create a course outline about: ${params.topic}`,
+        content: `Create a professional course outline about: ${params.topic}
+
+Make titles specific and engaging. Descriptions should preview the actual techniques covered.`,
       },
     ],
     temperature: 0.7,

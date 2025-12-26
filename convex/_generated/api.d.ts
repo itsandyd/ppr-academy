@@ -127,6 +127,7 @@ import type * as masterAI_goalExtractor from "../masterAI/goalExtractor.js";
 import type * as masterAI_goalExtractorMutations from "../masterAI/goalExtractorMutations.js";
 import type * as masterAI_ideaGenerator from "../masterAI/ideaGenerator.js";
 import type * as masterAI_index from "../masterAI/index.js";
+import type * as masterAI_leadMagnetAnalyzer from "../masterAI/leadMagnetAnalyzer.js";
 import type * as masterAI_llmClient from "../masterAI/llmClient.js";
 import type * as masterAI_memoryManager from "../masterAI/memoryManager.js";
 import type * as masterAI_mutations from "../masterAI/mutations.js";
@@ -319,6 +320,7 @@ declare const fullApi: ApiFromModules<{
   "masterAI/goalExtractorMutations": typeof masterAI_goalExtractorMutations;
   "masterAI/ideaGenerator": typeof masterAI_ideaGenerator;
   "masterAI/index": typeof masterAI_index;
+  "masterAI/leadMagnetAnalyzer": typeof masterAI_leadMagnetAnalyzer;
   "masterAI/llmClient": typeof masterAI_llmClient;
   "masterAI/memoryManager": typeof masterAI_memoryManager;
   "masterAI/mutations": typeof masterAI_mutations;
