@@ -194,3 +194,54 @@ export const getStorageUrl = internalQuery({
   },
 });
 
+/**
+ * Create a complete illustration record with image and embedding
+ * Used for lead magnet images that are generated and approved in one step
+ */
+export const createCompleteIllustration = internalMutation({
+  args: {
+    userId: v.string(),
+    storeId: v.optional(v.string()),
+    scriptId: v.optional(v.string()),
+    sourceType: v.union(
+      v.literal("course"),
+      v.literal("lesson"),
+      v.literal("script"),
+      v.literal("custom")
+    ),
+    sentence: v.string(),
+    sentenceIndex: v.number(),
+    illustrationPrompt: v.string(),
+    imageUrl: v.string(),
+    imageStorageId: v.optional(v.id("_storage")),
+    embedding: v.optional(v.array(v.number())),
+    embeddingModel: v.optional(v.string()),
+    generationModel: v.string(),
+    generationStatus: v.union(
+      v.literal("pending"),
+      v.literal("generating"),
+      v.literal("completed"),
+      v.literal("failed")
+    ),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.insert("scriptIllustrations", {
+      userId: args.userId,
+      storeId: args.storeId,
+      scriptId: args.scriptId,
+      sourceType: args.sourceType,
+      sentence: args.sentence,
+      sentenceIndex: args.sentenceIndex,
+      illustrationPrompt: args.illustrationPrompt,
+      imageUrl: args.imageUrl,
+      imageStorageId: args.imageStorageId,
+      embedding: args.embedding,
+      embeddingModel: args.embeddingModel,
+      generationModel: args.generationModel,
+      generationStatus: args.generationStatus,
+      createdAt: Date.now(),
+      generatedAt: Date.now(),
+    });
+  },
+});
+

@@ -111,6 +111,7 @@ import type * as integrations_internal from "../integrations/internal.js";
 import type * as integrations_queries from "../integrations/queries.js";
 import type * as langchainNotes from "../langchainNotes.js";
 import type * as langchainNotesActions from "../langchainNotesActions.js";
+import type * as leadMagnetAnalysisMutations from "../leadMagnetAnalysisMutations.js";
 import type * as leadSubmissions from "../leadSubmissions.js";
 import type * as leaderboards from "../leaderboards.js";
 import type * as lib_typeValidation from "../lib/typeValidation.js";
@@ -304,6 +305,7 @@ declare const fullApi: ApiFromModules<{
   "integrations/queries": typeof integrations_queries;
   langchainNotes: typeof langchainNotes;
   langchainNotesActions: typeof langchainNotesActions;
+  leadMagnetAnalysisMutations: typeof leadMagnetAnalysisMutations;
   leadSubmissions: typeof leadSubmissions;
   leaderboards: typeof leaderboards;
   "lib/typeValidation": typeof lib_typeValidation;

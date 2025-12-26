@@ -4080,6 +4080,74 @@ export default defineSchema({
     .index("by_userId_and_createdAt", ["userId", "createdAt"]), // For ordered retrieval (newest first)
 
   // =============================================================================
+  // Lead Magnet Analyses - Saved visual idea analyses for courses
+  // =============================================================================
+  leadMagnetAnalyses: defineTable({
+    userId: v.string(), // Clerk ID
+    courseId: v.id("courses"),
+    courseTitle: v.string(),
+    
+    // Analysis metadata
+    name: v.string(), // User-given name for this analysis
+    
+    // Full analysis results (stored as JSON)
+    totalChapters: v.number(),
+    totalVisualIdeas: v.number(),
+    avgLeadMagnetScore: v.number(),
+    
+    // Serialized chapter analyses
+    chapters: v.array(v.object({
+      chapterId: v.string(),
+      chapterTitle: v.string(),
+      moduleTitle: v.optional(v.string()),
+      lessonTitle: v.optional(v.string()),
+      overallLeadMagnetScore: v.number(),
+      keyTopics: v.array(v.string()),
+      leadMagnetSuggestions: v.array(v.string()),
+      visualIdeas: v.array(v.object({
+        sentenceOrConcept: v.string(),
+        visualDescription: v.string(),
+        illustrationPrompt: v.string(),
+        importance: v.union(
+          v.literal("critical"),
+          v.literal("helpful"),
+          v.literal("optional")
+        ),
+        category: v.union(
+          v.literal("concept_diagram"),
+          v.literal("process_flow"),
+          v.literal("comparison"),
+          v.literal("equipment_setup"),
+          v.literal("waveform_visual"),
+          v.literal("ui_screenshot"),
+          v.literal("metaphor"),
+          v.literal("example")
+        ),
+        leadMagnetPotential: v.number(),
+        estimatedPosition: v.number(),
+        embedding: v.optional(v.array(v.number())),
+        embeddingText: v.optional(v.string()),
+      })),
+    })),
+    
+    // Bundle ideas
+    bundleIdeas: v.optional(v.array(v.object({
+      name: v.string(),
+      description: v.string(),
+      chapterIds: v.array(v.string()),
+      estimatedVisuals: v.number(),
+    }))),
+    
+    // Timestamps
+    createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_courseId", ["courseId"])
+    .index("by_userId_and_courseId", ["userId", "courseId"])
+    .index("by_userId_and_createdAt", ["userId", "createdAt"]),
+
+  // =============================================================================
   // AI Course Builder - Batch course generation queue and outlines
   // =============================================================================
   

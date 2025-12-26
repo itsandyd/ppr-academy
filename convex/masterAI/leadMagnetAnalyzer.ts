@@ -797,3 +797,570 @@ function generateBundleIdeas(chapters: ChapterAnalysis[]): Array<{
 
   return bundles;
 }
+
+// ============================================================================
+// IMAGE GENERATION (Gemini 3 Pro via OpenRouter)
+// ============================================================================
+
+/**
+ * Core Excalidraw-style aesthetic that applies to all visuals
+ */
+const EXCALIDRAW_CORE_STYLE = `
+## MANDATORY VISUAL STYLE: Excalidraw Hand-Drawn Aesthetic
+
+This is the most important instruction. ALL images MUST follow this style:
+
+**Core Style Requirements:**
+- Simple hand-drawn sketch appearance
+- Excalidraw-style illustration (like the popular whiteboard tool)
+- Slightly wobbly, imperfect outlines (not perfectly straight lines)
+- Hand-sketched look with organic, natural line quality
+- Flat pastel colors with soft, muted tones
+- Minimal to no shading - keep it flat and simple
+- Pure white or very light off-white background
+- 16:9 aspect ratio
+- Clean, uncluttered composition with breathing room
+
+**Pastel Color Palette:**
+- Soft coral/salmon (#FFB6C1, #FFA07A)
+- Muted lavender/purple (#DDA0DD, #B19CD9)
+- Gentle mint/seafoam (#98FB98, #7FFFD4)
+- Warm peach/apricot (#FFDAB9, #FFE4B5)
+- Soft sky blue (#87CEEB, #ADD8E6)
+- Dusty rose (#D8BFD8)
+- Light sage green (#90EE90)
+
+**Line Quality:**
+- Hand-drawn wobbly lines, not perfectly geometric
+- Varying line thickness for organic feel
+- Rounded corners on shapes
+- Sketchy, not clinical or sterile
+
+**What to AVOID:**
+- Photorealistic rendering
+- Heavy gradients or complex shading
+- Dark or high-contrast backgrounds
+- Perfectly straight geometric lines
+- Overly complex or busy compositions
+- 3D effects or heavy shadows
+`;
+
+/**
+ * Category-specific guidance for Excalidraw-style visuals
+ * These complement the core style, not override it
+ */
+const categoryStyleGuides: Record<string, string> = {
+  concept_diagram: `
+CONTENT FOCUS: Technical diagram showing relationships and hierarchy
+- Use simple shapes: rounded rectangles, circles, cloud shapes
+- Connect elements with hand-drawn arrows or lines
+- Keep icons simple and iconic (stick-figure style for complex items)
+- Use different pastel colors to distinguish concept groups
+- Minimal text labels are okay if they help clarity`,
+
+  process_flow: `
+CONTENT FOCUS: Step-by-step workflow or sequence
+- Show clear left-to-right or top-to-bottom progression
+- Use simple numbered circles or boxes for steps
+- Hand-drawn arrows connecting each step
+- Small iconic representations for each action
+- Visual emphasis on the flow/direction`,
+
+  comparison: `
+CONTENT FOCUS: Side-by-side or before/after visualization
+- Split composition into two clear halves
+- Use matching layouts for easy comparison
+- Hand-drawn checkmarks (✓) or X marks to show differences
+- Simple icons representing each state
+- Subtle visual divider between sections`,
+
+  equipment_setup: `
+CONTENT FOCUS: Hardware or software setup illustration
+- Simple iconic representations of equipment
+- Cute, simplified sketches (not realistic)
+- Hand-drawn connection lines between devices
+- Isometric-ish perspective but still sketchy
+- Focus on relationships between components`,
+
+  waveform_visual: `
+CONTENT FOCUS: Audio signals and waveforms
+- Simple hand-drawn waveform shapes
+- Use different pastel colors for different signals
+- Grid lines should also be hand-drawn style
+- Simplified frequency/amplitude representations
+- Keep the technical info readable but sketchy`,
+
+  ui_screenshot: `
+CONTENT FOCUS: Software interface concept
+- Simplified, sketch-style UI elements
+- Hand-drawn buttons, sliders, knobs
+- Don't try to be pixel-perfect
+- Focus on the key interface elements
+- Use callout bubbles if highlighting specific parts`,
+
+  metaphor: `
+CONTENT FOCUS: Abstract concept made visual
+- Use simple symbolic imagery
+- Cute, friendly representations
+- Visual metaphors over literal depictions
+- Playful interpretation of the concept
+- Focus on the "aha" moment`,
+
+  example: `
+CONTENT FOCUS: Concrete scenario illustration
+- Simple scene with recognizable context
+- Cartoon-ish, friendly style
+- Focus on the key elements of the example
+- Minimal background detail
+- Clear focal point`,
+};
+
+/**
+ * Build a rich, detailed prompt for image generation
+ * Uses Excalidraw hand-drawn aesthetic with 65K token context
+ */
+function buildRichImagePrompt(args: {
+  prompt: string;
+  visualDescription?: string;
+  sentenceOrConcept?: string;
+  category?: string;
+  chapterTitle?: string;
+  courseTitle?: string;
+  importance?: string;
+}): string {
+  const categoryGuide = args.category 
+    ? categoryStyleGuides[args.category] || categoryStyleGuides.concept_diagram
+    : categoryStyleGuides.concept_diagram;
+
+  const importanceContext = args.importance === "critical" 
+    ? "Make this especially clear and memorable - it's essential for understanding."
+    : args.importance === "helpful"
+    ? "This adds significant value - make it informative and engaging."
+    : "Keep this clean and supportive of the main content.";
+
+  return `# Excalidraw-Style Educational Illustration
+
+${EXCALIDRAW_CORE_STYLE}
+
+---
+
+## What to Illustrate
+
+${args.courseTitle ? `**Course Context:** ${args.courseTitle}` : ""}
+${args.chapterTitle ? `**From Chapter:** ${args.chapterTitle}` : ""}
+${args.category ? `**Visual Type:** ${args.category.replace(/_/g, " ")}` : ""}
+${args.importance ? `**Priority:** ${importanceContext}` : ""}
+
+### The Concept
+${args.sentenceOrConcept ? `"${args.sentenceOrConcept}"` : ""}
+
+### Visual Description
+${args.visualDescription || ""}
+
+### Specific Request
+${args.prompt}
+
+---
+
+## Category-Specific Guidance
+${categoryGuide}
+
+---
+
+## Final Reminders
+
+1. **STYLE IS PARAMOUNT**: Hand-drawn, Excalidraw aesthetic with wobbly lines
+2. **KEEP IT SIMPLE**: Don't overcomplicate - clarity over detail
+3. **PASTEL COLORS**: Soft, muted, friendly color palette
+4. **WHITE BACKGROUND**: Pure white or very light background
+5. **16:9 RATIO**: Landscape orientation
+6. **FLAT DESIGN**: No complex shading or 3D effects
+7. **FRIENDLY & APPROACHABLE**: Should feel hand-drawn and human
+
+Generate one cohesive illustration that captures the concept in a simple, hand-drawn Excalidraw style. The image should feel like a quick whiteboard sketch - clear, friendly, and instantly understandable.`;
+}
+
+/**
+ * Generate an image from an illustration prompt using Google's Gemini 3 Pro (Nano Banana Pro)
+ * via OpenRouter. Returns base64 image data.
+ * 
+ * Gemini 3 Pro has 65,536 token context - we take advantage of this by providing
+ * rich, detailed prompts with full context for better image generation.
+ */
+export const generateVisualImage = action({
+  args: {
+    prompt: v.string(),
+    chapterId: v.optional(v.string()),
+    visualIndex: v.optional(v.number()),
+    // Enhanced context for richer prompts
+    visualDescription: v.optional(v.string()),
+    sentenceOrConcept: v.optional(v.string()),
+    category: v.optional(v.string()),
+    chapterTitle: v.optional(v.string()),
+    courseTitle: v.optional(v.string()),
+    importance: v.optional(v.string()),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    imageData: v.optional(v.string()), // Base64 data URL
+    storageId: v.optional(v.id("_storage")),
+    imageUrl: v.optional(v.string()),
+    error: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    console.log(`🎨 Generating visual image for prompt: ${args.prompt.substring(0, 100)}...`);
+    
+    const apiKey = process.env.OPENROUTER_API_KEY;
+    if (!apiKey) {
+      return {
+        success: false,
+        error: "OPENROUTER_API_KEY not configured",
+      };
+    }
+
+    // Build a rich, detailed prompt taking advantage of 65K context
+    const richPrompt = buildRichImagePrompt(args);
+
+    try {
+      // Call OpenRouter with Gemini 3 Pro Image Preview
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "https://ppr-academy.com",
+          "X-Title": "PPR Academy Lead Magnet Generator",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-3-pro-image-preview",
+          modalities: ["image", "text"],
+          messages: [
+            {
+              role: "user",
+              content: richPrompt,
+            },
+          ],
+          max_tokens: 4096,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`OpenRouter error (${response.status}):`, errorText);
+        return {
+          success: false,
+          error: `Image generation failed: ${response.status} - ${errorText.substring(0, 200)}`,
+        };
+      }
+
+      const data = await response.json() as {
+        choices: Array<{
+          message: {
+            content: string | Array<{
+              type: string;
+              image_url?: { url: string };
+              text?: string;
+            }>;
+          };
+        }>;
+      };
+
+      // Extract image from response
+      const messageContent = data.choices?.[0]?.message?.content;
+      
+      if (!messageContent) {
+        return {
+          success: false,
+          error: "No content in response",
+        };
+      }
+
+      // Handle array content (multimodal response)
+      if (Array.isArray(messageContent)) {
+        for (const part of messageContent) {
+          if (part.type === "image_url" && part.image_url?.url) {
+            const imageData = part.image_url.url;
+            
+            // If it's a base64 data URL, upload to Convex storage
+            if (imageData.startsWith("data:image")) {
+              try {
+                const storageResult = await uploadBase64ToStorage(ctx, imageData);
+                const imageUrl = await ctx.storage.getUrl(storageResult);
+                
+                return {
+                  success: true,
+                  imageData,
+                  storageId: storageResult,
+                  imageUrl: imageUrl || undefined,
+                };
+              } catch (uploadError) {
+                console.warn("Failed to upload to storage, returning base64:", uploadError);
+                return {
+                  success: true,
+                  imageData,
+                };
+              }
+            }
+            
+            return {
+              success: true,
+              imageData,
+            };
+          }
+        }
+      }
+
+      // Handle string content (might contain base64 or URL)
+      if (typeof messageContent === "string") {
+        // Check if it's a data URL
+        if (messageContent.includes("data:image")) {
+          const match = messageContent.match(/data:image\/[^;]+;base64,[A-Za-z0-9+/=]+/);
+          if (match) {
+            return {
+              success: true,
+              imageData: match[0],
+            };
+          }
+        }
+        
+        // Otherwise it might be a text response explaining inability to generate
+        return {
+          success: false,
+          error: `Model returned text instead of image: ${messageContent.substring(0, 200)}`,
+        };
+      }
+
+      return {
+        success: false,
+        error: "Could not extract image from response",
+      };
+
+    } catch (error) {
+      console.error("Image generation error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  },
+});
+
+/**
+ * Helper to upload base64 image data to Convex storage
+ */
+async function uploadBase64ToStorage(ctx: any, base64Data: string): Promise<Id<"_storage">> {
+  // Extract the base64 content without the data URL prefix
+  const base64Content = base64Data.replace(/^data:image\/\w+;base64,/, "");
+  
+  // Convert base64 to ArrayBuffer
+  const binaryString = atob(base64Content);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  
+  // Determine content type
+  const contentTypeMatch = base64Data.match(/^data:(image\/\w+);base64,/);
+  const contentType = contentTypeMatch ? contentTypeMatch[1] : "image/png";
+  
+  // Get upload URL and upload
+  const uploadUrl = await ctx.storage.generateUploadUrl();
+  
+  const uploadResponse = await fetch(uploadUrl, {
+    method: "POST",
+    headers: { "Content-Type": contentType },
+    body: bytes.buffer,
+  });
+
+  if (!uploadResponse.ok) {
+    throw new Error("Failed to upload to Convex storage");
+  }
+
+  const { storageId } = await uploadResponse.json() as { storageId: Id<"_storage"> };
+  return storageId;
+}
+
+// ============================================================================
+// SAVE ACCEPTED IMAGE WITH EMBEDDINGS
+// ============================================================================
+
+/**
+ * Save an accepted lead magnet image to the database with embeddings
+ * Called after user reviews and approves a generated image
+ */
+export const saveAcceptedImage = action({
+  args: {
+    userId: v.string(),
+    chapterId: v.string(),
+    courseId: v.string(),
+    // Visual idea metadata
+    sentenceOrConcept: v.string(),
+    visualDescription: v.string(),
+    illustrationPrompt: v.string(),
+    category: v.string(),
+    // Image data - either base64 or URL
+    imageData: v.string(),
+    storageId: v.optional(v.id("_storage")),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    illustrationId: v.optional(v.id("scriptIllustrations")),
+    imageUrl: v.optional(v.string()),
+    error: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    console.log(`💾 Saving accepted image for chapter ${args.chapterId}`);
+
+    try {
+      let storageId = args.storageId;
+      let imageUrl: string;
+
+      // If we have base64 data but no storage ID, upload to storage
+      if (!storageId && args.imageData.startsWith("data:image")) {
+        console.log("   📤 Uploading image to storage...");
+        storageId = await uploadBase64ToStorage(ctx, args.imageData);
+      }
+
+      // Get the image URL
+      if (storageId) {
+        const url = await ctx.storage.getUrl(storageId);
+        if (!url) {
+          throw new Error("Failed to get storage URL");
+        }
+        imageUrl = url;
+      } else if (args.imageData.startsWith("http")) {
+        imageUrl = args.imageData;
+      } else {
+        throw new Error("No valid image data provided");
+      }
+
+      console.log("   🎨 Image URL:", imageUrl.substring(0, 50) + "...");
+
+      // Generate embedding from the image using vision + text embedding
+      console.log("   🧮 Generating image embedding...");
+      const embedding = await generateImageEmbeddingFromUrl(imageUrl, args.visualDescription);
+
+      // Save to scriptIllustrations table
+      console.log("   💾 Saving to database...");
+      const illustrationId = await ctx.runMutation(
+        internalRef.scriptIllustrationMutations.createCompleteIllustration,
+        {
+          userId: args.userId,
+          scriptId: args.courseId,
+          sourceType: "course" as const,
+          sentence: args.sentenceOrConcept,
+          sentenceIndex: 0, // Lead magnet images don't have a specific index
+          illustrationPrompt: args.illustrationPrompt,
+          imageUrl,
+          imageStorageId: storageId,
+          embedding,
+          embeddingModel: "text-embedding-3-small",
+          generationModel: "google/gemini-3-pro-image-preview",
+          generationStatus: "completed" as const,
+        }
+      ) as Id<"scriptIllustrations">;
+
+      console.log(`   ✅ Saved illustration: ${illustrationId}`);
+
+      return {
+        success: true,
+        illustrationId,
+        imageUrl,
+      };
+
+    } catch (error) {
+      console.error("❌ Error saving accepted image:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  },
+});
+
+/**
+ * Generate embedding for an image by first describing it with vision, then embedding the description
+ */
+async function generateImageEmbeddingFromUrl(imageUrl: string, additionalContext?: string): Promise<number[]> {
+  const openaiKey = process.env.OPENAI_API_KEY;
+  if (!openaiKey) {
+    console.warn("⚠️ No OpenAI key, returning placeholder embedding");
+    return new Array(EMBEDDING_DIMENSIONS).fill(0).map(() => Math.random() - 0.5);
+  }
+
+  try {
+    // Step 1: Use GPT-4o-mini vision to describe the image
+    console.log("      📝 Describing image with GPT-4o-mini vision...");
+    const descriptionResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${openaiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `Describe this educational illustration in detail for semantic search purposes. 
+Focus on: visual elements, concepts depicted, style, colors, composition, and educational value.
+${additionalContext ? `Context: ${additionalContext}` : ""}
+Be concise but thorough (2-3 sentences).`,
+              },
+              {
+                type: "image_url",
+                image_url: { url: imageUrl },
+              },
+            ],
+          },
+        ],
+        max_tokens: 300,
+      }),
+    });
+
+    if (!descriptionResponse.ok) {
+      throw new Error(`Vision API error: ${descriptionResponse.status}`);
+    }
+
+    const descriptionData = await descriptionResponse.json() as any;
+    const imageDescription = descriptionData.choices?.[0]?.message?.content || additionalContext || "";
+
+    console.log("      📝 Image description:", imageDescription.substring(0, 100) + "...");
+
+    // Step 2: Generate text embedding from the description
+    console.log("      🔢 Generating embedding from description...");
+    const embeddingResponse = await fetch("https://api.openai.com/v1/embeddings", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${openaiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "text-embedding-3-small",
+        input: imageDescription,
+      }),
+    });
+
+    if (!embeddingResponse.ok) {
+      throw new Error(`Embedding API error: ${embeddingResponse.status}`);
+    }
+
+    const embeddingData = await embeddingResponse.json() as any;
+    const embedding = embeddingData.data?.[0]?.embedding;
+
+    if (!embedding || embedding.length === 0) {
+      throw new Error("No embedding returned");
+    }
+
+    console.log(`      ✅ Generated ${embedding.length}-dim embedding`);
+    return embedding;
+
+  } catch (error) {
+    console.error("Error generating image embedding:", error);
+    // Return placeholder on error
+    return new Array(EMBEDDING_DIMENSIONS).fill(0).map(() => Math.random() - 0.5);
+  }
+}
