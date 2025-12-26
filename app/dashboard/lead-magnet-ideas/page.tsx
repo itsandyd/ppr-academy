@@ -612,11 +612,12 @@ export default function LeadMagnetIdeasPage() {
   };
 
   const handleAnalyze = async () => {
-    if (!selectedCourse) return;
+    if (!selectedCourse || !convexUser?.clerkId) return;
     
     setIsAnalyzing(true);
     setAnalysis(null);
     setSearchResults(null);
+    setLoadedAnalysisId(null);
     // Clear image state for new analysis
     setGeneratedImages({});
     setSavedImages(new Set());
@@ -629,10 +630,53 @@ export default function LeadMagnetIdeasPage() {
         maxChapters,
         generateEmbeddings,
       }) as CourseLeadMagnetAnalysis;
+      
       setAnalysis(result);
+      
       // Expand the first chapter by default
       if (result.chapters.length > 0) {
         setExpandedChapters(new Set([result.chapters[0].chapterId]));
+      }
+      
+      // Auto-save the analysis
+      const selectedCourseObj = courses?.find(c => c._id === selectedCourse);
+      const timestamp = new Date().toLocaleString('en-US', { 
+        month: 'short', 
+        day: 'numeric', 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
+      const autoName = `${selectedCourseObj?.title || 'Course'} - ${timestamp}`;
+      
+      // Calculate avgLeadMagnetScore from chapters
+      const avgScore = result.chapters.length > 0 
+        ? result.chapters.reduce((sum, ch) => sum + ch.overallLeadMagnetScore, 0) / result.chapters.length
+        : 0;
+      
+      try {
+        const analysisId = await saveAnalysisMutation({
+          userId: convexUser.clerkId,
+          courseId: selectedCourse as Id<"courses">,
+          courseTitle: result.courseTitle,
+          name: autoName,
+          analysisResult: {
+            courseId: result.courseId,
+            courseTitle: result.courseTitle,
+            totalChapters: result.totalChapters,
+            analyzedChapters: result.analyzedChapters,
+            totalVisualIdeas: result.totalVisualIdeas,
+            avgLeadMagnetScore: avgScore,
+            overallLeadMagnetScore: avgScore,
+            chapters: result.chapters,
+            topLeadMagnetCandidates: result.topLeadMagnetCandidates,
+            bundleIdeas: result.bundleIdeas,
+          },
+        });
+        setLoadedAnalysisId(analysisId);
+        console.log('✅ Analysis auto-saved:', analysisId);
+      } catch (saveError) {
+        console.error('Failed to auto-save analysis:', saveError);
+        // Don't fail the whole operation if save fails
       }
     } catch (error) {
       console.error("Analysis failed:", error);

@@ -4099,8 +4099,10 @@ export default defineSchema({
     chapters: v.array(v.object({
       chapterId: v.string(),
       chapterTitle: v.string(),
-      moduleTitle: v.optional(v.string()),
+      lessonId: v.optional(v.string()),
       lessonTitle: v.optional(v.string()),
+      moduleTitle: v.optional(v.string()),
+      wordCount: v.optional(v.number()),
       overallLeadMagnetScore: v.number(),
       keyTopics: v.array(v.string()),
       leadMagnetSuggestions: v.array(v.string()),

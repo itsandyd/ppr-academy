@@ -34,8 +34,10 @@ const visualIdeaValidator = v.object({
 const chapterAnalysisValidator = v.object({
   chapterId: v.string(),
   chapterTitle: v.string(),
-  moduleTitle: v.optional(v.string()),
+  lessonId: v.optional(v.string()),
   lessonTitle: v.optional(v.string()),
+  moduleTitle: v.optional(v.string()),
+  wordCount: v.optional(v.number()),
   overallLeadMagnetScore: v.number(),
   keyTopics: v.array(v.string()),
   leadMagnetSuggestions: v.array(v.string()),
@@ -53,9 +55,17 @@ const analysisResultValidator = v.object({
   courseId: v.string(),
   courseTitle: v.string(),
   totalChapters: v.number(),
+  analyzedChapters: v.optional(v.number()),
   totalVisualIdeas: v.number(),
   avgLeadMagnetScore: v.number(),
+  overallLeadMagnetScore: v.optional(v.number()),
   chapters: v.array(chapterAnalysisValidator),
+  topLeadMagnetCandidates: v.optional(v.array(v.object({
+    chapterId: v.string(),
+    chapterTitle: v.string(),
+    score: v.number(),
+    reason: v.string(),
+  }))),
   bundleIdeas: v.optional(v.array(bundleIdeaValidator)),
 });
 
