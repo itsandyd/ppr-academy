@@ -4,15 +4,14 @@
 import { useState } from "react";
 import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useAuth } from "@/hooks/useAuth";
-import { useParams } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Loader2, Sparkles, Image, Zap, ChevronDown, ChevronUp, CheckCircle2, Search, Brain } from "lucide-react";
+import { Loader2, Sparkles, Image, FileText, Zap, ChevronDown, ChevronUp, CheckCircle2, Search, Brain, ArrowLeft } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -22,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import type { Id } from "@/convex/_generated/dataModel";
+import Link from "next/link";
 
 // Store API references to avoid TypeScript deep instantiation issues
 const coursesApi = api.courses as any;
@@ -249,9 +249,7 @@ function ChapterCard({ chapter, isExpanded, onToggle }: {
 }
 
 export default function LeadMagnetIdeasPage() {
-  const { user } = useAuth();
-  const params = useParams();
-  const storeId = params?.storeId as string;
+  const { user } = useUser();
 
   const [selectedCourse, setSelectedCourse] = useState<string>("");
   const [analysis, setAnalysis] = useState<CourseLeadMagnetAnalysis | null>(null);
@@ -268,8 +266,17 @@ export default function LeadMagnetIdeasPage() {
   }> | null>(null);
   const [isSearching, setIsSearching] = useState(false);
 
-  // Fetch courses for the store (using pre-cast API refs to avoid TS deep instantiation)
-  const courses = useQuery(coursesApi.getCoursesByStore, { storeId }) as Array<{ _id: string; title: string }> | undefined;
+  // Get Convex user
+  const convexUser = useQuery(
+    api.users.getUserFromClerk,
+    user?.id ? { clerkId: user.id } : 'skip'
+  );
+
+  // Fetch user's courses (using clerkId)
+  const courses = useQuery(
+    coursesApi.getCoursesByUser,
+    convexUser?.clerkId ? { userId: convexUser.clerkId } : 'skip'
+  ) as Array<{ _id: string; title: string }> | undefined;
 
   // Actions
   const analyzeAction = useAction(leadMagnetApi.analyzeLeadMagnetOpportunities);
@@ -346,6 +353,15 @@ export default function LeadMagnetIdeasPage() {
 
   return (
     <div className="container max-w-6xl py-8">
+      {/* Back to Dashboard */}
+      <Link 
+        href="/dashboard?mode=create" 
+        className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        Back to Dashboard
+      </Link>
+
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2 flex items-center gap-3">
           <Sparkles className="w-8 h-8 text-primary" />
@@ -418,7 +434,7 @@ export default function LeadMagnetIdeasPage() {
           </div>
 
           {/* Embedding toggle */}
-          <div className="flex items-center gap-3 pt-4 border-t">
+          <div className="flex items-center gap-3 pt-4 border-t mt-4">
             <Switch
               id="embeddings"
               checked={generateEmbeddings}

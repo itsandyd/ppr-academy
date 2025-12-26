@@ -140,6 +140,13 @@ export function CreateModeContent() {
         icon: BarChart3,
         color: "from-indigo-500 to-purple-500",
         href: `/store/${baseStoreId}/analytics`
+      },
+      {
+        title: "Lead Magnet Ideas",
+        description: "Generate visual ideas",
+        icon: Star,
+        color: "from-amber-500 to-yellow-500",
+        href: `/dashboard/lead-magnet-ideas`
       }
     ];
   }, [storeId]);
