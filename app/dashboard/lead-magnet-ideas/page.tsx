@@ -120,19 +120,19 @@ function ScoreIndicator({ score }: { score: number }) {
   };
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1.5 sm:gap-2">
       <div className="flex gap-0.5">
         {[...Array(10)].map((_, i) => (
           <div
             key={i}
             className={cn(
-              "w-2 h-4 rounded-sm transition-colors",
+              "w-1.5 sm:w-2 h-3 sm:h-4 rounded-sm transition-colors",
               i < score ? getColor(score) : "bg-muted"
             )}
           />
         ))}
       </div>
-      <span className="text-sm font-medium">{score}/10</span>
+      <span className="text-xs sm:text-sm font-medium whitespace-nowrap">{score}/10</span>
     </div>
   );
 }
@@ -173,11 +173,11 @@ function VisualIdeaCard({
 
   return (
     <div className={cn(
-      "border rounded-lg p-4 bg-card transition-colors",
+      "border rounded-lg p-3 sm:p-4 bg-card transition-colors",
       isSaved && "border-green-500/50 bg-green-500/5"
     )}>
-      <div className="flex items-start justify-between gap-4 mb-3">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4 mb-3">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           <span className="text-xs text-muted-foreground font-mono">#{index + 1}</span>
           <Badge variant="outline" className={cn("text-xs", importanceColors[idea.importance])}>
             {idea.importance}
@@ -192,12 +192,14 @@ function VisualIdeaCard({
             </Badge>
           )}
         </div>
-        <ScoreIndicator score={idea.leadMagnetPotential} />
+        <div className="shrink-0">
+          <ScoreIndicator score={idea.leadMagnetPotential} />
+        </div>
       </div>
 
-      <h4 className="font-medium text-sm mb-2 line-clamp-2">{idea.sentenceOrConcept}</h4>
+      <h4 className="font-medium text-sm mb-2 line-clamp-3 sm:line-clamp-2">{idea.sentenceOrConcept}</h4>
       
-      <p className="text-sm text-muted-foreground mb-3">{idea.visualDescription}</p>
+      <p className="text-xs sm:text-sm text-muted-foreground mb-3">{idea.visualDescription}</p>
 
       {/* Generated Image Display */}
       {generatedImage && (
@@ -205,19 +207,19 @@ function VisualIdeaCard({
           <img 
             src={generatedImage} 
             alt={idea.sentenceOrConcept}
-            className="w-full h-auto max-h-[300px] object-contain"
+            className="w-full h-auto max-h-[250px] sm:max-h-[300px] object-contain"
           />
-          <div className="p-2 flex justify-between gap-2 border-t bg-muted/10">
+          <div className="p-2 border-t bg-muted/10">
             {!isSaved ? (
-              <>
+              <div className="flex flex-col sm:flex-row sm:justify-between gap-2">
                 {/* Review Actions */}
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <Button
                     variant="default"
                     size="sm"
                     onClick={() => onAcceptImage(index)}
                     disabled={isSaving}
-                    className="text-xs bg-green-500 hover:bg-green-600"
+                    className="text-xs bg-green-500 hover:bg-green-600 flex-1 sm:flex-initial"
                   >
                     {isSaving ? (
                       <>
@@ -236,7 +238,7 @@ function VisualIdeaCard({
                     size="sm"
                     onClick={() => onRejectImage(index)}
                     disabled={isSaving}
-                    className="text-xs border-red-500/50 text-red-500 hover:bg-red-500/10"
+                    className="text-xs border-red-500/50 text-red-500 hover:bg-red-500/10 flex-1 sm:flex-initial"
                   >
                     <X className="w-3 h-3 mr-1" />
                     Reject
@@ -246,23 +248,23 @@ function VisualIdeaCard({
                   variant="outline"
                   size="sm"
                   onClick={handleDownload}
-                  className="text-xs"
+                  className="text-xs w-full sm:w-auto"
                 >
                   <Download className="w-3 h-3 mr-1" />
                   Download
                 </Button>
-              </>
+              </div>
             ) : (
-              <div className="flex gap-2 w-full justify-between">
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:justify-between sm:items-center">
                 <span className="text-xs text-green-600 flex items-center gap-1">
-                  <CheckCircle2 className="w-4 h-4" />
-                  Image saved with embeddings
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                  <span className="truncate">Image saved with embeddings</span>
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleDownload}
-                  className="text-xs"
+                  className="text-xs w-full sm:w-auto"
                 >
                   <Download className="w-3 h-3 mr-1" />
                   Download
@@ -281,7 +283,8 @@ function VisualIdeaCard({
           className="text-xs"
         >
           {showPrompt ? <ChevronUp className="w-3 h-3 mr-1" /> : <ChevronDown className="w-3 h-3 mr-1" />}
-          {showPrompt ? "Hide Prompt" : "View AI Prompt"}
+          <span className="hidden xs:inline">{showPrompt ? "Hide Prompt" : "View AI Prompt"}</span>
+          <span className="xs:hidden">{showPrompt ? "Hide" : "Prompt"}</span>
         </Button>
         <Button
           variant="outline"
@@ -297,12 +300,13 @@ function VisualIdeaCard({
             size="sm"
             onClick={() => onGenerateImage(idea, index)}
             disabled={isGenerating}
-            className="text-xs bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+            className="text-xs bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 flex-1 sm:flex-initial"
           >
             {isGenerating ? (
               <>
                 <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                Generating...
+                <span className="hidden sm:inline">Generating...</span>
+                <span className="sm:hidden">Gen...</span>
               </>
             ) : isSaved ? (
               <>
@@ -312,7 +316,8 @@ function VisualIdeaCard({
             ) : (
               <>
                 <ImagePlus className="w-3 h-3 mr-1" />
-                Generate Image
+                <span className="hidden sm:inline">Generate Image</span>
+                <span className="sm:hidden">Generate</span>
               </>
             )}
           </Button>
@@ -320,8 +325,8 @@ function VisualIdeaCard({
       </div>
 
       {showPrompt && (
-        <div className="mt-3 p-3 bg-muted/50 rounded-md">
-          <p className="text-xs font-mono text-muted-foreground whitespace-pre-wrap">
+        <div className="mt-3 p-2 sm:p-3 bg-muted/50 rounded-md">
+          <p className="text-xs font-mono text-muted-foreground whitespace-pre-wrap break-words">
             {idea.illustrationPrompt}
           </p>
         </div>
@@ -356,32 +361,36 @@ function ChapterCard({
   return (
     <Card className="overflow-hidden">
       <CardHeader 
-        className="cursor-pointer hover:bg-muted/50 transition-colors"
+        className="cursor-pointer hover:bg-muted/50 transition-colors p-3 sm:p-6"
         onClick={onToggle}
       >
-        <div className="flex items-start justify-between">
-          <div className="space-y-1">
-            <CardTitle className="text-lg">{chapter.chapterTitle}</CardTitle>
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <div className="space-y-1 min-w-0 flex-1">
+            <CardTitle className="text-base sm:text-lg pr-6 sm:pr-0">{chapter.chapterTitle}</CardTitle>
             {chapter.moduleTitle && (
-              <CardDescription>
+              <CardDescription className="text-xs sm:text-sm">
                 {chapter.moduleTitle} {chapter.lessonTitle && `→ ${chapter.lessonTitle}`}
               </CardDescription>
             )}
           </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right">
-              <div className="flex items-center gap-2 justify-end">
+          <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
+            <div className="text-left sm:text-right">
+              <div className="flex items-center gap-2 sm:justify-end">
                 <Image className="w-4 h-4 text-muted-foreground" />
-                <span className="font-medium">{chapter.visualIdeas.length} visuals</span>
+                <span className="font-medium text-sm">{chapter.visualIdeas.length} visuals</span>
               </div>
-              <ScoreIndicator score={chapter.overallLeadMagnetScore} />
+              <div className="mt-1">
+                <ScoreIndicator score={chapter.overallLeadMagnetScore} />
+              </div>
             </div>
-            {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+            <div className="shrink-0">
+              {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+            </div>
           </div>
         </div>
 
         {chapter.keyTopics.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-2">
+          <div className="flex flex-wrap gap-1 mt-3">
             {chapter.keyTopics.map((topic, i) => (
               <Badge key={i} variant="secondary" className="text-xs">
                 {topic}
@@ -392,26 +401,26 @@ function ChapterCard({
       </CardHeader>
 
       {isExpanded && (
-        <CardContent className="border-t bg-muted/30">
+        <CardContent className="border-t bg-muted/30 p-3 sm:p-6">
           {chapter.leadMagnetSuggestions.length > 0 && (
-            <div className="mb-6 p-4 bg-primary/5 rounded-lg border border-primary/10">
+            <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-primary/5 rounded-lg border border-primary/10">
               <h4 className="font-medium text-sm mb-2 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-primary" />
+                <Sparkles className="w-4 h-4 text-primary shrink-0" />
                 Lead Magnet Ideas
               </h4>
-              <ul className="space-y-1">
+              <ul className="space-y-2">
                 {chapter.leadMagnetSuggestions.map((suggestion, i) => (
-                  <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
+                  <li key={i} className="text-xs sm:text-sm text-muted-foreground flex items-start gap-2">
                     <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                    {suggestion}
+                    <span>{suggestion}</span>
                   </li>
                 ))}
               </ul>
             </div>
           )}
 
-          <h4 className="font-medium text-sm mb-4">Visual Opportunities ({chapter.visualIdeas.length})</h4>
-          <div className="grid gap-4">
+          <h4 className="font-medium text-sm mb-3 sm:mb-4">Visual Opportunities ({chapter.visualIdeas.length})</h4>
+          <div className="grid gap-3 sm:gap-4">
             {chapter.visualIdeas
               .sort((a, b) => b.leadMagnetPotential - a.leadMagnetPotential)
               .map((idea, i) => {
@@ -874,28 +883,28 @@ export default function LeadMagnetIdeasPage() {
 
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <p className="text-muted-foreground">Please sign in to analyze courses</p>
+      <div className="flex items-center justify-center min-h-[300px] sm:min-h-[400px] px-4">
+        <p className="text-sm sm:text-base text-muted-foreground text-center">Please sign in to analyze courses</p>
       </div>
     );
   }
 
   return (
-    <div className="container max-w-6xl py-8">
+    <div className="container max-w-6xl py-4 sm:py-8 px-4 sm:px-6">
       {/* Back to Dashboard */}
       <Link 
         href="/dashboard?mode=create" 
-        className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
+        className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-4 sm:mb-6 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
         Back to Dashboard
       </Link>
 
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-8">
-        <div className="flex-1 min-w-0">
-          <h1 className="text-2xl sm:text-3xl font-bold mb-2 flex items-center gap-2 sm:gap-3">
-            <Sparkles className="w-6 h-6 sm:w-8 sm:h-8 text-primary shrink-0" />
-            <span>Lead Magnet Visual Ideas</span>
+      <div className="flex items-start justify-between mb-8">
+        <div>
+          <h1 className="text-3xl font-bold mb-2 flex items-center gap-3">
+            <Sparkles className="w-8 h-8 text-primary" />
+            Lead Magnet Visual Ideas
           </h1>
           <p className="text-sm sm:text-base text-muted-foreground">
             Analyze your course chapters to discover visual illustration opportunities for lead magnets and PDF resources.
@@ -918,22 +927,22 @@ export default function LeadMagnetIdeasPage() {
       {/* Saved Analyses Panel */}
       {showSavedAnalyses && savedAnalyses && savedAnalyses.length > 0 && (
         <Card className="mb-8 border-primary/20">
-          <CardHeader className="pb-3 sm:pb-6">
-            <CardTitle className="text-base sm:text-lg flex items-center gap-2">
-              <FolderOpen className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <FolderOpen className="w-5 h-5" />
               Saved Analyses
             </CardTitle>
-            <CardDescription className="text-xs sm:text-sm">
-              Tap an analysis to load it
+            <CardDescription>
+              Click on an analysis to load it
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-3">
+            <div className="grid gap-2 sm:gap-3">
               {savedAnalyses.map((saved) => (
                 <div
                   key={saved._id}
                   className={cn(
-                    "flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors gap-2 sm:gap-4",
+                    "flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors",
                     loadedAnalysisId === saved._id 
                       ? "bg-primary/10 border-primary" 
                       : "hover:bg-muted/50"
@@ -941,18 +950,18 @@ export default function LeadMagnetIdeasPage() {
                   onClick={() => handleLoadAnalysis(saved)}
                 >
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start sm:items-center gap-2 flex-wrap">
-                      <span className="font-medium break-words">{saved.name}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium truncate">{saved.name}</span>
                       {loadedAnalysisId === saved._id && (
                         <Badge variant="secondary" className="text-xs shrink-0">Loaded</Badge>
                       )}
                     </div>
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground mt-1">
-                      <span className="truncate max-w-[150px] sm:max-w-none">{saved.courseTitle}</span>
-                      <span className="hidden sm:inline">•</span>
-                      <span className="shrink-0">{saved.totalVisualIdeas} visuals</span>
-                      <span className="hidden sm:inline">•</span>
-                      <span className="flex items-center gap-1 shrink-0">
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                      <span>{saved.courseTitle}</span>
+                      <span>•</span>
+                      <span>{saved.totalVisualIdeas} visuals</span>
+                      <span>•</span>
+                      <span className="flex items-center gap-1">
                         <Clock className="w-3 h-3" />
                         {new Date(saved.createdAt).toLocaleDateString()}
                       </span>
@@ -961,7 +970,7 @@ export default function LeadMagnetIdeasPage() {
                   
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 self-end sm:self-auto shrink-0">
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                         <MoreVertical className="w-4 h-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -986,18 +995,18 @@ export default function LeadMagnetIdeasPage() {
       )}
 
       {/* Course Selection */}
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle className="text-lg">Select Course to Analyze</CardTitle>
-          <CardDescription>
+      <Card className="mb-6 sm:mb-8">
+        <CardHeader className="pb-3 sm:pb-6">
+          <CardTitle className="text-base sm:text-lg">Select Course to Analyze</CardTitle>
+          <CardDescription className="text-sm">
             Choose a course to analyze its chapters for visual lead magnet opportunities
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap gap-4">
-            <div className="flex-1 min-w-[200px]">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+            <div className="flex-1 min-w-0">
               <Select value={selectedCourse} onValueChange={setSelectedCourse}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select a course" />
                 </SelectTrigger>
                 <SelectContent className="bg-white dark:bg-black">
@@ -1010,12 +1019,12 @@ export default function LeadMagnetIdeasPage() {
               </Select>
             </div>
             
-            <div className="w-[180px]">
+            <div className="w-full sm:w-[180px]">
               <Select 
                 value={maxChapters?.toString() || "all"} 
                 onValueChange={(v) => setMaxChapters(v === "all" ? undefined : parseInt(v))}
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue placeholder="Chapters to analyze" />
                 </SelectTrigger>
                 <SelectContent className="bg-white dark:bg-black">
@@ -1030,7 +1039,7 @@ export default function LeadMagnetIdeasPage() {
             <Button 
               onClick={handleAnalyze} 
               disabled={!selectedCourse || isAnalyzing}
-              className="min-w-[140px]"
+              className="w-full sm:w-auto sm:min-w-[140px]"
             >
               {isAnalyzing ? (
                 <>
@@ -1047,17 +1056,19 @@ export default function LeadMagnetIdeasPage() {
           </div>
 
           {/* Embedding toggle */}
-          <div className="flex items-center gap-3 pt-4 border-t mt-4">
-            <Switch
-              id="embeddings"
-              checked={generateEmbeddings}
-              onCheckedChange={setGenerateEmbeddings}
-            />
-            <Label htmlFor="embeddings" className="flex items-center gap-2 cursor-pointer">
-              <Brain className="w-4 h-4 text-primary" />
-              <span>Generate embeddings for semantic search</span>
-            </Label>
-            <span className="text-xs text-muted-foreground">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 pt-4 border-t mt-4">
+            <div className="flex items-center gap-3">
+              <Switch
+                id="embeddings"
+                checked={generateEmbeddings}
+                onCheckedChange={setGenerateEmbeddings}
+              />
+              <Label htmlFor="embeddings" className="flex items-center gap-2 cursor-pointer text-sm">
+                <Brain className="w-4 h-4 text-primary shrink-0" />
+                <span>Generate embeddings for semantic search</span>
+              </Label>
+            </div>
+            <span className="text-xs text-muted-foreground ml-9 sm:ml-0">
               (enables finding similar visuals)
             </span>
           </div>
@@ -1066,24 +1077,24 @@ export default function LeadMagnetIdeasPage() {
 
       {/* Analysis Results */}
       {analysis && (
-        <div className="space-y-8">
+        <div className="space-y-6 sm:space-y-8">
           {/* Header with Save Button */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-bold">Analysis: {analysis.courseTitle}</h2>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="text-lg sm:text-xl font-bold truncate">Analysis: {analysis.courseTitle}</h2>
               {loadedAnalysisId && (
-                <p className="text-sm text-muted-foreground">Loaded from saved analysis</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Loaded from saved analysis</p>
               )}
             </div>
             
             <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
               <DialogTrigger asChild>
-                <Button variant="outline" className="gap-2">
+                <Button variant="outline" className="gap-2 w-full sm:w-auto shrink-0">
                   <Save className="w-4 h-4" />
                   {loadedAnalysisId ? "Save As New" : "Save Analysis"}
                 </Button>
               </DialogTrigger>
-              <DialogContent className="bg-white dark:bg-black">
+              <DialogContent className="bg-white dark:bg-black mx-4 sm:mx-0 max-w-[calc(100%-2rem)] sm:max-w-lg">
                 <DialogHeader>
                   <DialogTitle>Save Analysis</DialogTitle>
                   <DialogDescription>
@@ -1100,13 +1111,14 @@ export default function LeadMagnetIdeasPage() {
                     className="mt-2"
                   />
                 </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setShowSaveDialog(false)}>
+                <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+                  <Button variant="outline" onClick={() => setShowSaveDialog(false)} className="w-full sm:w-auto">
                     Cancel
                   </Button>
                   <Button 
                     onClick={handleSaveAnalysis} 
                     disabled={isSavingAnalysis || !saveAnalysisName.trim()}
+                    className="w-full sm:w-auto"
                   >
                     {isSavingAnalysis ? (
                       <>
@@ -1126,29 +1138,29 @@ export default function LeadMagnetIdeasPage() {
           </div>
 
           {/* Summary Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <Card>
-              <CardContent className="pt-6">
-                <div className="text-2xl font-bold">{analysis.analyzedChapters}</div>
-                <div className="text-sm text-muted-foreground">Chapters Analyzed</div>
+              <CardContent className="p-4 sm:pt-6">
+                <div className="text-xl sm:text-2xl font-bold">{analysis.analyzedChapters}</div>
+                <div className="text-xs sm:text-sm text-muted-foreground">Chapters Analyzed</div>
               </CardContent>
             </Card>
             <Card>
-              <CardContent className="pt-6">
-                <div className="text-2xl font-bold">{analysis.totalVisualIdeas}</div>
-                <div className="text-sm text-muted-foreground">Visual Opportunities</div>
+              <CardContent className="p-4 sm:pt-6">
+                <div className="text-xl sm:text-2xl font-bold">{analysis.totalVisualIdeas}</div>
+                <div className="text-xs sm:text-sm text-muted-foreground">Visual Opportunities</div>
               </CardContent>
             </Card>
             <Card>
-              <CardContent className="pt-6">
-                <div className="text-2xl font-bold">{analysis.topLeadMagnetCandidates.length}</div>
-                <div className="text-sm text-muted-foreground">High-Potential Chapters</div>
+              <CardContent className="p-4 sm:pt-6">
+                <div className="text-xl sm:text-2xl font-bold">{analysis.topLeadMagnetCandidates.length}</div>
+                <div className="text-xs sm:text-sm text-muted-foreground">High-Potential</div>
               </CardContent>
             </Card>
             <Card>
-              <CardContent className="pt-6">
-                <div className="text-2xl font-bold">{analysis.bundleIdeas.length}</div>
-                <div className="text-sm text-muted-foreground">Bundle Ideas</div>
+              <CardContent className="p-4 sm:pt-6">
+                <div className="text-xl sm:text-2xl font-bold">{analysis.bundleIdeas.length}</div>
+                <div className="text-xs sm:text-sm text-muted-foreground">Bundle Ideas</div>
               </CardContent>
             </Card>
           </div>
@@ -1156,13 +1168,13 @@ export default function LeadMagnetIdeasPage() {
           {/* Semantic Search */}
           {generateEmbeddings && (
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Search className="w-5 h-5 text-primary" />
+              <CardHeader className="pb-3 sm:pb-6">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <Search className="w-4 h-4 sm:w-5 sm:h-5 text-primary shrink-0" />
                   Semantic Search
                 </CardTitle>
-                <CardDescription>
-                  Find similar visual ideas using natural language (e.g., "diagram showing signal flow" or "comparison chart")
+                <CardDescription className="text-xs sm:text-sm">
+                  Find similar visual ideas using natural language (e.g., "diagram showing signal flow")
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -1172,9 +1184,14 @@ export default function LeadMagnetIdeasPage() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                    className="flex-1"
+                    className="flex-1 text-sm"
                   />
-                  <Button onClick={handleSearch} disabled={isSearching || !searchQuery.trim()}>
+                  <Button 
+                    onClick={handleSearch} 
+                    disabled={isSearching || !searchQuery.trim()}
+                    className="shrink-0"
+                    size="default"
+                  >
                     {isSearching ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
@@ -1185,25 +1202,25 @@ export default function LeadMagnetIdeasPage() {
 
                 {/* Search Results */}
                 {searchResults && searchResults.length > 0 && (
-                  <div className="mt-4 space-y-3">
+                  <div className="mt-4 space-y-2 sm:space-y-3">
                     <h4 className="font-medium text-sm">Search Results ({searchResults.length})</h4>
                     {searchResults.map((result, i) => (
                       <div 
                         key={i} 
-                        className="p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors cursor-pointer"
+                        className="p-2.5 sm:p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors cursor-pointer"
                         onClick={() => {
                           setExpandedChapters(new Set([result.chapterId]));
                           document.getElementById(`chapter-${result.chapterId}`)?.scrollIntoView({ behavior: "smooth" });
                         }}
                       >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1">
-                            <div className="font-medium text-sm line-clamp-2">{result.visualIdea.sentenceOrConcept}</div>
-                            <div className="text-xs text-muted-foreground mt-1">
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-xs sm:text-sm line-clamp-2">{result.visualIdea.sentenceOrConcept}</div>
+                            <div className="text-xs text-muted-foreground mt-1 truncate">
                               From: {result.chapterTitle}
                             </div>
                           </div>
-                          <div className="text-right shrink-0">
+                          <div className="shrink-0">
                             <Badge variant="outline" className="text-xs">
                               {Math.round(result.similarityScore * 100)}% match
                             </Badge>
@@ -1215,7 +1232,7 @@ export default function LeadMagnetIdeasPage() {
                 )}
 
                 {searchResults && searchResults.length === 0 && (
-                  <div className="mt-4 text-center py-4 text-muted-foreground">
+                  <div className="mt-4 text-center py-4 text-muted-foreground text-sm">
                     No matching visual ideas found. Try a different search term.
                   </div>
                 )}
@@ -1226,34 +1243,36 @@ export default function LeadMagnetIdeasPage() {
           {/* Top Candidates */}
           {analysis.topLeadMagnetCandidates.length > 0 && (
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-primary" />
+              <CardHeader className="pb-3 sm:pb-6">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-primary shrink-0" />
                   Top Lead Magnet Candidates
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-xs sm:text-sm">
                   Chapters with the highest potential for standalone PDF resources
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   {analysis.topLeadMagnetCandidates.map((candidate, i) => (
                     <div 
                       key={candidate.chapterId}
-                      className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors cursor-pointer"
+                      className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors cursor-pointer gap-2 sm:gap-4"
                       onClick={() => {
                         setExpandedChapters(new Set([candidate.chapterId]));
                         document.getElementById(`chapter-${candidate.chapterId}`)?.scrollIntoView({ behavior: "smooth" });
                       }}
                     >
-                      <div className="flex items-center gap-3">
-                        <span className="text-lg font-bold text-primary">#{i + 1}</span>
-                        <div>
-                          <div className="font-medium">{candidate.chapterTitle}</div>
-                          <div className="text-sm text-muted-foreground">{candidate.reason}</div>
+                      <div className="flex items-start sm:items-center gap-3 flex-1 min-w-0">
+                        <span className="text-base sm:text-lg font-bold text-primary shrink-0">#{i + 1}</span>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-medium text-sm sm:text-base truncate">{candidate.chapterTitle}</div>
+                          <div className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{candidate.reason}</div>
                         </div>
                       </div>
-                      <ScoreIndicator score={candidate.score} />
+                      <div className="ml-8 sm:ml-0 shrink-0">
+                        <ScoreIndicator score={candidate.score} />
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -1264,28 +1283,28 @@ export default function LeadMagnetIdeasPage() {
           {/* Bundle Ideas */}
           {analysis.bundleIdeas.length > 0 && (
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-primary" />
+              <CardHeader className="pb-3 sm:pb-6">
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-primary shrink-0" />
                   Bundle Ideas
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-xs sm:text-sm">
                   Suggested ways to package multiple chapters into comprehensive lead magnets
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   {analysis.bundleIdeas.map((bundle, i) => (
-                    <div key={i} className="p-4 rounded-lg border bg-card">
-                      <h4 className="font-medium mb-1">{bundle.name}</h4>
-                      <p className="text-sm text-muted-foreground mb-3">{bundle.description}</p>
-                      <div className="flex items-center gap-4 text-sm">
+                    <div key={i} className="p-3 sm:p-4 rounded-lg border bg-card">
+                      <h4 className="font-medium text-sm sm:text-base mb-1">{bundle.name}</h4>
+                      <p className="text-xs sm:text-sm text-muted-foreground mb-3 line-clamp-2">{bundle.description}</p>
+                      <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs sm:text-sm">
                         <span className="flex items-center gap-1">
-                          <FileText className="w-4 h-4" />
+                          <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                           {bundle.chapterIds.length} chapters
                         </span>
                         <span className="flex items-center gap-1">
-                          <Image className="w-4 h-4" />
+                          <Image className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                           ~{bundle.estimatedVisuals} visuals
                         </span>
                       </div>
@@ -1298,14 +1317,14 @@ export default function LeadMagnetIdeasPage() {
 
           {/* Chapter Details */}
           <div>
-            <h2 className="text-xl font-bold mb-4">Chapter Analysis</h2>
+            <h2 className="text-lg sm:text-xl font-bold mb-3 sm:mb-4">Chapter Analysis</h2>
             {(imageError || saveError) && (
-              <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-sm">
+              <div className="mb-3 sm:mb-4 p-2.5 sm:p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-xs sm:text-sm">
                 {imageError && <div>Image generation error: {imageError}</div>}
                 {saveError && <div>Save error: {saveError}</div>}
               </div>
             )}
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {analysis.chapters
                 .sort((a, b) => b.overallLeadMagnetScore - a.overallLeadMagnetScore)
                 .map((chapter) => (
@@ -1332,11 +1351,11 @@ export default function LeadMagnetIdeasPage() {
       {/* Empty State */}
       {!analysis && !isAnalyzing && (
         <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <Sparkles className="w-12 h-12 text-muted-foreground/50 mb-4" />
-            <h3 className="text-lg font-medium mb-2">No Analysis Yet</h3>
-            <p className="text-muted-foreground max-w-md">
-              Select a course above and click "Analyze Course" to discover visual opportunities 
+          <CardContent className="flex flex-col items-center justify-center py-8 sm:py-12 text-center px-4">
+            <Sparkles className="w-10 h-10 sm:w-12 sm:h-12 text-muted-foreground/50 mb-3 sm:mb-4" />
+            <h3 className="text-base sm:text-lg font-medium mb-2">No Analysis Yet</h3>
+            <p className="text-sm sm:text-base text-muted-foreground max-w-md">
+              Select a course above and tap "Analyze Course" to discover visual opportunities 
               for lead magnets and PDF resources.
             </p>
           </CardContent>
@@ -1348,24 +1367,10 @@ export default function LeadMagnetIdeasPage() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
-            <h3 className="text-lg font-medium mb-2">Analyzing All Chapters in Parallel...</h3>
-            <p className="text-muted-foreground max-w-md mb-4">
-              Our AI is analyzing all chapters simultaneously to identify visual opportunities and lead magnet potential.
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground">
-              <Badge variant="outline" className="animate-pulse">
-                <Zap className="w-3 h-3 mr-1" />
-                All chapters processing in parallel
-              </Badge>
-              {generateEmbeddings && (
-                <Badge variant="outline" className="animate-pulse">
-                  <Brain className="w-3 h-3 mr-1" />
-                  Generating embeddings
-                </Badge>
-              )}
-            </div>
-            <p className="text-xs text-muted-foreground mt-4">
-              This usually takes 30-90 seconds for most courses.
+            <h3 className="text-lg font-medium mb-2">Analyzing Course Chapters...</h3>
+            <p className="text-muted-foreground max-w-md">
+              Our AI is reviewing each chapter to identify visual opportunities and lead magnet potential. 
+              This may take a minute.
             </p>
           </CardContent>
         </Card>
