@@ -891,13 +891,13 @@ export default function LeadMagnetIdeasPage() {
         Back to Dashboard
       </Link>
 
-      <div className="flex items-start justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-bold mb-2 flex items-center gap-3">
-            <Sparkles className="w-8 h-8 text-primary" />
-            Lead Magnet Visual Ideas
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-8">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl sm:text-3xl font-bold mb-2 flex items-center gap-2 sm:gap-3">
+            <Sparkles className="w-6 h-6 sm:w-8 sm:h-8 text-primary shrink-0" />
+            <span>Lead Magnet Visual Ideas</span>
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm sm:text-base text-muted-foreground">
             Analyze your course chapters to discover visual illustration opportunities for lead magnets and PDF resources.
           </p>
         </div>
@@ -907,7 +907,7 @@ export default function LeadMagnetIdeasPage() {
           <Button
             variant="outline"
             onClick={() => setShowSavedAnalyses(!showSavedAnalyses)}
-            className="shrink-0"
+            className="shrink-0 w-full sm:w-auto"
           >
             <FolderOpen className="w-4 h-4 mr-2" />
             Saved ({savedAnalyses.length})
@@ -918,13 +918,13 @@ export default function LeadMagnetIdeasPage() {
       {/* Saved Analyses Panel */}
       {showSavedAnalyses && savedAnalyses && savedAnalyses.length > 0 && (
         <Card className="mb-8 border-primary/20">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <FolderOpen className="w-5 h-5" />
+          <CardHeader className="pb-3 sm:pb-6">
+            <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+              <FolderOpen className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
               Saved Analyses
             </CardTitle>
-            <CardDescription>
-              Click on an analysis to load it
+            <CardDescription className="text-xs sm:text-sm">
+              Tap an analysis to load it
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -933,7 +933,7 @@ export default function LeadMagnetIdeasPage() {
                 <div
                   key={saved._id}
                   className={cn(
-                    "flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors",
+                    "flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors gap-2 sm:gap-4",
                     loadedAnalysisId === saved._id 
                       ? "bg-primary/10 border-primary" 
                       : "hover:bg-muted/50"
@@ -941,18 +941,18 @@ export default function LeadMagnetIdeasPage() {
                   onClick={() => handleLoadAnalysis(saved)}
                 >
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium truncate">{saved.name}</span>
+                    <div className="flex items-start sm:items-center gap-2 flex-wrap">
+                      <span className="font-medium break-words">{saved.name}</span>
                       {loadedAnalysisId === saved._id && (
-                        <Badge variant="secondary" className="text-xs">Loaded</Badge>
+                        <Badge variant="secondary" className="text-xs shrink-0">Loaded</Badge>
                       )}
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
-                      <span>{saved.courseTitle}</span>
-                      <span>•</span>
-                      <span>{saved.totalVisualIdeas} visuals</span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground mt-1">
+                      <span className="truncate max-w-[150px] sm:max-w-none">{saved.courseTitle}</span>
+                      <span className="hidden sm:inline">•</span>
+                      <span className="shrink-0">{saved.totalVisualIdeas} visuals</span>
+                      <span className="hidden sm:inline">•</span>
+                      <span className="flex items-center gap-1 shrink-0">
                         <Clock className="w-3 h-3" />
                         {new Date(saved.createdAt).toLocaleDateString()}
                       </span>
@@ -961,7 +961,7 @@ export default function LeadMagnetIdeasPage() {
                   
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 self-end sm:self-auto shrink-0">
                         <MoreVertical className="w-4 h-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -1348,10 +1348,24 @@ export default function LeadMagnetIdeasPage() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
-            <h3 className="text-lg font-medium mb-2">Analyzing Course Chapters...</h3>
-            <p className="text-muted-foreground max-w-md">
-              Our AI is reviewing each chapter to identify visual opportunities and lead magnet potential. 
-              This may take a minute.
+            <h3 className="text-lg font-medium mb-2">Analyzing All Chapters in Parallel...</h3>
+            <p className="text-muted-foreground max-w-md mb-4">
+              Our AI is analyzing all chapters simultaneously to identify visual opportunities and lead magnet potential.
+            </p>
+            <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground">
+              <Badge variant="outline" className="animate-pulse">
+                <Zap className="w-3 h-3 mr-1" />
+                All chapters processing in parallel
+              </Badge>
+              {generateEmbeddings && (
+                <Badge variant="outline" className="animate-pulse">
+                  <Brain className="w-3 h-3 mr-1" />
+                  Generating embeddings
+                </Badge>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-4">
+              This usually takes 30-90 seconds for most courses.
             </p>
           </CardContent>
         </Card>

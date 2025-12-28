@@ -174,8 +174,10 @@ export const analyzeChapterContent = internalAction({
       };
     }
 
-    // Use GPT-4o-mini for analysis (fast and cost-effective)
-    const modelId: ModelId = "gpt-4o-mini";
+    // Use Gemini 2.5 Flash for analysis - fastest and excellent at structured JSON
+    // Same cost as GPT-4o-mini but faster with 65K output limit
+    // Switch to "gemini-2.5-flash-lite" for half the cost if needed
+    const modelId: ModelId = "gemini-2.5-flash";
 
     const systemPrompt = `You are an expert at analyzing educational content and identifying opportunities for visual illustrations that enhance learning and can be repurposed as lead magnet materials (PDF guides, cheat sheets, infographics).
 
@@ -316,6 +318,8 @@ Identify 3-10 key visual opportunities. Focus on quality over quantity - priorit
 /**
  * Analyze a course for lead magnet opportunities
  * Returns visual ideas for all chapters without generating any images
+ * 
+ * OPTIMIZED: Uses parallel batch processing for faster analysis of large courses
  */
 export const analyzeLeadMagnetOpportunities = action({
   args: {
@@ -359,42 +363,67 @@ export const analyzeLeadMagnetOpportunities = action({
 
     console.log(`📚 Found ${chapters.length} chapters to analyze`);
 
+    // Pre-filter chapters with content (skip empty ones early)
+    const chaptersWithContent = chapters.filter(ch => {
+      if (!ch.description) {
+        console.log(`   ⏭️ Pre-filter: Skipping "${ch.title}" - no content`);
+        return false;
+      }
+      // Also skip very short content (< 100 chars after stripping HTML)
+      const plainText = ch.description
+        .replace(/<[^>]*>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (plainText.length < 200) {
+        console.log(`   ⏭️ Pre-filter: Skipping "${ch.title}" - too short (${plainText.length} chars)`);
+        return false;
+      }
+      return true;
+    });
+
+    console.log(`📋 ${chaptersWithContent.length} chapters have analyzable content`);
+
     // Optionally limit chapters for testing
     const chaptersToAnalyze = maxChapters 
-      ? chapters.slice(0, maxChapters) 
-      : chapters;
+      ? chaptersWithContent.slice(0, maxChapters) 
+      : chaptersWithContent;
 
-    // Analyze each chapter (doing sequentially to avoid rate limits)
-    const chapterAnalyses: ChapterAnalysis[] = [];
-
-    for (const chapter of chaptersToAnalyze) {
-      console.log(`📖 Analyzing chapter: ${chapter.title}`);
-      
-      if (!chapter.description) {
-        console.log(`   ⏭️ Skipping - no content`);
-        continue;
-      }
-
+    // OPTIMIZATION: Process ALL chapters in parallel at once
+    // OpenAI rate limits are generous enough for this with GPT-4o-mini
+    console.log(`\n🚀 Launching ${chaptersToAnalyze.length} parallel chapter analyses...`);
+    
+    const allPromises = chaptersToAnalyze.map(async (chapter, index) => {
       try {
         const analysis = await ctx.runAction(
           internalRef.masterAI.leadMagnetAnalyzer.analyzeChapterContent,
           {
             chapterId: chapter._id,
             chapterTitle: chapter.title,
-            chapterContent: chapter.description,
+            chapterContent: chapter.description!,
             lessonId: chapter.lessonId,
             lessonTitle: chapter.lessonTitle,
             moduleTitle: chapter.moduleTitle,
             generateEmbeddings,
           }
         ) as ChapterAnalysis;
-
-        chapterAnalyses.push(analysis);
-        console.log(`   ✅ Found ${analysis.visualIdeas.length} visual opportunities (score: ${analysis.overallLeadMagnetScore})`);
+        
+        const elapsed = Math.round((Date.now() - startTime) / 1000);
+        console.log(`   ✅ [${index + 1}/${chaptersToAnalyze.length}] "${chapter.title.substring(0, 30)}..." - ${analysis.visualIdeas.length} visuals (${elapsed}s)`);
+        return analysis;
       } catch (error) {
-        console.error(`   ❌ Error analyzing chapter:`, error);
+        console.error(`   ❌ [${index + 1}] Error analyzing "${chapter.title}":`, error);
+        return null;
       }
-    }
+    });
+    
+    // Wait for ALL to complete
+    const allResults = await Promise.all(allPromises);
+    
+    // Filter out nulls (failed analyses)
+    const chapterAnalyses = allResults.filter((r): r is ChapterAnalysis => r !== null);
+    
+    const elapsed = Math.round((Date.now() - startTime) / 1000);
+    console.log(`\n⏱️ All chapters analyzed in ${elapsed}s. Success: ${chapterAnalyses.length}/${chaptersToAnalyze.length}`);
 
     // Calculate totals
     const totalVisualIdeas = chapterAnalyses.reduce(
