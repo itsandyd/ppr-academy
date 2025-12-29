@@ -1,7 +1,9 @@
 import { cronJobs } from "convex/server";
-import { internal } from "./_generated/api";
 
 const crons = cronJobs();
+
+/* eslint-disable @typescript-eslint/no-var-requires */
+const { internal } = require("./_generated/api");
 
 crons.interval(
   "cleanup expired live viewers",
@@ -13,7 +15,7 @@ crons.interval(
 crons.interval(
   "process drip campaign emails",
   { minutes: 15 },
-  internal.dripCampaigns.processDueDripEmails,
+  internal.dripCampaignActions.processDueDripEmails,
   {}
 );
 

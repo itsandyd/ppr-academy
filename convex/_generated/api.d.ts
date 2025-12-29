@@ -72,6 +72,7 @@ import type * as discordInternal from "../discordInternal.js";
 import type * as discordPublic from "../discordPublic.js";
 import type * as discordSchema from "../discordSchema.js";
 import type * as domainVerification from "../domainVerification.js";
+import type * as dripCampaignActions from "../dripCampaignActions.js";
 import type * as dripCampaigns from "../dripCampaigns.js";
 import type * as emailABTesting from "../emailABTesting.js";
 import type * as emailAnalyticsRollup from "../emailAnalyticsRollup.js";
@@ -268,6 +269,7 @@ declare const fullApi: ApiFromModules<{
   discordPublic: typeof discordPublic;
   discordSchema: typeof discordSchema;
   domainVerification: typeof domainVerification;
+  dripCampaignActions: typeof dripCampaignActions;
   dripCampaigns: typeof dripCampaigns;
   emailABTesting: typeof emailABTesting;
   emailAnalyticsRollup: typeof emailAnalyticsRollup;
