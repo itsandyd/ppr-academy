@@ -14,12 +14,14 @@ export default defineSchema({
     image: v.optional(v.string()),
     hashedPassword: v.optional(v.string()),
     agencyId: v.optional(v.string()),
-    role: v.optional(v.union(
-      v.literal("AGENCY_OWNER"),
-      v.literal("AGENCY_ADMIN"), 
-      v.literal("SUBACCOUNT_USER"),
-      v.literal("SUBACCOUNT_GUEST")
-    )),
+    role: v.optional(
+      v.union(
+        v.literal("AGENCY_OWNER"),
+        v.literal("AGENCY_ADMIN"),
+        v.literal("SUBACCOUNT_USER"),
+        v.literal("SUBACCOUNT_GUEST")
+      )
+    ),
     avatarUrl: v.optional(v.string()),
     userRoleId: v.optional(v.string()),
     userTypeId: v.optional(v.string()),
@@ -27,11 +29,9 @@ export default defineSchema({
     discordId: v.optional(v.string()),
     discordVerified: v.optional(v.boolean()),
     stripeConnectAccountId: v.optional(v.string()),
-    stripeAccountStatus: v.optional(v.union(
-      v.literal("pending"),
-      v.literal("restricted"),
-      v.literal("enabled")
-    )),
+    stripeAccountStatus: v.optional(
+      v.union(v.literal("pending"), v.literal("restricted"), v.literal("enabled"))
+    ),
     stripeOnboardingComplete: v.optional(v.boolean()),
     admin: v.optional(v.boolean()),
     clerkId: v.optional(v.string()),
@@ -46,11 +46,11 @@ export default defineSchema({
     youtube: v.optional(v.string()),
     website: v.optional(v.string()),
     // Dashboard preference for unified dashboard
-    dashboardPreference: v.optional(v.union(v.literal('learn'), v.literal('create'))),
+    dashboardPreference: v.optional(v.union(v.literal("learn"), v.literal("create"))),
   })
-  .index("by_email", ["email"])
-  .index("by_clerkId", ["clerkId"])
-  .index("by_discordId", ["discordId"]),
+    .index("by_email", ["email"])
+    .index("by_clerkId", ["clerkId"])
+    .index("by_discordId", ["discordId"]),
 
   // Sync Metadata (for tracking sync operations)
   syncMetadata: defineTable({
@@ -61,8 +61,7 @@ export default defineSchema({
     usersAdded: v.optional(v.number()),
     usersUpdated: v.optional(v.number()),
     status: v.string(), // "completed", "failed", "in_progress"
-  })
-  .index("by_type", ["type"]),
+  }).index("by_type", ["type"]),
 
   // User Notifications
   notifications: defineTable({
@@ -83,17 +82,19 @@ export default defineSchema({
     emailSent: v.optional(v.boolean()),
     emailSentAt: v.optional(v.number()),
     // Sender information
-    senderType: v.optional(v.union(
-      v.literal("platform"), // From PPR Academy platform/admin
-      v.literal("creator"),  // From a course creator
-      v.literal("system")    // System-generated
-    )),
+    senderType: v.optional(
+      v.union(
+        v.literal("platform"), // From PPR Academy platform/admin
+        v.literal("creator"), // From a course creator
+        v.literal("system") // System-generated
+      )
+    ),
     senderId: v.optional(v.string()), // Clerk ID of sender (if creator)
     senderName: v.optional(v.string()),
     senderAvatar: v.optional(v.string()),
   })
-  .index("by_userId", ["userId"])
-  .index("by_createdAt", ["createdAt"]),
+    .index("by_userId", ["userId"])
+    .index("by_createdAt", ["createdAt"]),
 
   // Course Update Notifications (sent by course creators to enrolled students)
   courseNotifications: defineTable({
@@ -119,9 +120,9 @@ export default defineSchema({
     recipientCount: v.number(), // How many students received this
     emailSent: v.optional(v.boolean()),
   })
-  .index("by_courseId", ["courseId"])
-  .index("by_creatorId", ["creatorId"])
-  .index("by_sentAt", ["sentAt"]),
+    .index("by_courseId", ["courseId"])
+    .index("by_creatorId", ["creatorId"])
+    .index("by_sentAt", ["sentAt"]),
 
   // User Notification Preferences
   notificationPreferences: defineTable({
@@ -158,8 +159,7 @@ export default defineSchema({
       v.literal("never")
     ),
     updatedAt: v.number(),
-  })
-  .index("by_userId", ["userId"]),
+  }).index("by_userId", ["userId"]),
 
   // Course Management
   courses: defineTable({
@@ -191,39 +191,42 @@ export default defineSchema({
     // Soft delete support
     deletedAt: v.optional(v.number()),
     deletedBy: v.optional(v.string()),
-    
+
     // Follow Gate Configuration (NEW - for free courses)
     followGateEnabled: v.optional(v.boolean()),
-    followGateRequirements: v.optional(v.object({
-      requireEmail: v.optional(v.boolean()),
-      requireInstagram: v.optional(v.boolean()),
-      requireTiktok: v.optional(v.boolean()),
-      requireYoutube: v.optional(v.boolean()),
-      requireSpotify: v.optional(v.boolean()),
-      minFollowsRequired: v.optional(v.number()),
-    })),
-    followGateSocialLinks: v.optional(v.object({
-      instagram: v.optional(v.string()),
-      tiktok: v.optional(v.string()),
-      youtube: v.optional(v.string()),
-      spotify: v.optional(v.string()),
-    })),
+    followGateRequirements: v.optional(
+      v.object({
+        requireEmail: v.optional(v.boolean()),
+        requireInstagram: v.optional(v.boolean()),
+        requireTiktok: v.optional(v.boolean()),
+        requireYoutube: v.optional(v.boolean()),
+        requireSpotify: v.optional(v.boolean()),
+        minFollowsRequired: v.optional(v.number()),
+      })
+    ),
+    followGateSocialLinks: v.optional(
+      v.object({
+        instagram: v.optional(v.string()),
+        tiktok: v.optional(v.string()),
+        youtube: v.optional(v.string()),
+        spotify: v.optional(v.string()),
+      })
+    ),
     followGateMessage: v.optional(v.string()),
   })
-  .index("by_instructorId", ["instructorId"])
-  .index("by_slug", ["slug"])
-  .index("by_categoryId", ["courseCategoryId"])
-  .index("by_userId", ["userId"])
-  .index("by_storeId", ["storeId"])
-  .index("by_published", ["isPublished"])
-  .index("by_instructor_published", ["instructorId", "isPublished"])
-  .index("by_category", ["category"]) // New index for category filtering
-  .index("by_category_subcategory", ["category", "subcategory"]), // New index for precise filtering
+    .index("by_instructorId", ["instructorId"])
+    .index("by_slug", ["slug"])
+    .index("by_categoryId", ["courseCategoryId"])
+    .index("by_userId", ["userId"])
+    .index("by_storeId", ["storeId"])
+    .index("by_published", ["isPublished"])
+    .index("by_instructor_published", ["instructorId", "isPublished"])
+    .index("by_category", ["category"]) // New index for category filtering
+    .index("by_category_subcategory", ["category", "subcategory"]), // New index for precise filtering
 
   courseCategories: defineTable({
     name: v.string(),
-  })
-  .index("by_name", ["name"]),
+  }).index("by_name", ["name"]),
 
   courseModules: defineTable({
     title: v.string(),
@@ -231,8 +234,8 @@ export default defineSchema({
     position: v.number(),
     courseId: v.string(),
   })
-  .index("by_courseId", ["courseId"])
-  .index("by_position", ["position"]),
+    .index("by_courseId", ["courseId"])
+    .index("by_position", ["position"]),
 
   courseLessons: defineTable({
     title: v.string(),
@@ -240,8 +243,8 @@ export default defineSchema({
     position: v.number(),
     moduleId: v.string(),
   })
-  .index("by_moduleId", ["moduleId"])
-  .index("by_position", ["position"]),
+    .index("by_moduleId", ["moduleId"])
+    .index("by_position", ["position"]),
 
   courseChapters: defineTable({
     title: v.string(),
@@ -256,25 +259,39 @@ export default defineSchema({
     // AI-generated content fields
     generatedAudioUrl: v.optional(v.string()),
     generatedVideoUrl: v.optional(v.string()),
-    audioGenerationStatus: v.optional(v.union(v.literal("pending"), v.literal("generating"), v.literal("completed"), v.literal("failed"))),
-    videoGenerationStatus: v.optional(v.union(v.literal("pending"), v.literal("generating"), v.literal("completed"), v.literal("failed"))),
+    audioGenerationStatus: v.optional(
+      v.union(
+        v.literal("pending"),
+        v.literal("generating"),
+        v.literal("completed"),
+        v.literal("failed")
+      )
+    ),
+    videoGenerationStatus: v.optional(
+      v.union(
+        v.literal("pending"),
+        v.literal("generating"),
+        v.literal("completed"),
+        v.literal("failed")
+      )
+    ),
     audioGeneratedAt: v.optional(v.number()),
     videoGeneratedAt: v.optional(v.number()),
     audioGenerationError: v.optional(v.string()),
     videoGenerationError: v.optional(v.string()),
   })
-  .index("by_courseId", ["courseId"])
-  .index("by_lessonId", ["lessonId"])
-  .index("by_position", ["position"]),
+    .index("by_courseId", ["courseId"])
+    .index("by_lessonId", ["lessonId"])
+    .index("by_position", ["position"]),
 
   enrollments: defineTable({
     userId: v.string(),
     courseId: v.string(),
     progress: v.optional(v.number()),
   })
-  .index("by_userId", ["userId"])
-  .index("by_courseId", ["courseId"])
-  .index("by_user_course", ["userId", "courseId"]),
+    .index("by_userId", ["userId"])
+    .index("by_courseId", ["courseId"])
+    .index("by_user_course", ["userId", "courseId"]),
 
   // Store & E-commerce
   stores: defineTable({
@@ -288,57 +305,65 @@ export default defineSchema({
     customDomain: v.optional(v.string()), // Custom domain (e.g., beatsbymike.com)
     domainStatus: v.optional(v.string()), // pending, verified, active
     bio: v.optional(v.string()),
-    socialLinks: v.optional(v.object({
-      website: v.optional(v.string()),
-      twitter: v.optional(v.string()),
-      instagram: v.optional(v.string()),
-      linkedin: v.optional(v.string()),
-      youtube: v.optional(v.string()),
-    })),
+    socialLinks: v.optional(
+      v.object({
+        website: v.optional(v.string()),
+        twitter: v.optional(v.string()),
+        instagram: v.optional(v.string()),
+        linkedin: v.optional(v.string()),
+        youtube: v.optional(v.string()),
+      })
+    ),
     // Creator Plan & Visibility Settings
-    plan: v.optional(v.union(
-      v.literal("free"),         // Free - Basic link-in-bio only
-      v.literal("creator"),      // Creator - Courses + coaching
-      v.literal("creator_pro"),  // Creator Pro - Full features (paid)
-      v.literal("early_access")  // Early Access - Grandfathered unlimited (free)
-    )),
+    plan: v.optional(
+      v.union(
+        v.literal("free"), // Free - Basic link-in-bio only
+        v.literal("creator"), // Creator - Courses + coaching
+        v.literal("creator_pro"), // Creator Pro - Full features (paid)
+        v.literal("early_access") // Early Access - Grandfathered unlimited (free)
+      )
+    ),
     planStartedAt: v.optional(v.number()),
     isPublic: v.optional(v.boolean()), // Show on marketplace/public discovery
     isPublishedProfile: v.optional(v.boolean()), // Profile is complete and ready to show
     stripeCustomerId: v.optional(v.string()),
     stripeSubscriptionId: v.optional(v.string()),
-    subscriptionStatus: v.optional(v.union(
-      v.literal("active"),
-      v.literal("trialing"),
-      v.literal("past_due"),
-      v.literal("canceled"),
-      v.literal("incomplete")
-    )),
+    subscriptionStatus: v.optional(
+      v.union(
+        v.literal("active"),
+        v.literal("trialing"),
+        v.literal("past_due"),
+        v.literal("canceled"),
+        v.literal("incomplete")
+      )
+    ),
     trialEndsAt: v.optional(v.number()),
     // Email Sender Configuration (API key handled centrally via environment variables)
-    emailConfig: v.optional(v.object({
-      fromEmail: v.string(),
-      fromName: v.optional(v.string()),
-      replyToEmail: v.optional(v.string()),
-      isConfigured: v.optional(v.boolean()),
-      lastTestedAt: v.optional(v.number()),
-      emailsSentThisMonth: v.optional(v.number()),
-      // Admin Notification Preferences
-      adminNotifications: v.optional(v.object({
-        enabled: v.optional(v.boolean()),
-        emailOnNewLead: v.optional(v.boolean()),
-        emailOnReturningUser: v.optional(v.boolean()),
-        notificationEmail: v.optional(v.string()), // Override admin email
-        customSubjectPrefix: v.optional(v.string()),
-        includeLeadDetails: v.optional(v.boolean()),
-        sendDigestInsteadOfInstant: v.optional(v.boolean()),
-        digestFrequency: v.optional(v.union(
-          v.literal("hourly"),
-          v.literal("daily"),
-          v.literal("weekly")
-        )),
-      })),
-    })),
+    emailConfig: v.optional(
+      v.object({
+        fromEmail: v.string(),
+        fromName: v.optional(v.string()),
+        replyToEmail: v.optional(v.string()),
+        isConfigured: v.optional(v.boolean()),
+        lastTestedAt: v.optional(v.number()),
+        emailsSentThisMonth: v.optional(v.number()),
+        // Admin Notification Preferences
+        adminNotifications: v.optional(
+          v.object({
+            enabled: v.optional(v.boolean()),
+            emailOnNewLead: v.optional(v.boolean()),
+            emailOnReturningUser: v.optional(v.boolean()),
+            notificationEmail: v.optional(v.string()), // Override admin email
+            customSubjectPrefix: v.optional(v.string()),
+            includeLeadDetails: v.optional(v.boolean()),
+            sendDigestInsteadOfInstant: v.optional(v.boolean()),
+            digestFrequency: v.optional(
+              v.union(v.literal("hourly"), v.literal("daily"), v.literal("weekly"))
+            ),
+          })
+        ),
+      })
+    ),
   })
     .index("by_userId", ["userId"])
     .index("by_slug", ["slug"])
@@ -363,28 +388,32 @@ export default defineSchema({
       ),
       config: v.any(), // Flexible config for different trigger types
     }),
-    nodes: v.array(v.object({
-      id: v.string(),
-      type: v.union(
-        v.literal("trigger"),
-        v.literal("email"),
-        v.literal("delay"),
-        v.literal("condition"),
-        v.literal("action")
-      ),
-      position: v.object({
-        x: v.number(),
-        y: v.number(),
-      }),
-      data: v.any(), // Node-specific data
-    })),
-    edges: v.array(v.object({
-      id: v.string(),
-      source: v.string(),
-      target: v.string(),
-      sourceHandle: v.optional(v.string()),
-      targetHandle: v.optional(v.string()),
-    })),
+    nodes: v.array(
+      v.object({
+        id: v.string(),
+        type: v.union(
+          v.literal("trigger"),
+          v.literal("email"),
+          v.literal("delay"),
+          v.literal("condition"),
+          v.literal("action")
+        ),
+        position: v.object({
+          x: v.number(),
+          y: v.number(),
+        }),
+        data: v.any(), // Node-specific data
+      })
+    ),
+    edges: v.array(
+      v.object({
+        id: v.string(),
+        source: v.string(),
+        target: v.string(),
+        sourceHandle: v.optional(v.string()),
+        targetHandle: v.optional(v.string()),
+      })
+    ),
     // Execution tracking
     totalExecutions: v.optional(v.number()),
     lastExecuted: v.optional(v.number()),
@@ -433,57 +462,71 @@ export default defineSchema({
     isPublished: v.optional(v.boolean()),
     category: v.optional(v.string()), // Product category for filtering
     buttonLabel: v.optional(v.string()),
-    style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))),
+    style: v.optional(
+      v.union(
+        v.literal("button"),
+        v.literal("callout"),
+        v.literal("preview"),
+        v.literal("card"),
+        v.literal("minimal")
+      )
+    ),
     // URL/Media specific fields
-    productType: v.optional(v.union(
-      v.literal("digital"), 
-      v.literal("urlMedia"), 
-      v.literal("coaching"),
-      v.literal("effectChain"),  // Renamed from abletonRack
-      v.literal("abletonRack"),  // Legacy - keep for backward compatibility
-      v.literal("abletonPreset"),
-      v.literal("playlistCuration") // NEW: Playlist curation as a product
-    )),
-    
+    productType: v.optional(
+      v.union(
+        v.literal("digital"),
+        v.literal("urlMedia"),
+        v.literal("coaching"),
+        v.literal("effectChain"), // Renamed from abletonRack
+        v.literal("abletonRack"), // Legacy - keep for backward compatibility
+        v.literal("abletonPreset"),
+        v.literal("playlistCuration") // NEW: Playlist curation as a product
+      )
+    ),
+
     // Product Category (more specific than productType)
-    productCategory: v.optional(v.union(
-      // Music Production
-      v.literal("sample-pack"),
-      v.literal("preset-pack"),
-      v.literal("midi-pack"),
-      v.literal("bundle"), // NEW: Bundle multiple products together
-      v.literal("effect-chain"),  // NEW: Multi-DAW effect chains
-      v.literal("ableton-rack"),  // Legacy - keep for backward compatibility
-      v.literal("beat-lease"),
-      v.literal("project-files"),
-      v.literal("mixing-template"),
-      // Services
-      v.literal("coaching"),
-      v.literal("mixing-service"),
-      v.literal("mastering-service"),
-      // Curation
-      v.literal("playlist-curation"),
-      // Education
-      v.literal("course"),
-      v.literal("workshop"),
-      v.literal("masterclass"),
-      // Digital Content
-      v.literal("pdf"),  // Consolidated: PDFs, cheat sheets, guides, ebooks
-      v.literal("pdf-guide"),  // Legacy
-      v.literal("cheat-sheet"),  // Legacy
-      v.literal("template"),  // Legacy
-      v.literal("blog-post"),
-      // Community
-      v.literal("community"),
-      // Support & Donations
-      v.literal("tip-jar"),
-      v.literal("donation"),
-      // Legacy (for backward compatibility)
-      v.literal("lead-magnet"),
-    )),
+    productCategory: v.optional(
+      v.union(
+        // Music Production
+        v.literal("sample-pack"),
+        v.literal("preset-pack"),
+        v.literal("midi-pack"),
+        v.literal("bundle"), // NEW: Bundle multiple products together
+        v.literal("effect-chain"), // NEW: Multi-DAW effect chains
+        v.literal("ableton-rack"), // Legacy - keep for backward compatibility
+        v.literal("beat-lease"),
+        v.literal("project-files"),
+        v.literal("mixing-template"),
+        // Services
+        v.literal("coaching"),
+        v.literal("mixing-service"),
+        v.literal("mastering-service"),
+        // Curation
+        v.literal("playlist-curation"),
+        // Education
+        v.literal("course"),
+        v.literal("workshop"),
+        v.literal("masterclass"),
+        // Digital Content
+        v.literal("pdf"), // Consolidated: PDFs, cheat sheets, guides, ebooks
+        v.literal("pdf-guide"), // Legacy
+        v.literal("cheat-sheet"), // Legacy
+        v.literal("template"), // Legacy
+        v.literal("blog-post"),
+        // Community
+        v.literal("community"),
+        // Support & Donations
+        v.literal("tip-jar"),
+        v.literal("donation"),
+        // Legacy (for backward compatibility)
+        v.literal("lead-magnet")
+      )
+    ),
     url: v.optional(v.string()),
     displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
-    mediaType: v.optional(v.union(v.literal("youtube"), v.literal("spotify"), v.literal("website"), v.literal("social"))),
+    mediaType: v.optional(
+      v.union(v.literal("youtube"), v.literal("spotify"), v.literal("website"), v.literal("social"))
+    ),
     // Coaching specific fields
     duration: v.optional(v.number()), // Session duration in minutes
     sessionType: v.optional(v.string()), // "video", "audio", "phone"
@@ -494,12 +537,14 @@ export default defineSchema({
     // Ableton Rack specific fields
     abletonVersion: v.optional(v.string()), // "Live 9", "Live 10", "Live 11", "Live 12"
     minAbletonVersion: v.optional(v.string()), // Minimum required version
-    rackType: v.optional(v.union(
-      v.literal("audioEffect"),
-      v.literal("instrument"),
-      v.literal("midiEffect"),
-      v.literal("drumRack")
-    )),
+    rackType: v.optional(
+      v.union(
+        v.literal("audioEffect"),
+        v.literal("instrument"),
+        v.literal("midiEffect"),
+        v.literal("drumRack")
+      )
+    ),
     effectType: v.optional(v.array(v.string())), // ["Delay", "Reverb", "Distortion", etc.]
     macroCount: v.optional(v.number()), // Number of macro controls (typically 8)
     cpuLoad: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
@@ -511,7 +556,9 @@ export default defineSchema({
     demoAudioUrl: v.optional(v.string()), // 30-second audio preview
     chainImageUrl: v.optional(v.string()), // Screenshot of device chain
     macroScreenshotUrls: v.optional(v.array(v.string())), // Screenshots of macro controls
-    complexity: v.optional(v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced"))),
+    complexity: v.optional(
+      v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced"))
+    ),
     tags: v.optional(v.array(v.string())), // Additional searchable tags
     fileFormat: v.optional(v.union(v.literal("adg"), v.literal("adv"), v.literal("alp"))), // .adg = rack, .adv = preset, .alp = pack
     fileSize: v.optional(v.number()), // File size in MB
@@ -523,58 +570,66 @@ export default defineSchema({
     orderBumpPrice: v.optional(v.number()),
     orderBumpImageUrl: v.optional(v.string()),
     affiliateEnabled: v.optional(v.boolean()),
-    
+
     // Pack Files (for sample/midi/preset packs)
     packFiles: v.optional(v.string()), // JSON stringified array of file metadata
-    
+
     // Effect Chain / DAW-specific fields
-    dawType: v.optional(v.union(
-      v.literal("ableton"),
-      v.literal("fl-studio"),
-      v.literal("logic"),
-      v.literal("bitwig"),
-      v.literal("studio-one"),
-      v.literal("reason"),
-      v.literal("cubase"),
-      v.literal("multi-daw")
-    )),
-    dawVersion: v.optional(v.string()),  // e.g., "11.3" for Ableton, "21.0" for FL Studio
-    
+    dawType: v.optional(
+      v.union(
+        v.literal("ableton"),
+        v.literal("fl-studio"),
+        v.literal("logic"),
+        v.literal("bitwig"),
+        v.literal("studio-one"),
+        v.literal("reason"),
+        v.literal("cubase"),
+        v.literal("multi-daw")
+      )
+    ),
+    dawVersion: v.optional(v.string()), // e.g., "11.3" for Ableton, "21.0" for FL Studio
+
     // Follow Gate Configuration
     followGateEnabled: v.optional(v.boolean()),
-    followGateRequirements: v.optional(v.object({
-      requireEmail: v.optional(v.boolean()), // Require email to unlock
-      requireInstagram: v.optional(v.boolean()), // Require Instagram follow
-      requireTiktok: v.optional(v.boolean()), // Require TikTok follow
-      requireYoutube: v.optional(v.boolean()), // Require YouTube subscribe
-      requireSpotify: v.optional(v.boolean()), // Require Spotify follow
-      minFollowsRequired: v.optional(v.number()), // e.g., "Follow 2 out of 4" (0 = all required)
-    })),
-    followGateSocialLinks: v.optional(v.object({
-      instagram: v.optional(v.string()), // @username or full URL
-      tiktok: v.optional(v.string()),
-      youtube: v.optional(v.string()),
-      spotify: v.optional(v.string()),
-    })),
+    followGateRequirements: v.optional(
+      v.object({
+        requireEmail: v.optional(v.boolean()), // Require email to unlock
+        requireInstagram: v.optional(v.boolean()), // Require Instagram follow
+        requireTiktok: v.optional(v.boolean()), // Require TikTok follow
+        requireYoutube: v.optional(v.boolean()), // Require YouTube subscribe
+        requireSpotify: v.optional(v.boolean()), // Require Spotify follow
+        minFollowsRequired: v.optional(v.number()), // e.g., "Follow 2 out of 4" (0 = all required)
+      })
+    ),
+    followGateSocialLinks: v.optional(
+      v.object({
+        instagram: v.optional(v.string()), // @username or full URL
+        tiktok: v.optional(v.string()),
+        youtube: v.optional(v.string()),
+        spotify: v.optional(v.string()),
+      })
+    ),
     followGateMessage: v.optional(v.string()), // Custom message to show users
     affiliateCommissionRate: v.optional(v.number()),
     affiliateMinPayout: v.optional(v.number()),
     affiliateCookieDuration: v.optional(v.number()),
     confirmationEmailSubject: v.optional(v.string()),
     confirmationEmailBody: v.optional(v.string()),
-    
+
     // Playlist Curation Configuration (for productCategory: "playlist-curation")
-    playlistCurationConfig: v.optional(v.object({
-      linkedPlaylistId: v.optional(v.id("curatorPlaylists")), // Link to existing playlist
-      reviewTurnaroundDays: v.optional(v.number()), // SLA (e.g., 3-7 days)
-      genresAccepted: v.optional(v.array(v.string())), // Genres curator accepts
-      submissionGuidelines: v.optional(v.string()), // Custom guidelines
-      maxSubmissionsPerMonth: v.optional(v.number()), // Rate limiting
-    })),
+    playlistCurationConfig: v.optional(
+      v.object({
+        linkedPlaylistId: v.optional(v.id("curatorPlaylists")), // Link to existing playlist
+        reviewTurnaroundDays: v.optional(v.number()), // SLA (e.g., 3-7 days)
+        genresAccepted: v.optional(v.array(v.string())), // Genres curator accepts
+        submissionGuidelines: v.optional(v.string()), // Custom guidelines
+        maxSubmissionsPerMonth: v.optional(v.number()), // Rate limiting
+      })
+    ),
   })
-  .index("by_storeId", ["storeId"])
-  .index("by_userId", ["userId"])
-  .index("by_productCategory", ["productCategory"]),
+    .index("by_storeId", ["storeId"])
+    .index("by_userId", ["userId"])
+    .index("by_productCategory", ["productCategory"]),
 
   // Reviews for products
   productReviews: defineTable({
@@ -582,16 +637,14 @@ export default defineSchema({
     reviewText: v.string(),
     rating: v.optional(v.number()),
     customerName: v.optional(v.string()),
-  })
-  .index("by_productId", ["productId"]),
+  }).index("by_productId", ["productId"]),
 
   // Email flows
   emailFlows: defineTable({
     productId: v.string(),
     flowName: v.string(),
     isActive: v.optional(v.boolean()),
-  })
-  .index("by_productId", ["productId"]),
+  }).index("by_productId", ["productId"]),
 
   // Coach Management
   coachProfiles: defineTable({
@@ -615,8 +668,7 @@ export default defineSchema({
     stripeAccountId: v.optional(v.string()),
     stripeConnectComplete: v.optional(v.boolean()),
     stripeAccountStatus: v.optional(v.string()),
-  })
-  .index("by_userId", ["userId"]),
+  }).index("by_userId", ["userId"]),
 
   coachingSessions: defineTable({
     productId: v.id("digitalProducts"),
@@ -642,11 +694,11 @@ export default defineSchema({
     discordCleanedUp: v.optional(v.boolean()),
     reminderSent: v.optional(v.boolean()),
   })
-  .index("by_productId", ["productId"])
-  .index("by_coachId", ["coachId"])
-  .index("by_studentId", ["studentId"])
-  .index("by_scheduledDate", ["scheduledDate"])
-  .index("by_status", ["status"]),
+    .index("by_productId", ["productId"])
+    .index("by_coachId", ["coachId"])
+    .index("by_studentId", ["studentId"])
+    .index("by_scheduledDate", ["scheduledDate"])
+    .index("by_status", ["status"]),
 
   // User Progress Tracking - Enhanced for library
   userProgress: defineTable({
@@ -661,18 +713,18 @@ export default defineSchema({
     lastAccessedAt: v.optional(v.number()),
     progressPercentage: v.optional(v.number()), // 0-100
   })
-  .index("by_userId", ["userId"])
-  .index("by_courseId", ["courseId"])
-  .index("by_moduleId", ["moduleId"])
-  .index("by_lessonId", ["lessonId"])
-  .index("by_chapterId", ["chapterId"])
-  .index("by_user_chapter", ["userId", "chapterId"])
-  .index("by_user_course", ["userId", "courseId"])
-  // NEW: Performance indexes for completion queries
-  .index("by_user_completed", ["userId", "isCompleted"])
-  .index("by_course_completed", ["courseId", "isCompleted"])
-  // Additional composite index for filtering completed progress by user and course
-  .index("by_user_course_completed", ["userId", "courseId", "isCompleted"]),
+    .index("by_userId", ["userId"])
+    .index("by_courseId", ["courseId"])
+    .index("by_moduleId", ["moduleId"])
+    .index("by_lessonId", ["lessonId"])
+    .index("by_chapterId", ["chapterId"])
+    .index("by_user_chapter", ["userId", "chapterId"])
+    .index("by_user_course", ["userId", "courseId"])
+    // NEW: Performance indexes for completion queries
+    .index("by_user_completed", ["userId", "isCompleted"])
+    .index("by_course_completed", ["courseId", "isCompleted"])
+    // Additional composite index for filtering completed progress by user and course
+    .index("by_user_course_completed", ["userId", "courseId", "isCompleted"]),
 
   // Live Viewer Tracking (Real-time presence)
   liveViewers: defineTable({
@@ -689,7 +741,12 @@ export default defineSchema({
   // Library Sessions - Track user activity in library
   librarySessions: defineTable({
     userId: v.string(),
-    sessionType: v.union(v.literal("course"), v.literal("download"), v.literal("coaching"), v.literal("browse")),
+    sessionType: v.union(
+      v.literal("course"),
+      v.literal("download"),
+      v.literal("coaching"),
+      v.literal("browse")
+    ),
     resourceId: v.optional(v.string()), // courseId, productId, etc.
     startedAt: v.number(),
     endedAt: v.optional(v.number()),
@@ -697,10 +754,10 @@ export default defineSchema({
     deviceType: v.optional(v.string()),
     userAgent: v.optional(v.string()),
   })
-  .index("by_userId", ["userId"])
-  .index("by_sessionType", ["sessionType"])
-  .index("by_resourceId", ["resourceId"])
-  .index("by_startedAt", ["startedAt"]),
+    .index("by_userId", ["userId"])
+    .index("by_sessionType", ["sessionType"])
+    .index("by_resourceId", ["resourceId"])
+    .index("by_startedAt", ["startedAt"]),
 
   // Collaborative Timestamped Notes
   courseNotes: defineTable({
@@ -733,22 +790,22 @@ export default defineSchema({
     lastDownloadAt: v.optional(v.number()),
     source: v.optional(v.string()), // tracking where they came from
   })
-  .index("by_email", ["email"])
-  .index("by_productId", ["productId"])
-  .index("by_storeId", ["storeId"])
-  .index("by_adminUserId", ["adminUserId"])
-  .index("by_email_and_product", ["email", "productId"]),
+    .index("by_email", ["email"])
+    .index("by_productId", ["productId"])
+    .index("by_storeId", ["storeId"])
+    .index("by_adminUserId", ["adminUserId"])
+    .index("by_email_and_product", ["email", "productId"]),
 
   // Follow Gate Submissions (Track social follow gates)
   followGateSubmissions: defineTable({
     productId: v.id("digitalProducts"),
     storeId: v.string(),
     creatorId: v.string(), // Creator who owns the product
-    
+
     // User Information
     email: v.string(),
     name: v.optional(v.string()),
-    
+
     // Follow Confirmations (self-reported by user)
     followedPlatforms: v.object({
       instagram: v.optional(v.boolean()),
@@ -756,12 +813,12 @@ export default defineSchema({
       youtube: v.optional(v.boolean()),
       spotify: v.optional(v.boolean()),
     }),
-    
+
     // Metadata
     submittedAt: v.number(),
     ipAddress: v.optional(v.string()),
     userAgent: v.optional(v.string()),
-    
+
     // Download Tracking
     hasDownloaded: v.optional(v.boolean()),
     downloadCount: v.optional(v.number()),
@@ -786,11 +843,11 @@ export default defineSchema({
     lastActivity: v.optional(v.number()),
     source: v.optional(v.string()),
     notes: v.optional(v.string()),
-    
+
     // ActiveCampaign / Fan Management Fields
     phone: v.optional(v.string()),
     tags: v.optional(v.array(v.string())), // For segmentation
-    
+
     // Producer Profile Fields
     daw: v.optional(v.string()), // Digital Audio Workstation (Ableton, FL Studio, etc.)
     typeOfMusic: v.optional(v.string()), // Genre preference
@@ -800,13 +857,13 @@ export default defineSchema({
     howLongProducing: v.optional(v.string()),
     whySignedUp: v.optional(v.string()),
     genreSpecialty: v.optional(v.string()),
-    
+
     // Engagement Tracking
     score: v.optional(v.number()), // Engagement score (0-100)
     lastOpenDate: v.optional(v.number()), // Last email open
     opensEmail: v.optional(v.boolean()),
     clicksLinks: v.optional(v.boolean()),
-    
+
     // Location
     city: v.optional(v.string()),
     state: v.optional(v.string()),
@@ -814,15 +871,15 @@ export default defineSchema({
     zipCode: v.optional(v.string()),
     country: v.optional(v.string()),
     countryCode: v.optional(v.string()),
-    
+
     // ActiveCampaign Import
     activeCampaignId: v.optional(v.string()),
   })
-  .index("by_email", ["email"])
-  .index("by_storeId", ["storeId"])
-  .index("by_adminUserId", ["adminUserId"])
-  .index("by_type", ["type"])
-  .index("by_email_and_store", ["email", "storeId"]),
+    .index("by_email", ["email"])
+    .index("by_storeId", ["storeId"])
+    .index("by_adminUserId", ["adminUserId"])
+    .index("by_type", ["type"])
+    .index("by_email_and_store", ["email", "storeId"]),
 
   // Fan Count Aggregation (for large datasets)
   fanCounts: defineTable({
@@ -832,8 +889,7 @@ export default defineSchema({
     paying: v.number(),
     subscriptions: v.number(),
     lastUpdated: v.number(), // Timestamp of last count
-  })
-  .index("by_storeId", ["storeId"]),
+  }).index("by_storeId", ["storeId"]),
 
   // Purchase History - Enhanced for library system
   purchases: defineTable({
@@ -848,27 +904,32 @@ export default defineSchema({
     status: v.union(v.literal("pending"), v.literal("completed"), v.literal("refunded")),
     paymentMethod: v.optional(v.string()),
     transactionId: v.optional(v.string()),
-    productType: v.union(v.literal("digitalProduct"), v.literal("course"), v.literal("coaching"), v.literal("bundle")),
+    productType: v.union(
+      v.literal("digitalProduct"),
+      v.literal("course"),
+      v.literal("coaching"),
+      v.literal("bundle")
+    ),
     // Library access fields
     accessGranted: v.optional(v.boolean()),
     accessExpiresAt: v.optional(v.number()),
     downloadCount: v.optional(v.number()),
     lastAccessedAt: v.optional(v.number()),
   })
-  .index("by_userId", ["userId"])
-  .index("by_customerId", ["customerId"])
-  .index("by_productId", ["productId"])
-  .index("by_courseId", ["courseId"])
-  .index("by_storeId", ["storeId"])
-  .index("by_adminUserId", ["adminUserId"])
-  .index("by_status", ["status"])
-  .index("by_productType", ["productType"])
-  .index("by_user_product", ["userId", "productId"])
-  .index("by_user_course", ["userId", "courseId"])
-  // NEW: Performance indexes for creator dashboard
-  // Note: _creationTime is automatically added to all indexes by Convex
-  .index("by_store_status", ["storeId", "status"])
-  .index("by_user_status", ["userId", "status"]),
+    .index("by_userId", ["userId"])
+    .index("by_customerId", ["customerId"])
+    .index("by_productId", ["productId"])
+    .index("by_courseId", ["courseId"])
+    .index("by_storeId", ["storeId"])
+    .index("by_adminUserId", ["adminUserId"])
+    .index("by_status", ["status"])
+    .index("by_productType", ["productType"])
+    .index("by_user_product", ["userId", "productId"])
+    .index("by_user_course", ["userId", "courseId"])
+    // NEW: Performance indexes for creator dashboard
+    // Note: _creationTime is automatically added to all indexes by Convex
+    .index("by_store_status", ["storeId", "status"])
+    .index("by_user_status", ["userId", "status"]),
 
   // Subscriptions (Legacy - keeping for backward compatibility)
   subscriptions: defineTable({
@@ -938,11 +999,7 @@ export default defineSchema({
   contentAccess: defineTable({
     resourceId: v.string(), // courseId or productId
     resourceType: v.union(v.literal("course"), v.literal("product"), v.literal("coaching")),
-    accessType: v.union(
-      v.literal("free"), 
-      v.literal("purchase"), 
-      v.literal("subscription")
-    ),
+    accessType: v.union(v.literal("free"), v.literal("purchase"), v.literal("subscription")),
     requiredTierId: v.optional(v.id("creatorSubscriptionTiers")), // For subscription-only
     creatorId: v.string(),
     storeId: v.string(),
@@ -978,11 +1035,11 @@ export default defineSchema({
     stripeTransferId: v.optional(v.string()),
     paidAt: v.optional(v.number()),
   })
-  .index("by_creatorId", ["creatorId"])
-  .index("by_storeId", ["storeId"])
-  .index("by_payoutStatus", ["payoutStatus"])
-  .index("by_creator_status", ["creatorId", "payoutStatus"])
-  .index("by_transactionType", ["transactionType"]),
+    .index("by_creatorId", ["creatorId"])
+    .index("by_storeId", ["storeId"])
+    .index("by_payoutStatus", ["payoutStatus"])
+    .index("by_creator_status", ["creatorId", "payoutStatus"])
+    .index("by_transactionType", ["transactionType"]),
   // Note: _creationTime is automatically added to all indexes, so by_creatorId already supports time-based queries
 
   // Email Campaign System
@@ -994,10 +1051,10 @@ export default defineSchema({
     storeId: v.string(),
     adminUserId: v.string(),
     status: v.union(
-      v.literal("draft"), 
-      v.literal("scheduled"), 
-      v.literal("sending"), 
-      v.literal("sent"), 
+      v.literal("draft"),
+      v.literal("scheduled"),
+      v.literal("sending"),
+      v.literal("sent"),
       v.literal("failed")
     ),
     scheduledAt: v.optional(v.number()),
@@ -1024,7 +1081,7 @@ export default defineSchema({
     customerName: v.string(),
     status: v.union(
       v.literal("queued"),
-      v.literal("sent"), 
+      v.literal("sent"),
       v.literal("delivered"),
       v.literal("opened"),
       v.literal("clicked"),
@@ -1066,15 +1123,17 @@ export default defineSchema({
     metadata: v.optional(v.any()), // Store any additional metadata (courseId, type, etc.)
     title: v.optional(v.string()),
     category: v.optional(v.string()),
-    sourceType: v.optional(v.union(
-      v.literal("course"),
-      v.literal("chapter"), 
-      v.literal("lesson"),
-      v.literal("document"),
-      v.literal("note"),
-      v.literal("custom"),
-      v.literal("socialPost") // Instagram post captions + video transcriptions
-    )),
+    sourceType: v.optional(
+      v.union(
+        v.literal("course"),
+        v.literal("chapter"),
+        v.literal("lesson"),
+        v.literal("document"),
+        v.literal("note"),
+        v.literal("custom"),
+        v.literal("socialPost") // Instagram post captions + video transcriptions
+      )
+    ),
     sourceId: v.optional(v.string()), // ID of the source (courseId, chapterId, etc.)
   })
     .index("by_userId", ["userId"])
@@ -1109,22 +1168,19 @@ export default defineSchema({
     userId: v.string(), // Clerk ID of the author
     storeId: v.string(), // Store context
     folderId: v.optional(v.id("noteFolders")), // Parent folder
-    
+
     // Content metadata
     plainTextContent: v.optional(v.string()), // For search and RAG
     wordCount: v.optional(v.number()),
     readTimeMinutes: v.optional(v.number()),
-    
+
     // Organization
     tags: v.array(v.string()), // User-defined tags
     category: v.optional(v.string()), // Course category context
-    priority: v.optional(v.union(
-      v.literal("low"),
-      v.literal("medium"), 
-      v.literal("high"),
-      v.literal("urgent")
-    )),
-    
+    priority: v.optional(
+      v.union(v.literal("low"), v.literal("medium"), v.literal("high"), v.literal("urgent"))
+    ),
+
     // Status tracking
     status: v.union(
       v.literal("draft"),
@@ -1132,28 +1188,28 @@ export default defineSchema({
       v.literal("completed"),
       v.literal("archived")
     ),
-    
+
     // AI and course generation
     isProcessedForRAG: v.boolean(), // Whether embeddings were generated
     linkedCourseId: v.optional(v.id("courses")), // If note was used to generate course
     aiSummary: v.optional(v.string()), // AI-generated summary
-    
+
     // Timestamps
     lastEditedAt: v.number(),
     lastViewedAt: v.optional(v.number()),
-    
+
     // Collaboration
     isShared: v.boolean(),
     sharedWith: v.optional(v.array(v.string())), // Clerk IDs of collaborators
-    
+
     // Template system
     isTemplate: v.boolean(),
     templateCategory: v.optional(v.string()),
-    
+
     // Notion-like features
     icon: v.optional(v.string()), // Emoji or icon
     coverImage: v.optional(v.string()), // Cover image URL
-    
+
     // Archival
     isArchived: v.boolean(),
     isFavorite: v.boolean(),
@@ -1172,7 +1228,7 @@ export default defineSchema({
     .index("by_linkedCourseId", ["linkedCourseId"])
     .searchIndex("search_content", {
       searchField: "plainTextContent",
-      filterFields: ["userId", "storeId", "status", "isArchived"]
+      filterFields: ["userId", "storeId", "status", "isArchived"],
     }),
 
   // Note Templates - Predefined note structures
@@ -1211,7 +1267,7 @@ export default defineSchema({
   noteSources: defineTable({
     userId: v.string(), // Clerk ID
     storeId: v.string(),
-    
+
     // Source type and identification
     sourceType: v.union(
       v.literal("pdf"),
@@ -1220,20 +1276,20 @@ export default defineSchema({
       v.literal("audio"),
       v.literal("text")
     ),
-    
+
     // Source metadata
     title: v.string(),
     url: v.optional(v.string()), // For YouTube/website
     storageId: v.optional(v.id("_storage")), // For uploaded PDFs/audio
     fileName: v.optional(v.string()),
     fileSize: v.optional(v.number()),
-    
+
     // Extracted content
     rawContent: v.optional(v.string()), // Full extracted text
     contentChunks: v.optional(v.array(v.string())), // Split chunks for processing
     summary: v.optional(v.string()), // AI-generated summary
     keyPoints: v.optional(v.array(v.string())), // Extracted key points
-    
+
     // Processing status
     status: v.union(
       v.literal("pending"),
@@ -1242,25 +1298,25 @@ export default defineSchema({
       v.literal("failed")
     ),
     errorMessage: v.optional(v.string()),
-    
+
     // YouTube-specific metadata
     youtubeVideoId: v.optional(v.string()),
     youtubeDuration: v.optional(v.number()), // In seconds
     youtubeChannel: v.optional(v.string()),
     youtubeThumbnail: v.optional(v.string()),
-    
+
     // Website-specific metadata
     websiteDomain: v.optional(v.string()),
     websiteAuthor: v.optional(v.string()),
     websitePublishedDate: v.optional(v.string()),
-    
+
     // Timestamps
     createdAt: v.number(),
     processedAt: v.optional(v.number()),
-    
+
     // Generated notes
     generatedNoteIds: v.optional(v.array(v.id("notes"))),
-    
+
     // Tags for organization
     tags: v.optional(v.array(v.string())),
   })
@@ -1327,46 +1383,50 @@ export default defineSchema({
       v.literal("webhook_failed")
     ),
     resourceId: v.optional(v.string()), // courseId, productId, etc.
-    resourceType: v.optional(v.union(
-      v.literal("course"),
-      v.literal("digitalProduct"),
-      v.literal("lesson"),
-      v.literal("chapter"),
-      v.literal("page")
-    )),
-    metadata: v.optional(v.object({
-      // Existing metadata
-      page: v.optional(v.string()),
-      referrer: v.optional(v.string()),
-      searchTerm: v.optional(v.string()),
-      duration: v.optional(v.number()),
-      progress: v.optional(v.number()),
-      value: v.optional(v.number()),
-      country: v.optional(v.string()),
-      city: v.optional(v.string()),
-      device: v.optional(v.string()),
-      browser: v.optional(v.string()),
-      os: v.optional(v.string()),
-      // NEW: Campaign tracking
-      source: v.optional(v.string()),
-      campaign_id: v.optional(v.string()),
-      utm_source: v.optional(v.string()),
-      utm_medium: v.optional(v.string()),
-      utm_campaign: v.optional(v.string()),
-      // NEW: Creator-specific
-      daw: v.optional(v.string()),
-      audience_size: v.optional(v.number()),
-      // NEW: Product/revenue specific
-      product_id: v.optional(v.string()),
-      amount_cents: v.optional(v.number()),
-      currency: v.optional(v.string()),
-      // NEW: Experiment tracking
-      experiment_id: v.optional(v.string()),
-      variant: v.optional(v.string()),
-      // NEW: Error tracking
-      error_code: v.optional(v.string()),
-      error_message: v.optional(v.string()),
-    })),
+    resourceType: v.optional(
+      v.union(
+        v.literal("course"),
+        v.literal("digitalProduct"),
+        v.literal("lesson"),
+        v.literal("chapter"),
+        v.literal("page")
+      )
+    ),
+    metadata: v.optional(
+      v.object({
+        // Existing metadata
+        page: v.optional(v.string()),
+        referrer: v.optional(v.string()),
+        searchTerm: v.optional(v.string()),
+        duration: v.optional(v.number()),
+        progress: v.optional(v.number()),
+        value: v.optional(v.number()),
+        country: v.optional(v.string()),
+        city: v.optional(v.string()),
+        device: v.optional(v.string()),
+        browser: v.optional(v.string()),
+        os: v.optional(v.string()),
+        // NEW: Campaign tracking
+        source: v.optional(v.string()),
+        campaign_id: v.optional(v.string()),
+        utm_source: v.optional(v.string()),
+        utm_medium: v.optional(v.string()),
+        utm_campaign: v.optional(v.string()),
+        // NEW: Creator-specific
+        daw: v.optional(v.string()),
+        audience_size: v.optional(v.number()),
+        // NEW: Product/revenue specific
+        product_id: v.optional(v.string()),
+        amount_cents: v.optional(v.number()),
+        currency: v.optional(v.string()),
+        // NEW: Experiment tracking
+        experiment_id: v.optional(v.string()),
+        variant: v.optional(v.string()),
+        // NEW: Error tracking
+        error_code: v.optional(v.string()),
+        error_message: v.optional(v.string()),
+      })
+    ),
     sessionId: v.optional(v.string()),
     ipAddress: v.optional(v.string()),
     userAgent: v.optional(v.string()),
@@ -1410,7 +1470,12 @@ export default defineSchema({
     creatorId: v.string(), // Creator's user ID
     purchaseId: v.id("purchases"),
     resourceId: v.string(), // courseId or productId
-    resourceType: v.union(v.literal("course"), v.literal("digitalProduct"), v.literal("coaching"), v.literal("bundle")),
+    resourceType: v.union(
+      v.literal("course"),
+      v.literal("digitalProduct"),
+      v.literal("coaching"),
+      v.literal("bundle")
+    ),
     grossAmount: v.number(),
     platformFee: v.number(),
     processingFee: v.number(),
@@ -1477,12 +1542,9 @@ export default defineSchema({
     firstSaleAt: v.optional(v.number()),
     // Outreach tracking
     lastTouchAt: v.optional(v.number()),
-    lastTouchType: v.optional(v.union(
-      v.literal("dm"),
-      v.literal("email"),
-      v.literal("comment"),
-      v.literal("call")
-    )),
+    lastTouchType: v.optional(
+      v.union(v.literal("dm"), v.literal("email"), v.literal("comment"), v.literal("call"))
+    ),
     nextStepNote: v.optional(v.string()),
     assignedTo: v.optional(v.string()), // Admin handling this creator
     // Creator metadata
@@ -1520,11 +1582,7 @@ export default defineSchema({
       v.literal("paused")
     ),
     // Targeting
-    targetRole: v.optional(v.union(
-      v.literal("learner"),
-      v.literal("creator"),
-      v.literal("both")
-    )),
+    targetRole: v.optional(v.union(v.literal("learner"), v.literal("creator"), v.literal("both"))),
     targetSegment: v.optional(v.string()), // "stuck_creators", "new_signups", etc.
     // Content
     subject: v.optional(v.string()),
@@ -1585,8 +1643,7 @@ export default defineSchema({
     createdBy: v.string(),
     createdAt: v.number(),
     updatedAt: v.number(),
-  })
-    .index("by_status_and_startDate", ["status", "startDate"]),
+  }).index("by_status_and_startDate", ["status", "startDate"]),
 
   // Simplified Music Showcase - Artist Profiles
   artistProfiles: defineTable({
@@ -1602,17 +1659,19 @@ export default defineSchema({
     profileImage: v.optional(v.string()),
     bannerImage: v.optional(v.string()),
     // Social Links (same as SoundPitch structure)
-    socialLinks: v.optional(v.object({
-      spotify: v.optional(v.string()),
-      soundcloud: v.optional(v.string()),
-      instagram: v.optional(v.string()),
-      twitter: v.optional(v.string()),
-      youtube: v.optional(v.string()),
-      tiktok: v.optional(v.string()),
-      facebook: v.optional(v.string()),
-      bandcamp: v.optional(v.string()),
-      apple_music: v.optional(v.string()),
-    })),
+    socialLinks: v.optional(
+      v.object({
+        spotify: v.optional(v.string()),
+        soundcloud: v.optional(v.string()),
+        instagram: v.optional(v.string()),
+        twitter: v.optional(v.string()),
+        youtube: v.optional(v.string()),
+        tiktok: v.optional(v.string()),
+        facebook: v.optional(v.string()),
+        bandcamp: v.optional(v.string()),
+        apple_music: v.optional(v.string()),
+      })
+    ),
     // Settings
     isPublic: v.optional(v.boolean()),
     // Stats
@@ -1643,7 +1702,7 @@ export default defineSchema({
     originalUrl: v.string(), // Spotify, SoundCloud, YouTube, etc.
     platform: v.union(
       v.literal("spotify"),
-      v.literal("soundcloud"), 
+      v.literal("soundcloud"),
       v.literal("youtube"),
       v.literal("apple_music"),
       v.literal("bandcamp"),
@@ -1686,13 +1745,15 @@ export default defineSchema({
     playDuration: v.optional(v.number()), // How long they listened (seconds)
     completionPercentage: v.optional(v.number()), // % of track completed
     // Context
-    source: v.optional(v.union(
-      v.literal("profile"),
-      v.literal("embed"),
-      v.literal("direct_link"),
-      v.literal("search"),
-      v.literal("playlist")
-    )),
+    source: v.optional(
+      v.union(
+        v.literal("profile"),
+        v.literal("embed"),
+        v.literal("direct_link"),
+        v.literal("search"),
+        v.literal("playlist")
+      )
+    ),
     referrer: v.optional(v.string()),
     // Technical Info
     ipAddress: v.optional(v.string()),
@@ -1803,8 +1864,7 @@ export default defineSchema({
     lifetimeEarned: v.number(), // Total credits earned (for creators)
     lifetimeSpent: v.number(), // Total credits spent
     lastUpdated: v.number(),
-  })
-    .index("by_userId", ["userId"]),
+  }).index("by_userId", ["userId"]),
 
   // Credit Transactions
   creditTransactions: defineTable({
@@ -1820,16 +1880,16 @@ export default defineSchema({
     balance: v.number(), // Balance after transaction
     description: v.string(),
     relatedResourceId: v.optional(v.string()), // Sample/pack ID if applicable
-    relatedResourceType: v.optional(v.union(
-      v.literal("sample"),
-      v.literal("pack"),
-      v.literal("credit_package")
-    )),
-    metadata: v.optional(v.object({
-      stripePaymentId: v.optional(v.string()),
-      dollarAmount: v.optional(v.number()),
-      packageName: v.optional(v.string()),
-    })),
+    relatedResourceType: v.optional(
+      v.union(v.literal("sample"), v.literal("pack"), v.literal("credit_package"))
+    ),
+    metadata: v.optional(
+      v.object({
+        stripePaymentId: v.optional(v.string()),
+        dollarAmount: v.optional(v.number()),
+        packageName: v.optional(v.string()),
+      })
+    ),
   })
     .index("by_userId", ["userId"])
     .index("by_type", ["type"])
@@ -1839,11 +1899,11 @@ export default defineSchema({
   audioSamples: defineTable({
     userId: v.string(), // Creator
     storeId: v.string(),
-    
+
     // Basic Info
     title: v.string(),
     description: v.optional(v.string()),
-    
+
     // Audio File
     storageId: v.id("_storage"), // Convex storage ID
     fileUrl: v.string(), // Public URL for streaming
@@ -1851,7 +1911,7 @@ export default defineSchema({
     fileSize: v.number(), // in bytes
     duration: v.number(), // in seconds
     format: v.string(), // "wav", "mp3", "aiff"
-    
+
     // Metadata
     bpm: v.optional(v.number()),
     key: v.optional(v.string()), // "C", "Am", "D#", etc.
@@ -1868,21 +1928,21 @@ export default defineSchema({
       v.literal("loops"),
       v.literal("one-shots")
     ),
-    
+
     // Waveform data
     waveformData: v.optional(v.array(v.number())), // Peaks for visualization
     peakAmplitude: v.optional(v.number()),
-    
+
     // Pricing & Status
     creditPrice: v.number(), // Cost in credits
     isPublished: v.boolean(),
     isFree: v.optional(v.boolean()),
-    
+
     // Stats
     downloads: v.number(),
     plays: v.number(),
     favorites: v.number(),
-    
+
     // License
     licenseType: v.union(
       v.literal("royalty-free"),
@@ -1904,37 +1964,39 @@ export default defineSchema({
   samplePacks: defineTable({
     userId: v.string(), // Creator
     storeId: v.string(),
-    
+
     // Basic Info
     name: v.string(),
     description: v.string(),
     coverImageUrl: v.optional(v.string()),
     coverImageStorageId: v.optional(v.id("_storage")),
-    
+
     // Pack Contents
     sampleIds: v.array(v.id("audioSamples")),
     totalSamples: v.number(),
     totalSize: v.number(), // in bytes
     totalDuration: v.number(), // in seconds
-    
+
     // Metadata (aggregated from samples)
     genres: v.array(v.string()),
     categories: v.array(v.string()),
     tags: v.array(v.string()),
-    bpmRange: v.optional(v.object({
-      min: v.number(),
-      max: v.number(),
-    })),
-    
+    bpmRange: v.optional(
+      v.object({
+        min: v.number(),
+        max: v.number(),
+      })
+    ),
+
     // Pricing & Status
     creditPrice: v.number(),
     isPublished: v.boolean(),
-    
+
     // Stats
     downloads: v.number(),
     favorites: v.number(),
     revenue: v.number(), // Total credits earned from this pack
-    
+
     // License
     licenseType: v.union(
       v.literal("royalty-free"),
@@ -1954,15 +2016,15 @@ export default defineSchema({
     sampleId: v.optional(v.id("audioSamples")),
     packId: v.optional(v.id("samplePacks")),
     creatorId: v.string(), // Creator who uploaded
-    
+
     // Transaction Info
     creditAmount: v.number(),
     transactionId: v.id("creditTransactions"),
-    
+
     // Download Tracking
     downloadCount: v.number(), // Allow re-downloads
     lastDownloadAt: v.optional(v.number()),
-    
+
     // License Info
     licenseType: v.string(),
     licenseKey: v.optional(v.string()), // Unique license identifier
@@ -1996,10 +2058,10 @@ export default defineSchema({
     isActive: v.boolean(),
     stripePriceId: v.string(),
     displayOrder: v.number(),
-    
+
     // Badge/label
     badge: v.optional(v.string()), // "Most Popular", "Best Value"
-    
+
     // Stats
     purchaseCount: v.number(),
   })
@@ -2014,7 +2076,7 @@ export default defineSchema({
   socialAccounts: defineTable({
     storeId: v.string(),
     userId: v.string(), // Store owner
-    
+
     // Platform Info
     platform: v.union(
       v.literal("instagram"),
@@ -2027,33 +2089,35 @@ export default defineSchema({
     platformUsername: v.optional(v.string()),
     platformDisplayName: v.optional(v.string()),
     profileImageUrl: v.optional(v.string()),
-    
+
     // OAuth Tokens (encrypted in production)
     accessToken: v.string(),
     refreshToken: v.optional(v.string()),
     tokenExpiresAt: v.optional(v.number()),
-    
+
     // Account Status
     isActive: v.boolean(),
     isConnected: v.boolean(),
     lastVerified: v.optional(v.number()),
     connectionError: v.optional(v.string()),
-    
+
     // Platform-specific data
-    platformData: v.optional(v.object({
-      // Instagram
-      instagramBusinessAccountId: v.optional(v.string()),
-      // Facebook
-      facebookPageId: v.optional(v.string()),
-      facebookPageAccessToken: v.optional(v.string()),
-      // Platform-specific rate limits
-      dailyPostLimit: v.optional(v.number()),
-      postsToday: v.optional(v.number()),
-    })),
-    
+    platformData: v.optional(
+      v.object({
+        // Instagram
+        instagramBusinessAccountId: v.optional(v.string()),
+        // Facebook
+        facebookPageId: v.optional(v.string()),
+        facebookPageAccessToken: v.optional(v.string()),
+        // Platform-specific rate limits
+        dailyPostLimit: v.optional(v.number()),
+        postsToday: v.optional(v.number()),
+      })
+    ),
+
     // Permissions/Scopes granted
     grantedScopes: v.array(v.string()),
-    
+
     // Account label (optional, for users to distinguish multiple accounts)
     accountLabel: v.optional(v.string()), // e.g., "Personal", "Business", "Brand Account"
   })
@@ -2069,16 +2133,16 @@ export default defineSchema({
     storeId: v.string(),
     userId: v.string(),
     socialAccountId: v.id("socialAccounts"),
-    
+
     // Post Content
     content: v.string(), // Text content
     mediaUrls: v.optional(v.array(v.string())), // Images/videos
     mediaStorageIds: v.optional(v.array(v.id("_storage"))), // Convex storage IDs
-    
+
     // Scheduling
     scheduledFor: v.number(), // Unix timestamp
     timezone: v.string(), // User's timezone
-    
+
     // Post Configuration
     postType: v.union(
       v.literal("post"),
@@ -2087,20 +2151,22 @@ export default defineSchema({
       v.literal("tweet"),
       v.literal("thread")
     ),
-    
+
     // Platform-specific options
-    platformOptions: v.optional(v.object({
-      // Instagram
-      instagramLocation: v.optional(v.string()),
-      instagramCaption: v.optional(v.string()),
-      // Twitter
-      twitterReplySettings: v.optional(v.string()),
-      // Facebook
-      facebookTargeting: v.optional(v.string()),
-      // LinkedIn
-      linkedinVisibility: v.optional(v.string()),
-    })),
-    
+    platformOptions: v.optional(
+      v.object({
+        // Instagram
+        instagramLocation: v.optional(v.string()),
+        instagramCaption: v.optional(v.string()),
+        // Twitter
+        twitterReplySettings: v.optional(v.string()),
+        // Facebook
+        facebookTargeting: v.optional(v.string()),
+        // LinkedIn
+        linkedinVisibility: v.optional(v.string()),
+      })
+    ),
+
     // Status
     status: v.union(
       v.literal("draft"),
@@ -2110,25 +2176,27 @@ export default defineSchema({
       v.literal("failed"),
       v.literal("cancelled")
     ),
-    
+
     // Publishing Info
     publishedAt: v.optional(v.number()),
     platformPostId: v.optional(v.string()), // ID from the platform
     platformPostUrl: v.optional(v.string()), // Direct link to post
-    
+
     // Error Handling
     errorMessage: v.optional(v.string()),
     retryCount: v.number(),
     lastRetryAt: v.optional(v.number()),
-    
+
     // Analytics (populated after publishing)
-    initialMetrics: v.optional(v.object({
-      likes: v.optional(v.number()),
-      comments: v.optional(v.number()),
-      shares: v.optional(v.number()),
-      views: v.optional(v.number()),
-      clicks: v.optional(v.number()),
-    })),
+    initialMetrics: v.optional(
+      v.object({
+        likes: v.optional(v.number()),
+        comments: v.optional(v.number()),
+        shares: v.optional(v.number()),
+        views: v.optional(v.number()),
+        clicks: v.optional(v.number()),
+      })
+    ),
   })
     .index("by_storeId", ["storeId"])
     .index("by_userId", ["userId"])
@@ -2143,7 +2211,7 @@ export default defineSchema({
     scheduledPostId: v.id("scheduledPosts"),
     socialAccountId: v.id("socialAccounts"),
     storeId: v.string(),
-    
+
     // Platform Info
     platform: v.union(
       v.literal("instagram"),
@@ -2153,7 +2221,7 @@ export default defineSchema({
       v.literal("linkedin")
     ),
     platformPostId: v.string(),
-    
+
     // Engagement Metrics
     likes: v.number(),
     comments: v.number(),
@@ -2163,11 +2231,11 @@ export default defineSchema({
     impressions: v.optional(v.number()),
     reach: v.optional(v.number()),
     clicks: v.optional(v.number()),
-    
+
     // Audience Metrics
     followerCount: v.optional(v.number()),
     engagementRate: v.optional(v.number()), // Percentage
-    
+
     // Time-based tracking
     timestamp: v.number(), // When these metrics were captured
     hoursAfterPost: v.optional(v.number()), // 1h, 24h, 7d snapshots
@@ -2187,12 +2255,12 @@ export default defineSchema({
       v.literal("tiktok"),
       v.literal("linkedin")
     ),
-    
+
     // Webhook Data
     eventType: v.string(), // "post.published", "comment.created", etc.
     payload: v.any(), // Full webhook payload
     signature: v.optional(v.string()), // Webhook signature for verification
-    
+
     // Processing Status
     status: v.union(
       v.literal("pending"),
@@ -2202,7 +2270,7 @@ export default defineSchema({
     ),
     processedAt: v.optional(v.number()),
     errorMessage: v.optional(v.string()),
-    
+
     // Related Resources
     socialAccountId: v.optional(v.id("socialAccounts")),
     scheduledPostId: v.optional(v.id("scheduledPosts")),
@@ -2215,25 +2283,27 @@ export default defineSchema({
   postTemplates: defineTable({
     storeId: v.string(),
     userId: v.string(),
-    
+
     // Template Info
     name: v.string(),
     description: v.optional(v.string()),
     category: v.optional(v.string()), // "promotion", "announcement", "engagement"
-    
+
     // Template Content
     content: v.string(),
     mediaUrls: v.optional(v.array(v.string())),
-    
+
     // Platform Targeting
-    platforms: v.array(v.union(
-      v.literal("instagram"),
-      v.literal("twitter"),
-      v.literal("facebook"),
-      v.literal("tiktok"),
-      v.literal("linkedin")
-    )),
-    
+    platforms: v.array(
+      v.union(
+        v.literal("instagram"),
+        v.literal("twitter"),
+        v.literal("facebook"),
+        v.literal("tiktok"),
+        v.literal("linkedin")
+      )
+    ),
+
     // Usage Stats
     useCount: v.number(),
     lastUsed: v.optional(v.number()),
@@ -2250,102 +2320,112 @@ export default defineSchema({
   automationFlows: defineTable({
     storeId: v.string(),
     userId: v.string(),
-    
+
     // Flow Info
     name: v.string(),
     description: v.optional(v.string()),
     isActive: v.boolean(),
-    
+
     // Trigger Configuration
     triggerType: v.union(
-      v.literal("keyword"),          // Triggered by keyword in comments/messages
-      v.literal("comment"),          // Triggered by any comment
-      v.literal("dm"),              // Triggered by DM
-      v.literal("mention"),         // Triggered by mention
-      v.literal("hashtag"),         // Triggered by specific hashtag
-      v.literal("manual"),          // Manually triggered
+      v.literal("keyword"), // Triggered by keyword in comments/messages
+      v.literal("comment"), // Triggered by any comment
+      v.literal("dm"), // Triggered by DM
+      v.literal("mention"), // Triggered by mention
+      v.literal("hashtag"), // Triggered by specific hashtag
+      v.literal("manual") // Manually triggered
     ),
-    
+
     // Trigger Conditions
     triggerConditions: v.object({
       keywords: v.optional(v.array(v.string())), // Keywords to match (case-insensitive)
-      platforms: v.array(v.union(
-        v.literal("instagram"),
-        v.literal("twitter"),
-        v.literal("facebook"),
-        v.literal("tiktok"),
-        v.literal("linkedin")
-      )),
+      platforms: v.array(
+        v.union(
+          v.literal("instagram"),
+          v.literal("twitter"),
+          v.literal("facebook"),
+          v.literal("tiktok"),
+          v.literal("linkedin")
+        )
+      ),
       matchType: v.union(
-        v.literal("exact"),           // Exact match
-        v.literal("contains"),        // Contains keyword
-        v.literal("starts_with"),     // Starts with keyword
-        v.literal("regex"),           // Regex match
+        v.literal("exact"), // Exact match
+        v.literal("contains"), // Contains keyword
+        v.literal("starts_with"), // Starts with keyword
+        v.literal("regex") // Regex match
       ),
       socialAccountIds: v.optional(v.array(v.id("socialAccounts"))), // Specific accounts
     }),
-    
+
     // Flow Definition (nodes and connections)
     flowDefinition: v.object({
-      nodes: v.array(v.object({
-        id: v.string(),
-        type: v.union(
-          v.literal("trigger"),       // Starting point
-          v.literal("message"),       // Send message
-          v.literal("delay"),         // Wait/delay
-          v.literal("condition"),     // Conditional branching  
-          v.literal("resource"),      // Send resource/file
-          v.literal("tag"),           // Add user tag
-          v.literal("webhook"),       // Send webhook
-        ),
-        position: v.object({ x: v.number(), y: v.number() }),
-        data: v.object({
-          // Message node data
-          content: v.optional(v.string()),
-          mediaUrls: v.optional(v.array(v.string())),
-          
-          // Delay node data
-          delayMinutes: v.optional(v.number()),
-          
-          // Condition node data
-          conditionType: v.optional(v.union(
-            v.literal("keyword"),
-            v.literal("user_response"),
-            v.literal("time_based"),
-            v.literal("tag_based"),
-          )),
-          conditionValue: v.optional(v.string()),
-          
-          // Resource node data
-          resourceType: v.optional(v.union(
-            v.literal("link"),
-            v.literal("file"),
-            v.literal("course"),
-            v.literal("product"),
-          )),
-          resourceUrl: v.optional(v.string()),
-          resourceId: v.optional(v.string()),
-          
-          // Tag node data
-          tagName: v.optional(v.string()),
-          
-          // Webhook node data
-          webhookUrl: v.optional(v.string()),
-          webhookData: v.optional(v.any()),
-        }),
-      })),
-      connections: v.array(v.object({
-        from: v.string(), // Node ID
-        to: v.string(),   // Node ID
-        label: v.optional(v.string()), // Connection label (for conditions)
-      })),
+      nodes: v.array(
+        v.object({
+          id: v.string(),
+          type: v.union(
+            v.literal("trigger"), // Starting point
+            v.literal("message"), // Send message
+            v.literal("delay"), // Wait/delay
+            v.literal("condition"), // Conditional branching
+            v.literal("resource"), // Send resource/file
+            v.literal("tag"), // Add user tag
+            v.literal("webhook") // Send webhook
+          ),
+          position: v.object({ x: v.number(), y: v.number() }),
+          data: v.object({
+            // Message node data
+            content: v.optional(v.string()),
+            mediaUrls: v.optional(v.array(v.string())),
+
+            // Delay node data
+            delayMinutes: v.optional(v.number()),
+
+            // Condition node data
+            conditionType: v.optional(
+              v.union(
+                v.literal("keyword"),
+                v.literal("user_response"),
+                v.literal("time_based"),
+                v.literal("tag_based")
+              )
+            ),
+            conditionValue: v.optional(v.string()),
+
+            // Resource node data
+            resourceType: v.optional(
+              v.union(
+                v.literal("link"),
+                v.literal("file"),
+                v.literal("course"),
+                v.literal("product")
+              )
+            ),
+            resourceUrl: v.optional(v.string()),
+            resourceId: v.optional(v.string()),
+
+            // Tag node data
+            tagName: v.optional(v.string()),
+
+            // Webhook node data
+            webhookUrl: v.optional(v.string()),
+            webhookData: v.optional(v.any()),
+          }),
+        })
+      ),
+      connections: v.array(
+        v.object({
+          from: v.string(), // Node ID
+          to: v.string(), // Node ID
+          label: v.optional(v.string()), // Connection label (for conditions)
+        })
+      ),
     }),
-    
+
     // Analytics
     totalTriggers: v.number(),
     totalCompletions: v.number(),
     lastTriggered: v.optional(v.number()),
-    
+
     // Configuration
     settings: v.object({
       stopOnError: v.boolean(),
@@ -2363,7 +2443,7 @@ export default defineSchema({
   userAutomationStates: defineTable({
     storeId: v.string(),
     automationFlowId: v.id("automationFlows"),
-    
+
     // User Identity (from social platforms)
     platformUserId: v.string(),
     platform: v.union(
@@ -2374,22 +2454,22 @@ export default defineSchema({
       v.literal("linkedin")
     ),
     platformUsername: v.optional(v.string()),
-    
+
     // Flow State
     currentNodeId: v.optional(v.string()), // Current position in flow
     status: v.union(
-      v.literal("active"),           // Currently in flow
-      v.literal("completed"),        // Flow completed
-      v.literal("paused"),           // Flow paused
-      v.literal("error"),            // Flow errored
-      v.literal("timeout"),          // Flow timed out
+      v.literal("active"), // Currently in flow
+      v.literal("completed"), // Flow completed
+      v.literal("paused"), // Flow paused
+      v.literal("error"), // Flow errored
+      v.literal("timeout") // Flow timed out
     ),
-    
+
     // Progress Tracking
     startedAt: v.number(),
     lastActivityAt: v.number(),
     completedAt: v.optional(v.number()),
-    
+
     // Flow Data
     variables: v.optional(v.object({})), // Store user responses/data
     tags: v.optional(v.array(v.string())), // User tags collected
@@ -2397,7 +2477,7 @@ export default defineSchema({
     isPendingResponse: v.optional(v.boolean()), // Waiting for user response
     expectedResponse: v.optional(v.string()), // What response we're waiting for ("yes", "no", etc.)
     waitingNodeId: v.optional(v.string()), // Which node is waiting for response
-    
+
     // Trigger Context
     triggerContext: v.object({
       triggerType: v.string(),
@@ -2406,7 +2486,7 @@ export default defineSchema({
       triggerMessage: v.optional(v.string()),
       socialAccountId: v.optional(v.id("socialAccounts")),
     }),
-    
+
     // Error Handling
     errorMessage: v.optional(v.string()),
     retryCount: v.number(),
@@ -2423,12 +2503,12 @@ export default defineSchema({
     storeId: v.string(),
     automationFlowId: v.id("automationFlows"),
     userAutomationStateId: v.optional(v.id("userAutomationStates")),
-    
+
     // Trigger Details
     triggerType: v.string(),
     keyword: v.optional(v.string()),
     matchedText: v.string(),
-    
+
     // Social Context
     platform: v.union(
       v.literal("instagram"),
@@ -2440,24 +2520,24 @@ export default defineSchema({
     socialAccountId: v.id("socialAccounts"),
     platformUserId: v.string(),
     platformUsername: v.optional(v.string()),
-    
+
     // Content Context
     commentId: v.optional(v.string()),
     postId: v.optional(v.string()),
     messageId: v.optional(v.string()),
     fullContent: v.string(),
-    
+
     // Processing
     status: v.union(
       v.literal("pending"),
-      v.literal("processing"), 
+      v.literal("processing"),
       v.literal("completed"),
       v.literal("failed"),
-      v.literal("ignored"),
+      v.literal("ignored")
     ),
     processedAt: v.optional(v.number()),
     errorMessage: v.optional(v.string()),
-    
+
     // Webhook data (if triggered by webhook)
     webhookId: v.optional(v.id("socialWebhooks")),
   })
@@ -2475,16 +2555,16 @@ export default defineSchema({
     automationFlowId: v.id("automationFlows"),
     userAutomationStateId: v.id("userAutomationStates"),
     nodeId: v.string(), // Flow node that sent this message
-    
+
     // Message Content
     messageType: v.union(
-      v.literal("dm"),              // Direct message
-      v.literal("comment_reply"),   // Reply to comment  
-      v.literal("story_reply"),     // Story reply
+      v.literal("dm"), // Direct message
+      v.literal("comment_reply"), // Reply to comment
+      v.literal("story_reply") // Story reply
     ),
     content: v.string(),
     mediaUrls: v.optional(v.array(v.string())),
-    
+
     // Recipient Info
     platform: v.union(
       v.literal("instagram"),
@@ -2495,7 +2575,7 @@ export default defineSchema({
     ),
     platformUserId: v.string(),
     platformUsername: v.optional(v.string()),
-    
+
     // Delivery Status
     status: v.union(
       v.literal("pending"),
@@ -2503,16 +2583,16 @@ export default defineSchema({
       v.literal("sent"),
       v.literal("delivered"),
       v.literal("failed"),
-      v.literal("rate_limited"),
+      v.literal("rate_limited")
     ),
     sentAt: v.optional(v.number()),
     deliveredAt: v.optional(v.number()),
     errorMessage: v.optional(v.string()),
-    
+
     // Platform Response
     platformMessageId: v.optional(v.string()),
     socialAccountId: v.id("socialAccounts"),
-    
+
     // Retry Logic
     retryCount: v.number(),
     maxRetries: v.number(),
@@ -2539,13 +2619,15 @@ export default defineSchema({
     expiresAt: v.number(), // Token expiration timestamp
     enrolledCourseIds: v.array(v.id("courses")), // Courses user is enrolled in
     assignedRoles: v.array(v.string()), // Discord role IDs assigned to user
-    guildMemberStatus: v.optional(v.union(
-      v.literal("invited"),
-      v.literal("joined"),
-      v.literal("left"),
-      v.literal("kicked"),
-      v.literal("banned")
-    )),
+    guildMemberStatus: v.optional(
+      v.union(
+        v.literal("invited"),
+        v.literal("joined"),
+        v.literal("left"),
+        v.literal("kicked"),
+        v.literal("banned")
+      )
+    ),
     lastSyncedAt: v.number(), // Last time roles were synced
     connectedAt: v.number(), // When user connected Discord
   })
@@ -2560,14 +2642,14 @@ export default defineSchema({
     guildName: v.string(), // Discord server name
     inviteCode: v.optional(v.string()), // Permanent invite code
     botToken: v.string(), // Bot token for this server (encrypted)
-    
+
     // Role mapping (courseId -> Discord role ID)
     courseRoles: v.optional(v.any()), // JSON object: { "courseId": "roleId" }
-    
+
     // General roles
     generalMemberRole: v.optional(v.string()), // Role for all members
     creatorRole: v.optional(v.string()), // Role for course creator
-    
+
     isActive: v.boolean(),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -2856,11 +2938,13 @@ export default defineSchema({
 
   recommendations: defineTable({
     userId: v.string(),
-    recommendations: v.array(v.object({
-      courseId: v.id("courses"),
-      score: v.number(),
-      reason: v.string(),
-    })),
+    recommendations: v.array(
+      v.object({
+        courseId: v.id("courses"),
+        score: v.number(),
+        reason: v.string(),
+      })
+    ),
     generatedAt: v.number(),
     expiresAt: v.number(),
   })
@@ -2914,8 +2998,7 @@ export default defineSchema({
     partialCredit: v.optional(v.boolean()),
     createdAt: v.number(),
     updatedAt: v.number(),
-  })
-    .index("by_quiz", ["quizId", "order"]),
+  }).index("by_quiz", ["quizId", "order"]),
 
   quizAttempts: defineTable({
     quizId: v.id("quizzes"),
@@ -2934,14 +3017,16 @@ export default defineSchema({
     score: v.optional(v.number()),
     percentage: v.optional(v.number()),
     passed: v.optional(v.boolean()),
-    answers: v.array(v.object({
-      questionId: v.id("quizQuestions"),
-      answer: v.any(),
-      isCorrect: v.optional(v.boolean()),
-      pointsEarned: v.optional(v.number()),
-      gradedAt: v.optional(v.number()),
-      feedback: v.optional(v.string()),
-    })),
+    answers: v.array(
+      v.object({
+        questionId: v.id("quizQuestions"),
+        answer: v.any(),
+        isCorrect: v.optional(v.boolean()),
+        pointsEarned: v.optional(v.number()),
+        gradedAt: v.optional(v.number()),
+        feedback: v.optional(v.string()),
+      })
+    ),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -2987,38 +3072,38 @@ export default defineSchema({
   // Subscriptions & Memberships (renamed to avoid conflict with existing subscriptions table)
   membershipSubscriptions: monetizationSchema.subscriptionsTable,
   subscriptionPlans: monetizationSchema.subscriptionPlansTable,
-  
+
   // Coupons & Discounts
   coupons: monetizationSchema.couponsTable,
   couponUsages: monetizationSchema.couponUsagesTable,
-  
+
   // Affiliate Program
   affiliates: monetizationSchema.affiliatesTable,
   affiliateClicks: monetizationSchema.affiliateClicksTable,
   affiliateSales: monetizationSchema.affiliateSalesTable,
   affiliatePayouts: monetizationSchema.affiliatePayoutsTable,
-  
+
   // Referral Program
   referrals: monetizationSchema.referralsTable,
-  
+
   // Payment Plans (Installments)
   paymentPlans: monetizationSchema.paymentPlansTable,
   installmentPayments: monetizationSchema.installmentPaymentsTable,
-  
+
   // Bundles
   bundles: monetizationSchema.bundlesTable,
-  
+
   // Tax & Multi-Currency
   taxRates: monetizationSchema.taxRatesTable,
   currencyRates: monetizationSchema.currencyRatesTable,
-  
+
   // Refunds
   refunds: monetizationSchema.refundsTable,
-  
+
   // Creator Payouts
   creatorPayouts: monetizationSchema.creatorPayoutsTable,
   payoutSchedules: monetizationSchema.payoutSchedulesTable,
-  
+
   // Free Trials & Upsells
   freeTrials: monetizationSchema.freeTrialsTable,
   upsells: monetizationSchema.upsellsTable,
@@ -3060,58 +3145,56 @@ export default defineSchema({
     .index("by_type", ["type"])
     .index("by_user", ["userId"])
     .index("by_store", ["storeId"]),
-  
+
   resendTemplates: emailSchema.resendTemplatesTable
     .index("by_connection", ["connectionId"])
     .index("by_type", ["type"])
     .index("by_active", ["isActive"]),
-  
+
   resendCampaigns: emailSchema.resendCampaignsTable
     .index("by_connection", ["connectionId"])
     .index("by_status", ["status"])
     .index("by_target", ["targetAudience"]),
-  
+
   resendAutomations: emailSchema.resendAutomationsTable
     .index("by_connection", ["connectionId"])
     .index("by_trigger", ["triggerType"])
     .index("by_active", ["isActive"]),
-  
+
   resendLogs: emailSchema.resendLogsTable
     .index("by_connection", ["connectionId"])
     .index("by_recipient", ["recipientEmail"])
     .index("by_user", ["recipientUserId"])
     .index("by_status", ["status"])
     .index("by_campaign", ["campaignId"]),
-  
-  resendAudienceLists: emailSchema.resendAudienceListsTable
-    .index("by_connection", ["connectionId"]),
-  
-  resendPreferences: emailSchema.resendPreferencesTable
-    .index("by_user", ["userId"]),
-  
+
+  resendAudienceLists: emailSchema.resendAudienceListsTable.index("by_connection", [
+    "connectionId",
+  ]),
+
+  resendPreferences: emailSchema.resendPreferencesTable.index("by_user", ["userId"]),
+
   resendImportedContacts: emailSchema.resendImportedContactsTable
     .index("by_connection", ["connectionId"])
     .index("by_status", ["status"]),
 
   // Advanced Email Features (ActiveCampaign-Level)
   // Note: emailWorkflows and workflowExecutions already exist above
-  
+
   leadScores: emailSchema.leadScoresTable,
-  
-  emailSegments: emailSchema.emailSegmentsTable
-    .index("by_connection", ["connectionId"]),
-  
+
+  emailSegments: emailSchema.emailSegmentsTable.index("by_connection", ["connectionId"]),
+
   emailABTests: emailSchema.emailABTestsTable,
-  
+
   userEngagementPatterns: emailSchema.userEngagementPatternsTable,
-  
+
   emailHealthMetrics: emailSchema.emailHealthMetricsTable,
-  
+
   campaignGoals: emailSchema.campaignGoalsTable,
-  
-  spamScoreChecks: emailSchema.spamScoreChecksTable
-    .index("by_template", ["templateId"]),
-  
+
+  spamScoreChecks: emailSchema.spamScoreChecksTable.index("by_template", ["templateId"]),
+
   listHygieneActions: emailSchema.listHygieneActionsTable,
 
   // Gamification - Achievements
@@ -3120,10 +3203,12 @@ export default defineSchema({
     achievementId: v.string(), // Achievement identifier
     unlocked: v.boolean(),
     unlockedAt: v.optional(v.number()), // Timestamp when unlocked
-    progress: v.optional(v.object({
-      current: v.number(),
-      target: v.number()
-    })),
+    progress: v.optional(
+      v.object({
+        current: v.number(),
+        target: v.number(),
+      })
+    ),
   })
     .index("by_userId", ["userId"])
     .index("by_userId_and_achievementId", ["userId", "achievementId"]),
@@ -3133,8 +3218,7 @@ export default defineSchema({
     userId: v.string(), // Clerk ID
     totalXP: v.number(),
     lastXPGain: v.optional(v.number()), // Timestamp of last XP gain
-  })
-    .index("by_userId", ["userId"]),
+  }).index("by_userId", ["userId"]),
 
   // Music Sharing - User Uploaded Tracks
   userTracks: defineTable({
@@ -3145,7 +3229,7 @@ export default defineSchema({
     mood: v.optional(v.string()),
     description: v.optional(v.string()),
     coverUrl: v.optional(v.string()),
-    
+
     // Track source
     sourceType: v.union(
       v.literal("upload"),
@@ -3155,17 +3239,17 @@ export default defineSchema({
     ),
     sourceUrl: v.optional(v.string()), // For URLs
     storageId: v.optional(v.id("_storage")), // For uploads
-    
+
     // Metadata
     duration: v.optional(v.number()),
     releaseDate: v.optional(v.number()),
     tags: v.optional(v.array(v.string())),
-    
+
     // Stats
     plays: v.number(),
     likes: v.number(),
     shares: v.number(),
-    
+
     // Visibility
     isPublic: v.boolean(),
   })
@@ -3180,18 +3264,18 @@ export default defineSchema({
     bio: v.optional(v.string()),
     avatarUrl: v.optional(v.string()),
     coverUrl: v.optional(v.string()),
-    
+
     // Social links
     instagram: v.optional(v.string()),
     twitter: v.optional(v.string()),
     youtube: v.optional(v.string()),
     spotify: v.optional(v.string()),
     soundcloud: v.optional(v.string()),
-    
+
     // Settings
     isPublic: v.boolean(),
     customSlug: v.optional(v.string()),
-    
+
     // Stats
     totalPlays: v.number(),
     totalFollowers: v.number(),
@@ -3206,35 +3290,37 @@ export default defineSchema({
     name: v.string(),
     description: v.optional(v.string()),
     coverUrl: v.optional(v.string()),
-    
+
     // Organization
     tags: v.optional(v.array(v.string())),
     genres: v.optional(v.array(v.string())),
-    
+
     // Visibility
     isPublic: v.boolean(),
     customSlug: v.optional(v.string()),
-    
+
     // Submissions
     acceptsSubmissions: v.boolean(),
-    submissionRules: v.optional(v.object({
-      allowedGenres: v.optional(v.array(v.string())),
-      maxLengthSeconds: v.optional(v.number()),
-      requiresMessage: v.boolean(),
-      guidelines: v.optional(v.string()),
-    })),
+    submissionRules: v.optional(
+      v.object({
+        allowedGenres: v.optional(v.array(v.string())),
+        maxLengthSeconds: v.optional(v.number()),
+        requiresMessage: v.boolean(),
+        guidelines: v.optional(v.string()),
+      })
+    ),
     submissionPricing: v.object({
       isFree: v.boolean(),
       price: v.optional(v.number()),
       currency: v.string(),
     }),
     submissionSLA: v.optional(v.number()), // Days to review
-    
+
     // Stats
     trackCount: v.number(),
     totalPlays: v.number(),
     totalSubmissions: v.number(),
-    
+
     // Product Integration (NEW)
     linkedProductId: v.optional(v.id("digitalProducts")), // Link to product listing
   })
@@ -3263,17 +3349,15 @@ export default defineSchema({
     creatorId: v.string(), // Playlist owner
     trackId: v.id("userTracks"),
     playlistId: v.optional(v.id("curatorPlaylists")), // Target playlist
-    
+
     // Submission details
     message: v.optional(v.string()),
     submissionFee: v.number(),
     paymentId: v.optional(v.string()), // Stripe payment ID
-    paymentStatus: v.optional(v.union(
-      v.literal("pending"),
-      v.literal("paid"),
-      v.literal("refunded")
-    )),
-    
+    paymentStatus: v.optional(
+      v.union(v.literal("pending"), v.literal("paid"), v.literal("refunded"))
+    ),
+
     // Status
     status: v.union(
       v.literal("inbox"),
@@ -3281,7 +3365,7 @@ export default defineSchema({
       v.literal("accepted"),
       v.literal("declined")
     ),
-    
+
     // Decision
     decidedAt: v.optional(v.number()),
     decisionNotes: v.optional(v.string()),
@@ -3298,7 +3382,7 @@ export default defineSchema({
   aiOutreachDrafts: defineTable({
     userId: v.string(), // Clerk ID
     trackId: v.id("userTracks"),
-    
+
     // Target
     targetType: v.union(
       v.literal("labels"),
@@ -3307,17 +3391,17 @@ export default defineSchema({
       v.literal("ar"),
       v.literal("generic")
     ),
-    
+
     // Generated content
     subject: v.string(),
     emailBody: v.string(),
     dmScript: v.optional(v.string()),
     followUpSuggestions: v.optional(v.array(v.string())),
-    
+
     // Settings
     tone: v.string(), // professional, casual, enthusiastic
     style: v.optional(v.string()),
-    
+
     // Metadata
     generatedAt: v.number(),
     exported: v.boolean(),
@@ -3333,20 +3417,20 @@ export default defineSchema({
   integrations: defineTable({
     userId: v.id("users"),
     name: v.union(v.literal("INSTAGRAM"), v.literal("FACEBOOK")),
-    
+
     // OAuth Tokens
     token: v.string(), // Access token
     expiresAt: v.optional(v.number()), // Token expiry (60 days for Instagram)
-    
+
     // Instagram-specific data
     instagramId: v.optional(v.string()), // Instagram Business Account ID
     username: v.optional(v.string()),
     profilePicture: v.optional(v.string()),
-    
+
     // Facebook Page (required for Instagram Business API)
     facebookPageId: v.optional(v.string()),
     facebookPageAccessToken: v.optional(v.string()),
-    
+
     // Status
     isActive: v.boolean(),
     lastVerified: v.optional(v.number()),
@@ -3359,14 +3443,14 @@ export default defineSchema({
   automations: defineTable({
     userId: v.id("users"),
     storeId: v.optional(v.id("stores")),
-    
+
     // Basic Info
     name: v.string(),
     active: v.boolean(),
-    
+
     // Instagram Account Association
     instagramAccountId: v.optional(v.string()), // Which Instagram account this automation uses
-    
+
     // Stats (for analytics dashboard)
     totalTriggers: v.optional(v.number()),
     totalResponses: v.optional(v.number()),
@@ -3381,8 +3465,8 @@ export default defineSchema({
   triggers: defineTable({
     automationId: v.id("automations"),
     type: v.union(
-      v.literal("COMMENT"),  // Triggered by Instagram comment
-      v.literal("DM")         // Triggered by Instagram DM
+      v.literal("COMMENT"), // Triggered by Instagram comment
+      v.literal("DM") // Triggered by Instagram DM
     ),
   })
     .index("by_automationId", ["automationId"])
@@ -3403,22 +3487,22 @@ export default defineSchema({
   listeners: defineTable({
     automationId: v.id("automations"),
     listener: v.union(
-      v.literal("MESSAGE"),    // Send single message
-      v.literal("SMART_AI"),   // AI chatbot conversation
-      v.literal("SMARTAI")     // Alternative spelling
+      v.literal("MESSAGE"), // Send single message
+      v.literal("SMART_AI"), // AI chatbot conversation
+      v.literal("SMARTAI") // Alternative spelling
     ),
-    
+
     // Message content
     prompt: v.string(), // For SMART_AI: OpenAI system prompt. For MESSAGE: the message to send
     commentReply: v.optional(v.string()), // Optional reply to comment
-    
+
     // Smart AI Configuration
     aiPersonality: v.optional(v.string()), // AI persona description (e.g., "friendly music producer assistant")
     aiKnowledge: v.optional(v.string()), // Knowledge context (products, pricing, FAQs)
     aiTemperature: v.optional(v.number()), // OpenAI temperature (0.0 - 1.0, default 0.7)
     maxConversationTurns: v.optional(v.number()), // Limit conversation length (default unlimited)
     conversationTimeout: v.optional(v.number()), // Minutes before conversation resets (default 30)
-    
+
     // Analytics counters
     dmCount: v.optional(v.number()),
     commentCount: v.optional(v.number()),
@@ -3429,7 +3513,7 @@ export default defineSchema({
   // Posts - Instagram posts attached to comment automations
   posts: defineTable({
     automationId: v.id("automations"),
-    
+
     // Instagram post data
     postId: v.string(), // Instagram media ID
     caption: v.optional(v.string()),
@@ -3440,7 +3524,7 @@ export default defineSchema({
       v.literal("CAROUSEL_ALBUM"),
       v.literal("GLOBAL") // For global monitoring (ALL_POSTS_AND_FUTURE)
     ),
-    
+
     // Metadata
     timestamp: v.optional(v.number()),
     permalink: v.optional(v.string()),
@@ -3451,18 +3535,18 @@ export default defineSchema({
   // Chat History - Conversation history for Smart AI
   chatHistory: defineTable({
     automationId: v.id("automations"),
-    
+
     // Instagram user identity
     senderId: v.string(), // Instagram user ID who sent message
     receiverId: v.string(), // Business Instagram account ID
-    
+
     // Message
     message: v.string(),
     role: v.union(v.literal("user"), v.literal("assistant")),
-    
+
     // Context
     conversationId: v.optional(v.string()), // Group messages by conversation
-    
+
     // Timestamps for conversation management
     createdAt: v.optional(v.number()), // Unix timestamp
     turnNumber: v.optional(v.number()), // Track turn count in conversation
@@ -3476,30 +3560,32 @@ export default defineSchema({
   userSubscriptions: defineTable({
     userId: v.id("users"),
     plan: v.union(v.literal("FREE"), v.literal("PRO")),
-    
+
     // Stripe info
     stripeCustomerId: v.optional(v.string()),
     stripeSubscriptionId: v.optional(v.string()),
     stripePriceId: v.optional(v.string()),
-    
+
     // Billing
     currentPeriodStart: v.optional(v.number()),
     currentPeriodEnd: v.optional(v.number()),
     cancelAtPeriodEnd: v.optional(v.boolean()),
-    
+
     // Status
-    status: v.optional(v.union(
-      v.literal("active"),
-      v.literal("canceled"),
-      v.literal("past_due"),
-      v.literal("trialing")
-    )),
+    status: v.optional(
+      v.union(
+        v.literal("active"),
+        v.literal("canceled"),
+        v.literal("past_due"),
+        v.literal("trialing")
+      )
+    ),
   })
     .index("by_userId", ["userId"])
     .index("by_plan", ["plan"])
     .index("by_stripeCustomerId", ["stripeCustomerId"])
     .index("by_stripeSubscriptionId", ["stripeSubscriptionId"]),
-  
+
   // ============================================
   // LINK-IN-BIO SYSTEM
   // ============================================
@@ -3526,7 +3612,7 @@ export default defineSchema({
   // EMAIL DOMAIN MONITORING TABLES
   // ============================================
   ...emailDomainTables,
-  
+
   // ============================================
   // EMAIL REPLIES SYSTEM (INBOX)
   // ============================================
@@ -3541,8 +3627,7 @@ export default defineSchema({
     name: v.string(), // e.g., "Effect", "Instrument", "Studio Tool"
     createdAt: v.number(),
     updatedAt: v.number(),
-  })
-    .index("by_name", ["name"]),
+  }).index("by_name", ["name"]),
 
   // Effect-specific categories (e.g., "Reverb", "Delay", "EQ")
   pluginEffectCategories: defineTable({
@@ -3579,8 +3664,7 @@ export default defineSchema({
     name: v.string(),
     createdAt: v.number(),
     updatedAt: v.number(),
-  })
-    .index("by_name", ["name"]),
+  }).index("by_name", ["name"]),
 
   // Main Plugin records
   plugins: defineTable({
@@ -3601,11 +3685,7 @@ export default defineSchema({
     tags: v.optional(v.array(v.string())), // Array of tag strings for filtering
     optInFormUrl: v.optional(v.string()),
     price: v.optional(v.number()),
-    pricingType: v.union(
-      v.literal("FREE"),
-      v.literal("PAID"),
-      v.literal("FREEMIUM")
-    ),
+    pricingType: v.union(v.literal("FREE"), v.literal("PAID"), v.literal("FREEMIUM")),
     purchaseUrl: v.optional(v.string()),
     isPublished: v.optional(v.boolean()), // For marketplace visibility
     createdAt: v.number(),
@@ -3635,30 +3715,26 @@ export default defineSchema({
     authorName: v.optional(v.string()),
     authorAvatar: v.optional(v.string()),
     storeId: v.optional(v.id("stores")), // Optional: associate with a store
-    
+
     // SEO Fields
     metaTitle: v.optional(v.string()), // Custom SEO title
     metaDescription: v.optional(v.string()), // Meta description for search engines
     keywords: v.optional(v.array(v.string())), // SEO keywords
     canonicalUrl: v.optional(v.string()), // Canonical URL for duplicate content
-    
+
     // Publishing
-    status: v.union(
-      v.literal("draft"),
-      v.literal("published"),
-      v.literal("archived")
-    ),
+    status: v.union(v.literal("draft"), v.literal("published"), v.literal("archived")),
     publishedAt: v.optional(v.number()),
     scheduledFor: v.optional(v.number()), // Future publishing date
-    
+
     // Categories and Tags
     category: v.optional(v.string()), // Main category (e.g., "tutorials", "news", "tips")
     tags: v.optional(v.array(v.string())), // Tags for filtering
-    
+
     // Engagement
     views: v.optional(v.number()),
     readTimeMinutes: v.optional(v.number()), // Estimated reading time
-    
+
     // Timestamps
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -3702,12 +3778,14 @@ export default defineSchema({
     messageCount: v.number(), // Total messages in conversation
     // CONVERSATION GOAL ANCHOR - Prevents context drift in long conversations
     // Extracted from the first message and injected into every AI call
-    conversationGoal: v.optional(v.object({
-      originalIntent: v.string(), // "Create a course about Tourist's production style"
-      deliverableType: v.optional(v.string()), // "course", "outline", "lesson", etc.
-      keyConstraints: v.optional(v.array(v.string())), // ["Tourist style", "Ableton Live 12", "UKG"]
-      extractedAt: v.number(), // When the goal was extracted
-    })),
+    conversationGoal: v.optional(
+      v.object({
+        originalIntent: v.string(), // "Create a course about Tourist's production style"
+        deliverableType: v.optional(v.string()), // "course", "outline", "lesson", etc.
+        keyConstraints: v.optional(v.array(v.string())), // ["Tourist style", "Ableton Live 12", "UKG"]
+        extractedAt: v.number(), // When the goal was extracted
+      })
+    ),
     // Agent reference - which AI agent/GPT is this conversation with
     agentId: v.optional(v.id("aiAgents")), // Optional - null means default assistant
     agentSlug: v.optional(v.string()), // Cached for display without joins
@@ -3716,22 +3794,24 @@ export default defineSchema({
     preset: v.optional(v.string()),
     responseStyle: v.optional(v.string()),
     // Full settings object (new - complete settings persistence)
-    settings: v.optional(v.object({
-      preset: v.string(),
-      maxFacets: v.number(),
-      chunksPerFacet: v.number(),
-      similarityThreshold: v.number(),
-      enableCritic: v.boolean(),
-      enableCreativeMode: v.boolean(),
-      enableWebResearch: v.boolean(),
-      enableFactVerification: v.boolean(),
-      autoSaveWebResearch: v.boolean(),
-      qualityThreshold: v.optional(v.number()),
-      maxRetries: v.optional(v.number()),
-      webSearchMaxResults: v.optional(v.number()),
-      responseStyle: v.string(),
-      agenticMode: v.optional(v.boolean()),
-    })),
+    settings: v.optional(
+      v.object({
+        preset: v.string(),
+        maxFacets: v.number(),
+        chunksPerFacet: v.number(),
+        similarityThreshold: v.number(),
+        enableCritic: v.boolean(),
+        enableCreativeMode: v.boolean(),
+        enableWebResearch: v.boolean(),
+        enableFactVerification: v.boolean(),
+        autoSaveWebResearch: v.boolean(),
+        qualityThreshold: v.optional(v.number()),
+        maxRetries: v.optional(v.number()),
+        webSearchMaxResults: v.optional(v.number()),
+        responseStyle: v.string(),
+        agenticMode: v.optional(v.boolean()),
+      })
+    ),
     // Metadata
     archived: v.optional(v.boolean()),
     starred: v.optional(v.boolean()),
@@ -3751,21 +3831,27 @@ export default defineSchema({
     role: v.union(v.literal("user"), v.literal("assistant")),
     content: v.string(),
     // Assistant-specific fields
-    citations: v.optional(v.array(v.object({
-      id: v.number(),
-      title: v.string(),
-      sourceType: v.string(),
-      sourceId: v.optional(v.string()),
-    }))),
+    citations: v.optional(
+      v.array(
+        v.object({
+          id: v.number(),
+          title: v.string(),
+          sourceType: v.string(),
+          sourceId: v.optional(v.string()),
+        })
+      )
+    ),
     facetsUsed: v.optional(v.array(v.string())),
     // Pipeline metadata for assistant messages
-    pipelineMetadata: v.optional(v.object({
-      processingTimeMs: v.number(),
-      totalChunksProcessed: v.number(),
-      plannerModel: v.optional(v.string()),
-      summarizerModel: v.optional(v.string()),
-      finalWriterModel: v.optional(v.string()),
-    })),
+    pipelineMetadata: v.optional(
+      v.object({
+        processingTimeMs: v.number(),
+        totalChunksProcessed: v.number(),
+        plannerModel: v.optional(v.string()),
+        summarizerModel: v.optional(v.string()),
+        finalWriterModel: v.optional(v.string()),
+      })
+    ),
     // Timestamps
     createdAt: v.number(),
   })
@@ -3781,11 +3867,11 @@ export default defineSchema({
     summary: v.optional(v.string()), // Short summary for display
     // Memory type
     type: v.union(
-      v.literal("preference"),   // User preferences (e.g., "prefers conversational responses")
-      v.literal("fact"),         // Facts about the user (e.g., "uses Ableton Live")
-      v.literal("skill_level"),  // Skill assessments (e.g., "intermediate at mixing")
-      v.literal("context"),      // Contextual info (e.g., "working on melodic techno track")
-      v.literal("correction")    // Corrections made by user
+      v.literal("preference"), // User preferences (e.g., "prefers conversational responses")
+      v.literal("fact"), // Facts about the user (e.g., "uses Ableton Live")
+      v.literal("skill_level"), // Skill assessments (e.g., "intermediate at mixing")
+      v.literal("context"), // Contextual info (e.g., "working on melodic techno track")
+      v.literal("correction") // Corrections made by user
     ),
     // Source tracking
     sourceConversationId: v.optional(v.id("aiConversations")),
@@ -3814,46 +3900,50 @@ export default defineSchema({
     slug: v.string(), // URL-friendly identifier
     description: v.string(), // Short description for the picker
     longDescription: v.optional(v.string()), // Detailed description
-    
+
     // Visual identity
     icon: v.string(), // Emoji or icon name (e.g., "📣", "🎛️", "sparkles")
     color: v.optional(v.string()), // Gradient or color theme (e.g., "violet", "amber", "emerald")
     avatarUrl: v.optional(v.string()), // Custom avatar image
-    
+
     // Behavior configuration
     systemPrompt: v.string(), // The main system prompt that defines the agent's behavior
     welcomeMessage: v.optional(v.string()), // First message shown when starting a chat
     suggestedQuestions: v.optional(v.array(v.string())), // Starter questions for users
-    
+
     // Knowledge & Capabilities
-    knowledgeFilters: v.optional(v.object({
-      categories: v.optional(v.array(v.string())), // Filter embeddings by category
-      sourceTypes: v.optional(v.array(v.string())), // Filter by source type
-      tags: v.optional(v.array(v.string())), // Custom tags for knowledge filtering
-    })),
-    
+    knowledgeFilters: v.optional(
+      v.object({
+        categories: v.optional(v.array(v.string())), // Filter embeddings by category
+        sourceTypes: v.optional(v.array(v.string())), // Filter by source type
+        tags: v.optional(v.array(v.string())), // Custom tags for knowledge filtering
+      })
+    ),
+
     // External integrations/tools
     enabledTools: v.optional(v.array(v.string())), // e.g., ["blotato", "course_creator", "stripe"]
     toolConfigs: v.optional(v.any()), // Tool-specific configuration
-    
+
     // Default settings overrides
-    defaultSettings: v.optional(v.object({
-      preset: v.optional(v.string()),
-      responseStyle: v.optional(v.string()),
-      maxFacets: v.optional(v.number()),
-      chunksPerFacet: v.optional(v.number()),
-      enableWebResearch: v.optional(v.boolean()),
-      enableCreativeMode: v.optional(v.boolean()),
-    })),
-    
+    defaultSettings: v.optional(
+      v.object({
+        preset: v.optional(v.string()),
+        responseStyle: v.optional(v.string()),
+        maxFacets: v.optional(v.number()),
+        chunksPerFacet: v.optional(v.number()),
+        enableWebResearch: v.optional(v.boolean()),
+        enableCreativeMode: v.optional(v.boolean()),
+      })
+    ),
+
     // Access control
     visibility: v.union(
-      v.literal("public"),      // Available to all users
+      v.literal("public"), // Available to all users
       v.literal("subscribers"), // Only for subscribed users
-      v.literal("private")      // Only for owner/admins
+      v.literal("private") // Only for owner/admins
     ),
     creatorId: v.optional(v.string()), // Clerk ID of creator (for user-created agents)
-    
+
     // Categorization
     category: v.union(
       v.literal("marketing"),
@@ -3866,17 +3956,17 @@ export default defineSchema({
       v.literal("custom")
     ),
     tags: v.optional(v.array(v.string())),
-    
+
     // Analytics
     conversationCount: v.number(), // How many conversations used this agent
     rating: v.optional(v.number()), // Average rating 1-5
     ratingCount: v.optional(v.number()),
-    
+
     // Status
     isActive: v.boolean(),
     isBuiltIn: v.boolean(), // System-provided vs user-created
     isFeatured: v.optional(v.boolean()),
-    
+
     // Timestamps
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -3897,17 +3987,21 @@ export default defineSchema({
     vote: v.union(v.literal("up"), v.literal("down")),
     // Optional detailed feedback
     reason: v.optional(v.string()), // Why they voted this way
-    tags: v.optional(v.array(v.union(
-      v.literal("accurate"),
-      v.literal("helpful"),
-      v.literal("creative"),
-      v.literal("well_written"),
-      v.literal("inaccurate"),
-      v.literal("unhelpful"),
-      v.literal("off_topic"),
-      v.literal("too_long"),
-      v.literal("too_short")
-    ))),
+    tags: v.optional(
+      v.array(
+        v.union(
+          v.literal("accurate"),
+          v.literal("helpful"),
+          v.literal("creative"),
+          v.literal("well_written"),
+          v.literal("inaccurate"),
+          v.literal("unhelpful"),
+          v.literal("off_topic"),
+          v.literal("too_long"),
+          v.literal("too_short")
+        )
+      )
+    ),
     createdAt: v.number(),
   })
     .index("by_messageId", ["messageId"])
@@ -3920,13 +4014,15 @@ export default defineSchema({
     userId: v.string(), // Who triggered the search
     query: v.string(), // The search query
     // Results from Tavily
-    results: v.array(v.object({
-      title: v.string(),
-      url: v.string(),
-      content: v.string(),
-      score: v.number(),
-      publishedDate: v.optional(v.string()),
-    })),
+    results: v.array(
+      v.object({
+        title: v.string(),
+        url: v.string(),
+        content: v.string(),
+        score: v.number(),
+        publishedDate: v.optional(v.string()),
+      })
+    ),
     // Whether this has been added to embeddings
     addedToEmbeddings: v.boolean(),
     embeddingIds: v.optional(v.array(v.id("embeddings"))),
@@ -3951,23 +4047,23 @@ export default defineSchema({
     name: v.string(),
     description: v.string(),
     category: v.string(), // marketing, automation, content, monetization, engagement, analytics, social, audio, workflow, other
-    
+
     // Source tracking
     sourceCourses: v.array(v.string()), // Course titles
     sourceChapters: v.array(v.string()), // Chapter titles
-    
+
     // Priority and reasoning
     priority: v.string(), // high, medium, low
     reasoning: v.string(),
     existsPartially: v.optional(v.string()), // Name of existing similar feature
     implementationHint: v.optional(v.string()),
     cursorPrompt: v.optional(v.string()), // Pre-built prompt for Cursor
-    
+
     // Status tracking
     status: v.string(), // new, reviewing, planned, building, completed, rejected
     notes: v.optional(v.string()), // Admin notes
     linkedTaskUrl: v.optional(v.string()), // Link to Linear/GitHub issue
-    
+
     // Metadata
     analysisRunId: v.optional(v.string()), // Which analysis run created this
     updatedAt: v.number(),
@@ -3989,27 +4085,29 @@ export default defineSchema({
       v.literal("script"),
       v.literal("custom")
     ),
-    
+
     // Text content
     sentence: v.string(), // The original sentence from the script
     sentenceIndex: v.number(), // Position in the script
     illustrationPrompt: v.string(), // The AI-generated prompt used for image generation
-    
+
     // Image data
     imageUrl: v.string(), // URL to the generated image (Convex storage)
     imageStorageId: v.optional(v.id("_storage")), // Convex storage ID
-    
+
     // Embeddings for semantic search
     embedding: v.optional(v.array(v.number())), // Image embedding vector (512 or 1024 dims)
     embeddingModel: v.optional(v.string()), // Model used for embedding (e.g., "clip-vit-base-patch32")
-    
+
     // Generation metadata
     generationModel: v.string(), // FAL model used (e.g., "fal-ai/flux/schnell")
-    generationParams: v.optional(v.object({
-      seed: v.optional(v.number()),
-      steps: v.optional(v.number()),
-      guidance: v.optional(v.number()),
-    })),
+    generationParams: v.optional(
+      v.object({
+        seed: v.optional(v.number()),
+        steps: v.optional(v.number()),
+        guidance: v.optional(v.number()),
+      })
+    ),
     generationStatus: v.union(
       v.literal("pending"),
       v.literal("generating"),
@@ -4017,11 +4115,11 @@ export default defineSchema({
       v.literal("failed")
     ),
     generationError: v.optional(v.string()),
-    
+
     // Ownership
     userId: v.string(), // Clerk ID
     storeId: v.optional(v.string()),
-    
+
     // Timestamps
     createdAt: v.number(),
     generatedAt: v.optional(v.number()),
@@ -4038,7 +4136,7 @@ export default defineSchema({
   scriptIllustrationJobs: defineTable({
     userId: v.string(),
     storeId: v.optional(v.string()),
-    
+
     // Script content
     scriptText: v.string(),
     scriptTitle: v.optional(v.string()),
@@ -4049,7 +4147,7 @@ export default defineSchema({
       v.literal("custom")
     ),
     sourceId: v.optional(v.string()),
-    
+
     // Processing status
     status: v.union(
       v.literal("pending"),
@@ -4057,18 +4155,18 @@ export default defineSchema({
       v.literal("completed"),
       v.literal("failed")
     ),
-    
+
     // Progress tracking
     totalSentences: v.number(),
     processedSentences: v.number(),
     failedSentences: v.number(),
-    
+
     // Results
     illustrationIds: v.array(v.id("scriptIllustrations")),
-    
+
     // Error tracking
     errors: v.optional(v.array(v.string())),
-    
+
     // Timestamps
     createdAt: v.number(),
     startedAt: v.optional(v.number()),
@@ -4086,60 +4184,64 @@ export default defineSchema({
     userId: v.string(), // Clerk ID
     courseId: v.id("courses"),
     courseTitle: v.string(),
-    
+
     // Analysis metadata
     name: v.string(), // User-given name for this analysis
-    
+
     // Full analysis results (stored as JSON)
     totalChapters: v.number(),
     totalVisualIdeas: v.number(),
     avgLeadMagnetScore: v.number(),
-    
+
     // Serialized chapter analyses
-    chapters: v.array(v.object({
-      chapterId: v.string(),
-      chapterTitle: v.string(),
-      lessonId: v.optional(v.string()),
-      lessonTitle: v.optional(v.string()),
-      moduleTitle: v.optional(v.string()),
-      wordCount: v.optional(v.number()),
-      overallLeadMagnetScore: v.number(),
-      keyTopics: v.array(v.string()),
-      leadMagnetSuggestions: v.array(v.string()),
-      visualIdeas: v.array(v.object({
-        sentenceOrConcept: v.string(),
-        visualDescription: v.string(),
-        illustrationPrompt: v.string(),
-        importance: v.union(
-          v.literal("critical"),
-          v.literal("helpful"),
-          v.literal("optional")
+    chapters: v.array(
+      v.object({
+        chapterId: v.string(),
+        chapterTitle: v.string(),
+        lessonId: v.optional(v.string()),
+        lessonTitle: v.optional(v.string()),
+        moduleTitle: v.optional(v.string()),
+        wordCount: v.optional(v.number()),
+        overallLeadMagnetScore: v.number(),
+        keyTopics: v.array(v.string()),
+        leadMagnetSuggestions: v.array(v.string()),
+        visualIdeas: v.array(
+          v.object({
+            sentenceOrConcept: v.string(),
+            visualDescription: v.string(),
+            illustrationPrompt: v.string(),
+            importance: v.union(v.literal("critical"), v.literal("helpful"), v.literal("optional")),
+            category: v.union(
+              v.literal("concept_diagram"),
+              v.literal("process_flow"),
+              v.literal("comparison"),
+              v.literal("equipment_setup"),
+              v.literal("waveform_visual"),
+              v.literal("ui_screenshot"),
+              v.literal("metaphor"),
+              v.literal("example")
+            ),
+            leadMagnetPotential: v.number(),
+            estimatedPosition: v.number(),
+            embedding: v.optional(v.array(v.number())),
+            embeddingText: v.optional(v.string()),
+          })
         ),
-        category: v.union(
-          v.literal("concept_diagram"),
-          v.literal("process_flow"),
-          v.literal("comparison"),
-          v.literal("equipment_setup"),
-          v.literal("waveform_visual"),
-          v.literal("ui_screenshot"),
-          v.literal("metaphor"),
-          v.literal("example")
-        ),
-        leadMagnetPotential: v.number(),
-        estimatedPosition: v.number(),
-        embedding: v.optional(v.array(v.number())),
-        embeddingText: v.optional(v.string()),
-      })),
-    })),
-    
+      })
+    ),
+
     // Bundle ideas
-    bundleIdeas: v.optional(v.array(v.object({
-      name: v.string(),
-      description: v.string(),
-      chapterIds: v.array(v.string()),
-      estimatedVisuals: v.number(),
-    }))),
-    
+    bundleIdeas: v.optional(
+      v.array(
+        v.object({
+          name: v.string(),
+          description: v.string(),
+          chapterIds: v.array(v.string()),
+          estimatedVisuals: v.number(),
+        })
+      )
+    ),
+
     // Timestamps
     createdAt: v.number(),
     updatedAt: v.optional(v.number()),
@@ -4152,23 +4254,21 @@ export default defineSchema({
   // =============================================================================
   // AI Course Builder - Batch course generation queue and outlines
   // =============================================================================
-  
+
   // Queue for batch course creation requests
   aiCourseQueue: defineTable({
     userId: v.string(), // Clerk ID
     storeId: v.string(),
-    
+
     // Course request details
     prompt: v.string(), // e.g., "Create me a course on how to make a tour style track in Ableton Live 12"
     topic: v.optional(v.string()), // Extracted topic
-    skillLevel: v.optional(v.union(
-      v.literal("beginner"),
-      v.literal("intermediate"),
-      v.literal("advanced")
-    )),
+    skillLevel: v.optional(
+      v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced"))
+    ),
     targetModules: v.optional(v.number()), // Default 4
     targetLessonsPerModule: v.optional(v.number()), // Default 3
-    
+
     // Processing status
     status: v.union(
       v.literal("queued"), // Waiting to be processed
@@ -4180,27 +4280,29 @@ export default defineSchema({
       v.literal("completed"), // Course created successfully
       v.literal("failed") // Something went wrong
     ),
-    
+
     // Progress tracking
-    progress: v.optional(v.object({
-      currentStep: v.string(),
-      totalSteps: v.number(),
-      completedSteps: v.number(),
-      currentChapter: v.optional(v.string()),
-    })),
-    
+    progress: v.optional(
+      v.object({
+        currentStep: v.string(),
+        totalSteps: v.number(),
+        completedSteps: v.number(),
+        currentChapter: v.optional(v.string()),
+      })
+    ),
+
     // Results
     outlineId: v.optional(v.id("aiCourseOutlines")), // Link to generated outline
     courseId: v.optional(v.id("courses")), // Link to created course
-    
+
     // Error tracking
     error: v.optional(v.string()),
-    
+
     // Timestamps
     createdAt: v.number(),
     startedAt: v.optional(v.number()),
     completedAt: v.optional(v.number()),
-    
+
     // Priority for queue processing
     priority: v.optional(v.number()), // Higher = processed first
   })
@@ -4216,43 +4318,43 @@ export default defineSchema({
     queueId: v.id("aiCourseQueue"), // Reference to queue item
     userId: v.string(),
     storeId: v.string(),
-    
+
     // Course metadata
     title: v.string(),
     description: v.string(),
     topic: v.string(),
-    skillLevel: v.union(
-      v.literal("beginner"),
-      v.literal("intermediate"),
-      v.literal("advanced")
-    ),
+    skillLevel: v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced")),
     estimatedDuration: v.optional(v.number()), // In minutes
-    
+
     // The full outline structure as JSON
     outline: v.any(), // Full course structure with modules, lessons, chapters
-    
+
     // Content expansion tracking
     totalChapters: v.number(),
     expandedChapters: v.number(), // How many chapters have detailed content
-    
+
     // Chapter content status - tracks which chapters need expansion
-    chapterStatus: v.optional(v.array(v.object({
-      moduleIndex: v.number(),
-      lessonIndex: v.number(),
-      chapterIndex: v.number(),
-      title: v.string(),
-      hasDetailedContent: v.boolean(),
-      wordCount: v.optional(v.number()),
-    }))),
-    
+    chapterStatus: v.optional(
+      v.array(
+        v.object({
+          moduleIndex: v.number(),
+          lessonIndex: v.number(),
+          chapterIndex: v.number(),
+          title: v.string(),
+          hasDetailedContent: v.boolean(),
+          wordCount: v.optional(v.number()),
+        })
+      )
+    ),
+
     // Generation metadata
     generationModel: v.optional(v.string()),
     generationTimeMs: v.optional(v.number()),
-    
+
     // User edits
     isEdited: v.boolean(), // Has user manually edited the outline?
     lastEditedAt: v.optional(v.number()),
-    
+
     // Timestamps
     createdAt: v.number(),
   })
@@ -4260,4 +4362,65 @@ export default defineSchema({
     .index("by_userId", ["userId"])
     .index("by_storeId", ["storeId"])
     .index("by_userId_and_createdAt", ["userId", "createdAt"]),
-}); 
+
+  dripCampaigns: defineTable({
+    storeId: v.string(),
+    name: v.string(),
+    description: v.optional(v.string()),
+    triggerType: v.union(
+      v.literal("lead_signup"),
+      v.literal("product_purchase"),
+      v.literal("tag_added"),
+      v.literal("manual")
+    ),
+    triggerConfig: v.optional(v.any()),
+    isActive: v.boolean(),
+    totalEnrolled: v.number(),
+    totalCompleted: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_storeId", ["storeId"])
+    .index("by_triggerType", ["triggerType"])
+    .index("by_active", ["isActive"]),
+
+  dripCampaignSteps: defineTable({
+    campaignId: v.id("dripCampaigns"),
+    stepNumber: v.number(),
+    delayMinutes: v.number(),
+    subject: v.string(),
+    htmlContent: v.string(),
+    textContent: v.optional(v.string()),
+    isActive: v.boolean(),
+    sentCount: v.number(),
+    openCount: v.number(),
+    clickCount: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_campaignId", ["campaignId"])
+    .index("by_stepNumber", ["campaignId", "stepNumber"]),
+
+  dripCampaignEnrollments: defineTable({
+    campaignId: v.id("dripCampaigns"),
+    email: v.string(),
+    name: v.optional(v.string()),
+    customerId: v.optional(v.string()),
+    currentStepNumber: v.number(),
+    status: v.union(
+      v.literal("active"),
+      v.literal("completed"),
+      v.literal("cancelled"),
+      v.literal("paused")
+    ),
+    nextSendAt: v.optional(v.number()),
+    lastSentAt: v.optional(v.number()),
+    enrolledAt: v.number(),
+    completedAt: v.optional(v.number()),
+    metadata: v.optional(v.any()),
+  })
+    .index("by_campaignId", ["campaignId"])
+    .index("by_email", ["email"])
+    .index("by_campaignId_and_email", ["campaignId", "email"])
+    .index("by_status", ["status"])
+    .index("by_status_and_nextSendAt", ["status", "nextSendAt"]),
+});

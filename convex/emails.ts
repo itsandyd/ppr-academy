@@ -4,8 +4,8 @@ import { action, internalAction, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 import { Resend } from "resend";
 import { internal } from "./_generated/api";
+import crypto from "crypto";
 
-// Initialize Resend with environment variable or API key
 let resendClient: Resend | null = null;
 function getResendClient(apiKey?: string) {
   const key = apiKey || process.env.RESEND_API_KEY;
@@ -18,13 +18,28 @@ function getResendClient(apiKey?: string) {
   return resendClient;
 }
 
-/**
- * Replace personalization tokens in content
- */
+function generateUnsubscribeUrl(email: string): string {
+  const secret =
+    process.env.UNSUBSCRIBE_SECRET || process.env.CLERK_SECRET_KEY || "fallback-secret";
+  const emailBase64 = Buffer.from(email).toString("base64url");
+  const signature = crypto.createHmac("sha256", secret).update(email).digest("base64url");
+  const token = `${emailBase64}.${signature}`;
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
+  return `${baseUrl}/unsubscribe/${token}`;
+}
+
+function getListUnsubscribeHeaders(email: string): Record<string, string> {
+  const url = generateUnsubscribeUrl(email);
+  return {
+    "List-Unsubscribe": `<${url}>`,
+    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+  };
+}
+
 function personalizeContent(
-  content: string, 
-  recipient: { 
-    name: string; 
+  content: string,
+  recipient: {
+    name: string;
     email: string;
     musicAlias?: string;
     daw?: string;
@@ -32,31 +47,29 @@ function personalizeContent(
     city?: string;
     state?: string;
     country?: string;
+    unsubscribeUrl?: string;
   }
 ): string {
-  // Extract first name from full name
-  const firstName = recipient.name.split(' ')[0] || recipient.name;
-  
+  const firstName = recipient.name.split(" ")[0] || recipient.name;
+  const unsubscribeUrl = recipient.unsubscribeUrl || generateUnsubscribeUrl(recipient.email);
+
   return content
-    // {{firstName}} or {{first_name}}
     .replace(/\{\{firstName\}\}/g, firstName)
     .replace(/\{\{first_name\}\}/g, firstName)
-    // {{name}} or {{fullName}}
     .replace(/\{\{name\}\}/g, recipient.name)
     .replace(/\{\{fullName\}\}/g, recipient.name)
     .replace(/\{\{full_name\}\}/g, recipient.name)
-    // {{email}}
     .replace(/\{\{email\}\}/g, recipient.email)
-    // Producer/Fan specific fields
-    .replace(/\{\{musicAlias\}\}/g, recipient.musicAlias || '')
-    .replace(/\{\{daw\}\}/g, recipient.daw || '')
-    .replace(/\{\{studentLevel\}\}/g, recipient.studentLevel || '')
-    // Location fields
-    .replace(/\{\{city\}\}/g, recipient.city || '')
-    .replace(/\{\{state\}\}/g, recipient.state || '')
-    .replace(/\{\{country\}\}/g, recipient.country || '')
-    // Legacy support for {{customer.name}}
-    .replace(/\{\{customer\.name\}\}/g, recipient.name);
+    .replace(/\{\{musicAlias\}\}/g, recipient.musicAlias || "")
+    .replace(/\{\{daw\}\}/g, recipient.daw || "")
+    .replace(/\{\{studentLevel\}\}/g, recipient.studentLevel || "")
+    .replace(/\{\{city\}\}/g, recipient.city || "")
+    .replace(/\{\{state\}\}/g, recipient.state || "")
+    .replace(/\{\{country\}\}/g, recipient.country || "")
+    .replace(/\{\{customer\.name\}\}/g, recipient.name)
+    .replace(/\{\{unsubscribeLink\}\}/g, unsubscribeUrl)
+    .replace(/\{\{unsubscribe_link\}\}/g, unsubscribeUrl)
+    .replace(/\{\{unsubscribeUrl\}\}/g, unsubscribeUrl);
 }
 
 // ============================================================================
@@ -73,7 +86,7 @@ export const processCampaign = internalAction({
   handler: async (ctx, args) => {
     console.log("=== STARTING CAMPAIGN PROCESSING ===");
     console.log("Campaign ID:", args.campaignId);
-    
+
     try {
       const campaign = await ctx.runQuery(internal.emailQueries.getCampaignById, {
         campaignId: args.campaignId,
@@ -84,7 +97,7 @@ export const processCampaign = internalAction({
         throw new Error("Campaign not found");
       }
       console.log("✅ Campaign found:", campaign.name);
-      
+
       // Validate campaign has required fields
       if (!campaign.subject) {
         throw new Error("Campaign is missing a subject line");
@@ -102,7 +115,7 @@ export const processCampaign = internalAction({
       let totalFailed = 0;
       let cursor: string | null = null;
       let isDone = false;
-      
+
       while (!isDone) {
         // Get a batch of recipients
         const recipientBatch: {
@@ -125,13 +138,15 @@ export const processCampaign = internalAction({
           cursor: cursor || undefined,
           batchSize: 100,
         });
-        
+
         const recipients = recipientBatch.recipients;
         isDone = recipientBatch.isDone;
         cursor = recipientBatch.continueCursor || null;
-        
-        console.log(`📧 Processing batch of ${recipients.length} recipients (total sent so far: ${totalSent})`);
-        
+
+        console.log(
+          `📧 Processing batch of ${recipients.length} recipients (total sent so far: ${totalSent})`
+        );
+
         if (recipients.length === 0) {
           console.log("✅ No more recipients to process");
           break;
@@ -142,10 +157,10 @@ export const processCampaign = internalAction({
           campaignId: args.campaignId,
           recipients: recipients as any,
         });
-        
+
         totalSent += batchResult.sent;
         totalFailed += batchResult.failed;
-        
+
         console.log(`✅ Batch complete: ${batchResult.sent} sent, ${batchResult.failed} failed`);
       }
 
@@ -220,7 +235,7 @@ export const sendCampaignBatch = internalAction({
     // Get email content
     let htmlContent = "";
     let textContent = "";
-    
+
     if (isEmailCampaign) {
       htmlContent = (campaign as any).content || "";
       textContent = "";
@@ -232,20 +247,36 @@ export const sendCampaignBatch = internalAction({
     if (!htmlContent && !textContent) {
       throw new Error("Campaign has no email content");
     }
-    
+
     if (!campaign.subject) {
       throw new Error("Campaign has no subject line");
     }
 
     let sent = 0;
     let failed = 0;
+    let skipped = 0;
 
-    // Send emails in this batch
+    const emails = args.recipients.map((r: any) => r.email);
+    const suppressionResults: Array<{ email: string; suppressed: boolean; reason?: string }> =
+      await ctx.runQuery(internal.emailUnsubscribe.checkSuppressionBatch, { emails });
+    const suppressionMap = new Map<string, { email: string; suppressed: boolean; reason?: string }>(
+      suppressionResults.map((r) => [r.email.toLowerCase(), r])
+    );
+
     for (const recipient of args.recipients) {
       try {
-        // Personalize content
+        const suppression = suppressionMap.get(recipient.email.toLowerCase());
+        if (suppression?.suppressed) {
+          console.log(`Skipping ${recipient.email}: ${suppression.reason}`);
+          skipped++;
+          continue;
+        }
+
+        const unsubscribeUrl = generateUnsubscribeUrl(recipient.email);
+        const listUnsubscribeHeaders = getListUnsubscribeHeaders(recipient.email);
+
         const personalizedHtml = personalizeContent(htmlContent, {
-          name: recipient.name || 'there',
+          name: recipient.name || "there",
           email: recipient.email,
           musicAlias: recipient.musicAlias,
           daw: recipient.daw,
@@ -253,10 +284,11 @@ export const sendCampaignBatch = internalAction({
           city: recipient.city,
           state: recipient.state,
           country: recipient.country,
+          unsubscribeUrl,
         });
 
         const personalizedSubject = personalizeContent(campaign.subject, {
-          name: recipient.name || 'there',
+          name: recipient.name || "there",
           email: recipient.email,
           musicAlias: recipient.musicAlias,
           daw: recipient.daw,
@@ -266,7 +298,6 @@ export const sendCampaignBatch = internalAction({
           country: recipient.country,
         });
 
-        // Send email
         await resend.emails.send({
           from: fromName ? `${fromName} <${fromEmail}>` : fromEmail,
           to: recipient.email,
@@ -274,9 +305,9 @@ export const sendCampaignBatch = internalAction({
           html: personalizedHtml,
           text: textContent,
           replyTo: replyToEmail,
+          headers: listUnsubscribeHeaders,
         });
 
-        // Update recipient status
         if (recipient.recipientId) {
           await ctx.runMutation(internal.emailQueries.updateRecipientStatus, {
             recipientId: recipient.recipientId,
@@ -287,20 +318,19 @@ export const sendCampaignBatch = internalAction({
         sent++;
       } catch (error) {
         console.error(`Failed to send to ${recipient.email}:`, error);
-        
-        // Update recipient status to failed
+
         if (recipient.recipientId) {
           await ctx.runMutation(internal.emailQueries.updateRecipientStatus, {
             recipientId: recipient.recipientId,
             status: "failed",
           });
         }
-        
+
         failed++;
       }
     }
 
-    return { sent, failed };
+    return { sent, failed, skipped };
   },
 });
 
@@ -345,7 +375,7 @@ export const testStoreEmailConfig = action({
           message: "Email service not configured. Please contact support.",
         };
       }
-      
+
       // Send test email
       const result = await resend.emails.send({
         from: args.fromName ? `${args.fromName} <${args.fromEmail}>` : args.fromEmail,
@@ -367,8 +397,8 @@ export const testStoreEmailConfig = action({
               <h3 style="margin: 0 0 15px 0;">Verified Settings:</h3>
               <ul style="margin: 0; padding-left: 20px;">
                 <li><strong>From Email:</strong> ${args.fromEmail}</li>
-                ${args.fromName ? `<li><strong>From Name:</strong> ${args.fromName}</li>` : ''}
-                ${args.replyToEmail ? `<li><strong>Reply-to:</strong> ${args.replyToEmail}</li>` : ''}
+                ${args.fromName ? `<li><strong>From Name:</strong> ${args.fromName}</li>` : ""}
+                ${args.replyToEmail ? `<li><strong>Reply-to:</strong> ${args.replyToEmail}</li>` : ""}
               </ul>
             </div>
             
@@ -400,11 +430,12 @@ export const testStoreEmailConfig = action({
       }
     } catch (error: any) {
       console.error("Email test failed:", error);
-      
+
       let errorMessage = "Failed to send test email. ";
-      
+
       if (error.message?.includes("from") || error.message?.includes("sender")) {
-        errorMessage += "Please verify your 'from' email address is from a verified domain in Resend.";
+        errorMessage +=
+          "Please verify your 'from' email address is from a verified domain in Resend.";
       } else if (error.message?.includes("domain")) {
         errorMessage += "Please verify your domain is configured in Resend.";
       } else {
@@ -418,4 +449,3 @@ export const testStoreEmailConfig = action({
     }
   },
 });
-

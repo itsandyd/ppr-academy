@@ -6,7 +6,7 @@ import crypto from "crypto";
 /**
  * Resend Webhook Handler
  * Handles email events: delivered, opened, clicked, bounced, complained, delivery_delayed
- * 
+ *
  * Event Types:
  * - email.sent: Email was accepted by Resend
  * - email.delivered: Email was delivered to recipient
@@ -18,18 +18,11 @@ import crypto from "crypto";
  */
 
 // Webhook signature verification
-function verifyWebhookSignature(
-  payload: string,
-  signature: string,
-  secret: string
-): boolean {
+function verifyWebhookSignature(payload: string, signature: string, secret: string): boolean {
   try {
     const hmac = crypto.createHmac("sha256", secret);
     const digest = hmac.update(payload).digest("hex");
-    return crypto.timingSafeEqual(
-      Buffer.from(signature),
-      Buffer.from(digest)
-    );
+    return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(digest));
   } catch (error) {
     console.error("[Resend Webhook] Signature verification error:", error);
     return false;
@@ -41,15 +34,12 @@ export async function POST(req: NextRequest) {
     // Get raw body for signature verification
     const rawBody = await req.text();
     let body;
-    
+
     try {
       body = JSON.parse(rawBody);
     } catch (error) {
       console.error("[Resend Webhook] Invalid JSON:", error);
-      return NextResponse.json(
-        { error: "Invalid JSON payload" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid JSON payload" }, { status: 400 });
     }
 
     const { type, data, created_at } = body;
@@ -66,22 +56,16 @@ export async function POST(req: NextRequest) {
       if (svixSignature && svixTimestamp && svixId) {
         const signedContent = `${svixId}.${svixTimestamp}.${rawBody}`;
         const expectedSignature = svixSignature.split(",")[1]; // Format: "v1,signature"
-        
+
         if (!verifyWebhookSignature(signedContent, expectedSignature, webhookSecret)) {
           console.error("[Resend Webhook] Invalid signature");
-          return NextResponse.json(
-            { error: "Invalid webhook signature" },
-            { status: 401 }
-          );
+          return NextResponse.json({ error: "Invalid webhook signature" }, { status: 401 });
         }
       } else if (signature) {
         // Legacy signature verification
         if (!verifyWebhookSignature(rawBody, signature, webhookSecret)) {
           console.error("[Resend Webhook] Invalid signature");
-          return NextResponse.json(
-            { error: "Invalid webhook signature" },
-            { status: 401 }
-          );
+          return NextResponse.json({ error: "Invalid webhook signature" }, { status: 401 });
         }
       } else {
         console.warn("[Resend Webhook] No signature provided, but secret is configured");
@@ -150,13 +134,27 @@ export async function POST(req: NextRequest) {
         break;
     }
 
-    // Update email log in Convex
     await fetchMutation(api.emailQueries.handleWebhookEvent, {
       event: type,
       emailId: data.email_id,
       timestamp: eventData.timestamp,
       metadata: eventData,
     });
+
+    if (type === "email.complained" && data.to) {
+      const recipientEmail = Array.isArray(data.to) ? data.to[0] : data.to;
+      if (recipientEmail) {
+        try {
+          await fetchMutation(api.emailUnsubscribe.unsubscribeByEmail, {
+            email: recipientEmail,
+            reason: "Spam complaint - auto-unsubscribed",
+          });
+          console.log(`[Resend Webhook] Auto-unsubscribed ${recipientEmail} due to spam complaint`);
+        } catch (err) {
+          console.error(`[Resend Webhook] Failed to auto-unsubscribe ${recipientEmail}:`, err);
+        }
+      }
+    }
 
     return NextResponse.json({ received: true });
   } catch (error: any) {
@@ -184,4 +182,3 @@ export async function GET() {
     ],
   });
 }
-

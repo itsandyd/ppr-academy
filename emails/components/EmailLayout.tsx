@@ -15,12 +15,14 @@ interface EmailLayoutProps {
   preview: string;
   children: React.ReactNode;
   footerText?: string;
+  unsubscribeUrl?: string;
 }
 
 export default function EmailLayout({
   preview,
   children,
   footerText = "You're receiving this email because you're a student at PPR Academy.",
+  unsubscribeUrl = "{{unsubscribeLink}}",
 }: EmailLayoutProps) {
   return (
     <Html>
@@ -28,30 +30,30 @@ export default function EmailLayout({
       <Preview>{preview}</Preview>
       <Body style={main}>
         <Container style={container}>
-          {/* Header */}
           <Section style={header}>
             <Heading style={h1}>PPR Academy</Heading>
           </Section>
 
-          {/* Content */}
           <Section style={content}>{children}</Section>
 
-          {/* Footer */}
           <Hr style={hr} />
           <Section style={footer}>
             <Text style={footerTextStyle}>{footerText}</Text>
             <Text style={footerTextStyle}>
-              <Link href="#" style={link}>
+              <Link href={unsubscribeUrl} style={link}>
                 Unsubscribe
               </Link>
               {" • "}
-              <Link href="#" style={link}>
-                Preferences
+              <Link href="https://ppracademy.com" style={link}>
+                Website
               </Link>
               {" • "}
-              <Link href="#" style={link}>
+              <Link href="mailto:support@ppracademy.com" style={link}>
                 Help
               </Link>
+            </Text>
+            <Text style={addressStyle}>
+              PPR Academy LLC, 651 N Broad St Suite 201, Middletown, DE 19709
             </Text>
           </Section>
         </Container>
@@ -60,7 +62,6 @@ export default function EmailLayout({
   );
 }
 
-// Styles
 const main = {
   backgroundColor: "#f6f9fc",
   fontFamily:
@@ -109,8 +110,15 @@ const footerTextStyle = {
   textAlign: "center" as const,
 };
 
+const addressStyle = {
+  color: "#a0aec0",
+  fontSize: "11px",
+  lineHeight: "14px",
+  margin: "16px 0 0 0",
+  textAlign: "center" as const,
+};
+
 const link = {
   color: "#2563eb",
   textDecoration: "none",
 };
-

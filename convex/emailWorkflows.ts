@@ -1,5 +1,12 @@
 import { v } from "convex/values";
-import { mutation, query, action, internalMutation, internalQuery, internalAction } from "./_generated/server";
+import {
+  mutation,
+  query,
+  action,
+  internalMutation,
+  internalQuery,
+  internalAction,
+} from "./_generated/server";
 import { api, internal } from "./_generated/api";
 import { Doc, Id } from "./_generated/dataModel";
 
@@ -31,31 +38,33 @@ const edgeValidator = v.object({
 // Get all workflows for a store
 export const getWorkflowsByStore = query({
   args: { storeId: v.string() },
-  returns: v.array(v.object({
-    _id: v.id("emailWorkflows"),
-    _creationTime: v.number(),
-    name: v.string(),
-    description: v.optional(v.string()),
-    storeId: v.string(),
-    userId: v.string(),
-    isActive: v.optional(v.boolean()),
-    trigger: v.object({
-      type: v.union(
-        v.literal("lead_signup"),
-        v.literal("product_purchase"),
-        v.literal("time_delay"),
-        v.literal("date_time"),
-        v.literal("customer_action")
-      ),
-      config: v.any(),
-    }),
-    nodes: v.array(nodeValidator),
-    edges: v.array(edgeValidator),
-    totalExecutions: v.optional(v.number()),
-    lastExecuted: v.optional(v.number()),
-    avgOpenRate: v.optional(v.number()),
-    avgClickRate: v.optional(v.number()),
-  })),
+  returns: v.array(
+    v.object({
+      _id: v.id("emailWorkflows"),
+      _creationTime: v.number(),
+      name: v.string(),
+      description: v.optional(v.string()),
+      storeId: v.string(),
+      userId: v.string(),
+      isActive: v.optional(v.boolean()),
+      trigger: v.object({
+        type: v.union(
+          v.literal("lead_signup"),
+          v.literal("product_purchase"),
+          v.literal("time_delay"),
+          v.literal("date_time"),
+          v.literal("customer_action")
+        ),
+        config: v.any(),
+      }),
+      nodes: v.array(nodeValidator),
+      edges: v.array(edgeValidator),
+      totalExecutions: v.optional(v.number()),
+      lastExecuted: v.optional(v.number()),
+      avgOpenRate: v.optional(v.number()),
+      avgClickRate: v.optional(v.number()),
+    })
+  ),
   handler: async (ctx, args) => {
     return await ctx.db
       .query("emailWorkflows")
@@ -67,31 +76,34 @@ export const getWorkflowsByStore = query({
 // Get a specific workflow
 export const getWorkflow = query({
   args: { workflowId: v.id("emailWorkflows") },
-  returns: v.union(v.null(), v.object({
-    _id: v.id("emailWorkflows"),
-    _creationTime: v.number(),
-    name: v.string(),
-    description: v.optional(v.string()),
-    storeId: v.string(),
-    userId: v.string(),
-    isActive: v.optional(v.boolean()),
-    trigger: v.object({
-      type: v.union(
-        v.literal("lead_signup"),
-        v.literal("product_purchase"),
-        v.literal("time_delay"),
-        v.literal("date_time"),
-        v.literal("customer_action")
-      ),
-      config: v.any(),
-    }),
-    nodes: v.array(nodeValidator),
-    edges: v.array(edgeValidator),
-    totalExecutions: v.optional(v.number()),
-    lastExecuted: v.optional(v.number()),
-    avgOpenRate: v.optional(v.number()),
-    avgClickRate: v.optional(v.number()),
-  })),
+  returns: v.union(
+    v.null(),
+    v.object({
+      _id: v.id("emailWorkflows"),
+      _creationTime: v.number(),
+      name: v.string(),
+      description: v.optional(v.string()),
+      storeId: v.string(),
+      userId: v.string(),
+      isActive: v.optional(v.boolean()),
+      trigger: v.object({
+        type: v.union(
+          v.literal("lead_signup"),
+          v.literal("product_purchase"),
+          v.literal("time_delay"),
+          v.literal("date_time"),
+          v.literal("customer_action")
+        ),
+        config: v.any(),
+      }),
+      nodes: v.array(nodeValidator),
+      edges: v.array(edgeValidator),
+      totalExecutions: v.optional(v.number()),
+      lastExecuted: v.optional(v.number()),
+      avgOpenRate: v.optional(v.number()),
+      avgClickRate: v.optional(v.number()),
+    })
+  ),
   handler: async (ctx, args) => {
     return await ctx.db.get(args.workflowId);
   },
@@ -142,16 +154,18 @@ export const updateWorkflow = mutation({
     name: v.optional(v.string()),
     description: v.optional(v.string()),
     isActive: v.optional(v.boolean()),
-    trigger: v.optional(v.object({
-      type: v.union(
-        v.literal("lead_signup"),
-        v.literal("product_purchase"),
-        v.literal("time_delay"),
-        v.literal("date_time"),
-        v.literal("customer_action")
-      ),
-      config: v.any(),
-    })),
+    trigger: v.optional(
+      v.object({
+        type: v.union(
+          v.literal("lead_signup"),
+          v.literal("product_purchase"),
+          v.literal("time_delay"),
+          v.literal("date_time"),
+          v.literal("customer_action")
+        ),
+        config: v.any(),
+      })
+    ),
     nodes: v.optional(v.array(nodeValidator)),
     edges: v.optional(v.array(edgeValidator)),
   },
@@ -162,7 +176,7 @@ export const updateWorkflow = mutation({
   handler: async (ctx, args) => {
     try {
       const { workflowId, ...updates } = args;
-      
+
       const workflow = await ctx.db.get(workflowId);
       if (!workflow) {
         return { success: false, message: "Workflow not found" };
@@ -213,7 +227,7 @@ export const deleteWorkflow = mutation({
 
 // Toggle workflow active status
 export const toggleWorkflowStatus = mutation({
-  args: { 
+  args: {
     workflowId: v.id("emailWorkflows"),
     isActive: v.boolean(),
   },
@@ -232,9 +246,9 @@ export const toggleWorkflowStatus = mutation({
         isActive: args.isActive,
       });
 
-      return { 
-        success: true, 
-        message: `Workflow ${args.isActive ? 'activated' : 'deactivated'} successfully` 
+      return {
+        success: true,
+        message: `Workflow ${args.isActive ? "activated" : "deactivated"} successfully`,
       };
     } catch (error) {
       console.error("Failed to toggle workflow status:", error);
@@ -264,20 +278,23 @@ export const triggerWorkflow = internalAction({
       });
 
       if (!workflow || !workflow.isActive) {
-        return { 
-          success: false, 
-          message: "Workflow not found or not active" 
+        return {
+          success: false,
+          message: "Workflow not found or not active",
         };
       }
 
       // Create workflow execution record
-      const executionId: Id<"workflowExecutions"> = await ctx.runMutation(internal.emailWorkflows.createExecution, {
-        workflowId: args.workflowId,
-        storeId: workflow.storeId,
-        customerId: args.customerId,
-        customerEmail: args.customerEmail,
-        executionData: args.triggerData,
-      });
+      const executionId: Id<"workflowExecutions"> = await ctx.runMutation(
+        internal.emailWorkflows.createExecution,
+        {
+          workflowId: args.workflowId,
+          storeId: workflow.storeId,
+          customerId: args.customerId,
+          customerEmail: args.customerEmail,
+          executionData: args.triggerData,
+        }
+      );
 
       // Schedule the workflow execution
       await ctx.scheduler.runAfter(0, internal.emailWorkflows.executeWorkflow, {
@@ -326,7 +343,7 @@ export const executeWorkflow = internalAction({
   handler: async (ctx, args) => {
     try {
       console.log("🔄 Starting workflow execution:", args.executionId);
-      
+
       // Get execution details
       const execution = await ctx.runQuery(internal.emailWorkflows.getExecution, {
         executionId: args.executionId,
@@ -387,7 +404,7 @@ async function executeWorkflowNodes(ctx: any, workflow: any, execution: any) {
 
   while (currentNodeId && !visitedNodes.has(currentNodeId)) {
     visitedNodes.add(currentNodeId);
-    
+
     const currentNode = workflow.nodes.find((node: any) => node.id === currentNodeId);
     if (!currentNode) break;
 
@@ -405,7 +422,7 @@ async function executeWorkflowNodes(ctx: any, workflow: any, execution: any) {
     currentNodeId = nextNodeId;
 
     // Add small delay between nodes
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
 
   // Mark execution as completed
@@ -417,7 +434,12 @@ async function executeWorkflowNodes(ctx: any, workflow: any, execution: any) {
 }
 
 // Execute individual node
-async function executeNode(ctx: any, node: any, workflow: any, execution: any): Promise<string | null> {
+async function executeNode(
+  ctx: any,
+  node: any,
+  workflow: any,
+  execution: any
+): Promise<string | null> {
   switch (node.type) {
     case "trigger":
       // Trigger node - just pass through to next node
@@ -481,8 +503,9 @@ async function executeEmailNode(ctx: any, node: any, execution: any) {
 // Execute delay node
 async function executeDelayNode(ctx: any, node: any, workflow: any, execution: any) {
   const delayData = node.data;
-  const delayMs = (delayData.delay || 1) * (delayData.unit === "hours" ? 3600000 : 
-                                           delayData.unit === "days" ? 86400000 : 60000); // default minutes
+  const delayMs =
+    (delayData.delay || 1) *
+    (delayData.unit === "hours" ? 3600000 : delayData.unit === "days" ? 86400000 : 60000); // default minutes
 
   console.log(`⏱️ Scheduling delay: ${delayData.delay} ${delayData.unit}`);
 
@@ -499,9 +522,11 @@ function executeConditionNode(node: any, execution: any): string | null {
   // Simple condition evaluation - can be expanded
   const value = execution.executionData?.[conditionData.field];
   const passes = evaluateCondition(value, conditionData.operator, conditionData.value);
-  
-  console.log(`🔍 Condition ${passes ? "passed" : "failed"}: ${conditionData.field} ${conditionData.operator} ${conditionData.value}`);
-  
+
+  console.log(
+    `🔍 Condition ${passes ? "passed" : "failed"}: ${conditionData.field} ${conditionData.operator} ${conditionData.value}`
+  );
+
   // Return appropriate edge based on condition result
   return conditionData[passes ? "trueOutput" : "falseOutput"];
 }
@@ -510,7 +535,7 @@ function executeConditionNode(node: any, execution: any): string | null {
 async function executeActionNode(ctx: any, node: any, execution: any) {
   const actionData = node.data;
   console.log(`⚡ Executing action: ${actionData.actionType}`);
-  
+
   // Can be expanded with different action types
   switch (actionData.actionType) {
     case "add_tag":
@@ -527,12 +552,18 @@ async function executeActionNode(ctx: any, node: any, execution: any) {
 // Simple condition evaluator
 function evaluateCondition(value: any, operator: string, expected: any): boolean {
   switch (operator) {
-    case "equals": return value === expected;
-    case "not_equals": return value !== expected;
-    case "contains": return String(value).includes(String(expected));
-    case "greater_than": return Number(value) > Number(expected);
-    case "less_than": return Number(value) < Number(expected);
-    default: return false;
+    case "equals":
+      return value === expected;
+    case "not_equals":
+      return value !== expected;
+    case "contains":
+      return String(value).includes(String(expected));
+    case "greater_than":
+      return Number(value) > Number(expected);
+    case "less_than":
+      return Number(value) < Number(expected);
+    default:
+      return false;
   }
 }
 
@@ -546,7 +577,7 @@ export const continueWorkflow = internalAction({
   handler: async (ctx, args) => {
     try {
       console.log(`🔄 Continuing workflow from node: ${args.fromNodeId}`);
-      
+
       const execution = await ctx.runQuery(internal.emailWorkflows.getExecution, {
         executionId: args.executionId,
       });
@@ -614,13 +645,15 @@ export const getExecution = internalQuery({
 export const updateExecutionStatus = internalMutation({
   args: {
     executionId: v.id("workflowExecutions"),
-    status: v.optional(v.union(
-      v.literal("pending"),
-      v.literal("running"),
-      v.literal("completed"),
-      v.literal("failed"),
-      v.literal("cancelled")
-    )),
+    status: v.optional(
+      v.union(
+        v.literal("pending"),
+        v.literal("running"),
+        v.literal("completed"),
+        v.literal("failed"),
+        v.literal("cancelled")
+      )
+    ),
     currentNodeId: v.optional(v.string()),
     completedAt: v.optional(v.number()),
     errorMessage: v.optional(v.string()),
@@ -635,7 +668,7 @@ export const updateExecutionStatus = internalMutation({
 
 // Get workflow executions for analytics
 export const getWorkflowExecutions = query({
-  args: { 
+  args: {
     workflowId: v.id("emailWorkflows"),
     limit: v.optional(v.number()),
   },
@@ -665,7 +698,7 @@ export const triggerLeadSignupWorkflows = action({
   handler: async (ctx, args) => {
     try {
       console.log("🎯 Searching for lead signup workflows for store:", args.storeId);
-      
+
       // Get all active workflows for this store with lead_signup trigger
       const workflows = await ctx.runQuery(internal.emailWorkflows.getActiveLeadSignupWorkflows, {
         storeId: args.storeId,
@@ -676,7 +709,7 @@ export const triggerLeadSignupWorkflows = action({
       for (const workflow of workflows) {
         try {
           console.log(`🚀 Triggering workflow: ${workflow.name} (${workflow._id})`);
-          
+
           await ctx.runAction(internal.emailWorkflows.triggerWorkflow, {
             workflowId: workflow._id,
             customerEmail: args.customerEmail,
@@ -698,12 +731,11 @@ export const triggerLeadSignupWorkflows = action({
     } catch (error) {
       console.error("❌ Error in triggerLeadSignupWorkflows:", error);
     }
-    
+
     return null;
   },
 });
 
-// Get active workflows with lead signup trigger
 export const getActiveLeadSignupWorkflows = internalQuery({
   args: { storeId: v.string() },
   returns: v.array(v.any()),
@@ -711,12 +743,56 @@ export const getActiveLeadSignupWorkflows = internalQuery({
     return await ctx.db
       .query("emailWorkflows")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .filter((q) => 
-        q.and(
-          q.eq(q.field("isActive"), true),
-          q.eq(q.field("trigger.type"), "lead_signup")
-        )
+      .filter((q) =>
+        q.and(q.eq(q.field("isActive"), true), q.eq(q.field("trigger.type"), "lead_signup"))
       )
       .collect();
+  },
+});
+
+export const processScheduledExecutions = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    const now = Date.now();
+
+    const pendingExecutions = await ctx.runQuery(
+      internal.emailWorkflows.getPendingScheduledExecutions,
+      {
+        before: now,
+        limit: 50,
+      }
+    );
+
+    console.log(`[Workflows] Processing ${pendingExecutions.length} scheduled executions`);
+
+    for (const execution of pendingExecutions) {
+      try {
+        await ctx.runAction(internal.emailWorkflows.continueWorkflow, {
+          executionId: execution._id,
+        });
+      } catch (error) {
+        console.error(`[Workflows] Failed to process execution ${execution._id}:`, error);
+      }
+    }
+  },
+});
+
+export const getPendingScheduledExecutions = internalQuery({
+  args: {
+    before: v.number(),
+    limit: v.number(),
+  },
+  returns: v.array(v.any()),
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("workflowExecutions")
+      .withIndex("by_status", (q) => q.eq("status", "pending"))
+      .filter((q) =>
+        q.and(
+          q.neq(q.field("scheduledFor"), undefined),
+          q.lte(q.field("scheduledFor"), args.before)
+        )
+      )
+      .take(args.limit);
   },
 });
