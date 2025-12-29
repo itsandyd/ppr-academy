@@ -612,6 +612,7 @@ export const updateCourse = mutation({
     slug: v.optional(v.string()),
     category: v.optional(v.string()),
     skillLevel: v.optional(v.string()),
+    storeId: v.optional(v.string()),
     checkoutHeadline: v.optional(v.string()),
     checkoutDescription: v.optional(v.string()),
     paymentDescription: v.optional(v.string()),
