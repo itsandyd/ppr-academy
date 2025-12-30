@@ -28,7 +28,8 @@ async function sendConfirmationEmailHelper(ctx: any, args: any, product: any) {
         console.log("🔄 About to schedule email action...");
         const emailResult = await ctx.scheduler.runAfter(
           0,
-          (internal as any).emails.sendLeadMagnetConfirmation,
+          // @ts-ignore Convex type instantiation too deep
+          internal.emails.sendLeadMagnetConfirmation,
           {
             storeId: args.storeId as any,
             customerEmail: args.email,
