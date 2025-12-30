@@ -1707,3 +1707,54 @@ export const getChaptersForLeadMagnet = internalQuery({
     return enrichedChapters;
   },
 });
+
+/**
+ * Get all chapters for a course (public query)
+ * Used by social content creation flow to select chapter content
+ */
+export const getCourseChapters = query({
+  args: { courseId: v.id("courses") },
+  returns: v.array(
+    v.object({
+      _id: v.id("courseChapters"),
+      _creationTime: v.number(),
+      title: v.string(),
+      description: v.optional(v.string()),
+      courseId: v.string(),
+      position: v.number(),
+      lessonId: v.optional(v.string()),
+      audioUrl: v.optional(v.string()),
+      videoUrl: v.optional(v.string()),
+      generatedAudioUrl: v.optional(v.string()),
+      generatedVideoUrl: v.optional(v.string()),
+      audioGenerationStatus: v.optional(
+        v.union(
+          v.literal("pending"),
+          v.literal("generating"),
+          v.literal("completed"),
+          v.literal("failed")
+        )
+      ),
+      videoGenerationStatus: v.optional(
+        v.union(
+          v.literal("pending"),
+          v.literal("generating"),
+          v.literal("completed"),
+          v.literal("failed")
+        )
+      ),
+      audioGeneratedAt: v.optional(v.number()),
+      videoGeneratedAt: v.optional(v.number()),
+      audioGenerationError: v.optional(v.string()),
+      videoGenerationError: v.optional(v.string()),
+      isPublished: v.optional(v.boolean()),
+      isFree: v.optional(v.boolean()),
+    })
+  ),
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("courseChapters")
+      .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId))
+      .collect();
+  },
+});

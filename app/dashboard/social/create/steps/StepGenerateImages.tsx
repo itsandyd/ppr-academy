@@ -44,20 +44,18 @@ export function StepGenerateImages() {
 
     try {
       const result = await generateImagePrompts({
-        content: state.data.combinedScript,
-        count: 5,
+        script: state.data.combinedScript || "",
+        numImages: 5,
       });
 
-      if (result.prompts && result.prompts.length > 0) {
-        const newImages: ImageData[] = result.prompts.map(
-          (p: { prompt: string; sentence: string }) => ({
-            storageId: "" as any,
-            url: "",
-            aspectRatio,
-            prompt: p.prompt,
-            sentence: p.sentence,
-          })
-        );
+      if (result && result.length > 0) {
+        const newImages: ImageData[] = result.map((p: { prompt: string; sentence: string }) => ({
+          storageId: "" as any,
+          url: "",
+          aspectRatio,
+          prompt: p.prompt,
+          sentence: p.sentence,
+        }));
         setImages(newImages);
       }
     } catch (error) {
@@ -81,12 +79,12 @@ export function StepGenerateImages() {
         aspectRatio,
       });
 
-      if (result.storageId && result.url) {
+      if (result.success && result.storageId && result.imageUrl) {
         const updatedImages = [...images];
         updatedImages[index] = {
           ...image,
           storageId: result.storageId,
-          url: result.url,
+          url: result.imageUrl,
           aspectRatio,
         };
         setImages(updatedImages);

@@ -43,15 +43,15 @@ export function StepGenerateAudio() {
 
     try {
       const result = await generateAudio({
-        text: audioScript,
+        script: audioScript,
         voiceId: ANDREW_1_VOICE_ID,
       });
 
-      if (result.storageId && result.url) {
-        setAudioUrl(result.url);
+      if (result.success && result.storageId && result.audioUrl) {
+        setAudioUrl(result.audioUrl);
         updateData("audio", {
           audioStorageId: result.storageId,
-          audioUrl: result.url,
+          audioUrl: result.audioUrl,
           audioVoiceId: ANDREW_1_VOICE_ID,
           audioDuration: result.duration,
           audioScript,

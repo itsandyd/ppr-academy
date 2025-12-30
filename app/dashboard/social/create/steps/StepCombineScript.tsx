@@ -71,7 +71,6 @@ export function StepCombineScript() {
         youtubeScript: state.data.youtubeScript || "",
         instagramScript: state.data.instagramScript || "",
         ctaText: ctaText || undefined,
-        ctaKeyword: ctaKeyword || undefined,
       });
 
       if (result.combinedScript) {

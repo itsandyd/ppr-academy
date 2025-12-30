@@ -43,7 +43,7 @@ export function StepPlatformScripts() {
 
     try {
       const result = await generateScripts({
-        content: state.data.sourceContent,
+        sourceContent: state.data.sourceContent,
       });
 
       if (result.tiktokScript) setTiktokScript(result.tiktokScript);
