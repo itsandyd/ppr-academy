@@ -7,15 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import {
-  Music,
-  Search,
-  Package,
-  Download,
-  Filter,
-  Play,
-  Pause,
-} from "lucide-react";
+import { Music, Search, Package, Download, Filter, Play, Pause } from "lucide-react";
 import Link from "next/link";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
@@ -29,12 +21,11 @@ export default function LibrarySamplesPage() {
   const [playingSample, setPlayingSample] = useState<any | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  
+
   // Get samples with properly resolved URLs from Convex
-  const allSamples = useQuery(
-    api.libraryHelpers.getPackSamplesWithUrls,
-    user?.id ? { userId: user.id } : "skip"
-  ) || [];
+  const allSamples =
+    useQuery(api.libraryHelpers.getPackSamplesWithUrls, user?.id ? { userId: user.id } : "skip") ||
+    [];
 
   // Get user's purchases for pack count
   const userPurchases = useQuery(
@@ -44,23 +35,28 @@ export default function LibrarySamplesPage() {
 
   // Extract purchased packs for stats
   const purchasedPacks = useMemo(() => {
-    return userPurchases?.filter((purchase: any) => 
-      purchase.product?.productCategory === "sample-pack" ||
-      purchase.product?.productCategory === "midi-pack" ||
-      purchase.product?.productCategory === "preset-pack"
-    ) || [];
+    return (
+      userPurchases?.filter(
+        (purchase: any) =>
+          purchase.product?.productCategory === "sample-pack" ||
+          purchase.product?.productCategory === "midi-pack" ||
+          purchase.product?.productCategory === "preset-pack"
+      ) || []
+    );
   }, [userPurchases]);
 
   // Get unique packs for filter
-  const uniquePacks = Array.from(new Set(allSamples.map(s => s.packId)))
-    .map(packId => {
-      const sample = allSamples.find(s => s.packId === packId);
+  const uniquePacks = Array.from(new Set(allSamples.map((s: any) => s.packId))).map(
+    (packId: any) => {
+      const sample = allSamples.find((s: any) => s.packId === packId);
       return { id: packId, title: sample?.packTitle };
-    });
+    }
+  );
 
   // Filter samples
-  const filteredSamples = allSamples.filter((sample) => {
-    const matchesSearch = sample.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  const filteredSamples = allSamples.filter((sample: any) => {
+    const matchesSearch =
+      sample.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       sample.fileName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       sample.packTitle.toLowerCase().includes(searchQuery.toLowerCase());
 
@@ -73,7 +69,7 @@ export default function LibrarySamplesPage() {
   const stats = {
     totalPacks: purchasedPacks.length,
     totalSamples: allSamples.length,
-    totalSize: allSamples.reduce((sum, s) => sum + (s.fileSize || 0), 0),
+    totalSize: allSamples.reduce((sum: number, s: any) => sum + (s.fileSize || 0), 0),
   };
 
   // Audio player
@@ -89,8 +85,8 @@ export default function LibrarySamplesPage() {
           setPlayingSample(sample);
           setIsPlaying(true);
         } catch (error) {
-          console.error('Play failed:', error);
-          toast.error('Failed to play sample');
+          console.error("Play failed:", error);
+          toast.error("Failed to play sample");
         }
       }
     }
@@ -117,7 +113,7 @@ export default function LibrarySamplesPage() {
       const response = await fetch(sample.fileUrl);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
       link.download = sample.fileName;
       document.body.appendChild(link);
@@ -126,8 +122,8 @@ export default function LibrarySamplesPage() {
       window.URL.revokeObjectURL(url);
       toast.success(`Downloading ${sample.fileName}`);
     } catch (error) {
-      console.error('Download failed:', error);
-      toast.error('Download failed. Please try again.');
+      console.error("Download failed:", error);
+      toast.error("Download failed. Please try again.");
     }
   };
 
@@ -136,7 +132,7 @@ export default function LibrarySamplesPage() {
     for (const sample of filteredSamples) {
       await handleDownload(sample);
       // Small delay between downloads to avoid overwhelming the browser
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
     }
   };
 
@@ -149,7 +145,7 @@ export default function LibrarySamplesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">My Samples</h1>
-          <p className="text-muted-foreground mt-2">
+          <p className="mt-2 text-muted-foreground">
             Access and download all your purchased samples
           </p>
         </div>
@@ -158,14 +154,14 @@ export default function LibrarySamplesPage() {
             onClick={handleDownloadAll}
             className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
           >
-            <Download className="w-4 h-4 mr-2" />
+            <Download className="mr-2 h-4 w-4" />
             Download All ({filteredSamples.length})
           </Button>
         )}
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold text-foreground">{stats.totalPacks}</div>
@@ -195,9 +191,9 @@ export default function LibrarySamplesPage() {
       </div>
 
       {/* Filters and Search */}
-      <div className="flex flex-col sm:flex-row gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted-foreground" />
           <Input
             type="search"
             placeholder="Search samples by name, pack, or tags..."
@@ -212,7 +208,7 @@ export default function LibrarySamplesPage() {
             onClick={() => setFilterPack("all")}
             size="sm"
           >
-            <Filter className="w-4 h-4 mr-2" />
+            <Filter className="mr-2 h-4 w-4" />
             All Packs
           </Button>
           {uniquePacks.map((pack) => (
@@ -238,38 +234,38 @@ export default function LibrarySamplesPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.2, delay: index * 0.02 }}
             >
-              <Card className="hover:shadow-md transition-all">
+              <Card className="transition-all hover:shadow-md">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-4">
                     {/* Play Button */}
                     <Button
                       size="icon"
-                      variant={playingSample?._id === sample._id && isPlaying ? "default" : "outline"}
+                      variant={
+                        playingSample?._id === sample._id && isPlaying ? "default" : "outline"
+                      }
                       onClick={() => handlePlayPause(sample)}
                       className="flex-shrink-0"
                     >
                       {playingSample?._id === sample._id && isPlaying ? (
-                        <Pause className="w-4 h-4" />
+                        <Pause className="h-4 w-4" />
                       ) : (
-                        <Play className="w-4 h-4" />
+                        <Play className="h-4 w-4" />
                       )}
                     </Button>
 
                     {/* Sample Icon */}
-                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/20 dark:to-purple-900/20 flex items-center justify-center flex-shrink-0">
-                      <Music className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                    <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/20 dark:to-purple-900/20">
+                      <Music className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
                     </div>
 
                     {/* Sample Info */}
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold truncate">{sample.title}</h4>
-                      <p className="text-sm text-muted-foreground">
-                        From: {sample.packTitle}
-                      </p>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="truncate font-semibold">{sample.title}</h4>
+                      <p className="text-sm text-muted-foreground">From: {sample.packTitle}</p>
                     </div>
 
                     {/* Metadata */}
-                    <div className="hidden md:flex items-center gap-2">
+                    <div className="hidden items-center gap-2 md:flex">
                       <Badge variant="outline" className="text-xs">
                         {(sample.fileSize / 1024).toFixed(0)} KB
                       </Badge>
@@ -284,9 +280,9 @@ export default function LibrarySamplesPage() {
                     <Button
                       size="sm"
                       onClick={() => handleDownload(sample)}
-                      className="bg-green-600 hover:bg-green-700 flex-shrink-0"
+                      className="flex-shrink-0 bg-green-600 hover:bg-green-700"
                     >
-                      <Download className="w-4 h-4 mr-2" />
+                      <Download className="mr-2 h-4 w-4" />
                       Download
                     </Button>
                   </div>
@@ -297,29 +293,29 @@ export default function LibrarySamplesPage() {
         </div>
       ) : (
         <Card>
-          <CardContent className="text-center py-12">
+          <CardContent className="py-12 text-center">
             {allSamples.length === 0 ? (
               <>
-                <Package className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                <h2 className="text-2xl font-bold text-foreground mb-2">No samples yet</h2>
-                <p className="text-muted-foreground mb-6">
+                <Package className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
+                <h2 className="mb-2 text-2xl font-bold text-foreground">No samples yet</h2>
+                <p className="mb-6 text-muted-foreground">
                   Purchase sample packs from the marketplace to build your library
                 </p>
                 <Button asChild>
                   <Link href="/marketplace/samples">
-                    <Package className="w-4 h-4 mr-2" />
+                    <Package className="mr-2 h-4 w-4" />
                     Browse Sample Packs
                   </Link>
                 </Button>
               </>
             ) : (
               <>
-                <Search className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                <h2 className="text-2xl font-bold text-foreground mb-2">No samples found</h2>
-                <p className="text-muted-foreground mb-6">
+                <Search className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
+                <h2 className="mb-2 text-2xl font-bold text-foreground">No samples found</h2>
+                <p className="mb-6 text-muted-foreground">
                   Try adjusting your search or filter criteria
                 </p>
-                <Button 
+                <Button
                   onClick={() => {
                     setSearchQuery("");
                     setFilterPack("all");
@@ -336,4 +332,3 @@ export default function LibrarySamplesPage() {
     </div>
   );
 }
-

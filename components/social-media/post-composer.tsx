@@ -24,38 +24,30 @@ import {
 } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
-import {
-  ImageIcon,
-  VideoIcon,
-  X,
-  Clock,
-  Upload,
-  AlertCircle,
-  Crop,
-} from "lucide-react";
+import { ImageIcon, VideoIcon, X, Clock, Upload, AlertCircle, Crop } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { ImageCropEditor } from "./image-crop-editor";
 
 // Upload with progress tracking
 function uploadWithProgress(
-  url: string, 
-  file: File, 
+  url: string,
+  file: File,
   onProgress: (progress: number) => void
 ): Promise<Response> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    
+
     // Track upload progress
-    xhr.upload.addEventListener('progress', (event) => {
+    xhr.upload.addEventListener("progress", (event) => {
       if (event.lengthComputable) {
         const progress = (event.loaded / event.total) * 100;
         onProgress(progress);
       }
     });
-    
+
     // Handle completion
-    xhr.addEventListener('load', () => {
+    xhr.addEventListener("load", () => {
       if (xhr.status >= 200 && xhr.status < 300) {
         // Create a Response-like object
         const response = {
@@ -69,15 +61,15 @@ function uploadWithProgress(
         reject(new Error(`Upload failed with status ${xhr.status}`));
       }
     });
-    
+
     // Handle errors
-    xhr.addEventListener('error', () => {
-      reject(new Error('Upload network error'));
+    xhr.addEventListener("error", () => {
+      reject(new Error("Upload network error"));
     });
-    
+
     // Start upload
-    xhr.open('POST', url);
-    xhr.setRequestHeader('Content-Type', file.type);
+    xhr.open("POST", url);
+    xhr.setRequestHeader("Content-Type", file.type);
     xhr.send(file);
   });
 }
@@ -122,7 +114,7 @@ export function PostComposer({
 
   // Get connected social accounts
   const accounts = useQuery(api.socialMedia.getSocialAccounts, { storeId });
-  
+
   // Get media URLs for editing
   const existingMediaUrls = useQuery(
     api.socialMedia.getMediaUrls,
@@ -132,8 +124,12 @@ export function PostComposer({
   );
 
   // Form state
-  const [selectedAccountId, setSelectedAccountId] = useState<Id<"socialAccounts"> | null>(editPost?.socialAccountId || null);
-  const [postType, setPostType] = useState<"post" | "reel" | "story">(editPost?.postType as any || "post");
+  const [selectedAccountId, setSelectedAccountId] = useState<Id<"socialAccounts"> | null>(
+    editPost?.socialAccountId || null
+  );
+  const [postType, setPostType] = useState<"post" | "reel" | "story">(
+    (editPost?.postType as any) || "post"
+  );
   const [content, setContent] = useState(editPost?.content || "");
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   const [postTiming, setPostTiming] = useState<"now" | "later">("later");
@@ -143,11 +139,13 @@ export function PostComposer({
   const [scheduledTime, setScheduledTime] = useState(() => {
     if (editPost?.scheduledFor) {
       const date = new Date(editPost.scheduledFor);
-      return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+      return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
     }
     return "12:00";
   });
-  const [timezone, setTimezone] = useState(editPost?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone);
+  const [timezone, setTimezone] = useState(
+    editPost?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [cropImageIndex, setCropImageIndex] = useState<number | null>(null);
   const [showCropEditor, setShowCropEditor] = useState(false);
@@ -160,11 +158,11 @@ export function PostComposer({
   // Load existing media when editing
   useEffect(() => {
     if (existingMediaUrls && existingMediaUrls.length > 0) {
-      console.log('📂 Loading existing media for edit:', existingMediaUrls);
-      
+      console.log("📂 Loading existing media for edit:", existingMediaUrls);
+
       const existingFiles: MediaFile[] = existingMediaUrls
-        .filter(item => item.url !== null)
-        .map(item => ({
+        .filter((item: any) => item.url !== null)
+        .map((item: any) => ({
           file: new File([], `existing-${item.storageId}`), // Placeholder file
           preview: item.url!, // Storage URL for preview
           type: "image", // Default to image (we could enhance this)
@@ -172,9 +170,9 @@ export function PostComposer({
           uploading: false,
           uploadProgress: 100,
         }));
-      
+
       if (existingFiles.length > 0) {
-        console.log('📂 Loaded', existingFiles.length, 'existing media files');
+        console.log("📂 Loaded", existingFiles.length, "existing media files");
         setMediaFiles(existingFiles);
       }
     }
@@ -195,15 +193,15 @@ export function PostComposer({
 
   // Debug
   useEffect(() => {
-    console.log('🎬 PostComposer mounted, dialog open:', open);
+    console.log("🎬 PostComposer mounted, dialog open:", open);
   }, []);
 
   useEffect(() => {
-    console.log('📅 scheduledDate changed:', scheduledDate);
+    console.log("📅 scheduledDate changed:", scheduledDate);
   }, [scheduledDate]);
 
   // Get selected account details
-  const selectedAccount = accounts?.find(a => a._id === selectedAccountId);
+  const selectedAccount = accounts?.find((a: any) => a._id === selectedAccountId);
   const platform = selectedAccount?.platform;
 
   // Platform-specific limits
@@ -220,12 +218,12 @@ export function PostComposer({
   // Handle media file selection
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    
+
     for (const file of files) {
       // Validate file type
       const isImage = file.type.startsWith("image/");
       const isVideo = file.type.startsWith("video/");
-      
+
       if (!isImage && !isVideo) {
         toast({
           title: "Invalid file type",
@@ -256,14 +254,14 @@ export function PostComposer({
         await new Promise((resolve) => {
           img.onload = resolve;
         });
-        
+
         const aspectRatio = img.width / img.height;
         const recommendedRatios: Record<string, { min: number; max: number; ideal: string }> = {
           story: { min: 0.5, max: 0.6, ideal: "9:16 (1080x1920)" },
           reel: { min: 0.5, max: 0.6, ideal: "9:16 (1080x1920)" },
           post: { min: 0.8, max: 1.91, ideal: "1:1 (square) or 4:5" },
         };
-        
+
         const rec = recommendedRatios[postType];
         if (rec && (aspectRatio < rec.min || aspectRatio > rec.max)) {
           toast({
@@ -281,7 +279,7 @@ export function PostComposer({
         uploading: false,
       };
 
-      setMediaFiles(prev => [...prev, mediaFile]);
+      setMediaFiles((prev) => [...prev, mediaFile]);
     }
 
     // Reset input
@@ -292,7 +290,7 @@ export function PostComposer({
 
   // Remove media file
   const handleRemoveMedia = (index: number) => {
-    setMediaFiles(prev => {
+    setMediaFiles((prev) => {
       const newFiles = [...prev];
       URL.revokeObjectURL(newFiles[index].preview);
       newFiles.splice(index, 1);
@@ -304,13 +302,13 @@ export function PostComposer({
   const handleCropComplete = (croppedBlob: Blob, croppedUrl: string) => {
     if (cropImageIndex === null) return;
 
-    setMediaFiles(prev => {
+    setMediaFiles((prev) => {
       const newFiles = [...prev];
       const oldPreview = newFiles[cropImageIndex].preview;
-      
+
       // Revoke old preview URL
       URL.revokeObjectURL(oldPreview);
-      
+
       // Update with cropped version
       newFiles[cropImageIndex] = {
         ...newFiles[cropImageIndex],
@@ -319,7 +317,7 @@ export function PostComposer({
         }),
         preview: croppedUrl,
       };
-      
+
       return newFiles;
     });
 
@@ -329,65 +327,68 @@ export function PostComposer({
   // Upload media files to Convex storage
   const uploadMediaFiles = async (): Promise<Id<"_storage">[]> => {
     const storageIds: Id<"_storage">[] = [];
-    console.log('🔼 Starting media upload for', mediaFiles.length, 'files');
+    console.log("🔼 Starting media upload for", mediaFiles.length, "files");
 
     for (let i = 0; i < mediaFiles.length; i++) {
       const mediaFile = mediaFiles[i];
-      
+
       // Skip if already uploaded (existing media)
       if (mediaFile.storageId) {
-        console.log(`🔼 File ${i + 1}/${mediaFiles.length} already uploaded, using existing storageId:`, mediaFile.storageId);
+        console.log(
+          `🔼 File ${i + 1}/${mediaFiles.length} already uploaded, using existing storageId:`,
+          mediaFile.storageId
+        );
         storageIds.push(mediaFile.storageId);
         continue;
       }
-      
+
       console.log(`🔼 Uploading file ${i + 1}/${mediaFiles.length}:`, mediaFile.file.name);
 
       try {
         // Update uploading state
-        setMediaFiles(prev => {
+        setMediaFiles((prev) => {
           const newFiles = [...prev];
           newFiles[i] = { ...newFiles[i], uploading: true, uploadProgress: 0 };
           return newFiles;
         });
 
         // Get upload URL
-        console.log('  - Requesting upload URL...');
+        console.log("  - Requesting upload URL...");
         const uploadUrl = await generateUploadUrl();
-        console.log('  - Upload URL received:', uploadUrl);
+        console.log("  - Upload URL received:", uploadUrl);
 
         // Upload file with progress tracking
-        console.log('  - Uploading to Convex storage...');
+        console.log("  - Uploading to Convex storage...");
         const result = await uploadWithProgress(uploadUrl, mediaFile.file, (progress) => {
           // Update progress state in real-time
-          setMediaFiles(prev => {
+          setMediaFiles((prev) => {
             const newFiles = [...prev];
             newFiles[i] = { ...newFiles[i], uploadProgress: progress };
             return newFiles;
           });
         });
 
-        console.log('  - Upload response status:', result.status);
+        console.log("  - Upload response status:", result.status);
 
         if (!result.ok) {
           const errorText = await result.text();
-          console.error('  - Upload failed:', errorText);
+          console.error("  - Upload failed:", errorText);
           throw new Error(`Failed to upload file: ${errorText}`);
         }
 
         const responseData = await result.json();
-        console.log('  - Upload response:', responseData);
-        
+        console.log("  - Upload response:", responseData);
+
         const { storageId } = responseData;
         if (!storageId) {
           throw new Error("No storageId in response");
         }
-        
-        console.log('  - ✅ File uploaded, storageId:', storageId);
+
+        console.log("  - ✅ File uploaded, storageId:", storageId);
         storageIds.push(storageId);
 
         // Update success state
-        setMediaFiles(prev => {
+        setMediaFiles((prev) => {
           const newFiles = [...prev];
           newFiles[i] = {
             ...newFiles[i],
@@ -400,7 +401,7 @@ export function PostComposer({
       } catch (error: any) {
         console.error(`  - ❌ Upload failed for file ${i + 1}:`, error);
         // Update error state
-        setMediaFiles(prev => {
+        setMediaFiles((prev) => {
           const newFiles = [...prev];
           newFiles[i] = {
             ...newFiles[i],
@@ -413,7 +414,7 @@ export function PostComposer({
       }
     }
 
-    console.log('🔼 All uploads complete. Storage IDs:', storageIds);
+    console.log("🔼 All uploads complete. Storage IDs:", storageIds);
     return storageIds;
   };
 
@@ -489,9 +490,8 @@ export function PostComposer({
 
     try {
       // Upload media files first
-      const mediaStorageIds = mediaFiles.length > 0
-        ? await uploadMediaFiles()
-        : editPost?.mediaStorageIds;
+      const mediaStorageIds =
+        mediaFiles.length > 0 ? await uploadMediaFiles() : editPost?.mediaStorageIds;
 
       if (editPost) {
         // Update existing post
@@ -507,9 +507,10 @@ export function PostComposer({
 
         toast({
           title: "Post updated!",
-          description: postTiming === "now"
-            ? "Your post will be published within the next minute"
-            : `Your post will be published on ${format(scheduledDateTime, "PPP 'at' p")}`,
+          description:
+            postTiming === "now"
+              ? "Your post will be published within the next minute"
+              : `Your post will be published on ${format(scheduledDateTime, "PPP 'at' p")}`,
         });
       } else {
         // Create new scheduled post
@@ -526,9 +527,10 @@ export function PostComposer({
 
         toast({
           title: postTiming === "now" ? "Publishing post..." : "Post scheduled!",
-          description: postTiming === "now"
-            ? "Your post will be published within the next minute"
-            : `Your post will be published on ${format(scheduledDateTime, "PPP 'at' p")}`,
+          description:
+            postTiming === "now"
+              ? "Your post will be published within the next minute"
+              : `Your post will be published on ${format(scheduledDateTime, "PPP 'at' p")}`,
         });
       }
 
@@ -538,10 +540,10 @@ export function PostComposer({
       setScheduledDate(undefined);
       setScheduledTime("12:00");
       setPostType("post");
-      
+
       // Close dialog
       onOpenChange(false);
-      
+
       // Call success callback
       if (onSuccess) {
         onSuccess();
@@ -561,25 +563,28 @@ export function PostComposer({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[600px] bg-white dark:bg-black max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto bg-white dark:bg-black sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>{editPost ? "Edit Scheduled Post" : "Schedule New Post"}</DialogTitle>
             <DialogDescription>
-              {editPost ? "Update your scheduled post" : "Create and schedule a post for your social media accounts"}
+              {editPost
+                ? "Update your scheduled post"
+                : "Create and schedule a post for your social media accounts"}
             </DialogDescription>
           </DialogHeader>
 
           {/* Global Upload Progress Indicator */}
-          {isSubmitting && mediaFiles.some(m => m.uploading) && (
-            <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-4">
+          {isSubmitting && mediaFiles.some((m) => m.uploading) && (
+            <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950/20">
               <div className="flex items-center gap-3">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-blue-600"></div>
                 <div className="flex-1">
                   <div className="text-sm font-medium text-blue-800 dark:text-blue-200">
                     Uploading media files...
                   </div>
                   <div className="text-xs text-blue-600 dark:text-blue-300">
-                    {mediaFiles.filter(m => m.storageId).length} of {mediaFiles.length} files uploaded
+                    {mediaFiles.filter((m) => m.storageId).length} of {mediaFiles.length} files
+                    uploaded
                   </div>
                 </div>
               </div>
@@ -599,16 +604,16 @@ export function PostComposer({
                   <SelectValue placeholder="Choose an account..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {accounts?.filter(a => a.isConnected).map(account => (
-                    <SelectItem key={account._id} value={account._id}>
-                      <div className="flex items-center gap-2">
-                        <span className="capitalize">{account.platform}</span>
-                        <span className="text-muted-foreground">
-                          @{account.platformUsername}
-                        </span>
-                      </div>
-                    </SelectItem>
-                  ))}
+                  {accounts
+                    ?.filter((a: any) => a.isConnected)
+                    .map((account: any) => (
+                      <SelectItem key={account._id} value={account._id}>
+                        <div className="flex items-center gap-2">
+                          <span className="capitalize">{account.platform}</span>
+                          <span className="text-muted-foreground">@{account.platformUsername}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
               {editPost && (
@@ -623,7 +628,7 @@ export function PostComposer({
               <div className="space-y-2">
                 <Label>Post Type</Label>
                 <div className="flex gap-2">
-                  {(["post", "reel", "story"] as const).map(type => (
+                  {(["post", "reel", "story"] as const).map((type) => (
                     <Button
                       key={type}
                       type="button"
@@ -644,14 +649,16 @@ export function PostComposer({
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label>Caption</Label>
-                  <span className={cn(
-                    "text-sm",
-                    remainingChars < 0
-                      ? "text-red-500"
-                      : remainingChars < 100
-                      ? "text-yellow-500"
-                      : "text-muted-foreground"
-                  )}>
+                  <span
+                    className={cn(
+                      "text-sm",
+                      remainingChars < 0
+                        ? "text-red-500"
+                        : remainingChars < 100
+                          ? "text-yellow-500"
+                          : "text-muted-foreground"
+                    )}
+                  >
                     {content.length} / {characterLimit}
                   </span>
                 </div>
@@ -679,34 +686,34 @@ export function PostComposer({
               </div>
               <div className="flex flex-wrap gap-2">
                 {mediaFiles.map((media, index) => (
-                  <div key={index} className="relative w-32 max-h-48 rounded-lg overflow-hidden border">
+                  <div
+                    key={index}
+                    className="relative max-h-48 w-32 overflow-hidden rounded-lg border"
+                  >
                     {media.type === "image" ? (
                       <img
                         src={media.preview}
                         alt={`Upload ${index + 1}`}
-                        className="w-full h-auto object-contain"
+                        className="h-auto w-full object-contain"
                       />
                     ) : (
-                      <video
-                        src={media.preview}
-                        className="w-full h-auto object-contain"
-                      />
+                      <video src={media.preview} className="h-auto w-full object-contain" />
                     )}
-                    
+
                     {media.uploading && (
-                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                        <div className="text-white text-xs">Uploading...</div>
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                        <div className="text-xs text-white">Uploading...</div>
                       </div>
                     )}
-                    
+
                     {media.error && (
-                      <div className="absolute inset-0 bg-red-500/50 flex items-center justify-center">
-                        <AlertCircle className="w-6 h-6 text-white" />
+                      <div className="absolute inset-0 flex items-center justify-center bg-red-500/50">
+                        <AlertCircle className="h-6 w-6 text-white" />
                       </div>
                     )}
-                    
+
                     {/* Action buttons */}
-                    <div className="absolute top-1 right-1 flex gap-1">
+                    <div className="absolute right-1 top-1 flex gap-1">
                       {media.type === "image" && (
                         <Button
                           type="button"
@@ -733,7 +740,7 @@ export function PostComposer({
                         <X className="h-4 w-4" />
                       </Button>
                     </div>
-                    
+
                     <div className="absolute bottom-1 left-1">
                       {media.type === "image" ? (
                         <ImageIcon className="h-4 w-4 text-white drop-shadow" />
@@ -744,11 +751,13 @@ export function PostComposer({
 
                     {/* Upload Progress Overlay */}
                     {media.uploading && (
-                      <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                      <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/50">
                         <div className="text-center">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mb-2"></div>
-                          <div className="text-white text-xs font-medium">
-                            {media.uploadProgress ? `${Math.round(media.uploadProgress)}%` : 'Uploading...'}
+                          <div className="mb-2 h-8 w-8 animate-spin rounded-full border-b-2 border-white"></div>
+                          <div className="text-xs font-medium text-white">
+                            {media.uploadProgress
+                              ? `${Math.round(media.uploadProgress)}%`
+                              : "Uploading..."}
                           </div>
                         </div>
                       </div>
@@ -756,18 +765,18 @@ export function PostComposer({
 
                     {/* Upload Success Indicator */}
                     {media.storageId && !media.uploading && (
-                      <div className="absolute top-1 left-1 bg-green-500 rounded-full p-1">
-                        <div className="h-2 w-2 bg-white rounded-full"></div>
+                      <div className="absolute left-1 top-1 rounded-full bg-green-500 p-1">
+                        <div className="h-2 w-2 rounded-full bg-white"></div>
                       </div>
                     )}
 
                     {/* Upload Error Indicator */}
                     {media.error && (
-                      <div className="absolute inset-0 bg-red-500/80 rounded-lg flex items-center justify-center">
-                        <div className="text-center text-white text-xs p-2">
-                          <AlertCircle className="h-4 w-4 mx-auto mb-1" />
+                      <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-red-500/80">
+                        <div className="p-2 text-center text-xs text-white">
+                          <AlertCircle className="mx-auto mb-1 h-4 w-4" />
                           <div>Upload Failed</div>
-                          <div className="text-red-200 text-[10px] mt-1 truncate">
+                          <div className="mt-1 truncate text-[10px] text-red-200">
                             {media.error}
                           </div>
                         </div>
@@ -775,7 +784,7 @@ export function PostComposer({
                     )}
                   </div>
                 ))}
-                
+
                 {/* Add media button */}
                 {mediaFiles.length < 10 && (
                   <button
@@ -785,19 +794,20 @@ export function PostComposer({
                       e.stopPropagation();
                       fileInputRef.current?.click();
                     }}
-                    className="w-32 h-32 rounded-lg border-2 border-dashed border-muted-foreground/25 hover:border-muted-foreground/50 flex flex-col items-center justify-center gap-1 transition-colors"
+                    className="flex h-32 w-32 flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed border-muted-foreground/25 transition-colors hover:border-muted-foreground/50"
                   >
                     <Upload className="h-6 w-6 text-muted-foreground" />
                     <span className="text-xs text-muted-foreground">Add Media</span>
                   </button>
                 )}
               </div>
-              <div className="text-xs text-muted-foreground space-y-1">
+              <div className="space-y-1 text-xs text-muted-foreground">
                 <p>Images: JPEG, PNG (max 25MB) • Videos: MP4, MOV (max 1GB)</p>
                 {platform === "instagram" && (
                   <p className="text-blue-600 dark:text-blue-400">
                     {postType === "story" && "📐 Stories: 9:16 ratio recommended (e.g., 1080x1920)"}
-                    {postType === "reel" && "📐 Reels: 9:16 ratio recommended (e.g., 1080x1920), 3-90 sec"}
+                    {postType === "reel" &&
+                      "📐 Reels: 9:16 ratio recommended (e.g., 1080x1920), 3-90 sec"}
                     {postType === "post" && "📐 Posts: 1:1 (square) or 4:5 (portrait) recommended"}
                   </p>
                 )}
@@ -812,7 +822,7 @@ export function PostComposer({
             {/* Post Timing Options */}
             <div>
               <Label>When to Post</Label>
-              <div className="flex gap-2 mt-2">
+              <div className="mt-2 flex gap-2">
                 <Button
                   type="button"
                   variant={postTiming === "now" ? "default" : "outline"}
@@ -837,12 +847,12 @@ export function PostComposer({
               <>
                 <div>
                   <Label>Select Date</Label>
-                  <div className="mt-2 flex justify-center border rounded-lg p-4 bg-white dark:bg-black">
+                  <div className="mt-2 flex justify-center rounded-lg border bg-white p-4 dark:bg-black">
                     <Calendar
                       mode="single"
                       selected={scheduledDate}
                       onSelect={(date) => {
-                        console.log('✅ Date selected:', date);
+                        console.log("✅ Date selected:", date);
                         setScheduledDate(date);
                       }}
                       disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
@@ -860,12 +870,12 @@ export function PostComposer({
                   <div className="space-y-2">
                     <Label>Time</Label>
                     <div className="relative">
-                      <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Clock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted-foreground" />
                       <input
                         type="time"
                         value={scheduledTime}
                         onChange={(e) => setScheduledTime(e.target.value)}
-                        className="w-full pl-10 pr-3 py-2 border border-input bg-background rounded-md"
+                        className="w-full rounded-md border border-input bg-background py-2 pl-10 pr-3"
                       />
                     </div>
                   </div>
@@ -912,14 +922,21 @@ export function PostComposer({
             >
               {isSubmitting && (
                 <div className="absolute left-3">
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-white"></div>
                 </div>
               )}
               <span className={isSubmitting ? "ml-6" : ""}>
-                {isSubmitting 
-                  ? (postTiming === "now" ? "Publishing..." : (editPost ? "Updating..." : "Scheduling..."))
-                  : (postTiming === "now" ? "Post Now" : (editPost ? "Update Post" : "Schedule Post"))
-                }
+                {isSubmitting
+                  ? postTiming === "now"
+                    ? "Publishing..."
+                    : editPost
+                      ? "Updating..."
+                      : "Scheduling..."
+                  : postTiming === "now"
+                    ? "Post Now"
+                    : editPost
+                      ? "Update Post"
+                      : "Schedule Post"}
               </span>
             </Button>
           </DialogFooter>
@@ -934,7 +951,7 @@ export function PostComposer({
             className="sr-only"
             aria-hidden="true"
             tabIndex={-1}
-            style={{ pointerEvents: 'none', display: 'none' }}
+            style={{ pointerEvents: "none", display: "none" }}
           />
         </DialogContent>
       </Dialog>
@@ -951,7 +968,11 @@ export function PostComposer({
           onCropComplete={handleCropComplete}
           postType={postType}
           suggestedAspectRatio={
-            postType === "story" || postType === "reel" ? 9 / 16 : postType === "post" ? 1 : undefined
+            postType === "story" || postType === "reel"
+              ? 9 / 16
+              : postType === "post"
+                ? 1
+                : undefined
           }
         />
       )}

@@ -9,7 +9,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { EmptyStateEnhanced } from "@/components/ui/empty-state-enhanced";
-import { Calendar, Clock, Instagram, Twitter, Facebook, Linkedin, TrendingUp, Plus, Trash2, Edit3, AlertTriangle, RefreshCw, Users, Send, CheckCircle, Zap, BarChart3 } from "lucide-react";
+import {
+  Calendar,
+  Clock,
+  Instagram,
+  Twitter,
+  Facebook,
+  Linkedin,
+  TrendingUp,
+  Plus,
+  Trash2,
+  Edit3,
+  AlertTriangle,
+  RefreshCw,
+  Users,
+  Send,
+  CheckCircle,
+  Zap,
+  BarChart3,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AccountManagementDialog } from "./account-management-dialog";
 import { PostComposer } from "./post-composer";
@@ -44,18 +62,18 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
   // Listen for OAuth popup success/error messages
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      if (event.data.type === 'oauth_success') {
+      if (event.data.type === "oauth_success") {
         toast({
           title: "🎉 Connected Successfully!",
           description: `${event.data.platform} account has been connected.`,
           className: "bg-white dark:bg-black",
         });
-        
+
         // Refresh the page to show new connection
         setTimeout(() => {
           window.location.reload();
         }, 1500);
-      } else if (event.data.type === 'oauth_error') {
+      } else if (event.data.type === "oauth_error") {
         toast({
           title: "Connection Failed",
           description: `Failed to connect ${event.data.platform}: ${event.data.error}`,
@@ -65,8 +83,8 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
       }
     };
 
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
   }, [toast]);
 
   // Mutations
@@ -130,7 +148,7 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
         description: "Redirecting to Facebook Login to get a fresh token...",
         className: "bg-white dark:bg-black",
       });
-      
+
       // Trigger the OAuth flow
       setTimeout(() => {
         connectPlatform("instagram");
@@ -144,13 +162,13 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
       await refreshToken({
         accountId,
       });
-      
+
       toast({
         title: "🔄 Token Refreshed",
         description: `${platform} access token has been refreshed successfully.`,
         className: "bg-white dark:bg-black",
       });
-      
+
       // Refresh the page to show updated connection
       setTimeout(() => {
         window.location.reload();
@@ -184,8 +202,8 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
       // Open OAuth in popup window (like professional tools)
       const popup = window.open(
         authUrls[platform],
-        'oauth_popup',
-        'width=500,height=700,scrollbars=yes,resizable=yes'
+        "oauth_popup",
+        "width=500,height=700,scrollbars=yes,resizable=yes"
       );
 
       // Listen for popup completion
@@ -226,12 +244,12 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
   const handleDeletePost = async (postId: string) => {
     try {
       setDeletingPostId(postId);
-      
+
       await deletePost({
         postId: postId as Id<"scheduledPosts">,
         userId,
       });
-      
+
       toast({
         title: "Post Deleted",
         description: "The scheduled post has been successfully deleted.",
@@ -239,7 +257,7 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
     } catch (error) {
       console.error("Error deleting post:", error);
       toast({
-        title: "Delete Failed", 
+        title: "Delete Failed",
         description: "Failed to delete the scheduled post. Please try again.",
         variant: "destructive",
       });
@@ -266,13 +284,13 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         {/* Mobile: Horizontal scroll with icons + short text */}
         {/* Desktop: Clean horizontal tabs with full text */}
-        <TabsList className="w-full sm:w-auto h-auto overflow-x-auto flex gap-1 p-1">
-          <TabsTrigger value="accounts" className="gap-2 px-3 py-2 text-sm whitespace-nowrap">
-            <Users className="h-4 w-4 hidden sm:block" />
+        <TabsList className="flex h-auto w-full gap-1 overflow-x-auto p-1 sm:w-auto">
+          <TabsTrigger value="accounts" className="gap-2 whitespace-nowrap px-3 py-2 text-sm">
+            <Users className="hidden h-4 w-4 sm:block" />
             Accounts
           </TabsTrigger>
-          <TabsTrigger value="scheduled" className="gap-2 px-3 py-2 text-sm whitespace-nowrap">
-            <Send className="h-4 w-4 hidden sm:block" />
+          <TabsTrigger value="scheduled" className="gap-2 whitespace-nowrap px-3 py-2 text-sm">
+            <Send className="hidden h-4 w-4 sm:block" />
             Scheduled
             {(scheduledPosts?.length || 0) > 0 && (
               <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
@@ -280,16 +298,16 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="published" className="gap-2 px-3 py-2 text-sm whitespace-nowrap">
-            <CheckCircle className="h-4 w-4 hidden sm:block" />
+          <TabsTrigger value="published" className="gap-2 whitespace-nowrap px-3 py-2 text-sm">
+            <CheckCircle className="hidden h-4 w-4 sm:block" />
             Published
           </TabsTrigger>
-          <TabsTrigger value="automation" className="gap-2 px-3 py-2 text-sm whitespace-nowrap">
-            <Zap className="h-4 w-4 hidden sm:block" />
+          <TabsTrigger value="automation" className="gap-2 whitespace-nowrap px-3 py-2 text-sm">
+            <Zap className="hidden h-4 w-4 sm:block" />
             Automation
           </TabsTrigger>
-          <TabsTrigger value="analytics" className="gap-2 px-3 py-2 text-sm whitespace-nowrap">
-            <BarChart3 className="h-4 w-4 hidden sm:block" />
+          <TabsTrigger value="analytics" className="gap-2 whitespace-nowrap px-3 py-2 text-sm">
+            <BarChart3 className="hidden h-4 w-4 sm:block" />
             Analytics
           </TabsTrigger>
         </TabsList>
@@ -307,67 +325,71 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {["instagram", "twitter", "facebook", "linkedin", "tiktok"].map((platform) => {
                   // Get all accounts for this platform (supports multiple)
-                  const platformAccounts = accounts?.filter((a) => a.platform === platform && a.isConnected) || [];
+                  const platformAccounts =
+                    accounts?.filter((a: any) => a.platform === platform && a.isConnected) || [];
                   const hasAccounts = platformAccounts.length > 0;
                   const isComingSoon = platform !== "instagram" && platform !== "facebook";
 
                   return (
                     <Card key={platform} className="relative overflow-hidden">
-                      <div className={`absolute top-0 left-0 right-0 h-1 ${getPlatformColor(platform)}`} />
+                      <div
+                        className={`absolute left-0 right-0 top-0 h-1 ${getPlatformColor(platform)}`}
+                      />
                       <CardContent className="pt-6">
-                        <div className="flex items-center justify-between mb-4">
+                        <div className="mb-4 flex items-center justify-between">
                           <div className="flex items-center space-x-3">
                             {getPlatformIcon(platform)}
                             <div>
                               <h3 className="font-semibold capitalize">{platform}</h3>
                               {hasAccounts && (
                                 <p className="text-sm text-muted-foreground">
-                                  {platformAccounts.length} account{platformAccounts.length > 1 ? 's' : ''} connected
+                                  {platformAccounts.length} account
+                                  {platformAccounts.length > 1 ? "s" : ""} connected
                                 </p>
                               )}
                             </div>
                           </div>
                           <div className="flex flex-col items-end gap-1">
                             {isComingSoon && (
-                              <Badge variant="secondary" className="bg-orange-100 dark:bg-orange-950 text-orange-700 dark:text-orange-300 border-orange-300 dark:border-orange-800">
+                              <Badge
+                                variant="secondary"
+                                className="border-orange-300 bg-orange-100 text-orange-700 dark:border-orange-800 dark:bg-orange-950 dark:text-orange-300"
+                              >
                                 Coming Soon
                               </Badge>
                             )}
-                          {hasAccounts && (
-                            <Badge variant="default" className="bg-green-500">
-                              Connected
-                            </Badge>
-                          )}
+                            {hasAccounts && (
+                              <Badge variant="default" className="bg-green-500">
+                                Connected
+                              </Badge>
+                            )}
                           </div>
                         </div>
 
                         {isComingSoon ? (
                           <div className="space-y-3">
                             <p className="text-sm text-muted-foreground">
-                              {platform === "twitter" && "Twitter/X integration is currently in development."}
-                              {platform === "linkedin" && "LinkedIn integration is currently in development."}
-                              {platform === "tiktok" && "TikTok integration is currently in development."}
+                              {platform === "twitter" &&
+                                "Twitter/X integration is currently in development."}
+                              {platform === "linkedin" &&
+                                "LinkedIn integration is currently in development."}
+                              {platform === "tiktok" &&
+                                "TikTok integration is currently in development."}
                             </p>
-                            <Button
-                              className="w-full"
-                              variant="outline"
-                              disabled
-                            >
+                            <Button className="w-full" variant="outline" disabled>
                               Coming Soon
                             </Button>
                           </div>
                         ) : hasAccounts ? (
                           <div className="space-y-2">
                             {/* Show all connected accounts */}
-                            <div className="space-y-1 mb-3">
-                              {platformAccounts.map((account) => (
-                                <div key={account._id} className="text-sm p-2 bg-muted/50 rounded">
+                            <div className="mb-3 space-y-1">
+                              {platformAccounts.map((account: any) => (
+                                <div key={account._id} className="rounded bg-muted/50 p-2 text-sm">
                                   <div className="flex items-center justify-between">
-                                    <span className="font-medium">
-                                      @{account.platformUsername}
-                                    </span>
+                                    <span className="font-medium">@{account.platformUsername}</span>
                                     {account.platformDisplayName && (
-                                      <span className="text-xs text-muted-foreground truncate ml-2">
+                                      <span className="ml-2 truncate text-xs text-muted-foreground">
                                         {account.platformDisplayName}
                                       </span>
                                     )}
@@ -400,18 +422,20 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
                                 variant="outline"
                                 size="sm"
                                 className="flex-1 gap-1"
-                                onClick={() => handleRefreshToken(platformAccounts[0]._id, platform)}
+                                onClick={() =>
+                                  handleRefreshToken(platformAccounts[0]._id, platform)
+                                }
                                 disabled={refreshingToken === platformAccounts[0]._id}
                                 title="Refresh access token for better permissions"
                               >
                                 {refreshingToken === platformAccounts[0]._id ? (
                                   <>
-                                    <div className="w-3 h-3 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" />
+                                    <div className="h-3 w-3 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" />
                                     Refreshing...
                                   </>
                                 ) : (
                                   <>
-                                    <RefreshCw className="w-3 h-3" />
+                                    <RefreshCw className="h-3 w-3" />
                                     Refresh
                                   </>
                                 )}
@@ -419,10 +443,7 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
                             </div>
                           </div>
                         ) : (
-                          <Button
-                            className="w-full"
-                            onClick={() => connectPlatform(platform)}
-                          >
+                          <Button className="w-full" onClick={() => connectPlatform(platform)}>
                             Connect {platform}
                           </Button>
                         )}
@@ -469,8 +490,8 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
                         )}
                       </div>
                       <div className="flex space-x-2">
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="sm"
                           onClick={() => {
                             setEditingPost(post);
@@ -480,11 +501,11 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
                           <Edit3 className="mr-1 h-3 w-3" />
                           Edit
                         </Button>
-                        
+
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button 
-                              variant="destructive" 
+                            <Button
+                              variant="destructive"
                               size="sm"
                               disabled={deletingPostId === post._id}
                             >
@@ -508,13 +529,14 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
                                 Delete Scheduled Post
                               </AlertDialogTitle>
                               <AlertDialogDescription>
-                                Are you sure you want to delete this scheduled post? This action cannot be undone.
-                                <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                                Are you sure you want to delete this scheduled post? This action
+                                cannot be undone.
+                                <div className="mt-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-900">
                                   <p className="text-sm font-medium">Post Content:</p>
-                                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-3">
+                                  <p className="mt-1 line-clamp-3 text-sm text-gray-600 dark:text-gray-400">
                                     {post.content}
                                   </p>
-                                  <p className="text-xs text-gray-500 mt-2">
+                                  <p className="mt-2 text-xs text-gray-500">
                                     Scheduled for: {formatDate(post.scheduledFor)}
                                   </p>
                                 </div>
@@ -522,9 +544,9 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Keep Post</AlertDialogCancel>
-                              <AlertDialogAction 
+                              <AlertDialogAction
                                 onClick={() => handleDeletePost(post._id)}
-                                className="bg-red-600 hover:bg-red-700 text-white"
+                                className="bg-red-600 text-white hover:bg-red-700"
                               >
                                 <Trash2 className="mr-1 h-3 w-3" />
                                 Delete Post
@@ -545,53 +567,54 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
               description="Schedule posts across Instagram, Twitter, Facebook, and LinkedIn. Save time and maintain consistent presence."
               showSuccessMetric={{
                 label: "Creators who post 3x/week",
-                value: "2.5x more followers"
+                value: "2.5x more followers",
               }}
               actions={[
                 {
                   label: "Schedule Post",
                   onClick: () => setActiveTab("create"),
-                  icon: Plus
-                }
+                  icon: Plus,
+                },
               ]}
               tips={[
                 {
                   icon: Calendar,
                   title: "Plan Ahead",
-                  description: "Schedule a week's worth of content in one sitting for consistency."
+                  description: "Schedule a week's worth of content in one sitting for consistency.",
                 },
                 {
                   icon: TrendingUp,
                   title: "Best Times to Post",
-                  description: "Post when your audience is most active: weekdays 10am-2pm."
+                  description: "Post when your audience is most active: weekdays 10am-2pm.",
                 },
                 {
                   icon: Instagram,
                   title: "Cross-Platform",
-                  description: "Reuse content across platforms to maximize reach with minimal effort."
-                }
+                  description:
+                    "Reuse content across platforms to maximize reach with minimal effort.",
+                },
               ]}
               examples={[
                 {
                   title: "New Product Announcement",
                   description: "Share when you release a new sample pack or course",
-                  badge: "High Impact"
+                  badge: "High Impact",
                 },
                 {
                   title: "Behind the Scenes",
                   description: "Show your production process to build connection",
-                  badge: "Engaging"
+                  badge: "Engaging",
                 },
                 {
                   title: "Tutorial Snippets",
                   description: "Share quick tips from your courses as teasers",
-                  badge: "Value-Add"
+                  badge: "Value-Add",
                 },
                 {
                   title: "User Testimonials",
                   description: "Showcase reviews and success stories",
-                  badge: "Social Proof"
-                }
+                  badge: "Social Proof",
+                },
               ]}
               variant="default"
             />
@@ -645,9 +668,9 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
           ) : (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12">
-                <TrendingUp className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No published posts yet</h3>
-                <p className="text-muted-foreground text-center">
+                <TrendingUp className="mb-4 h-12 w-12 text-muted-foreground" />
+                <h3 className="mb-2 text-lg font-semibold">No published posts yet</h3>
+                <p className="text-center text-muted-foreground">
                   Your published posts will appear here
                 </p>
               </CardContent>
@@ -657,9 +680,9 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
 
         {/* Automation Tab */}
         <TabsContent value="automation">
-          <AutomationManager 
-            storeId={storeId} 
-            userId={userId} 
+          <AutomationManager
+            storeId={storeId}
+            userId={userId}
             onSwitchToAccounts={() => setActiveTab("accounts")}
           />
         </TabsContent>
@@ -668,9 +691,9 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
         <TabsContent value="analytics">
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <TrendingUp className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Analytics Dashboard</h3>
-              <p className="text-muted-foreground text-center mb-4">
+              <TrendingUp className="mb-4 h-12 w-12 text-muted-foreground" />
+              <h3 className="mb-2 text-lg font-semibold">Analytics Dashboard</h3>
+              <p className="mb-4 text-center text-muted-foreground">
                 Track your post performance across all platforms
               </p>
               <Button variant="outline" disabled>
@@ -701,19 +724,25 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
             setEditingPost(null); // Clear editing post when dialog closes
           }
         }}
-        editPost={editingPost ? {
-          _id: editingPost._id,
-          socialAccountId: editingPost.socialAccountId,
-          content: editingPost.content,
-          postType: editingPost.postType,
-          scheduledFor: editingPost.scheduledFor,
-          timezone: editingPost.timezone,
-          mediaStorageIds: editingPost.mediaStorageIds,
-        } : undefined}
+        editPost={
+          editingPost
+            ? {
+                _id: editingPost._id,
+                socialAccountId: editingPost.socialAccountId,
+                content: editingPost.content,
+                postType: editingPost.postType,
+                scheduledFor: editingPost.scheduledFor,
+                timezone: editingPost.timezone,
+                mediaStorageIds: editingPost.mediaStorageIds,
+              }
+            : undefined
+        }
         onSuccess={() => {
           toast({
             title: editingPost ? "Post updated!" : "Post scheduled!",
-            description: editingPost ? "Your post has been updated successfully" : "Your post has been scheduled successfully",
+            description: editingPost
+              ? "Your post has been updated successfully"
+              : "Your post has been scheduled successfully",
           });
           setEditingPost(null);
         }}

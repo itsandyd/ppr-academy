@@ -1,20 +1,20 @@
-'use client';
+"use client";
 
-import { useState, useCallback, useEffect } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { useUser } from '@clerk/nextjs';
-import { useQuery, useMutation, useAction } from 'convex/react';
-import { api } from '@/convex/_generated/api';
-import { Id } from '@/convex/_generated/dataModel';
-import { NotionEditor } from '@/components/notes/notion-editor';
-import { NotesSidebar } from '@/components/notes/notes-sidebar';
-import { AINoteGenerator } from '@/components/notes/ai-note-generator';
-import { SourceLibrary } from '@/components/notes/source-library';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent } from '@/components/ui/card';
-import { toast } from '@/hooks/use-toast';
+import { useState, useCallback, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
+import { useQuery, useMutation, useAction } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
+import { NotionEditor } from "@/components/notes/notion-editor";
+import { NotesSidebar } from "@/components/notes/notes-sidebar";
+import { AINoteGenerator } from "@/components/notes/ai-note-generator";
+import { SourceLibrary } from "@/components/notes/source-library";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent } from "@/components/ui/card";
+import { toast } from "@/hooks/use-toast";
 import {
   Save,
   Sparkles,
@@ -31,64 +31,62 @@ import {
   Youtube,
   Globe,
   Upload,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { formatDistanceToNow } from 'date-fns';
-import Link from 'next/link';
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { formatDistanceToNow } from "date-fns";
+import Link from "next/link";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export default function DashboardNotesPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user, isLoaded } = useUser();
-  
-  const mode = searchParams.get('mode');
+
+  const mode = searchParams.get("mode");
 
   // State
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [showSourceLibrary, setShowSourceLibrary] = useState(false);
 
   // Current note state
   const [currentNote, setCurrentNote] = useState({
-    title: 'Untitled',
-    content: '',
-    icon: '📝',
+    title: "Untitled",
+    content: "",
+    icon: "📝",
     tags: [] as string[],
-    priority: 'medium' as 'low' | 'medium' | 'high' | 'urgent',
-    status: 'draft' as 'draft' | 'in_progress' | 'completed' | 'archived',
+    priority: "medium" as "low" | "medium" | "high" | "urgent",
+    status: "draft" as "draft" | "in_progress" | "completed" | "archived",
   });
 
   // Redirect if not in create mode
   useEffect(() => {
-    if (isLoaded && mode !== 'create') {
-      router.replace('/dashboard?mode=learn');
+    if (isLoaded && mode !== "create") {
+      router.replace("/dashboard?mode=learn");
     }
   }, [mode, isLoaded, router]);
 
   // Get user's stores
-  const stores = useQuery(
-    api.stores.getStoresByUser,
-    user?.id ? { userId: user.id } : 'skip'
-  );
+  const stores = useQuery(api.stores.getStoresByUser, user?.id ? { userId: user.id } : "skip");
 
   const storeId = stores?.[0]?._id;
 
   // Convex queries and mutations
-  const folders = useQuery(
-    api.notes.getFoldersByUser,
-    user?.id && storeId
-      ? {
-          userId: user.id,
-          storeId,
-          parentId: selectedFolderId ? (selectedFolderId as Id<"noteFolders">) : undefined,
-        }
-      : 'skip'
-  ) ?? [];
+  const folders =
+    useQuery(
+      api.notes.getFoldersByUser,
+      user?.id && storeId
+        ? {
+            userId: user.id,
+            storeId,
+            parentId: selectedFolderId ? (selectedFolderId as Id<"noteFolders">) : undefined,
+          }
+        : "skip"
+    ) ?? [];
 
   const notesQuery = useQuery(
     (api.notes as any).getNotesByUser,
@@ -99,14 +97,14 @@ export default function DashboardNotesPage() {
           folderId: selectedFolderId ? (selectedFolderId as Id<"noteFolders">) : undefined,
           paginationOpts: { numItems: 50, cursor: null },
         }
-      : 'skip'
+      : "skip"
   );
 
   const notes = notesQuery?.page ?? [];
 
   const selectedNote = useQuery(
     api.notes.getNote,
-    selectedNoteId ? { noteId: selectedNoteId as Id<"notes"> } : 'skip'
+    selectedNoteId ? { noteId: selectedNoteId as Id<"notes"> } : "skip"
   );
 
   const createNote = useMutation(api.notes.createNote);
@@ -117,22 +115,22 @@ export default function DashboardNotesPage() {
   const deleteFolder = useMutation(api.notes.deleteFolder);
 
   // Get current folder for breadcrumb
-  const currentFolder = selectedFolderId 
-    ? folders.find(f => f._id === selectedFolderId)
+  const currentFolder = selectedFolderId
+    ? folders.find((f: any) => f._id === selectedFolderId)
     : null;
 
   // Build breadcrumb path
   const getBreadcrumbPath = () => {
     if (!selectedFolderId || !currentFolder) return [];
-    
-    const path: Array<{_id: string, name: string}> = [];
+
+    const path: Array<{ _id: string; name: string }> = [];
     let folder = currentFolder;
-    
+
     while (folder) {
       path.unshift({ _id: folder._id, name: folder.name });
-      folder = folders.find(f => f._id === folder.parentId) as any;
+      folder = folders.find((f: any) => f._id === folder.parentId) as any;
     }
-    
+
     return path;
   };
 
@@ -143,111 +141,123 @@ export default function DashboardNotesPage() {
     setSelectedNoteId(noteId);
   }, []);
 
-  const handleCreateNote = useCallback(async (folderId?: string) => {
-    if (!user?.id || !storeId) return;
-    
-    try {
-      const noteId = await createNote({
-        title: 'Untitled',
-        content: '<p>Start writing your thoughts...</p>',
-        userId: user.id,
-        storeId,
-        folderId: folderId ? folderId as Id<"noteFolders"> : undefined,
-        tags: [],
-        category: undefined,
-        priority: 'medium',
-      });
-      setSelectedNoteId(noteId);
-      toast({
-        title: "Note Created",
-        description: "Your new note has been created.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to create note.",
-        variant: "destructive",
-      });
-    }
-  }, [createNote, user?.id, storeId]);
+  const handleCreateNote = useCallback(
+    async (folderId?: string) => {
+      if (!user?.id || !storeId) return;
 
-  const handleCreateFolder = useCallback(async (parentId?: string) => {
-    if (!user?.id || !storeId) return;
-    
-    try {
-      await createFolder({
-        name: 'New Folder',
-        userId: user.id,
-        storeId,
-        parentId: parentId ? parentId as Id<"noteFolders"> : undefined,
-      });
-      toast({
-        title: "Folder Created",
-        description: "Your new folder has been created.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to create folder.",
-        variant: "destructive",
-      });
-    }
-  }, [createFolder, user?.id, storeId]);
-
-  const handleRenameFolder = useCallback(async (folderId: string, newName: string) => {
-    try {
-      await updateFolder({
-        folderId: folderId as Id<"noteFolders">,
-        name: newName,
-      });
-      toast({
-        title: "Folder Renamed",
-        description: "Your folder has been renamed successfully.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to rename folder.",
-        variant: "destructive",
-      });
-    }
-  }, [updateFolder]);
-
-  const handleSaveNote = useCallback(async (showToast = true) => {
-    if (!selectedNoteId) {
-      await handleCreateNote(selectedFolderId || undefined);
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      await updateNote({
-        noteId: selectedNoteId as Id<"notes">,
-        title: currentNote.title,
-        content: currentNote.content,
-        tags: currentNote.tags,
-        priority: currentNote.priority,
-        status: currentNote.status,
-      });
-      
-      setLastSaved(new Date());
-      
-      if (showToast) {
+      try {
+        const noteId = await createNote({
+          title: "Untitled",
+          content: "<p>Start writing your thoughts...</p>",
+          userId: user.id,
+          storeId,
+          folderId: folderId ? (folderId as Id<"noteFolders">) : undefined,
+          tags: [],
+          category: undefined,
+          priority: "medium",
+        });
+        setSelectedNoteId(noteId);
         toast({
-          title: "Note Saved",
-          description: "Your note has been saved successfully.",
+          title: "Note Created",
+          description: "Your new note has been created.",
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to create note.",
+          variant: "destructive",
         });
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to save note.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  }, [selectedNoteId, currentNote, updateNote, handleCreateNote, selectedFolderId]);
+    },
+    [createNote, user?.id, storeId]
+  );
+
+  const handleCreateFolder = useCallback(
+    async (parentId?: string) => {
+      if (!user?.id || !storeId) return;
+
+      try {
+        await createFolder({
+          name: "New Folder",
+          userId: user.id,
+          storeId,
+          parentId: parentId ? (parentId as Id<"noteFolders">) : undefined,
+        });
+        toast({
+          title: "Folder Created",
+          description: "Your new folder has been created.",
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to create folder.",
+          variant: "destructive",
+        });
+      }
+    },
+    [createFolder, user?.id, storeId]
+  );
+
+  const handleRenameFolder = useCallback(
+    async (folderId: string, newName: string) => {
+      try {
+        await updateFolder({
+          folderId: folderId as Id<"noteFolders">,
+          name: newName,
+        });
+        toast({
+          title: "Folder Renamed",
+          description: "Your folder has been renamed successfully.",
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to rename folder.",
+          variant: "destructive",
+        });
+      }
+    },
+    [updateFolder]
+  );
+
+  const handleSaveNote = useCallback(
+    async (showToast = true) => {
+      if (!selectedNoteId) {
+        await handleCreateNote(selectedFolderId || undefined);
+        return;
+      }
+
+      setIsSaving(true);
+      try {
+        await updateNote({
+          noteId: selectedNoteId as Id<"notes">,
+          title: currentNote.title,
+          content: currentNote.content,
+          tags: currentNote.tags,
+          priority: currentNote.priority,
+          status: currentNote.status,
+        });
+
+        setLastSaved(new Date());
+
+        if (showToast) {
+          toast({
+            title: "Note Saved",
+            description: "Your note has been saved successfully.",
+          });
+        }
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to save note.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [selectedNoteId, currentNote, updateNote, handleCreateNote, selectedFolderId]
+  );
 
   // Update current note when selected note changes
   useEffect(() => {
@@ -255,9 +265,9 @@ export default function DashboardNotesPage() {
       setCurrentNote({
         title: selectedNote.title,
         content: selectedNote.content,
-        icon: selectedNote.icon || '📝',
+        icon: selectedNote.icon || "📝",
         tags: selectedNote.tags,
-        priority: selectedNote.priority || 'medium',
+        priority: selectedNote.priority || "medium",
         status: selectedNote.status,
       });
     }
@@ -267,7 +277,7 @@ export default function DashboardNotesPage() {
   useEffect(() => {
     if (!selectedNoteId || !selectedNote) return;
 
-    const hasChanges = 
+    const hasChanges =
       currentNote.title !== selectedNote.title ||
       currentNote.content !== selectedNote.content ||
       JSON.stringify(currentNote.tags) !== JSON.stringify(selectedNote.tags) ||
@@ -289,7 +299,7 @@ export default function DashboardNotesPage() {
         });
         setLastSaved(new Date());
       } catch (error) {
-        console.error('Auto-save failed:', error);
+        console.error("Auto-save failed:", error);
       } finally {
         setIsSaving(false);
       }
@@ -306,16 +316,16 @@ export default function DashboardNotesPage() {
   // Loading state
   if (!isLoaded || !user || stores === undefined) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center">
         <Skeleton className="h-screen w-full" />
       </div>
     );
   }
 
   // Redirect if not create mode
-  if (mode !== 'create') {
+  if (mode !== "create") {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center">
         <Skeleton className="h-screen w-full" />
       </div>
     );
@@ -326,27 +336,26 @@ export default function DashboardNotesPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold mb-2">AI Notes</h1>
+          <h1 className="mb-2 text-3xl font-bold">AI Notes</h1>
           <p className="text-muted-foreground">
             Generate notes from YouTube, websites, PDFs, and more using AI
           </p>
         </div>
 
-        <Card className="border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/20">
+        <Card className="border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/20">
           <CardContent className="p-6">
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900 rounded-full flex items-center justify-center flex-shrink-0">
-                <AlertCircle className="w-6 h-6 text-orange-600" />
+              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900">
+                <AlertCircle className="h-6 w-6 text-orange-600" />
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-semibold mb-2">Store Required</h3>
-                <p className="text-muted-foreground mb-4">
-                  AI Notes requires a creator store. Set up your store to start generating notes from any content.
+                <h3 className="mb-2 text-lg font-semibold">Store Required</h3>
+                <p className="mb-4 text-muted-foreground">
+                  AI Notes requires a creator store. Set up your store to start generating notes
+                  from any content.
                 </p>
                 <Button asChild>
-                  <Link href="/dashboard?mode=create">
-                    Set Up Your Store
-                  </Link>
+                  <Link href="/dashboard?mode=create">Set Up Your Store</Link>
                 </Button>
               </div>
             </div>
@@ -357,10 +366,10 @@ export default function DashboardNotesPage() {
   }
 
   return (
-    <div className="h-[calc(100vh-9rem)] -m-4 md:-m-8 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800/50">
-      <div className="h-full w-full flex bg-white dark:bg-[#1a1a1a] overflow-hidden">
+    <div className="-m-4 h-[calc(100vh-9rem)] overflow-hidden rounded-lg border border-gray-200 dark:border-gray-800/50 md:-m-8">
+      <div className="flex h-full w-full overflow-hidden bg-white dark:bg-[#1a1a1a]">
         {/* Sidebar */}
-        <div className="w-72 flex-shrink-0 bg-gray-50 dark:bg-[#1e1e1e] border-r border-gray-200 dark:border-gray-800/50 flex flex-col">
+        <div className="flex w-72 flex-shrink-0 flex-col border-r border-gray-200 bg-gray-50 dark:border-gray-800/50 dark:bg-[#1e1e1e]">
           <NotesSidebar
             folders={folders}
             notes={notes}
@@ -379,15 +388,15 @@ export default function DashboardNotesPage() {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col bg-white dark:bg-[#1a1a1a] min-w-0">
+        <div className="flex min-w-0 flex-1 flex-col bg-white dark:bg-[#1a1a1a]">
           {/* Header */}
-          <div className="border-b border-gray-200 dark:border-gray-800/50 bg-white dark:bg-[#1e1e1e]/50 backdrop-blur-sm flex-shrink-0">
+          <div className="flex-shrink-0 border-b border-gray-200 bg-white backdrop-blur-sm dark:border-gray-800/50 dark:bg-[#1e1e1e]/50">
             {/* Breadcrumb Navigation */}
             {breadcrumbPath.length > 0 && (
-              <div className="px-6 pt-3 pb-2 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <div className="flex items-center gap-2 px-6 pb-2 pt-3 text-sm text-gray-600 dark:text-gray-400">
                 <button
                   onClick={() => setSelectedFolderId(null)}
-                  className="hover:text-gray-900 dark:hover:text-gray-100 flex items-center gap-1 transition-colors"
+                  className="flex items-center gap-1 transition-colors hover:text-gray-900 dark:hover:text-gray-100"
                 >
                   <Home className="h-4 w-4" />
                   <span>All Notes</span>
@@ -398,8 +407,9 @@ export default function DashboardNotesPage() {
                     <button
                       onClick={() => setSelectedFolderId(folder._id)}
                       className={cn(
-                        "hover:text-gray-900 dark:hover:text-gray-100 transition-colors",
-                        index === breadcrumbPath.length - 1 && "font-semibold text-gray-900 dark:text-gray-100"
+                        "transition-colors hover:text-gray-900 dark:hover:text-gray-100",
+                        index === breadcrumbPath.length - 1 &&
+                          "font-semibold text-gray-900 dark:text-gray-100"
                       )}
                     >
                       {folder.name}
@@ -408,21 +418,25 @@ export default function DashboardNotesPage() {
                 ))}
               </div>
             )}
-            
+
             {/* Main Header */}
-            <div className="h-16 flex items-center justify-between px-6">
-              <div className="flex items-center gap-4 min-w-0">
-                <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 truncate">
-                  {selectedNoteId ? currentNote.title : (currentFolder ? currentFolder.name : 'Notes')}
+            <div className="flex h-16 items-center justify-between px-6">
+              <div className="flex min-w-0 items-center gap-4">
+                <h1 className="truncate text-xl font-semibold text-gray-900 dark:text-gray-100">
+                  {selectedNoteId
+                    ? currentNote.title
+                    : currentFolder
+                      ? currentFolder.name
+                      : "Notes"}
                 </h1>
               </div>
-              
-              <div className="flex items-center gap-3 flex-shrink-0">
+
+              <div className="flex flex-shrink-0 items-center gap-3">
                 {selectedNote && (
                   <>
-                    <Badge 
-                      variant="secondary" 
-                      className="text-xs bg-gray-100 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700/50"
+                    <Badge
+                      variant="secondary"
+                      className="border-gray-200 bg-gray-100 text-xs text-gray-700 dark:border-gray-700/50 dark:bg-gray-800/50 dark:text-gray-300"
                     >
                       {selectedNote.status}
                     </Badge>
@@ -432,12 +446,12 @@ export default function DashboardNotesPage() {
                       </span>
                     )}
                     {isSaving ? (
-                      <span className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1 font-medium">
-                        <Loader2 className="w-3 h-3 animate-spin" />
+                      <span className="flex items-center gap-1 text-xs font-medium text-blue-600 dark:text-blue-400">
+                        <Loader2 className="h-3 w-3 animate-spin" />
                         Saving...
                       </span>
                     ) : lastSaved ? (
-                      <span className="text-xs text-green-600 dark:text-green-400 font-medium">
+                      <span className="text-xs font-medium text-green-600 dark:text-green-400">
                         ✓ Saved {formatDistanceToNow(lastSaved)} ago
                       </span>
                     ) : null}
@@ -478,28 +492,28 @@ export default function DashboardNotesPage() {
           </div>
 
           {/* Content Area */}
-          <div className="flex-1 flex overflow-hidden">
+          <div className="flex flex-1 overflow-hidden">
             {/* Editor */}
             <div className="flex-1 overflow-auto">
               {selectedNoteId && selectedNote ? (
                 <div className="h-full w-full">
                   <NotionEditor
                     content={currentNote.content}
-                    onChange={(content) => setCurrentNote(prev => ({ ...prev, content }))}
+                    onChange={(content) => setCurrentNote((prev) => ({ ...prev, content }))}
                     title={currentNote.title}
-                    onTitleChange={(title) => setCurrentNote(prev => ({ ...prev, title }))}
+                    onTitleChange={(title) => setCurrentNote((prev) => ({ ...prev, title }))}
                     icon={currentNote.icon}
-                    onIconChange={(icon) => setCurrentNote(prev => ({ ...prev, icon }))}
+                    onIconChange={(icon) => setCurrentNote((prev) => ({ ...prev, icon }))}
                     placeholder="Start writing your ideas..."
-                    className="h-full border-none rounded-none shadow-none"
+                    className="h-full rounded-none border-none shadow-none"
                   />
                 </div>
               ) : (
                 // Welcome Screen
-                <div className="h-full flex items-center justify-center bg-gray-50/50 dark:bg-[#1a1a1a]">
-                  <div className="text-center space-y-6 max-w-lg px-4">
+                <div className="flex h-full items-center justify-center bg-gray-50/50 dark:bg-[#1a1a1a]">
+                  <div className="max-w-lg space-y-6 px-4 text-center">
                     <div className="space-y-2">
-                      <div className="mx-auto w-20 h-20 bg-gradient-to-br from-purple-500/10 to-blue-500/10 dark:from-purple-500/20 dark:to-blue-500/20 rounded-2xl flex items-center justify-center mb-4">
+                      <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500/10 to-blue-500/10 dark:from-purple-500/20 dark:to-blue-500/20">
                         <Brain className="h-10 w-10 text-purple-600 dark:text-purple-400" />
                       </div>
                       <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
@@ -509,7 +523,7 @@ export default function DashboardNotesPage() {
                         Generate notes from YouTube videos, websites, PDFs, or write your own.
                       </p>
                     </div>
-                    
+
                     <div className="space-y-3">
                       <div className="flex gap-3">
                         <Button onClick={() => handleCreateNote()} className="flex-1 gap-2">
@@ -523,36 +537,42 @@ export default function DashboardNotesPage() {
                           onNoteCreated={handleNoteCreated}
                         />
                       </div>
-                      
+
                       <div className="text-sm text-gray-500 dark:text-gray-400">
                         Or select a note from the sidebar
                       </div>
                     </div>
-                    
-                    <div className="pt-6 border-t border-gray-200 dark:border-gray-800/50">
-                      <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-4">
+
+                    <div className="border-t border-gray-200 pt-6 dark:border-gray-800/50">
+                      <h3 className="mb-4 font-medium text-gray-900 dark:text-gray-100">
                         Import Content From
                       </h3>
                       <div className="grid grid-cols-3 gap-4">
-                        <div className="bg-white dark:bg-[#1e1e1e] border border-gray-200 dark:border-gray-800 rounded-lg p-4 text-center">
-                          <div className="w-10 h-10 bg-red-100 dark:bg-red-900/20 rounded-lg flex items-center justify-center mx-auto mb-2">
+                        <div className="rounded-lg border border-gray-200 bg-white p-4 text-center dark:border-gray-800 dark:bg-[#1e1e1e]">
+                          <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/20">
                             <Youtube className="h-5 w-5 text-red-500" />
                           </div>
-                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">YouTube</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                            YouTube
+                          </p>
                           <p className="text-xs text-gray-500">Transcripts</p>
                         </div>
-                        <div className="bg-white dark:bg-[#1e1e1e] border border-gray-200 dark:border-gray-800 rounded-lg p-4 text-center">
-                          <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/20 rounded-lg flex items-center justify-center mx-auto mb-2">
+                        <div className="rounded-lg border border-gray-200 bg-white p-4 text-center dark:border-gray-800 dark:bg-[#1e1e1e]">
+                          <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/20">
                             <Globe className="h-5 w-5 text-blue-500" />
                           </div>
-                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Websites</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                            Websites
+                          </p>
                           <p className="text-xs text-gray-500">Articles</p>
                         </div>
-                        <div className="bg-white dark:bg-[#1e1e1e] border border-gray-200 dark:border-gray-800 rounded-lg p-4 text-center">
-                          <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/20 rounded-lg flex items-center justify-center mx-auto mb-2">
+                        <div className="rounded-lg border border-gray-200 bg-white p-4 text-center dark:border-gray-800 dark:bg-[#1e1e1e]">
+                          <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-900/20">
                             <Upload className="h-5 w-5 text-orange-500" />
                           </div>
-                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">PDFs</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                            PDFs
+                          </p>
                           <p className="text-xs text-gray-500">Documents</p>
                         </div>
                       </div>
@@ -581,5 +601,3 @@ export default function DashboardNotesPage() {
     </div>
   );
 }
-
-

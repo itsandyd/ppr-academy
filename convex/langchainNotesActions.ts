@@ -32,7 +32,7 @@ export const extractYoutubeTranscript = internalAction({
 
       // Try different language codes to fetch transcript
       // YouTube auto-generated captions often need specific language codes
-      const languagesToTry = ['en', 'en-US', 'en-GB', 'a.en', undefined];
+      const languagesToTry = ["en", "en-US", "en-GB", "a.en", undefined];
       let transcriptItems: Array<{ text: string }> | null = null;
       let lastError: Error | null = null;
 
@@ -58,16 +58,16 @@ export const extractYoutubeTranscript = internalAction({
         if (errorMsg.includes("disabled")) {
           throw new Error(
             `Could not fetch transcript for this video. The transcript may be:\n` +
-            `• Auto-generated and temporarily unavailable\n` +
-            `• Restricted by the video owner\n` +
-            `• Only available in a different language\n\n` +
-            `Try copying the transcript manually from YouTube (click "...more" under the video, then "Show transcript") and paste it using the "Text" option instead.`
+              `• Auto-generated and temporarily unavailable\n` +
+              `• Restricted by the video owner\n` +
+              `• Only available in a different language\n\n` +
+              `Try copying the transcript manually from YouTube (click "...more" under the video, then "Show transcript") and paste it using the "Text" option instead.`
           );
         }
         throw new Error(`Failed to fetch transcript: ${errorMsg}`);
       }
 
-      const transcript = transcriptItems.map(item => item.text).join(" ");
+      const transcript = transcriptItems.map((item) => item.text).join(" ");
 
       // Split content into chunks
       const splitter = new RecursiveCharacterTextSplitter({
@@ -138,12 +138,14 @@ export const extractWebsiteContent = internalAction({
       const textContent = mainContent.text().replace(/\s+/g, " ").trim();
 
       // Extract metadata
-      const author = $('meta[name="author"]').attr("content") || 
-                     $('[rel="author"]').text() ||
-                     $(".author").first().text();
-      const publishedDate = $('meta[property="article:published_time"]').attr("content") ||
-                           $('meta[name="date"]').attr("content") ||
-                           $("time").first().attr("datetime");
+      const author =
+        $('meta[name="author"]').attr("content") ||
+        $('[rel="author"]').text() ||
+        $(".author").first().text();
+      const publishedDate =
+        $('meta[property="article:published_time"]').attr("content") ||
+        $('meta[name="date"]').attr("content") ||
+        $("time").first().attr("datetime");
       const domain = new URL(args.websiteUrl).hostname;
 
       // Split content into chunks
@@ -204,7 +206,9 @@ export const extractPdfContent = internalAction({
       const pdfText = await extractTextFromPdf(pdfBuffer);
 
       if (!pdfText || pdfText.length < 50) {
-        throw new Error("Could not extract readable text from PDF. The PDF may be image-based or protected.");
+        throw new Error(
+          "Could not extract readable text from PDF. The PDF may be image-based or protected."
+        );
       }
 
       // Split content into chunks
@@ -235,19 +239,27 @@ export const extractPdfContent = internalAction({
 
 // ==================== AI NOTE GENERATION ====================
 
+type GenerateNotesResult = {
+  success: boolean;
+  noteId?: Id<"notes">;
+  error?: string;
+};
+
 export const generateNotesFromSource = action({
   args: {
     sourceId: v.id("noteSources"),
     userId: v.string(),
     storeId: v.string(),
     folderId: v.optional(v.id("noteFolders")),
-    noteStyle: v.optional(v.union(
-      v.literal("summary"),
-      v.literal("detailed"),
-      v.literal("bullet_points"),
-      v.literal("study_guide"),
-      v.literal("outline")
-    )),
+    noteStyle: v.optional(
+      v.union(
+        v.literal("summary"),
+        v.literal("detailed"),
+        v.literal("bullet_points"),
+        v.literal("study_guide"),
+        v.literal("outline")
+      )
+    ),
     customPrompt: v.optional(v.string()),
   },
   returns: v.object({
@@ -255,9 +267,10 @@ export const generateNotesFromSource = action({
     noteId: v.optional(v.id("notes")),
     error: v.optional(v.string()),
   }),
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<GenerateNotesResult> => {
     try {
       // Get the source
+      // @ts-ignore Convex type instantiation too deep
       const source = await ctx.runQuery(internal.langchainNotes.getSource, {
         sourceId: args.sourceId,
       });
@@ -278,17 +291,19 @@ export const generateNotesFromSource = action({
       const systemPrompt = getNoteGenerationPrompt(noteStyle, args.customPrompt);
 
       // Prepare content (use chunks if too long)
-      const content = source.rawContent.length > 15000
-        ? source.contentChunks?.slice(0, 8).join("\n\n---\n\n") || source.rawContent.slice(0, 15000)
-        : source.rawContent;
+      const content =
+        source.rawContent.length > 15000
+          ? source.contentChunks?.slice(0, 8).join("\n\n---\n\n") ||
+            source.rawContent.slice(0, 15000)
+          : source.rawContent;
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [
           { role: "system", content: systemPrompt },
-          { 
-            role: "user", 
-            content: `Source Title: ${source.title}\nSource Type: ${source.sourceType}\n\nContent:\n${content}` 
+          {
+            role: "user",
+            content: `Source Title: ${source.title}\nSource Type: ${source.sourceType}\n\nContent:\n${content}`,
           },
         ],
         temperature: 0.7,
@@ -304,9 +319,10 @@ export const generateNotesFromSource = action({
       const summaryCompletion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
-          { 
-            role: "system", 
-            content: "You are a summarization expert. Extract: 1) A one-paragraph summary, 2) 5-7 key takeaways as bullet points. Format as JSON: {\"summary\": \"...\", \"keyPoints\": [\"...\", \"...\"]}" 
+          {
+            role: "system",
+            content:
+              'You are a summarization expert. Extract: 1) A one-paragraph summary, 2) 5-7 key takeaways as bullet points. Format as JSON: {"summary": "...", "keyPoints": ["...", "..."]}',
           },
           { role: "user", content: content.slice(0, 8000) },
         ],
@@ -366,13 +382,15 @@ export const generateMultipleNotesFromSource = action({
     userId: v.string(),
     storeId: v.string(),
     folderId: v.optional(v.id("noteFolders")),
-    noteTypes: v.array(v.union(
-      v.literal("summary"),
-      v.literal("detailed"),
-      v.literal("bullet_points"),
-      v.literal("study_guide"),
-      v.literal("outline")
-    )),
+    noteTypes: v.array(
+      v.union(
+        v.literal("summary"),
+        v.literal("detailed"),
+        v.literal("bullet_points"),
+        v.literal("study_guide"),
+        v.literal("outline")
+      )
+    ),
   },
   returns: v.object({
     success: v.boolean(),
@@ -473,7 +491,7 @@ export const createNoteSource = action({
           chunkOverlap: 200,
         });
         const chunks = await splitter.splitText(args.rawContent);
-        
+
         await ctx.runMutation(internal.langchainNotes.updateSourceContent, {
           sourceId,
           rawContent: args.rawContent,
@@ -497,7 +515,7 @@ function extractYoutubeVideoId(url: string): string | null {
     /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/)([^&\n?#]+)/,
     /^([a-zA-Z0-9_-]{11})$/,
   ];
-  
+
   for (const pattern of patterns) {
     const match = url.match(pattern);
     if (match) return match[1];
@@ -509,21 +527,24 @@ async function extractTextFromPdf(buffer: ArrayBuffer): Promise<string> {
   const uint8Array = new Uint8Array(buffer);
   const decoder = new TextDecoder("utf-8", { fatal: false });
   let text = decoder.decode(uint8Array);
-  
+
   text = text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, " ");
   text = text.replace(/\s+/g, " ").trim();
-  
+
   const streamMatch = text.match(/stream[\s\S]*?endstream/g);
   if (streamMatch) {
     text = streamMatch
-      .map(s => s.replace(/stream|endstream/g, ""))
+      .map((s) => s.replace(/stream|endstream/g, ""))
       .join(" ")
       .replace(/[^\x20-\x7E\n]/g, " ")
       .replace(/\s+/g, " ")
       .trim();
   }
-  
-  return text || "PDF content extraction requires additional processing. Please use the text input option to paste your content.";
+
+  return (
+    text ||
+    "PDF content extraction requires additional processing. Please use the text input option to paste your content."
+  );
 }
 
 function getNoteGenerationPrompt(style: string, customPrompt?: string): string {
@@ -545,7 +566,7 @@ Use this context to better understand the content and fix any transcription erro
 ${transcriptHandling}
 Format your response as rich HTML with proper headings (h2, h3), paragraphs, lists (ul, ol, li), and emphasis (strong, em) where appropriate. Make the content scannable and easy to read.`;
   }
-  
+
   const prompts: Record<string, string> = {
     summary: `You are an expert note-taker. Create a concise summary of the following content.
 ${transcriptHandling}
@@ -554,7 +575,7 @@ Focus on the main ideas and key takeaways. Format as rich HTML with:
 - Key points as a bulleted list
 - A conclusion paragraph
 Keep it to about 300-500 words.`,
-    
+
     detailed: `You are an expert note-taker and educator. Create comprehensive, detailed notes from the following content.
 ${transcriptHandling}
 Include:
@@ -563,7 +584,7 @@ Include:
 - Connections between ideas
 - Definitions of key terms
 Format as rich HTML with proper headings (h2, h3), paragraphs, lists, and emphasis. Make it scannable but thorough.`,
-    
+
     bullet_points: `You are an expert note-taker. Convert the following content into clear, organized bullet points.
 ${transcriptHandling}
 Structure:
@@ -572,7 +593,7 @@ Structure:
 - Keep each point concise but informative
 - Include all important information
 Format as rich HTML with headings and nested unordered lists.`,
-    
+
     study_guide: `You are an expert educator. Create a study guide from the following content.
 ${transcriptHandling}
 Include:
@@ -582,7 +603,7 @@ Include:
 - Review questions at the end
 - Summary of main takeaways
 Format as rich HTML with clear sections, definitions, and numbered/bulleted lists.`,
-    
+
     outline: `You are an expert note-taker. Create a hierarchical outline of the following content.
 ${transcriptHandling}
 Structure:
@@ -592,7 +613,7 @@ Structure:
 - Keep it structured and scannable
 Format as rich HTML with proper heading hierarchy and nested lists.`,
   };
-  
+
   return prompts[style] || prompts.detailed;
 }
 
@@ -604,12 +625,12 @@ function generateNoteTitle(sourceTitle: string, sourceType: string): string {
     audio: "🎧 ",
     text: "📝 ",
   };
-  
+
   const cleanTitle = sourceTitle
     .replace(/^\s*-\s*YouTube$/, "")
     .replace(/\s*\|.*$/, "")
     .trim();
-  
+
   return `${prefix[sourceType] || ""}Notes: ${cleanTitle}`;
 }
 
@@ -628,7 +649,7 @@ function formatAsHtml(content: string, source: Record<string, unknown>): string 
   if (content.includes("<h") || content.includes("<p>") || content.includes("<ul>")) {
     return content;
   }
-  
+
   let html = content
     .replace(/^### (.*$)/gm, "<h3>$1</h3>")
     .replace(/^## (.*$)/gm, "<h2>$1</h2>")
@@ -639,23 +660,23 @@ function formatAsHtml(content: string, source: Record<string, unknown>): string 
     .replace(/^- (.*$)/gm, "<li>$1</li>")
     .replace(/^(\d+)\. (.*$)/gm, "<li>$2</li>")
     .split("\n\n")
-    .map(para => {
+    .map((para) => {
       if (para.includes("<h") || para.includes("<li>")) return para;
       return `<p>${para}</p>`;
     })
     .join("\n");
-  
+
   html = html.replace(/(<li>.*?<\/li>\n?)+/g, (match) => `<ul>${match}</ul>`);
-  
+
   const sourceInfo: Array<string> = [];
-  if (source.url) sourceInfo.push(`<a href="${source.url}" target="_blank" rel="noopener">Original Source</a>`);
+  if (source.url)
+    sourceInfo.push(`<a href="${source.url}" target="_blank" rel="noopener">Original Source</a>`);
   if (source.websiteAuthor) sourceInfo.push(`Author: ${source.websiteAuthor}`);
   if (source.youtubeChannel) sourceInfo.push(`Channel: ${source.youtubeChannel}`);
-  
+
   if (sourceInfo.length > 0) {
     html = `<p class="source-info text-sm text-muted-foreground mb-4">${sourceInfo.join(" • ")}</p>\n${html}`;
   }
-  
+
   return html;
 }
-

@@ -8,7 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Trash2, Copy, Eye, EyeOff } from "lucide-react";
 
@@ -45,16 +51,15 @@ export function CouponManager({ storeId, creatorId }: CouponManagerProps) {
 
     try {
       const now = Date.now();
-      const validUntil = formData.validUntil
-        ? new Date(formData.validUntil).getTime()
-        : undefined;
+      const validUntil = formData.validUntil ? new Date(formData.validUntil).getTime() : undefined;
 
       await createCoupon({
         code: formData.code,
         storeId,
         creatorId,
         discountType: formData.discountType,
-        discountValue: parseInt(formData.discountValue) * (formData.discountType === "fixed_amount" ? 100 : 1),
+        discountValue:
+          parseInt(formData.discountValue) * (formData.discountType === "fixed_amount" ? 100 : 1),
         currency: formData.discountType === "fixed_amount" ? "USD" : undefined,
         applicableTo: formData.applicableTo,
         maxUses: formData.maxUses ? parseInt(formData.maxUses) : undefined,
@@ -216,15 +221,15 @@ export function CouponManager({ storeId, creatorId }: CouponManagerProps) {
         </Card>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
         {coupons && coupons.length > 0 ? (
-          coupons.map((coupon) => (
+          coupons.map((coupon: any) => (
             <Card key={coupon._id} className={!coupon.isActive ? "opacity-60" : ""}>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
-                  <code className="text-lg font-mono">{coupon.code}</code>
+                  <code className="font-mono text-lg">{coupon.code}</code>
                   <Button variant="ghost" size="sm" onClick={() => copyCode(coupon.code)}>
-                    <Copy className="w-4 h-4" />
+                    <Copy className="h-4 w-4" />
                   </Button>
                 </CardTitle>
                 <CardDescription>
@@ -237,19 +242,22 @@ export function CouponManager({ storeId, creatorId }: CouponManagerProps) {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Used:</span>
-                    <span>{coupon.currentUses}{coupon.maxUses ? ` / ${coupon.maxUses}` : ""}</span>
+                    <span>
+                      {coupon.currentUses}
+                      {coupon.maxUses ? ` / ${coupon.maxUses}` : ""}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Status:</span>
                     <span className="flex items-center gap-1">
                       {coupon.isActive ? (
                         <>
-                          <Eye className="w-4 h-4 text-green-500" />
+                          <Eye className="h-4 w-4 text-green-500" />
                           Active
                         </>
                       ) : (
                         <>
-                          <EyeOff className="w-4 h-4 text-gray-400" />
+                          <EyeOff className="h-4 w-4 text-gray-400" />
                           Inactive
                         </>
                       )}
@@ -259,10 +267,10 @@ export function CouponManager({ storeId, creatorId }: CouponManagerProps) {
                     <Button
                       variant="destructive"
                       size="sm"
-                      className="w-full mt-2"
+                      className="mt-2 w-full"
                       onClick={() => handleDeactivate(coupon._id)}
                     >
-                      <Trash2 className="w-4 h-4 mr-2" />
+                      <Trash2 className="mr-2 h-4 w-4" />
                       Deactivate
                     </Button>
                   )}
@@ -271,7 +279,7 @@ export function CouponManager({ storeId, creatorId }: CouponManagerProps) {
             </Card>
           ))
         ) : (
-          <div className="col-span-full text-center py-12">
+          <div className="col-span-full py-12 text-center">
             <p className="text-muted-foreground">No coupons created yet</p>
           </div>
         )}
@@ -279,8 +287,3 @@ export function CouponManager({ storeId, creatorId }: CouponManagerProps) {
     </div>
   );
 }
-
-
-
-
-

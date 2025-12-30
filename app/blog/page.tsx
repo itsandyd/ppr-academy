@@ -14,15 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
-  BookOpen, 
-  Search, 
-  Calendar,
-  Clock,
-  Eye,
-  ArrowRight,
-  Sparkles,
-} from "lucide-react";
+import { BookOpen, Search, Calendar, Clock, Eye, ArrowRight, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import Image from "next/image";
@@ -47,7 +39,7 @@ export default function BlogPage() {
     if (searchQuery) {
       const search = searchQuery.toLowerCase();
       filtered = filtered.filter(
-        (post) =>
+        (post: any) =>
           post.title.toLowerCase().includes(search) ||
           post.excerpt?.toLowerCase().includes(search) ||
           post.authorName?.toLowerCase().includes(search)
@@ -56,7 +48,7 @@ export default function BlogPage() {
 
     // Category filter
     if (selectedCategory && selectedCategory !== "all") {
-      filtered = filtered.filter((post) => post.category === selectedCategory);
+      filtered = filtered.filter((post: any) => post.category === selectedCategory);
     }
 
     return filtered;
@@ -70,9 +62,9 @@ export default function BlogPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="text-center">
-          <BookOpen className="w-16 h-16 text-muted-foreground mx-auto mb-4 animate-pulse" />
+          <BookOpen className="mx-auto mb-4 h-16 w-16 animate-pulse text-muted-foreground" />
           <p className="text-muted-foreground">Loading blog...</p>
         </div>
       </div>
@@ -82,56 +74,54 @@ export default function BlogPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 text-white py-20">
+      <section className="relative bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 py-20 text-white">
         <div className="absolute inset-0 bg-black/20" />
-        <div className="relative max-w-7xl mx-auto px-6">
+        <div className="relative mx-auto max-w-7xl px-6">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
             className="text-center"
           >
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-white/10 backdrop-blur-lg rounded-2xl mb-6">
-              <BookOpen className="w-10 h-10" />
+            <div className="mb-6 inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-lg">
+              <BookOpen className="h-10 w-10" />
             </div>
-            <h1 className="text-4xl md:text-6xl font-bold mb-4">
-              PPR Academy Blog
-            </h1>
-            <p className="text-xl md:text-2xl text-white/90 max-w-3xl mx-auto">
+            <h1 className="mb-4 text-4xl font-bold md:text-6xl">PPR Academy Blog</h1>
+            <p className="mx-auto max-w-3xl text-xl text-white/90 md:text-2xl">
               Tutorials, tips, and insights to help you grow as a creator
             </p>
           </motion.div>
         </div>
       </section>
 
-      <div className="max-w-7xl mx-auto px-6 py-12">
+      <div className="mx-auto max-w-7xl px-6 py-12">
         {/* Filters */}
         <Card className="mb-8">
           <CardContent className="pt-6">
             <div className="space-y-4">
               {/* Search */}
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
+                <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 transform text-muted-foreground" />
                 <Input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search blog posts..."
-                  className="pl-10 bg-background"
+                  className="bg-background pl-10"
                 />
               </div>
 
               {/* Category Filter */}
               <div className="flex items-center gap-4">
-                <Select 
-                  value={selectedCategory || "all"} 
+                <Select
+                  value={selectedCategory || "all"}
                   onValueChange={(v) => setSelectedCategory(v === "all" ? undefined : v)}
                 >
-                  <SelectTrigger className="bg-background w-[200px]">
+                  <SelectTrigger className="w-[200px] bg-background">
                     <SelectValue placeholder="All Categories" />
                   </SelectTrigger>
                   <SelectContent className="bg-white dark:bg-black">
                     <SelectItem value="all">All Categories</SelectItem>
-                    {categories.map((category) => (
+                    {categories.map((category: any) => (
                       <SelectItem key={category.name} value={category.name}>
                         {category.name} ({category.count})
                       </SelectItem>
@@ -163,10 +153,10 @@ export default function BlogPage() {
             transition={{ duration: 0.4 }}
             className="mb-12"
           >
-            <Card className="overflow-hidden hover:shadow-xl transition-all duration-300">
-              <div className="grid md:grid-cols-2 gap-0">
+            <Card className="overflow-hidden transition-all duration-300 hover:shadow-xl">
+              <div className="grid gap-0 md:grid-cols-2">
                 {/* Featured Image */}
-                <div className="relative h-64 md:h-full bg-gradient-to-br from-purple-500/20 to-pink-500/20">
+                <div className="relative h-64 bg-gradient-to-br from-purple-500/20 to-pink-500/20 md:h-full">
                   {featuredPost.coverImage ? (
                     <Image
                       src={featuredPost.coverImage}
@@ -175,38 +165,36 @@ export default function BlogPage() {
                       className="object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <BookOpen className="w-24 h-24 text-muted-foreground/30" />
+                    <div className="flex h-full w-full items-center justify-center">
+                      <BookOpen className="h-24 w-24 text-muted-foreground/30" />
                     </div>
                   )}
-                  <div className="absolute top-4 left-4">
-                    <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold">
-                      <Sparkles className="w-3 h-3 mr-1" />
+                  <div className="absolute left-4 top-4">
+                    <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 font-semibold text-white">
+                      <Sparkles className="mr-1 h-3 w-3" />
                       Featured
                     </Badge>
                   </div>
                 </div>
 
                 {/* Content */}
-                <CardContent className="p-8 flex flex-col justify-center">
+                <CardContent className="flex flex-col justify-center p-8">
                   <div className="space-y-4">
                     {featuredPost.category && (
                       <Badge variant="secondary">{featuredPost.category}</Badge>
                     )}
-                    
+
                     <h2 className="text-3xl font-bold">
-                      <Link 
+                      <Link
                         href={`/blog/${featuredPost.slug}`}
-                        className="hover:text-purple-500 transition-colors"
+                        className="transition-colors hover:text-purple-500"
                       >
                         {featuredPost.title}
                       </Link>
                     </h2>
-                    
+
                     {featuredPost.excerpt && (
-                      <p className="text-lg text-muted-foreground">
-                        {featuredPost.excerpt}
-                      </p>
+                      <p className="text-lg text-muted-foreground">{featuredPost.excerpt}</p>
                     )}
 
                     {/* Meta */}
@@ -214,7 +202,7 @@ export default function BlogPage() {
                       {featuredPost.authorName && (
                         <div className="flex items-center gap-2">
                           {featuredPost.authorAvatar && (
-                            <div className="relative w-6 h-6 rounded-full overflow-hidden">
+                            <div className="relative h-6 w-6 overflow-hidden rounded-full">
                               <Image
                                 src={featuredPost.authorAvatar}
                                 alt={featuredPost.authorName}
@@ -228,13 +216,13 @@ export default function BlogPage() {
                       )}
                       {featuredPost.publishedAt && (
                         <div className="flex items-center gap-1">
-                          <Calendar className="w-4 h-4" />
+                          <Calendar className="h-4 w-4" />
                           <span>{format(featuredPost.publishedAt, "MMM d, yyyy")}</span>
                         </div>
                       )}
                       {featuredPost.readTimeMinutes && (
                         <div className="flex items-center gap-1">
-                          <Clock className="w-4 h-4" />
+                          <Clock className="h-4 w-4" />
                           <span>{featuredPost.readTimeMinutes} min read</span>
                         </div>
                       )}
@@ -243,7 +231,7 @@ export default function BlogPage() {
                     <Button asChild className="w-fit">
                       <Link href={`/blog/${featuredPost.slug}`}>
                         Read Article
-                        <ArrowRight className="w-4 h-4 ml-2" />
+                        <ArrowRight className="ml-2 h-4 w-4" />
                       </Link>
                     </Button>
                   </div>
@@ -255,32 +243,32 @@ export default function BlogPage() {
 
         {/* Regular Posts Grid */}
         {regularPosts.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {regularPosts.map((post, index) => (
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {regularPosts.map((post: any, index: number) => (
               <motion.div
                 key={post._id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: index * 0.05 }}
               >
-                <Card className="group hover:shadow-lg transition-all duration-300 overflow-hidden h-full flex flex-col">
+                <Card className="group flex h-full flex-col overflow-hidden transition-all duration-300 hover:shadow-lg">
                   {/* Image */}
-                  <div className="relative h-48 bg-gradient-to-br from-blue-500/10 to-purple-500/10 overflow-hidden">
+                  <div className="relative h-48 overflow-hidden bg-gradient-to-br from-blue-500/10 to-purple-500/10">
                     {post.coverImage ? (
                       <Image
                         src={post.coverImage}
                         alt={post.title}
                         fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="object-cover transition-transform duration-300 group-hover:scale-105"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <BookOpen className="w-16 h-16 text-muted-foreground/30" />
+                      <div className="flex h-full w-full items-center justify-center">
+                        <BookOpen className="h-16 w-16 text-muted-foreground/30" />
                       </div>
                     )}
-                    
+
                     {post.category && (
-                      <div className="absolute top-3 left-3">
+                      <div className="absolute left-3 top-3">
                         <Badge variant="secondary" className="bg-white dark:bg-black">
                           {post.category}
                         </Badge>
@@ -288,27 +276,25 @@ export default function BlogPage() {
                     )}
                   </div>
 
-                  <CardContent className="p-6 flex flex-col flex-1">
+                  <CardContent className="flex flex-1 flex-col p-6">
                     {/* Title */}
-                    <h3 className="text-xl font-bold mb-2 group-hover:text-purple-500 transition-colors line-clamp-2">
-                      <Link href={`/blog/${post.slug}`}>
-                        {post.title}
-                      </Link>
+                    <h3 className="mb-2 line-clamp-2 text-xl font-bold transition-colors group-hover:text-purple-500">
+                      <Link href={`/blog/${post.slug}`}>{post.title}</Link>
                     </h3>
 
                     {/* Excerpt */}
                     {post.excerpt && (
-                      <p className="text-sm text-muted-foreground line-clamp-3 mb-4 flex-1">
+                      <p className="mb-4 line-clamp-3 flex-1 text-sm text-muted-foreground">
                         {post.excerpt}
                       </p>
                     )}
 
                     {/* Meta */}
-                    <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground pt-4 border-t mt-auto">
+                    <div className="mt-auto flex flex-wrap items-center gap-3 border-t pt-4 text-xs text-muted-foreground">
                       {post.authorName && (
                         <div className="flex items-center gap-1">
                           {post.authorAvatar && (
-                            <div className="relative w-5 h-5 rounded-full overflow-hidden">
+                            <div className="relative h-5 w-5 overflow-hidden rounded-full">
                               <Image
                                 src={post.authorAvatar}
                                 alt={post.authorName}
@@ -322,13 +308,13 @@ export default function BlogPage() {
                       )}
                       {post.readTimeMinutes && (
                         <div className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
+                          <Clock className="h-3 w-3" />
                           <span>{post.readTimeMinutes} min</span>
                         </div>
                       )}
-                      {typeof post.views === 'number' && (
+                      {typeof post.views === "number" && (
                         <div className="flex items-center gap-1">
-                          <Eye className="w-3 h-3" />
+                          <Eye className="h-3 w-3" />
                           <span>{post.views}</span>
                         </div>
                       )}
@@ -341,8 +327,8 @@ export default function BlogPage() {
         ) : (
           <Card>
             <CardContent className="py-12 text-center">
-              <BookOpen className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-2">No posts found</h3>
+              <BookOpen className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
+              <h3 className="mb-2 text-xl font-semibold">No posts found</h3>
               <p className="text-muted-foreground">
                 {searchQuery || selectedCategory
                   ? "Try adjusting your filters"
@@ -355,4 +341,3 @@ export default function BlogPage() {
     </div>
   );
 }
-

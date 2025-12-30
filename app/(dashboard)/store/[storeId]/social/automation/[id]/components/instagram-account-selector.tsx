@@ -4,7 +4,13 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Instagram } from "lucide-react";
 
@@ -14,17 +20,18 @@ interface InstagramAccountSelectorProps {
   onAccountSelect: (accountId: string) => void;
 }
 
-export function InstagramAccountSelector({ 
-  storeId, 
-  selectedAccountId, 
-  onAccountSelect 
+export function InstagramAccountSelector({
+  storeId,
+  selectedAccountId,
+  onAccountSelect,
 }: InstagramAccountSelectorProps) {
   // Get all Instagram accounts for this store
   const socialAccounts = useQuery(api.socialMedia.getSocialAccounts, { storeId });
-  
-  const instagramAccounts = socialAccounts?.filter(
-    (account: any) => account.platform === "instagram" && account.isConnected
-  ) || [];
+
+  const instagramAccounts =
+    socialAccounts?.filter(
+      (account: any) => account.platform === "instagram" && account.isConnected
+    ) || [];
 
   // Don't show selector if only one account
   if (instagramAccounts.length <= 1) {
@@ -32,10 +39,10 @@ export function InstagramAccountSelector({
   }
 
   return (
-    <Card className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950 border-purple-200 dark:border-purple-800">
+    <Card className="border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50 dark:border-purple-800 dark:from-purple-950 dark:to-pink-950">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center gap-2">
-          <Instagram className="w-5 h-5 text-purple-600" />
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Instagram className="h-5 w-5 text-purple-600" />
           Instagram Account Selection
         </CardTitle>
       </CardHeader>
@@ -52,14 +59,14 @@ export function InstagramAccountSelector({
               {instagramAccounts.map((account: any) => (
                 <SelectItem key={account._id} value={account._id}>
                   <div className="flex items-center gap-3">
-                    <img 
-                      src={account.profileImageUrl} 
+                    <img
+                      src={account.profileImageUrl}
                       alt={account.platformUsername}
-                      className="w-6 h-6 rounded-full"
+                      className="h-6 w-6 rounded-full"
                     />
                     <div>
                       <span className="font-medium">@{account.platformUsername}</span>
-                      <span className="text-xs text-muted-foreground ml-2">
+                      <span className="ml-2 text-xs text-muted-foreground">
                         {account.platformDisplayName}
                       </span>
                     </div>
@@ -70,25 +77,25 @@ export function InstagramAccountSelector({
           </Select>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {instagramAccounts.map((account: any) => (
-            <div 
+            <div
               key={account._id}
-              className={`p-3 rounded-lg border transition-all cursor-pointer ${
+              className={`cursor-pointer rounded-lg border p-3 transition-all ${
                 selectedAccountId === account._id
-                  ? "border-purple-300 dark:border-purple-700 bg-purple-100 dark:bg-purple-900/30"
+                  ? "border-purple-300 bg-purple-100 dark:border-purple-700 dark:bg-purple-900/30"
                   : "border-border hover:border-purple-200 dark:hover:border-purple-800"
               }`}
               onClick={() => onAccountSelect(account._id)}
             >
               <div className="flex items-center gap-3">
-                <img 
-                  src={account.profileImageUrl} 
+                <img
+                  src={account.profileImageUrl}
                   alt={account.platformUsername}
-                  className="w-8 h-8 rounded-full"
+                  className="h-8 w-8 rounded-full"
                 />
                 <div className="flex-1">
-                  <p className="font-medium text-sm">@{account.platformUsername}</p>
+                  <p className="text-sm font-medium">@{account.platformUsername}</p>
                   <p className="text-xs text-muted-foreground">{account.platformDisplayName}</p>
                 </div>
                 {selectedAccountId === account._id && (
@@ -100,9 +107,12 @@ export function InstagramAccountSelector({
         </div>
 
         {selectedAccountId && (
-          <div className="bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-3">
+          <div className="rounded-lg border border-green-200 bg-green-50 p-3 dark:border-green-800 dark:bg-green-950">
             <p className="text-sm text-green-800 dark:text-green-200">
-              ✅ This automation will use <strong>@{instagramAccounts.find(a => a._id === selectedAccountId)?.platformUsername}</strong> 
+              ✅ This automation will use{" "}
+              <strong>
+                @{instagramAccounts.find((a: any) => a._id === selectedAccountId)?.platformUsername}
+              </strong>
               for posting replies and sending messages.
             </p>
           </div>

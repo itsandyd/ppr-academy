@@ -37,41 +37,40 @@ import { motion } from "framer-motion";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useRouter } from "next/navigation";
 import { SignUpButton, useAuth } from "@clerk/nextjs";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export default function MarketplacePage() {
   const router = useRouter();
   const { isSignedIn } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  
+
   // Filter state
   const [searchTerm, setSearchTerm] = useState("");
-  const [contentType, setContentType] = useState<"all" | "courses" | "products" | "coaching" | "sample-packs" | "plugins" | "ableton-racks">("all");
+  const [contentType, setContentType] = useState<
+    "all" | "courses" | "products" | "coaching" | "sample-packs" | "plugins" | "ableton-racks"
+  >("all");
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
   const [selectedSpecificCategories, setSelectedSpecificCategories] = useState<string[]>([]); // Multi-select for effect/instrument categories
   const [categorySearchQuery, setCategorySearchQuery] = useState(""); // Search query for filtering categories
-  const [priceRange, setPriceRange] = useState<"free" | "under-50" | "50-100" | "over-100" | undefined>(undefined);
+  const [priceRange, setPriceRange] = useState<
+    "free" | "under-50" | "50-100" | "over-100" | undefined
+  >(undefined);
   const [sortBy, setSortBy] = useState<"newest" | "popular" | "price-low" | "price-high">("newest");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 18;
-  
+
   // Fetch data
   const marketplaceData = useQuery(api.marketplace.searchMarketplace, {
     searchTerm: searchTerm || undefined,
     contentType: contentType === "all" ? undefined : contentType,
     category: selectedCategory,
-    specificCategories: selectedSpecificCategories.length > 0 ? selectedSpecificCategories : undefined,
+    specificCategories:
+      selectedSpecificCategories.length > 0 ? selectedSpecificCategories : undefined,
     priceRange,
     sortBy,
     limit: ITEMS_PER_PAGE,
@@ -81,24 +80,21 @@ export default function MarketplacePage() {
   const categories = useQuery(api.marketplace.getMarketplaceCategories) || [];
   const creators = useQuery(api.marketplace.getAllCreators, { limit: 8 }) || [];
   const stats = useQuery(api.marketplace.getPlatformStats);
-  
+
   // Fetch plugin categories when plugins content type is selected
-  const pluginCategories = useQuery(
-    api.plugins.getPluginCategories,
-    contentType === "plugins" ? {} : "skip"
-  ) || [];
-  
+  const pluginCategories =
+    useQuery(api.plugins.getPluginCategories, contentType === "plugins" ? {} : "skip") || [];
+
   // Fetch plugin specific categories (Effect/Instrument/Studio Tool categories)
-  const specificCategories = useQuery(
-    api.plugins.getAllSpecificCategories,
-    contentType === "plugins" ? {} : "skip"
-  ) || [];
-  
+  const specificCategories =
+    useQuery(api.plugins.getAllSpecificCategories, contentType === "plugins" ? {} : "skip") || [];
+
   // Determine which categories to show based on content type
   // Deduplicate categories to avoid duplicate keys
-  const displayCategories = contentType === "plugins" 
-    ? Array.from(new Set(pluginCategories.map(cat => cat.name))) 
-    : categories;
+  const displayCategories =
+    contentType === "plugins"
+      ? Array.from(new Set(pluginCategories.map((cat: any) => cat.name)))
+      : categories;
 
   const results = marketplaceData?.results || [];
   const total = marketplaceData?.total || 0;
@@ -158,40 +154,52 @@ export default function MarketplacePage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation Bar - Same as homepage */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+      <nav className="fixed left-0 right-0 top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex h-16 items-center justify-between">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-chart-1 to-chart-2 rounded-lg flex items-center justify-center">
-                <Music className="w-5 h-5 text-primary-foreground" />
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-chart-1 to-chart-2">
+                <Music className="h-5 w-5 text-primary-foreground" />
               </div>
-              <span className="font-bold text-lg">PPR Academy</span>
+              <span className="text-lg font-bold">PPR Academy</span>
             </Link>
 
             {/* Navigation Links */}
-            <div className="hidden md:flex items-center gap-6">
-              <Link href="/marketplace" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            <div className="hidden items-center gap-6 md:flex">
+              <Link
+                href="/marketplace"
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
                 Marketplace
               </Link>
-              <Link href="/marketplace/samples" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+              <Link
+                href="/marketplace/samples"
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
                 Samples
               </Link>
-              <Link href="/marketplace/ableton-racks" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+              <Link
+                href="/marketplace/ableton-racks"
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
                 Ableton Racks
               </Link>
-              <Link href="/marketplace/creators" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+              <Link
+                href="/marketplace/creators"
+                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
                 Creators
               </Link>
             </div>
 
             {/* Desktop Auth Buttons */}
-            <div className="hidden md:flex items-center gap-3">
+            <div className="hidden items-center gap-3 md:flex">
               {isSignedIn ? (
                 <>
                   <Link href="/library">
                     <Button variant="ghost" size="sm">
-                      <BookOpen className="w-4 h-4 mr-2" />
+                      <BookOpen className="mr-2 h-4 w-4" />
                       Library
                     </Button>
                   </Link>
@@ -221,57 +229,57 @@ export default function MarketplacePage() {
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild className="md:hidden">
                 <Button variant="ghost" size="icon">
-                  <Menu className="w-5 h-5" />
+                  <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
               <SheetContent side="right" className="bg-white dark:bg-black">
                 <SheetHeader>
                   <SheetTitle className="flex items-center gap-2">
-                    <Music className="w-5 h-5 text-chart-1" />
+                    <Music className="h-5 w-5 text-chart-1" />
                     Menu
                   </SheetTitle>
                 </SheetHeader>
-                <div className="flex flex-col gap-4 mt-8">
+                <div className="mt-8 flex flex-col gap-4">
                   {/* Navigation Links */}
                   <Link href="/marketplace" onClick={() => setMobileMenuOpen(false)}>
                     <Button variant="ghost" className="w-full justify-start">
-                      <Search className="w-4 h-4 mr-3" />
+                      <Search className="mr-3 h-4 w-4" />
                       Marketplace
                     </Button>
                   </Link>
                   <Link href="/marketplace/samples" onClick={() => setMobileMenuOpen(false)}>
                     <Button variant="ghost" className="w-full justify-start">
-                      <Music className="w-4 h-4 mr-3" />
+                      <Music className="mr-3 h-4 w-4" />
                       Samples
                     </Button>
                   </Link>
                   <Link href="/marketplace/ableton-racks" onClick={() => setMobileMenuOpen(false)}>
                     <Button variant="ghost" className="w-full justify-start">
-                      <Plug className="w-4 h-4 mr-3" />
+                      <Plug className="mr-3 h-4 w-4" />
                       Ableton Racks
                     </Button>
                   </Link>
                   <Link href="/marketplace/creators" onClick={() => setMobileMenuOpen(false)}>
                     <Button variant="ghost" className="w-full justify-start">
-                      <Users className="w-4 h-4 mr-3" />
+                      <Users className="mr-3 h-4 w-4" />
                       Creators
                     </Button>
                   </Link>
-                  
-                  <div className="border-t border-border my-4"></div>
-                  
+
+                  <div className="my-4 border-t border-border"></div>
+
                   {/* Auth Actions */}
                   {isSignedIn ? (
                     <>
                       <Link href="/library" onClick={() => setMobileMenuOpen(false)}>
                         <Button variant="ghost" className="w-full justify-start">
-                          <BookOpen className="w-4 h-4 mr-3" />
+                          <BookOpen className="mr-3 h-4 w-4" />
                           My Library
                         </Button>
                       </Link>
                       <Link href="/home" onClick={() => setMobileMenuOpen(false)}>
                         <Button className="w-full bg-gradient-to-r from-chart-1 to-chart-2">
-                          <Store className="w-4 h-4 mr-2" />
+                          <Store className="mr-2 h-4 w-4" />
                           Dashboard
                         </Button>
                       </Link>
@@ -298,19 +306,20 @@ export default function MarketplacePage() {
       </nav>
 
       {/* Header Section */}
-      <section className="border-b border-border bg-card/50 backdrop-blur-sm pt-16">{/* pt-16 for navbar spacing */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center space-y-4 mb-8">
-            <motion.h1 
-              className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-chart-1 to-chart-4 bg-clip-text text-transparent"
+      <section className="border-b border-border bg-card/50 pt-16 backdrop-blur-sm">
+        {/* pt-16 for navbar spacing */}
+        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+          <div className="mb-8 space-y-4 text-center">
+            <motion.h1
+              className="bg-gradient-to-r from-chart-1 to-chart-4 bg-clip-text text-4xl font-bold text-transparent md:text-5xl"
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
             >
               Marketplace
             </motion.h1>
-            <motion.p 
-              className="text-xl text-muted-foreground max-w-2xl mx-auto"
+            <motion.p
+              className="mx-auto max-w-2xl text-xl text-muted-foreground"
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
@@ -321,31 +330,31 @@ export default function MarketplacePage() {
 
           {/* Platform Stats */}
           {stats && (
-            <motion.div 
-              className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"
+            <motion.div
+              className="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              <Card className="bg-card border-border">
+              <Card className="border-border bg-card">
                 <CardContent className="p-4 text-center">
                   <div className="text-2xl font-bold text-chart-1">{stats.totalCreators}+</div>
                   <div className="text-sm text-muted-foreground">Creators</div>
                 </CardContent>
               </Card>
-              <Card className="bg-card border-border">
+              <Card className="border-border bg-card">
                 <CardContent className="p-4 text-center">
                   <div className="text-2xl font-bold text-chart-2">{stats.totalCourses}+</div>
                   <div className="text-sm text-muted-foreground">Courses</div>
                 </CardContent>
               </Card>
-              <Card className="bg-card border-border">
+              <Card className="border-border bg-card">
                 <CardContent className="p-4 text-center">
                   <div className="text-2xl font-bold text-chart-3">{stats.totalProducts}+</div>
                   <div className="text-sm text-muted-foreground">Products</div>
                 </CardContent>
               </Card>
-              <Card className="bg-card border-border">
+              <Card className="border-border bg-card">
                 <CardContent className="p-4 text-center">
                   <div className="text-2xl font-bold text-chart-4">{stats.totalStudents}+</div>
                   <div className="text-sm text-muted-foreground">Students</div>
@@ -355,42 +364,37 @@ export default function MarketplacePage() {
           )}
 
           {/* Search Bar */}
-          <motion.div 
-            className="relative max-w-2xl mx-auto"
+          <motion.div
+            className="relative mx-auto max-w-2xl"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
           >
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="text"
               placeholder="Search courses, products, creators..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-12 pr-4 h-12 text-base bg-background border-border"
+              className="h-12 border-border bg-background pl-12 pr-4 text-base"
             />
           </motion.div>
         </div>
       </section>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
           {/* Filters Sidebar */}
-          <aside className="lg:col-span-1 space-y-6">
-            <Card className="bg-card border-border sticky top-4">
-              <CardContent className="p-6 space-y-6">
+          <aside className="space-y-6 lg:col-span-1">
+            <Card className="sticky top-4 border-border bg-card">
+              <CardContent className="space-y-6 p-6">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-lg flex items-center gap-2">
-                    <Filter className="w-5 h-5" />
+                  <h3 className="flex items-center gap-2 text-lg font-semibold">
+                    <Filter className="h-5 w-5" />
                     Filters
                   </h3>
                   {activeFiltersCount > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={clearFilters}
-                      className="text-xs"
-                    >
+                    <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs">
                       Clear ({activeFiltersCount})
                     </Button>
                   )}
@@ -405,36 +409,36 @@ export default function MarketplacePage() {
                         All
                       </TabsTrigger>
                       <TabsTrigger value="courses" className="text-xs">
-                        <BookOpen className="w-3 h-3 mr-1" />
+                        <BookOpen className="mr-1 h-3 w-3" />
                         Courses
                       </TabsTrigger>
                     </TabsList>
-                    <TabsList className="grid w-full grid-cols-2 mt-2 bg-white dark:bg-black">
+                    <TabsList className="mt-2 grid w-full grid-cols-2 bg-white dark:bg-black">
                       <TabsTrigger value="products" className="text-xs">
-                        <Package className="w-3 h-3 mr-1" />
+                        <Package className="mr-1 h-3 w-3" />
                         Products
                       </TabsTrigger>
                       <TabsTrigger value="coaching" className="text-xs">
-                        <Video className="w-3 h-3 mr-1" />
+                        <Video className="mr-1 h-3 w-3" />
                         Coaching
                       </TabsTrigger>
                     </TabsList>
-                    <TabsList className="grid w-full grid-cols-2 mt-2 bg-white dark:bg-black">
+                    <TabsList className="mt-2 grid w-full grid-cols-2 bg-white dark:bg-black">
                       <TabsTrigger value="plugins" className="text-xs">
-                        <Plug className="w-3 h-3 mr-1" />
+                        <Plug className="mr-1 h-3 w-3" />
                         Plugins
                       </TabsTrigger>
                       <TabsTrigger value="sample-packs" className="text-xs" asChild>
                         <Link href="/marketplace/samples">
-                          <Music className="w-3 h-3 mr-1" />
+                          <Music className="mr-1 h-3 w-3" />
                           Samples
                         </Link>
                       </TabsTrigger>
                     </TabsList>
-                    <TabsList className="grid w-full mt-2 bg-white dark:bg-black">
+                    <TabsList className="mt-2 grid w-full bg-white dark:bg-black">
                       <TabsTrigger value="ableton-racks" className="text-xs" asChild>
                         <Link href="/marketplace/ableton-racks">
-                          <Plug className="w-3 h-3 mr-1" />
+                          <Plug className="mr-1 h-3 w-3" />
                           Ableton Racks
                         </Link>
                       </TabsTrigger>
@@ -453,13 +457,17 @@ export default function MarketplacePage() {
                       onValueChange={(v) => setSelectedCategory(v === "all" ? undefined : v)}
                     >
                       <SelectTrigger className="bg-white dark:bg-black">
-                        <SelectValue placeholder={contentType === "plugins" ? "All Plugin Categories" : "All Categories"} />
+                        <SelectValue
+                          placeholder={
+                            contentType === "plugins" ? "All Plugin Categories" : "All Categories"
+                          }
+                        />
                       </SelectTrigger>
                       <SelectContent className="bg-white dark:bg-black">
                         <SelectItem value="all">
                           {contentType === "plugins" ? "All Plugin Categories" : "All Categories"}
                         </SelectItem>
-                        {displayCategories.map((cat) => (
+                        {displayCategories.map((cat: any) => (
                           <SelectItem key={cat} value={cat}>
                             {cat}
                           </SelectItem>
@@ -480,10 +488,10 @@ export default function MarketplacePage() {
                         </span>
                       )}
                     </label>
-                    <div className="text-xs text-muted-foreground mb-2">
+                    <div className="mb-2 text-xs text-muted-foreground">
                       Select specific categories like Reverb, Delay, Synth, Drums, etc.
                     </div>
-                    
+
                     {/* Search input for categories */}
                     <Input
                       type="text"
@@ -492,47 +500,57 @@ export default function MarketplacePage() {
                       onChange={(e) => setCategorySearchQuery(e.target.value)}
                       className="mb-2 bg-white dark:bg-black"
                     />
-                    
-                    <div className="max-h-48 overflow-y-auto border border-border rounded-lg p-3 space-y-2 bg-white dark:bg-black">
+
+                    <div className="max-h-48 space-y-2 overflow-y-auto rounded-lg border border-border bg-white p-3 dark:bg-black">
                       {specificCategories
-                        .filter((category: any) => 
+                        .filter((category: any) =>
                           category.name.toLowerCase().includes(categorySearchQuery.toLowerCase())
                         )
                         .map((category: any) => {
-                        const isSelected = selectedSpecificCategories.includes(category.name);
-                        return (
-                          <button
-                            key={category._id}
-                            onClick={() => {
-                              if (isSelected) {
-                                setSelectedSpecificCategories(prev => prev.filter(c => c !== category.name));
-                              } else {
-                                setSelectedSpecificCategories(prev => [...prev, category.name]);
-                              }
-                            }}
-                            className={`
-                              w-full text-left px-3 py-2 rounded-md text-sm transition-colors
-                              ${isSelected 
-                                ? 'bg-primary text-primary-foreground' 
-                                : 'hover:bg-accent hover:text-accent-foreground'
-                              }
-                            `}
-                          >
-                            <div className="flex items-center justify-between">
-                              <span>{category.name}</span>
-                              {isSelected && (
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                </svg>
-                              )}
-                            </div>
-                          </button>
-                        );
-                      })}
-                      {specificCategories.filter((category: any) => 
+                          const isSelected = selectedSpecificCategories.includes(category.name);
+                          return (
+                            <button
+                              key={category._id}
+                              onClick={() => {
+                                if (isSelected) {
+                                  setSelectedSpecificCategories((prev) =>
+                                    prev.filter((c) => c !== category.name)
+                                  );
+                                } else {
+                                  setSelectedSpecificCategories((prev) => [...prev, category.name]);
+                                }
+                              }}
+                              className={`w-full rounded-md px-3 py-2 text-left text-sm transition-colors ${
+                                isSelected
+                                  ? "bg-primary text-primary-foreground"
+                                  : "hover:bg-accent hover:text-accent-foreground"
+                              } `}
+                            >
+                              <div className="flex items-center justify-between">
+                                <span>{category.name}</span>
+                                {isSelected && (
+                                  <svg
+                                    className="h-4 w-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M5 13l4 4L19 7"
+                                    />
+                                  </svg>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      {specificCategories.filter((category: any) =>
                         category.name.toLowerCase().includes(categorySearchQuery.toLowerCase())
                       ).length === 0 && (
-                        <div className="text-center text-sm text-muted-foreground py-4">
+                        <div className="py-4 text-center text-sm text-muted-foreground">
                           No categories found
                         </div>
                       )}
@@ -555,7 +573,7 @@ export default function MarketplacePage() {
                   <label className="text-sm font-medium">Price Range</label>
                   <Select
                     value={priceRange || "all"}
-                    onValueChange={(v) => setPriceRange(v === "all" ? undefined : v as any)}
+                    onValueChange={(v) => setPriceRange(v === "all" ? undefined : (v as any))}
                   >
                     <SelectTrigger className="bg-white dark:bg-black">
                       <SelectValue placeholder="All Prices" />
@@ -571,32 +589,33 @@ export default function MarketplacePage() {
                 </div>
 
                 {/* Browse Creators */}
-                <div className="pt-6 border-t border-border">
-                  <h4 className="text-sm font-medium mb-3">Browse by Creator</h4>
+                <div className="border-t border-border pt-6">
+                  <h4 className="mb-3 text-sm font-medium">Browse by Creator</h4>
                   <div className="space-y-2">
-                    {creators.slice(0, 5).map((creator) => (
+                    {creators.slice(0, 5).map((creator: any) => (
                       <button
                         key={creator._id}
                         onClick={() => router.push(`/${creator.slug}`)}
-                        className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors text-left"
+                        className="flex w-full items-center gap-3 rounded-lg p-2 text-left transition-colors hover:bg-muted/50"
                       >
-                        <Avatar className="w-8 h-8 border border-border">
+                        <Avatar className="h-8 w-8 border border-border">
                           <AvatarImage src={creator.avatar} />
-                          <AvatarFallback className="text-xs bg-gradient-to-r from-chart-1 to-chart-2 text-primary-foreground">
+                          <AvatarFallback className="bg-gradient-to-r from-chart-1 to-chart-2 text-xs text-primary-foreground">
                             {creator.name.charAt(0)}
                           </AvatarFallback>
                         </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium truncate">{creator.name}</div>
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm font-medium">{creator.name}</div>
                           <div className="text-xs text-muted-foreground">
-                            {creator.totalProducts} {creator.totalProducts === 1 ? 'product' : 'products'}
+                            {creator.totalProducts}{" "}
+                            {creator.totalProducts === 1 ? "product" : "products"}
                           </div>
                         </div>
                       </button>
                     ))}
                     {creators.length > 5 && (
                       <Link href="/marketplace/creators">
-                        <Button variant="outline" size="sm" className="w-full mt-2">
+                        <Button variant="outline" size="sm" className="mt-2 w-full">
                           View All Creators
                         </Button>
                       </Link>
@@ -608,15 +627,15 @@ export default function MarketplacePage() {
           </aside>
 
           {/* Main Content */}
-          <div className="lg:col-span-3 space-y-6">
+          <div className="space-y-6 lg:col-span-3">
             {/* Toolbar */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
               <div>
                 <h2 className="text-2xl font-bold">
                   {searchTerm ? `Results for "${searchTerm}"` : "All Content"}
                 </h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {total} {total === 1 ? 'result' : 'results'} found
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {total} {total === 1 ? "result" : "results"} found
                 </p>
               </div>
 
@@ -624,7 +643,7 @@ export default function MarketplacePage() {
                 {/* Sort */}
                 <Select value={sortBy} onValueChange={(v: any) => setSortBy(v)}>
                   <SelectTrigger className="w-[180px] bg-white dark:bg-black">
-                    <TrendingUp className="w-4 h-4 mr-2" />
+                    <TrendingUp className="mr-2 h-4 w-4" />
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-white dark:bg-black">
@@ -636,14 +655,14 @@ export default function MarketplacePage() {
                 </Select>
 
                 {/* View Mode Toggle */}
-                <div className="flex border border-border rounded-lg">
+                <div className="flex rounded-lg border border-border">
                   <Button
                     variant={viewMode === "grid" ? "default" : "ghost"}
                     size="sm"
                     onClick={() => setViewMode("grid")}
                     className="rounded-r-none"
                   >
-                    <Grid3x3 className="w-4 h-4" />
+                    <Grid3x3 className="h-4 w-4" />
                   </Button>
                   <Button
                     variant={viewMode === "list" ? "default" : "ghost"}
@@ -651,7 +670,7 @@ export default function MarketplacePage() {
                     onClick={() => setViewMode("list")}
                     className="rounded-l-none"
                   >
-                    <List className="w-4 h-4" />
+                    <List className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
@@ -664,7 +683,7 @@ export default function MarketplacePage() {
                   <Badge variant="secondary" className="gap-2">
                     Search: {searchTerm}
                     <button onClick={() => setSearchTerm("")}>
-                      <X className="w-3 h-3" />
+                      <X className="h-3 w-3" />
                     </button>
                   </Badge>
                 )}
@@ -672,7 +691,7 @@ export default function MarketplacePage() {
                   <Badge variant="secondary" className="gap-2">
                     Type: {contentType}
                     <button onClick={() => setContentType("all")}>
-                      <X className="w-3 h-3" />
+                      <X className="h-3 w-3" />
                     </button>
                   </Badge>
                 )}
@@ -680,7 +699,7 @@ export default function MarketplacePage() {
                   <Badge variant="secondary" className="gap-2">
                     Category: {selectedCategory}
                     <button onClick={() => setSelectedCategory(undefined)}>
-                      <X className="w-3 h-3" />
+                      <X className="h-3 w-3" />
                     </button>
                   </Badge>
                 )}
@@ -688,7 +707,7 @@ export default function MarketplacePage() {
                   <Badge variant="secondary" className="gap-2">
                     Price: {priceRange.replace("-", " - ")}
                     <button onClick={() => setPriceRange(undefined)}>
-                      <X className="w-3 h-3" />
+                      <X className="h-3 w-3" />
                     </button>
                   </Badge>
                 )}
@@ -698,22 +717,22 @@ export default function MarketplacePage() {
             {/* Results Grid */}
             {results.length > 0 ? (
               <>
-                <MarketplaceGrid 
-                  content={results} 
+                <MarketplaceGrid
+                  content={results}
                   emptyMessage="No results found. Try adjusting your filters."
                 />
-                
+
                 {/* Pagination Controls */}
                 {totalPages > 1 && (
                   <div className="mt-8 flex items-center justify-center gap-2">
                     <Button
                       variant="outline"
-                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                       disabled={currentPage === 1}
                     >
                       Previous
                     </Button>
-                    
+
                     <div className="flex items-center gap-1">
                       {/* First page */}
                       {currentPage > 3 && (
@@ -728,17 +747,18 @@ export default function MarketplacePage() {
                           {currentPage > 4 && <span className="px-2">...</span>}
                         </>
                       )}
-                      
+
                       {/* Page numbers around current */}
                       {Array.from({ length: totalPages }, (_, i) => i + 1)
-                        .filter(page => 
-                          page === currentPage ||
-                          page === currentPage - 1 ||
-                          page === currentPage + 1 ||
-                          page === currentPage - 2 ||
-                          page === currentPage + 2
+                        .filter(
+                          (page) =>
+                            page === currentPage ||
+                            page === currentPage - 1 ||
+                            page === currentPage + 1 ||
+                            page === currentPage - 2 ||
+                            page === currentPage + 2
                         )
-                        .map(page => (
+                        .map((page) => (
                           <Button
                             key={page}
                             variant={currentPage === page ? "default" : "ghost"}
@@ -748,7 +768,7 @@ export default function MarketplacePage() {
                             {page}
                           </Button>
                         ))}
-                      
+
                       {/* Last page */}
                       {currentPage < totalPages - 2 && (
                         <>
@@ -763,10 +783,10 @@ export default function MarketplacePage() {
                         </>
                       )}
                     </div>
-                    
+
                     <Button
                       variant="outline"
-                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                       disabled={currentPage === totalPages}
                     >
                       Next
@@ -775,10 +795,10 @@ export default function MarketplacePage() {
                 )}
               </>
             ) : (
-              <Card className="p-12 text-center bg-card border-border">
-                <Package className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-xl font-semibold mb-2">No results found</h3>
-                <p className="text-muted-foreground mb-6">
+              <Card className="border-border bg-card p-12 text-center">
+                <Package className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
+                <h3 className="mb-2 text-xl font-semibold">No results found</h3>
+                <p className="mb-6 text-muted-foreground">
                   Try adjusting your filters or search terms
                 </p>
                 <Button onClick={clearFilters}>Clear All Filters</Button>
@@ -790,4 +810,3 @@ export default function MarketplacePage() {
     </div>
   );
 }
-

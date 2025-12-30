@@ -10,26 +10,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  StickyNote,
-  Plus,
-  Trash2,
-  Lock,
-  Unlock,
-  Edit2,
-  Check,
-  X,
-  Clock,
-} from "lucide-react";
+import { StickyNote, Plus, Trash2, Lock, Unlock, Edit2, Check, X, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface TimestampedNotesProps {
   courseId: Id<"courses">;
@@ -154,11 +139,9 @@ export function TimestampedNotes({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <StickyNote className="w-5 h-5 text-amber-600" aria-hidden="true" />
+          <StickyNote className="h-5 w-5 text-amber-600" aria-hidden="true" />
           <h3 className="font-semibold">Timestamped Notes</h3>
-          {notes && notes.length > 0 && (
-            <Badge variant="secondary">{notes.length}</Badge>
-          )}
+          {notes && notes.length > 0 && <Badge variant="secondary">{notes.length}</Badge>}
         </div>
 
         <div className="flex items-center gap-2">
@@ -171,7 +154,7 @@ export function TimestampedNotes({
                   onClick={() => setShowPublicNotes(!showPublicNotes)}
                   aria-label={showPublicNotes ? "Hide public notes" : "Show public notes"}
                 >
-                  {showPublicNotes ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                  {showPublicNotes ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
                 </Button>
               </TooltipTrigger>
               <TooltipContent className="bg-white dark:bg-black">
@@ -186,7 +169,7 @@ export function TimestampedNotes({
             disabled={isCreating}
             aria-label="Add new note"
           >
-            <Plus className="w-4 h-4 mr-2" aria-hidden="true" />
+            <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
             Add Note
           </Button>
         </div>
@@ -201,9 +184,9 @@ export function TimestampedNotes({
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.2 }}
           >
-            <Card className="p-4 space-y-3 bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900">
+            <Card className="space-y-3 border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/20">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Clock className="w-4 h-4" aria-hidden="true" />
+                <Clock className="h-4 w-4" aria-hidden="true" />
                 <span>At {formatTimestamp(currentTimestamp)}</span>
               </div>
               <Textarea
@@ -211,7 +194,7 @@ export function TimestampedNotes({
                 placeholder="Write your note here..."
                 value={newNoteContent}
                 onChange={(e) => setNewNoteContent(e.target.value)}
-                className="min-h-[80px] bg-white dark:bg-black resize-none"
+                className="min-h-[80px] resize-none bg-white dark:bg-black"
                 aria-label="Note content"
               />
               <div className="flex items-center justify-end gap-2">
@@ -224,7 +207,7 @@ export function TimestampedNotes({
                   }}
                   aria-label="Cancel"
                 >
-                  <X className="w-4 h-4 mr-2" aria-hidden="true" />
+                  <X className="mr-2 h-4 w-4" aria-hidden="true" />
                   Cancel
                 </Button>
                 <Button
@@ -233,7 +216,7 @@ export function TimestampedNotes({
                   disabled={!newNoteContent.trim()}
                   aria-label="Save note"
                 >
-                  <Check className="w-4 h-4 mr-2" aria-hidden="true" />
+                  <Check className="mr-2 h-4 w-4" aria-hidden="true" />
                   Save
                 </Button>
               </div>
@@ -246,7 +229,7 @@ export function TimestampedNotes({
       <div className="space-y-3">
         <AnimatePresence>
           {notes && notes.length > 0 ? (
-            notes.map((note) => (
+            notes.map((note: any) => (
               <motion.div
                 key={note._id}
                 initial={{ opacity: 0, y: -10 }}
@@ -254,12 +237,14 @@ export function TimestampedNotes({
                 exit={{ opacity: 0, x: -100 }}
                 transition={{ duration: 0.2 }}
               >
-                <Card className={`p-4 space-y-3 ${note.isOwner ? "bg-card" : "bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900"}`}>
+                <Card
+                  className={`space-y-3 p-4 ${note.isOwner ? "bg-card" : "border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/20"}`}
+                >
                   {/* Header */}
                   <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <div className="flex min-w-0 flex-1 items-center gap-2">
                       {!note.isOwner && (
-                        <Avatar className="w-6 h-6">
+                        <Avatar className="h-6 w-6">
                           <AvatarImage src={note.userAvatar} alt={note.userName || "User"} />
                           <AvatarFallback className="text-xs">
                             {note.userName?.charAt(0) || "?"}
@@ -269,15 +254,15 @@ export function TimestampedNotes({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-auto p-0 text-xs text-muted-foreground hover:text-primary font-mono"
+                        className="h-auto p-0 font-mono text-xs text-muted-foreground hover:text-primary"
                         onClick={() => onSeekTo?.(note.timestamp)}
                         aria-label={`Jump to ${formatTimestamp(note.timestamp)}`}
                       >
-                        <Clock className="w-3 h-3 mr-1" aria-hidden="true" />
+                        <Clock className="mr-1 h-3 w-3" aria-hidden="true" />
                         {formatTimestamp(note.timestamp)}
                       </Button>
                       {!note.isOwner && note.userName && (
-                        <span className="text-xs text-muted-foreground truncate">
+                        <span className="truncate text-xs text-muted-foreground">
                           by {note.userName}
                         </span>
                       )}
@@ -301,9 +286,9 @@ export function TimestampedNotes({
                                 aria-label={note.isPublic ? "Make private" : "Make public"}
                               >
                                 {note.isPublic ? (
-                                  <Unlock className="w-3.5 h-3.5" aria-hidden="true" />
+                                  <Unlock className="h-3.5 w-3.5" aria-hidden="true" />
                                 ) : (
-                                  <Lock className="w-3.5 h-3.5" aria-hidden="true" />
+                                  <Lock className="h-3.5 w-3.5" aria-hidden="true" />
                                 )}
                               </Button>
                             </TooltipTrigger>
@@ -323,7 +308,7 @@ export function TimestampedNotes({
                           }}
                           aria-label="Edit note"
                         >
-                          <Edit2 className="w-3.5 h-3.5" aria-hidden="true" />
+                          <Edit2 className="h-3.5 w-3.5" aria-hidden="true" />
                         </Button>
 
                         <Button
@@ -333,7 +318,7 @@ export function TimestampedNotes({
                           onClick={() => handleDeleteNote(note._id)}
                           aria-label="Delete note"
                         >
-                          <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+                          <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                         </Button>
                       </div>
                     )}
@@ -371,7 +356,7 @@ export function TimestampedNotes({
                       </div>
                     </div>
                   ) : (
-                    <p className="text-sm text-foreground whitespace-pre-wrap">{note.content}</p>
+                    <p className="whitespace-pre-wrap text-sm text-foreground">{note.content}</p>
                   )}
 
                   {/* Footer */}
@@ -382,8 +367,8 @@ export function TimestampedNotes({
               </motion.div>
             ))
           ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <StickyNote className="w-12 h-12 mx-auto mb-3 opacity-20" aria-hidden="true" />
+            <div className="py-8 text-center text-muted-foreground">
+              <StickyNote className="mx-auto mb-3 h-12 w-12 opacity-20" aria-hidden="true" />
               <p>No notes yet. Click "Add Note" to create your first note!</p>
             </div>
           )}
@@ -392,4 +377,3 @@ export function TimestampedNotes({
     </div>
   );
 }
-

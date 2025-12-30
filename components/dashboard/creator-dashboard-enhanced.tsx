@@ -10,19 +10,31 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  BookOpen, 
-  Users, 
-  TrendingUp, 
+import {
+  BookOpen,
+  Users,
+  TrendingUp,
   Plus,
   DollarSign,
   BarChart,
@@ -54,14 +66,18 @@ import {
   ChevronDown,
   Activity,
   Waves,
-  Share2
+  Share2,
 } from "lucide-react";
 
 // Hooks and components
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { features } from "@/lib/features";
-import { createCoachApplication, getUserCoachProfile, updateCoachApplication } from "@/app/actions/coaching-actions";
+import {
+  createCoachApplication,
+  getUserCoachProfile,
+  updateCoachApplication,
+} from "@/app/actions/coaching-actions";
 import CoachScheduleManager from "@/components/coach-schedule-manager";
 import { SocialScheduler } from "@/components/social-media/social-scheduler";
 
@@ -92,46 +108,39 @@ interface CreatorDashboardEnhancedProps {
   };
 }
 
-export function CreatorDashboardEnhanced({ 
-  legacyDashboardStats 
-}: CreatorDashboardEnhancedProps) {
+export function CreatorDashboardEnhanced({ legacyDashboardStats }: CreatorDashboardEnhancedProps) {
   const { user } = useUser();
   const { toast } = useToast();
-  
+
   // First, get the Convex user record from Clerk ID
-  const convexUser = useQuery(
-    api.users.getUserFromClerk,
-    user?.id ? { clerkId: user.id } : "skip"
-  );
+  const convexUser = useQuery(api.users.getUserFromClerk, user?.id ? { clerkId: user.id } : "skip");
 
   // Use the Convex user ID for all queries
   const convexUserId = convexUser?._id;
 
   // Fetch user's stores using Clerk user ID (stores use Clerk IDs)
-  const stores = useQuery(
-    api.stores.getStoresByUser,
-    user?.id ? { userId: user.id } : "skip"
-  );
-  
+  const stores = useQuery(api.stores.getStoresByUser, user?.id ? { userId: user.id } : "skip");
+
   // Get the first store ID (or use a fallback)
   const storeId = stores?.[0]?._id;
-  
+
   // Fetch data using Convex
   const courses = useQuery(api.courses.getCourses, {});
-  const digitalProducts = useQuery(api.digitalProducts.getProductsByUser, 
+  const digitalProducts = useQuery(
+    api.digitalProducts.getProductsByUser,
     convexUserId ? { userId: convexUserId } : "skip"
   );
-  
+
   // Combine products for unified display
   const products = React.useMemo(() => {
-    const transformedCourses = (courses || []).map(course => ({
+    const transformedCourses = (courses || []).map((course: any) => ({
       _id: course._id,
       title: course.title,
       description: course.description,
       price: course.price || 0,
       imageUrl: course.imageUrl,
       isPublished: course.isPublished,
-      type: 'course',
+      type: "course",
       slug: course.slug,
       category: course.category,
       downloadCount: 0,
@@ -139,16 +148,16 @@ export function CreatorDashboardEnhanced({
       storeId: (course as any).storeId, // Include storeId for proper routing
     }));
 
-    const transformedDigitalProducts = (digitalProducts || []).map(product => ({
+    const transformedDigitalProducts = (digitalProducts || []).map((product: any) => ({
       _id: product._id,
       title: product.title,
       description: product.description,
       price: product.price || 0,
       imageUrl: product.imageUrl,
       isPublished: product.isPublished,
-      type: 'digitalProduct',
+      type: "digitalProduct",
       slug: (product as any).slug || product._id,
-      category: (product as any).category || 'Digital',
+      category: (product as any).category || "Digital",
       downloadCount: (product as any).downloadCount || 0,
       rating: 4.5,
       storeId: (product as any).storeId, // Include storeId for proper routing
@@ -158,7 +167,7 @@ export function CreatorDashboardEnhanced({
   }, [courses, digitalProducts]);
 
   const isLoadingProducts = courses === undefined || digitalProducts === undefined;
-  
+
   // Enhanced state for mobile-first design
   const [activeTab, setActiveTab] = useState("overview");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -168,7 +177,7 @@ export function CreatorDashboardEnhanced({
   const [existingProfile, setExistingProfile] = useState<any>(null);
   const [isCreateProductDialogOpen, setIsCreateProductDialogOpen] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(true);
-  
+
   // Form states (unchanged from original)
   const [coachingForm, setCoachingForm] = useState({
     category: "",
@@ -195,57 +204,61 @@ export function CreatorDashboardEnhanced({
     draftProducts: products.filter((p: any) => !p.isPublished).length,
     totalRevenue: products.reduce((sum: number, p: any) => sum + (p.price || 0), 0),
     totalStudents: legacyDashboardStats?.totalStudents || 0,
-    courseCount: products.filter((p: any) => p.type === 'course').length,
-    coachingCount: products.filter((p: any) => p.type === 'coaching').length,
-    digitalProductCount: products.filter((p: any) => p.type === 'digitalProduct').length,
+    courseCount: products.filter((p: any) => p.type === "course").length,
+    coachingCount: products.filter((p: any) => p.type === "coaching").length,
+    digitalProductCount: products.filter((p: any) => p.type === "digitalProduct").length,
     // Music-specific metrics
-    samplePackCount: products.filter((p: any) => p.category?.includes('sample') || p.type === 'samplePack').length,
-    presetCount: products.filter((p: any) => p.category?.includes('preset') || p.type === 'preset').length,
+    samplePackCount: products.filter(
+      (p: any) => p.category?.includes("sample") || p.type === "samplePack"
+    ).length,
+    presetCount: products.filter((p: any) => p.category?.includes("preset") || p.type === "preset")
+      .length,
     totalDownloads: products.reduce((sum: number, p: any) => sum + (p.downloadCount || 0), 0),
-    averageRating: products.reduce((sum: number, p: any) => sum + (p.rating || 0), 0) / products.length || 0,
+    averageRating:
+      products.reduce((sum: number, p: any) => sum + (p.rating || 0), 0) / products.length || 0,
   };
 
   // Quick action items for music creators
   const quickActions = [
     {
-      id: 'upload-sample-pack',
-      title: 'Upload Sample Pack',
-      description: 'Share your beats and loops',
+      id: "upload-sample-pack",
+      title: "Upload Sample Pack",
+      description: "Share your beats and loops",
       icon: Music,
-      color: 'from-purple-500 to-pink-500',
-      action: () => setIsCreateProductDialogOpen(true)
+      color: "from-purple-500 to-pink-500",
+      action: () => setIsCreateProductDialogOpen(true),
     },
     {
-      id: 'create-preset',
-      title: 'Create Preset',
-      description: 'Upload synth presets',
+      id: "create-preset",
+      title: "Create Preset",
+      description: "Upload synth presets",
       icon: Waves,
-      color: 'from-blue-500 to-cyan-500',
-      action: () => setIsCreateProductDialogOpen(true)
+      color: "from-blue-500 to-cyan-500",
+      action: () => setIsCreateProductDialogOpen(true),
     },
     {
-      id: 'new-course',
-      title: 'New Course',
-      description: 'Teach production skills',
+      id: "new-course",
+      title: "New Course",
+      description: "Teach production skills",
       icon: BookOpen,
-      color: 'from-green-500 to-emerald-500',
-      action: () => window.location.href = '/create-course'
+      color: "from-green-500 to-emerald-500",
+      action: () => (window.location.href = "/create-course"),
     },
     {
-      id: 'coaching-session',
-      title: 'Offer Coaching',
-      description: '1-on-1 mentoring',
+      id: "coaching-session",
+      title: "Offer Coaching",
+      description: "1-on-1 mentoring",
       icon: Headphones,
-      color: 'from-orange-500 to-red-500',
-      action: () => handleOpenCoachingDialog()
-    }
+      color: "from-orange-500 to-red-500",
+      action: () => handleOpenCoachingDialog(),
+    },
   ];
 
   // Handle functions (simplified for demo)
   const handleCreateProduct = async () => {
     try {
       // If creating a course, redirect to the full course creation flow
-      if (newProductForm.type === 'course') {
+      if (newProductForm.type === "course") {
         // Get the user's store ID
         const storeId = user?.publicMetadata?.storeId as string;
         if (!storeId) {
@@ -266,7 +279,7 @@ export function CreatorDashboardEnhanced({
         title: "Product Created",
         description: `${newProductForm.type} "${newProductForm.title}" will be created.`,
       });
-      
+
       setIsCreateProductDialogOpen(false);
       setNewProductForm({
         type: "course",
@@ -284,22 +297,27 @@ export function CreatorDashboardEnhanced({
   };
 
   const handleEditProduct = (product: Product) => {
-    if (product.type === 'course') {
+    if (product.type === "course") {
       // For courses, check if the storeId is valid or if it's actually a user ID
       let courseStoreId = product.storeId;
-      
-      // If the storeId looks like a user ID (starts with "ks" - Convex user ID pattern), 
+
+      // If the storeId looks like a user ID (starts with "ks" - Convex user ID pattern),
       // use the user's actual store ID instead
-      if (courseStoreId && courseStoreId.startsWith('ks7')) {
-        console.log('⚠️ Course has invalid storeId (user ID):', courseStoreId, 'using user store:', storeId);
+      if (courseStoreId && courseStoreId.startsWith("ks7")) {
+        console.log(
+          "⚠️ Course has invalid storeId (user ID):",
+          courseStoreId,
+          "using user store:",
+          storeId
+        );
         courseStoreId = storeId; // Use the user's actual store ID
       }
-      
+
       // Fallback to user's store or setup
-      courseStoreId = courseStoreId || storeId || 'setup';
-      
+      courseStoreId = courseStoreId || storeId || "setup";
+
       const editUrl = `/store/${courseStoreId}/course/create?edit=${product._id}`;
-      console.log('🔗 Editing course with URL:', editUrl);
+      console.log("🔗 Editing course with URL:", editUrl);
       window.location.href = editUrl;
     } else {
       // Route to digital product editing
@@ -334,10 +352,10 @@ export function CreatorDashboardEnhanced({
   const handleOpenCoachingDialog = async () => {
     setIsLoadingProfile(true);
     setIsCoachingDialogOpen(true);
-    
+
     try {
       const result = await getUserCoachProfile();
-      
+
       if (result.success && result.profile) {
         setExistingProfile(result.profile);
         setCoachingForm({
@@ -371,7 +389,12 @@ export function CreatorDashboardEnhanced({
   };
 
   const handleSubmitCoaching = async () => {
-    if (!coachingForm.category || !coachingForm.title || !coachingForm.description || !coachingForm.basePrice) {
+    if (
+      !coachingForm.category ||
+      !coachingForm.title ||
+      !coachingForm.description ||
+      !coachingForm.basePrice
+    ) {
       toast({
         title: "Missing Required Fields",
         description: "Please fill in specialty, title, description, and hourly rate.",
@@ -385,7 +408,7 @@ export function CreatorDashboardEnhanced({
     try {
       const applicationData = {
         ...coachingForm,
-        basePrice: Number(coachingForm.basePrice)
+        basePrice: Number(coachingForm.basePrice),
       };
 
       let result;
@@ -398,7 +421,7 @@ export function CreatorDashboardEnhanced({
       if (result.success) {
         toast({
           title: existingProfile ? "Profile Updated" : "Application Submitted",
-          description: existingProfile 
+          description: existingProfile
             ? "Your coaching profile has been updated successfully."
             : "Your coaching application has been submitted for review.",
         });
@@ -430,15 +453,15 @@ export function CreatorDashboardEnhanced({
       }
     };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   if (!user) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex min-h-screen items-center justify-center">
         <div className="flex items-center gap-3">
-          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
           <span className="text-lg">Loading your studio...</span>
         </div>
       </div>
@@ -448,30 +471,30 @@ export function CreatorDashboardEnhanced({
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
       {/* Mobile Header */}
-      <div className="lg:hidden bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-50">
+      <div className="sticky top-0 z-50 border-b border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800 lg:hidden">
         <div className="flex items-center justify-between px-4 py-3">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-              <Music className="w-4 h-4 text-white" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-pink-500">
+              <Music className="h-4 w-4 text-white" />
             </div>
             <div>
               <h1 className="font-semibold text-slate-900 dark:text-slate-100">
-                {user.firstName || 'Creator'}
+                {user.firstName || "Creator"}
               </h1>
               <p className="text-xs text-slate-500">Music Studio</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" className="relative">
-              <Bell className="w-4 h-4" />
-              <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+              <Bell className="h-4 w-4" />
+              <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-red-500"></span>
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             >
-              {isMobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+              {isMobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
             </Button>
           </div>
         </div>
@@ -479,15 +502,15 @@ export function CreatorDashboardEnhanced({
 
       <div className="flex">
         {/* Desktop Sidebar */}
-        <div className="hidden lg:block w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 min-h-screen">
+        <div className="hidden min-h-screen w-64 border-r border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-800 lg:block">
           <div className="p-6">
-            <div className="flex items-center gap-3 mb-8">
-              <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
-                <Music className="w-5 h-5 text-white" />
+            <div className="mb-8 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-purple-500 to-pink-500">
+                <Music className="h-5 w-5 text-white" />
               </div>
               <div>
                 <h1 className="font-bold text-slate-900 dark:text-slate-100">
-                  {user.firstName || 'Creator'} Studio
+                  {user.firstName || "Creator"} Studio
                 </h1>
                 <p className="text-sm text-slate-500">Music Dashboard</p>
               </div>
@@ -495,22 +518,22 @@ export function CreatorDashboardEnhanced({
 
             <nav className="space-y-2">
               {[
-                { id: 'overview', label: 'Overview', icon: BarChart },
-                { id: 'products', label: 'My Music', icon: Music },
-                { id: 'analytics', label: 'Analytics', icon: TrendingUp },
-                { id: 'coaching', label: 'Coaching', icon: Headphones },
-                { id: 'social', label: 'Social Media', icon: Share2 },
+                { id: "overview", label: "Overview", icon: BarChart },
+                { id: "products", label: "My Music", icon: Music },
+                { id: "analytics", label: "Analytics", icon: TrendingUp },
+                { id: "coaching", label: "Coaching", icon: Headphones },
+                { id: "social", label: "Social Media", icon: Share2 },
               ].map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
+                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors ${
                     activeTab === tab.id
-                      ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                      ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
+                      : "text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700"
                   }`}
                 >
-                  <tab.icon className="w-4 h-4" />
+                  <tab.icon className="h-4 w-4" />
                   {tab.label}
                 </button>
               ))}
@@ -525,23 +548,23 @@ export function CreatorDashboardEnhanced({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="lg:hidden fixed inset-0 z-40 bg-black/50"
+              className="fixed inset-0 z-40 bg-black/50 lg:hidden"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               <motion.div
                 initial={{ x: -300 }}
                 animate={{ x: 0 }}
                 exit={{ x: -300 }}
-                className="w-64 bg-white dark:bg-slate-800 min-h-screen p-6"
+                className="min-h-screen w-64 bg-white p-6 dark:bg-slate-800"
                 onClick={(e) => e.stopPropagation()}
               >
                 <nav className="space-y-2">
                   {[
-                    { id: 'overview', label: 'Overview', icon: BarChart },
-                    { id: 'products', label: 'My Music', icon: Music },
-                    { id: 'analytics', label: 'Analytics', icon: TrendingUp },
-                    { id: 'coaching', label: 'Coaching', icon: Headphones },
-                    { id: 'social', label: 'Social Media', icon: Share2 },
+                    { id: "overview", label: "Overview", icon: BarChart },
+                    { id: "products", label: "My Music", icon: Music },
+                    { id: "analytics", label: "Analytics", icon: TrendingUp },
+                    { id: "coaching", label: "Coaching", icon: Headphones },
+                    { id: "social", label: "Social Media", icon: Share2 },
                   ].map((tab) => (
                     <button
                       key={tab.id}
@@ -549,13 +572,13 @@ export function CreatorDashboardEnhanced({
                         setActiveTab(tab.id);
                         setIsMobileMenuOpen(false);
                       }}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
+                      className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors ${
                         activeTab === tab.id
-                          ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
-                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                          ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
+                          : "text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700"
                       }`}
                     >
-                      <tab.icon className="w-4 h-4" />
+                      <tab.icon className="h-4 w-4" />
                       {tab.label}
                     </button>
                   ))}
@@ -568,9 +591,10 @@ export function CreatorDashboardEnhanced({
         {/* Main Content */}
         <div className="flex-1 p-4 lg:p-8">
           {/* Welcome Header - Hidden on mobile, shown in sidebar */}
-          <div className="hidden lg:block mb-8">
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100 mb-2">
-              Welcome back, {user.firstName || user.primaryEmailAddress?.emailAddress?.split('@')[0]}! 🎵
+          <div className="mb-8 hidden lg:block">
+            <h1 className="mb-2 text-3xl font-bold text-slate-900 dark:text-slate-100">
+              Welcome back,{" "}
+              {user.firstName || user.primaryEmailAddress?.emailAddress?.split("@")[0]}! 🎵
             </h1>
             <p className="text-slate-600 dark:text-slate-400">
               Ready to create some amazing music content today?
@@ -586,11 +610,11 @@ export function CreatorDashboardEnhanced({
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.2 }}
             >
-              {activeTab === 'overview' && (
+              {activeTab === "overview" && (
                 <div className="space-y-6">
                   {/* Quick Actions - Collapsible on mobile */}
-                  <div className="bg-white dark:bg-slate-800 rounded-xl p-4 lg:p-6 border border-slate-200 dark:border-slate-700">
-                    <div className="flex items-center justify-between mb-4">
+                  <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800 lg:p-6">
+                    <div className="mb-4 flex items-center justify-between">
                       <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                         Quick Actions
                       </h2>
@@ -600,17 +624,21 @@ export function CreatorDashboardEnhanced({
                         onClick={() => setShowQuickActions(!showQuickActions)}
                         className="lg:hidden"
                       >
-                        {showQuickActions ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        {showQuickActions ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )}
                       </Button>
                     </div>
-                    
+
                     <AnimatePresence>
                       {showQuickActions && (
                         <motion.div
                           initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: 'auto', opacity: 1 }}
+                          animate={{ height: "auto", opacity: 1 }}
                           exit={{ height: 0, opacity: 0 }}
-                          className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4"
+                          className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4"
                         >
                           {quickActions.map((action, index) => (
                             <motion.button
@@ -621,14 +649,18 @@ export function CreatorDashboardEnhanced({
                               onClick={action.action}
                               className="group relative overflow-hidden rounded-xl p-4 text-left transition-all hover:scale-105"
                             >
-                              <div className={`absolute inset-0 bg-gradient-to-br ${action.color} opacity-10 group-hover:opacity-20 transition-opacity`}></div>
-                              <div className={`w-8 h-8 lg:w-10 lg:h-10 rounded-lg bg-gradient-to-br ${action.color} flex items-center justify-center mb-3`}>
-                                <action.icon className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
+                              <div
+                                className={`absolute inset-0 bg-gradient-to-br ${action.color} opacity-10 transition-opacity group-hover:opacity-20`}
+                              ></div>
+                              <div
+                                className={`h-8 w-8 rounded-lg bg-gradient-to-br lg:h-10 lg:w-10 ${action.color} mb-3 flex items-center justify-center`}
+                              >
+                                <action.icon className="h-4 w-4 text-white lg:h-5 lg:w-5" />
                               </div>
-                              <h3 className="font-medium text-slate-900 dark:text-slate-100 text-sm lg:text-base mb-1">
+                              <h3 className="mb-1 text-sm font-medium text-slate-900 dark:text-slate-100 lg:text-base">
                                 {action.title}
                               </h3>
-                              <p className="text-xs lg:text-sm text-slate-500 dark:text-slate-400">
+                              <p className="text-xs text-slate-500 dark:text-slate-400 lg:text-sm">
                                 {action.description}
                               </p>
                             </motion.button>
@@ -639,7 +671,7 @@ export function CreatorDashboardEnhanced({
                   </div>
 
                   {/* Stats Overview - Enhanced for music creators */}
-                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
                     <Card className="border-slate-200 dark:border-slate-700">
                       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-400">
@@ -668,9 +700,7 @@ export function CreatorDashboardEnhanced({
                         <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
                           {dashboardMetrics.totalDownloads.toLocaleString()}
                         </div>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          All time
-                        </p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">All time</p>
                       </CardContent>
                     </Card>
 
@@ -712,43 +742,47 @@ export function CreatorDashboardEnhanced({
                   {/* Content Mix */}
                   <Card className="border-slate-200 dark:border-slate-700">
                     <CardHeader>
-                      <CardTitle className="text-slate-900 dark:text-slate-100">Content Breakdown</CardTitle>
+                      <CardTitle className="text-slate-900 dark:text-slate-100">
+                        Content Breakdown
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div className="text-center p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                          <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center mx-auto mb-2">
-                            <Music className="w-4 h-4 text-white" />
+                      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+                        <div className="rounded-lg bg-purple-50 p-4 text-center dark:bg-purple-900/20">
+                          <div className="mx-auto mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-purple-500">
+                            <Music className="h-4 w-4 text-white" />
                           </div>
                           <div className="text-2xl font-bold text-purple-700 dark:text-purple-300">
                             {dashboardMetrics.samplePackCount}
                           </div>
-                          <p className="text-sm text-purple-600 dark:text-purple-400">Sample Packs</p>
+                          <p className="text-sm text-purple-600 dark:text-purple-400">
+                            Sample Packs
+                          </p>
                         </div>
-                        
-                        <div className="text-center p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                          <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center mx-auto mb-2">
-                            <Waves className="w-4 h-4 text-white" />
+
+                        <div className="rounded-lg bg-blue-50 p-4 text-center dark:bg-blue-900/20">
+                          <div className="mx-auto mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500">
+                            <Waves className="h-4 w-4 text-white" />
                           </div>
                           <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">
                             {dashboardMetrics.presetCount}
                           </div>
                           <p className="text-sm text-blue-600 dark:text-blue-400">Presets</p>
                         </div>
-                        
-                        <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                          <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center mx-auto mb-2">
-                            <BookOpen className="w-4 h-4 text-white" />
+
+                        <div className="rounded-lg bg-green-50 p-4 text-center dark:bg-green-900/20">
+                          <div className="mx-auto mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-green-500">
+                            <BookOpen className="h-4 w-4 text-white" />
                           </div>
                           <div className="text-2xl font-bold text-green-700 dark:text-green-300">
                             {dashboardMetrics.courseCount}
                           </div>
                           <p className="text-sm text-green-600 dark:text-green-400">Courses</p>
                         </div>
-                        
-                        <div className="text-center p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
-                          <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center mx-auto mb-2">
-                            <Headphones className="w-4 h-4 text-white" />
+
+                        <div className="rounded-lg bg-orange-50 p-4 text-center dark:bg-orange-900/20">
+                          <div className="mx-auto mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500">
+                            <Headphones className="h-4 w-4 text-white" />
                           </div>
                           <div className="text-2xl font-bold text-orange-700 dark:text-orange-300">
                             {dashboardMetrics.coachingCount}
@@ -761,20 +795,23 @@ export function CreatorDashboardEnhanced({
                 </div>
               )}
 
-              {activeTab === 'products' && (
+              {activeTab === "products" && (
                 <div className="space-y-6">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
                     <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
                       Your Music Library
                     </h2>
                     <div className="flex flex-wrap gap-2">
-                      <Button onClick={() => setIsCreateProductDialogOpen(true)} className="bg-purple-500 hover:bg-purple-600">
-                        <Plus className="w-4 h-4 mr-2" />
+                      <Button
+                        onClick={() => setIsCreateProductDialogOpen(true)}
+                        className="bg-purple-500 hover:bg-purple-600"
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
                         New Release
                       </Button>
-                      <Link href={`/store/${storeId || 'setup'}/course/create`}>
+                      <Link href={`/store/${storeId || "setup"}/course/create`}>
                         <Button variant="outline">
-                          <BookOpen className="w-4 h-4 mr-2" />
+                          <BookOpen className="mr-2 h-4 w-4" />
                           Create Course
                         </Button>
                       </Link>
@@ -782,57 +819,92 @@ export function CreatorDashboardEnhanced({
                   </div>
 
                   {isLoadingProducts ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                       {[...Array(6)].map((_, i) => (
-                        <div key={i} className="bg-white dark:bg-slate-800 rounded-xl p-6 border border-slate-200 dark:border-slate-700">
-                          <div className="w-full h-32 bg-slate-200 dark:bg-slate-700 rounded-lg mb-4 animate-pulse"></div>
-                          <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded mb-2 animate-pulse"></div>
-                          <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-2/3 animate-pulse"></div>
+                        <div
+                          key={i}
+                          className="rounded-xl border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-800"
+                        >
+                          <div className="mb-4 h-32 w-full animate-pulse rounded-lg bg-slate-200 dark:bg-slate-700"></div>
+                          <div className="mb-2 h-4 animate-pulse rounded bg-slate-200 dark:bg-slate-700"></div>
+                          <div className="h-3 w-2/3 animate-pulse rounded bg-slate-200 dark:bg-slate-700"></div>
                         </div>
                       ))}
                     </div>
                   ) : products.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                       {products.map((product) => (
-                        <Card key={product._id} className="border-slate-200 dark:border-slate-700 hover:shadow-lg transition-shadow">
+                        <Card
+                          key={product._id}
+                          className="border-slate-200 transition-shadow hover:shadow-lg dark:border-slate-700"
+                        >
                           <CardContent className="p-6">
-                            <div className="aspect-video bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg mb-4 flex items-center justify-center">
+                            <div className="mb-4 flex aspect-video items-center justify-center rounded-lg bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20">
                               {product.imageUrl ? (
-                                <img src={product.imageUrl} alt={product.title} className="w-full h-full object-cover rounded-lg" />
+                                <img
+                                  src={product.imageUrl}
+                                  alt={product.title}
+                                  className="h-full w-full rounded-lg object-cover"
+                                />
                               ) : (
-                                <Music className="w-8 h-8 text-purple-500" />
+                                <Music className="h-8 w-8 text-purple-500" />
                               )}
                             </div>
-                            <div className="flex items-center gap-2 mb-2">
-                              <Badge variant={product.type === 'course' ? 'default' : 'secondary'} className="text-xs">
-                                {product.type === 'course' ? '📚 Course' : '🎵 Digital'}
+                            <div className="mb-2 flex items-center gap-2">
+                              <Badge
+                                variant={product.type === "course" ? "default" : "secondary"}
+                                className="text-xs"
+                              >
+                                {product.type === "course" ? "📚 Course" : "🎵 Digital"}
                               </Badge>
                               {product.isPublished ? (
-                                <Badge variant="outline" className="text-xs text-green-600 border-green-200">Live</Badge>
+                                <Badge
+                                  variant="outline"
+                                  className="border-green-200 text-xs text-green-600"
+                                >
+                                  Live
+                                </Badge>
                               ) : (
-                                <Badge variant="outline" className="text-xs text-orange-600 border-orange-200">Draft</Badge>
+                                <Badge
+                                  variant="outline"
+                                  className="border-orange-200 text-xs text-orange-600"
+                                >
+                                  Draft
+                                </Badge>
                               )}
                             </div>
-                            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2 line-clamp-2">
+                            <h3 className="mb-2 line-clamp-2 font-semibold text-slate-900 dark:text-slate-100">
                               {product.title}
                             </h3>
-                            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 line-clamp-2">
+                            <p className="mb-4 line-clamp-2 text-sm text-slate-500 dark:text-slate-400">
                               {product.description}
                             </p>
                             <div className="flex items-center justify-between">
                               <span className="font-semibold text-purple-600 dark:text-purple-400">
-                                ${product.price?.toFixed(2) || '0.00'}
+                                ${product.price?.toFixed(2) || "0.00"}
                               </span>
                               <div className="flex gap-2">
-                                <Button size="sm" variant="outline" onClick={() => handleEditProduct(product)}>
-                                  <Settings className="w-3 h-3" />
-                                </Button>
-                                <Button 
-                                  size="sm" 
-                                  variant={product.isPublished ? "outline" : "default"}
-                                  onClick={() => product.isPublished ? handleUnpublishProduct(product) : handlePublishProduct(product)}
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleEditProduct(product)}
                                 >
-                                  {product.isPublished ? <Eye className="w-3 h-3" /> : <Upload className="w-3 h-3" />}
+                                  <Settings className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant={product.isPublished ? "outline" : "default"}
+                                  onClick={() =>
+                                    product.isPublished
+                                      ? handleUnpublishProduct(product)
+                                      : handlePublishProduct(product)
+                                  }
+                                >
+                                  {product.isPublished ? (
+                                    <Eye className="h-3 w-3" />
+                                  ) : (
+                                    <Upload className="h-3 w-3" />
+                                  )}
                                 </Button>
                               </div>
                             </div>
@@ -841,18 +913,22 @@ export function CreatorDashboardEnhanced({
                       ))}
                     </div>
                   ) : (
-                    <div className="text-center py-12">
-                      <div className="w-24 h-24 bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
-                        <Music className="w-12 h-12 text-purple-500" />
+                    <div className="py-12 text-center">
+                      <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20">
+                        <Music className="h-12 w-12 text-purple-500" />
                       </div>
-                      <h3 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2">
+                      <h3 className="mb-2 text-xl font-semibold text-slate-900 dark:text-slate-100">
                         Ready to share your music?
                       </h3>
-                      <p className="text-slate-500 dark:text-slate-400 mb-6 max-w-md mx-auto">
-                        Upload your first sample pack, preset, or course to start building your music empire.
+                      <p className="mx-auto mb-6 max-w-md text-slate-500 dark:text-slate-400">
+                        Upload your first sample pack, preset, or course to start building your
+                        music empire.
                       </p>
-                      <Button onClick={() => setIsCreateProductDialogOpen(true)} className="bg-purple-500 hover:bg-purple-600">
-                        <Plus className="w-4 h-4 mr-2" />
+                      <Button
+                        onClick={() => setIsCreateProductDialogOpen(true)}
+                        className="bg-purple-500 hover:bg-purple-600"
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
                         Create Your First Release
                       </Button>
                     </div>
@@ -860,23 +936,27 @@ export function CreatorDashboardEnhanced({
                 </div>
               )}
 
-              {activeTab === 'analytics' && (
+              {activeTab === "analytics" && (
                 <div className="space-y-6">
                   <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
                     Analytics & Insights
                   </h2>
                   <Card className="border-slate-200 dark:border-slate-700">
                     <CardContent className="p-8 text-center">
-                      <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                        <BarChart className="w-8 h-8 text-blue-500" />
+                      <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20">
+                        <BarChart className="h-8 w-8 text-blue-500" />
                       </div>
-                      <h3 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2">
+                      <h3 className="mb-2 text-xl font-semibold text-slate-900 dark:text-slate-100">
                         Advanced Analytics Coming Soon
                       </h3>
-                      <p className="text-slate-500 dark:text-slate-400 mb-4">
-                        Get detailed insights into your music performance, audience demographics, and revenue trends.
+                      <p className="mb-4 text-slate-500 dark:text-slate-400">
+                        Get detailed insights into your music performance, audience demographics,
+                        and revenue trends.
                       </p>
-                      <Badge variant="outline" className="bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-200 dark:border-blue-800">
+                      <Badge
+                        variant="outline"
+                        className="border-blue-200 bg-blue-50 text-blue-600 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-400"
+                      >
                         In Development
                       </Badge>
                     </CardContent>
@@ -884,15 +964,18 @@ export function CreatorDashboardEnhanced({
                 </div>
               )}
 
-              {activeTab === 'coaching' && (
+              {activeTab === "coaching" && (
                 <div className="space-y-6">
-                  <div className="flex justify-between items-center">
+                  <div className="flex items-center justify-between">
                     <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
                       Music Coaching
                     </h2>
-                    <Button onClick={handleOpenCoachingDialog} className="bg-orange-500 hover:bg-orange-600">
-                      <Plus className="w-4 h-4 mr-2" />
-                      {existingProfile ? 'Update Profile' : 'Become a Coach'}
+                    <Button
+                      onClick={handleOpenCoachingDialog}
+                      className="bg-orange-500 hover:bg-orange-600"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      {existingProfile ? "Update Profile" : "Become a Coach"}
                     </Button>
                   </div>
 
@@ -901,17 +984,21 @@ export function CreatorDashboardEnhanced({
                   ) : (
                     <Card className="border-slate-200 dark:border-slate-700">
                       <CardContent className="p-8 text-center">
-                        <div className="w-16 h-16 bg-gradient-to-br from-orange-100 to-red-100 dark:from-orange-900/20 dark:to-red-900/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                          <Headphones className="w-8 h-8 text-orange-500" />
+                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-100 to-red-100 dark:from-orange-900/20 dark:to-red-900/20">
+                          <Headphones className="h-8 w-8 text-orange-500" />
                         </div>
-                        <h3 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2">
+                        <h3 className="mb-2 text-xl font-semibold text-slate-900 dark:text-slate-100">
                           Share Your Music Knowledge
                         </h3>
-                        <p className="text-slate-500 dark:text-slate-400 mb-6">
-                          Help other producers level up their skills with personalized coaching sessions.
+                        <p className="mb-6 text-slate-500 dark:text-slate-400">
+                          Help other producers level up their skills with personalized coaching
+                          sessions.
                         </p>
-                        <Button onClick={handleOpenCoachingDialog} className="bg-orange-500 hover:bg-orange-600">
-                          <Headphones className="w-4 h-4 mr-2" />
+                        <Button
+                          onClick={handleOpenCoachingDialog}
+                          className="bg-orange-500 hover:bg-orange-600"
+                        >
+                          <Headphones className="mr-2 h-4 w-4" />
                           Start Coaching
                         </Button>
                       </CardContent>
@@ -920,7 +1007,7 @@ export function CreatorDashboardEnhanced({
                 </div>
               )}
 
-              {activeTab === 'social' && storeId && user?.id && (
+              {activeTab === "social" && storeId && user?.id && (
                 <div className="space-y-6">
                   <SocialScheduler storeId={storeId} userId={user.id} />
                 </div>
@@ -944,7 +1031,9 @@ export function CreatorDashboardEnhanced({
               <Label htmlFor="type">Content Type</Label>
               <Select
                 value={newProductForm.type}
-                onValueChange={(value) => setNewProductForm({ ...newProductForm, type: value as ProductType })}
+                onValueChange={(value) =>
+                  setNewProductForm({ ...newProductForm, type: value as ProductType })
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select content type" />
@@ -973,7 +1062,9 @@ export function CreatorDashboardEnhanced({
                 id="description"
                 placeholder="Describe your content and what makes it special..."
                 value={newProductForm.description}
-                onChange={(e) => setNewProductForm({ ...newProductForm, description: e.target.value })}
+                onChange={(e) =>
+                  setNewProductForm({ ...newProductForm, description: e.target.value })
+                }
               />
             </div>
             <div>
@@ -1000,19 +1091,20 @@ export function CreatorDashboardEnhanced({
 
       {/* Coaching Dialog - Keep original functionality */}
       <Dialog open={isCoachingDialogOpen} onOpenChange={setIsCoachingDialogOpen}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>
               {existingProfile ? "Update Your Coaching Profile" : "Become a Music Coach"}
             </DialogTitle>
             <DialogDescription>
-              Help other producers and musicians improve their skills with personalized coaching sessions.
+              Help other producers and musicians improve their skills with personalized coaching
+              sessions.
             </DialogDescription>
           </DialogHeader>
-          
+
           {isLoadingProfile ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 animate-spin" />
+              <Loader2 className="h-6 w-6 animate-spin" />
               <span className="ml-2">Loading profile...</span>
             </div>
           ) : (
@@ -1038,7 +1130,7 @@ export function CreatorDashboardEnhanced({
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div>
                 <Label htmlFor="title">Coaching Title</Label>
                 <Input
@@ -1048,18 +1140,20 @@ export function CreatorDashboardEnhanced({
                   onChange={(e) => setCoachingForm({ ...coachingForm, title: e.target.value })}
                 />
               </div>
-              
+
               <div>
                 <Label htmlFor="description">About Your Coaching</Label>
                 <Textarea
                   id="description"
                   placeholder="Describe your experience, teaching style, and what students can expect..."
                   value={coachingForm.description}
-                  onChange={(e) => setCoachingForm({ ...coachingForm, description: e.target.value })}
+                  onChange={(e) =>
+                    setCoachingForm({ ...coachingForm, description: e.target.value })
+                  }
                   rows={4}
                 />
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="basePrice">Hourly Rate ($)</Label>
@@ -1068,7 +1162,9 @@ export function CreatorDashboardEnhanced({
                     type="number"
                     placeholder="50"
                     value={coachingForm.basePrice}
-                    onChange={(e) => setCoachingForm({ ...coachingForm, basePrice: e.target.value })}
+                    onChange={(e) =>
+                      setCoachingForm({ ...coachingForm, basePrice: e.target.value })
+                    }
                   />
                 </div>
                 <div>
@@ -1081,7 +1177,7 @@ export function CreatorDashboardEnhanced({
                   />
                 </div>
               </div>
-              
+
               <div>
                 <Label htmlFor="timezone">Timezone</Label>
                 <Select
@@ -1093,18 +1189,40 @@ export function CreatorDashboardEnhanced({
                   </SelectTrigger>
                   <SelectContent>
                     {[
-                      "UTC-12:00", "UTC-11:00", "UTC-10:00", "UTC-09:00", "UTC-08:00",
-                      "UTC-07:00", "UTC-06:00", "UTC-05:00", "UTC-04:00", "UTC-03:00",
-                      "UTC-02:00", "UTC-01:00", "UTC+00:00", "UTC+01:00", "UTC+02:00",
-                      "UTC+03:00", "UTC+04:00", "UTC+05:00", "UTC+06:00", "UTC+07:00",
-                      "UTC+08:00", "UTC+09:00", "UTC+10:00", "UTC+11:00", "UTC+12:00"
-                    ].map(tz => (
-                      <SelectItem key={tz} value={tz}>{tz}</SelectItem>
+                      "UTC-12:00",
+                      "UTC-11:00",
+                      "UTC-10:00",
+                      "UTC-09:00",
+                      "UTC-08:00",
+                      "UTC-07:00",
+                      "UTC-06:00",
+                      "UTC-05:00",
+                      "UTC-04:00",
+                      "UTC-03:00",
+                      "UTC-02:00",
+                      "UTC-01:00",
+                      "UTC+00:00",
+                      "UTC+01:00",
+                      "UTC+02:00",
+                      "UTC+03:00",
+                      "UTC+04:00",
+                      "UTC+05:00",
+                      "UTC+06:00",
+                      "UTC+07:00",
+                      "UTC+08:00",
+                      "UTC+09:00",
+                      "UTC+10:00",
+                      "UTC+11:00",
+                      "UTC+12:00",
+                    ].map((tz) => (
+                      <SelectItem key={tz} value={tz}>
+                        {tz}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="availableDays">Available Days</Label>
@@ -1112,7 +1230,9 @@ export function CreatorDashboardEnhanced({
                     id="availableDays"
                     placeholder="Mon-Fri"
                     value={coachingForm.availableDays}
-                    onChange={(e) => setCoachingForm({ ...coachingForm, availableDays: e.target.value })}
+                    onChange={(e) =>
+                      setCoachingForm({ ...coachingForm, availableDays: e.target.value })
+                    }
                   />
                 </div>
                 <div>
@@ -1121,27 +1241,31 @@ export function CreatorDashboardEnhanced({
                     id="availableHours"
                     placeholder="9AM-5PM"
                     value={coachingForm.availableHours}
-                    onChange={(e) => setCoachingForm({ ...coachingForm, availableHours: e.target.value })}
+                    onChange={(e) =>
+                      setCoachingForm({ ...coachingForm, availableHours: e.target.value })
+                    }
                   />
                 </div>
               </div>
-              
+
               <div className="flex justify-end space-x-2 pt-4">
                 <Button variant="outline" onClick={() => setIsCoachingDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button 
-                  onClick={handleSubmitCoaching} 
+                <Button
+                  onClick={handleSubmitCoaching}
                   disabled={isSubmitting}
                   className="bg-orange-500 hover:bg-orange-600"
                 >
                   {isSubmitting ? (
                     <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       {existingProfile ? "Updating..." : "Submitting..."}
                     </>
+                  ) : existingProfile ? (
+                    "Update Profile"
                   ) : (
-                    existingProfile ? "Update Profile" : "Submit Application"
+                    "Submit Application"
                   )}
                 </Button>
               </div>

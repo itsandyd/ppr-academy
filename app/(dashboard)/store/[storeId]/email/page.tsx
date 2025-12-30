@@ -6,8 +6,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useQuery, useMutation } from "convex/react";
@@ -188,8 +202,8 @@ export default function StoreEmailPage() {
     }
 
     try {
-      const scheduledFor = campaignForm.scheduledFor 
-        ? new Date(campaignForm.scheduledFor).getTime() 
+      const scheduledFor = campaignForm.scheduledFor
+        ? new Date(campaignForm.scheduledFor).getTime()
         : undefined;
 
       await createCampaign({
@@ -202,7 +216,9 @@ export default function StoreEmailPage() {
         scheduledFor,
       });
 
-      toast.success(scheduledFor ? "Campaign scheduled successfully!" : "Campaign created successfully!");
+      toast.success(
+        scheduledFor ? "Campaign scheduled successfully!" : "Campaign created successfully!"
+      );
       setIsCampaignDialogOpen(false);
       setCampaignForm({
         name: "",
@@ -273,9 +289,7 @@ export default function StoreEmailPage() {
                 type="password"
                 placeholder="re_..."
                 value={formData.resendApiKey}
-                onChange={(e) =>
-                  setFormData({ ...formData, resendApiKey: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, resendApiKey: e.target.value })}
               />
               <p className="text-xs text-muted-foreground">
                 Get your API key from{" "}
@@ -298,9 +312,7 @@ export default function StoreEmailPage() {
                   type="email"
                   placeholder="noreply@yourdomain.com"
                   value={formData.fromEmail}
-                  onChange={(e) =>
-                    setFormData({ ...formData, fromEmail: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, fromEmail: e.target.value })}
                 />
               </div>
 
@@ -310,9 +322,7 @@ export default function StoreEmailPage() {
                   id="fromName"
                   placeholder="Your Name"
                   value={formData.fromName}
-                  onChange={(e) =>
-                    setFormData({ ...formData, fromName: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, fromName: e.target.value })}
                 />
               </div>
             </div>
@@ -324,18 +334,11 @@ export default function StoreEmailPage() {
                 type="email"
                 placeholder="support@yourdomain.com"
                 value={formData.replyToEmail}
-                onChange={(e) =>
-                  setFormData({ ...formData, replyToEmail: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, replyToEmail: e.target.value })}
               />
             </div>
 
-            <Button
-              onClick={handleConnect}
-              disabled={isConnecting}
-              className="w-full"
-              size="lg"
-            >
+            <Button onClick={handleConnect} disabled={isConnecting} className="w-full" size="lg">
               {isConnecting ? "Connecting..." : "Connect Resend"}
             </Button>
           </CardContent>
@@ -343,7 +346,7 @@ export default function StoreEmailPage() {
       ) : (
         <div className="space-y-6">
           {/* Analytics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
@@ -351,7 +354,7 @@ export default function StoreEmailPage() {
                     <p className="text-sm text-muted-foreground">Total Sent</p>
                     <p className="text-2xl font-bold">{analytics?.totalSent || 0}</p>
                   </div>
-                  <Mail className="w-8 h-8 opacity-50" />
+                  <Mail className="h-8 w-8 opacity-50" />
                 </div>
               </CardContent>
             </Card>
@@ -366,7 +369,7 @@ export default function StoreEmailPage() {
                       {analytics?.deliveryRate.toFixed(1)}% rate
                     </p>
                   </div>
-                  <CheckCircle className="w-8 h-8 opacity-50 text-green-600" />
+                  <CheckCircle className="h-8 w-8 text-green-600 opacity-50" />
                 </div>
               </CardContent>
             </Card>
@@ -377,11 +380,9 @@ export default function StoreEmailPage() {
                   <div>
                     <p className="text-sm text-muted-foreground">Opened</p>
                     <p className="text-2xl font-bold">{analytics?.opened || 0}</p>
-                    <p className="text-xs text-blue-600">
-                      {analytics?.openRate.toFixed(1)}% rate
-                    </p>
+                    <p className="text-xs text-blue-600">{analytics?.openRate.toFixed(1)}% rate</p>
                   </div>
-                  <Activity className="w-8 h-8 opacity-50 text-blue-600" />
+                  <Activity className="h-8 w-8 text-blue-600 opacity-50" />
                 </div>
               </CardContent>
             </Card>
@@ -396,7 +397,7 @@ export default function StoreEmailPage() {
                       {analytics?.clickRate.toFixed(1)}% rate
                     </p>
                   </div>
-                  <TrendingUp className="w-8 h-8 opacity-50 text-purple-600" />
+                  <TrendingUp className="h-8 w-8 text-purple-600 opacity-50" />
                 </div>
               </CardContent>
             </Card>
@@ -418,16 +419,14 @@ export default function StoreEmailPage() {
                 <Dialog open={isCampaignDialogOpen} onOpenChange={setIsCampaignDialogOpen}>
                   <DialogTrigger asChild>
                     <Button>
-                      <Sparkles className="w-4 h-4 mr-2" />
+                      <Sparkles className="mr-2 h-4 w-4" />
                       New Campaign
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-2xl bg-white dark:bg-black">
                     <DialogHeader>
                       <DialogTitle>Create Email Campaign</DialogTitle>
-                      <DialogDescription>
-                        Send an email campaign to your students
-                      </DialogDescription>
+                      <DialogDescription>Send an email campaign to your students</DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-4">
@@ -467,7 +466,7 @@ export default function StoreEmailPage() {
                             <SelectValue placeholder="Select a template" />
                           </SelectTrigger>
                           <SelectContent className="bg-white dark:bg-black">
-                            {templates?.map((template) => (
+                            {templates?.map((template: any) => (
                               <SelectItem key={template._id} value={template._id}>
                                 {template.name}
                               </SelectItem>
@@ -489,7 +488,7 @@ export default function StoreEmailPage() {
                           </SelectTrigger>
                           <SelectContent className="bg-white dark:bg-black">
                             <SelectItem value="">All Courses</SelectItem>
-                            {courses?.map((course) => (
+                            {courses?.map((course: any) => (
                               <SelectItem key={course._id} value={course._id}>
                                 {course.title}
                               </SelectItem>
@@ -519,7 +518,7 @@ export default function StoreEmailPage() {
                         Cancel
                       </Button>
                       <Button onClick={handleCreateCampaign}>
-                        <Send className="w-4 h-4 mr-2" />
+                        <Send className="mr-2 h-4 w-4" />
                         {campaignForm.scheduledFor ? "Schedule Campaign" : "Send Campaign"}
                       </Button>
                     </DialogFooter>
@@ -529,62 +528,48 @@ export default function StoreEmailPage() {
 
               {campaigns && campaigns.length > 0 ? (
                 <div className="space-y-4">
-                  {campaigns.map((campaign) => (
+                  {campaigns.map((campaign: any) => (
                     <Card key={campaign._id}>
                       <CardContent className="p-6">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <h3 className="font-semibold text-lg">
-                                {campaign.name}
-                              </h3>
+                            <div className="mb-2 flex items-center gap-3">
+                              <h3 className="text-lg font-semibold">{campaign.name}</h3>
                               <Badge
                                 variant={
                                   campaign.status === "sent"
                                     ? "default"
                                     : campaign.status === "sending"
-                                    ? "secondary"
-                                    : campaign.status === "scheduled"
-                                    ? "outline"
-                                    : "destructive"
+                                      ? "secondary"
+                                      : campaign.status === "scheduled"
+                                        ? "outline"
+                                        : "destructive"
                                 }
                               >
                                 {campaign.status}
                               </Badge>
                             </div>
-                            <p className="text-sm text-muted-foreground mb-4">
+                            <p className="mb-4 text-sm text-muted-foreground">
                               Subject: {campaign.subject}
                             </p>
 
                             <div className="grid grid-cols-4 gap-4">
                               <div>
-                                <p className="text-xs text-muted-foreground">
-                                  Sent
-                                </p>
-                                <p className="text-sm font-semibold">
-                                  {campaign.sentCount || 0}
-                                </p>
+                                <p className="text-xs text-muted-foreground">Sent</p>
+                                <p className="text-sm font-semibold">{campaign.sentCount || 0}</p>
                               </div>
                               <div>
-                                <p className="text-xs text-muted-foreground">
-                                  Delivered
-                                </p>
+                                <p className="text-xs text-muted-foreground">Delivered</p>
                                 <p className="text-sm font-semibold">
                                   {campaign.deliveredCount || 0}
                                 </p>
                               </div>
                               <div>
-                                <p className="text-xs text-muted-foreground">
-                                  Opened
-                                </p>
-                                <p className="text-sm font-semibold">
-                                  {campaign.openedCount || 0}
-                                </p>
+                                <p className="text-xs text-muted-foreground">Opened</p>
+                                <p className="text-sm font-semibold">{campaign.openedCount || 0}</p>
                               </div>
                               <div>
-                                <p className="text-xs text-muted-foreground">
-                                  Clicked
-                                </p>
+                                <p className="text-xs text-muted-foreground">Clicked</p>
                                 <p className="text-sm font-semibold">
                                   {campaign.clickedCount || 0}
                                 </p>
@@ -599,7 +584,7 @@ export default function StoreEmailPage() {
               ) : (
                 <Card>
                   <CardContent className="p-12 text-center">
-                    <Mail className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <Mail className="mx-auto mb-4 h-12 w-12 opacity-50" />
                     <p className="text-muted-foreground">
                       No campaigns yet. Create your first campaign to engage your students.
                     </p>
@@ -615,11 +600,11 @@ export default function StoreEmailPage() {
                 <Dialog open={isTemplateDialogOpen} onOpenChange={setIsTemplateDialogOpen}>
                   <DialogTrigger asChild>
                     <Button>
-                      <Plus className="w-4 h-4 mr-2" />
+                      <Plus className="mr-2 h-4 w-4" />
                       New Template
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto bg-white dark:bg-black">
+                  <DialogContent className="max-h-[80vh] max-w-3xl overflow-y-auto bg-white dark:bg-black">
                     <DialogHeader>
                       <DialogTitle>Create Email Template</DialogTitle>
                       <DialogDescription>
@@ -682,7 +667,7 @@ export default function StoreEmailPage() {
                         <Textarea
                           id="template-html"
                           placeholder="<h1>Welcome!</h1><p>Thanks for enrolling in {courseName}...</p>"
-                          className="font-mono text-sm min-h-[200px]"
+                          className="min-h-[200px] font-mono text-sm"
                           value={templateForm.htmlContent}
                           onChange={(e) =>
                             setTemplateForm({ ...templateForm, htmlContent: e.target.value })
@@ -712,7 +697,7 @@ export default function StoreEmailPage() {
                         Cancel
                       </Button>
                       <Button onClick={handleCreateTemplate}>
-                        <Plus className="w-4 h-4 mr-2" />
+                        <Plus className="mr-2 h-4 w-4" />
                         Create Template
                       </Button>
                     </DialogFooter>
@@ -721,21 +706,17 @@ export default function StoreEmailPage() {
               </div>
 
               {templates && templates.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {templates.map((template) => (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {templates.map((template: any) => (
                     <Card key={template._id}>
                       <CardContent className="p-6">
-                        <div className="flex items-start justify-between mb-2">
+                        <div className="mb-2 flex items-start justify-between">
                           <h3 className="font-semibold">{template.name}</h3>
-                          <Badge
-                            variant={template.isActive ? "default" : "secondary"}
-                          >
+                          <Badge variant={template.isActive ? "default" : "secondary"}>
                             {template.isActive ? "Active" : "Inactive"}
                           </Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground mb-4">
-                          {template.subject}
-                        </p>
+                        <p className="mb-4 text-sm text-muted-foreground">{template.subject}</p>
                         <div className="flex items-center gap-2">
                           <Badge variant="outline" className="text-xs">
                             {template.type}
@@ -748,7 +729,7 @@ export default function StoreEmailPage() {
               ) : (
                 <Card>
                   <CardContent className="p-12 text-center">
-                    <Mail className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <Mail className="mx-auto mb-4 h-12 w-12 opacity-50" />
                     <p className="text-muted-foreground">
                       No templates yet. Create reusable email templates for your campaigns.
                     </p>
@@ -764,7 +745,7 @@ export default function StoreEmailPage() {
                 <Dialog open={isAutomationDialogOpen} onOpenChange={setIsAutomationDialogOpen}>
                   <DialogTrigger asChild>
                     <Button>
-                      <Zap className="w-4 h-4 mr-2" />
+                      <Zap className="mr-2 h-4 w-4" />
                       New Automation
                     </Button>
                   </DialogTrigger>
@@ -821,7 +802,7 @@ export default function StoreEmailPage() {
                             <SelectValue placeholder="Select a template" />
                           </SelectTrigger>
                           <SelectContent className="bg-white dark:bg-black">
-                            {templates?.map((template) => (
+                            {templates?.map((template: any) => (
                               <SelectItem key={template._id} value={template._id}>
                                 {template.name}
                               </SelectItem>
@@ -843,7 +824,7 @@ export default function StoreEmailPage() {
                           </SelectTrigger>
                           <SelectContent className="bg-white dark:bg-black">
                             <SelectItem value="">All Courses</SelectItem>
-                            {courses?.map((course) => (
+                            {courses?.map((course: any) => (
                               <SelectItem key={course._id} value={course._id}>
                                 {course.title}
                               </SelectItem>
@@ -878,7 +859,7 @@ export default function StoreEmailPage() {
                         Cancel
                       </Button>
                       <Button onClick={handleCreateAutomation}>
-                        <Zap className="w-4 h-4 mr-2" />
+                        <Zap className="mr-2 h-4 w-4" />
                         Create Automation
                       </Button>
                     </DialogFooter>
@@ -888,7 +869,7 @@ export default function StoreEmailPage() {
 
               <Card>
                 <CardContent className="p-12 text-center">
-                  <Zap className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <Zap className="mx-auto mb-4 h-12 w-12 opacity-50" />
                   <p className="text-muted-foreground">
                     No automations yet. Set up automated emails for your students.
                   </p>
@@ -899,8 +880,8 @@ export default function StoreEmailPage() {
             {/* Settings Tab */}
             <TabsContent value="settings" className="space-y-4">
               <div>
-                <h2 className="text-2xl font-semibold mb-2">Email Settings</h2>
-                <p className="text-muted-foreground mb-6">
+                <h2 className="mb-2 text-2xl font-semibold">Email Settings</h2>
+                <p className="mb-6 text-muted-foreground">
                   Configure your email preferences and sender information
                 </p>
               </div>
@@ -908,9 +889,7 @@ export default function StoreEmailPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Sender Information</CardTitle>
-                  <CardDescription>
-                    Update the sender details for your emails
-                  </CardDescription>
+                  <CardDescription>Update the sender details for your emails</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
@@ -951,7 +930,7 @@ export default function StoreEmailPage() {
                   </div>
 
                   <Button onClick={handleUpdateSettings}>
-                    <Settings className="w-4 h-4 mr-2" />
+                    <Settings className="mr-2 h-4 w-4" />
                     Update Settings
                   </Button>
                 </CardContent>
@@ -960,9 +939,7 @@ export default function StoreEmailPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Email Preferences</CardTitle>
-                  <CardDescription>
-                    Control what types of emails are enabled
-                  </CardDescription>
+                  <CardDescription>Control what types of emails are enabled</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -996,7 +973,7 @@ export default function StoreEmailPage() {
                   </div>
 
                   <Button onClick={handleUpdateSettings}>
-                    <Settings className="w-4 h-4 mr-2" />
+                    <Settings className="mr-2 h-4 w-4" />
                     Save Preferences
                   </Button>
                 </CardContent>
@@ -1005,18 +982,14 @@ export default function StoreEmailPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Connection Status</CardTitle>
-                  <CardDescription>
-                    Your Resend integration is active
-                  </CardDescription>
+                  <CardDescription>Your Resend integration is active</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center gap-2">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    <CheckCircle className="h-5 w-5 text-green-600" />
                     <div>
                       <p className="font-medium">Connected to Resend</p>
-                      <p className="text-sm text-muted-foreground">
-                        Email: {connection.fromEmail}
-                      </p>
+                      <p className="text-sm text-muted-foreground">Email: {connection.fromEmail}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -1028,4 +1001,3 @@ export default function StoreEmailPage() {
     </div>
   );
 }
-

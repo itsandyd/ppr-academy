@@ -24,25 +24,19 @@ import { Progress } from "@/components/ui/progress";
 
 export default function LibraryRecentPage() {
   const { user } = useUser();
-  
-  const courses = useQuery(
-    api.library.getUserCourses,
-    user?.id ? { userId: user.id } : "skip"
-  );
+
+  const courses = useQuery(api.library.getUserCourses, user?.id ? { userId: user.id } : "skip");
 
   const digitalProducts = useQuery(
     api.library.getUserDigitalProducts,
     user?.id ? { userId: user.id } : "skip"
   );
 
-  const purchases = useQuery(
-    api.library.getUserPurchases,
-    user?.id ? { userId: user.id } : "skip"
-  );
+  const purchases = useQuery(api.library.getUserPurchases, user?.id ? { userId: user.id } : "skip");
 
   // Combine all recent activity
   const recentActivity = [
-    ...(courses?.map(course => ({
+    ...(courses?.map((course: any) => ({
       type: "course" as const,
       id: course._id,
       title: course.title,
@@ -54,8 +48,8 @@ export default function LibraryRecentPage() {
       progress: course.progress,
       badge: `${course.progress || 0}% complete`,
     })) || []),
-    
-    ...(digitalProducts?.map(product => ({
+
+    ...(digitalProducts?.map((product: any) => ({
       type: "download" as const,
       id: product._id,
       title: product.title,
@@ -67,18 +61,20 @@ export default function LibraryRecentPage() {
       badge: product.productType === "urlMedia" ? "URL/Media" : "Digital File",
       downloadCount: product.downloadCount,
     })) || []),
-    
-    ...(purchases?.filter(p => p.productType === "coaching").map(coaching => ({
-      type: "coaching" as const,
-      id: coaching._id,
-      title: coaching.productTitle || "Coaching Session",
-      description: `Coaching session with ${coaching.storeName}`,
-      imageUrl: coaching.productImageUrl,
-      href: `/library/coaching`,
-      timestamp: coaching.lastAccessedAt || coaching._creationTime,
-      storeName: coaching.storeName,
-      badge: "Coaching",
-    })) || []),
+
+    ...(purchases
+      ?.filter((p: any) => p.productType === "coaching")
+      .map((coaching: any) => ({
+        type: "coaching" as const,
+        id: coaching._id,
+        title: coaching.productTitle || "Coaching Session",
+        description: `Coaching session with ${coaching.storeName}`,
+        imageUrl: coaching.productImageUrl,
+        href: `/library/coaching`,
+        timestamp: coaching.lastAccessedAt || coaching._creationTime,
+        storeName: coaching.storeName,
+        badge: "Coaching",
+      })) || []),
   ].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
 
   const getActivityIcon = (type: string) => {
@@ -112,13 +108,11 @@ export default function LibraryRecentPage() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-foreground">Recent Activity</h1>
-        <p className="text-muted-foreground mt-2">
-          Your recently accessed content and purchases
-        </p>
+        <p className="mt-2 text-muted-foreground">Your recently accessed content and purchases</p>
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold text-foreground">{recentActivity.length}</div>
@@ -128,7 +122,7 @@ export default function LibraryRecentPage() {
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold text-blue-600">
-              {recentActivity.filter(a => a.type === "course").length}
+              {recentActivity.filter((a) => a.type === "course").length}
             </div>
             <div className="text-sm text-muted-foreground">Courses</div>
           </CardContent>
@@ -136,7 +130,7 @@ export default function LibraryRecentPage() {
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold text-green-600">
-              {recentActivity.filter(a => a.type === "download").length}
+              {recentActivity.filter((a) => a.type === "download").length}
             </div>
             <div className="text-sm text-muted-foreground">Downloads</div>
           </CardContent>
@@ -144,7 +138,7 @@ export default function LibraryRecentPage() {
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold text-purple-600">
-              {recentActivity.filter(a => a.type === "coaching").length}
+              {recentActivity.filter((a) => a.type === "coaching").length}
             </div>
             <div className="text-sm text-muted-foreground">Coaching</div>
           </CardContent>
@@ -155,79 +149,79 @@ export default function LibraryRecentPage() {
       {recentActivity.length > 0 ? (
         <div className="space-y-4">
           <h2 className="text-xl font-semibold text-foreground">Recent Activity</h2>
-          
+
           {recentActivity.map((item, index) => {
             const Icon = getActivityIcon(item.type);
             const colorClass = getActivityColor(item.type);
-            
+
             return (
-              <Card key={`${item.type}-${item.id}`} className="hover:shadow-md transition-shadow">
+              <Card key={`${item.type}-${item.id}`} className="transition-shadow hover:shadow-md">
                 <CardContent className="p-6">
                   <div className="flex items-start space-x-4">
                     {/* Timeline dot */}
                     <div className="flex flex-col items-center">
-                      <div className={`w-10 h-10 rounded-full bg-background border-2 flex items-center justify-center ${colorClass.replace('text-', 'border-')}`}>
-                        <Icon className={`w-5 h-5 ${colorClass}`} />
+                      <div
+                        className={`flex h-10 w-10 items-center justify-center rounded-full border-2 bg-background ${colorClass.replace("text-", "border-")}`}
+                      >
+                        <Icon className={`h-5 w-5 ${colorClass}`} />
                       </div>
                       {index < recentActivity.length - 1 && (
-                        <div className="w-px h-8 bg-border mt-2" />
+                        <div className="mt-2 h-8 w-px bg-border" />
                       )}
                     </div>
 
                     {/* Content */}
-                    <div className="flex-1 min-w-0">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between">
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-foreground line-clamp-2">
+                        <div className="min-w-0 flex-1">
+                          <h3 className="line-clamp-2 font-semibold text-foreground">
                             {item.title}
                           </h3>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            by {item.storeName}
-                          </p>
+                          <p className="mt-1 text-sm text-muted-foreground">by {item.storeName}</p>
                           {item.description && (
-                            <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
+                            <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
                               {item.description}
                             </p>
                           )}
                         </div>
-                        
+
                         {/* Thumbnail */}
-                        <div className="w-16 h-16 bg-muted rounded-lg overflow-hidden ml-4">
+                        <div className="ml-4 h-16 w-16 overflow-hidden rounded-lg bg-muted">
                           {item.imageUrl ? (
-                            <Image 
-                              src={item.imageUrl} 
+                            <Image
+                              src={item.imageUrl}
                               alt={item.title}
                               width={64}
                               height={64}
-                              className="w-full h-full object-cover"
+                              className="h-full w-full object-cover"
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <Icon className={`w-6 h-6 ${colorClass}`} />
+                            <div className="flex h-full w-full items-center justify-center">
+                              <Icon className={`h-6 w-6 ${colorClass}`} />
                             </div>
                           )}
                         </div>
                       </div>
 
                       {/* Metadata */}
-                      <div className="flex items-center justify-between mt-4">
+                      <div className="mt-4 flex items-center justify-between">
                         <div className="flex items-center space-x-3">
                           <Badge variant="secondary" className="text-xs">
                             {item.badge}
                           </Badge>
-                          
+
                           {item.type === "course" && item.progress !== undefined && (
                             <div className="flex items-center space-x-2">
-                              <Progress value={item.progress} className="w-16 h-2" />
+                              <Progress value={item.progress} className="h-2 w-16" />
                               <span className="text-xs text-muted-foreground">
                                 {item.progress}%
                               </span>
                             </div>
                           )}
-                          
+
                           {item.type === "download" && item.downloadCount !== undefined && (
                             <div className="text-xs text-muted-foreground">
-                              <Download className="w-3 h-3 inline mr-1" />
+                              <Download className="mr-1 inline h-3 w-3" />
                               {item.downloadCount} downloads
                             </div>
                           )}
@@ -235,18 +229,20 @@ export default function LibraryRecentPage() {
 
                         <div className="flex items-center space-x-2">
                           <span className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(new Date(item.timestamp || 0), { addSuffix: true })}
+                            {formatDistanceToNow(new Date(item.timestamp || 0), {
+                              addSuffix: true,
+                            })}
                           </span>
                           <Button asChild size="sm" variant="outline">
                             <Link href={item.href}>
                               {item.type === "course" ? (
                                 <>
-                                  <PlayCircle className="w-4 h-4 mr-1" />
+                                  <PlayCircle className="mr-1 h-4 w-4" />
                                   Continue
                                 </>
                               ) : (
                                 <>
-                                  <ExternalLink className="w-4 h-4 mr-1" />
+                                  <ExternalLink className="mr-1 h-4 w-4" />
                                   Access
                                 </>
                               )}
@@ -263,22 +259,22 @@ export default function LibraryRecentPage() {
         </div>
       ) : (
         <Card>
-          <CardContent className="text-center py-12">
-            <Clock className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-foreground mb-2">No recent activity</h2>
-            <p className="text-muted-foreground mb-6">
+          <CardContent className="py-12 text-center">
+            <Clock className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
+            <h2 className="mb-2 text-2xl font-bold text-foreground">No recent activity</h2>
+            <p className="mb-6 text-muted-foreground">
               Start learning or accessing your content to see activity here
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex flex-col justify-center gap-4 sm:flex-row">
               <Button asChild>
                 <Link href="/library/courses">
-                  <Book className="w-4 h-4 mr-2" />
+                  <Book className="mr-2 h-4 w-4" />
                   My Courses
                 </Link>
               </Button>
               <Button asChild variant="outline">
                 <Link href="/library/downloads">
-                  <Download className="w-4 h-4 mr-2" />
+                  <Download className="mr-2 h-4 w-4" />
                   My Downloads
                 </Link>
               </Button>

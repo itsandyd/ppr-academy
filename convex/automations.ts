@@ -71,7 +71,7 @@ export const getAutomationById = query({
   returns: v.union(v.any(), v.null()),
   handler: async (ctx, args) => {
     const automation = await ctx.db.get(args.automationId);
-    
+
     if (!automation) {
       return null;
     }
@@ -97,7 +97,7 @@ export const getAutomationById = query({
     ]);
 
     // Get user subscription
-    const subscription = user 
+    const subscription = user
       ? await ctx.db
           .query("userSubscriptions")
           .withIndex("by_userId", (q) => q.eq("userId", user._id))
@@ -110,10 +110,12 @@ export const getAutomationById = query({
       trigger: trigger || null,
       listener: listener || null,
       posts: posts || [],
-      user: user ? {
-        ...user,
-        subscription,
-      } : null,
+      user: user
+        ? {
+            ...user,
+            subscription,
+          }
+        : null,
     };
   },
 });
@@ -127,14 +129,12 @@ export const findAutomationByKeyword = query({
   returns: v.union(v.any(), v.null()),
   handler: async (ctx, args) => {
     const textLower = args.keyword.toLowerCase();
-    
+
     // Get all keywords and check if any are contained in the text
     const allKeywords = await ctx.db.query("keywords").collect();
-    
+
     // Find a keyword that's contained in the text
-    const keywordMatch = allKeywords.find((kw) => 
-      textLower.includes(kw.word.toLowerCase())
-    );
+    const keywordMatch = allKeywords.find((kw) => textLower.includes(kw.word.toLowerCase()));
 
     if (!keywordMatch) {
       return null;
@@ -142,7 +142,7 @@ export const findAutomationByKeyword = query({
 
     // Get the full automation with all related data
     const automation = await ctx.db.get(keywordMatch.automationId);
-    
+
     if (!automation) {
       return null;
     }
@@ -189,11 +189,13 @@ export const findAutomationByKeyword = query({
       listener,
       posts: posts || [],
       keywords: keywords || [],
-      user: user ? {
-        ...user,
-        subscription,
-        integration,
-      } : null,
+      user: user
+        ? {
+            ...user,
+            subscription,
+            integration,
+          }
+        : null,
     };
   },
 });
@@ -230,15 +232,15 @@ export const createAutomation = mutation({
         active: false,
       });
 
-      return { 
-        status: 201, 
-        data: { 
+      return {
+        status: 201,
+        data: {
           _id: automationId,
           name: args.name || "Untitled",
           active: false,
           userId: user._id,
           _creationTime: Date.now(),
-        } 
+        },
       };
     } catch (error) {
       console.error("Error creating automation:", error);
@@ -266,7 +268,8 @@ export const updateAutomation = mutation({
       const updateData: any = {};
       if (args.name !== undefined) updateData.name = args.name;
       if (args.active !== undefined) updateData.active = args.active;
-      if (args.instagramAccountId !== undefined) updateData.instagramAccountId = args.instagramAccountId;
+      if (args.instagramAccountId !== undefined)
+        updateData.instagramAccountId = args.instagramAccountId;
 
       await ctx.db.patch(args.automationId, updateData);
 
@@ -320,7 +323,7 @@ export const deleteAutomation = mutation({
         .query("keywords")
         .withIndex("by_automationId", (q) => q.eq("automationId", args.automationId))
         .collect();
-      
+
       for (const keyword of keywords) {
         await ctx.db.delete(keyword._id);
       }
@@ -330,7 +333,7 @@ export const deleteAutomation = mutation({
         .query("triggers")
         .withIndex("by_automationId", (q) => q.eq("automationId", args.automationId))
         .collect();
-      
+
       for (const trigger of triggers) {
         await ctx.db.delete(trigger._id);
       }
@@ -340,7 +343,7 @@ export const deleteAutomation = mutation({
         .query("listeners")
         .withIndex("by_automationId", (q) => q.eq("automationId", args.automationId))
         .collect();
-      
+
       for (const listener of listeners) {
         await ctx.db.delete(listener._id);
       }
@@ -544,15 +547,17 @@ export const savePosts = mutation({
       for (const post of existingPosts) {
         await ctx.db.delete(post._id);
       }
-      
+
       // Schedule deletion of associated embeddings (batch after loop to avoid type depth issues)
       const postIdsToDelete = existingPosts
-        .filter(p => p.postId !== "ALL_POSTS_AND_FUTURE")
-        .map(p => p.postId);
-      
+        .filter((p) => p.postId !== "ALL_POSTS_AND_FUTURE")
+        .map((p) => p.postId);
+
       for (const postId of postIdsToDelete) {
         // @ts-ignore - Type instantiation too deep, but this is correct
-        ctx.scheduler.runAfter(0, internal.socialPostEmbeddings.deleteSocialPostEmbedding, { postId });
+        ctx.scheduler.runAfter(0, internal.socialPostEmbeddings.deleteSocialPostEmbedding, {
+          postId,
+        });
       }
 
       // Create new posts
@@ -568,7 +573,7 @@ export const savePosts = mutation({
       }
 
       console.log(`✅ Attached ${args.posts.length} posts to automation ${args.automationId}`);
-      
+
       // Schedule embedding generation for the posts
       // This transcribes videos and creates AI-searchable embeddings
       if (userClerkId) {
@@ -579,8 +584,11 @@ export const savePosts = mutation({
         });
         console.log(`📊 Scheduled embedding generation for ${args.posts.length} posts`);
       }
-      
-      return { status: 200, message: `${args.posts.length} post${args.posts.length > 1 ? 's' : ''} attached successfully` };
+
+      return {
+        status: 200,
+        message: `${args.posts.length} post${args.posts.length > 1 ? "s" : ""} attached successfully`,
+      };
     } catch (error) {
       console.error("Error saving posts:", error);
       return { status: 500, message: "Failed to save posts" };
@@ -682,10 +690,12 @@ export const getChatHistoryInternal = internalQuery({
     automationId: v.id("automations"),
     instagramUserId: v.string(),
   },
-  returns: v.array(v.object({
-    role: v.union(v.literal("user"), v.literal("assistant")),
-    message: v.string(),
-  })),
+  returns: v.array(
+    v.object({
+      role: v.union(v.literal("user"), v.literal("assistant")),
+      message: v.string(),
+    })
+  ),
   handler: async (ctx, args) => {
     const history = await ctx.db
       .query("chatHistory")
@@ -696,7 +706,7 @@ export const getChatHistoryInternal = internalQuery({
       .take(10); // Last 10 messages for context
 
     // Return oldest first for OpenAI conversation format
-    return history.reverse().map(h => ({
+    return history.reverse().map((h) => ({
       role: h.role,
       message: h.message,
     }));
@@ -739,7 +749,7 @@ export const getAutomationWithListener = internalQuery({
     // Get user's subscription plan
     const user = await ctx.db.get(automation.userId);
     let userPlan = "FREE";
-    
+
     if (user) {
       const subscription = await ctx.db
         .query("userSubscriptions")
@@ -752,11 +762,13 @@ export const getAutomationWithListener = internalQuery({
       _id: automation._id,
       userId: automation.userId,
       name: automation.name,
-      listener: listener ? {
-        listener: listener.listener,
-        prompt: listener.prompt,
-        commentReply: listener.commentReply,
-      } : null,
+      listener: listener
+        ? {
+            listener: listener.listener,
+            prompt: listener.prompt,
+            commentReply: listener.commentReply,
+          }
+        : null,
       userPlan,
     };
   },
@@ -776,7 +788,7 @@ export const getKeywordAutomation = internalQuery({
   returns: v.union(v.any(), v.null()),
   handler: async (ctx, args) => {
     const automation = await ctx.db.get(args.automationId);
-    
+
     if (!automation) return null;
 
     // Get the trigger
@@ -795,8 +807,8 @@ export const getKeywordAutomation = internalQuery({
     const user = await ctx.db.get(automation.userId);
 
     let subscription = null;
-    let integrations = [];
-    
+    let integrations: any[] = [];
+
     if (user) {
       // Get subscription - note: subscriptions use customerId, not userId
       // For now, we skip subscription fetching since it requires customer mapping
@@ -808,7 +820,7 @@ export const getKeywordAutomation = internalQuery({
       // Get Instagram integration
       integrations = await ctx.db
         .query("socialAccounts")
-        .filter((q) => 
+        .filter((q) =>
           q.and(
             q.eq(q.field("userId"), user.clerkId),
             q.eq(q.field("platform"), "instagram"),
@@ -831,11 +843,13 @@ export const getKeywordAutomation = internalQuery({
       trigger,
       listener,
       posts,
-      User: user ? {
-        ...user,
-        subscription,
-        integrations,
-      } : null,
+      User: user
+        ? {
+            ...user,
+            subscription,
+            integrations,
+          }
+        : null,
     };
   },
 });
@@ -891,7 +905,7 @@ export const findAutomationByChatHistory = internalQuery({
     // Find recent chat history for this sender
     const recentChat = await ctx.db
       .query("chatHistory")
-      .filter((q) => 
+      .filter((q) =>
         q.and(
           q.eq(q.field("senderId"), args.senderId),
           q.eq(q.field("receiverId"), args.receiverId)
@@ -906,15 +920,14 @@ export const findAutomationByChatHistory = internalQuery({
     const history = await ctx.db
       .query("chatHistory")
       .withIndex("by_automationId_and_sender", (q) =>
-        q.eq("automationId", recentChat.automationId)
-         .eq("senderId", args.senderId)
+        q.eq("automationId", recentChat.automationId).eq("senderId", args.senderId)
       )
       .order("asc")
       .collect();
 
     return {
       automationId: recentChat.automationId,
-      history: history.map(h => ({
+      history: history.map((h) => ({
         role: h.role,
         content: h.message,
       })),

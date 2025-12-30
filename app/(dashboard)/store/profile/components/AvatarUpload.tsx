@@ -13,7 +13,7 @@ export function AvatarUpload() {
   const [isUploading, setIsUploading] = useState(false);
   const { user: clerkUser } = useUser();
   const { toast } = useToast();
-  
+
   // Get user data from Convex
   const convexUser = useQuery(
     api.users.getUserFromClerk,
@@ -31,19 +31,21 @@ export function AvatarUpload() {
         updateUser({
           clerkId: clerkUser.id,
           imageUrl: res[0].url,
-        }).then(() => {
-          toast({
-            title: "Success",
-            description: "Profile picture updated successfully!",
+        })
+          .then(() => {
+            toast({
+              title: "Success",
+              description: "Profile picture updated successfully!",
+            });
+          })
+          .catch((error) => {
+            console.error("Error updating profile:", error);
+            toast({
+              title: "Error",
+              description: "Failed to update profile picture",
+              variant: "destructive",
+            });
           });
-        }).catch((error) => {
-          console.error("Error updating profile:", error);
-          toast({
-            title: "Error", 
-            description: "Failed to update profile picture",
-            variant: "destructive",
-          });
-        });
       }
       setIsUploading(false);
     },
@@ -59,14 +61,15 @@ export function AvatarUpload() {
   });
 
   // Get display name and generate initials
-  const displayName = convexUser?.name || 
-    (clerkUser?.firstName && clerkUser?.lastName 
+  const displayName =
+    convexUser?.name ||
+    (clerkUser?.firstName && clerkUser?.lastName
       ? `${clerkUser.firstName} ${clerkUser.lastName}`
       : clerkUser?.firstName || clerkUser?.lastName || "User");
-  
+
   const initials = displayName
     .split(" ")
-    .map(name => name.charAt(0))
+    .map((name: string) => name.charAt(0))
     .join("")
     .toUpperCase()
     .slice(0, 2);
@@ -87,29 +90,30 @@ export function AvatarUpload() {
   return (
     <div className="flex justify-center">
       <div className="relative">
-        <Avatar className="w-32 h-32 cursor-pointer">
-          <AvatarImage src={convexUser?.imageUrl || clerkUser?.imageUrl || ""} alt={`${displayName}'s profile`} />
-          <AvatarFallback className="text-2xl font-semibold bg-muted">
-            {initials}
-          </AvatarFallback>
+        <Avatar className="h-32 w-32 cursor-pointer">
+          <AvatarImage
+            src={convexUser?.imageUrl || clerkUser?.imageUrl || ""}
+            alt={`${displayName}'s profile`}
+          />
+          <AvatarFallback className="bg-muted text-2xl font-semibold">{initials}</AvatarFallback>
         </Avatar>
-        
+
         {/* Edit Badge */}
-        <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-[#6356FF] rounded-full flex items-center justify-center cursor-pointer hover:bg-[#5248E6] transition-colors">
+        <div className="absolute -bottom-2 -right-2 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-[#6356FF] transition-colors hover:bg-[#5248E6]">
           {isUploading ? (
-            <Loader2 className="w-4 h-4 text-white animate-spin" />
+            <Loader2 className="h-4 w-4 animate-spin text-white" />
           ) : (
-            <PenLine className="w-4 h-4 text-white" />
+            <PenLine className="h-4 w-4 text-white" />
           )}
           <input
             type="file"
             accept=".png,.jpg,.jpeg,.webp"
             onChange={handleFileChange}
             disabled={isUploading}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+            className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
           />
         </div>
       </div>
     </div>
   );
-} 
+}

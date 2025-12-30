@@ -4,7 +4,14 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -18,7 +25,10 @@ export function SubscriptionPlansGrid({ storeId, userId }: SubscriptionPlansGrid
   const createSubscription = useMutation(api.subscriptions.createSubscription);
   const { toast } = useToast();
 
-  const handleSubscribe = async (planId: Id<"subscriptionPlans">, billingCycle: "monthly" | "yearly") => {
+  const handleSubscribe = async (
+    planId: Id<"subscriptionPlans">,
+    billingCycle: "monthly" | "yearly"
+  ) => {
     if (!userId) {
       toast({
         title: "Please sign in",
@@ -51,15 +61,15 @@ export function SubscriptionPlansGrid({ storeId, userId }: SubscriptionPlansGrid
 
   if (!plans || plans.length === 0) {
     return (
-      <div className="text-center py-12">
+      <div className="py-12 text-center">
         <p className="text-muted-foreground">No subscription plans available</p>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {plans.map((plan) => (
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+      {plans.map((plan: any) => (
         <Card key={plan._id} className="flex flex-col">
           <CardHeader>
             <CardTitle>{plan.name}</CardTitle>
@@ -77,19 +87,16 @@ export function SubscriptionPlansGrid({ storeId, userId }: SubscriptionPlansGrid
             </div>
 
             <div className="space-y-2">
-              {plan.features.map((feature, idx) => (
+              {plan.features.map((feature: any, idx: number) => (
                 <div key={idx} className="flex items-start gap-2">
-                  <Check className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                  <Check className="mt-0.5 h-5 w-5 flex-shrink-0 text-green-500" />
                   <span className="text-sm">{feature}</span>
                 </div>
               ))}
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-2">
-            <Button
-              className="w-full"
-              onClick={() => handleSubscribe(plan._id, "monthly")}
-            >
+            <Button className="w-full" onClick={() => handleSubscribe(plan._id, "monthly")}>
               Subscribe Monthly
             </Button>
             <Button
@@ -97,7 +104,8 @@ export function SubscriptionPlansGrid({ storeId, userId }: SubscriptionPlansGrid
               variant="outline"
               onClick={() => handleSubscribe(plan._id, "yearly")}
             >
-              Subscribe Yearly (Save {Math.round((1 - (plan.yearlyPrice / 12) / plan.monthlyPrice) * 100)}%)
+              Subscribe Yearly (Save{" "}
+              {Math.round((1 - plan.yearlyPrice / 12 / plan.monthlyPrice) * 100)}%)
             </Button>
           </CardFooter>
         </Card>
@@ -105,8 +113,3 @@ export function SubscriptionPlansGrid({ storeId, userId }: SubscriptionPlansGrid
     </div>
   );
 }
-
-
-
-
-

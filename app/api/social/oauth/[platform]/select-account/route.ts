@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
 
 /**
  * Account selection page for users with multiple Facebook Pages/Instagram accounts
@@ -9,14 +9,14 @@ export async function GET(
   { params }: { params: Promise<{ platform: string }> }
 ) {
   const searchParams = request.nextUrl.searchParams;
-  const accounts = searchParams.get('accounts');
-  const storeId = searchParams.get('storeId');
-  const userId = searchParams.get('userId');
-  const accessToken = searchParams.get('accessToken');
+  const accounts = searchParams.get("accounts");
+  const storeId = searchParams.get("storeId");
+  const userId = searchParams.get("userId");
+  const accessToken = searchParams.get("accessToken");
   const { platform } = await params;
 
   if (!accounts || !storeId || !userId || !accessToken) {
-    return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
+    return NextResponse.json({ error: "Missing required parameters" }, { status: 400 });
   }
 
   const accountsData = JSON.parse(decodeURIComponent(accounts));
@@ -191,33 +191,38 @@ export async function GET(
           <div id="selection-view">
             <h1>🎯 Connect Your Accounts</h1>
             <p>
-              You have multiple ${platform === 'instagram' ? 'Instagram' : 'Facebook'} accounts. 
+              You have multiple ${platform === "instagram" ? "Instagram" : "Facebook"} accounts. 
               Select which ones you'd like to connect to your store:
             </p>
             
             <div class="account-list" id="accountList">
-              ${accountsData.map((acc, index) => {
-                const account = platform === 'instagram' ? acc.instagram : acc;
-                const page = acc.page;
-                const displayName = account.name || account.username;
-                const username = account.username;
-                const profileImage = account.profile_picture_url || (page && page.picture && page.picture.data && page.picture.data.url);
-                const initials = displayName ? displayName.substring(0, 2).toUpperCase() : '??';
-                
-                return `
+              ${accountsData
+                .map((acc: any, index: number) => {
+                  const account = platform === "instagram" ? acc.instagram : acc;
+                  const page = acc.page;
+                  const displayName = account.name || account.username;
+                  const username = account.username;
+                  const profileImage =
+                    account.profile_picture_url ||
+                    (page && page.picture && page.picture.data && page.picture.data.url);
+                  const initials = displayName ? displayName.substring(0, 2).toUpperCase() : "??";
+
+                  return `
                   <div class="account-card" data-index="${index}" onclick="selectAccount(${index})">
-                    ${profileImage 
-                      ? `<img src="${profileImage}" alt="${displayName}" class="account-image" />`
-                      : `<div class="account-image-placeholder">${initials}</div>`
+                    ${
+                      profileImage
+                        ? `<img src="${profileImage}" alt="${displayName}" class="account-image" />`
+                        : `<div class="account-image-placeholder">${initials}</div>`
                     }
                     <div class="account-info">
                       <div class="account-name">${displayName}</div>
-                      ${username ? `<div class="account-username">@${username}</div>` : ''}
-                      ${page ? `<div class="page-badge">via ${page.name}</div>` : ''}
+                      ${username ? `<div class="account-username">@${username}</div>` : ""}
+                      ${page ? `<div class="page-badge">via ${page.name}</div>` : ""}
                     </div>
                   </div>
                 `;
-              }).join('')}
+                })
+                .join("")}
             </div>
 
             <div class="button-group">
@@ -383,7 +388,6 @@ export async function GET(
 
   return new NextResponse(html, {
     status: 200,
-    headers: { 'Content-Type': 'text/html' }
+    headers: { "Content-Type": "text/html" },
   });
 }
-

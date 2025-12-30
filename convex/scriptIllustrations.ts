@@ -17,6 +17,14 @@ import OpenAI from "openai";
  * Takes long-form text, splits into sentences, generates prompts, creates images,
  * and generates embeddings for semantic search
  */
+type GenerateScriptIllustrationsResult = {
+  success: boolean;
+  jobId?: Id<"scriptIllustrationJobs">;
+  totalSentences: number;
+  message?: string;
+  error?: string;
+};
+
 export const generateScriptIllustrations = action({
   args: {
     userId: v.string(),
@@ -42,9 +50,9 @@ export const generateScriptIllustrations = action({
     message: v.optional(v.string()),
     error: v.optional(v.string()),
   }),
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<GenerateScriptIllustrationsResult> => {
     console.log(`🎨 Starting script illustration generation for user ${args.userId}`);
-    
+
     try {
       // Check FAL API key is configured (it's read from FAL_KEY env var automatically)
       const falApiKey = process.env.FAL_KEY;
@@ -65,15 +73,19 @@ export const generateScriptIllustrations = action({
       }
 
       // Create a job to track progress
-      const jobId = await ctx.runMutation(internal.scriptIllustrationMutations.createJob, {
-        userId: args.userId,
-        storeId: args.storeId,
-        scriptText: args.scriptText,
-        scriptTitle: args.scriptTitle,
-        sourceType: args.sourceType,
-        sourceId: args.sourceId,
-        totalSentences: sentences.length,
-      });
+      // @ts-ignore Convex type instantiation too deep
+      const jobId: Id<"scriptIllustrationJobs"> = await ctx.runMutation(
+        internal.scriptIllustrationMutations.createJob,
+        {
+          userId: args.userId,
+          storeId: args.storeId,
+          scriptText: args.scriptText,
+          scriptTitle: args.scriptTitle,
+          sourceType: args.sourceType,
+          sourceId: args.sourceId,
+          totalSentences: sentences.length,
+        }
+      );
 
       console.log(`📋 Created job ${jobId}`);
 
@@ -95,7 +107,6 @@ export const generateScriptIllustrations = action({
         totalSentences: sentences.length,
         message: `Started generation of ${sentences.length} illustrations`,
       };
-
     } catch (error: any) {
       console.error("❌ Error starting illustration generation:", error);
       return {
@@ -141,25 +152,30 @@ export const processSentences = internalAction({
 
     for (let i = 0; i < args.sentences.length; i++) {
       const sentence = args.sentences[i];
-      
+
       try {
-        console.log(`\n📸 [${i + 1}/${args.sentences.length}] Processing: "${sentence.substring(0, 50)}..."`);
+        console.log(
+          `\n📸 [${i + 1}/${args.sentences.length}] Processing: "${sentence.substring(0, 50)}..."`
+        );
 
         // Generate illustration prompt from sentence
         const prompt = await generateIllustrationPrompt(sentence);
         console.log(`   Prompt: "${prompt.substring(0, 80)}..."`);
 
         // Create illustration record (pending)
-        const illustrationId = await ctx.runMutation(internal.scriptIllustrationMutations.createIllustration, {
-          userId: args.userId,
-          storeId: args.storeId,
-          scriptId: args.scriptId,
-          sourceType: args.sourceType,
-          sentence,
-          sentenceIndex: i,
-          illustrationPrompt: prompt,
-          generationModel: args.imageModel,
-        });
+        const illustrationId = await ctx.runMutation(
+          internal.scriptIllustrationMutations.createIllustration,
+          {
+            userId: args.userId,
+            storeId: args.storeId,
+            scriptId: args.scriptId,
+            sourceType: args.sourceType,
+            sentence,
+            sentenceIndex: i,
+            illustrationPrompt: prompt,
+            generationModel: args.imageModel,
+          }
+        );
 
         // Generate image using FAL
         try {
@@ -186,11 +202,14 @@ export const processSentences = internalAction({
           if (args.generateEmbeddings) {
             try {
               const embedding = await generateImageEmbedding(imageUrl);
-              await ctx.runMutation(internal.scriptIllustrationMutations.updateIllustrationEmbedding, {
-                illustrationId,
-                embedding,
-                embeddingModel: "clip-vit-base-patch32",
-              });
+              await ctx.runMutation(
+                internal.scriptIllustrationMutations.updateIllustrationEmbedding,
+                {
+                  illustrationId,
+                  embedding,
+                  embeddingModel: "clip-vit-base-patch32",
+                }
+              );
               console.log(`   🧮 Embedding generated (${embedding.length} dimensions)`);
             } catch (embError: any) {
               console.error(`   ⚠️ Failed to generate embedding: ${embError.message}`);
@@ -200,7 +219,6 @@ export const processSentences = internalAction({
 
           illustrationIds.push(illustrationId);
           processed++;
-
         } catch (genError: any) {
           console.error(`   ❌ Image generation failed: ${genError.message}`);
           await ctx.runMutation(internal.scriptIllustrationMutations.updateIllustrationStatus, {
@@ -221,9 +239,8 @@ export const processSentences = internalAction({
 
         // Rate limiting - avoid overwhelming FAL API
         if (i < args.sentences.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise((resolve) => setTimeout(resolve, 1000));
         }
-
       } catch (error: any) {
         console.error(`   ❌ Error processing sentence ${i + 1}:`, error);
         errors.push(`Sentence ${i + 1}: ${error.message}`);
@@ -237,7 +254,9 @@ export const processSentences = internalAction({
       errors,
     });
 
-    console.log(`\n🎉 Job complete! Processed: ${processed}/${args.sentences.length}, Errors: ${errors.length}`);
+    console.log(
+      `\n🎉 Job complete! Processed: ${processed}/${args.sentences.length}, Errors: ${errors.length}`
+    );
   },
 });
 
@@ -250,15 +269,15 @@ export const processSentences = internalAction({
  */
 function splitIntoSentences(text: string, skipEmpty: boolean = true): string[] {
   // Normalize whitespace
-  text = text.replace(/\s+/g, ' ').trim();
-  
+  text = text.replace(/\s+/g, " ").trim();
+
   // Split on sentence boundaries (., !, ?)
   // Handle common abbreviations like "Dr.", "Mr.", "etc."
   const sentences = text
-    .replace(/([.!?])\s+/g, '$1|')
-    .split('|')
-    .map(s => s.trim())
-    .filter(s => {
+    .replace(/([.!?])\s+/g, "$1|")
+    .split("|")
+    .map((s) => s.trim())
+    .filter((s) => {
       if (skipEmpty && s.length === 0) return false;
       // Filter out very short fragments (likely abbreviations)
       if (s.length < 10) return false;
@@ -293,7 +312,7 @@ Output: "Professional diagram showing audio waveform being compressed, with visu
     model: "gpt-4o-mini", // Fast and cheap for prompt generation
     messages: [
       { role: "system", content: systemPrompt },
-      { role: "user", content: sentence }
+      { role: "user", content: sentence },
     ],
     temperature: 0.7,
     max_tokens: 150,
@@ -305,13 +324,16 @@ Output: "Professional diagram showing audio waveform being compressed, with visu
 /**
  * Generate image using FAL AI
  */
-async function generateImageWithFAL(prompt: string, model: string): Promise<{ url: string; seed?: number }> {
+async function generateImageWithFAL(
+  prompt: string,
+  model: string
+): Promise<{ url: string; seed?: number }> {
   console.log(`   🎨 Calling FAL API with model: ${model}`);
-  
+
   try {
     // Create FAL client - it reads FAL_KEY from environment automatically
     const falClient = createFalClient();
-    
+
     const result = await falClient.run(model, {
       input: {
         prompt,
@@ -322,7 +344,7 @@ async function generateImageWithFAL(prompt: string, model: string): Promise<{ ur
     });
 
     const imageData = result.data as any;
-    
+
     if (!imageData?.images?.[0]?.url) {
       throw new Error("No image URL in FAL response");
     }
@@ -342,7 +364,7 @@ async function generateImageWithFAL(prompt: string, model: string): Promise<{ ur
  */
 async function uploadImageToConvex(ctx: any, imageUrl: string): Promise<Id<"_storage">> {
   console.log(`   📥 Downloading image from: ${imageUrl}`);
-  
+
   // Fetch the image
   const response = await fetch(imageUrl);
   if (!response.ok) {
@@ -353,7 +375,10 @@ async function uploadImageToConvex(ctx: any, imageUrl: string): Promise<Id<"_sto
   const arrayBuffer = await imageBlob.arrayBuffer();
 
   // Get upload URL
-  const uploadUrl = await ctx.runMutation(internal.scriptIllustrationMutations.generateUploadUrl, {});
+  const uploadUrl = await ctx.runMutation(
+    internal.scriptIllustrationMutations.generateUploadUrl,
+    {}
+  );
 
   // Upload to Convex
   const uploadResult = await fetch(uploadUrl, {
@@ -366,7 +391,7 @@ async function uploadImageToConvex(ctx: any, imageUrl: string): Promise<Id<"_sto
     throw new Error("Failed to upload to Convex storage");
   }
 
-  const { storageId } = await uploadResult.json() as { storageId: Id<"_storage"> };
+  const { storageId } = (await uploadResult.json()) as { storageId: Id<"_storage"> };
   return storageId;
 }
 
@@ -382,7 +407,7 @@ async function generateImageEmbedding(imageUrl: string): Promise<number[]> {
   // For now, we'll generate embeddings from the image's caption/alt text
   // In production, you'd want to use a proper image embedding model
   // or OpenAI's vision API to describe the image first, then embed that description
-  
+
   try {
     // Use GPT-4V to describe the image
     const description = await openai.chat.completions.create({
@@ -393,14 +418,14 @@ async function generateImageEmbedding(imageUrl: string): Promise<number[]> {
           content: [
             {
               type: "text",
-              text: "Describe this image in detail for semantic search purposes. Focus on objects, concepts, colors, composition, and mood. Be concise but thorough."
+              text: "Describe this image in detail for semantic search purposes. Focus on objects, concepts, colors, composition, and mood. Be concise but thorough.",
             },
             {
               type: "image_url",
-              image_url: { url: imageUrl }
-            }
-          ]
-        }
+              image_url: { url: imageUrl },
+            },
+          ],
+        },
       ],
       max_tokens: 300,
     });
@@ -414,7 +439,6 @@ async function generateImageEmbedding(imageUrl: string): Promise<number[]> {
     });
 
     return embeddingResponse.data[0].embedding;
-
   } catch (error: any) {
     console.error("Error generating image embedding:", error);
     throw error;
@@ -423,4 +447,3 @@ async function generateImageEmbedding(imageUrl: string): Promise<number[]> {
 
 // Note: All mutations and queries have been moved to scriptIllustrationMutations.ts
 // to allow this file to use "use node";
-

@@ -26,7 +26,7 @@ export function ConvexExample({ userId }: ConvexExampleProps) {
 
   // Real-time query - automatically updates when data changes
   const stores = useQuery(api.stores.getStoresByUser, { userId });
-  
+
   // Mutations for creating stores
   const createStore = useMutation(api.stores.createStore);
   const deleteStore = useMutation(api.stores.deleteStore);
@@ -42,12 +42,12 @@ export function ConvexExample({ userId }: ConvexExampleProps) {
         name: storeName,
         userId: userId,
       });
-      
+
       toast({
         title: "Store created",
         description: `Successfully created store "${storeName}"`,
       });
-      
+
       setStoreName("");
     } catch (error) {
       toast({
@@ -64,7 +64,7 @@ export function ConvexExample({ userId }: ConvexExampleProps) {
   const handleDeleteStore = async (storeId: string, name: string) => {
     try {
       await deleteStore({ id: storeId as any });
-      
+
       toast({
         title: "Store deleted",
         description: `Successfully deleted store "${name}"`,
@@ -88,13 +88,13 @@ export function ConvexExample({ userId }: ConvexExampleProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground mb-4">
+          <p className="mb-4 text-sm text-muted-foreground">
             This component demonstrates real-time data fetching and mutations using Convex hooks.
             Data updates automatically across all connected clients.
           </p>
 
           {/* Create Store Form */}
-          <form onSubmit={handleCreateStore} className="flex gap-2 mb-6">
+          <form onSubmit={handleCreateStore} className="mb-6 flex gap-2">
             <Input
               placeholder="Enter store name"
               value={storeName}
@@ -113,7 +113,7 @@ export function ConvexExample({ userId }: ConvexExampleProps) {
 
           {/* Stores List */}
           <div className="space-y-4">
-            <h3 className="font-semibold flex items-center gap-2">
+            <h3 className="flex items-center gap-2 font-semibold">
               <ShoppingBag className="h-4 w-4" />
               Your Stores
             </h3>
@@ -127,14 +127,14 @@ export function ConvexExample({ userId }: ConvexExampleProps) {
               </div>
             ) : stores.length === 0 ? (
               // Empty state
-              <div className="text-center py-8 text-muted-foreground">
-                <Store className="h-12 w-12 mx-auto mb-2 opacity-50" />
+              <div className="py-8 text-center text-muted-foreground">
+                <Store className="mx-auto mb-2 h-12 w-12 opacity-50" />
                 <p>No stores yet. Create your first store above!</p>
               </div>
             ) : (
               // Stores grid
               <div className="grid gap-3">
-                {stores.map((store) => (
+                {stores.map((store: any) => (
                   <Card key={store._id} className="p-4">
                     <div className="flex items-center justify-between">
                       <div className="space-y-1">
@@ -143,9 +143,7 @@ export function ConvexExample({ userId }: ConvexExampleProps) {
                           <Badge variant="outline" className="text-xs">
                             ID: {store._id}
                           </Badge>
-                          <span>
-                            Created: {new Date(store._creationTime).toLocaleDateString()}
-                          </span>
+                          <span>Created: {new Date(store._creationTime).toLocaleDateString()}</span>
                         </div>
                       </div>
                       <Button
@@ -169,7 +167,7 @@ export function ConvexExample({ userId }: ConvexExampleProps) {
         <CardHeader>
           <CardTitle className="text-sm">Integration Details</CardTitle>
         </CardHeader>
-        <CardContent className="text-xs text-muted-foreground space-y-2">
+        <CardContent className="space-y-2 text-xs text-muted-foreground">
           <div>
             <strong>Real-time Query:</strong> <code>useQuery(api.stores.getStoresByUser)</code>
           </div>
@@ -186,4 +184,4 @@ export function ConvexExample({ userId }: ConvexExampleProps) {
       </Card>
     </div>
   );
-} 
+}

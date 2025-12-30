@@ -6,10 +6,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Plus, List, Music, Settings, Eye, EyeOff, Edit, Trash2, ExternalLink, X } from "lucide-react";
+import {
+  Plus,
+  List,
+  Music,
+  Settings,
+  Eye,
+  EyeOff,
+  Edit,
+  Trash2,
+  ExternalLink,
+  X,
+} from "lucide-react";
 import { useUser } from "@clerk/nextjs";
 import Link from "next/link";
 import Image from "next/image";
@@ -36,10 +53,7 @@ export default function PlaylistsPage() {
   const [coverUrl, setCoverUrl] = useState("");
 
   // Fetch user's tracks for Add Track selector
-  const userTracks = useQuery(
-    api.tracks.getUserTracks,
-    user?.id ? { userId: user.id } : "skip"
-  );
+  const userTracks = useQuery(api.tracks.getUserTracks, user?.id ? { userId: user.id } : "skip");
 
   const addTrackToPlaylist = useMutation(api.playlists.addTrackToPlaylist);
 
@@ -93,10 +107,8 @@ export default function PlaylistsPage() {
   };
 
   const toggleGenre = (genre: string) => {
-    setSelectedGenres(prev => 
-      prev.includes(genre)
-        ? prev.filter(g => g !== genre)
-        : [...prev, genre]
+    setSelectedGenres((prev) =>
+      prev.includes(genre) ? prev.filter((g) => g !== genre) : [...prev, genre]
     );
   };
 
@@ -119,7 +131,7 @@ export default function PlaylistsPage() {
 
   const handleOpenPublic = (playlist: any) => {
     const publicUrl = `/playlists/${playlist.customSlug || playlist._id}`;
-    window.open(publicUrl, '_blank');
+    window.open(publicUrl, "_blank");
   };
 
   const handleSaveEdit = async () => {
@@ -193,7 +205,9 @@ export default function PlaylistsPage() {
 
       toast({
         title: enable ? "Submissions Enabled!" : "Submissions Disabled",
-        description: enable ? "Artists can now submit tracks to this playlist" : "Submission form has been closed",
+        description: enable
+          ? "Artists can now submit tracks to this playlist"
+          : "Submission form has been closed",
         className: "bg-white dark:bg-black",
       });
 
@@ -237,23 +251,21 @@ export default function PlaylistsPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8">
+    <div className="mx-auto max-w-6xl space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Playlists</h1>
-          <p className="text-muted-foreground">
-            Curate playlists and accept track submissions
-          </p>
+          <h1 className="mb-2 text-3xl font-bold">Playlists</h1>
+          <p className="text-muted-foreground">Curate playlists and accept track submissions</p>
         </div>
         <Button onClick={() => setShowCreateDialog(true)} size="lg">
-          <Plus className="w-4 h-4 mr-2" />
+          <Plus className="mr-2 h-4 w-4" />
           New Playlist
         </Button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="p-6">
             <div className="text-2xl font-bold">{playlists?.length || 0}</div>
@@ -263,7 +275,7 @@ export default function PlaylistsPage() {
         <Card>
           <CardContent className="p-6">
             <div className="text-2xl font-bold">
-              {playlists?.filter(p => p.isPublic).length || 0}
+              {playlists?.filter((p: any) => p.isPublic).length || 0}
             </div>
             <div className="text-sm text-muted-foreground">Public</div>
           </CardContent>
@@ -271,7 +283,7 @@ export default function PlaylistsPage() {
         <Card>
           <CardContent className="p-6">
             <div className="text-2xl font-bold">
-              {playlists?.filter(p => p.acceptsSubmissions).length || 0}
+              {playlists?.filter((p: any) => p.acceptsSubmissions).length || 0}
             </div>
             <div className="text-sm text-muted-foreground">Accepting Submissions</div>
           </CardContent>
@@ -279,7 +291,7 @@ export default function PlaylistsPage() {
         <Card>
           <CardContent className="p-6">
             <div className="text-2xl font-bold">
-              {playlists?.reduce((sum, p) => sum + (p.totalSubmissions || 0), 0) || 0}
+              {playlists?.reduce((sum: number, p: any) => sum + (p.totalSubmissions || 0), 0) || 0}
             </div>
             <div className="text-sm text-muted-foreground">Total Submissions</div>
           </CardContent>
@@ -288,47 +300,47 @@ export default function PlaylistsPage() {
 
       {/* Playlists Grid */}
       {playlists && playlists.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {playlists.map((playlist) => (
-            <Card key={playlist._id} className="group hover:shadow-lg transition-all">
-              <CardContent className="p-6 space-y-4">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {playlists.map((playlist: any) => (
+            <Card key={playlist._id} className="group transition-all hover:shadow-lg">
+              <CardContent className="space-y-4 p-6">
                 {/* Cover */}
-                <div className="aspect-square bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg flex items-center justify-center relative overflow-hidden">
+                <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900/20 dark:to-blue-900/20">
                   {playlist.coverUrl ? (
-                    <Image 
-                      src={playlist.coverUrl} 
-                      alt={playlist.name} 
+                    <Image
+                      src={playlist.coverUrl}
+                      alt={playlist.name}
                       width={400}
                       height={400}
-                      className="w-full h-full object-cover"
+                      className="h-full w-full object-cover"
                     />
                   ) : (
-                    <List className="w-16 h-16 text-purple-400" />
+                    <List className="h-16 w-16 text-purple-400" />
                   )}
                 </div>
 
                 {/* Info */}
                 <div>
-                  <h3 className="font-semibold text-lg line-clamp-1 mb-2">{playlist.name}</h3>
+                  <h3 className="mb-2 line-clamp-1 text-lg font-semibold">{playlist.name}</h3>
                   {playlist.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                    <p className="mb-2 line-clamp-2 text-sm text-muted-foreground">
                       {playlist.description}
                     </p>
                   )}
-                  <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex flex-wrap items-center gap-2">
                     {playlist.isPublic ? (
                       <Badge variant="secondary" className="gap-1">
-                        <Eye className="w-3 h-3" />
+                        <Eye className="h-3 w-3" />
                         Public
                       </Badge>
                     ) : (
                       <Badge variant="outline" className="gap-1">
-                        <EyeOff className="w-3 h-3" />
+                        <EyeOff className="h-3 w-3" />
                         Private
                       </Badge>
                     )}
                     {playlist.acceptsSubmissions && (
-                      <Badge className="bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300">
+                      <Badge className="bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-300">
                         Submissions Open
                       </Badge>
                     )}
@@ -343,53 +355,53 @@ export default function PlaylistsPage() {
 
                 {/* Actions */}
                 <div className="grid grid-cols-3 gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     className="gap-1"
                     onClick={() => handleAddTrack(playlist)}
                   >
-                    <Plus className="w-3 h-3" />
+                    <Plus className="h-3 w-3" />
                     Add
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     className="gap-1"
                     onClick={() => handleEdit(playlist)}
                   >
-                    <Edit className="w-3 h-3" />
+                    <Edit className="h-3 w-3" />
                     Edit
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     className="gap-1"
                     onClick={() => handleSettings(playlist)}
                   >
-                    <Settings className="w-3 h-3" />
+                    <Settings className="h-3 w-3" />
                     Settings
                   </Button>
                 </div>
 
                 {playlist.isPublic && (
                   <div className="grid grid-cols-2 gap-1">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       className="gap-1 text-xs"
                       onClick={() => handleCopyLink(playlist)}
                     >
-                      <ExternalLink className="w-3 h-3" />
+                      <ExternalLink className="h-3 w-3" />
                       Copy Link
                     </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
+                    <Button
+                      variant="ghost"
+                      size="sm"
                       className="gap-1 text-xs"
                       onClick={() => handleOpenPublic(playlist)}
                     >
-                      <Eye className="w-3 h-3" />
+                      <Eye className="h-3 w-3" />
                       Open
                     </Button>
                   </div>
@@ -407,25 +419,25 @@ export default function PlaylistsPage() {
             {
               label: "Create Playlist",
               onClick: () => setShowCreateDialog(true),
-              icon: Plus
-            }
+              icon: Plus,
+            },
           ]}
           tips={[
             {
               icon: List,
               title: "Curate by Theme",
-              description: "Create playlists around specific moods, genres, or themes"
+              description: "Create playlists around specific moods, genres, or themes",
             },
             {
               icon: Music,
               title: "Accept Submissions",
-              description: "Let artists submit tracks and monetize your curation"
+              description: "Let artists submit tracks and monetize your curation",
             },
             {
               icon: ExternalLink,
               title: "Share Everywhere",
-              description: "Public playlists can be shared on social media and in bios"
-            }
+              description: "Public playlists can be shared on social media and in bios",
+            },
           ]}
         />
       )}
@@ -449,19 +461,15 @@ export default function PlaylistsPage() {
             </div>
 
             <div className="flex gap-3">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => setShowCreateDialog(false)}
                 className="flex-1"
               >
                 Cancel
               </Button>
-              <Button 
-                onClick={handleCreate}
-                disabled={!newPlaylistName.trim()}
-                className="flex-1"
-              >
-                <Plus className="w-4 h-4 mr-2" />
+              <Button onClick={handleCreate} disabled={!newPlaylistName.trim()} className="flex-1">
+                <Plus className="mr-2 h-4 w-4" />
                 Create Playlist
               </Button>
             </div>
@@ -474,9 +482,7 @@ export default function PlaylistsPage() {
         <DialogContent className="bg-white dark:bg-black">
           <DialogHeader>
             <DialogTitle>Edit Playlist</DialogTitle>
-            <DialogDescription>
-              Update playlist name and description
-            </DialogDescription>
+            <DialogDescription>Update playlist name and description</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -514,17 +520,17 @@ export default function PlaylistsPage() {
                 className="mt-2"
               />
               {coverUrl && (
-                <div className="mt-2 relative w-32 h-32 rounded-lg overflow-hidden border">
-                  <Image 
-                    src={coverUrl} 
-                    alt="Cover preview" 
+                <div className="relative mt-2 h-32 w-32 overflow-hidden rounded-lg border">
+                  <Image
+                    src={coverUrl}
+                    alt="Cover preview"
                     width={128}
                     height={128}
-                    className="w-full h-full object-cover"
+                    className="h-full w-full object-cover"
                   />
                 </div>
               )}
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="mt-1 text-xs text-muted-foreground">
                 Paste an image URL or upload from your computer (coming soon)
               </p>
             </div>
@@ -532,8 +538,17 @@ export default function PlaylistsPage() {
             {/* Genres */}
             <div>
               <Label>Genres (Select all that apply)</Label>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {["Electronic", "Hip-Hop", "House", "Techno", "Trap", "Lo-Fi", "Ambient", "Experimental"].map(genre => (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {[
+                  "Electronic",
+                  "Hip-Hop",
+                  "House",
+                  "Techno",
+                  "Trap",
+                  "Lo-Fi",
+                  "Ambient",
+                  "Experimental",
+                ].map((genre) => (
                   <Badge
                     key={genre}
                     variant={selectedGenres.includes(genre) ? "default" : "outline"}
@@ -544,37 +559,27 @@ export default function PlaylistsPage() {
                   </Badge>
                 ))}
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="mt-1 text-xs text-muted-foreground">
                 Helps artists find playlists that fit their music style
               </p>
             </div>
 
             {/* Public/Private Toggle */}
-            <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div className="flex items-center justify-between rounded-lg border p-4">
               <div className="flex-1">
                 <h4 className="font-medium">Visibility</h4>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="mt-1 text-sm text-muted-foreground">
                   {isPublic ? "Anyone can view this playlist" : "Only you can see this playlist"}
                 </p>
               </div>
-              <Switch
-                checked={isPublic}
-                onCheckedChange={setIsPublic}
-              />
+              <Switch checked={isPublic} onCheckedChange={setIsPublic} />
             </div>
 
             <div className="flex gap-3">
-              <Button 
-                variant="outline" 
-                onClick={() => setShowEditDialog(false)}
-                className="flex-1"
-              >
+              <Button variant="outline" onClick={() => setShowEditDialog(false)} className="flex-1">
                 Cancel
               </Button>
-              <Button 
-                onClick={handleSaveEdit}
-                className="flex-1"
-              >
+              <Button onClick={handleSaveEdit} className="flex-1">
                 Save Changes
               </Button>
             </div>
@@ -593,10 +598,10 @@ export default function PlaylistsPage() {
           </DialogHeader>
           <div className="space-y-6">
             {/* Accept Submissions Toggle */}
-            <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div className="flex items-center justify-between rounded-lg border p-4">
               <div className="flex-1">
                 <h4 className="font-medium">Accept Track Submissions</h4>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="mt-1 text-sm text-muted-foreground">
                   Allow artists to submit their tracks for consideration
                 </p>
               </div>
@@ -608,18 +613,17 @@ export default function PlaylistsPage() {
 
             {/* Submission Pricing (if enabled) */}
             {selectedPlaylist?.acceptsSubmissions && (
-              <div className="space-y-4 border rounded-lg p-4 bg-muted/30">
+              <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <h4 className="font-medium">Charge Submission Fee</h4>
                     <p className="text-sm text-muted-foreground">
-                      {isPaid ? `Artists pay $${submissionPrice} per submission` : "Free submissions (no charge)"}
+                      {isPaid
+                        ? `Artists pay $${submissionPrice} per submission`
+                        : "Free submissions (no charge)"}
                     </p>
                   </div>
-                  <Switch
-                    checked={isPaid}
-                    onCheckedChange={setIsPaid}
-                  />
+                  <Switch checked={isPaid} onCheckedChange={setIsPaid} />
                 </div>
 
                 {/* Price Input (when paid) */}
@@ -654,23 +658,20 @@ export default function PlaylistsPage() {
                 rows={3}
                 className="mt-2"
               />
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="mt-1 text-xs text-muted-foreground">
                 Help artists understand what tracks fit your playlist
               </p>
             </div>
 
             <div className="flex gap-3">
-              <Button 
+              <Button
                 variant="outline"
-                onClick={() => setShowSettingsDialog(false)} 
+                onClick={() => setShowSettingsDialog(false)}
                 className="flex-1"
               >
                 Cancel
               </Button>
-              <Button 
-                onClick={handleSaveSettings}
-                className="flex-1"
-              >
+              <Button onClick={handleSaveSettings} className="flex-1">
                 Save Settings
               </Button>
             </div>
@@ -690,50 +691,50 @@ export default function PlaylistsPage() {
 
           <div className="space-y-4">
             {userTracks && userTracks.length > 0 ? (
-              <div className="space-y-2 max-h-96 overflow-y-auto">
-                {userTracks.filter(t => t.isPublic).map((track) => (
-                  <div
-                    key={track._id}
-                    className="flex items-center gap-4 p-3 border rounded-lg hover:bg-accent transition-colors cursor-pointer"
-                    onClick={() => handleAddTrackToPlaylist(track._id)}
-                  >
-                    <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900/20 dark:to-blue-900/20 rounded flex items-center justify-center flex-shrink-0">
-                      <Music className="w-6 h-6 text-purple-600" />
+              <div className="max-h-96 space-y-2 overflow-y-auto">
+                {userTracks
+                  .filter((t: any) => t.isPublic)
+                  .map((track: any) => (
+                    <div
+                      key={track._id}
+                      className="flex cursor-pointer items-center gap-4 rounded-lg border p-3 transition-colors hover:bg-accent"
+                      onClick={() => handleAddTrackToPlaylist(track._id)}
+                    >
+                      <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900/20 dark:to-blue-900/20">
+                        <Music className="h-6 w-6 text-purple-600" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="truncate font-medium">{track.title}</h4>
+                        <p className="truncate text-sm text-muted-foreground">
+                          {track.artist || "Unknown Artist"}
+                        </p>
+                      </div>
+                      {track.genre && (
+                        <Badge variant="secondary" className="text-xs capitalize">
+                          {track.genre}
+                        </Badge>
+                      )}
+                      <Button size="sm" variant="ghost">
+                        <Plus className="h-4 w-4" />
+                      </Button>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-medium truncate">{track.title}</h4>
-                      <p className="text-sm text-muted-foreground truncate">
-                        {track.artist || "Unknown Artist"}
-                      </p>
-                    </div>
-                    {track.genre && (
-                      <Badge variant="secondary" className="text-xs capitalize">
-                        {track.genre}
-                      </Badge>
-                    )}
-                    <Button size="sm" variant="ghost">
-                      <Plus className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ))}
+                  ))}
               </div>
             ) : (
-              <div className="text-center py-12">
-                <Music className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-muted-foreground mb-4">
-                  You haven't shared any tracks yet
-                </p>
+              <div className="py-12 text-center">
+                <Music className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+                <p className="mb-4 text-muted-foreground">You haven't shared any tracks yet</p>
                 <Button asChild>
                   <a href="/library/share">
-                    <Plus className="w-4 h-4 mr-2" />
+                    <Plus className="mr-2 h-4 w-4" />
                     Share Your First Track
                   </a>
                 </Button>
               </div>
             )}
 
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setShowAddTrackDialog(false)}
               className="w-full"
             >
@@ -745,5 +746,3 @@ export default function PlaylistsPage() {
     </div>
   );
 }
-
-

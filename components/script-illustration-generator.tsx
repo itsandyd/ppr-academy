@@ -12,16 +12,16 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  ImageIcon, 
-  Loader2, 
-  CheckCircle2, 
-  XCircle, 
+import {
+  ImageIcon,
+  Loader2,
+  CheckCircle2,
+  XCircle,
   Clock,
   Search,
   Sparkles,
   Download,
-  Eye
+  Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
@@ -94,9 +94,7 @@ export function ScriptIllustrationGenerator({
     }
   };
 
-  const sentenceCount = scriptText
-    .split(/[.!?]+/)
-    .filter(s => s.trim().length > 10).length;
+  const sentenceCount = scriptText.split(/[.!?]+/).filter((s) => s.trim().length > 10).length;
 
   return (
     <div className="space-y-6">
@@ -107,7 +105,8 @@ export function ScriptIllustrationGenerator({
             Script-to-Illustration Generator
           </CardTitle>
           <CardDescription>
-            Generate AI illustrations for each sentence in your script using FAL AI and semantic search
+            Generate AI illustrations for each sentence in your script using FAL AI and semantic
+            search
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -131,9 +130,7 @@ export function ScriptIllustrationGenerator({
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="script">Script Content</Label>
-                  <Badge variant="outline">
-                    ~{sentenceCount} sentences
-                  </Badge>
+                  <Badge variant="outline">~{sentenceCount} sentences</Badge>
                 </div>
                 <Textarea
                   id="script"
@@ -144,8 +141,8 @@ export function ScriptIllustrationGenerator({
                   className="font-mono text-sm"
                 />
                 <p className="text-xs text-muted-foreground">
-                  The script will be split into sentences, and each sentence will get an AI-generated illustration
-                  based on its content.
+                  The script will be split into sentences, and each sentence will get an
+                  AI-generated illustration based on its content.
                 </p>
               </div>
 
@@ -173,13 +170,13 @@ export function ScriptIllustrationGenerator({
               {currentJobId && jobStatus && (
                 <Card className="border-primary/20 bg-primary/5">
                   <CardHeader>
-                    <CardTitle className="text-sm flex items-center gap-2">
+                    <CardTitle className="flex items-center gap-2 text-sm">
                       {jobStatus.status === "completed" ? (
                         <CheckCircle2 className="h-4 w-4 text-green-500" />
                       ) : jobStatus.status === "failed" ? (
                         <XCircle className="h-4 w-4 text-red-500" />
                       ) : (
-                        <Clock className="h-4 w-4 text-blue-500 animate-pulse" />
+                        <Clock className="h-4 w-4 animate-pulse text-blue-500" />
                       )}
                       Generation Progress
                     </CardTitle>
@@ -226,7 +223,7 @@ export function ScriptIllustrationGenerator({
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {userJobs.map((job) => (
+              {userJobs.map((job: any) => (
                 <JobStatusCard
                   key={job._id}
                   job={job}
@@ -246,8 +243,8 @@ export function ScriptIllustrationGenerator({
             <CardTitle className="text-sm">Generated Illustrations</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {illustrations.map((illustration) => (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {illustrations.map((illustration: any) => (
                 <IllustrationCard key={illustration._id} illustration={illustration} />
               ))}
             </div>
@@ -270,34 +267,27 @@ function JobStatusCard({ job, onSelect, isSelected }: any) {
     failed: "bg-red-500",
   };
 
-  const progress = job.totalSentences > 0 
-    ? Math.round((job.processedSentences / job.totalSentences) * 100)
-    : 0;
+  const progress =
+    job.totalSentences > 0 ? Math.round((job.processedSentences / job.totalSentences) * 100) : 0;
 
   return (
     <button
       onClick={onSelect}
-      className={`w-full text-left p-3 rounded-lg border transition-colors ${
-        isSelected
-          ? "border-primary bg-primary/5"
-          : "border-border hover:border-primary/50"
+      className={`w-full rounded-lg border p-3 text-left transition-colors ${
+        isSelected ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
       }`}
     >
-      <div className="flex items-center justify-between mb-2">
-        <div className="font-medium text-sm truncate">
-          {job.scriptTitle || "Untitled Script"}
-        </div>
+      <div className="mb-2 flex items-center justify-between">
+        <div className="truncate text-sm font-medium">{job.scriptTitle || "Untitled Script"}</div>
         <Badge className={statusColors[job.status as keyof typeof statusColors]}>
           {job.status}
         </Badge>
       </div>
-      <div className="text-xs text-muted-foreground space-y-1">
+      <div className="space-y-1 text-xs text-muted-foreground">
         <div>
           {job.processedSentences} / {job.totalSentences} completed
         </div>
-        {job.status === "processing" && (
-          <Progress value={progress} className="h-1 mt-1" />
-        )}
+        {job.status === "processing" && <Progress value={progress} className="mt-1 h-1" />}
       </div>
     </button>
   );
@@ -314,75 +304,71 @@ function IllustrationCard({ illustration }: any) {
             src={illustration.imageUrl}
             alt={illustration.sentence}
             fill
-            className="object-cover cursor-pointer hover:scale-105 transition-transform"
+            className="cursor-pointer object-cover transition-transform hover:scale-105"
             onClick={() => setIsExpanded(true)}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center">
+          <div className="flex h-full w-full items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         )}
-        
-        <div className="absolute top-2 right-2">
-          <Badge variant="secondary">
-            #{illustration.sentenceIndex + 1}
-          </Badge>
+
+        <div className="absolute right-2 top-2">
+          <Badge variant="secondary">#{illustration.sentenceIndex + 1}</Badge>
         </div>
       </div>
 
-      <CardContent className="p-3 space-y-2">
-        <p className="text-xs line-clamp-2">{illustration.sentence}</p>
-        
+      <CardContent className="space-y-2 p-3">
+        <p className="line-clamp-2 text-xs">{illustration.sentence}</p>
+
         {illustration.generationStatus === "completed" && (
           <div className="flex gap-1">
             <Button
               size="sm"
               variant="ghost"
-              className="h-7 text-xs flex-1"
+              className="h-7 flex-1 text-xs"
               onClick={() => setIsExpanded(true)}
             >
-              <Eye className="h-3 w-3 mr-1" />
+              <Eye className="mr-1 h-3 w-3" />
               View
             </Button>
             <Button
               size="sm"
               variant="ghost"
-              className="h-7 text-xs flex-1"
+              className="h-7 flex-1 text-xs"
               onClick={() => {
-                const link = document.createElement('a');
+                const link = document.createElement("a");
                 link.href = illustration.imageUrl;
                 link.download = `illustration-${illustration.sentenceIndex + 1}.png`;
                 link.click();
               }}
             >
-              <Download className="h-3 w-3 mr-1" />
+              <Download className="mr-1 h-3 w-3" />
               Save
             </Button>
           </div>
         )}
 
         {illustration.generationStatus === "failed" && (
-          <div className="text-xs text-red-500">
-            Failed: {illustration.generationError}
-          </div>
+          <div className="text-xs text-red-500">Failed: {illustration.generationError}</div>
         )}
       </CardContent>
 
       {/* Expanded View Modal */}
       {isExpanded && illustration.imageUrl && (
         <div
-          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
           onClick={() => setIsExpanded(false)}
         >
-          <div className="relative max-w-4xl max-h-[90vh] bg-white dark:bg-black rounded-lg overflow-hidden">
+          <div className="relative max-h-[90vh] max-w-4xl overflow-hidden rounded-lg bg-white dark:bg-black">
             <Image
               src={illustration.imageUrl}
               alt={illustration.sentence}
               width={1024}
               height={576}
-              className="object-contain max-h-[70vh]"
+              className="max-h-[70vh] object-contain"
             />
-            <div className="p-4 space-y-2">
+            <div className="space-y-2 p-4">
               <p className="text-sm font-medium">{illustration.sentence}</p>
               <p className="text-xs text-muted-foreground">
                 Prompt: {illustration.illustrationPrompt}
@@ -450,7 +436,7 @@ function IllustrationSearch({ userId }: { userId: string }) {
       </div>
 
       {searchResults.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {searchResults.map((result) => (
             <SearchResultCard key={result.illustrationId} result={result} />
           ))}
@@ -458,7 +444,7 @@ function IllustrationSearch({ userId }: { userId: string }) {
       )}
 
       {searchResults.length === 0 && searchQuery && !isSearching && (
-        <div className="text-center py-8 text-muted-foreground">
+        <div className="py-8 text-center text-muted-foreground">
           No illustrations found matching "{searchQuery}"
         </div>
       )}
@@ -467,31 +453,26 @@ function IllustrationSearch({ userId }: { userId: string }) {
 }
 
 function SearchResultCard({ result }: any) {
-  const similarityColor = 
-    result.similarity > 0.9 ? "text-green-500" :
-    result.similarity > 0.8 ? "text-blue-500" :
-    result.similarity > 0.7 ? "text-yellow-500" :
-    "text-gray-500";
+  const similarityColor =
+    result.similarity > 0.9
+      ? "text-green-500"
+      : result.similarity > 0.8
+        ? "text-blue-500"
+        : result.similarity > 0.7
+          ? "text-yellow-500"
+          : "text-gray-500";
 
   return (
     <Card className="overflow-hidden">
       <div className="relative aspect-video bg-muted">
-        <Image
-          src={result.imageUrl}
-          alt={result.sentence}
-          fill
-          className="object-cover"
-        />
-        <div className="absolute top-2 right-2">
-          <Badge className={similarityColor}>
-            {Math.round(result.similarity * 100)}% match
-          </Badge>
+        <Image src={result.imageUrl} alt={result.sentence} fill className="object-cover" />
+        <div className="absolute right-2 top-2">
+          <Badge className={similarityColor}>{Math.round(result.similarity * 100)}% match</Badge>
         </div>
       </div>
       <CardContent className="p-3">
-        <p className="text-xs line-clamp-3">{result.sentence}</p>
+        <p className="line-clamp-3 text-xs">{result.sentence}</p>
       </CardContent>
     </Card>
   );
 }
-

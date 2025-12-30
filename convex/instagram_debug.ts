@@ -11,8 +11,9 @@ export const debugTokenPermissions = action({
     username: v.string(),
   },
   returns: v.any(),
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<any> => {
     // Get the token from the database using the existing query
+    // @ts-ignore Convex type instantiation too deep
     const tokenData = await ctx.runQuery(api.instagram_debug.getTokenByUsername, {
       username: args.username,
     });
@@ -24,22 +25,22 @@ export const debugTokenPermissions = action({
     // Check token permissions with Meta's debug_token endpoint
     const appId = process.env.FACEBOOK_APP_ID;
     const appSecret = process.env.FACEBOOK_APP_SECRET;
-    
+
     if (!appId || !appSecret) {
       return { error: "Missing FACEBOOK_APP_ID or FACEBOOK_APP_SECRET" };
     }
 
     const appAccessToken = `${appId}|${appSecret}`;
-    
+
     const debugUrl = `https://graph.facebook.com/debug_token?input_token=${tokenData.token}&access_token=${appAccessToken}`;
-    
+
     console.log("🔍 Debugging token for:", args.username);
-    
+
     const response = await fetch(debugUrl);
     const data = await response.json();
-    
+
     console.log("📋 Token debug result:", JSON.stringify(data, null, 2));
-    
+
     return {
       username: args.username,
       tokenPreview: tokenData.token.substring(0, 20) + "...",
@@ -98,9 +99,9 @@ export const getAccountData = query({
   ),
   handler: async (ctx, args) => {
     console.log("🔍 Looking for account:", args.accountId);
-    
-    const account = await ctx.db.get(args.accountId as any) as any;
-    
+
+    const account = (await ctx.db.get(args.accountId as any)) as any;
+
     if (!account) {
       console.log("❌ Account not found");
       return null;
@@ -114,7 +115,8 @@ export const getAccountData = query({
       accountId: String(account._id),
       username: account.platformUsername || "",
       platformUserId: account.platformUserId || "",
-      instagramBusinessId: account.platformData?.instagramBusinessAccountId || account.platformUserId || "",
+      instagramBusinessId:
+        account.platformData?.instagramBusinessAccountId || account.platformUserId || "",
       accessToken: account.accessToken || "",
     };
   },

@@ -11,11 +11,11 @@ import { Search, BookOpen, Eye, DollarSign, Users } from "lucide-react";
 
 export default function CoursesManagementPage() {
   const [searchQuery, setSearchQuery] = useState("");
-  
+
   // Fetch all courses
   const courses = useQuery(api.courses.getAllCourses) || [];
 
-  const filteredCourses = courses.filter((course) =>
+  const filteredCourses = courses.filter((course: any) =>
     course.title?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -24,13 +24,11 @@ export default function CoursesManagementPage() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold">Courses</h1>
-        <p className="text-muted-foreground">
-          Manage all courses on the platform
-        </p>
+        <p className="text-muted-foreground">Manage all courses on the platform</p>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">{courses.length}</div>
@@ -40,7 +38,7 @@ export default function CoursesManagementPage() {
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">
-              {courses.filter(c => c.isPublished).length}
+              {courses.filter((c: any) => c.isPublished).length}
             </div>
             <div className="text-sm text-muted-foreground">Published</div>
           </CardContent>
@@ -48,7 +46,7 @@ export default function CoursesManagementPage() {
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">
-              {courses.filter(c => !c.isPublished).length}
+              {courses.filter((c: any) => !c.isPublished).length}
             </div>
             <div className="text-sm text-muted-foreground">Drafts</div>
           </CardContent>
@@ -56,7 +54,7 @@ export default function CoursesManagementPage() {
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">
-              {courses.filter(c => c.price && c.price > 0).length}
+              {courses.filter((c: any) => c.price && c.price > 0).length}
             </div>
             <div className="text-sm text-muted-foreground">Paid</div>
           </CardContent>
@@ -65,7 +63,7 @@ export default function CoursesManagementPage() {
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted-foreground" />
         <Input
           placeholder="Search courses..."
           value={searchQuery}
@@ -81,14 +79,14 @@ export default function CoursesManagementPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {filteredCourses.map((course) => (
+            {filteredCourses.map((course: any) => (
               <div
                 key={course._id}
-                className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                className="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
               >
                 <div className="flex-1">
                   <h3 className="font-semibold">{course.title}</h3>
-                  <p className="text-sm text-muted-foreground line-clamp-1">
+                  <p className="line-clamp-1 text-sm text-muted-foreground">
                     {course.description || "No description"}
                   </p>
                 </div>
@@ -97,11 +95,9 @@ export default function CoursesManagementPage() {
                   <Badge variant={course.isPublished ? "default" : "secondary"}>
                     {course.isPublished ? "Published" : "Draft"}
                   </Badge>
-                  
+
                   {course.price && course.price > 0 ? (
-                    <span className="text-sm font-semibold">
-                      ${course.price}
-                    </span>
+                    <span className="text-sm font-semibold">${course.price}</span>
                   ) : (
                     <Badge variant="outline">Free</Badge>
                   )}
@@ -118,4 +114,3 @@ export default function CoursesManagementPage() {
     </div>
   );
 }
-

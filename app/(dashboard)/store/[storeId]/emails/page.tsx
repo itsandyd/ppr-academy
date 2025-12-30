@@ -12,15 +12,7 @@ import { useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useParams } from "next/navigation";
 import { Id } from "@/convex/_generated/dataModel";
-import {
-  Mail,
-  Send,
-  Activity,
-  TrendingUp,
-  XCircle,
-  Sparkles,
-  Zap,
-} from "lucide-react";
+import { Mail, Send, Activity, TrendingUp, XCircle, Sparkles, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 export default function StoreEmailsPage() {
@@ -106,9 +98,7 @@ export default function StoreEmailsPage() {
                 type="password"
                 placeholder="re_..."
                 value={formData.resendApiKey}
-                onChange={(e) =>
-                  setFormData({ ...formData, resendApiKey: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, resendApiKey: e.target.value })}
               />
               <p className="text-xs text-muted-foreground">
                 Get your API key from{" "}
@@ -131,9 +121,7 @@ export default function StoreEmailsPage() {
                   type="email"
                   placeholder="hello@yourdomain.com"
                   value={formData.fromEmail}
-                  onChange={(e) =>
-                    setFormData({ ...formData, fromEmail: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, fromEmail: e.target.value })}
                 />
               </div>
 
@@ -143,9 +131,7 @@ export default function StoreEmailsPage() {
                   id="fromName"
                   placeholder="Your Store Name"
                   value={formData.fromName}
-                  onChange={(e) =>
-                    setFormData({ ...formData, fromName: e.target.value })
-                  }
+                  onChange={(e) => setFormData({ ...formData, fromName: e.target.value })}
                 />
               </div>
             </div>
@@ -157,18 +143,12 @@ export default function StoreEmailsPage() {
                 type="email"
                 placeholder="support@yourdomain.com"
                 value={formData.replyToEmail}
-                onChange={(e) =>
-                  setFormData({ ...formData, replyToEmail: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, replyToEmail: e.target.value })}
               />
             </div>
 
-            <Button
-              onClick={handleConnect}
-              disabled={isConnecting}
-              className="w-full"
-            >
-              <Mail className="w-4 h-4 mr-2" />
+            <Button onClick={handleConnect} disabled={isConnecting} className="w-full">
+              <Mail className="mr-2 h-4 w-4" />
               {isConnecting ? "Configuring..." : "Configure Email"}
             </Button>
           </CardContent>
@@ -177,7 +157,7 @@ export default function StoreEmailsPage() {
         /* Main Dashboard */
         <>
           {/* Analytics Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
@@ -187,7 +167,7 @@ export default function StoreEmailsPage() {
                       {analytics?.totalSent.toLocaleString() || 0}
                     </p>
                   </div>
-                  <Send className="w-8 h-8 text-blue-500" />
+                  <Send className="h-8 w-8 text-blue-500" />
                 </div>
               </CardContent>
             </Card>
@@ -197,11 +177,9 @@ export default function StoreEmailsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">Open Rate</p>
-                    <p className="text-2xl font-bold">
-                      {analytics?.openRate || 0}%
-                    </p>
+                    <p className="text-2xl font-bold">{analytics?.openRate || 0}%</p>
                   </div>
-                  <Activity className="w-8 h-8 text-green-500" />
+                  <Activity className="h-8 w-8 text-green-500" />
                 </div>
               </CardContent>
             </Card>
@@ -211,11 +189,9 @@ export default function StoreEmailsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">Click Rate</p>
-                    <p className="text-2xl font-bold">
-                      {analytics?.clickRate || 0}%
-                    </p>
+                    <p className="text-2xl font-bold">{analytics?.clickRate || 0}%</p>
                   </div>
-                  <TrendingUp className="w-8 h-8 text-purple-500" />
+                  <TrendingUp className="h-8 w-8 text-purple-500" />
                 </div>
               </CardContent>
             </Card>
@@ -225,11 +201,9 @@ export default function StoreEmailsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">Bounce Rate</p>
-                    <p className="text-2xl font-bold">
-                      {analytics?.bounceRate || 0}%
-                    </p>
+                    <p className="text-2xl font-bold">{analytics?.bounceRate || 0}%</p>
                   </div>
-                  <XCircle className="w-8 h-8 text-red-500" />
+                  <XCircle className="h-8 w-8 text-red-500" />
                 </div>
               </CardContent>
             </Card>
@@ -254,76 +228,62 @@ export default function StoreEmailsPage() {
                   </p>
                 </div>
                 <Button>
-                  <Sparkles className="w-4 h-4 mr-2" />
+                  <Sparkles className="mr-2 h-4 w-4" />
                   New Campaign
                 </Button>
               </div>
 
               {campaigns && campaigns.length > 0 ? (
                 <div className="space-y-4">
-                  {campaigns.map((campaign) => (
+                  {campaigns.map((campaign: any) => (
                     <Card key={campaign._id}>
                       <CardContent className="p-6">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <h3 className="font-semibold text-lg">
-                                {campaign.name}
-                              </h3>
+                            <div className="mb-2 flex items-center gap-3">
+                              <h3 className="text-lg font-semibold">{campaign.name}</h3>
                               <Badge
                                 variant={
                                   campaign.status === "sent"
                                     ? "default"
                                     : campaign.status === "sending"
-                                    ? "secondary"
-                                    : "outline"
+                                      ? "secondary"
+                                      : "outline"
                                 }
                               >
                                 {campaign.status}
                               </Badge>
                             </div>
-                            <p className="text-sm text-muted-foreground mb-4">
+                            <p className="mb-4 text-sm text-muted-foreground">
                               Subject: {campaign.subject}
                             </p>
 
                             {campaign.status === "sent" && (
                               <div className="grid grid-cols-5 gap-4">
                                 <div>
-                                  <p className="text-xs text-muted-foreground">
-                                    Recipients
-                                  </p>
+                                  <p className="text-xs text-muted-foreground">Recipients</p>
                                   <p className="text-sm font-semibold">
                                     {campaign.recipientCount || 0}
                                   </p>
                                 </div>
                                 <div>
-                                  <p className="text-xs text-muted-foreground">
-                                    Sent
-                                  </p>
-                                  <p className="text-sm font-semibold">
-                                    {campaign.sentCount || 0}
-                                  </p>
+                                  <p className="text-xs text-muted-foreground">Sent</p>
+                                  <p className="text-sm font-semibold">{campaign.sentCount || 0}</p>
                                 </div>
                                 <div>
-                                  <p className="text-xs text-muted-foreground">
-                                    Delivered
-                                  </p>
+                                  <p className="text-xs text-muted-foreground">Delivered</p>
                                   <p className="text-sm font-semibold">
                                     {campaign.deliveredCount || 0}
                                   </p>
                                 </div>
                                 <div>
-                                  <p className="text-xs text-muted-foreground">
-                                    Opened
-                                  </p>
+                                  <p className="text-xs text-muted-foreground">Opened</p>
                                   <p className="text-sm font-semibold">
                                     {campaign.openedCount || 0}
                                   </p>
                                 </div>
                                 <div>
-                                  <p className="text-xs text-muted-foreground">
-                                    Clicked
-                                  </p>
+                                  <p className="text-xs text-muted-foreground">Clicked</p>
                                   <p className="text-sm font-semibold">
                                     {campaign.clickedCount || 0}
                                   </p>
@@ -339,10 +299,8 @@ export default function StoreEmailsPage() {
               ) : (
                 <Card>
                   <CardContent className="p-12 text-center">
-                    <Mail className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p className="text-muted-foreground mb-2">
-                      No campaigns yet
-                    </p>
+                    <Mail className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                    <p className="mb-2 text-muted-foreground">No campaigns yet</p>
                     <p className="text-sm text-muted-foreground">
                       Create your first email campaign to engage with your students
                     </p>
@@ -356,32 +314,26 @@ export default function StoreEmailsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-2xl font-semibold">Email Templates</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Create reusable email templates
-                  </p>
+                  <p className="text-sm text-muted-foreground">Create reusable email templates</p>
                 </div>
                 <Button>
-                  <Sparkles className="w-4 h-4 mr-2" />
+                  <Sparkles className="mr-2 h-4 w-4" />
                   New Template
                 </Button>
               </div>
 
               {templates && templates.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   {templates.map((template) => (
                     <Card key={template._id}>
                       <CardContent className="p-6">
-                        <div className="flex items-start justify-between mb-2">
+                        <div className="mb-2 flex items-start justify-between">
                           <h3 className="font-semibold">{template.name}</h3>
-                          <Badge
-                            variant={template.isActive ? "default" : "secondary"}
-                          >
+                          <Badge variant={template.isActive ? "default" : "secondary"}>
                             {template.isActive ? "Active" : "Inactive"}
                           </Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground mb-4">
-                          {template.subject}
-                        </p>
+                        <p className="mb-4 text-sm text-muted-foreground">{template.subject}</p>
                         <div className="flex items-center gap-2">
                           <Badge variant="outline" className="text-xs">
                             {template.type}
@@ -399,10 +351,8 @@ export default function StoreEmailsPage() {
               ) : (
                 <Card>
                   <CardContent className="p-12 text-center">
-                    <Mail className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p className="text-muted-foreground mb-2">
-                      No templates yet
-                    </p>
+                    <Mail className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                    <p className="mb-2 text-muted-foreground">No templates yet</p>
                     <p className="text-sm text-muted-foreground">
                       Create reusable templates for faster campaign creation
                     </p>
@@ -421,7 +371,7 @@ export default function StoreEmailsPage() {
                   </p>
                 </div>
                 <Button>
-                  <Zap className="w-4 h-4 mr-2" />
+                  <Zap className="mr-2 h-4 w-4" />
                   New Automation
                 </Button>
               </div>
@@ -433,17 +383,13 @@ export default function StoreEmailsPage() {
                       <CardContent className="p-6">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
-                              <h3 className="font-semibold text-lg">
-                                {automation.name}
-                              </h3>
-                              <Badge
-                                variant={automation.isActive ? "default" : "secondary"}
-                              >
+                            <div className="mb-2 flex items-center gap-3">
+                              <h3 className="text-lg font-semibold">{automation.name}</h3>
+                              <Badge variant={automation.isActive ? "default" : "secondary"}>
                                 {automation.isActive ? "Active" : "Inactive"}
                               </Badge>
                             </div>
-                            <p className="text-sm text-muted-foreground mb-4">
+                            <p className="mb-4 text-sm text-muted-foreground">
                               {automation.description}
                             </p>
                             <div className="flex items-center gap-2">
@@ -451,8 +397,8 @@ export default function StoreEmailsPage() {
                                 {automation.triggerType.replace("_", " ")}
                               </Badge>
                               <span className="text-xs text-muted-foreground">
-                                • {automation.triggeredCount || 0} triggered
-                                • {automation.sentCount || 0} sent
+                                • {automation.triggeredCount || 0} triggered •{" "}
+                                {automation.sentCount || 0} sent
                               </span>
                             </div>
                           </div>
@@ -464,10 +410,8 @@ export default function StoreEmailsPage() {
               ) : (
                 <Card>
                   <CardContent className="p-12 text-center">
-                    <Zap className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p className="text-muted-foreground mb-2">
-                      No automations yet
-                    </p>
+                    <Zap className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                    <p className="mb-2 text-muted-foreground">No automations yet</p>
                     <p className="text-sm text-muted-foreground">
                       Set up automated emails for enrollments, completions, and more
                     </p>
@@ -481,23 +425,17 @@ export default function StoreEmailsPage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Email Configuration</CardTitle>
-                  <CardDescription>
-                    Your current email settings for this store
-                  </CardDescription>
+                  <CardDescription>Your current email settings for this store</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label className="text-sm font-medium">From Email</Label>
-                      <p className="text-sm text-muted-foreground">
-                        {connection.fromEmail}
-                      </p>
+                      <p className="text-sm text-muted-foreground">{connection.fromEmail}</p>
                     </div>
                     <div>
                       <Label className="text-sm font-medium">From Name</Label>
-                      <p className="text-sm text-muted-foreground">
-                        {connection.fromName}
-                      </p>
+                      <p className="text-sm text-muted-foreground">{connection.fromName}</p>
                     </div>
                     <div>
                       <Label className="text-sm font-medium">Reply-To</Label>
@@ -513,7 +451,7 @@ export default function StoreEmailsPage() {
                     </div>
                   </div>
 
-                  <div className="pt-4 border-t">
+                  <div className="border-t pt-4">
                     <Button variant="outline" className="w-full">
                       Update Email Settings
                     </Button>
@@ -527,4 +465,3 @@ export default function StoreEmailsPage() {
     </div>
   );
 }
-

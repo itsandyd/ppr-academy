@@ -5,22 +5,34 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { 
-  Inbox, 
-  CheckCircle2, 
-  XCircle, 
-  MessageSquare, 
+import {
+  Inbox,
+  CheckCircle2,
+  XCircle,
+  MessageSquare,
   Music,
   Calendar,
   DollarSign,
   Settings,
   Play,
   Sparkles,
-  Trash2
+  Trash2,
 } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
 import { useQuery, useMutation } from "convex/react";
@@ -58,14 +70,14 @@ export default function SubmissionsPage() {
 
   const acceptSubmission = useMutation(api.submissions.acceptSubmission);
   const declineSubmission = useMutation(api.submissions.declineSubmission);
-  
+
   // DEV ONLY: Seeder for testing
   const createSampleSubmissions = useMutation(api.devSeeders.createSampleSubmissions);
   const clearTestSubmissions = useMutation(api.devSeeders.clearTestSubmissions);
 
   const handleGenerateSamples = async () => {
     if (!user?.id) return;
-    
+
     try {
       await createSampleSubmissions({
         creatorId: user.id,
@@ -80,7 +92,9 @@ export default function SubmissionsPage() {
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to create samples. Make sure you have a playlist accepting submissions.",
+        description:
+          error.message ||
+          "Failed to create samples. Make sure you have a playlist accepting submissions.",
         variant: "destructive",
       });
     }
@@ -108,19 +122,19 @@ export default function SubmissionsPage() {
     }
   };
 
-  const filteredSubmissions = allSubmissions?.filter(s => {
+  const filteredSubmissions = allSubmissions?.filter((s: any) => {
     // Status filter
     if (activeTab === "inbox" && s.status !== "inbox") return false;
     if (activeTab === "reviewed" && s.status !== "reviewed") return false;
     if (activeTab === "accepted" && s.status !== "accepted") return false;
     if (activeTab === "declined" && s.status !== "declined") return false;
-    
+
     // Playlist filter
     if (playlistFilter !== "all" && s.playlistId !== playlistFilter) return false;
-    
+
     // Genre filter
     if (genreFilter !== "all" && s.track?.genre !== genreFilter) return false;
-    
+
     return true;
   });
 
@@ -135,8 +149,9 @@ export default function SubmissionsPage() {
     }
 
     try {
-      const playlistName = playlists?.find(p => p._id === selectedPlaylist)?.name || "playlist";
-      
+      const playlistName =
+        playlists?.find((p: any) => p._id === selectedPlaylist)?.name || "playlist";
+
       await acceptSubmission({
         submissionId: submissionId as any,
         playlistId: selectedPlaylist as any,
@@ -228,11 +243,11 @@ export default function SubmissionsPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
+    <div className="mx-auto max-w-7xl space-y-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Submissions</h1>
+          <h1 className="mb-2 text-3xl font-bold">Submissions</h1>
           <p className="text-muted-foreground">
             Review and manage track submissions to your playlists
           </p>
@@ -240,29 +255,25 @@ export default function SubmissionsPage() {
         <div className="flex items-center gap-2">
           {/* DEV ONLY: Test Data Seeder */}
           {stats?.total === 0 && (
-            <Button 
-              variant="outline"
-              onClick={handleGenerateSamples}
-              className="gap-2"
-            >
-              <Sparkles className="w-4 h-4" />
+            <Button variant="outline" onClick={handleGenerateSamples} className="gap-2">
+              <Sparkles className="h-4 w-4" />
               Generate Test Data
             </Button>
           )}
           {stats && stats.total > 0 && (
-            <Button 
+            <Button
               variant="ghost"
               onClick={handleClearSamples}
               size="sm"
               className="gap-1 text-red-600"
             >
-              <Trash2 className="w-3 h-3" />
+              <Trash2 className="h-3 w-3" />
               Clear Test Data
             </Button>
           )}
           <Button variant="outline" asChild>
             <a href="/home/playlists">
-              <Settings className="w-4 h-4 mr-2" />
+              <Settings className="mr-2 h-4 w-4" />
               Playlist Settings
             </a>
           </Button>
@@ -271,7 +282,7 @@ export default function SubmissionsPage() {
 
       {/* Stats Cards */}
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
           <Card>
             <CardContent className="p-4">
               <div className="text-2xl font-bold text-orange-600">{stats.inbox}</div>
@@ -314,8 +325,10 @@ export default function SubmissionsPage() {
             </SelectTrigger>
             <SelectContent className="bg-white dark:bg-black">
               <SelectItem value="all">All Playlists</SelectItem>
-              {playlists?.map(p => (
-                <SelectItem key={p._id} value={p._id}>{p.name}</SelectItem>
+              {playlists?.map((p: any) => (
+                <SelectItem key={p._id} value={p._id}>
+                  {p.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -340,18 +353,18 @@ export default function SubmissionsPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full max-w-2xl grid-cols-4">
           <TabsTrigger value="inbox" className="gap-2">
-            <Inbox className="w-4 h-4" />
+            <Inbox className="h-4 w-4" />
             Inbox ({stats?.inbox || 0})
           </TabsTrigger>
           <TabsTrigger value="reviewed" className="gap-2">
             Reviewed ({stats?.reviewed || 0})
           </TabsTrigger>
           <TabsTrigger value="accepted" className="gap-2">
-            <CheckCircle2 className="w-4 h-4" />
+            <CheckCircle2 className="h-4 w-4" />
             Accepted ({stats?.accepted || 0})
           </TabsTrigger>
           <TabsTrigger value="declined" className="gap-2">
-            <XCircle className="w-4 h-4" />
+            <XCircle className="h-4 w-4" />
             Declined ({stats?.declined || 0})
           </TabsTrigger>
         </TabsList>
@@ -359,37 +372,38 @@ export default function SubmissionsPage() {
         <TabsContent value={activeTab} className="mt-6">
           {filteredSubmissions && filteredSubmissions.length > 0 ? (
             <div className="space-y-4">
-              {filteredSubmissions.map((submission) => (
+              {filteredSubmissions.map((submission: any) => (
                 <Card key={submission._id}>
                   <CardContent className="p-6">
                     <div className="flex items-start gap-6">
-                      <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <Music className="w-8 h-8 text-purple-600" />
+                      <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900/20 dark:to-blue-900/20">
+                        <Music className="h-8 w-8 text-purple-600" />
                       </div>
 
                       <div className="flex-1 space-y-3">
                         <div className="flex items-start justify-between">
                           <div>
-                            <h3 className="font-semibold text-lg">{submission.track?.title || "Untitled"}</h3>
+                            <h3 className="text-lg font-semibold">
+                              {submission.track?.title || "Untitled"}
+                            </h3>
                             <p className="text-sm text-muted-foreground">
                               by {submission.submitterName}
                             </p>
                           </div>
-                          <div className="flex items-center gap-2 flex-wrap">
+                          <div className="flex flex-wrap items-center gap-2">
                             {submission.submissionFee > 0 && (
                               <Badge variant="secondary" className="gap-1">
-                                <DollarSign className="w-3 h-3" />
-                                ${submission.submissionFee}
+                                <DollarSign className="h-3 w-3" />${submission.submissionFee}
                               </Badge>
                             )}
                             {submission.playlistName && (
                               <Badge variant="outline" className="gap-1">
-                                <Music className="w-3 h-3" />
+                                <Music className="h-3 w-3" />
                                 {submission.playlistName}
                               </Badge>
                             )}
                             {submission.status === "accepted" && submission.addedToPlaylistId && (
-                              <Badge className="bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-300">
+                              <Badge className="bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-300">
                                 ✓ Added to Playlist
                               </Badge>
                             )}
@@ -397,8 +411,8 @@ export default function SubmissionsPage() {
                         </div>
 
                         {submission.message && (
-                          <div className="bg-muted rounded-lg p-3">
-                            <p className="text-sm text-muted-foreground italic">
+                          <div className="rounded-lg bg-muted p-3">
+                            <p className="text-sm italic text-muted-foreground">
                               "{submission.message}"
                             </p>
                           </div>
@@ -406,8 +420,10 @@ export default function SubmissionsPage() {
 
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           <span className="flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            {formatDistanceToNow(new Date(submission._creationTime), { addSuffix: true })}
+                            <Calendar className="h-3 w-3" />
+                            {formatDistanceToNow(new Date(submission._creationTime), {
+                              addSuffix: true,
+                            })}
                           </span>
                           {submission.track?.genre && (
                             <Badge variant="secondary" className="text-xs capitalize">
@@ -417,7 +433,7 @@ export default function SubmissionsPage() {
                         </div>
 
                         {submission.status === "inbox" && (
-                          <div className="flex gap-2 pt-2 flex-wrap">
+                          <div className="flex flex-wrap gap-2 pt-2">
                             <Button
                               size="sm"
                               className="gap-1"
@@ -427,7 +443,7 @@ export default function SubmissionsPage() {
                                 setShowFeedbackDialog(true);
                               }}
                             >
-                              <CheckCircle2 className="w-4 h-4" />
+                              <CheckCircle2 className="h-4 w-4" />
                               Accept
                             </Button>
                             <Button
@@ -439,7 +455,7 @@ export default function SubmissionsPage() {
                                 setShowSendFeedbackDialog(true);
                               }}
                             >
-                              <MessageSquare className="w-4 h-4" />
+                              <MessageSquare className="h-4 w-4" />
                               Send Feedback
                             </Button>
                             <Button
@@ -448,23 +464,23 @@ export default function SubmissionsPage() {
                               className="gap-1 text-red-600"
                               onClick={() => handleDecline(submission._id, "Not a fit")}
                             >
-                              <XCircle className="w-4 h-4" />
+                              <XCircle className="h-4 w-4" />
                               Decline
                             </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               className="gap-1"
-                              onClick={() => window.open(submission.track?.sourceUrl, '_blank')}
+                              onClick={() => window.open(submission.track?.sourceUrl, "_blank")}
                             >
-                              <Play className="w-4 h-4" />
+                              <Play className="h-4 w-4" />
                               Listen
                             </Button>
                           </div>
                         )}
 
                         {submission.feedback && (
-                          <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                          <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-900/10">
                             <p className="text-sm text-blue-900 dark:text-blue-100">
                               <strong>Your feedback:</strong> {submission.feedback}
                             </p>
@@ -481,18 +497,20 @@ export default function SubmissionsPage() {
               icon={Inbox}
               title={`No ${activeTab} submissions`}
               description={
-                activeTab === "inbox" 
+                activeTab === "inbox"
                   ? "New submissions will appear here when artists submit tracks to your playlists"
                   : `No submissions in the ${activeTab} category yet`
               }
               actions={
-                activeTab === "inbox" ? [
-                  {
-                    label: "Enable Submissions on Playlist",
-                    href: "/home/playlists",
-                    icon: Settings
-                  }
-                ] : undefined
+                activeTab === "inbox"
+                  ? [
+                      {
+                        label: "Enable Submissions on Playlist",
+                        href: "/home/playlists",
+                        icon: Settings,
+                      },
+                    ]
+                  : undefined
               }
               variant="compact"
             />
@@ -518,7 +536,7 @@ export default function SubmissionsPage() {
                   <SelectValue placeholder="Choose a playlist" />
                 </SelectTrigger>
                 <SelectContent className="bg-white dark:bg-black">
-                  {playlists?.map(p => (
+                  {playlists?.map((p: any) => (
                     <SelectItem key={p._id} value={p._id}>
                       {p.name} ({p.trackCount || 0} tracks)
                     </SelectItem>
@@ -536,25 +554,25 @@ export default function SubmissionsPage() {
                 rows={4}
                 className="mt-2"
               />
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="mt-1 text-xs text-muted-foreground">
                 Positive feedback encourages artists and builds relationships
               </p>
             </div>
 
             <div className="flex gap-3">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => setShowFeedbackDialog(false)}
                 className="flex-1"
               >
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={() => handleAccept(selectedSubmission?._id)}
                 disabled={!selectedPlaylist}
                 className="flex-1 gap-2"
               >
-                <CheckCircle2 className="w-4 h-4" />
+                <CheckCircle2 className="h-4 w-4" />
                 Accept & Add
               </Button>
             </div>
@@ -582,7 +600,7 @@ export default function SubmissionsPage() {
                 rows={6}
                 className="mt-2"
               />
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="mt-1 text-xs text-muted-foreground">
                 This will be marked as "Reviewed" and sent to the artist
               </p>
             </div>
@@ -601,14 +619,22 @@ export default function SubmissionsPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setFeedback("Good concept, but the mix needs work. Consider EQ adjustments on the low end.")}
+                  onClick={() =>
+                    setFeedback(
+                      "Good concept, but the mix needs work. Consider EQ adjustments on the low end."
+                    )
+                  }
                 >
                   Constructive
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setFeedback("Interesting track! Not quite right for this playlist, but keep creating.")}
+                  onClick={() =>
+                    setFeedback(
+                      "Interesting track! Not quite right for this playlist, but keep creating."
+                    )
+                  }
                 >
                   Encouraging
                 </Button>
@@ -616,8 +642,8 @@ export default function SubmissionsPage() {
             </div>
 
             <div className="flex gap-3">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => {
                   setShowSendFeedbackDialog(false);
                   setFeedback("");
@@ -626,12 +652,12 @@ export default function SubmissionsPage() {
               >
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={() => handleSendFeedback(selectedSubmission?._id)}
                 disabled={!feedback.trim()}
                 className="flex-1 gap-2"
               >
-                <MessageSquare className="w-4 h-4" />
+                <MessageSquare className="h-4 w-4" />
                 Send Feedback
               </Button>
             </div>
@@ -641,4 +667,3 @@ export default function SubmissionsPage() {
     </div>
   );
 }
-

@@ -45,8 +45,8 @@ class MarketplaceMigration {
   }
 
   async runMigration(config: MigrationConfig): Promise<MigrationStats> {
-    console.log('🚀 Starting marketplace migration...');
-    console.log('Config:', config);
+    console.log("🚀 Starting marketplace migration...");
+    console.log("Config:", config);
 
     try {
       if (config.createBackup) {
@@ -67,14 +67,13 @@ class MarketplaceMigration {
         await this.finalizeIndexes();
       }
 
-      console.log('✅ Migration completed successfully!');
-      console.log('Final stats:', this.stats);
-
+      console.log("✅ Migration completed successfully!");
+      console.log("Final stats:", this.stats);
     } catch (error) {
-      console.error('❌ Migration failed:', error);
+      console.error("❌ Migration failed:", error);
       this.stats.errors.push({
-        type: 'CRITICAL',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        type: "CRITICAL",
+        message: error instanceof Error ? error.message : "Unknown error",
       });
     }
 
@@ -82,8 +81,8 @@ class MarketplaceMigration {
   }
 
   private async createBackup(): Promise<void> {
-    console.log('📦 Creating backup...');
-    
+    console.log("📦 Creating backup...");
+
     // Export all critical data before migration
     const backup = {
       timestamp: new Date().toISOString(),
@@ -93,15 +92,17 @@ class MarketplaceMigration {
     };
 
     // In a real implementation, you'd save this to a file or external storage
-    console.log(`Backup created with ${backup.users.length} users and ${backup.courses.length} courses`);
+    console.log(
+      `Backup created with ${backup.users.length} users and ${backup.courses.length} courses`
+    );
   }
 
   private async migrateUsersAndStores(config: MigrationConfig): Promise<void> {
-    console.log('👥 Migrating users and creating creator stores...');
+    console.log("👥 Migrating users and creating creator stores...");
 
     // Get all users who have created courses (potential creators)
     const courseCreators = await this.convex.query(api.courses.getAllInstructors);
-    
+
     for (const creator of courseCreators) {
       try {
         this.stats.usersProcessed++;
@@ -109,7 +110,7 @@ class MarketplaceMigration {
         // Check if creator store already exists
         if (config.skipExisting) {
           const existingStore = await this.convex.query(api.stores.getByUserId, {
-            userId: creator._id
+            userId: creator._id,
           });
           if (existingStore) {
             this.stats.usersSkipped++;
@@ -128,9 +129,9 @@ class MarketplaceMigration {
           // Create creator store
           const storeId = await this.convex.mutation(api.stores.create, {
             userId: creator._id,
-            name: `${creator.name || 'Creator'}'s Store`,
-            slug: this.generateSlug(creator.name || creator.email || 'creator'),
-            description: `Welcome to ${creator.name || 'my'} music production store!`,
+            name: `${creator.name || "Creator"}'s Store`,
+            slug: this.generateSlug(creator.name || creator.email || "creator"),
+            description: `Welcome to ${creator.name || "my"} music production store!`,
           });
 
           this.stats.storesCreated++;
@@ -138,12 +139,11 @@ class MarketplaceMigration {
 
         this.stats.usersCreated++;
         console.log(`✓ Migrated creator: ${creator.name} (${creator.email})`);
-
       } catch (error) {
         this.stats.errors.push({
-          type: 'USER_MIGRATION',
-          message: error instanceof Error ? error.message : 'Unknown error',
-          data: { userId: creator._id, name: creator.name }
+          type: "USER_MIGRATION",
+          message: error instanceof Error ? error.message : "Unknown error",
+          data: { userId: creator._id, name: creator.name },
         });
         console.error(`✗ Failed to migrate creator ${creator.name}:`, error);
       }
@@ -156,10 +156,10 @@ class MarketplaceMigration {
   }
 
   private async migrateCoursesToProducts(config: MigrationConfig): Promise<void> {
-    console.log('📚 Migrating courses to products...');
+    console.log("📚 Migrating courses to products...");
 
     const courses = await this.convex.query(api.courses.getAll);
-    
+
     for (let i = 0; i < courses.length; i += config.batchSize) {
       const batch = courses.slice(i, i + config.batchSize);
 
@@ -170,7 +170,7 @@ class MarketplaceMigration {
           // Skip if product already exists
           if (config.skipExisting) {
             const existingProduct = await this.convex.query(api.products?.getByLegacyId, {
-              legacyId: course._id
+              legacyId: course._id,
             });
             if (existingProduct) {
               this.stats.coursesSkipped++;
@@ -181,7 +181,7 @@ class MarketplaceMigration {
           if (!config.dryRun) {
             // Get creator store
             const creatorStore = await this.convex.query(api.stores.getByUserId, {
-              userId: course.instructorId || course.userId
+              userId: course.instructorId || course.userId,
             });
 
             if (!creatorStore) {
@@ -209,12 +209,11 @@ class MarketplaceMigration {
 
           this.stats.coursesCreated++;
           console.log(`✓ Migrated course: ${course.title}`);
-
         } catch (error) {
           this.stats.errors.push({
-            type: 'COURSE_MIGRATION',
-            message: error instanceof Error ? error.message : 'Unknown error',
-            data: { courseId: course._id, title: course.title }
+            type: "COURSE_MIGRATION",
+            message: error instanceof Error ? error.message : "Unknown error",
+            data: { courseId: course._id, title: course.title },
           });
           console.error(`✗ Failed to migrate course ${course.title}:`, error);
         }
@@ -231,17 +230,17 @@ class MarketplaceMigration {
   private async migrateCourseContent(courseId: Id<"courses">): Promise<any> {
     // Migrate course modules, lessons, and chapters
     const modules = await this.convex.query(api.courseModules?.getByCourseId, { courseId });
-    
+
     const migratedModules = [];
     for (const module of modules) {
       const lessons = await this.convex.query(api.courseLessons?.getByModuleId, {
-        moduleId: module._id
+        moduleId: module._id,
       });
 
       const migratedLessons = [];
       for (const lesson of lessons) {
         const chapters = await this.convex.query(api.courseChapters?.getByLessonId, {
-          lessonId: lesson._id
+          lessonId: lesson._id,
         });
 
         migratedLessons.push({
@@ -249,7 +248,7 @@ class MarketplaceMigration {
           title: lesson.title,
           description: lesson.description,
           position: lesson.position,
-          chapters: chapters.map(chapter => ({
+          chapters: chapters.map((chapter: any) => ({
             id: chapter._id,
             title: chapter.title,
             description: chapter.description,
@@ -258,7 +257,7 @@ class MarketplaceMigration {
             position: chapter.position,
             isPublished: chapter.isPublished,
             isFree: chapter.isFree,
-          }))
+          })),
         });
       }
 
@@ -275,15 +274,15 @@ class MarketplaceMigration {
   }
 
   private async migrateEnrollmentsToPurchases(config: MigrationConfig): Promise<void> {
-    console.log('💰 Migrating enrollments to purchases...');
+    console.log("💰 Migrating enrollments to purchases...");
 
     const enrollments = await this.convex.query(api.enrollments?.getAll);
-    
+
     for (const enrollment of enrollments) {
       try {
         // Find the corresponding product
         const product = await this.convex.query(api.products?.getByLegacyId, {
-          legacyId: enrollment.courseId
+          legacyId: enrollment.courseId,
         });
 
         if (product && !config.dryRun) {
@@ -298,12 +297,11 @@ class MarketplaceMigration {
         }
 
         console.log(`✓ Migrated enrollment for user ${enrollment.userId}`);
-
       } catch (error) {
         this.stats.errors.push({
-          type: 'ENROLLMENT_MIGRATION',
-          message: error instanceof Error ? error.message : 'Unknown error',
-          data: { enrollmentId: enrollment._id }
+          type: "ENROLLMENT_MIGRATION",
+          message: error instanceof Error ? error.message : "Unknown error",
+          data: { enrollmentId: enrollment._id },
         });
         console.error(`✗ Failed to migrate enrollment:`, error);
       }
@@ -311,28 +309,30 @@ class MarketplaceMigration {
   }
 
   private async finalizeIndexes(): Promise<void> {
-    console.log('🔍 Finalizing indexes...');
+    console.log("🔍 Finalizing indexes...");
     // Any final cleanup or index optimization would go here
   }
 
   private generateUsername(name: string): string {
-    return name
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, '')
-      .substring(0, 20) + Math.random().toString(36).substring(2, 6);
+    return (
+      name
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "")
+        .substring(0, 20) + Math.random().toString(36).substring(2, 6)
+    );
   }
 
   private generateSlug(text: string): string {
     return text
       .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
+      .replace(/[^a-z0-9\s-]/g, "")
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-")
       .trim();
   }
 
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }
 
@@ -347,10 +347,10 @@ export async function runMarketplaceMigration(config: Partial<MigrationConfig> =
   };
 
   const finalConfig = { ...defaultConfig, ...config };
-  
+
   const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
   if (!convexUrl) {
-    throw new Error('NEXT_PUBLIC_CONVEX_URL is not set');
+    throw new Error("NEXT_PUBLIC_CONVEX_URL is not set");
   }
 
   const migration = new MarketplaceMigration(convexUrl);
@@ -360,17 +360,17 @@ export async function runMarketplaceMigration(config: Partial<MigrationConfig> =
 // CLI runner
 if (require.main === module) {
   const args = process.argv.slice(2);
-  const dryRun = !args.includes('--execute');
-  
-  console.log(dryRun ? '🔍 Running in DRY RUN mode' : '⚠️  Running in EXECUTE mode');
-  
+  const dryRun = !args.includes("--execute");
+
+  console.log(dryRun ? "🔍 Running in DRY RUN mode" : "⚠️  Running in EXECUTE mode");
+
   runMarketplaceMigration({ dryRun })
-    .then(stats => {
-      console.log('Migration completed:', stats);
+    .then((stats) => {
+      console.log("Migration completed:", stats);
       process.exit(0);
     })
-    .catch(error => {
-      console.error('Migration failed:', error);
+    .catch((error) => {
+      console.error("Migration failed:", error);
       process.exit(1);
     });
 }

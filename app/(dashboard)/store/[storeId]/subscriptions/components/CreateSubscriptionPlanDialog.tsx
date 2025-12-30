@@ -164,13 +164,12 @@ export function CreateSubscriptionPlanDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-black">
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto bg-white dark:bg-black">
         <DialogHeader>
-          <DialogTitle>
-            {existingPlan ? "Edit" : "Create"} Subscription Plan
-          </DialogTitle>
+          <DialogTitle>{existingPlan ? "Edit" : "Create"} Subscription Plan</DialogTitle>
           <DialogDescription>
-            Set up a subscription tier for your content. Subscribers get access to courses and products you choose.
+            Set up a subscription tier for your content. Subscribers get access to courses and
+            products you choose.
           </DialogDescription>
         </DialogHeader>
 
@@ -178,7 +177,9 @@ export function CreateSubscriptionPlanDialog({
           {/* Basic Info */}
           <div className="space-y-4">
             <div>
-              <Label htmlFor="name">Plan Name <span className="text-red-500">*</span></Label>
+              <Label htmlFor="name">
+                Plan Name <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="name"
                 value={name}
@@ -211,7 +212,7 @@ export function CreateSubscriptionPlanDialog({
                   onChange={(e) => setTier(parseInt(e.target.value))}
                   placeholder="1"
                 />
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="mt-1 text-xs text-muted-foreground">
                   Higher tiers can access lower tier content
                 </p>
               </div>
@@ -223,7 +224,9 @@ export function CreateSubscriptionPlanDialog({
             <h3 className="font-medium">Pricing</h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="monthlyPrice">Monthly Price ($) <span className="text-red-500">*</span></Label>
+                <Label htmlFor="monthlyPrice">
+                  Monthly Price ($) <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="monthlyPrice"
                   type="number"
@@ -237,7 +240,9 @@ export function CreateSubscriptionPlanDialog({
                 />
               </div>
               <div>
-                <Label htmlFor="yearlyPrice">Yearly Price ($) <span className="text-red-500">*</span></Label>
+                <Label htmlFor="yearlyPrice">
+                  Yearly Price ($) <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="yearlyPrice"
                   type="number"
@@ -250,7 +255,7 @@ export function CreateSubscriptionPlanDialog({
                   className={!yearlyPrice ? "border-red-500" : ""}
                 />
                 {calculateSavings() > 0 && (
-                  <p className="text-xs text-green-600 mt-1">
+                  <p className="mt-1 text-xs text-green-600">
                     Saves {calculateSavings()}% vs monthly
                   </p>
                 )}
@@ -267,7 +272,7 @@ export function CreateSubscriptionPlanDialog({
                 onChange={(e) => setTrialDays(e.target.value)}
                 placeholder="7"
               />
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="mt-1 text-xs text-muted-foreground">
                 Optional: Offer a free trial period
               </p>
             </div>
@@ -276,8 +281,8 @@ export function CreateSubscriptionPlanDialog({
           {/* Content Access */}
           <div className="space-y-4">
             <h3 className="font-medium">Content Access</h3>
-            
-            <div className="space-y-4 p-4 border rounded-lg">
+
+            <div className="space-y-4 rounded-lg border p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <Label htmlFor="allCourses">All Courses</Label>
@@ -295,8 +300,8 @@ export function CreateSubscriptionPlanDialog({
               {!hasAllCourses && courses && courses.length > 0 && (
                 <div className="space-y-2">
                   <Label>Select Courses</Label>
-                  <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {courses.map((course) => (
+                  <div className="max-h-40 space-y-2 overflow-y-auto">
+                    {courses.map((course: any) => (
                       <div key={course._id} className="flex items-center space-x-2">
                         <Checkbox
                           id={`course-${course._id}`}
@@ -305,14 +310,11 @@ export function CreateSubscriptionPlanDialog({
                             if (checked) {
                               setSelectedCourses([...selectedCourses, course._id]);
                             } else {
-                              setSelectedCourses(selectedCourses.filter(id => id !== course._id));
+                              setSelectedCourses(selectedCourses.filter((id) => id !== course._id));
                             }
                           }}
                         />
-                        <label
-                          htmlFor={`course-${course._id}`}
-                          className="text-sm cursor-pointer"
-                        >
+                        <label htmlFor={`course-${course._id}`} className="cursor-pointer text-sm">
                           {course.title}
                         </label>
                       </div>
@@ -322,7 +324,7 @@ export function CreateSubscriptionPlanDialog({
               )}
             </div>
 
-            <div className="space-y-4 p-4 border rounded-lg">
+            <div className="space-y-4 rounded-lg border p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <Label htmlFor="allProducts">All Digital Products</Label>
@@ -340,8 +342,8 @@ export function CreateSubscriptionPlanDialog({
               {!hasAllProducts && products && products.length > 0 && (
                 <div className="space-y-2">
                   <Label>Select Products</Label>
-                  <div className="space-y-2 max-h-40 overflow-y-auto">
-                    {products.map((product) => (
+                  <div className="max-h-40 space-y-2 overflow-y-auto">
+                    {products.map((product: any) => (
                       <div key={product._id} className="flex items-center space-x-2">
                         <Checkbox
                           id={`product-${product._id}`}
@@ -350,13 +352,15 @@ export function CreateSubscriptionPlanDialog({
                             if (checked) {
                               setSelectedProducts([...selectedProducts, product._id]);
                             } else {
-                              setSelectedProducts(selectedProducts.filter(id => id !== product._id));
+                              setSelectedProducts(
+                                selectedProducts.filter((id) => id !== product._id)
+                              );
                             }
                           }}
                         />
                         <label
                           htmlFor={`product-${product._id}`}
-                          className="text-sm cursor-pointer"
+                          className="cursor-pointer text-sm"
                         >
                           {product.name}
                         </label>
@@ -373,7 +377,7 @@ export function CreateSubscriptionPlanDialog({
             <div className="flex items-center justify-between">
               <Label>Features</Label>
               <Button type="button" variant="outline" size="sm" onClick={addFeature}>
-                <Plus className="w-3 h-3 mr-1" />
+                <Plus className="mr-1 h-3 w-3" />
                 Add Feature
               </Button>
             </div>
@@ -392,7 +396,7 @@ export function CreateSubscriptionPlanDialog({
                       size="sm"
                       onClick={() => removeFeature(index)}
                     >
-                      <X className="w-4 h-4" />
+                      <X className="h-4 w-4" />
                     </Button>
                   )}
                 </div>
@@ -413,4 +417,3 @@ export function CreateSubscriptionPlanDialog({
     </Dialog>
   );
 }
-

@@ -4423,4 +4423,123 @@ export default defineSchema({
     .index("by_campaignId_and_email", ["campaignId", "email"])
     .index("by_status", ["status"])
     .index("by_status_and_nextSendAt", ["status", "nextSendAt"]),
+
+  // ============================================================================
+  // SOCIAL MEDIA POST GENERATOR
+  // ============================================================================
+
+  // Generated Social Media Posts - Store AI-generated posts from course content
+  socialMediaPosts: defineTable({
+    userId: v.string(), // Clerk ID
+    storeId: v.optional(v.string()), // Store ID
+
+    // Source content reference
+    courseId: v.optional(v.id("courses")), // Source course
+    chapterId: v.optional(v.id("courseChapters")), // Source chapter
+
+    // Source content details
+    sourceContent: v.string(), // Raw text used for generation
+    sourceType: v.union(
+      v.literal("chapter"), // Entire chapter
+      v.literal("section"), // Section by heading
+      v.literal("custom") // Custom text input
+    ),
+    selectedHeadings: v.optional(v.array(v.string())), // Which headings were selected (if sourceType is "section")
+
+    // Generated platform-specific scripts
+    tiktokScript: v.optional(v.string()),
+    youtubeScript: v.optional(v.string()),
+    instagramScript: v.optional(v.string()),
+    combinedScript: v.optional(v.string()), // Final combined/edited script
+
+    // CTA configuration
+    ctaTemplateId: v.optional(v.id("ctaTemplates")),
+    ctaText: v.optional(v.string()), // Actual CTA text used (may be edited)
+    ctaKeyword: v.optional(v.string()), // e.g., "COMPRESSION", "KICK"
+    ctaProductId: v.optional(v.id("digitalProducts")), // Linked product for CTA
+    ctaCourseId: v.optional(v.id("courses")), // Or linked course for CTA
+
+    // Generated images
+    images: v.optional(
+      v.array(
+        v.object({
+          storageId: v.id("_storage"),
+          url: v.string(),
+          aspectRatio: v.union(v.literal("16:9"), v.literal("9:16")),
+          prompt: v.string(), // The prompt used to generate this image
+          sentence: v.optional(v.string()), // The sentence/concept this image illustrates
+          embedding: v.optional(v.array(v.number())), // For semantic search
+        })
+      )
+    ),
+
+    // Generated audio (ElevenLabs TTS)
+    audioStorageId: v.optional(v.id("_storage")),
+    audioUrl: v.optional(v.string()),
+    audioVoiceId: v.optional(v.string()), // ElevenLabs voice ID (default: Andrew 1)
+    audioDuration: v.optional(v.number()), // Duration in seconds
+    audioScript: v.optional(v.string()), // The exact text sent to TTS (may differ from combinedScript)
+
+    // Generation status tracking
+    status: v.union(
+      v.literal("draft"), // Initial state
+      v.literal("scripts_generated"), // Platform scripts ready
+      v.literal("combined"), // Scripts combined with CTA
+      v.literal("images_generated"), // Images generated
+      v.literal("audio_generated"), // Audio generated
+      v.literal("completed"), // All assets ready
+      v.literal("published") // Published to social (future)
+    ),
+
+    // Metadata
+    title: v.optional(v.string()), // User-given title for organization
+    tags: v.optional(v.array(v.string())), // User tags for filtering
+
+    // Timestamps
+    createdAt: v.number(),
+    updatedAt: v.number(),
+
+    // Future: Instagram automation integration
+    automationId: v.optional(v.id("automations")),
+    scheduledPostId: v.optional(v.id("scheduledPosts")),
+    publishedAt: v.optional(v.number()),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_storeId", ["storeId"])
+    .index("by_courseId", ["courseId"])
+    .index("by_chapterId", ["chapterId"])
+    .index("by_status", ["status"])
+    .index("by_userId_status", ["userId", "status"])
+    .index("by_createdAt", ["createdAt"])
+    .index("by_userId_createdAt", ["userId", "createdAt"]),
+
+  // CTA Templates - Reusable call-to-action templates
+  ctaTemplates: defineTable({
+    userId: v.string(), // Clerk ID
+    storeId: v.optional(v.string()), // Store ID
+
+    // Template details
+    name: v.string(), // e.g., "Compression Course CTA"
+    template: v.string(), // The full CTA text with {{KEYWORD}} placeholder
+    keyword: v.string(), // e.g., "COMPRESSION"
+    description: v.optional(v.string()), // Optional description for organization
+
+    // Linked product/course (optional)
+    productId: v.optional(v.id("digitalProducts")),
+    courseId: v.optional(v.id("courses")),
+    productName: v.optional(v.string()), // Cached name for display
+
+    // Usage tracking
+    usageCount: v.optional(v.number()),
+    lastUsedAt: v.optional(v.number()),
+
+    // Timestamps
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_storeId", ["storeId"])
+    .index("by_keyword", ["keyword"])
+    .index("by_userId_keyword", ["userId", "keyword"])
+    .index("by_createdAt", ["createdAt"]),
 });

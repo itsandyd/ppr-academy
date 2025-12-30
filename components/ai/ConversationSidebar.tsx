@@ -62,7 +62,9 @@ export default function ConversationSidebar({
   const [editingId, setEditingId] = useState<Id<"aiConversations"> | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [conversationToDelete, setConversationToDelete] = useState<Id<"aiConversations"> | null>(null);
+  const [conversationToDelete, setConversationToDelete] = useState<Id<"aiConversations"> | null>(
+    null
+  );
 
   // Queries
   const conversations = useQuery(api.aiConversations.getUserConversations, {
@@ -78,7 +80,7 @@ export default function ConversationSidebar({
   const deleteConversation = useMutation(api.aiConversations.deleteConversation);
 
   // Filter conversations by search
-  const filteredConversations = conversations?.filter((c) =>
+  const filteredConversations = conversations?.filter((c: any) =>
     c.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -110,17 +112,21 @@ export default function ConversationSidebar({
     }
   };
 
-  const ConversationItem = ({ conversation }: { conversation: NonNullable<typeof conversations>[0] }) => {
+  const ConversationItem = ({
+    conversation,
+  }: {
+    conversation: NonNullable<typeof conversations>[0];
+  }) => {
     const isActive = currentConversationId === conversation._id;
     const isEditing = editingId === conversation._id;
 
     return (
       <div
         className={cn(
-          "group relative px-3 py-2.5 rounded-lg cursor-pointer transition-all",
+          "group relative cursor-pointer rounded-lg px-3 py-2.5 transition-all",
           isActive
-            ? "bg-primary/10 text-primary border border-primary/20"
-            : "hover:bg-muted/50 border border-transparent"
+            ? "border border-primary/20 bg-primary/10 text-primary"
+            : "border border-transparent hover:bg-muted/50"
         )}
         onClick={() => !isEditing && onSelectConversation(conversation._id)}
       >
@@ -141,17 +147,19 @@ export default function ConversationSidebar({
             />
           ) : (
             <>
-              <div className="flex items-center gap-1.5 mb-0.5">
+              <div className="mb-0.5 flex items-center gap-1.5">
                 {conversation.starred && (
-                  <Star className="w-3 h-3 text-yellow-500 fill-yellow-500 flex-shrink-0" />
+                  <Star className="h-3 w-3 flex-shrink-0 fill-yellow-500 text-yellow-500" />
                 )}
-                <span className="font-medium text-sm line-clamp-2 leading-tight">
+                <span className="line-clamp-2 text-sm font-medium leading-tight">
                   {conversation.title}
                 </span>
               </div>
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Clock className="w-3 h-3 flex-shrink-0" />
-                <span className="truncate">{formatDistanceToNow(conversation.lastMessageAt, { addSuffix: true })}</span>
+                <Clock className="h-3 w-3 flex-shrink-0" />
+                <span className="truncate">
+                  {formatDistanceToNow(conversation.lastMessageAt, { addSuffix: true })}
+                </span>
                 <span className="flex-shrink-0">·</span>
                 <span className="flex-shrink-0">{conversation.messageCount} msgs</span>
               </div>
@@ -166,22 +174,26 @@ export default function ConversationSidebar({
               <Button
                 variant="ghost"
                 size="icon"
-                className="absolute right-1 top-1.5 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute right-1 top-1.5 h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100"
               >
-                <MoreVertical className="w-4 h-4" />
+                <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-white dark:bg-black">
-              <DropdownMenuItem onClick={() => handleStartEdit(conversation._id, conversation.title)}>
-                <Edit3 className="w-4 h-4 mr-2" />
+              <DropdownMenuItem
+                onClick={() => handleStartEdit(conversation._id, conversation.title)}
+              >
+                <Edit3 className="mr-2 h-4 w-4" />
                 Rename
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => toggleStarred({ conversationId: conversation._id })}>
-                <Star className={cn("w-4 h-4 mr-2", conversation.starred && "fill-current")} />
+                <Star className={cn("mr-2 h-4 w-4", conversation.starred && "fill-current")} />
                 {conversation.starred ? "Unstar" : "Star"}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => archiveConversation({ conversationId: conversation._id })}>
-                <Archive className="w-4 h-4 mr-2" />
+              <DropdownMenuItem
+                onClick={() => archiveConversation({ conversationId: conversation._id })}
+              >
+                <Archive className="mr-2 h-4 w-4" />
                 Archive
               </DropdownMenuItem>
               <DropdownMenuSeparator />
@@ -192,7 +204,7 @@ export default function ConversationSidebar({
                   setDeleteDialogOpen(true);
                 }}
               >
-                <Trash2 className="w-4 h-4 mr-2" />
+                <Trash2 className="mr-2 h-4 w-4" />
                 Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -205,11 +217,11 @@ export default function ConversationSidebar({
   // Collapsed view - show mini conversation buttons
   if (isCollapsed) {
     const recentConversations = conversations?.slice(0, 6) || [];
-    
+
     return (
-      <div className="w-16 h-full border-r bg-background flex flex-col items-center pt-2 pb-3">
+      <div className="flex h-full w-16 flex-col items-center border-r bg-background pb-3 pt-2">
         {/* Header section */}
-        <div className="flex flex-col items-center gap-2 px-2 pb-2 border-b border-border w-full">
+        <div className="flex w-full flex-col items-center gap-2 border-b border-border px-2 pb-2">
           {/* Expand button */}
           <Button
             variant="ghost"
@@ -218,9 +230,9 @@ export default function ConversationSidebar({
             className="h-8 w-8"
             title="Expand sidebar"
           >
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="h-4 w-4" />
           </Button>
-          
+
           {/* New conversation */}
           <Button
             variant="outline"
@@ -229,54 +241,54 @@ export default function ConversationSidebar({
             className="h-10 w-10 rounded-full"
             title="New conversation"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="h-4 w-4" />
           </Button>
         </div>
-        
+
         {/* Recent conversations as mini buttons */}
-        <div className="flex-1 flex flex-col items-center gap-2 overflow-y-auto w-full py-3 px-2">
+        <div className="flex w-full flex-1 flex-col items-center gap-2 overflow-y-auto px-2 py-3">
           {recentConversations.map((conversation) => {
             const isActive = currentConversationId === conversation._id;
             const initial = conversation.title.charAt(0).toUpperCase();
-            
+
             return (
               <button
                 key={conversation._id}
                 onClick={() => onSelectConversation(conversation._id)}
                 className={cn(
-                  "w-10 h-10 rounded-lg flex items-center justify-center text-sm font-medium transition-all flex-shrink-0",
+                  "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg text-sm font-medium transition-all",
                   "hover:bg-muted/80",
-                  isActive 
-                    ? "bg-primary/20 text-primary ring-2 ring-primary/30" 
+                  isActive
+                    ? "bg-primary/20 text-primary ring-2 ring-primary/30"
                     : "bg-muted/50 text-muted-foreground"
                 )}
                 title={conversation.title}
               >
                 {conversation.starred ? (
-                  <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                  <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
                 ) : (
                   initial
                 )}
               </button>
             );
           })}
-          
+
           {/* Show more indicator if there are more conversations */}
           {conversations && conversations.length > 6 && (
             <button
               onClick={onToggleCollapse}
-              className="w-10 h-10 rounded-lg flex items-center justify-center text-xs text-muted-foreground hover:bg-muted/50 flex-shrink-0"
+              className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg text-xs text-muted-foreground hover:bg-muted/50"
               title={`${conversations.length - 6} more conversations`}
             >
               +{conversations.length - 6}
             </button>
           )}
         </div>
-        
+
         {/* Footer count */}
-        <div className="pt-2 px-2 border-t border-border w-full flex justify-center">
+        <div className="flex w-full justify-center border-t border-border px-2 pt-2">
           <div className="flex flex-col items-center text-[10px] text-muted-foreground">
-            <MessageSquare className="w-4 h-4 mb-0.5" />
+            <MessageSquare className="mb-0.5 h-4 w-4" />
             <span>{conversations?.length || 0}</span>
           </div>
         </div>
@@ -286,49 +298,45 @@ export default function ConversationSidebar({
 
   return (
     <>
-      <div className="w-80 h-full border-r bg-background flex flex-col">
+      <div className="flex h-full w-80 flex-col border-r bg-background">
         {/* Header */}
-        <div className="p-4 border-b space-y-3">
+        <div className="space-y-3 border-b p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Brain className="w-5 h-5 text-primary" />
+              <Brain className="h-5 w-5 text-primary" />
               <h2 className="font-semibold">Conversations</h2>
             </div>
             {onToggleCollapse && (
               <Button variant="ghost" size="icon" onClick={onToggleCollapse} className="h-8 w-8">
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronLeft className="h-4 w-4" />
               </Button>
             )}
           </div>
-          
-          <Button
-            onClick={onNewConversation}
-            className="w-full"
-            size="sm"
-          >
-            <Plus className="w-4 h-4 mr-2" />
+
+          <Button onClick={onNewConversation} className="w-full" size="sm">
+            <Plus className="mr-2 h-4 w-4" />
             New Conversation
           </Button>
 
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search conversations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 h-9 bg-muted/50"
+              className="h-9 bg-muted/50 pl-8"
             />
           </div>
         </div>
 
         {/* Conversations List */}
         <ScrollArea className="flex-1">
-          <div className="p-2 space-y-1">
+          <div className="space-y-1 p-2">
             {/* Starred Section */}
             {starredConversations.length > 0 && (
               <div className="mb-4">
-                <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                <div className="px-3 py-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Starred
                 </div>
                 {starredConversations.map((conversation) => (
@@ -341,7 +349,7 @@ export default function ConversationSidebar({
             {regularConversations.length > 0 && (
               <div>
                 {starredConversations.length > 0 && (
-                  <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  <div className="px-3 py-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     Recent
                   </div>
                 )}
@@ -354,24 +362,18 @@ export default function ConversationSidebar({
             {/* Empty State */}
             {filteredConversations?.length === 0 && (
               <div className="p-8 text-center text-muted-foreground">
-                <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                <MessageSquare className="mx-auto mb-3 h-12 w-12 opacity-20" />
                 <p className="text-sm">
-                  {searchQuery
-                    ? "No conversations found"
-                    : "No conversations yet"}
+                  {searchQuery ? "No conversations found" : "No conversations yet"}
                 </p>
-                {!searchQuery && (
-                  <p className="text-xs mt-1">
-                    Start a new conversation to begin
-                  </p>
-                )}
+                {!searchQuery && <p className="mt-1 text-xs">Start a new conversation to begin</p>}
               </div>
             )}
           </div>
         </ScrollArea>
 
         {/* Footer Stats */}
-        <div className="p-3 border-t bg-muted/30">
+        <div className="border-t bg-muted/30 p-3">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>{conversations?.length || 0} conversations</span>
             <span>{conversations?.reduce((sum, c) => sum + c.messageCount, 0) || 0} messages</span>
@@ -385,8 +387,8 @@ export default function ConversationSidebar({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Conversation?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete this conversation and all its messages.
-              This action cannot be undone.
+              This will permanently delete this conversation and all its messages. This action
+              cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -403,4 +405,3 @@ export default function ConversationSidebar({
     </>
   );
 }
-

@@ -39,7 +39,7 @@ export function AffiliateDashboard({ affiliateId }: AffiliateDashboardProps) {
         <p className="text-muted-foreground">Track your earnings and performance</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Earnings</CardTitle>
@@ -75,9 +75,7 @@ export function AffiliateDashboard({ affiliateId }: AffiliateDashboardProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.stats?.conversionRate || 0}%</div>
-            <p className="text-xs text-muted-foreground">
-              {stats.totalSales} sales
-            </p>
+            <p className="text-xs text-muted-foreground">{stats.totalSales} sales</p>
           </CardContent>
         </Card>
 
@@ -90,9 +88,7 @@ export function AffiliateDashboard({ affiliateId }: AffiliateDashboardProps) {
             <div className="text-2xl font-bold">
               ${((stats.totalRevenue || 0) / 100).toFixed(2)}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Generated for creator
-            </p>
+            <p className="text-xs text-muted-foreground">Generated for creator</p>
           </CardContent>
         </Card>
       </div>
@@ -104,17 +100,17 @@ export function AffiliateDashboard({ affiliateId }: AffiliateDashboardProps) {
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-2">
-            <code className="flex-1 px-4 py-2 bg-muted rounded-md text-sm">
+            <code className="flex-1 rounded-md bg-muted px-4 py-2 text-sm">
               {`${window.location.origin}?ref=${stats.affiliateCode}`}
             </code>
             <Button onClick={copyAffiliateLink} variant="outline">
-              <Copy className="w-4 h-4 mr-2" />
+              <Copy className="mr-2 h-4 w-4" />
               Copy
             </Button>
           </div>
-          <div className="mt-4 p-4 bg-muted rounded-md">
-            <p className="text-sm font-medium mb-2">Your Affiliate Code:</p>
-            <code className="text-lg font-mono font-bold">{stats.affiliateCode}</code>
+          <div className="mt-4 rounded-md bg-muted p-4">
+            <p className="mb-2 text-sm font-medium">Your Affiliate Code:</p>
+            <code className="font-mono text-lg font-bold">{stats.affiliateCode}</code>
           </div>
         </CardContent>
       </Card>
@@ -127,10 +123,10 @@ export function AffiliateDashboard({ affiliateId }: AffiliateDashboardProps) {
         <CardContent>
           {sales && sales.length > 0 ? (
             <div className="space-y-4">
-              {sales.map((sale) => (
+              {sales.map((sale: any) => (
                 <div
                   key={sale._id}
-                  className="flex items-center justify-between py-2 border-b last:border-0"
+                  className="flex items-center justify-between border-b py-2 last:border-0"
                 >
                   <div>
                     <p className="font-medium">
@@ -144,7 +140,7 @@ export function AffiliateDashboard({ affiliateId }: AffiliateDashboardProps) {
                     <p className="font-bold text-green-600">
                       +${((sale.commissionAmount || 0) / 100).toFixed(2)}
                     </p>
-                    <p className="text-xs text-muted-foreground capitalize">
+                    <p className="text-xs capitalize text-muted-foreground">
                       {sale.commissionStatus}
                     </p>
                   </div>
@@ -152,7 +148,7 @@ export function AffiliateDashboard({ affiliateId }: AffiliateDashboardProps) {
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="py-8 text-center text-muted-foreground">
               No sales yet. Start sharing your affiliate link!
             </div>
           )}
@@ -161,8 +157,3 @@ export function AffiliateDashboard({ affiliateId }: AffiliateDashboardProps) {
     </div>
   );
 }
-
-
-
-
-

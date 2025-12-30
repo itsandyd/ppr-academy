@@ -144,8 +144,8 @@ export default function EmailCampaignsPage() {
     }
   };
 
-  const totalEnrolled = campaigns?.reduce((sum, c: any) => sum + (c.totalEnrolled || 0), 0) || 0;
-  const totalCompleted = campaigns?.reduce((sum, c: any) => sum + (c.totalCompleted || 0), 0) || 0;
+  const totalEnrolled = campaigns?.reduce((sum: number, c: any) => sum + (c.totalEnrolled || 0), 0) || 0;
+  const totalCompleted = campaigns?.reduce((sum: number, c: any) => sum + (c.totalCompleted || 0), 0) || 0;
   const activeCampaigns = campaigns?.filter((c: any) => c.isActive).length || 0;
 
   return (

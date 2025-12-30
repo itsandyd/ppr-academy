@@ -1,17 +1,17 @@
-'use client';
+"use client";
 
-import { useState, useCallback, useEffect } from 'react';
-import { useMutation, useQuery, useAction } from 'convex/react';
-import { api } from '@/convex/_generated/api';
-import { Id } from '@/convex/_generated/dataModel';
-import { NotionEditor } from './notion-editor';
-import { NotesSidebar } from './notes-sidebar';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import { useState, useCallback, useEffect } from "react";
+import { useMutation, useQuery, useAction } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
+import { NotionEditor } from "./notion-editor";
+import { NotesSidebar } from "./notes-sidebar";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
   DialogContent,
@@ -20,15 +20,15 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { toast } from '@/hooks/use-toast';
+} from "@/components/ui/select";
+import { toast } from "@/hooks/use-toast";
 import {
   Save,
   Sparkles,
@@ -48,9 +48,9 @@ import {
   Settings,
   ChevronRight,
   Home,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { formatDistanceToNow } from 'date-fns';
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { formatDistanceToNow } from "date-fns";
 
 interface NotesDashboardProps {
   userId: string;
@@ -61,7 +61,7 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
   // State
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedNotesForCourse, setSelectedNotesForCourse] = useState<Set<string>>(new Set());
   const [isGeneratingCourse, setIsGeneratingCourse] = useState(false);
   const [showCourseDialog, setShowCourseDialog] = useState(false);
@@ -69,11 +69,11 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [courseFormData, setCourseFormData] = useState({
-    title: '',
-    description: '',
-    targetAudience: '',
-    category: '',
-    skillLevel: 'intermediate' as 'beginner' | 'intermediate' | 'advanced',
+    title: "",
+    description: "",
+    targetAudience: "",
+    category: "",
+    skillLevel: "intermediate" as "beginner" | "intermediate" | "advanced",
     preferredModuleCount: 4,
     includeQuizzes: true,
     matchExistingStyle: true, // NEW: Match existing course style by default
@@ -81,20 +81,21 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
 
   // Current note state
   const [currentNote, setCurrentNote] = useState({
-    title: 'Untitled',
-    content: '',
-    icon: '📝',
+    title: "Untitled",
+    content: "",
+    icon: "📝",
     tags: [] as string[],
-    priority: 'medium' as 'low' | 'medium' | 'high' | 'urgent',
-    status: 'draft' as 'draft' | 'in_progress' | 'completed' | 'archived',
+    priority: "medium" as "low" | "medium" | "high" | "urgent",
+    status: "draft" as "draft" | "in_progress" | "completed" | "archived",
   });
 
   // Convex queries and mutations
-  const folders = useQuery(api.notes.getFoldersByUser, {
-    userId,
-    storeId,
-    parentId: selectedFolderId ? (selectedFolderId as Id<"noteFolders">) : undefined,
-  }) ?? [];
+  const folders =
+    useQuery(api.notes.getFoldersByUser, {
+      userId,
+      storeId,
+      parentId: selectedFolderId ? (selectedFolderId as Id<"noteFolders">) : undefined,
+    }) ?? [];
 
   const notesQuery = useQuery((api.notes as any).getNotesByUser, {
     userId,
@@ -104,9 +105,10 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
   });
 
   // Get user's existing courses for style analysis
-  const userCourses = useQuery(api.courses.getCoursesByStore, {
-    storeId,
-  }) ?? [];
+  const userCourses =
+    useQuery(api.courses.getCoursesByStore, {
+      storeId,
+    }) ?? [];
 
   const notes = notesQuery?.page ?? [];
 
@@ -124,23 +126,23 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
   const generateCourseFromNotes = useAction((api as any).notesToCourse.generateCourseFromNotes);
 
   // Get current folder for breadcrumb
-  const currentFolder = selectedFolderId 
-    ? folders.find(f => f._id === selectedFolderId)
+  const currentFolder = selectedFolderId
+    ? folders.find((f: any) => f._id === selectedFolderId)
     : null;
 
   // Build breadcrumb path
   const getBreadcrumbPath = () => {
     if (!selectedFolderId || !currentFolder) return [];
-    
-    const path: Array<{_id: string, name: string}> = [];
+
+    const path: Array<{ _id: string; name: string }> = [];
     let folder = currentFolder;
-    
+
     // Build path from current folder to root
     while (folder) {
       path.unshift({ _id: folder._id, name: folder.name });
-      folder = folders.find(f => f._id === folder.parentId) as any;
+      folder = folders.find((f: any) => f._id === folder.parentId) as any;
     }
-    
+
     return path;
   };
 
@@ -151,107 +153,119 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
     setSelectedNoteId(noteId);
   }, []);
 
-  const handleCreateNote = useCallback(async (folderId?: string) => {
-    try {
-      const noteId = await createNote({
-        title: 'Untitled',
-        content: '<p>Start writing your thoughts...</p>',
-        userId,
-        storeId,
-        folderId: folderId ? folderId as Id<"noteFolders"> : undefined,
-        tags: [],
-        category: undefined,
-        priority: 'medium',
-      });
-      setSelectedNoteId(noteId);
-      toast({
-        title: "Note Created",
-        description: "Your new note has been created.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to create note.",
-        variant: "destructive",
-      });
-    }
-  }, [createNote, userId, storeId]);
-
-  const handleCreateFolder = useCallback(async (parentId?: string) => {
-    try {
-      const folderId = await createFolder({
-        name: 'New Folder',
-        userId,
-        storeId,
-        parentId: parentId ? parentId as Id<"noteFolders"> : undefined,
-      });
-      toast({
-        title: "Folder Created",
-        description: "Your new folder has been created.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to create folder.",
-        variant: "destructive",
-      });
-    }
-  }, [createFolder, userId, storeId]);
-
-  const handleRenameFolder = useCallback(async (folderId: string, newName: string) => {
-    try {
-      await updateFolder({
-        folderId: folderId as Id<"noteFolders">,
-        name: newName,
-      });
-      toast({
-        title: "Folder Renamed",
-        description: "Your folder has been renamed successfully.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to rename folder.",
-        variant: "destructive",
-      });
-    }
-  }, [updateFolder]);
-
-  const handleSaveNote = useCallback(async (showToast = true) => {
-    if (!selectedNoteId) {
-      await handleCreateNote(selectedFolderId || undefined);
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      await updateNote({
-        noteId: selectedNoteId as Id<"notes">,
-        title: currentNote.title,
-        content: currentNote.content,
-        tags: currentNote.tags,
-        priority: currentNote.priority,
-        status: currentNote.status,
-      });
-      
-      setLastSaved(new Date());
-      
-      if (showToast) {
+  const handleCreateNote = useCallback(
+    async (folderId?: string) => {
+      try {
+        const noteId = await createNote({
+          title: "Untitled",
+          content: "<p>Start writing your thoughts...</p>",
+          userId,
+          storeId,
+          folderId: folderId ? (folderId as Id<"noteFolders">) : undefined,
+          tags: [],
+          category: undefined,
+          priority: "medium",
+        });
+        setSelectedNoteId(noteId);
         toast({
-          title: "Note Saved",
-          description: "Your note has been saved successfully.",
+          title: "Note Created",
+          description: "Your new note has been created.",
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to create note.",
+          variant: "destructive",
         });
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to save note.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  }, [selectedNoteId, currentNote, updateNote, handleCreateNote, selectedFolderId]);
+    },
+    [createNote, userId, storeId]
+  );
+
+  const handleCreateFolder = useCallback(
+    async (parentId?: string) => {
+      try {
+        const folderId = await createFolder({
+          name: "New Folder",
+          userId,
+          storeId,
+          parentId: parentId ? (parentId as Id<"noteFolders">) : undefined,
+        });
+        toast({
+          title: "Folder Created",
+          description: "Your new folder has been created.",
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to create folder.",
+          variant: "destructive",
+        });
+      }
+    },
+    [createFolder, userId, storeId]
+  );
+
+  const handleRenameFolder = useCallback(
+    async (folderId: string, newName: string) => {
+      try {
+        await updateFolder({
+          folderId: folderId as Id<"noteFolders">,
+          name: newName,
+        });
+        toast({
+          title: "Folder Renamed",
+          description: "Your folder has been renamed successfully.",
+        });
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to rename folder.",
+          variant: "destructive",
+        });
+      }
+    },
+    [updateFolder]
+  );
+
+  const handleSaveNote = useCallback(
+    async (showToast = true) => {
+      if (!selectedNoteId) {
+        await handleCreateNote(selectedFolderId || undefined);
+        return;
+      }
+
+      setIsSaving(true);
+      try {
+        await updateNote({
+          noteId: selectedNoteId as Id<"notes">,
+          title: currentNote.title,
+          content: currentNote.content,
+          tags: currentNote.tags,
+          priority: currentNote.priority,
+          status: currentNote.status,
+        });
+
+        setLastSaved(new Date());
+
+        if (showToast) {
+          toast({
+            title: "Note Saved",
+            description: "Your note has been saved successfully.",
+          });
+        }
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to save note.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [selectedNoteId, currentNote, updateNote, handleCreateNote, selectedFolderId]
+  );
 
   const handleToggleNoteSelection = (noteId: string) => {
     const newSelection = new Set(selectedNotesForCourse);
@@ -265,7 +279,7 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
 
   // NEW: Select ALL notes in current folder for course generation
   const handleSelectAllNotesInFolder = () => {
-    const folderNotes = notes.map(note => note._id);
+    const folderNotes = notes.map((note: any) => note._id);
     setSelectedNotesForCourse(new Set(folderNotes));
     toast({
       title: "Notes Selected",
@@ -300,8 +314,8 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
       });
 
       if (result.success && result.courseId) {
-        const styleMessage = courseFormData.matchExistingStyle 
-          ? " matching your teaching style" 
+        const styleMessage = courseFormData.matchExistingStyle
+          ? " matching your teaching style"
           : "";
         toast({
           title: "Course Generated Successfully!",
@@ -310,17 +324,17 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
         setShowCourseDialog(false);
         setSelectedNotesForCourse(new Set());
         setCourseFormData({
-          title: '',
-          description: '',
-          targetAudience: '',
-          category: '',
-          skillLevel: 'intermediate',
+          title: "",
+          description: "",
+          targetAudience: "",
+          category: "",
+          skillLevel: "intermediate",
           preferredModuleCount: 4,
           includeQuizzes: true,
           matchExistingStyle: true,
         });
         // Optionally redirect to course editor
-        window.open(`/store/${storeId}/course/${result.courseId}/edit`, '_blank');
+        window.open(`/store/${storeId}/course/${result.courseId}/edit`, "_blank");
       } else {
         toast({
           title: "Course Generation Failed",
@@ -345,9 +359,9 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
       setCurrentNote({
         title: selectedNote.title,
         content: selectedNote.content,
-        icon: selectedNote.icon || '📝',
+        icon: selectedNote.icon || "📝",
         tags: selectedNote.tags,
-        priority: selectedNote.priority || 'medium',
+        priority: selectedNote.priority || "medium",
         status: selectedNote.status,
       });
     }
@@ -358,7 +372,7 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
     if (!selectedNoteId || !selectedNote) return;
 
     // Check if content has actually changed
-    const hasChanges = 
+    const hasChanges =
       currentNote.title !== selectedNote.title ||
       currentNote.content !== selectedNote.content ||
       JSON.stringify(currentNote.tags) !== JSON.stringify(selectedNote.tags) ||
@@ -380,7 +394,7 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
         });
         setLastSaved(new Date());
       } catch (error) {
-        console.error('Auto-save failed:', error);
+        console.error("Auto-save failed:", error);
       } finally {
         setIsSaving(false);
       }
@@ -390,9 +404,9 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
   }, [selectedNoteId, selectedNote, currentNote, updateNote]);
 
   return (
-    <div className="h-full w-full flex bg-white dark:bg-[#1a1a1a] overflow-hidden">
+    <div className="flex h-full w-full overflow-hidden bg-white dark:bg-[#1a1a1a]">
       {/* Sidebar - Balanced width */}
-      <div className="w-72 flex-shrink-0 bg-gray-50 dark:bg-[#1e1e1e] border-r border-gray-200 dark:border-gray-800/50 flex flex-col">
+      <div className="flex w-72 flex-shrink-0 flex-col border-r border-gray-200 bg-gray-50 dark:border-gray-800/50 dark:bg-[#1e1e1e]">
         <NotesSidebar
           folders={folders}
           notes={notes}
@@ -411,15 +425,15 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col bg-white dark:bg-[#1a1a1a] min-w-0">
+      <div className="flex min-w-0 flex-1 flex-col bg-white dark:bg-[#1a1a1a]">
         {/* Header with Breadcrumbs - Clean and spacious */}
-        <div className="border-b border-gray-200 dark:border-gray-800/50 bg-white dark:bg-[#1e1e1e]/50 backdrop-blur-sm flex-shrink-0">
+        <div className="flex-shrink-0 border-b border-gray-200 bg-white backdrop-blur-sm dark:border-gray-800/50 dark:bg-[#1e1e1e]/50">
           {/* Breadcrumb Navigation */}
           {breadcrumbPath.length > 0 && (
-            <div className="px-6 pt-3 pb-2 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+            <div className="flex items-center gap-2 px-6 pb-2 pt-3 text-sm text-gray-600 dark:text-gray-400">
               <button
                 onClick={() => setSelectedFolderId(null)}
-                className="hover:text-gray-900 dark:hover:text-gray-100 flex items-center gap-1 transition-colors"
+                className="flex items-center gap-1 transition-colors hover:text-gray-900 dark:hover:text-gray-100"
               >
                 <Home className="h-4 w-4" />
                 <span>All Notes</span>
@@ -430,8 +444,9 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
                   <button
                     onClick={() => setSelectedFolderId(folder._id)}
                     className={cn(
-                      "hover:text-gray-900 dark:hover:text-gray-100 transition-colors",
-                      index === breadcrumbPath.length - 1 && "font-semibold text-gray-900 dark:text-gray-100"
+                      "transition-colors hover:text-gray-900 dark:hover:text-gray-100",
+                      index === breadcrumbPath.length - 1 &&
+                        "font-semibold text-gray-900 dark:text-gray-100"
                     )}
                   >
                     {folder.name}
@@ -440,20 +455,20 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
               ))}
             </div>
           )}
-          
+
           {/* Main Header */}
-          <div className="h-16 flex items-center justify-between px-6">
-            <div className="flex items-center gap-4 min-w-0">
-              <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 truncate">
-                {selectedNoteId ? currentNote.title : (currentFolder ? currentFolder.name : 'Notes')}
+          <div className="flex h-16 items-center justify-between px-6">
+            <div className="flex min-w-0 items-center gap-4">
+              <h1 className="truncate text-xl font-semibold text-gray-900 dark:text-gray-100">
+                {selectedNoteId ? currentNote.title : currentFolder ? currentFolder.name : "Notes"}
               </h1>
             </div>
-            
+
             {selectedNote && (
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <Badge 
-                  variant="secondary" 
-                  className="text-xs bg-gray-100 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700/50"
+              <div className="flex flex-shrink-0 items-center gap-2">
+                <Badge
+                  variant="secondary"
+                  className="border-gray-200 bg-gray-100 text-xs text-gray-700 dark:border-gray-700/50 dark:bg-gray-800/50 dark:text-gray-300"
                 >
                   {selectedNote.status}
                 </Badge>
@@ -464,12 +479,12 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
                 )}
                 {/* Auto-save indicator - Enhanced visibility */}
                 {isSaving ? (
-                  <span className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1 font-medium">
-                    <Loader2 className="w-3 h-3 animate-spin" />
+                  <span className="flex items-center gap-1 text-xs font-medium text-blue-600 dark:text-blue-400">
+                    <Loader2 className="h-3 w-3 animate-spin" />
                     Saving...
                   </span>
                 ) : lastSaved ? (
-                  <span className="text-xs text-green-600 dark:text-green-400 font-medium">
+                  <span className="text-xs font-medium text-green-600 dark:text-green-400">
                     ✓ Saved {formatDistanceToNow(lastSaved)} ago
                   </span>
                 ) : null}
@@ -484,7 +499,7 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
                 <Badge variant="default" className="mr-2">
                   {selectedNotesForCourse.size} selected
                 </Badge>
-                
+
                 <Dialog open={showCourseDialog} onOpenChange={setShowCourseDialog}>
                   <DialogTrigger asChild>
                     <Button className="gap-2">
@@ -492,71 +507,79 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
                       Generate Course
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-lg bg-white dark:bg-[#1e1e1e] border-gray-200 dark:border-gray-800">
+                  <DialogContent className="border-gray-200 bg-white dark:border-gray-800 dark:bg-[#1e1e1e] sm:max-w-lg">
                     <DialogHeader>
                       <DialogTitle className="flex items-center gap-2 text-gray-900 dark:text-gray-100">
                         <Brain className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                         Generate Course from Notes
                       </DialogTitle>
                       <DialogDescription className="text-gray-600 dark:text-gray-400">
-                        Create a structured course from your selected {selectedNotesForCourse.size} notes using AI.
+                        Create a structured course from your selected {selectedNotesForCourse.size}{" "}
+                        notes using AI.
                       </DialogDescription>
                     </DialogHeader>
-                    
+
                     <div className="space-y-4">
                       <div>
                         <Label htmlFor="course-title">Course Title *</Label>
                         <Input
                           id="course-title"
                           value={courseFormData.title}
-                          onChange={(e) => setCourseFormData(prev => ({ ...prev, title: e.target.value }))}
+                          onChange={(e) =>
+                            setCourseFormData((prev) => ({ ...prev, title: e.target.value }))
+                          }
                           placeholder="e.g., Complete Guide to React Development"
                         />
                       </div>
-                      
+
                       <div>
                         <Label htmlFor="course-description">Course Description</Label>
                         <Textarea
                           id="course-description"
                           value={courseFormData.description}
-                          onChange={(e) => setCourseFormData(prev => ({ ...prev, description: e.target.value }))}
+                          onChange={(e) =>
+                            setCourseFormData((prev) => ({ ...prev, description: e.target.value }))
+                          }
                           placeholder="Brief description of what students will learn..."
                           rows={3}
                         />
                       </div>
-                      
+
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <Label htmlFor="skill-level">Skill Level</Label>
-                          <Select 
-                            value={courseFormData.skillLevel} 
-                            onValueChange={(value: 'beginner' | 'intermediate' | 'advanced') => 
-                              setCourseFormData(prev => ({ ...prev, skillLevel: value }))
+                          <Select
+                            value={courseFormData.skillLevel}
+                            onValueChange={(value: "beginner" | "intermediate" | "advanced") =>
+                              setCourseFormData((prev) => ({ ...prev, skillLevel: value }))
                             }
                           >
                             <SelectTrigger>
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="bg-white dark:bg-[#1e1e1e] border-gray-200 dark:border-gray-800">
+                            <SelectContent className="border-gray-200 bg-white dark:border-gray-800 dark:bg-[#1e1e1e]">
                               <SelectItem value="beginner">Beginner</SelectItem>
                               <SelectItem value="intermediate">Intermediate</SelectItem>
                               <SelectItem value="advanced">Advanced</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
-                        
+
                         <div>
                           <Label htmlFor="module-count">Module Count</Label>
-                          <Select 
-                            value={courseFormData.preferredModuleCount.toString()} 
-                            onValueChange={(value) => 
-                              setCourseFormData(prev => ({ ...prev, preferredModuleCount: parseInt(value) }))
+                          <Select
+                            value={courseFormData.preferredModuleCount.toString()}
+                            onValueChange={(value) =>
+                              setCourseFormData((prev) => ({
+                                ...prev,
+                                preferredModuleCount: parseInt(value),
+                              }))
                             }
                           >
                             <SelectTrigger>
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="bg-white dark:bg-[#1e1e1e] border-gray-200 dark:border-gray-800">
+                            <SelectContent className="border-gray-200 bg-white dark:border-gray-800 dark:bg-[#1e1e1e]">
                               <SelectItem value="3">3 Modules</SelectItem>
                               <SelectItem value="4">4 Modules</SelectItem>
                               <SelectItem value="5">5 Modules</SelectItem>
@@ -565,52 +588,67 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
                           </Select>
                         </div>
                       </div>
-                      
+
                       <div className="flex items-center space-x-2">
                         <input
                           type="checkbox"
                           id="include-quizzes"
                           checked={courseFormData.includeQuizzes}
-                          onChange={(e) => setCourseFormData(prev => ({ ...prev, includeQuizzes: e.target.checked }))}
+                          onChange={(e) =>
+                            setCourseFormData((prev) => ({
+                              ...prev,
+                              includeQuizzes: e.target.checked,
+                            }))
+                          }
                           className="rounded border-gray-300"
                         />
                         <Label htmlFor="include-quizzes" className="text-sm">
                           Include quizzes and assessments
                         </Label>
                       </div>
-                      
+
                       {/* NEW: Match Existing Style Toggle */}
-                      <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-3">
+                      <div className="space-y-3 border-t border-gray-200 pt-4 dark:border-gray-700">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-2">
                             <input
                               type="checkbox"
                               id="match-style"
                               checked={courseFormData.matchExistingStyle}
-                              onChange={(e) => setCourseFormData(prev => ({ ...prev, matchExistingStyle: e.target.checked }))}
+                              onChange={(e) =>
+                                setCourseFormData((prev) => ({
+                                  ...prev,
+                                  matchExistingStyle: e.target.checked,
+                                }))
+                              }
                               className="rounded border-gray-300"
                             />
-                            <Label htmlFor="match-style" className="text-sm font-semibold flex items-center gap-2">
+                            <Label
+                              htmlFor="match-style"
+                              className="flex items-center gap-2 text-sm font-semibold"
+                            >
                               <Sparkles className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                               Match My Course Style
                             </Label>
                           </div>
                         </div>
                         {courseFormData.matchExistingStyle && (
-                          <div className="pl-6 text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                          <div className="space-y-1 pl-6 text-xs text-gray-600 dark:text-gray-400">
                             {userCourses.length > 0 ? (
                               <>
                                 <p className="font-medium text-green-600 dark:text-green-400">
-                                  ✓ Found {userCourses.length} existing course{userCourses.length > 1 ? 's' : ''} to analyze
+                                  ✓ Found {userCourses.length} existing course
+                                  {userCourses.length > 1 ? "s" : ""} to analyze
                                 </p>
                                 <p className="leading-relaxed">
-                                  AI will analyze your existing courses to match your teaching style, 
-                                  content structure, and communication approach.
+                                  AI will analyze your existing courses to match your teaching
+                                  style, content structure, and communication approach.
                                 </p>
                               </>
                             ) : (
-                              <p className="text-amber-600 dark:text-amber-400 leading-relaxed">
-                                No existing courses found. The AI will use best practices for course creation.
+                              <p className="leading-relaxed text-amber-600 dark:text-amber-400">
+                                No existing courses found. The AI will use best practices for course
+                                creation.
                               </p>
                             )}
                           </div>
@@ -657,9 +695,9 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
               onClick={() => setSelectedNotesForCourse(new Set())}
             >
               <CheckSquare className="h-4 w-4" />
-              {selectedNotesForCourse.size > 0 ? 'Clear Selection' : 'Select Notes'}
+              {selectedNotesForCourse.size > 0 ? "Clear Selection" : "Select Notes"}
             </Button>
-            
+
             {/* NEW: Select all notes in folder */}
             {notes.length > 0 && selectedNotesForCourse.size === 0 && (
               <Button
@@ -688,21 +726,21 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
             <div className="h-full w-full">
               <NotionEditor
                 content={currentNote.content}
-                onChange={(content) => setCurrentNote(prev => ({ ...prev, content }))}
+                onChange={(content) => setCurrentNote((prev) => ({ ...prev, content }))}
                 title={currentNote.title}
-                onTitleChange={(title) => setCurrentNote(prev => ({ ...prev, title }))}
+                onTitleChange={(title) => setCurrentNote((prev) => ({ ...prev, title }))}
                 icon={currentNote.icon}
-                onIconChange={(icon) => setCurrentNote(prev => ({ ...prev, icon }))}
+                onIconChange={(icon) => setCurrentNote((prev) => ({ ...prev, icon }))}
                 placeholder="Start writing your ideas..."
-                className="h-full border-none rounded-none shadow-none"
+                className="h-full rounded-none border-none shadow-none"
               />
             </div>
           ) : (
             // Welcome Screen - Enhanced dark mode
-            <div className="h-full flex items-center justify-center bg-gray-50/50 dark:bg-[#1a1a1a]">
-              <div className="text-center space-y-6 max-w-md px-4">
+            <div className="flex h-full items-center justify-center bg-gray-50/50 dark:bg-[#1a1a1a]">
+              <div className="max-w-md space-y-6 px-4 text-center">
                 <div className="space-y-2">
-                  <div className="mx-auto w-20 h-20 bg-gradient-to-br from-purple-500/10 to-blue-500/10 dark:from-purple-500/20 dark:to-blue-500/20 rounded-2xl flex items-center justify-center mb-4">
+                  <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500/10 to-blue-500/10 dark:from-purple-500/20 dark:to-blue-500/20">
                     <FileText className="h-10 w-10 text-purple-600 dark:text-purple-400" />
                   </div>
                   <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
@@ -712,20 +750,20 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
                     Create, organize, and transform your ideas into courses with AI assistance.
                   </p>
                 </div>
-                
+
                 <div className="space-y-3">
                   <Button onClick={() => handleCreateNote()} className="w-full gap-2">
                     <PlusCircle className="h-4 w-4" />
                     Create Your First Note
                   </Button>
-                  
+
                   <div className="text-sm text-gray-500 dark:text-gray-400">
                     Or select a note from the sidebar to start editing
                   </div>
                 </div>
-                
-                <div className="pt-6 border-t border-gray-200 dark:border-gray-800/50">
-                  <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-3">
+
+                <div className="border-t border-gray-200 pt-6 dark:border-gray-800/50">
+                  <h3 className="mb-3 font-medium text-gray-900 dark:text-gray-100">
                     AI-Powered Features
                   </h3>
                   <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
@@ -751,9 +789,9 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
 
       {/* Multi-select overlay for notes list */}
       {selectedNotesForCourse.size > 0 && (
-        <div className="fixed inset-0 bg-black/20 pointer-events-none" />
+        <div className="pointer-events-none fixed inset-0 bg-black/20" />
       )}
-      
+
       {/* Note selection checkboxes */}
       {notes.length > 0 && (
         <style jsx>{`
@@ -761,7 +799,7 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
             position: relative;
           }
           .note-item::after {
-            content: '';
+            content: "";
             position: absolute;
             top: 8px;
             right: 8px;
@@ -777,7 +815,7 @@ export function NotesDashboard({ userId, storeId }: NotesDashboardProps) {
             border-color: #3b82f6;
           }
           .note-item.selected::before {
-            content: '✓';
+            content: "✓";
             position: absolute;
             top: 10px;
             right: 10px;

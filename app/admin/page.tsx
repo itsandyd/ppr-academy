@@ -39,13 +39,10 @@ export default function AdminDashboard() {
   useEffect(() => {
     setMounted(true);
   }, []);
-  
+
   // Check if user is admin
-  const adminCheck = useQuery(
-    api.users.checkIsAdmin,
-    user?.id ? { clerkId: user.id } : "skip"
-  );
-  
+  const adminCheck = useQuery(api.users.checkIsAdmin, user?.id ? { clerkId: user.id } : "skip");
+
   // Fetch platform-wide statistics (only if admin)
   const overview = useQuery(
     api.adminAnalytics.getPlatformOverview,
@@ -72,14 +69,14 @@ export default function AdminDashboard() {
   // Show loading state while checking authentication
   if (!isLoaded || adminCheck === undefined) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="text-center space-y-4">
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="space-y-4 text-center">
           <div className="relative">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-chart-1 to-chart-2 flex items-center justify-center mx-auto animate-pulse">
-              <Shield className="w-8 h-8 text-white" />
+            <div className="mx-auto flex h-16 w-16 animate-pulse items-center justify-center rounded-2xl bg-gradient-to-br from-chart-1 to-chart-2">
+              <Shield className="h-8 w-8 text-white" />
             </div>
-            <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-background border-2 border-chart-1 flex items-center justify-center">
-              <Loader2 className="w-3 h-3 animate-spin text-chart-1" />
+            <div className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-chart-1 bg-background">
+              <Loader2 className="h-3 w-3 animate-spin text-chart-1" />
             </div>
           </div>
           <div>
@@ -94,15 +91,15 @@ export default function AdminDashboard() {
   // Show access denied for non-admins
   if (!adminCheck.isAdmin) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="flex min-h-[60vh] items-center justify-center">
         <Card className="max-w-md border-destructive/50 bg-destructive/5">
           <CardContent className="pt-6">
-            <div className="text-center space-y-4">
-              <div className="w-16 h-16 bg-destructive/10 rounded-2xl flex items-center justify-center mx-auto">
-                <Lock className="w-8 h-8 text-destructive" />
+            <div className="space-y-4 text-center">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-destructive/10">
+                <Lock className="h-8 w-8 text-destructive" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold mb-2">Access Denied</h2>
+                <h2 className="mb-2 text-2xl font-bold">Access Denied</h2>
                 <p className="text-muted-foreground">
                   You don't have permission to access the admin dashboard.
                 </p>
@@ -113,7 +110,7 @@ export default function AdminDashboard() {
       </div>
     );
   }
-  
+
   const stats = {
     totalUsers: overview?.totalUsers || 0,
     totalCourses: overview?.totalCourses || 0,
@@ -190,34 +187,39 @@ export default function AdminDashboard() {
 
   const getActivityIcon = (type: string) => {
     switch (type) {
-      case "enrollment": return <TrendingUp className="w-4 h-4" />;
-      case "course_published": return <BookOpen className="w-4 h-4" />;
-      case "purchase": return <DollarSign className="w-4 h-4" />;
-      default: return <Activity className="w-4 h-4" />;
+      case "enrollment":
+        return <TrendingUp className="h-4 w-4" />;
+      case "course_published":
+        return <BookOpen className="h-4 w-4" />;
+      case "purchase":
+        return <DollarSign className="h-4 w-4" />;
+      default:
+        return <Activity className="h-4 w-4" />;
     }
   };
 
   const getActivityColor = (type: string) => {
     switch (type) {
-      case "enrollment": return "text-emerald-500 bg-emerald-500/10";
-      case "course_published": return "text-blue-500 bg-blue-500/10";
-      case "purchase": return "text-violet-500 bg-violet-500/10";
-      default: return "text-muted-foreground bg-muted";
+      case "enrollment":
+        return "text-emerald-500 bg-emerald-500/10";
+      case "course_published":
+        return "text-blue-500 bg-blue-500/10";
+      case "purchase":
+        return "text-violet-500 bg-violet-500/10";
+      default:
+        return "text-muted-foreground bg-muted";
     }
   };
 
   return (
-    <div className={cn(
-      "space-y-8",
-      mounted ? "animate-in fade-in-0 duration-500" : "opacity-0"
-    )}>
+    <div className={cn("space-y-8", mounted ? "duration-500 animate-in fade-in-0" : "opacity-0")}>
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
+      <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <h1 className="text-4xl font-bold tracking-tight">Mission Control</h1>
-            <Badge variant="outline" className="text-chart-1 border-chart-1/30 bg-chart-1/5">
-              <Sparkles className="w-3 h-3 mr-1" />
+            <Badge variant="outline" className="border-chart-1/30 bg-chart-1/5 text-chart-1">
+              <Sparkles className="mr-1 h-3 w-3" />
               Live
             </Badge>
           </div>
@@ -227,18 +229,18 @@ export default function AdminDashboard() {
         </div>
 
         {/* Quick stats */}
-        <div className="flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-r from-chart-1/10 via-chart-2/5 to-chart-3/10 border border-border/50">
+        <div className="flex items-center gap-4 rounded-2xl border border-border/50 bg-gradient-to-r from-chart-1/10 via-chart-2/5 to-chart-3/10 p-4">
           <div className="text-right">
             <p className="text-sm text-muted-foreground">Total Revenue</p>
-            <p className="text-2xl font-bold bg-gradient-to-r from-chart-1 to-chart-2 bg-clip-text text-transparent">
+            <p className="bg-gradient-to-r from-chart-1 to-chart-2 bg-clip-text text-2xl font-bold text-transparent">
               ${stats.totalRevenue.toLocaleString()}
             </p>
           </div>
-          <div className="w-px h-10 bg-border/50" />
+          <div className="h-10 w-px bg-border/50" />
           <div className="text-right">
             <p className="text-sm text-muted-foreground">Growth</p>
-            <p className="text-2xl font-bold text-emerald-500 flex items-center gap-1">
-              <ArrowUpRight className="w-5 h-5" />
+            <p className="flex items-center gap-1 text-2xl font-bold text-emerald-500">
+              <ArrowUpRight className="h-5 w-5" />
               23%
             </p>
           </div>
@@ -247,69 +249,77 @@ export default function AdminDashboard() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="bg-muted/50 border border-border/50 p-1 h-auto">
-          <TabsTrigger 
-            value="overview" 
-            className="data-[state=active]:bg-background data-[state=active]:shadow-sm px-6 py-2.5"
+        <TabsList className="h-auto border border-border/50 bg-muted/50 p-1">
+          <TabsTrigger
+            value="overview"
+            className="px-6 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
           >
-            <BarChart3 className="w-4 h-4 mr-2" />
+            <BarChart3 className="mr-2 h-4 w-4" />
             Overview
           </TabsTrigger>
-          <TabsTrigger 
+          <TabsTrigger
             value="creators"
-            className="data-[state=active]:bg-background data-[state=active]:shadow-sm px-6 py-2.5"
+            className="px-6 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm"
           >
-            <Users className="w-4 h-4 mr-2" />
+            <Users className="mr-2 h-4 w-4" />
             Creators & Products
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-8 mt-8">
+        <TabsContent value="overview" className="mt-8 space-y-8">
           {/* Metrics Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {metrics.map((metric, index) => {
               const Icon = metric.icon;
               return (
-                <Card 
+                <Card
                   key={metric.title}
                   className={cn(
-                    "group relative overflow-hidden border-border/50 hover:border-border transition-all duration-300",
-                    "hover:shadow-lg hover:-translate-y-0.5"
+                    "group relative overflow-hidden border-border/50 transition-all duration-300 hover:border-border",
+                    "hover:-translate-y-0.5 hover:shadow-lg"
                   )}
                   style={{ animationDelay: `${index * 50}ms` }}
                 >
                   {/* Background gradient */}
-                  <div className={cn(
-                    "absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity duration-500",
-                    metric.bgGradient
-                  )} />
-                  
+                  <div
+                    className={cn(
+                      "absolute inset-0 bg-gradient-to-br opacity-0 transition-opacity duration-500 group-hover:opacity-100",
+                      metric.bgGradient
+                    )}
+                  />
+
                   <CardContent className="relative p-6">
                     <div className="flex items-start justify-between">
                       <div className="space-y-3">
-                        <div className={cn(
-                          "inline-flex items-center justify-center w-12 h-12 rounded-2xl",
-                          "bg-gradient-to-br shadow-lg",
-                          metric.gradient
-                        )}>
-                          <Icon className="w-6 h-6 text-white" />
+                        <div
+                          className={cn(
+                            "inline-flex h-12 w-12 items-center justify-center rounded-2xl",
+                            "bg-gradient-to-br shadow-lg",
+                            metric.gradient
+                          )}
+                        >
+                          <Icon className="h-6 w-6 text-white" />
                         </div>
                         <div>
                           <p className="text-3xl font-bold tracking-tight">{metric.value}</p>
-                          <p className="text-sm text-muted-foreground font-medium mt-1">{metric.title}</p>
+                          <p className="mt-1 text-sm font-medium text-muted-foreground">
+                            {metric.title}
+                          </p>
                         </div>
                       </div>
-                      
-                      <div className={cn(
-                        "flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold",
-                        metric.trend === "up" 
-                          ? "bg-emerald-500/10 text-emerald-500" 
-                          : "bg-amber-500/10 text-amber-500"
-                      )}>
+
+                      <div
+                        className={cn(
+                          "flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold",
+                          metric.trend === "up"
+                            ? "bg-emerald-500/10 text-emerald-500"
+                            : "bg-amber-500/10 text-amber-500"
+                        )}
+                      >
                         {metric.trend === "up" ? (
-                          <ArrowUpRight className="w-3 h-3" />
+                          <ArrowUpRight className="h-3 w-3" />
                         ) : (
-                          <ArrowDownRight className="w-3 h-3" />
+                          <ArrowDownRight className="h-3 w-3" />
                         )}
                         {metric.change}
                       </div>
@@ -321,52 +331,54 @@ export default function AdminDashboard() {
           </div>
 
           {/* Activity and System Status */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {/* Recent Activity */}
             <Card className="border-border/50">
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-chart-1 to-chart-2 flex items-center justify-center">
-                      <Zap className="w-4 h-4 text-white" />
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-chart-1 to-chart-2">
+                      <Zap className="h-4 w-4 text-white" />
                     </div>
                     Live Activity
                   </CardTitle>
                   <Badge variant="outline" className="text-muted-foreground">
-                    <Clock className="w-3 h-3 mr-1" />
+                    <Clock className="mr-1 h-3 w-3" />
                     Real-time
                   </Badge>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                <div className="max-h-[400px] space-y-3 overflow-y-auto pr-2">
                   {recentActivity && recentActivity.length > 0 ? (
-                    recentActivity.slice(0, 10).map((activity, index) => (
-                      <div 
-                        key={index} 
+                    recentActivity.slice(0, 10).map((activity: any, index: number) => (
+                      <div
+                        key={index}
                         className={cn(
-                          "flex items-start gap-3 p-3 rounded-xl",
-                          "bg-muted/30 hover:bg-muted/50 transition-colors"
+                          "flex items-start gap-3 rounded-xl p-3",
+                          "bg-muted/30 transition-colors hover:bg-muted/50"
                         )}
                       >
-                        <div className={cn(
-                          "flex items-center justify-center w-8 h-8 rounded-lg shrink-0",
-                          getActivityColor(activity.type)
-                        )}>
+                        <div
+                          className={cn(
+                            "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+                            getActivityColor(activity.type)
+                          )}
+                        >
                           {getActivityIcon(activity.type)}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{activity.description}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">{activity.description}</p>
+                          <p className="mt-0.5 text-xs text-muted-foreground">
                             {formatTimeAgo(activity.timestamp)}
                           </p>
                         </div>
                       </div>
                     ))
                   ) : (
-                    <div className="text-center py-8">
-                      <Activity className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
-                      <p className="text-muted-foreground text-sm">No recent activity</p>
+                    <div className="py-8 text-center">
+                      <Activity className="mx-auto mb-3 h-12 w-12 text-muted-foreground/30" />
+                      <p className="text-sm text-muted-foreground">No recent activity</p>
                     </div>
                   )}
                 </div>
@@ -378,13 +390,13 @@ export default function AdminDashboard() {
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center">
-                      <Globe className="w-4 h-4 text-white" />
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-green-500">
+                      <Globe className="h-4 w-4 text-white" />
                     </div>
                     System Health
                   </CardTitle>
                   <div className="flex items-center gap-2 text-emerald-500">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <div className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
                     <span className="text-xs font-medium">All Systems Go</span>
                   </div>
                 </div>
@@ -399,17 +411,22 @@ export default function AdminDashboard() {
                     { name: "Payment Gateway (Stripe)", status: "operational", latency: "89ms" },
                     { name: "Auth Service (Clerk)", status: "operational", latency: "34ms" },
                   ].map((service) => (
-                    <div 
+                    <div
                       key={service.name}
-                      className="flex items-center justify-between p-3 rounded-xl bg-muted/30"
+                      className="flex items-center justify-between rounded-xl bg-muted/30 p-3"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                        <div className="h-2 w-2 rounded-full bg-emerald-500" />
                         <span className="text-sm font-medium">{service.name}</span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="text-xs text-muted-foreground font-mono">{service.latency}</span>
-                        <Badge variant="outline" className="text-emerald-500 border-emerald-500/30 bg-emerald-500/5 text-xs">
+                        <span className="font-mono text-xs text-muted-foreground">
+                          {service.latency}
+                        </span>
+                        <Badge
+                          variant="outline"
+                          className="border-emerald-500/30 bg-emerald-500/5 text-xs text-emerald-500"
+                        >
                           Operational
                         </Badge>
                       </div>

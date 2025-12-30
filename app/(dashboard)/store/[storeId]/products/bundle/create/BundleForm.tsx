@@ -13,16 +13,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Layers, 
-  GraduationCap, 
-  Box, 
-  Save, 
-  ArrowRight, 
+import {
+  Layers,
+  GraduationCap,
+  Box,
+  Save,
+  ArrowRight,
   Plus,
   X,
   Calculator,
-  Package
+  Package,
 } from "lucide-react";
 import Link from "next/link";
 import { z } from "zod";
@@ -46,7 +46,7 @@ function FormSection({ index, title, children }: FormSectionProps) {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <div className="w-7 h-7 rounded-full bg-emerald-600 text-white font-medium flex items-center justify-center text-sm">
+        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-600 text-sm font-medium text-white">
           {index}
         </div>
         <h3 className="text-base font-semibold">{title}</h3>
@@ -66,19 +66,18 @@ export function BundleForm() {
   const storeId = params.storeId as string;
   const bundleId = searchParams.get("bundleId");
 
-  const [selectedProducts, setSelectedProducts] = useState<Array<{
-    id: string;
-    type: "course" | "digitalProduct";
-    title: string;
-    price: number;
-    description?: string;
-  }>>([]);
+  const [selectedProducts, setSelectedProducts] = useState<
+    Array<{
+      id: string;
+      type: "course" | "digitalProduct";
+      title: string;
+      price: number;
+      description?: string;
+    }>
+  >([]);
 
   // Fetch available products
-  const courses = useQuery(
-    api.courses.getCoursesByStore,
-    storeId ? { storeId } : "skip"
-  );
+  const courses = useQuery(api.courses.getCoursesByStore, storeId ? { storeId } : "skip");
 
   const digitalProducts = useQuery(
     api.digitalProducts.getProductsByStore,
@@ -87,15 +86,15 @@ export function BundleForm() {
 
   const form = useForm<BundleSchema>({
     resolver: zodResolver(bundleSchema),
-    defaultValues: { 
-      title: "", 
-      description: "", 
-      category: ""
+    defaultValues: {
+      title: "",
+      description: "",
+      category: "",
     },
   });
 
   const { register, watch, setValue, formState, handleSubmit } = form;
-  
+
   const char = {
     title: watch("title").length,
     description: watch("description")?.length || 0,
@@ -112,7 +111,7 @@ export function BundleForm() {
       selectedProducts,
       individualTotal,
       suggestedBundlePrice,
-      savings
+      savings,
     });
     // TODO: Create bundle in database
     toast({
@@ -131,8 +130,8 @@ export function BundleForm() {
       description: product.description,
     };
 
-    setSelectedProducts(prev => {
-      if (prev.some(p => p.id === product._id)) {
+    setSelectedProducts((prev) => {
+      if (prev.some((p) => p.id === product._id)) {
         return prev; // Already added
       }
       return [...prev, newProduct];
@@ -140,27 +139,27 @@ export function BundleForm() {
   };
 
   const removeProduct = (productId: string) => {
-    setSelectedProducts(prev => prev.filter(p => p.id !== productId));
+    setSelectedProducts((prev) => prev.filter((p) => p.id !== productId));
   };
 
   const steps = [
-    { 
-      label: "Bundle Info", 
-      href: "?step=info", 
-      icon: Layers, 
-      active: true
+    {
+      label: "Bundle Info",
+      href: "?step=info",
+      icon: Layers,
+      active: true,
     },
-    { 
-      label: "Add Products", 
-      href: "?step=products", 
-      icon: Package, 
-      active: false
+    {
+      label: "Add Products",
+      href: "?step=products",
+      icon: Package,
+      active: false,
     },
-    { 
-      label: "Pricing", 
-      href: "?step=pricing", 
-      icon: Calculator, 
-      active: false
+    {
+      label: "Pricing",
+      href: "?step=pricing",
+      icon: Calculator,
+      active: false,
     },
   ];
 
@@ -169,21 +168,21 @@ export function BundleForm() {
       {/* Navigation Tabs */}
       <div className="mb-8">
         <Tabs value="info" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-transparent p-0 h-auto">
+          <TabsList className="grid h-auto w-full grid-cols-3 bg-transparent p-0">
             {steps.map((step) => {
               const Icon = step.icon;
               return (
                 <TabsTrigger
                   key={step.label}
-                  value={step.label.toLowerCase().replace(' ', '-')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  value={step.label.toLowerCase().replace(" ", "-")}
+                  className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                     step.active
-                      ? "bg-white border border-emerald-500 text-emerald-600 font-bold data-[state=active]:bg-white data-[state=active]:text-emerald-600"
+                      ? "border border-emerald-500 bg-white font-bold text-emerald-600 data-[state=active]:bg-white data-[state=active]:text-emerald-600"
                       : "text-[#4B4E68] hover:text-emerald-600 data-[state=active]:bg-transparent"
                   }`}
                   disabled={!step.active}
                 >
-                  <Icon className="w-[18px] h-[18px]" />
+                  <Icon className="h-[18px] w-[18px]" />
                   {step.label}
                 </TabsTrigger>
               );
@@ -198,9 +197,11 @@ export function BundleForm() {
         <FormSection index={1} title="Bundle Information">
           <div className="space-y-4">
             <div>
-              <div className="flex justify-between items-center mb-2">
+              <div className="mb-2 flex items-center justify-between">
                 <label className="text-sm font-medium text-gray-700">Bundle Title</label>
-                <span className={`text-xs ${char.title >= 100 ? 'text-red-500' : 'text-[#6B6E85]'}`}>
+                <span
+                  className={`text-xs ${char.title >= 100 ? "text-red-500" : "text-[#6B6E85]"}`}
+                >
                   {char.title}/100
                 </span>
               </div>
@@ -212,9 +213,11 @@ export function BundleForm() {
             </div>
 
             <div>
-              <div className="flex justify-between items-center mb-2">
+              <div className="mb-2 flex items-center justify-between">
                 <label className="text-sm font-medium text-gray-700">Description</label>
-                <span className={`text-xs ${char.description >= 500 ? 'text-red-500' : 'text-[#6B6E85]'}`}>
+                <span
+                  className={`text-xs ${char.description >= 500 ? "text-red-500" : "text-[#6B6E85]"}`}
+                >
                   {char.description}/500
                 </span>
               </div>
@@ -226,7 +229,7 @@ export function BundleForm() {
             </div>
 
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Category</label>
+              <label className="mb-2 block text-sm font-medium text-gray-700">Category</label>
               <Input
                 {...register("category")}
                 placeholder="e.g., Music Production, Ableton, Mixing"
@@ -242,25 +245,30 @@ export function BundleForm() {
             {/* Selected Products */}
             {selectedProducts.length > 0 && (
               <div className="space-y-4">
-                <h4 className="font-medium text-foreground">Selected Products ({selectedProducts.length})</h4>
+                <h4 className="font-medium text-foreground">
+                  Selected Products ({selectedProducts.length})
+                </h4>
                 <div className="space-y-3">
                   {selectedProducts.map((product) => (
-                    <Card key={product.id} className="p-4 border-emerald-200">
+                    <Card key={product.id} className="border-emerald-200 p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                            product.type === "course" ? "bg-emerald-100" : "bg-blue-100"
-                          }`}>
+                          <div
+                            className={`flex h-8 w-8 items-center justify-center rounded-lg ${
+                              product.type === "course" ? "bg-emerald-100" : "bg-blue-100"
+                            }`}
+                          >
                             {product.type === "course" ? (
-                              <GraduationCap className="w-4 h-4 text-emerald-600" />
+                              <GraduationCap className="h-4 w-4 text-emerald-600" />
                             ) : (
-                              <Box className="w-4 h-4 text-blue-600" />
+                              <Box className="h-4 w-4 text-blue-600" />
                             )}
                           </div>
                           <div>
-                            <h5 className="font-medium text-sm">{product.title}</h5>
+                            <h5 className="text-sm font-medium">{product.title}</h5>
                             <p className="text-xs text-muted-foreground">
-                              {product.type === "course" ? "Course" : "Digital Product"} • ${product.price}
+                              {product.type === "course" ? "Course" : "Digital Product"} • $
+                              {product.price}
                             </p>
                           </div>
                         </div>
@@ -271,15 +279,15 @@ export function BundleForm() {
                           onClick={() => removeProduct(product.id)}
                           className="text-red-600 hover:text-red-700"
                         >
-                          <X className="w-4 h-4" />
+                          <X className="h-4 w-4" />
                         </Button>
                       </div>
                     </Card>
                   ))}
                 </div>
-                
+
                 {/* Pricing Summary */}
-                <Card className="p-4 bg-emerald-50 border-emerald-200">
+                <Card className="border-emerald-200 bg-emerald-50 p-4">
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span>Individual Total:</span>
@@ -291,7 +299,9 @@ export function BundleForm() {
                     </div>
                     <div className="flex justify-between text-sm text-emerald-600">
                       <span>Customer Savings:</span>
-                      <span>${savings} ({Math.round((savings / individualTotal) * 100)}% off)</span>
+                      <span>
+                        ${savings} ({Math.round((savings / individualTotal) * 100)}% off)
+                      </span>
                     </div>
                   </div>
                 </Card>
@@ -300,24 +310,30 @@ export function BundleForm() {
 
             {/* Available Courses */}
             <div>
-              <h4 className="font-medium text-foreground mb-3">Available Courses</h4>
-              <div className="grid grid-cols-1 gap-3 max-h-60 overflow-y-auto">
-                {courses?.filter(course => course.isPublished && !selectedProducts.some(p => p.id === course._id))
-                  .map((course) => (
-                    <Card 
-                      key={course._id} 
-                      className="p-3 cursor-pointer hover:shadow-md transition-all border-emerald-200 hover:bg-emerald-50"
+              <h4 className="mb-3 font-medium text-foreground">Available Courses</h4>
+              <div className="grid max-h-60 grid-cols-1 gap-3 overflow-y-auto">
+                {courses
+                  ?.filter(
+                    (course: any) =>
+                      course.isPublished && !selectedProducts.some((p: any) => p.id === course._id)
+                  )
+                  .map((course: any) => (
+                    <Card
+                      key={course._id}
+                      className="cursor-pointer border-emerald-200 p-3 transition-all hover:bg-emerald-50 hover:shadow-md"
                       onClick={() => addProduct(course, "course")}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
-                          <GraduationCap className="w-4 h-4 text-emerald-600" />
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100">
+                          <GraduationCap className="h-4 w-4 text-emerald-600" />
                         </div>
                         <div className="flex-1">
-                          <h5 className="font-medium text-sm">{course.title}</h5>
-                          <p className="text-xs text-muted-foreground">Course • ${course.price || 0}</p>
+                          <h5 className="text-sm font-medium">{course.title}</h5>
+                          <p className="text-xs text-muted-foreground">
+                            Course • ${course.price || 0}
+                          </p>
                         </div>
-                        <Plus className="w-4 h-4 text-emerald-600" />
+                        <Plus className="h-4 w-4 text-emerald-600" />
                       </div>
                     </Card>
                   ))}
@@ -326,24 +342,31 @@ export function BundleForm() {
 
             {/* Available Digital Products */}
             <div>
-              <h4 className="font-medium text-foreground mb-3">Available Digital Products</h4>
-              <div className="grid grid-cols-1 gap-3 max-h-60 overflow-y-auto">
-                {digitalProducts?.filter(product => product.isPublished && !selectedProducts.some(p => p.id === product._id))
-                  .map((product) => (
-                    <Card 
-                      key={product._id} 
-                      className="p-3 cursor-pointer hover:shadow-md transition-all border-blue-200 hover:bg-blue-50"
+              <h4 className="mb-3 font-medium text-foreground">Available Digital Products</h4>
+              <div className="grid max-h-60 grid-cols-1 gap-3 overflow-y-auto">
+                {digitalProducts
+                  ?.filter(
+                    (product: any) =>
+                      product.isPublished &&
+                      !selectedProducts.some((p: any) => p.id === product._id)
+                  )
+                  .map((product: any) => (
+                    <Card
+                      key={product._id}
+                      className="cursor-pointer border-blue-200 p-3 transition-all hover:bg-blue-50 hover:shadow-md"
                       onClick={() => addProduct(product, "digitalProduct")}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                          <Box className="w-4 h-4 text-blue-600" />
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100">
+                          <Box className="h-4 w-4 text-blue-600" />
                         </div>
                         <div className="flex-1">
-                          <h5 className="font-medium text-sm">{product.title}</h5>
-                          <p className="text-xs text-muted-foreground">Digital Product • ${product.price}</p>
+                          <h5 className="text-sm font-medium">{product.title}</h5>
+                          <p className="text-xs text-muted-foreground">
+                            Digital Product • ${product.price}
+                          </p>
                         </div>
-                        <Plus className="w-4 h-4 text-blue-600" />
+                        <Plus className="h-4 w-4 text-blue-600" />
                       </div>
                     </Card>
                   ))}
@@ -353,21 +376,21 @@ export function BundleForm() {
         </FormSection>
 
         {/* Action Bar */}
-        <div className="flex items-center gap-6 justify-end relative">
-          <span className="absolute -top-6 right-0 italic text-xs text-[#6B6E85]">
+        <div className="relative flex items-center justify-end gap-6">
+          <span className="absolute -top-6 right-0 text-xs italic text-[#6B6E85]">
             Create your bundle
           </span>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             type="button"
-            className="flex items-center gap-2 h-10 rounded-lg px-4"
+            className="flex h-10 items-center gap-2 rounded-lg px-4"
           >
             <Save size={16} />
             Save as Draft
           </Button>
           <Button
             type="submit"
-            className="bg-emerald-600 hover:bg-emerald-700 text-white h-10 rounded-lg px-8 flex items-center gap-2"
+            className="flex h-10 items-center gap-2 rounded-lg bg-emerald-600 px-8 text-white hover:bg-emerald-700"
             disabled={!formState.isValid || selectedProducts.length === 0}
           >
             <ArrowRight size={16} />

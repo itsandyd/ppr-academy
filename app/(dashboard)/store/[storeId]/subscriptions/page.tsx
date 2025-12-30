@@ -4,7 +4,14 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Edit, Trash2, Users, DollarSign, TrendingUp } from "lucide-react";
 import { useState } from "react";
@@ -12,11 +19,7 @@ import { CreateSubscriptionPlanDialog } from "./components/CreateSubscriptionPla
 import { toast } from "sonner";
 import { useUser } from "@clerk/nextjs";
 
-export default function SubscriptionPlansPage({
-  params,
-}: {
-  params: { storeId: string };
-}) {
+export default function SubscriptionPlansPage({ params }: { params: { storeId: string } }) {
   const storeId = params.storeId as Id<"stores">;
   const { user } = useUser();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -27,7 +30,9 @@ export default function SubscriptionPlansPage({
   const deletePlan = useMutation(api.subscriptions.deleteSubscriptionPlan);
 
   const handleDeletePlan = async (planId: Id<"subscriptionPlans">) => {
-    if (!confirm("Are you sure you want to delete this plan? This will prevent new subscriptions.")) {
+    if (
+      !confirm("Are you sure you want to delete this plan? This will prevent new subscriptions.")
+    ) {
       return;
     }
 
@@ -40,32 +45,30 @@ export default function SubscriptionPlansPage({
   };
 
   return (
-    <div className="container mx-auto p-6 space-y-8">
+    <div className="container mx-auto space-y-8 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Subscription Plans</h1>
-          <p className="text-muted-foreground mt-1">
-            Create subscription tiers for your content
-          </p>
+          <p className="mt-1 text-muted-foreground">Create subscription tiers for your content</p>
         </div>
         <Button onClick={() => setShowCreateDialog(true)} size="lg">
-          <Plus className="w-4 h-4 mr-2" />
+          <Plus className="mr-2 h-4 w-4" />
           Create Plan
         </Button>
       </div>
 
       {/* Stats */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Active Subscribers</CardTitle>
-              <Users className="w-4 h-4 text-muted-foreground" />
+              <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.activeSubscriptions}</div>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="mt-1 text-xs text-muted-foreground">
                 {stats.trialingSubscriptions} on trial
               </p>
             </CardContent>
@@ -74,41 +77,33 @@ export default function SubscriptionPlansPage({
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Monthly MRR</CardTitle>
-              <DollarSign className="w-4 h-4 text-muted-foreground" />
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                ${(stats.totalMRR / 100).toFixed(2)}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Recurring revenue
-              </p>
+              <div className="text-2xl font-bold">${(stats.totalMRR / 100).toFixed(2)}</div>
+              <p className="mt-1 text-xs text-muted-foreground">Recurring revenue</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Total Subscriptions</CardTitle>
-              <TrendingUp className="w-4 h-4 text-muted-foreground" />
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.totalSubscriptions}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                All time
-              </p>
+              <p className="mt-1 text-xs text-muted-foreground">All time</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">Churn Rate</CardTitle>
-              <TrendingUp className="w-4 h-4 text-muted-foreground" />
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {(stats.churnRate * 100).toFixed(1)}%
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
+              <div className="text-2xl font-bold">{(stats.churnRate * 100).toFixed(1)}%</div>
+              <p className="mt-1 text-xs text-muted-foreground">
                 {stats.canceledSubscriptions} canceled
               </p>
             </CardContent>
@@ -119,30 +114,28 @@ export default function SubscriptionPlansPage({
       {/* Plans List */}
       <div className="space-y-4">
         <h2 className="text-xl font-semibold">Your Plans</h2>
-        
+
         {!plans || plans.length === 0 ? (
           <Card className="border-dashed">
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <p className="text-muted-foreground mb-4">
+              <p className="mb-4 text-muted-foreground">
                 No subscription plans yet. Create your first one!
               </p>
               <Button onClick={() => setShowCreateDialog(true)}>
-                <Plus className="w-4 h-4 mr-2" />
+                <Plus className="mr-2 h-4 w-4" />
                 Create Your First Plan
               </Button>
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {plans.map((plan) => (
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {plans.map((plan: any) => (
               <Card key={plan._id} className="flex flex-col">
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div>
                       <CardTitle>{plan.name}</CardTitle>
-                      <CardDescription className="mt-1">
-                        Tier {plan.tier}
-                      </CardDescription>
+                      <CardDescription className="mt-1">Tier {plan.tier}</CardDescription>
                     </div>
                     {plan.isActive ? (
                       <Badge variant="default">Active</Badge>
@@ -159,35 +152,36 @@ export default function SubscriptionPlansPage({
                     </p>
                     <p className="text-sm text-muted-foreground">
                       or ${(plan.yearlyPrice / 100).toFixed(2)}/year
-                      <span className="text-green-600 ml-1">
-                        (save {Math.round((1 - (plan.yearlyPrice / 12) / plan.monthlyPrice) * 100)}%)
+                      <span className="ml-1 text-green-600">
+                        (save {Math.round((1 - plan.yearlyPrice / 12 / plan.monthlyPrice) * 100)}%)
                       </span>
                     </p>
                   </div>
 
                   <div className="space-y-2">
                     <p className="text-sm font-medium">Includes:</p>
-                    {plan.hasAllCourses && (
-                      <Badge variant="secondary">All Courses</Badge>
-                    )}
+                    {plan.hasAllCourses && <Badge variant="secondary">All Courses</Badge>}
                     {plan.hasAllProducts && (
-                      <Badge variant="secondary" className="ml-2">All Products</Badge>
+                      <Badge variant="secondary" className="ml-2">
+                        All Products
+                      </Badge>
                     )}
                     {!plan.hasAllCourses && plan.courseAccess.length > 0 && (
                       <Badge variant="secondary">
-                        {plan.courseAccess.length} Course{plan.courseAccess.length > 1 ? 's' : ''}
+                        {plan.courseAccess.length} Course{plan.courseAccess.length > 1 ? "s" : ""}
                       </Badge>
                     )}
                     {!plan.hasAllProducts && plan.digitalProductAccess.length > 0 && (
                       <Badge variant="secondary" className="ml-2">
-                        {plan.digitalProductAccess.length} Product{plan.digitalProductAccess.length > 1 ? 's' : ''}
+                        {plan.digitalProductAccess.length} Product
+                        {plan.digitalProductAccess.length > 1 ? "s" : ""}
                       </Badge>
                     )}
                   </div>
 
                   <div className="space-y-1">
                     {plan.features.slice(0, 3).map((feature: string, index: number) => (
-                      <p key={index} className="text-sm text-muted-foreground flex items-start">
+                      <p key={index} className="flex items-start text-sm text-muted-foreground">
                         <span className="mr-2">✓</span>
                         {feature}
                       </p>
@@ -199,10 +193,11 @@ export default function SubscriptionPlansPage({
                     )}
                   </div>
 
-                  <div className="pt-2 border-t">
+                  <div className="border-t pt-2">
                     <p className="text-sm text-muted-foreground">
-                      <Users className="w-3 h-3 inline mr-1" />
-                      {plan.currentStudents} active subscriber{plan.currentStudents !== 1 ? 's' : ''}
+                      <Users className="mr-1 inline h-3 w-3" />
+                      {plan.currentStudents} active subscriber
+                      {plan.currentStudents !== 1 ? "s" : ""}
                     </p>
                   </div>
                 </CardContent>
@@ -216,15 +211,11 @@ export default function SubscriptionPlansPage({
                       setShowCreateDialog(true);
                     }}
                   >
-                    <Edit className="w-3 h-3 mr-1" />
+                    <Edit className="mr-1 h-3 w-3" />
                     Edit
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDeletePlan(plan._id)}
-                  >
-                    <Trash2 className="w-3 h-3" />
+                  <Button variant="outline" size="sm" onClick={() => handleDeletePlan(plan._id)}>
+                    <Trash2 className="h-3 w-3" />
                   </Button>
                 </CardFooter>
               </Card>
@@ -247,4 +238,3 @@ export default function SubscriptionPlansPage({
     </div>
   );
 }
-

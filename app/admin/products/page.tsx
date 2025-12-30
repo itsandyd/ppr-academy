@@ -11,15 +11,15 @@ import { Search, Package, Download, DollarSign } from "lucide-react";
 
 export default function ProductsManagementPage() {
   const [searchQuery, setSearchQuery] = useState("");
-  
+
   // Fetch all digital products and courses
   const digitalProducts = useQuery(api.digitalProducts.getAllProducts) || [];
   const courses = useQuery(api.courses.getAllCourses) || [];
 
   // Combine both into a unified list
   const allProducts = [
-    ...digitalProducts.map((p) => ({ ...p, type: "digital_product" as const })),
-    ...courses.map((c) => ({ ...c, type: "course" as const })),
+    ...digitalProducts.map((p: any) => ({ ...p, type: "digital_product" as const })),
+    ...courses.map((c: any) => ({ ...c, type: "course" as const })),
   ];
 
   const filteredProducts = allProducts.filter((product) =>
@@ -37,7 +37,7 @@ export default function ProductsManagementPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">{allProducts.length}</div>
@@ -59,7 +59,7 @@ export default function ProductsManagementPage() {
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">
-              {allProducts.filter(p => p.isPublished).length}
+              {allProducts.filter((p) => p.isPublished).length}
             </div>
             <div className="text-sm text-muted-foreground">Published</div>
           </CardContent>
@@ -67,7 +67,7 @@ export default function ProductsManagementPage() {
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">
-              {allProducts.filter(p => !p.isPublished).length}
+              {allProducts.filter((p) => !p.isPublished).length}
             </div>
             <div className="text-sm text-muted-foreground">Drafts</div>
           </CardContent>
@@ -76,7 +76,7 @@ export default function ProductsManagementPage() {
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted-foreground" />
         <Input
           placeholder="Search products..."
           value={searchQuery}
@@ -98,20 +98,20 @@ export default function ProductsManagementPage() {
               filteredProducts.map((product) => (
                 <div
                   key={product._id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  className="flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
                 >
                   <div className="flex-1">
                     <h3 className="font-semibold">{product.title}</h3>
-                    <p className="text-sm text-muted-foreground line-clamp-1">
+                    <p className="line-clamp-1 text-sm text-muted-foreground">
                       {product.description || "No description"}
                     </p>
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="mt-1 flex items-center gap-2">
                       <Badge variant="outline" className="text-xs">
                         {product.type === "course" ? "Course" : "Digital Product"}
                       </Badge>
                       {product.type === "digital_product" && product.downloads && (
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Download className="w-3 h-3" />
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Download className="h-3 w-3" />
                           {product.downloads} downloads
                         </span>
                       )}
@@ -122,7 +122,7 @@ export default function ProductsManagementPage() {
                     <Badge variant={product.isPublished ? "default" : "secondary"}>
                       {product.isPublished ? "Published" : "Draft"}
                     </Badge>
-                    
+
                     <span className="text-sm font-semibold">
                       ${product.price?.toFixed(2) || "0.00"}
                     </span>
@@ -134,12 +134,12 @@ export default function ProductsManagementPage() {
                 </div>
               ))
             ) : (
-              <div className="text-center py-12 text-muted-foreground">
-                <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <div className="py-12 text-center text-muted-foreground">
+                <Package className="mx-auto mb-4 h-12 w-12 opacity-50" />
                 <p>No products found</p>
                 <p className="text-sm">
-                  {searchQuery 
-                    ? "Try adjusting your search" 
+                  {searchQuery
+                    ? "Try adjusting your search"
                     : "Courses and products will appear here once creators start adding them"}
                 </p>
               </div>
@@ -150,4 +150,3 @@ export default function ProductsManagementPage() {
     </div>
   );
 }
-

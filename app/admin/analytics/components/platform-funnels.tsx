@@ -9,7 +9,15 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Users, UserPlus, BookOpen, DollarSign, TrendingUp, TrendingDown, Sparkles } from "lucide-react";
+import {
+  Users,
+  UserPlus,
+  BookOpen,
+  DollarSign,
+  TrendingUp,
+  TrendingDown,
+  Sparkles,
+} from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface PlatformFunnelsProps {
@@ -34,12 +42,12 @@ export function PlatformFunnels({ startTime, endTime }: PlatformFunnelsProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       {/* Learner Funnel */}
       <Card className="bg-white dark:bg-black">
         <CardHeader>
-          <CardTitle className="text-lg font-semibold flex items-center gap-2">
-            <Users className="w-5 h-5 text-blue-600" />
+          <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+            <Users className="h-5 w-5 text-blue-600" />
             Learner Funnel (Platform-Wide)
           </CardTitle>
           <p className="text-sm text-muted-foreground">
@@ -48,7 +56,7 @@ export function PlatformFunnels({ startTime, endTime }: PlatformFunnelsProps) {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {learnerFunnel.steps.map((step, index) => (
+            {learnerFunnel.steps.map((step: any, index: number) => (
               <FunnelStep
                 key={step.name}
                 step={step}
@@ -60,8 +68,8 @@ export function PlatformFunnels({ startTime, endTime }: PlatformFunnelsProps) {
           </div>
 
           {/* Summary */}
-          <div className="mt-6 pt-6 border-t">
-            <div className="flex justify-between items-center">
+          <div className="mt-6 border-t pt-6">
+            <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Overall Conversion</p>
                 <p className="text-2xl font-bold text-blue-600">
@@ -70,9 +78,7 @@ export function PlatformFunnels({ startTime, endTime }: PlatformFunnelsProps) {
               </div>
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">Total Users</p>
-                <p className="text-2xl font-bold">
-                  {learnerFunnel.steps[0]?.count || 0}
-                </p>
+                <p className="text-2xl font-bold">{learnerFunnel.steps[0]?.count || 0}</p>
               </div>
             </div>
           </div>
@@ -82,17 +88,15 @@ export function PlatformFunnels({ startTime, endTime }: PlatformFunnelsProps) {
       {/* Creator Funnel */}
       <Card className="bg-white dark:bg-black">
         <CardHeader>
-          <CardTitle className="text-lg font-semibold flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-purple-600" />
+          <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+            <Sparkles className="h-5 w-5 text-purple-600" />
             Creator Funnel (Platform-Wide)
           </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            How visitors become active creators
-          </p>
+          <p className="text-sm text-muted-foreground">How visitors become active creators</p>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {creatorFunnel.steps.map((step, index) => (
+            {creatorFunnel.steps.map((step: any, index: number) => (
               <FunnelStep
                 key={step.name}
                 step={step}
@@ -104,8 +108,8 @@ export function PlatformFunnels({ startTime, endTime }: PlatformFunnelsProps) {
           </div>
 
           {/* Summary + Stuck Creators Alert */}
-          <div className="mt-6 pt-6 border-t space-y-4">
-            <div className="flex justify-between items-center">
+          <div className="mt-6 space-y-4 border-t pt-6">
+            <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Overall Conversion</p>
                 <p className="text-2xl font-bold text-purple-600">
@@ -115,21 +119,22 @@ export function PlatformFunnels({ startTime, endTime }: PlatformFunnelsProps) {
               <div className="text-right">
                 <p className="text-sm text-muted-foreground">Started</p>
                 <p className="text-2xl font-bold">
-                  {creatorFunnel.steps.find(s => s.name === "Start Creator Flow")?.count || 0}
+                  {creatorFunnel.steps.find((s: any) => s.name === "Start Creator Flow")?.count ||
+                    0}
                 </p>
               </div>
             </div>
 
             {/* Stuck Creators Count */}
             {creatorFunnel.stuckCreators.length > 0 && (
-              <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+              <div className="rounded-lg border border-orange-200 bg-orange-50 p-3 dark:border-orange-800 dark:bg-orange-900/20">
                 <div className="flex items-center gap-2">
-                  <TrendingDown className="w-4 h-4 text-orange-600" />
+                  <TrendingDown className="h-4 w-4 text-orange-600" />
                   <p className="text-sm font-semibold text-orange-900 dark:text-orange-300">
                     {creatorFunnel.stuckCreators.length} creators stuck in drafting
                   </p>
                 </div>
-                <p className="text-xs text-orange-700 dark:text-orange-400 mt-1">
+                <p className="mt-1 text-xs text-orange-700 dark:text-orange-400">
                   Need outreach assistance
                 </p>
               </div>
@@ -179,13 +184,13 @@ function FunnelStep({ step, isFirst, isLast, color }: FunnelStepProps) {
   return (
     <div className="relative">
       {/* Step Content */}
-      <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+      <div className="flex items-center justify-between rounded-lg bg-muted/50 p-3">
         <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-full ${colorClasses[color].bg}`}>
-            <Icon className={`w-4 h-4 ${colorClasses[color].text}`} />
+          <div className={`rounded-full p-2 ${colorClasses[color].bg}`}>
+            <Icon className={`h-4 w-4 ${colorClasses[color].text}`} />
           </div>
           <div>
-            <h4 className="font-semibold text-sm">{step.name}</h4>
+            <h4 className="text-sm font-semibold">{step.name}</h4>
             <p className="text-xs text-muted-foreground">{step.count} users</p>
           </div>
         </div>
@@ -195,8 +200,8 @@ function FunnelStep({ step, isFirst, isLast, color }: FunnelStepProps) {
             {step.conversionRate.toFixed(1)}%
           </div>
           {!isFirst && (
-            <div className="text-xs text-muted-foreground flex items-center gap-1 justify-end">
-              <TrendingDown className="w-3 h-3 text-orange-500" />
+            <div className="flex items-center justify-end gap-1 text-xs text-muted-foreground">
+              <TrendingDown className="h-3 w-3 text-orange-500" />
               {step.dropOff.toFixed(0)}% drop
             </div>
           )}
@@ -205,8 +210,8 @@ function FunnelStep({ step, isFirst, isLast, color }: FunnelStepProps) {
 
       {/* Connector Arrow */}
       {!isLast && (
-        <div className="flex items-center justify-center my-1">
-          <div className={`w-0.5 h-4 bg-gradient-to-b ${colorClasses[color].gradient}`} />
+        <div className="my-1 flex items-center justify-center">
+          <div className={`h-4 w-0.5 bg-gradient-to-b ${colorClasses[color].gradient}`} />
         </div>
       )}
     </div>
@@ -215,11 +220,11 @@ function FunnelStep({ step, isFirst, isLast, color }: FunnelStepProps) {
 
 function PlatformFunnelsSkeleton() {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       {[1, 2].map((i) => (
         <Card key={i} className="bg-white dark:bg-black">
           <CardHeader>
-            <Skeleton className="h-6 w-48 mb-2" />
+            <Skeleton className="mb-2 h-6 w-48" />
             <Skeleton className="h-4 w-64" />
           </CardHeader>
           <CardContent>
@@ -227,9 +232,9 @@ function PlatformFunnelsSkeleton() {
               {[1, 2, 3, 4].map((j) => (
                 <div key={j} className="flex items-center justify-between p-3">
                   <div className="flex items-center gap-3">
-                    <Skeleton className="w-10 h-10 rounded-full" />
+                    <Skeleton className="h-10 w-10 rounded-full" />
                     <div>
-                      <Skeleton className="h-4 w-24 mb-1" />
+                      <Skeleton className="mb-1 h-4 w-24" />
                       <Skeleton className="h-3 w-16" />
                     </div>
                   </div>
@@ -243,4 +248,3 @@ function PlatformFunnelsSkeleton() {
     </div>
   );
 }
-

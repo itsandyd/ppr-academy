@@ -25,12 +25,14 @@ export function StuckCreatorsAlert() {
     return (
       <Card className="bg-white dark:bg-black">
         <CardContent className="p-6">
-          <div className="flex flex-col items-center justify-center text-center py-4">
-            <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mb-3">
-              <AlertTriangle className="w-6 h-6 text-green-600" />
+          <div className="flex flex-col items-center justify-center py-4 text-center">
+            <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+              <AlertTriangle className="h-6 w-6 text-green-600" />
             </div>
-            <p className="font-semibold text-green-900 dark:text-green-300">All creators on track!</p>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="font-semibold text-green-900 dark:text-green-300">
+              All creators on track!
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
               No creators currently need outreach
             </p>
           </div>
@@ -40,33 +42,36 @@ export function StuckCreatorsAlert() {
   }
 
   return (
-    <Card className="bg-white dark:bg-black border-orange-200 dark:border-orange-800">
+    <Card className="border-orange-200 bg-white dark:border-orange-800 dark:bg-black">
       <CardHeader className="bg-orange-50 dark:bg-orange-900/20">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-orange-600" />
+            <AlertTriangle className="h-5 w-5 text-orange-600" />
             <CardTitle className="text-lg font-semibold text-orange-900 dark:text-orange-300">
               Creators Need Help
             </CardTitle>
           </div>
-          <Badge variant="secondary" className="bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300">
+          <Badge
+            variant="secondary"
+            className="bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300"
+          >
             {stuckCreators.length} stuck
           </Badge>
         </div>
-        <p className="text-sm text-orange-700 dark:text-orange-400 mt-1">
+        <p className="mt-1 text-sm text-orange-700 dark:text-orange-400">
           Creators who haven't progressed in 3+ days
         </p>
       </CardHeader>
       <CardContent className="pt-6">
         <div className="space-y-3">
-          {stuckCreators.slice(0, 5).map((creator) => (
+          {stuckCreators.slice(0, 5).map((creator: any) => (
             <StuckCreatorItem key={creator._id} creator={creator} />
           ))}
 
           {stuckCreators.length > 5 && (
             <Button variant="outline" size="sm" className="w-full">
               View all {stuckCreators.length} creators
-              <ChevronRight className="w-4 h-4 ml-2" />
+              <ChevronRight className="ml-2 h-4 w-4" />
             </Button>
           )}
         </div>
@@ -81,32 +86,33 @@ interface StuckCreatorItemProps {
 
 function StuckCreatorItem({ creator }: StuckCreatorItemProps) {
   return (
-    <div className="flex items-start justify-between p-3 bg-orange-50/50 dark:bg-orange-900/10 rounded-lg border border-orange-100 dark:border-orange-900/30">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <p className="font-semibold text-sm">{creator.userName}</p>
-          <Badge variant="secondary" className="text-xs bg-orange-100 text-orange-800 dark:bg-orange-900/30">
+    <div className="flex items-start justify-between rounded-lg border border-orange-100 bg-orange-50/50 p-3 dark:border-orange-900/30 dark:bg-orange-900/10">
+      <div className="min-w-0 flex-1">
+        <div className="mb-1 flex items-center gap-2">
+          <p className="text-sm font-semibold">{creator.userName}</p>
+          <Badge
+            variant="secondary"
+            className="bg-orange-100 text-xs text-orange-800 dark:bg-orange-900/30"
+          >
             {creator.stage}
           </Badge>
         </div>
-        <p className="text-xs text-muted-foreground mb-2">{creator.userEmail}</p>
-        
-        <div className="flex items-center gap-1 text-xs text-orange-700 dark:text-orange-400 mb-2">
-          <Clock className="w-3 h-3" />
+        <p className="mb-2 text-xs text-muted-foreground">{creator.userEmail}</p>
+
+        <div className="mb-2 flex items-center gap-1 text-xs text-orange-700 dark:text-orange-400">
+          <Clock className="h-3 w-3" />
           <span>Stuck for {creator.daysSinceStep} days</span>
         </div>
 
-        <p className="text-xs text-muted-foreground">
-          → {creator.recommendedAction}
-        </p>
+        <p className="text-xs text-muted-foreground">→ {creator.recommendedAction}</p>
       </div>
 
-      <div className="flex gap-1 ml-3">
+      <div className="ml-3 flex gap-1">
         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-          <Mail className="w-4 h-4" />
+          <Mail className="h-4 w-4" />
         </Button>
         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-          <MessageSquare className="w-4 h-4" />
+          <MessageSquare className="h-4 w-4" />
         </Button>
       </div>
     </div>
@@ -121,7 +127,7 @@ function StuckCreatorsAlertSkeleton() {
           <Skeleton className="h-6 w-48" />
           <Skeleton className="h-6 w-16" />
         </div>
-        <Skeleton className="h-4 w-64 mt-2" />
+        <Skeleton className="mt-2 h-4 w-64" />
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
@@ -133,4 +139,3 @@ function StuckCreatorsAlertSkeleton() {
     </Card>
   );
 }
-

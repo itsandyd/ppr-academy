@@ -35,13 +35,11 @@ export function MyFunnel({ storeId, startTime, endTime }: MyFunnelProps) {
     <Card className="bg-white dark:bg-black">
       <CardHeader>
         <CardTitle className="text-lg font-semibold">My Conversion Funnel</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          How visitors convert to paying students
-        </p>
+        <p className="text-sm text-muted-foreground">How visitors convert to paying students</p>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {steps.map((step, index) => (
+          {steps.map((step: any, index: number) => (
             <FunnelStep
               key={step.name}
               step={step}
@@ -52,24 +50,20 @@ export function MyFunnel({ storeId, startTime, endTime }: MyFunnelProps) {
         </div>
 
         {/* Summary Stats */}
-        <div className="mt-6 pt-6 border-t grid grid-cols-2 gap-4">
+        <div className="mt-6 grid grid-cols-2 gap-4 border-t pt-6">
           <div>
             <p className="text-sm text-muted-foreground">Overall Conversion</p>
             <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
               {steps[steps.length - 1]?.conversionRate.toFixed(1)}%
             </p>
-            <p className="text-xs text-muted-foreground">
-              From visit to return
-            </p>
+            <p className="text-xs text-muted-foreground">From visit to return</p>
           </div>
           <div>
             <p className="text-sm text-muted-foreground">Total Drop-off</p>
             <p className="text-2xl font-bold text-orange-600 dark:text-orange-400">
               {(100 - steps[steps.length - 1]?.conversionRate).toFixed(1)}%
             </p>
-            <p className="text-xs text-muted-foreground">
-              Visitors who didn't return
-            </p>
+            <p className="text-xs text-muted-foreground">Visitors who didn't return</p>
           </div>
         </div>
       </CardContent>
@@ -109,11 +103,11 @@ function FunnelStep({ step, isFirst, isLast }: FunnelStepProps) {
   return (
     <div className="relative">
       {/* Step Content */}
-      <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
+      <div className="flex items-center justify-between rounded-lg bg-muted/50 p-4 transition-colors hover:bg-muted">
         <div className="flex items-center gap-4">
           {/* Icon */}
-          <div className="p-3 rounded-full bg-purple-100 dark:bg-purple-900/30">
-            <Icon className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+          <div className="rounded-full bg-purple-100 p-3 dark:bg-purple-900/30">
+            <Icon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
           </div>
 
           {/* Step Info */}
@@ -129,8 +123,8 @@ function FunnelStep({ step, isFirst, isLast }: FunnelStepProps) {
             {step.conversionRate.toFixed(1)}%
           </div>
           {!isFirst && (
-            <div className="text-xs text-muted-foreground flex items-center gap-1 justify-end">
-              <TrendingDown className="w-3 h-3 text-orange-500" />
+            <div className="flex items-center justify-end gap-1 text-xs text-muted-foreground">
+              <TrendingDown className="h-3 w-3 text-orange-500" />
               {step.dropOff.toFixed(1)}% drop-off
             </div>
           )}
@@ -139,8 +133,8 @@ function FunnelStep({ step, isFirst, isLast }: FunnelStepProps) {
 
       {/* Connector Arrow */}
       {!isLast && (
-        <div className="flex items-center justify-center my-2">
-          <div className="w-0.5 h-6 bg-gradient-to-b from-purple-300 to-purple-500 dark:from-purple-700 dark:to-purple-500" />
+        <div className="my-2 flex items-center justify-center">
+          <div className="h-6 w-0.5 bg-gradient-to-b from-purple-300 to-purple-500 dark:from-purple-700 dark:to-purple-500" />
         </div>
       )}
     </div>
@@ -152,16 +146,16 @@ function MyFunnelSkeleton() {
     <Card className="bg-white dark:bg-black">
       <CardHeader>
         <Skeleton className="h-6 w-48" />
-        <Skeleton className="h-4 w-64 mt-2" />
+        <Skeleton className="mt-2 h-4 w-64" />
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="flex items-center justify-between p-4">
               <div className="flex items-center gap-4">
-                <Skeleton className="w-12 h-12 rounded-full" />
+                <Skeleton className="h-12 w-12 rounded-full" />
                 <div>
-                  <Skeleton className="h-5 w-24 mb-2" />
+                  <Skeleton className="mb-2 h-5 w-24" />
                   <Skeleton className="h-4 w-16" />
                 </div>
               </div>
@@ -173,4 +167,3 @@ function MyFunnelSkeleton() {
     </Card>
   );
 }
-

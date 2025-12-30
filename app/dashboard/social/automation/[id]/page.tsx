@@ -68,13 +68,14 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
   });
 
   // Get Instagram accounts for this store
-  const socialAccounts = useQuery(api.socialMedia.getSocialAccounts, { 
-    storeId: storeId || "" 
+  const socialAccounts = useQuery(api.socialMedia.getSocialAccounts, {
+    storeId: storeId || "",
   });
-  
-  const instagramAccounts = socialAccounts?.filter(
-    (account: any) => account.platform === "instagram" && account.isConnected
-  ) || [];
+
+  const instagramAccounts =
+    socialAccounts?.filter(
+      (account: any) => account.platform === "instagram" && account.isConnected
+    ) || [];
 
   // Mutations
   const updateAutomation = useMutation(api.automations.updateAutomation);
@@ -97,9 +98,10 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
     }
     // Set selected Instagram account if available AND it still exists
     // (accounts can be deleted when user disconnects and reconnects)
-    const accountStillExists = automation.instagramAccountId && 
+    const accountStillExists =
+      automation.instagramAccountId &&
       instagramAccounts.some((acc: any) => acc._id === automation.instagramAccountId);
-    
+
     if (accountStillExists && !selectedInstagramAccount) {
       setSelectedInstagramAccount(automation.instagramAccountId);
     } else if (instagramAccounts.length > 0 && !selectedInstagramAccount) {
@@ -111,7 +113,7 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
   // Handlers
   const handleUpdateName = async () => {
     if (!name.trim()) return;
-    
+
     try {
       await updateAutomation({
         automationId: id as Id<"automations">,
@@ -226,7 +228,7 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
   if (!isLoaded || automation === undefined || stores === undefined) {
     return (
       <div className="space-y-6 px-4 sm:px-6">
-        <Skeleton className="h-12 w-full sm:w-96 mb-8" />
+        <Skeleton className="mb-8 h-12 w-full sm:w-96" />
         <div className="space-y-6">
           <Skeleton className="h-64 w-full" />
           <Skeleton className="h-64 w-full" />
@@ -237,9 +239,9 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
 
   if (automation === null) {
     return (
-      <Card className="p-8 sm:p-12 text-center mx-4 sm:mx-6">
-        <AlertCircle className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 text-muted-foreground" />
-        <h3 className="text-xl sm:text-2xl font-bold mb-2">Automation not found</h3>
+      <Card className="mx-4 p-8 text-center sm:mx-6 sm:p-12">
+        <AlertCircle className="mx-auto mb-4 h-12 w-12 text-muted-foreground sm:h-16 sm:w-16" />
+        <h3 className="mb-2 text-xl font-bold sm:text-2xl">Automation not found</h3>
         <Button onClick={() => router.push("/dashboard/social?mode=create")}>
           Back to Social Media
         </Button>
@@ -253,38 +255,38 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
   const hasCommentTrigger = selectedTriggers.includes("COMMENT");
 
   return (
-    <div className="space-y-4 sm:space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-0">
+    <div className="mx-auto max-w-7xl space-y-4 px-4 sm:space-y-6 sm:px-6 lg:px-0">
       {/* Back Button + Header */}
-      <div className="space-y-3 sm:space-y-0 sm:flex sm:items-center sm:gap-4">
+      <div className="space-y-3 sm:flex sm:items-center sm:gap-4 sm:space-y-0">
         <Button
           variant="ghost"
           size="sm"
           onClick={() => router.push("/dashboard/social?mode=create")}
-          className="gap-2 -ml-2 sm:ml-0"
+          className="-ml-2 gap-2 sm:ml-0"
         >
-          <ChevronLeft className="w-4 h-4" />
+          <ChevronLeft className="h-4 w-4" />
           Back
         </Button>
-        
-        <div className="flex flex-col sm:flex-row sm:flex-1 sm:items-center gap-3 sm:gap-4">
+
+        <div className="flex flex-col gap-3 sm:flex-1 sm:flex-row sm:items-center sm:gap-4">
           {isEditingName ? (
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
               onBlur={handleUpdateName}
               onKeyPress={(e) => e.key === "Enter" && handleUpdateName()}
-              className="text-xl sm:text-2xl font-bold border-2 w-full sm:max-w-md"
+              className="w-full border-2 text-xl font-bold sm:max-w-md sm:text-2xl"
               autoFocus
             />
           ) : (
             <button
-              className="flex items-center gap-2 group text-left"
+              className="group flex items-center gap-2 text-left"
               onClick={() => setIsEditingName(true)}
             >
-              <h1 className="text-2xl sm:text-3xl font-bold group-hover:text-primary transition-colors truncate">
+              <h1 className="truncate text-2xl font-bold transition-colors group-hover:text-primary sm:text-3xl">
                 {automation.name}
               </h1>
-              <Pencil className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+              <Pencil className="h-4 w-4 flex-shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
             </button>
           )}
 
@@ -296,12 +298,12 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
           >
             {automation.active ? (
               <>
-                <Pause className="w-4 h-4 mr-2" />
+                <Pause className="mr-2 h-4 w-4" />
                 Deactivate
               </>
             ) : (
               <>
-                <Play className="w-4 h-4 mr-2" />
+                <Play className="mr-2 h-4 w-4" />
                 Activate
               </>
             )}
@@ -309,24 +311,26 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
         </div>
       </div>
 
-      <p className="text-xs sm:text-sm text-muted-foreground">
+      <p className="text-xs text-muted-foreground sm:text-sm">
         All changes are saved automatically
       </p>
 
       {/* Warning when no Instagram accounts are connected */}
       {instagramAccounts.length === 0 && (
-        <Card className="border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950">
+        <Card className="border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-950">
           <CardContent className="p-6 text-center">
-            <Instagram className="w-12 h-12 mx-auto mb-4 text-red-600" />
-            <h3 className="font-semibold text-red-900 dark:text-red-100 mb-2">Please Connect Your Instagram Account</h3>
-            <p className="text-sm text-red-700 dark:text-red-300 mb-4">
+            <Instagram className="mx-auto mb-4 h-12 w-12 text-red-600" />
+            <h3 className="mb-2 font-semibold text-red-900 dark:text-red-100">
+              Please Connect Your Instagram Account
+            </h3>
+            <p className="mb-4 text-sm text-red-700 dark:text-red-300">
               You need to connect an Instagram Business account to use automations.
             </p>
-            <Button 
+            <Button
               onClick={() => router.push("/dashboard/social?mode=create")}
               className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
             >
-              <Instagram className="w-4 h-4 mr-2" />
+              <Instagram className="mr-2 h-4 w-4" />
               Connect Instagram
             </Button>
           </CardContent>
@@ -335,63 +339,71 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
 
       {/* Instagram Account Selection - Always show so users can change accounts */}
       {instagramAccounts.length > 0 && (
-        <Card className={`border-2 ${
-          automation?.instagramAccountId && !instagramAccounts.some((acc: any) => acc._id === automation.instagramAccountId)
-            ? "border-orange-300 dark:border-orange-700 bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-950 dark:to-amber-950"
-            : "border-purple-200 dark:border-purple-800 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950"
-        }`}>
+        <Card
+          className={`border-2 ${
+            automation?.instagramAccountId &&
+            !instagramAccounts.some((acc: any) => acc._id === automation.instagramAccountId)
+              ? "border-orange-300 bg-gradient-to-r from-orange-50 to-amber-50 dark:border-orange-700 dark:from-orange-950 dark:to-amber-950"
+              : "border-purple-200 bg-gradient-to-r from-purple-50 to-pink-50 dark:border-purple-800 dark:from-purple-950 dark:to-pink-950"
+          }`}
+        >
           <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Instagram className="w-5 h-5 text-purple-600" />
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Instagram className="h-5 w-5 text-purple-600" />
               Instagram Account
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {/* Warning when stored account was deleted */}
-            {automation?.instagramAccountId && 
-             !instagramAccounts.some((acc: any) => acc._id === automation.instagramAccountId) && (
-              <div className="flex items-start gap-3 p-3 bg-orange-100 dark:bg-orange-900/30 border border-orange-300 dark:border-orange-700 rounded-lg mb-3">
-                <AlertCircle className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-medium text-orange-900 dark:text-orange-100 text-sm">Account reconnected</p>
-                  <p className="text-xs text-orange-700 dark:text-orange-300 mt-1">
-                    The previous Instagram account was disconnected. Select an account below and click Save.
-                  </p>
+            {automation?.instagramAccountId &&
+              !instagramAccounts.some((acc: any) => acc._id === automation.instagramAccountId) && (
+                <div className="mb-3 flex items-start gap-3 rounded-lg border border-orange-300 bg-orange-100 p-3 dark:border-orange-700 dark:bg-orange-900/30">
+                  <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-orange-600" />
+                  <div>
+                    <p className="text-sm font-medium text-orange-900 dark:text-orange-100">
+                      Account reconnected
+                    </p>
+                    <p className="mt-1 text-xs text-orange-700 dark:text-orange-300">
+                      The previous Instagram account was disconnected. Select an account below and
+                      click Save.
+                    </p>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
             <p className="text-sm text-muted-foreground">
-              {instagramAccounts.length > 1 
+              {instagramAccounts.length > 1
                 ? "Choose which Instagram account this automation should use:"
                 : "This is the Instagram account this automation will use:"}
             </p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               {instagramAccounts.map((account: any) => {
                 const isSelected = selectedInstagramAccount === account._id;
                 return (
-                  <div 
+                  <div
                     key={account._id}
-                    className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                    className={`cursor-pointer rounded-lg border-2 p-3 transition-all ${
                       isSelected
-                        ? "border-purple-300 dark:border-purple-700 bg-purple-100 dark:bg-purple-900/30"
+                        ? "border-purple-300 bg-purple-100 dark:border-purple-700 dark:bg-purple-900/30"
                         : "border-border hover:border-purple-200 dark:hover:border-purple-800"
                     }`}
                     onClick={() => setSelectedInstagramAccount(account._id)}
                   >
                     <div className="flex items-center gap-3">
-                      <img 
-                        src={account.profileImageUrl} 
+                      <img
+                        src={account.profileImageUrl}
                         alt={account.platformUsername}
-                        className="w-8 h-8 rounded-full"
+                        className="h-8 w-8 rounded-full"
                       />
                       <div className="flex-1">
-                        <p className="font-medium text-sm">@{account.platformUsername}</p>
-                        <p className="text-xs text-muted-foreground">{account.platformDisplayName}</p>
+                        <p className="text-sm font-medium">@{account.platformUsername}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {account.platformDisplayName}
+                        </p>
                       </div>
                       {isSelected && (
-                        <Badge className="bg-purple-600 text-white text-xs">Selected</Badge>
+                        <Badge className="bg-purple-600 text-xs text-white">Selected</Badge>
                       )}
                     </div>
                   </div>
@@ -400,20 +412,23 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
             </div>
 
             {selectedInstagramAccount && (
-              <div className={`flex items-center justify-between gap-4 rounded-lg p-3 ${
-                selectedInstagramAccount !== automation?.instagramAccountId
-                  ? "bg-orange-50 dark:bg-orange-950 border border-orange-200 dark:border-orange-800"
-                  : "bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800"
-              }`}>
-                <p className={`text-sm ${
+              <div
+                className={`flex items-center justify-between gap-4 rounded-lg p-3 ${
                   selectedInstagramAccount !== automation?.instagramAccountId
-                    ? "text-orange-800 dark:text-orange-200"
-                    : "text-green-800 dark:text-green-200"
-                }`}>
-                  {selectedInstagramAccount !== automation?.instagramAccountId 
-                    ? `⚠️ Click Save to use @${instagramAccounts.find(a => a._id === selectedInstagramAccount)?.platformUsername} for this automation`
-                    : `✅ Using @${instagramAccounts.find(a => a._id === selectedInstagramAccount)?.platformUsername} for replies and messages`
-                  }
+                    ? "border border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950"
+                    : "border border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950"
+                }`}
+              >
+                <p
+                  className={`text-sm ${
+                    selectedInstagramAccount !== automation?.instagramAccountId
+                      ? "text-orange-800 dark:text-orange-200"
+                      : "text-green-800 dark:text-green-200"
+                  }`}
+                >
+                  {selectedInstagramAccount !== automation?.instagramAccountId
+                    ? `⚠️ Click Save to use @${instagramAccounts.find((a: any) => a._id === selectedInstagramAccount)?.platformUsername} for this automation`
+                    : `✅ Using @${instagramAccounts.find((a: any) => a._id === selectedInstagramAccount)?.platformUsername} for replies and messages`}
                 </p>
                 {selectedInstagramAccount !== automation?.instagramAccountId && (
                   <Button
@@ -429,14 +444,14 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
                         toast.error("Failed to save account");
                       }
                     }}
-                    className="bg-orange-600 hover:bg-orange-700 text-white shrink-0"
+                    className="shrink-0 bg-orange-600 text-white hover:bg-orange-700"
                   >
-                    <Save className="w-4 h-4 mr-1" />
+                    <Save className="mr-1 h-4 w-4" />
                     Save Account
                   </Button>
                 )}
                 {selectedInstagramAccount === automation?.instagramAccountId && (
-                  <Badge className="bg-green-600 text-white shrink-0">Saved ✓</Badge>
+                  <Badge className="shrink-0 bg-green-600 text-white">Saved ✓</Badge>
                 )}
               </div>
             )}
@@ -449,40 +464,40 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
         <Card>
           <CardHeader className="p-4 sm:p-6">
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center text-white font-bold text-sm sm:text-base">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 text-sm font-bold text-white sm:h-10 sm:w-10 sm:text-base">
                 1
               </div>
               <div className="flex-1">
                 <CardTitle className="text-lg sm:text-xl">When</CardTitle>
-                <p className="text-xs sm:text-sm text-muted-foreground">
+                <p className="text-xs text-muted-foreground sm:text-sm">
                   Choose how this automation triggers
                 </p>
               </div>
             </div>
           </CardHeader>
 
-          <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6 pt-0 sm:pt-0">
+          <CardContent className="space-y-4 p-4 pt-0 sm:space-y-6 sm:p-6 sm:pt-0">
             {/* Trigger Type Selector */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
               {/* Comment Trigger */}
               <div
                 onClick={() => handleToggleTrigger("COMMENT")}
-                className={`
-                  p-4 sm:p-6 rounded-xl border-2 cursor-pointer transition-all
-                  ${selectedTriggers.includes("COMMENT")
+                className={`cursor-pointer rounded-xl border-2 p-4 transition-all sm:p-6 ${
+                  selectedTriggers.includes("COMMENT")
                     ? "border-purple-600 bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-950 dark:to-blue-950"
                     : "border-border hover:border-purple-400"
-                  }
-                `}
+                } `}
               >
-                <div className="flex items-start justify-between mb-2 sm:mb-3">
-                  <MessageSquare className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600" />
+                <div className="mb-2 flex items-start justify-between sm:mb-3">
+                  <MessageSquare className="h-6 w-6 text-purple-600 sm:h-8 sm:w-8" />
                   {selectedTriggers.includes("COMMENT") && (
                     <Badge className="bg-purple-600 text-xs">Selected</Badge>
                   )}
                 </div>
-                <h3 className="font-semibold text-base sm:text-lg mb-1 sm:mb-2">User comments on my post</h3>
-                <p className="text-xs sm:text-sm text-muted-foreground">
+                <h3 className="mb-1 text-base font-semibold sm:mb-2 sm:text-lg">
+                  User comments on my post
+                </h3>
+                <p className="text-xs text-muted-foreground sm:text-sm">
                   Trigger when someone comments with a specific keyword
                 </p>
               </div>
@@ -490,22 +505,22 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
               {/* DM Trigger */}
               <div
                 onClick={() => handleToggleTrigger("DM")}
-                className={`
-                  p-4 sm:p-6 rounded-xl border-2 cursor-pointer transition-all
-                  ${selectedTriggers.includes("DM")
+                className={`cursor-pointer rounded-xl border-2 p-4 transition-all sm:p-6 ${
+                  selectedTriggers.includes("DM")
                     ? "border-blue-600 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950"
                     : "border-border hover:border-blue-400"
-                  }
-                `}
+                } `}
               >
-                <div className="flex items-start justify-between mb-2 sm:mb-3">
-                  <Instagram className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
+                <div className="mb-2 flex items-start justify-between sm:mb-3">
+                  <Instagram className="h-6 w-6 text-blue-600 sm:h-8 sm:w-8" />
                   {selectedTriggers.includes("DM") && (
                     <Badge className="bg-blue-600 text-xs">Selected</Badge>
                   )}
                 </div>
-                <h3 className="font-semibold text-base sm:text-lg mb-1 sm:mb-2">User sends me a DM</h3>
-                <p className="text-xs sm:text-sm text-muted-foreground">
+                <h3 className="mb-1 text-base font-semibold sm:mb-2 sm:text-lg">
+                  User sends me a DM
+                </h3>
+                <p className="text-xs text-muted-foreground sm:text-sm">
                   Trigger when someone DMs you with a keyword
                 </p>
               </div>
@@ -515,16 +530,16 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
             {selectedTriggers.length > 0 && (
               <>
                 <Separator />
-                
+
                 <div className="space-y-3 sm:space-y-4">
-                  <Label className="text-sm sm:text-base font-semibold">Trigger Keywords</Label>
-                  <p className="text-xs sm:text-sm text-muted-foreground">
+                  <Label className="text-sm font-semibold sm:text-base">Trigger Keywords</Label>
+                  <p className="text-xs text-muted-foreground sm:text-sm">
                     Add keywords that will trigger this automation (case-insensitive)
                   </p>
 
                   {/* Existing Keywords */}
                   {automation.keywords && automation.keywords.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-4">
+                    <div className="mb-4 flex flex-wrap gap-2">
                       {automation.keywords.map((kw: any, index: number) => {
                         const colors = [
                           "bg-purple-600 text-white",
@@ -537,11 +552,11 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
                         return (
                           <Badge
                             key={kw._id}
-                            className={`${colorClass} text-xs sm:text-sm py-1.5 sm:py-2 px-3 sm:px-4 gap-2`}
+                            className={`${colorClass} gap-2 px-3 py-1.5 text-xs sm:px-4 sm:py-2 sm:text-sm`}
                           >
                             {kw.word}
                             <X
-                              className="w-3 h-3 cursor-pointer hover:opacity-75"
+                              className="h-3 w-3 cursor-pointer hover:opacity-75"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDeleteKeyword(kw._id);
@@ -554,7 +569,7 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
                   )}
 
                   {/* Add Keyword Input */}
-                  <div className="flex flex-col sm:flex-row gap-2">
+                  <div className="flex flex-col gap-2 sm:flex-row">
                     <Input
                       placeholder="e.g., STEMS, LEARN, COACHING"
                       value={keywordInput}
@@ -562,15 +577,19 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
                       onKeyPress={(e) => e.key === "Enter" && handleAddKeyword()}
                       className="flex-1"
                     />
-                    <Button onClick={handleAddKeyword} disabled={!keywordInput.trim()} className="w-full sm:w-auto">
-                      <Plus className="w-4 h-4 mr-2" />
+                    <Button
+                      onClick={handleAddKeyword}
+                      disabled={!keywordInput.trim()}
+                      className="w-full sm:w-auto"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
                       Add
                     </Button>
                   </div>
 
                   {automation.keywords && automation.keywords.length === 0 && (
-                    <div className="border-2 border-dashed border-muted rounded-lg p-4 sm:p-6 text-center">
-                      <p className="text-xs sm:text-sm text-muted-foreground">
+                    <div className="rounded-lg border-2 border-dashed border-muted p-4 text-center sm:p-6">
+                      <p className="text-xs text-muted-foreground sm:text-sm">
                         No keywords yet. Add your first trigger keyword above.
                       </p>
                     </div>
@@ -578,7 +597,7 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
                 </div>
 
                 <Button onClick={handleSaveTrigger} className="w-full sm:w-auto">
-                  <Save className="w-4 h-4 mr-2" />
+                  <Save className="mr-2 h-4 w-4" />
                   Save Trigger
                 </Button>
               </>
@@ -590,21 +609,21 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
         <Card>
           <CardHeader className="p-4 sm:p-6">
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-purple-600 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm sm:text-base">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-purple-600 to-blue-600 text-sm font-bold text-white sm:h-10 sm:w-10 sm:text-base">
                 2
               </div>
               <div className="flex-1">
                 <CardTitle className="text-lg sm:text-xl">Then</CardTitle>
-                <p className="text-xs sm:text-sm text-muted-foreground">
+                <p className="text-xs text-muted-foreground sm:text-sm">
                   Choose what happens when triggered
                 </p>
               </div>
             </div>
           </CardHeader>
 
-          <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6 pt-0 sm:pt-0">
+          <CardContent className="space-y-4 p-4 pt-0 sm:space-y-6 sm:p-6 sm:pt-0">
             {/* Listener Type Selector */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
               {/* Simple Message */}
               <div
                 onClick={() => {
@@ -613,22 +632,20 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
                     // Don't carry over AI prompt to message field
                   }
                 }}
-                className={`
-                  p-4 sm:p-6 rounded-xl border-2 cursor-pointer transition-all
-                  ${listenerType === "MESSAGE"
+                className={`cursor-pointer rounded-xl border-2 p-4 transition-all sm:p-6 ${
+                  listenerType === "MESSAGE"
                     ? "border-blue-600 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950"
                     : "border-border hover:border-blue-400"
-                  }
-                `}
+                } `}
               >
-                <div className="flex items-start justify-between mb-2 sm:mb-3">
-                  <MessageSquare className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
+                <div className="mb-2 flex items-start justify-between sm:mb-3">
+                  <MessageSquare className="h-6 w-6 text-blue-600 sm:h-8 sm:w-8" />
                   {listenerType === "MESSAGE" && (
                     <Badge className="bg-blue-600 text-xs">Selected</Badge>
                   )}
                 </div>
-                <h3 className="font-semibold text-base sm:text-lg mb-1 sm:mb-2">Send a message</h3>
-                <p className="text-xs sm:text-sm text-muted-foreground">
+                <h3 className="mb-1 text-base font-semibold sm:mb-2 sm:text-lg">Send a message</h3>
+                <p className="text-xs text-muted-foreground sm:text-sm">
                   Send a single automated message (Free plan)
                 </p>
               </div>
@@ -642,36 +659,36 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
                     setAiPrompt("");
                   }
                 }}
-                className={`
-                  p-4 sm:p-6 rounded-xl border-2 cursor-pointer transition-all relative
-                  ${listenerType === "SMART_AI"
+                className={`relative cursor-pointer rounded-xl border-2 p-4 transition-all sm:p-6 ${
+                  listenerType === "SMART_AI"
                     ? "border-purple-600 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950"
                     : isPro
                       ? "border-border hover:border-purple-400"
-                      : "border-border opacity-60 cursor-not-allowed"
-                  }
-                `}
+                      : "cursor-not-allowed border-border opacity-60"
+                } `}
               >
                 {!isPro && (
-                  <div className="absolute inset-0 bg-black/50 backdrop-blur-sm rounded-xl flex items-center justify-center z-10">
-                    <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-3 sm:px-4 py-1.5 sm:py-2 text-xs">
-                      <Lock className="w-3 h-3 mr-1 sm:mr-2" />
+                  <div className="absolute inset-0 z-10 flex items-center justify-center rounded-xl bg-black/50 backdrop-blur-sm">
+                    <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 px-3 py-1.5 text-xs text-white sm:px-4 sm:py-2">
+                      <Lock className="mr-1 h-3 w-3 sm:mr-2" />
                       Pro Plan Required
                     </Badge>
                   </div>
                 )}
-                
-                <div className="flex items-start justify-between mb-2 sm:mb-3">
-                  <Sparkles className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600" />
+
+                <div className="mb-2 flex items-start justify-between sm:mb-3">
+                  <Sparkles className="h-6 w-6 text-purple-600 sm:h-8 sm:w-8" />
                   {listenerType === "SMART_AI" && (
                     <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-xs">
                       Selected
                     </Badge>
                   )}
                 </div>
-                <h3 className="font-semibold text-base sm:text-lg mb-1 sm:mb-2">Smart AI Conversation</h3>
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  AI chatbot that remembers context (Pro plan) 
+                <h3 className="mb-1 text-base font-semibold sm:mb-2 sm:text-lg">
+                  Smart AI Conversation
+                </h3>
+                <p className="text-xs text-muted-foreground sm:text-sm">
+                  AI chatbot that remembers context (Pro plan)
                 </p>
               </div>
             </div>
@@ -682,7 +699,10 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
             {listenerType === "MESSAGE" && (
               <div className="space-y-3 sm:space-y-4">
                 <div>
-                  <Label htmlFor="message" className="text-sm sm:text-base font-semibold mb-2 block">
+                  <Label
+                    htmlFor="message"
+                    className="mb-2 block text-sm font-semibold sm:text-base"
+                  >
                     Message to Send
                   </Label>
                   <Textarea
@@ -697,7 +717,7 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
 
                 {hasCommentTrigger && (
                   <div>
-                    <Label htmlFor="commentReply" className="text-xs sm:text-sm mb-2 block">
+                    <Label htmlFor="commentReply" className="mb-2 block text-xs sm:text-sm">
                       Reply to Comment (Optional)
                     </Label>
                     <Input
@@ -706,7 +726,7 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
                       value={commentReply}
                       onChange={(e) => setCommentReply(e.target.value)}
                     />
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className="mt-1 text-xs text-muted-foreground">
                       Publicly reply to the comment before sending DM
                     </p>
                   </div>
@@ -718,8 +738,11 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
             {listenerType === "SMART_AI" && (
               <div className="space-y-3 sm:space-y-4">
                 <div>
-                  <Label htmlFor="aiPrompt" className="text-sm sm:text-base font-semibold mb-2 block flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-purple-600" />
+                  <Label
+                    htmlFor="aiPrompt"
+                    className="mb-2 block flex items-center gap-2 text-sm font-semibold sm:text-base"
+                  >
+                    <Sparkles className="h-4 w-4 text-purple-600" />
                     AI System Prompt
                   </Label>
                   <Textarea
@@ -731,24 +754,33 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
                     className="resize-none font-mono text-xs sm:text-sm"
                     disabled={!isPro}
                   />
-                  <p className="text-xs text-muted-foreground mt-2">
+                  <p className="mt-2 text-xs text-muted-foreground">
                     💡 Tip: Be specific about products, prices, and desired outcomes
                   </p>
                 </div>
 
                 {!isPro && (
-                  <div className="bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-950 dark:to-pink-950 border-2 border-purple-300 dark:border-purple-700 rounded-lg p-4 sm:p-6">
-                    <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4">
-                      <Lock className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 flex-shrink-0" />
+                  <div className="rounded-lg border-2 border-purple-300 bg-gradient-to-r from-purple-100 to-pink-100 p-4 dark:border-purple-700 dark:from-purple-950 dark:to-pink-950 sm:p-6">
+                    <div className="flex flex-col items-start gap-3 sm:flex-row sm:gap-4">
+                      <Lock className="h-5 w-5 flex-shrink-0 text-purple-600 sm:h-6 sm:w-6" />
                       <div>
-                        <h4 className="font-semibold text-sm sm:text-base mb-1 sm:mb-2">Upgrade to unlock Smart AI</h4>
-                        <p className="text-xs sm:text-sm text-muted-foreground mb-3 sm:mb-4">
-                          Get AI-powered conversations that remember context, qualify leads, and close sales automatically.
+                        <h4 className="mb-1 text-sm font-semibold sm:mb-2 sm:text-base">
+                          Upgrade to unlock Smart AI
+                        </h4>
+                        <p className="mb-3 text-xs text-muted-foreground sm:mb-4 sm:text-sm">
+                          Get AI-powered conversations that remember context, qualify leads, and
+                          close sales automatically.
                         </p>
                         <Button
                           size="sm"
-                          className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 w-full sm:w-auto"
-                          onClick={() => router.push(storeId ? `/store/${storeId}/settings/billing` : "/dashboard?mode=create")}
+                          className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 sm:w-auto"
+                          onClick={() =>
+                            router.push(
+                              storeId
+                                ? `/store/${storeId}/settings/billing`
+                                : "/dashboard?mode=create"
+                            )
+                          }
                         >
                           Upgrade to Pro - $29/mo
                         </Button>
@@ -760,7 +792,7 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
             )}
 
             <Button onClick={handleSaveListener} className="w-full sm:w-auto" size="lg">
-              <Save className="w-4 h-4 mr-2" />
+              <Save className="mr-2 h-4 w-4" />
               Save Action
             </Button>
           </CardContent>
@@ -771,19 +803,19 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
           <Card>
             <CardHeader className="p-4 sm:p-6">
               <div className="flex items-center gap-2 sm:gap-3">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-pink-600 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm sm:text-base">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-pink-600 to-purple-600 text-sm font-bold text-white sm:h-10 sm:w-10 sm:text-base">
                   3
                 </div>
                 <div className="flex-1">
                   <CardTitle className="text-lg sm:text-xl">Attach Posts</CardTitle>
-                  <p className="text-xs sm:text-sm text-muted-foreground">
+                  <p className="text-xs text-muted-foreground sm:text-sm">
                     Select which Instagram posts this automation applies to
                   </p>
                 </div>
               </div>
             </CardHeader>
 
-            <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
+            <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
               <InstagramPostSelector
                 userId={automation.user._id}
                 automationId={id as Id<"automations">}
@@ -798,47 +830,63 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
         <Card className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950">
           <CardHeader className="p-4 sm:p-6">
             <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600" />
+              <Zap className="h-4 w-4 text-yellow-600 sm:h-5 sm:w-5" />
               Automation Flow Preview
             </CardTitle>
           </CardHeader>
 
-          <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
+          <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
             <div className="space-y-3 sm:space-y-4">
               {/* Preview Step 1 */}
               <div className="flex items-start gap-2 sm:gap-4">
-                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-yellow-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 text-xs sm:text-sm">
+                <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-yellow-600 text-xs font-bold text-white sm:h-8 sm:w-8 sm:text-sm">
                   1
                 </div>
-                <div className="flex-1 bg-white dark:bg-black border rounded-lg p-3 sm:p-4">
-                  <p className="text-xs sm:text-sm font-semibold mb-1 sm:mb-2">When</p>
-                  <p className="text-muted-foreground text-xs sm:text-sm">
+                <div className="flex-1 rounded-lg border bg-white p-3 dark:bg-black sm:p-4">
+                  <p className="mb-1 text-xs font-semibold sm:mb-2 sm:text-sm">When</p>
+                  <p className="text-xs text-muted-foreground sm:text-sm">
                     {selectedTriggers.length > 0
-                      ? selectedTriggers.map(t => `User ${t === "COMMENT" ? "comments on post" : "sends DM"}`).join(" OR ")
+                      ? selectedTriggers
+                          .map((t) => `User ${t === "COMMENT" ? "comments on post" : "sends DM"}`)
+                          .join(" OR ")
                       : "No trigger selected"}
                     {automation.keywords && automation.keywords.length > 0 && (
-                      <span className="block sm:inline mt-1 sm:mt-0"> with keyword: <Badge variant="outline" className="ml-0 sm:ml-1 text-xs">{automation.keywords[0].word}</Badge></span>
+                      <span className="mt-1 block sm:mt-0 sm:inline">
+                        {" "}
+                        with keyword:{" "}
+                        <Badge variant="outline" className="ml-0 text-xs sm:ml-1">
+                          {automation.keywords[0].word}
+                        </Badge>
+                      </span>
                     )}
                   </p>
                 </div>
               </div>
 
               <div className="flex justify-center">
-                <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 text-muted-foreground rotate-90 sm:rotate-0" />
+                <ArrowRight className="h-5 w-5 rotate-90 text-muted-foreground sm:h-6 sm:w-6 sm:rotate-0" />
               </div>
 
               {/* Preview Step 2 */}
               <div className="flex items-start gap-2 sm:gap-4">
-                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 text-xs sm:text-sm">
+                <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-purple-600 text-xs font-bold text-white sm:h-8 sm:w-8 sm:text-sm">
                   2
                 </div>
-                <div className="flex-1 bg-white dark:bg-black border rounded-lg p-3 sm:p-4">
-                  <p className="text-xs sm:text-sm font-semibold mb-1 sm:mb-2">Then</p>
-                  <p className="text-muted-foreground text-xs sm:text-sm break-words">
+                <div className="flex-1 rounded-lg border bg-white p-3 dark:bg-black sm:p-4">
+                  <p className="mb-1 text-xs font-semibold sm:mb-2 sm:text-sm">Then</p>
+                  <p className="break-words text-xs text-muted-foreground sm:text-sm">
                     {listenerType === "SMART_AI" ? (
                       <>🤖 Smart AI starts conversation</>
                     ) : (
-                      <>💬 Send message: "{message ? (message.length > 50 ? message.substring(0, 50) + "..." : message) : "..."}"</>
+                      <>
+                        💬 Send message: "
+                        {message
+                          ? message.length > 50
+                            ? message.substring(0, 50) + "..."
+                            : message
+                          : "..."}
+                        "
+                      </>
                     )}
                   </p>
                 </div>

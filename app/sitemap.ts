@@ -69,7 +69,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     // Fetch all published courses
     const courses = await fetchQuery(api.courses.getAllPublishedCourses, {});
-    const courseSitemapEntries: MetadataRoute.Sitemap = (courses || []).map((course) => ({
+    const courseSitemapEntries: MetadataRoute.Sitemap = (courses || []).map((course: any) => ({
       url: `${baseUrl}/courses/${course.slug}`,
       lastModified: new Date(course._creationTime),
       changeFrequency: "weekly" as const,
@@ -78,7 +78,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     // Fetch all stores
     const stores = await fetchQuery(api.stores.getAllStores, {});
-    const storefrontSitemapEntries: MetadataRoute.Sitemap = (stores || []).map((store) => ({
+    const storefrontSitemapEntries: MetadataRoute.Sitemap = (stores || []).map((store: any) => ({
       url: `${baseUrl}/${store.slug}`,
       lastModified: new Date(store._creationTime),
       changeFrequency: "weekly" as const,
@@ -87,7 +87,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     // Fetch all published products (for marketplace)
     const products = await fetchQuery(api.digitalProducts.getAllPublishedProducts, {});
-    const productSitemapEntries: MetadataRoute.Sitemap = (products || []).map((product) => ({
+    const productSitemapEntries: MetadataRoute.Sitemap = (products || []).map((product: any) => ({
       url: `${baseUrl}/marketplace/products/${product._id}`,
       lastModified: new Date(product._creationTime),
       changeFrequency: "monthly" as const,
@@ -96,7 +96,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     // Fetch all published blog posts
     const blogPosts = await fetchQuery(api.blog.getPublishedPosts, {});
-    const blogSitemapEntries: MetadataRoute.Sitemap = (blogPosts || []).map((post) => ({
+    const blogSitemapEntries: MetadataRoute.Sitemap = (blogPosts || []).map((post: any) => ({
       url: `${baseUrl}/blog/${post.slug}`,
       lastModified: post.publishedAt ? new Date(post.publishedAt) : new Date(post.createdAt),
       changeFrequency: "monthly" as const,
@@ -117,4 +117,3 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     return staticPages;
   }
 }
-

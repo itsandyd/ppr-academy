@@ -334,7 +334,7 @@ export default function AIAssistantPage() {
   // Load messages from database when conversation changes
   useEffect(() => {
     if (conversationMessages) {
-      const loadedMessages: Message[] = conversationMessages.map((m) => ({
+      const loadedMessages: Message[] = conversationMessages.map((m: any) => ({
         id: m._id,
         role: m.role,
         content: m.content,

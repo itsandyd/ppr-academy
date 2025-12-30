@@ -34,14 +34,12 @@ export default function ContentModerationPage() {
   const { user } = useUser();
 
   // Fetch reports from Convex
-  const reports = useQuery(
-    api.reports.getReportsByStatus, 
-    user?.id ? { status: activeTab, clerkId: user.id } : "skip"
-  ) || [];
-  const stats = useQuery(
-    api.reports.getReportStats,
-    user?.id ? { clerkId: user.id } : "skip"
-  ) || {
+  const reports =
+    useQuery(
+      api.reports.getReportsByStatus,
+      user?.id ? { status: activeTab, clerkId: user.id } : "skip"
+    ) || [];
+  const stats = useQuery(api.reports.getReportStats, user?.id ? { clerkId: user.id } : "skip") || {
     pending: 0,
     reviewed: 0,
     resolved: 0,
@@ -55,7 +53,7 @@ export default function ContentModerationPage() {
   const markAsDismissed = useMutation(api.reports.markAsDismissed);
 
   const filteredReports = reports.filter(
-    (report) =>
+    (report: any) =>
       report.contentTitle?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       report.reason?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       report.reporterName?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -66,7 +64,7 @@ export default function ContentModerationPage() {
       toast.error("You must be logged in");
       return;
     }
-    
+
     try {
       await markAsResolved({
         clerkId: user.id,
@@ -85,7 +83,7 @@ export default function ContentModerationPage() {
       toast.error("You must be logged in");
       return;
     }
-    
+
     try {
       await markAsDismissed({
         clerkId: user.id,
@@ -104,7 +102,7 @@ export default function ContentModerationPage() {
       toast.error("You must be logged in");
       return;
     }
-    
+
     try {
       await markAsReviewed({
         clerkId: user.id,
@@ -120,15 +118,15 @@ export default function ContentModerationPage() {
   const getReportTypeIcon = (type: ReportType) => {
     switch (type) {
       case "course":
-        return <FileText className="w-4 h-4" />;
+        return <FileText className="h-4 w-4" />;
       case "comment":
-        return <MessageSquare className="w-4 h-4" />;
+        return <MessageSquare className="h-4 w-4" />;
       case "user":
-        return <User className="w-4 h-4" />;
+        return <User className="h-4 w-4" />;
       case "product":
-        return <FileText className="w-4 h-4" />;
+        return <FileText className="h-4 w-4" />;
       default:
-        return <Flag className="w-4 h-4" />;
+        return <Flag className="h-4 w-4" />;
     }
   };
 
@@ -159,21 +157,21 @@ export default function ContentModerationPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-4xl font-bold tracking-tight">Content Moderation</h1>
-          <p className="text-muted-foreground mt-2 text-lg">
+          <p className="mt-2 text-lg text-muted-foreground">
             Review and manage reported content and user behavior
           </p>
         </div>
         <div className="flex items-center gap-3">
           <Badge variant="outline" className="px-3 py-1.5">
-            <AlertTriangle className="w-3.5 h-3.5 mr-1.5" />
+            <AlertTriangle className="mr-1.5 h-3.5 w-3.5" />
             {stats.pending} pending
           </Badge>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="border-2 hover:shadow-lg transition-shadow">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="border-2 transition-shadow hover:shadow-lg">
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
               <div className="space-y-2">
@@ -182,28 +180,30 @@ export default function ContentModerationPage() {
                 <p className="text-xs text-muted-foreground">requires attention</p>
               </div>
               <div className="rounded-full bg-red-500/10 p-3">
-                <AlertTriangle className="w-6 h-6 text-red-500" />
+                <AlertTriangle className="h-6 w-6 text-red-500" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-2 hover:shadow-lg transition-shadow">
+        <Card className="border-2 transition-shadow hover:shadow-lg">
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
               <div className="space-y-2">
                 <p className="text-sm font-medium text-muted-foreground">Under Review</p>
-                <p className="text-3xl font-bold tracking-tight text-orange-600">{stats.reviewed}</p>
+                <p className="text-3xl font-bold tracking-tight text-orange-600">
+                  {stats.reviewed}
+                </p>
                 <p className="text-xs text-muted-foreground">being processed</p>
               </div>
               <div className="rounded-full bg-orange-500/10 p-3">
-                <Clock className="w-6 h-6 text-orange-500" />
+                <Clock className="h-6 w-6 text-orange-500" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-2 hover:shadow-lg transition-shadow">
+        <Card className="border-2 transition-shadow hover:shadow-lg">
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
               <div className="space-y-2">
@@ -212,13 +212,13 @@ export default function ContentModerationPage() {
                 <p className="text-xs text-muted-foreground">action taken</p>
               </div>
               <div className="rounded-full bg-green-500/10 p-3">
-                <CheckCircle className="w-6 h-6 text-green-500" />
+                <CheckCircle className="h-6 w-6 text-green-500" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-2 hover:shadow-lg transition-shadow">
+        <Card className="border-2 transition-shadow hover:shadow-lg">
           <CardContent className="p-6">
             <div className="flex items-start justify-between">
               <div className="space-y-2">
@@ -227,7 +227,7 @@ export default function ContentModerationPage() {
                 <p className="text-xs text-muted-foreground">no action needed</p>
               </div>
               <div className="rounded-full bg-gray-500/10 p-3">
-                <XCircle className="w-6 h-6 text-gray-500" />
+                <XCircle className="h-6 w-6 text-gray-500" />
               </div>
             </div>
           </CardContent>
@@ -236,32 +236,36 @@ export default function ContentModerationPage() {
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+        <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 transform text-muted-foreground" />
         <Input
           placeholder="Search by title, reason, or reporter..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-11 h-12 text-base"
+          className="h-12 pl-11 text-base"
         />
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ReportStatus)} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4 h-12 p-1">
-          <TabsTrigger value="pending" className="text-base gap-2">
-            <AlertTriangle className="w-4 h-4" />
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => setActiveTab(v as ReportStatus)}
+        className="space-y-6"
+      >
+        <TabsList className="grid h-12 w-full grid-cols-4 p-1">
+          <TabsTrigger value="pending" className="gap-2 text-base">
+            <AlertTriangle className="h-4 w-4" />
             Pending ({stats.pending})
           </TabsTrigger>
-          <TabsTrigger value="reviewed" className="text-base gap-2">
-            <Clock className="w-4 h-4" />
+          <TabsTrigger value="reviewed" className="gap-2 text-base">
+            <Clock className="h-4 w-4" />
             Reviewing ({stats.reviewed})
           </TabsTrigger>
-          <TabsTrigger value="resolved" className="text-base gap-2">
-            <CheckCircle className="w-4 h-4" />
+          <TabsTrigger value="resolved" className="gap-2 text-base">
+            <CheckCircle className="h-4 w-4" />
             Resolved ({stats.resolved})
           </TabsTrigger>
-          <TabsTrigger value="dismissed" className="text-base gap-2">
-            <XCircle className="w-4 h-4" />
+          <TabsTrigger value="dismissed" className="gap-2 text-base">
+            <XCircle className="h-4 w-4" />
             Dismissed ({stats.dismissed})
           </TabsTrigger>
         </TabsList>
@@ -272,8 +276,8 @@ export default function ContentModerationPage() {
               <h2 className="text-2xl font-bold tracking-tight">
                 {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Reports
               </h2>
-              <p className="text-sm text-muted-foreground mt-1">
-                {filteredReports.length} report{filteredReports.length !== 1 ? 's' : ''} found
+              <p className="mt-1 text-sm text-muted-foreground">
+                {filteredReports.length} report{filteredReports.length !== 1 ? "s" : ""} found
               </p>
             </div>
           </div>
@@ -282,21 +286,18 @@ export default function ContentModerationPage() {
             <CardContent className="p-0">
               <div className="divide-y">
                 {filteredReports.length > 0 ? (
-                  filteredReports.map((report) => (
-                    <div
-                      key={report._id}
-                      className="p-6 hover:bg-muted/30 transition-colors"
-                    >
+                  filteredReports.map((report: any) => (
+                    <div key={report._id} className="p-6 transition-colors hover:bg-muted/30">
                       <div className="flex items-start justify-between gap-6">
                         <div className="flex-1 space-y-4">
                           {/* Header */}
                           <div className="flex items-start gap-3">
-                            <div className="rounded-lg bg-muted p-2 mt-0.5">
+                            <div className="mt-0.5 rounded-lg bg-muted p-2">
                               {getReportTypeIcon(report.type)}
                             </div>
                             <div className="flex-1 space-y-2">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <h3 className="font-bold text-lg">{report.contentTitle}</h3>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h3 className="text-lg font-bold">{report.contentTitle}</h3>
                                 <Badge variant="outline" className="text-xs capitalize">
                                   {report.type}
                                 </Badge>
@@ -304,10 +305,10 @@ export default function ContentModerationPage() {
                               </div>
 
                               {/* Reason */}
-                              <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                                <Flag className="w-4 h-4 text-red-600 mt-0.5" />
+                              <div className="flex items-start gap-2 rounded-lg border border-red-500/20 bg-red-500/10 p-3">
+                                <Flag className="mt-0.5 h-4 w-4 text-red-600" />
                                 <div>
-                                  <p className="text-xs font-semibold text-red-600 uppercase tracking-wide mb-1">
+                                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-red-600">
                                     Report Reason
                                   </p>
                                   <p className="text-sm text-red-600 dark:text-red-400">
@@ -318,29 +319,33 @@ export default function ContentModerationPage() {
 
                               {/* Content Preview */}
                               {report.contentPreview && (
-                                <div className="p-3 rounded-lg bg-muted/50 border">
-                                  <p className="text-sm italic line-clamp-2 text-muted-foreground">
+                                <div className="rounded-lg border bg-muted/50 p-3">
+                                  <p className="line-clamp-2 text-sm italic text-muted-foreground">
                                     "{report.contentPreview}"
                                   </p>
                                 </div>
                               )}
 
                               {/* Meta Info */}
-                              <div className="flex items-center flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground">
+                              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
                                 <div className="flex items-center gap-1.5">
-                                  <User className="w-3.5 h-3.5" />
+                                  <User className="h-3.5 w-3.5" />
                                   <span>Reported by:</span>
-                                  <span className="font-semibold text-foreground">{report.reporterName}</span>
+                                  <span className="font-semibold text-foreground">
+                                    {report.reporterName}
+                                  </span>
                                 </div>
                                 {report.reportedUserName && (
                                   <div className="flex items-center gap-1.5">
-                                    <AlertTriangle className="w-3.5 h-3.5" />
+                                    <AlertTriangle className="h-3.5 w-3.5" />
                                     <span>Reported user:</span>
-                                    <span className="font-semibold text-foreground">{report.reportedUserName}</span>
+                                    <span className="font-semibold text-foreground">
+                                      {report.reportedUserName}
+                                    </span>
                                   </div>
                                 )}
                                 <div className="flex items-center gap-1.5">
-                                  <Clock className="w-3.5 h-3.5" />
+                                  <Clock className="h-3.5 w-3.5" />
                                   {formatTimeAgo(report.reportedAt)}
                                 </div>
                               </div>
@@ -349,9 +354,9 @@ export default function ContentModerationPage() {
                         </div>
 
                         {/* Action Buttons */}
-                        <div className="flex flex-col gap-2 min-w-[120px]">
+                        <div className="flex min-w-[120px] flex-col gap-2">
                           <Button variant="outline" size="default" className="gap-2">
-                            <Eye className="w-4 h-4" />
+                            <Eye className="h-4 w-4" />
                             View
                           </Button>
                           {report.status === "pending" && (
@@ -362,7 +367,7 @@ export default function ContentModerationPage() {
                                 onClick={() => handleReview(report._id)}
                                 className="gap-2"
                               >
-                                <Clock className="w-4 h-4" />
+                                <Clock className="h-4 w-4" />
                                 Review
                               </Button>
                               <Button
@@ -371,7 +376,7 @@ export default function ContentModerationPage() {
                                 onClick={() => handleApprove(report._id)}
                                 className="gap-2"
                               >
-                                <Trash2 className="w-4 h-4" />
+                                <Trash2 className="h-4 w-4" />
                                 Remove
                               </Button>
                               <Button
@@ -380,7 +385,7 @@ export default function ContentModerationPage() {
                                 onClick={() => handleDismiss(report._id)}
                                 className="gap-2"
                               >
-                                <XCircle className="w-4 h-4" />
+                                <XCircle className="h-4 w-4" />
                                 Dismiss
                               </Button>
                             </>
@@ -393,7 +398,7 @@ export default function ContentModerationPage() {
                                 onClick={() => handleApprove(report._id)}
                                 className="gap-2"
                               >
-                                <Trash2 className="w-4 h-4" />
+                                <Trash2 className="h-4 w-4" />
                                 Remove
                               </Button>
                               <Button
@@ -402,7 +407,7 @@ export default function ContentModerationPage() {
                                 onClick={() => handleDismiss(report._id)}
                                 className="gap-2"
                               >
-                                <XCircle className="w-4 h-4" />
+                                <XCircle className="h-4 w-4" />
                                 Dismiss
                               </Button>
                             </>
@@ -412,14 +417,12 @@ export default function ContentModerationPage() {
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-16 px-6">
-                    <div className="rounded-full bg-muted w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                      <Flag className="w-8 h-8 text-muted-foreground" />
+                  <div className="px-6 py-16 text-center">
+                    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                      <Flag className="h-8 w-8 text-muted-foreground" />
                     </div>
-                    <h3 className="text-lg font-semibold mb-2">
-                      No {activeTab} reports
-                    </h3>
-                    <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                    <h3 className="mb-2 text-lg font-semibold">No {activeTab} reports</h3>
+                    <p className="mx-auto max-w-sm text-sm text-muted-foreground">
                       {searchQuery
                         ? "Try adjusting your search terms to find what you're looking for"
                         : `All ${activeTab} reports will appear here when available`}
@@ -434,4 +437,3 @@ export default function ContentModerationPage() {
     </div>
   );
 }
-

@@ -13,16 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  BookOpen,
-  Plus,
-  Edit,
-  Trash2,
-  MoreVertical,
-  Eye,
-  Clock,
-  Calendar,
-} from "lucide-react";
+import { BookOpen, Plus, Edit, Trash2, MoreVertical, Eye, Clock, Calendar } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
@@ -38,7 +29,9 @@ export default function CreatorBlogPage({ params }: BlogPageProps) {
   const { storeId } = use(params);
   const { user } = useUser();
   const router = useRouter();
-  const [selectedStatus, setSelectedStatus] = useState<"all" | "draft" | "published" | "archived">("all");
+  const [selectedStatus, setSelectedStatus] = useState<"all" | "draft" | "published" | "archived">(
+    "all"
+  );
 
   // Fetch posts by creator
   const postsData = useQuery(
@@ -71,9 +64,9 @@ export default function CreatorBlogPage({ params }: BlogPageProps) {
 
   const stats = {
     total: posts.length,
-    published: posts.filter((p) => p.status === "published").length,
-    draft: posts.filter((p) => p.status === "draft").length,
-    totalViews: posts.reduce((acc, p) => acc + (p.views || 0), 0),
+    published: posts.filter((p: any) => p.status === "published").length,
+    draft: posts.filter((p: any) => p.status === "draft").length,
+    totalViews: posts.reduce((acc: number, p: any) => acc + (p.views || 0), 0),
   };
 
   return (
@@ -82,20 +75,18 @@ export default function CreatorBlogPage({ params }: BlogPageProps) {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Blog Posts</h1>
-          <p className="text-muted-foreground mt-1">
-            Create and manage your blog posts
-          </p>
+          <p className="mt-1 text-muted-foreground">Create and manage your blog posts</p>
         </div>
         <Button asChild>
           <Link href={`/store/${storeId}/blog/new`}>
-            <Plus className="w-4 h-4 mr-2" />
+            <Plus className="mr-2 h-4 w-4" />
             New Post
           </Link>
         </Button>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="pt-6">
             <div className="text-3xl font-bold">{stats.total}</div>
@@ -158,14 +149,14 @@ export default function CreatorBlogPage({ params }: BlogPageProps) {
       {posts.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
-            <BookOpen className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-xl font-semibold mb-2">No blog posts yet</h3>
-            <p className="text-muted-foreground mb-6">
+            <BookOpen className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
+            <h3 className="mb-2 text-xl font-semibold">No blog posts yet</h3>
+            <p className="mb-6 text-muted-foreground">
               Create your first blog post to share knowledge with your audience
             </p>
             <Button asChild>
               <Link href={`/store/${storeId}/blog/new`}>
-                <Plus className="w-4 h-4 mr-2" />
+                <Plus className="mr-2 h-4 w-4" />
                 Create Your First Post
               </Link>
             </Button>
@@ -173,31 +164,29 @@ export default function CreatorBlogPage({ params }: BlogPageProps) {
         </Card>
       ) : (
         <div className="grid gap-4">
-          {posts.map((post) => (
-            <Card key={post._id} className="hover:shadow-lg transition-shadow">
+          {posts.map((post: any) => (
+            <Card key={post._id} className="transition-shadow hover:shadow-lg">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
+                    <div className="mb-2 flex items-center gap-3">
                       <h3 className="text-xl font-semibold">{post.title}</h3>
                       <Badge
                         variant={
                           post.status === "published"
                             ? "default"
                             : post.status === "draft"
-                            ? "secondary"
-                            : "outline"
+                              ? "secondary"
+                              : "outline"
                         }
                       >
                         {post.status}
                       </Badge>
-                      {post.category && (
-                        <Badge variant="outline">{post.category}</Badge>
-                      )}
+                      {post.category && <Badge variant="outline">{post.category}</Badge>}
                     </div>
 
                     {post.excerpt && (
-                      <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                      <p className="mb-3 line-clamp-2 text-sm text-muted-foreground">
                         {post.excerpt}
                       </p>
                     )}
@@ -205,20 +194,18 @@ export default function CreatorBlogPage({ params }: BlogPageProps) {
                     <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                       {post.publishedAt && (
                         <div className="flex items-center gap-1">
-                          <Calendar className="w-4 h-4" />
-                          <span>
-                            {format(post.publishedAt, "MMM d, yyyy")}
-                          </span>
+                          <Calendar className="h-4 w-4" />
+                          <span>{format(post.publishedAt, "MMM d, yyyy")}</span>
                         </div>
                       )}
                       {typeof post.views === "number" && (
                         <div className="flex items-center gap-1">
-                          <Eye className="w-4 h-4" />
+                          <Eye className="h-4 w-4" />
                           <span>{post.views} views</span>
                         </div>
                       )}
                       <div className="flex items-center gap-1">
-                        <Clock className="w-4 h-4" />
+                        <Clock className="h-4 w-4" />
                         <span>Updated {format(post.updatedAt, "MMM d, yyyy")}</span>
                       </div>
                     </div>
@@ -228,20 +215,20 @@ export default function CreatorBlogPage({ params }: BlogPageProps) {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="sm">
-                        <MoreVertical className="w-4 h-4" />
+                        <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="bg-white dark:bg-black" align="end">
                       <DropdownMenuItem asChild>
                         <Link href={`/store/${storeId}/blog/${post._id}/edit`}>
-                          <Edit className="w-4 h-4 mr-2" />
+                          <Edit className="mr-2 h-4 w-4" />
                           Edit
                         </Link>
                       </DropdownMenuItem>
                       {post.status === "published" && (
                         <DropdownMenuItem asChild>
                           <Link href={`/blog/${post.slug}`} target="_blank">
-                            <Eye className="w-4 h-4 mr-2" />
+                            <Eye className="mr-2 h-4 w-4" />
                             View Live
                           </Link>
                         </DropdownMenuItem>
@@ -250,7 +237,7 @@ export default function CreatorBlogPage({ params }: BlogPageProps) {
                         onClick={() => handleDelete(post._id)}
                         className="text-red-600"
                       >
-                        <Trash2 className="w-4 h-4 mr-2" />
+                        <Trash2 className="mr-2 h-4 w-4" />
                         Delete
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -264,4 +251,3 @@ export default function CreatorBlogPage({ params }: BlogPageProps) {
     </div>
   );
 }
-

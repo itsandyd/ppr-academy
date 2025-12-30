@@ -28,7 +28,7 @@ export default function LibraryDownloadsPage() {
   const { user } = useUser();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<"all" | "digital" | "urlMedia">("all");
-  
+
   const digitalProducts = useQuery(
     api.library.getUserDigitalProducts,
     user?.id ? { userId: user.id } : "skip"
@@ -36,18 +36,20 @@ export default function LibraryDownloadsPage() {
 
   const trackDownload = useMutation(api.library.trackDownload);
 
-  const filteredProducts = digitalProducts?.filter((product) => {
-    const matchesSearch = product.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.storeName?.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredProducts =
+    digitalProducts?.filter((product: any) => {
+      const matchesSearch =
+        product.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        product.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        product.storeName?.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesFilter = 
-      filterType === "all" ||
-      (filterType === "digital" && (!product.productType || product.productType === "digital")) ||
-      (filterType === "urlMedia" && product.productType === "urlMedia");
+      const matchesFilter =
+        filterType === "all" ||
+        (filterType === "digital" && (!product.productType || product.productType === "digital")) ||
+        (filterType === "urlMedia" && product.productType === "urlMedia");
 
-    return matchesSearch && matchesFilter;
-  }) || [];
+      return matchesSearch && matchesFilter;
+    }) || [];
 
   const handleDownload = async (productId: string, downloadUrl: string, title: string) => {
     if (!user?.id) return;
@@ -55,10 +57,10 @@ export default function LibraryDownloadsPage() {
     try {
       // Track the download
       await trackDownload({ userId: user.id, productId: productId as any });
-      
+
       // Open download link
       window.open(downloadUrl, "_blank");
-      
+
       toast.success(`${title} download started`);
     } catch (error) {
       toast.error("Failed to track download");
@@ -69,9 +71,12 @@ export default function LibraryDownloadsPage() {
 
   const stats = {
     total: digitalProducts?.length || 0,
-    digital: digitalProducts?.filter(p => !p.productType || p.productType === "digital").length || 0,
-    urlMedia: digitalProducts?.filter(p => p.productType === "urlMedia").length || 0,
-    totalDownloads: digitalProducts?.reduce((sum, p) => (p.downloadCount || 0) + sum, 0) || 0,
+    digital:
+      digitalProducts?.filter((p: any) => !p.productType || p.productType === "digital").length ||
+      0,
+    urlMedia: digitalProducts?.filter((p: any) => p.productType === "urlMedia").length || 0,
+    totalDownloads:
+      digitalProducts?.reduce((sum: number, p: any) => (p.downloadCount || 0) + sum, 0) || 0,
   };
 
   return (
@@ -79,13 +84,11 @@ export default function LibraryDownloadsPage() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-foreground">My Downloads</h1>
-        <p className="text-muted-foreground mt-2">
-          Access and manage your digital content library
-        </p>
+        <p className="mt-2 text-muted-foreground">Access and manage your digital content library</p>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold text-foreground">{stats.total}</div>
@@ -113,9 +116,9 @@ export default function LibraryDownloadsPage() {
       </div>
 
       {/* Filters and Search */}
-      <div className="flex flex-col sm:flex-row gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 transform text-muted-foreground" />
           <Input
             type="search"
             placeholder="Search downloads..."
@@ -137,7 +140,7 @@ export default function LibraryDownloadsPage() {
             onClick={() => setFilterType("digital")}
             size="sm"
           >
-            <Folder className="w-4 h-4 mr-1" />
+            <Folder className="mr-1 h-4 w-4" />
             Files
           </Button>
           <Button
@@ -145,7 +148,7 @@ export default function LibraryDownloadsPage() {
             onClick={() => setFilterType("urlMedia")}
             size="sm"
           >
-            <LinkIcon className="w-4 h-4 mr-1" />
+            <LinkIcon className="mr-1 h-4 w-4" />
             Links
           </Button>
         </div>
@@ -153,43 +156,41 @@ export default function LibraryDownloadsPage() {
 
       {/* Downloads Grid */}
       {filteredProducts.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredProducts.map((product) => (
-            <Card key={product._id} className="overflow-hidden hover:shadow-lg transition-shadow">
-              <div className="aspect-video bg-muted overflow-hidden">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {filteredProducts.map((product: any) => (
+            <Card key={product._id} className="overflow-hidden transition-shadow hover:shadow-lg">
+              <div className="aspect-video overflow-hidden bg-muted">
                 {product.imageUrl ? (
-                  <Image 
-                    src={product.imageUrl} 
+                  <Image
+                    src={product.imageUrl}
                     alt={product.title}
                     width={640}
                     height={360}
-                    className="w-full h-full object-cover"
+                    className="h-full w-full object-cover"
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center">
+                  <div className="flex h-full w-full items-center justify-center">
                     {product.productType === "urlMedia" ? (
-                      <LinkIcon className="w-12 h-12 text-muted-foreground" />
+                      <LinkIcon className="h-12 w-12 text-muted-foreground" />
                     ) : (
-                      <FileText className="w-12 h-12 text-muted-foreground" />
+                      <FileText className="h-12 w-12 text-muted-foreground" />
                     )}
                   </div>
                 )}
               </div>
-              
+
               <CardContent className="p-6">
                 <div className="space-y-4">
                   <div>
-                    <h3 className="font-bold text-lg text-foreground line-clamp-2">
+                    <h3 className="line-clamp-2 text-lg font-bold text-foreground">
                       {product.title}
                     </h3>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      by {product.storeName}
-                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">by {product.storeName}</p>
                   </div>
 
                   {product.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2">
+                    <p className="line-clamp-2 text-sm text-muted-foreground">
                       {product.description}
                     </p>
                   )}
@@ -207,45 +208,50 @@ export default function LibraryDownloadsPage() {
 
                   {product.downloadCount !== undefined && (
                     <div className="text-sm text-muted-foreground">
-                      <Download className="w-4 h-4 inline mr-1" />
+                      <Download className="mr-1 inline h-4 w-4" />
                       Downloaded {product.downloadCount} times
                     </div>
                   )}
 
                   <div className="text-xs text-muted-foreground">
                     {product.lastAccessedAt ? (
-                      <>Last accessed {formatDistanceToNow(new Date(product.lastAccessedAt), { addSuffix: true })}</>
+                      <>
+                        Last accessed{" "}
+                        {formatDistanceToNow(new Date(product.lastAccessedAt), { addSuffix: true })}
+                      </>
                     ) : (
-                      <>Purchased {formatDistanceToNow(new Date(product.purchaseDate), { addSuffix: true })}</>
+                      <>
+                        Purchased{" "}
+                        {formatDistanceToNow(new Date(product.purchaseDate), { addSuffix: true })}
+                      </>
                     )}
                   </div>
 
                   <div className="flex space-x-2">
                     {product.productType === "urlMedia" && product.url ? (
-                      <Button 
-                        onClick={() => window.open(product.url, "_blank")}
-                        className="flex-1"
-                      >
-                        <ExternalLink className="w-4 h-4 mr-2" />
+                      <Button onClick={() => window.open(product.url, "_blank")} className="flex-1">
+                        <ExternalLink className="mr-2 h-4 w-4" />
                         Open Link
                       </Button>
                     ) : product.downloadUrl ? (
-                      <Button 
-                        onClick={() => handleDownload(product._id, product.downloadUrl!, product.title)}
+                      <Button
+                        onClick={() =>
+                          handleDownload(product._id, product.downloadUrl!, product.title)
+                        }
                         className="flex-1"
                       >
-                        <Download className="w-4 h-4 mr-2" />
+                        <Download className="mr-2 h-4 w-4" />
                         Download
                       </Button>
                     ) : (
                       <Button disabled className="flex-1">
-                        <Download className="w-4 h-4 mr-2" />
+                        <Download className="mr-2 h-4 w-4" />
                         Unavailable
                       </Button>
                     )}
-                    
+
                     <Button variant="outline" size="icon">
-                      <MoreHorizontal className="w-4 h-4" />
+                      <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
@@ -255,29 +261,29 @@ export default function LibraryDownloadsPage() {
         </div>
       ) : (
         <Card>
-          <CardContent className="text-center py-12">
+          <CardContent className="py-12 text-center">
             {digitalProducts && digitalProducts.length === 0 ? (
               <>
-                <Download className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                <h2 className="text-2xl font-bold text-foreground mb-2">No downloads yet</h2>
-                <p className="text-muted-foreground mb-6">
+                <Download className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
+                <h2 className="mb-2 text-2xl font-bold text-foreground">No downloads yet</h2>
+                <p className="mb-6 text-muted-foreground">
                   Purchase digital products to access them here
                 </p>
                 <Button asChild>
                   <Link href="/courses">
-                    <Search className="w-4 h-4 mr-2" />
+                    <Search className="mr-2 h-4 w-4" />
                     Browse Products
                   </Link>
                 </Button>
               </>
             ) : (
               <>
-                <Search className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                <h2 className="text-2xl font-bold text-foreground mb-2">No downloads found</h2>
-                <p className="text-muted-foreground mb-6">
+                <Search className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
+                <h2 className="mb-2 text-2xl font-bold text-foreground">No downloads found</h2>
+                <p className="mb-6 text-muted-foreground">
                   Try adjusting your search or filter criteria
                 </p>
-                <Button 
+                <Button
                   onClick={() => {
                     setSearchQuery("");
                     setFilterType("all");

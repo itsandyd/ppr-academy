@@ -42,39 +42,47 @@ export const migrateToNewEmbeddingModel = action({
       console.log("🗑️ Deleting all existing embeddings in batches...");
       let hasMore = true;
       let batchCount = 0;
-      
+
       while (hasMore) {
-        const batchResult = await ctx.runMutation(internal.embeddings.deleteEmbeddingsBatch, {
-          batchSize: 50, // Small batches to avoid memory issues
-        });
-        
+        const batchResult = await ctx.runMutation(
+          // @ts-ignore Convex type instantiation too deep
+          internal.embeddings.deleteEmbeddingsBatch,
+          { batchSize: 50 } // Small batches to avoid memory issues
+        );
+
         results.deleted += batchResult.deleted;
         hasMore = batchResult.hasMore;
         batchCount++;
-        
-        console.log(`   Batch ${batchCount}: Deleted ${batchResult.deleted} embeddings (total: ${results.deleted})`);
-        
+
+        console.log(
+          `   Batch ${batchCount}: Deleted ${batchResult.deleted} embeddings (total: ${results.deleted})`
+        );
+
         // Small delay between batches to prevent overwhelming the system
         if (hasMore) {
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise((resolve) => setTimeout(resolve, 100));
         }
       }
-      
+
       console.log(`   ✅ Total deleted: ${results.deleted} embeddings`);
 
       // Step 2: Regenerate all embeddings with the new model
       console.log("🚀 Regenerating embeddings with text-embedding-3-small...");
-      const regenerateResult = await ctx.runAction(api.embeddingActions.generateAllCourseEmbeddings, {
-        userId: args.userId,
-        overwrite: false, // All embeddings were deleted, no need to overwrite
-      });
+      const regenerateResult = await ctx.runAction(
+        api.embeddingActions.generateAllCourseEmbeddings,
+        {
+          userId: args.userId,
+          overwrite: false, // All embeddings were deleted, no need to overwrite
+        }
+      );
 
       results.processed = regenerateResult.processed;
       results.errors = regenerateResult.errors;
       results.success = regenerateResult.success;
 
-      console.log(`🎉 Migration complete! Deleted: ${results.deleted}, Regenerated: ${results.processed}`);
-
+      console.log(
+        `🎉 Migration complete! Deleted: ${results.deleted}, Regenerated: ${results.processed}`
+      );
     } catch (error) {
       results.success = false;
       results.errors.push(`Migration failed: ${error}`);
@@ -97,8 +105,12 @@ export const generateAllCourseEmbeddings = action({
     skipped: v.number(),
     errors: v.array(v.string()),
   }),
-  handler: async (ctx, args) => {
+  handler: async (
+    ctx,
+    args
+  ): Promise<{ success: boolean; processed: number; skipped: number; errors: string[] }> => {
     // Delegate to the new combined function
+    // @ts-ignore Convex type instantiation too deep - self-referential action
     return await ctx.runAction(api.embeddingActions.generateCourseContentEmbeddings, args);
   },
 });
@@ -133,10 +145,13 @@ export const generateCourseContentEmbeddings = action({
       for (const course of courses) {
         try {
           // === COURSE ===
-          const existingCourseEmbeddings = await ctx.runQuery(internal.embeddings.checkExistingEmbeddings, {
-            sourceId: course._id,
-            sourceType: "course",
-          });
+          const existingCourseEmbeddings = await ctx.runQuery(
+            internal.embeddings.checkExistingEmbeddings,
+            {
+              sourceId: course._id,
+              sourceType: "course",
+            }
+          );
 
           if (existingCourseEmbeddings === 0 || args.overwrite) {
             if (existingCourseEmbeddings > 0 && args.overwrite) {
@@ -146,8 +161,8 @@ export const generateCourseContentEmbeddings = action({
               });
             }
 
-            const courseContent = `${course.title}\n${course.description || ''}`;
-            
+            const courseContent = `${course.title}\n${course.description || ""}`;
+
             await ctx.runMutation(api.rag.addContent, {
               content: courseContent,
               userId: args.userId,
@@ -175,10 +190,13 @@ export const generateCourseContentEmbeddings = action({
 
           for (const chapter of chapters) {
             try {
-              const existingChapterEmbeddings = await ctx.runQuery(internal.embeddings.checkExistingEmbeddings, {
-                sourceId: chapter._id,
-                sourceType: "chapter",
-              });
+              const existingChapterEmbeddings = await ctx.runQuery(
+                internal.embeddings.checkExistingEmbeddings,
+                {
+                  sourceId: chapter._id,
+                  sourceType: "chapter",
+                }
+              );
 
               if (existingChapterEmbeddings === 0 || args.overwrite) {
                 if (existingChapterEmbeddings > 0 && args.overwrite) {
@@ -188,8 +206,8 @@ export const generateCourseContentEmbeddings = action({
                   });
                 }
 
-                const chapterContent = `${chapter.title}\n${chapter.description || ''}\nFrom course: ${course.title}`;
-                
+                const chapterContent = `${chapter.title}\n${chapter.description || ""}\nFrom course: ${course.title}`;
+
                 await ctx.runMutation(api.rag.addContent, {
                   content: chapterContent,
                   userId: args.userId,
@@ -211,7 +229,7 @@ export const generateCourseContentEmbeddings = action({
                 results.skipped++;
               }
 
-              await new Promise(resolve => setTimeout(resolve, 50));
+              await new Promise((resolve) => setTimeout(resolve, 50));
             } catch (error) {
               results.errors.push(`Chapter ${chapter.title}: ${error}`);
             }
@@ -229,10 +247,13 @@ export const generateCourseContentEmbeddings = action({
 
             for (const lesson of lessons) {
               try {
-                const existingLessonEmbeddings = await ctx.runQuery(internal.embeddings.checkExistingEmbeddings, {
-                  sourceId: lesson._id,
-                  sourceType: "lesson",
-                });
+                const existingLessonEmbeddings = await ctx.runQuery(
+                  internal.embeddings.checkExistingEmbeddings,
+                  {
+                    sourceId: lesson._id,
+                    sourceType: "lesson",
+                  }
+                );
 
                 if (existingLessonEmbeddings === 0 || args.overwrite) {
                   if (existingLessonEmbeddings > 0 && args.overwrite) {
@@ -242,7 +263,7 @@ export const generateCourseContentEmbeddings = action({
                     });
                   }
 
-                  const lessonContent = `${lesson.title}\n${lesson.description || ''}\nCourse: ${course.title}\nModule: ${module.title}`;
+                  const lessonContent = `${lesson.title}\n${lesson.description || ""}\nCourse: ${course.title}\nModule: ${module.title}`;
 
                   await ctx.runMutation(api.rag.addContent, {
                     content: lessonContent,
@@ -266,20 +287,22 @@ export const generateCourseContentEmbeddings = action({
                   results.skipped++;
                 }
 
-                await new Promise(resolve => setTimeout(resolve, 50));
+                await new Promise((resolve) => setTimeout(resolve, 50));
               } catch (error) {
                 results.errors.push(`Lesson ${lesson.title}: ${error}`);
               }
             }
           }
 
-          await new Promise(resolve => setTimeout(resolve, 200));
+          await new Promise((resolve) => setTimeout(resolve, 200));
         } catch (error) {
           results.errors.push(`Course ${course.title}: ${error}`);
         }
       }
 
-      console.log(`📚 Course content complete! Processed: ${results.processed}, Skipped: ${results.skipped}`);
+      console.log(
+        `📚 Course content complete! Processed: ${results.processed}, Skipped: ${results.skipped}`
+      );
     } catch (error) {
       results.success = false;
       results.errors.push(`Fatal error: ${error}`);
@@ -317,10 +340,12 @@ export const generateProductEmbeddings = action({
 
     try {
       const allProducts = await ctx.runQuery(internal.embeddings.getAllDigitalProducts, {});
-      
+
       // Filter out plugins - those go in the plugins embedding action
-      const products = allProducts.filter(p => !PLUGIN_TYPES.includes(p.productType || ""));
-      console.log(`🎹 Starting product embedding for ${products.length} products (excluding ${allProducts.length - products.length} plugins)`);
+      const products = allProducts.filter((p: any) => !PLUGIN_TYPES.includes(p.productType || ""));
+      console.log(
+        `🎹 Starting product embedding for ${products.length} products (excluding ${allProducts.length - products.length} plugins)`
+      );
 
       for (const product of products) {
         try {
@@ -340,8 +365,8 @@ export const generateProductEmbeddings = action({
             const productType = product.productCategory || product.productType || "digital product";
             const productContent = `${product.title}
 Type: ${productType}
-${product.description || ''}
-Category: ${product.category || 'uncategorized'}
+${product.description || ""}
+Category: ${product.category || "uncategorized"}
 Price: $${product.price}`;
 
             await ctx.runMutation(api.rag.addContent, {
@@ -367,14 +392,15 @@ Price: $${product.price}`;
             results.skipped++;
           }
 
-          await new Promise(resolve => setTimeout(resolve, 50));
+          await new Promise((resolve) => setTimeout(resolve, 50));
         } catch (error) {
           results.errors.push(`Product ${product.title}: ${error}`);
         }
       }
 
-      console.log(`🎹 Product embeddings complete! Processed: ${results.processed}, Skipped: ${results.skipped}`);
-
+      console.log(
+        `🎹 Product embeddings complete! Processed: ${results.processed}, Skipped: ${results.skipped}`
+      );
     } catch (error) {
       results.success = false;
       results.errors.push(`Fatal error: ${error}`);
@@ -412,9 +438,9 @@ export const generatePluginEmbeddings = action({
 
     try {
       const allProducts = await ctx.runQuery(internal.embeddings.getAllDigitalProducts, {});
-      
+
       // Filter for plugins only
-      const plugins = allProducts.filter(p => PLUGIN_TYPES.includes(p.productType || ""));
+      const plugins = allProducts.filter((p: any) => PLUGIN_TYPES.includes(p.productType || ""));
       console.log(`⚡ Starting plugin embedding for ${plugins.length} plugins/effect chains`);
 
       for (const plugin of plugins) {
@@ -440,8 +466,8 @@ export const generatePluginEmbeddings = action({
 
             const pluginContent = `${plugin.title}
 Type: ${typeName}
-${plugin.description || ''}
-Category: ${plugin.category || 'audio tools'}
+${plugin.description || ""}
+Category: ${plugin.category || "audio tools"}
 Price: $${plugin.price}`;
 
             await ctx.runMutation(api.rag.addContent, {
@@ -468,14 +494,15 @@ Price: $${plugin.price}`;
             results.skipped++;
           }
 
-          await new Promise(resolve => setTimeout(resolve, 50));
+          await new Promise((resolve) => setTimeout(resolve, 50));
         } catch (error) {
           results.errors.push(`Plugin ${plugin.title}: ${error}`);
         }
       }
 
-      console.log(`⚡ Plugin embeddings complete! Processed: ${results.processed}, Skipped: ${results.skipped}`);
-
+      console.log(
+        `⚡ Plugin embeddings complete! Processed: ${results.processed}, Skipped: ${results.skipped}`
+      );
     } catch (error) {
       results.success = false;
       results.errors.push(`Fatal error: ${error}`);
@@ -559,14 +586,15 @@ export const generateNoteEmbeddings = action({
             results.skipped++;
           }
 
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise((resolve) => setTimeout(resolve, 100));
         } catch (error) {
           results.errors.push(`Note ${note.title}: ${error}`);
         }
       }
 
-      console.log(`📝 Note embeddings complete! Processed: ${results.processed}, Skipped: ${results.skipped}`);
-
+      console.log(
+        `📝 Note embeddings complete! Processed: ${results.processed}, Skipped: ${results.skipped}`
+      );
     } catch (error) {
       results.success = false;
       results.errors.push(`Fatal error: ${error}`);
@@ -584,20 +612,25 @@ export const generateAllContentEmbeddings = action({
   args: {
     userId: v.string(),
     overwrite: v.boolean(),
-    contentTypes: v.array(v.union(
-      v.literal("courseContent"),
-      v.literal("products"),
-      v.literal("plugins"),
-      v.literal("notes")
-    )),
+    contentTypes: v.array(
+      v.union(
+        v.literal("courseContent"),
+        v.literal("products"),
+        v.literal("plugins"),
+        v.literal("notes")
+      )
+    ),
   },
   returns: v.object({
     success: v.boolean(),
-    results: v.record(v.string(), v.object({
-      processed: v.number(),
-      skipped: v.number(),
-      errors: v.number(),
-    })),
+    results: v.record(
+      v.string(),
+      v.object({
+        processed: v.number(),
+        skipped: v.number(),
+        errors: v.number(),
+      })
+    ),
     totalProcessed: v.number(),
     totalErrors: v.array(v.string()),
   }),
@@ -609,7 +642,9 @@ export const generateAllContentEmbeddings = action({
       totalErrors: [] as string[],
     };
 
-    console.log(`🚀 Starting comprehensive embedding generation for: ${args.contentTypes.join(", ")}`);
+    console.log(
+      `🚀 Starting comprehensive embedding generation for: ${args.contentTypes.join(", ")}`
+    );
 
     for (const contentType of args.contentTypes) {
       const config = CONTENT_TYPES[contentType];
@@ -651,7 +686,7 @@ export const generateAllContentEmbeddings = action({
         };
         finalResults.totalProcessed += result.processed;
         finalResults.totalErrors.push(...result.errors);
-        
+
         if (!result.success) {
           finalResults.success = false;
         }

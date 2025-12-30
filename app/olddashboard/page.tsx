@@ -7,17 +7,23 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
-import { getUserFromClerk, getUserEnrollments, getUserCourses, getFeaturedCourses, getPopularCourses } from "@/lib/data";
+import {
+  getUserFromClerk,
+  getUserEnrollments,
+  getUserCourses,
+  getFeaturedCourses,
+  getPopularCourses,
+} from "@/lib/data";
 
 // Force dynamic rendering for this page
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 import { ensureUserExists } from "@/app/actions/user-actions";
-import { 
-  BookOpen, 
-  Users, 
-  TrendingUp, 
-  Clock, 
-  PlayCircle, 
+import {
+  BookOpen,
+  Users,
+  TrendingUp,
+  Clock,
+  PlayCircle,
   Star,
   Calendar,
   Award,
@@ -43,7 +49,7 @@ import {
   GraduationCap,
   Video,
   UserCheck,
-  RefreshCw
+  RefreshCw,
 } from "lucide-react";
 import { StudentDashboard } from "@/components/dashboard/student-dashboard";
 import { CreatorDashboard } from "@/components/dashboard/creator-dashboard";
@@ -53,18 +59,18 @@ import { UserSyncFallback, UserErrorFallback } from "@/components/user-sync-fall
 
 export default async function olddashboard() {
   const { userId: clerkId } = await auth();
-  
+
   if (!clerkId) {
     redirect("/");
   }
 
   // Try to get user from database first
   let user = await getUserFromClerk(clerkId);
-  
+
   // If user doesn't exist, try to create them automatically
   if (!user) {
     console.log(`⚠️ User not found in database, attempting automatic creation...`);
-    
+
     try {
       const result = await ensureUserExists();
       if (result.success) {
@@ -96,22 +102,25 @@ export default async function olddashboard() {
   const dashboardStats = {
     enrolledCourses: enrollments.length,
     createdCourses: courses.length,
-    totalStudents: courses.reduce((acc, course) => acc + (course._count?.enrollments || 0), 0),
+    totalStudents: courses.reduce(
+      (acc: number, course: any) => acc + (course._count?.enrollments || 0),
+      0
+    ),
     completedCourses: enrollments.filter((e: any) => e.progress === 100).length,
   };
 
   // Format user data for navbar
   const navbarUser = {
-    name: user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'User',
+    name: user.name || `${user.firstName || ""} ${user.lastName || ""}`.trim() || "User",
     instructor: courses.length > 0,
-    admin: user.admin || false
+    admin: user.admin || false,
   };
 
   return (
     <>
       <DashboardNavbar user={navbarUser} />
       <div className="min-h-screen bg-slate-50 pt-16">
-        <UnifiedDashboard 
+        <UnifiedDashboard
           user={user}
           enrollments={enrollments}
           userCourses={courses}
@@ -122,4 +131,4 @@ export default async function olddashboard() {
       </div>
     </>
   );
-} 
+}

@@ -55,9 +55,9 @@ export default function AdminRevenuePage() {
 
   if (!overview || !revenueData || !topCourses || !topCreators) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex h-screen items-center justify-center">
         <div className="text-center">
-          <Activity className="w-12 h-12 animate-spin mx-auto mb-4 text-purple-600" />
+          <Activity className="mx-auto mb-4 h-12 w-12 animate-spin text-purple-600" />
           <p className="text-muted-foreground">Loading revenue data...</p>
         </div>
       </div>
@@ -66,19 +66,23 @@ export default function AdminRevenuePage() {
 
   // Calculate some metrics
   const totalRevenue = overview.totalRevenue;
-  const avgRevenuePerDay = revenueData.length > 0 
-    ? revenueData.reduce((sum, d) => sum + d.revenue, 0) / revenueData.length 
-    : 0;
-  const lastWeekRevenue = revenueData.slice(-7).reduce((sum, d) => sum + d.revenue, 0);
-  const prevWeekRevenue = revenueData.slice(-14, -7).reduce((sum, d) => sum + d.revenue, 0);
-  const weeklyGrowth = prevWeekRevenue > 0 
-    ? ((lastWeekRevenue - prevWeekRevenue) / prevWeekRevenue * 100).toFixed(1)
-    : 0;
+  const avgRevenuePerDay =
+    revenueData.length > 0
+      ? revenueData.reduce((sum: number, d: any) => sum + d.revenue, 0) / revenueData.length
+      : 0;
+  const lastWeekRevenue = revenueData.slice(-7).reduce((sum: number, d: any) => sum + d.revenue, 0);
+  const prevWeekRevenue = revenueData
+    .slice(-14, -7)
+    .reduce((sum: number, d: any) => sum + d.revenue, 0);
+  const weeklyGrowth =
+    prevWeekRevenue > 0
+      ? (((lastWeekRevenue - prevWeekRevenue) / prevWeekRevenue) * 100).toFixed(1)
+      : 0;
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
@@ -86,7 +90,7 @@ export default function AdminRevenuePage() {
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
   return (
@@ -95,86 +99,89 @@ export default function AdminRevenuePage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-4xl font-bold tracking-tight">Revenue Dashboard</h1>
-          <p className="text-muted-foreground mt-2 text-lg">
+          <p className="mt-2 text-lg text-muted-foreground">
             Track platform revenue, transactions, and creator earnings
           </p>
         </div>
         <div className="flex items-center gap-3">
           <Button variant="outline" className="gap-2">
-            <Download className="w-4 h-4" />
+            <Download className="h-4 w-4" />
             Export Report
           </Button>
           <Badge variant="outline" className="px-3 py-1.5">
-            <Calendar className="w-3.5 h-3.5 mr-1.5" />
+            <Calendar className="mr-1.5 h-3.5 w-3.5" />
             Last 30 days
           </Badge>
         </div>
       </div>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="border-2 hover:shadow-lg transition-shadow">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="border-2 transition-shadow hover:shadow-lg">
           <CardContent className="p-6">
-            <div className="flex items-start justify-between mb-3">
+            <div className="mb-3 flex items-start justify-between">
               <div className="rounded-full bg-purple-500/10 p-3">
-                <DollarSign className="w-6 h-6 text-purple-500" />
+                <DollarSign className="h-6 w-6 text-purple-500" />
               </div>
-              <div className="flex items-center gap-1 text-xs font-semibold text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-full">
-                <ArrowUpRight className="w-3 h-3" />
-                +{weeklyGrowth}%
+              <div className="flex items-center gap-1 rounded-full bg-green-50 px-2 py-1 text-xs font-semibold text-green-600 dark:bg-green-900/20">
+                <ArrowUpRight className="h-3 w-3" />+{weeklyGrowth}%
               </div>
             </div>
             <div className="space-y-1">
               <p className="text-3xl font-bold tracking-tight">{formatCurrency(totalRevenue)}</p>
-              <p className="text-sm text-muted-foreground font-medium">Total Revenue</p>
+              <p className="text-sm font-medium text-muted-foreground">Total Revenue</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-2 hover:shadow-lg transition-shadow">
+        <Card className="border-2 transition-shadow hover:shadow-lg">
           <CardContent className="p-6">
-            <div className="flex items-start justify-between mb-3">
+            <div className="mb-3 flex items-start justify-between">
               <div className="rounded-full bg-green-500/10 p-3">
-                <TrendingUp className="w-6 h-6 text-green-500" />
+                <TrendingUp className="h-6 w-6 text-green-500" />
               </div>
-              <div className="flex items-center gap-1 text-xs font-semibold text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-full">
-                <ArrowUpRight className="w-3 h-3" />
+              <div className="flex items-center gap-1 rounded-full bg-green-50 px-2 py-1 text-xs font-semibold text-green-600 dark:bg-green-900/20">
+                <ArrowUpRight className="h-3 w-3" />
                 +12.3%
               </div>
             </div>
             <div className="space-y-1">
-              <p className="text-3xl font-bold tracking-tight">{formatCurrency(avgRevenuePerDay)}</p>
-              <p className="text-sm text-muted-foreground font-medium">Avg. Daily Revenue</p>
+              <p className="text-3xl font-bold tracking-tight">
+                {formatCurrency(avgRevenuePerDay)}
+              </p>
+              <p className="text-sm font-medium text-muted-foreground">Avg. Daily Revenue</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-2 hover:shadow-lg transition-shadow">
+        <Card className="border-2 transition-shadow hover:shadow-lg">
           <CardContent className="p-6">
-            <div className="flex items-start justify-between mb-3">
+            <div className="mb-3 flex items-start justify-between">
               <div className="rounded-full bg-blue-500/10 p-3">
-                <ShoppingCart className="w-6 h-6 text-blue-500" />
+                <ShoppingCart className="h-6 w-6 text-blue-500" />
               </div>
-              <div className="flex items-center gap-1 text-xs font-semibold text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-full">
-                <ArrowUpRight className="w-3 h-3" />
+              <div className="flex items-center gap-1 rounded-full bg-green-50 px-2 py-1 text-xs font-semibold text-green-600 dark:bg-green-900/20">
+                <ArrowUpRight className="h-3 w-3" />
                 +18.4%
               </div>
             </div>
             <div className="space-y-1">
-              <p className="text-3xl font-bold tracking-tight">{overview.totalEnrollments.toLocaleString()}</p>
-              <p className="text-sm text-muted-foreground font-medium">Total Transactions</p>
+              <p className="text-3xl font-bold tracking-tight">
+                {overview.totalEnrollments.toLocaleString()}
+              </p>
+              <p className="text-sm font-medium text-muted-foreground">Total Transactions</p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-2 hover:shadow-lg transition-shadow">
+        <Card className="border-2 transition-shadow hover:shadow-lg">
           <CardContent className="p-6">
-            <div className="flex items-start justify-between mb-3">
+            <div className="mb-3 flex items-start justify-between">
               <div className="rounded-full bg-orange-500/10 p-3">
-                <CreditCard className="w-6 h-6 text-orange-500" />
+                <CreditCard className="h-6 w-6 text-orange-500" />
               </div>
-              <div className="flex items-center gap-1 text-xs font-semibold text-green-600 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-full">
-                <ArrowUpRight className="w-3 h-3" />
+              <div className="flex items-center gap-1 rounded-full bg-green-50 px-2 py-1 text-xs font-semibold text-green-600 dark:bg-green-900/20">
+                <ArrowUpRight className="h-3 w-3" />
                 +8.7%
               </div>
             </div>
@@ -182,7 +189,7 @@ export default function AdminRevenuePage() {
               <p className="text-3xl font-bold tracking-tight">
                 {formatCurrency(totalRevenue / (overview.totalEnrollments || 1))}
               </p>
-              <p className="text-sm text-muted-foreground font-medium">Avg. Transaction Value</p>
+              <p className="text-sm font-medium text-muted-foreground">Avg. Transaction Value</p>
             </div>
           </CardContent>
         </Card>
@@ -194,9 +201,15 @@ export default function AdminRevenuePage() {
           <div className="flex items-center justify-between">
             <CardTitle className="text-2xl font-bold">Revenue Trend</CardTitle>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm">7 Days</Button>
-              <Button variant="outline" size="sm">30 Days</Button>
-              <Button variant="default" size="sm">90 Days</Button>
+              <Button variant="outline" size="sm">
+                7 Days
+              </Button>
+              <Button variant="outline" size="sm">
+                30 Days
+              </Button>
+              <Button variant="default" size="sm">
+                90 Days
+              </Button>
             </div>
           </div>
         </CardHeader>
@@ -204,24 +217,17 @@ export default function AdminRevenuePage() {
           <ResponsiveContainer width="100%" height={400}>
             <LineChart data={revenueData}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                dataKey="date" 
-                tick={{ fontSize: 12 }}
-                tickFormatter={formatDate}
-              />
-              <YAxis 
-                tick={{ fontSize: 12 }}
-                tickFormatter={(value) => `$${value}`}
-              />
-              <Tooltip 
+              <XAxis dataKey="date" tick={{ fontSize: 12 }} tickFormatter={formatDate} />
+              <YAxis tick={{ fontSize: 12 }} tickFormatter={(value) => `$${value}`} />
+              <Tooltip
                 formatter={(value: number) => formatCurrency(value)}
                 labelFormatter={(date) => new Date(date).toLocaleDateString()}
               />
               <Legend />
-              <Line 
-                type="monotone" 
-                dataKey="revenue" 
-                stroke="#8b5cf6" 
+              <Line
+                type="monotone"
+                dataKey="revenue"
+                stroke="#8b5cf6"
                 strokeWidth={3}
                 name="Daily Revenue"
                 dot={{ r: 4 }}
@@ -234,13 +240,13 @@ export default function AdminRevenuePage() {
 
       {/* Tabs */}
       <Tabs defaultValue="courses" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 h-12 p-1">
-          <TabsTrigger value="courses" className="text-base gap-2">
-            <ShoppingCart className="w-4 h-4" />
+        <TabsList className="grid h-12 w-full grid-cols-2 p-1">
+          <TabsTrigger value="courses" className="gap-2 text-base">
+            <ShoppingCart className="h-4 w-4" />
             Top Courses by Revenue
           </TabsTrigger>
-          <TabsTrigger value="creators" className="text-base gap-2">
-            <Users className="w-4 h-4" />
+          <TabsTrigger value="creators" className="gap-2 text-base">
+            <Users className="h-4 w-4" />
             Top Creators by Earnings
           </TabsTrigger>
         </TabsList>
@@ -253,17 +259,17 @@ export default function AdminRevenuePage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {topCourses.map((course, index) => (
+                {topCourses.map((course: any, index: number) => (
                   <div
                     key={course.courseId}
-                    className="flex items-center gap-4 p-4 rounded-lg hover:bg-muted/50 transition-colors border"
+                    className="flex items-center gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50"
                   >
-                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-purple-500/10 flex items-center justify-center font-bold text-purple-600 text-lg">
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-purple-500/10 text-lg font-bold text-purple-600">
                       {index + 1}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-lg truncate">{course.title}</p>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-lg font-bold">{course.title}</p>
+                      <div className="mt-1 flex items-center gap-4 text-sm text-muted-foreground">
                         <span>{course.enrollments} sales</span>
                         <span>•</span>
                         <span>{course.views} views</span>
@@ -272,10 +278,10 @@ export default function AdminRevenuePage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-green-600 text-2xl">
+                      <p className="text-2xl font-bold text-green-600">
                         {formatCurrency(course.revenue)}
                       </p>
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="mt-1 text-xs text-muted-foreground">
                         {formatCurrency(course.revenue / course.enrollments)} avg
                       </p>
                     </div>
@@ -296,24 +302,17 @@ export default function AdminRevenuePage() {
               <ResponsiveContainer width="100%" height={500}>
                 <BarChart data={topCreators} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    type="number" 
+                  <XAxis
+                    type="number"
                     tick={{ fontSize: 12 }}
                     tickFormatter={(value) => `$${value.toLocaleString()}`}
                   />
-                  <YAxis 
-                    type="category" 
-                    dataKey="name" 
-                    tick={{ fontSize: 12 }}
-                    width={150}
-                  />
-                  <Tooltip 
-                    formatter={(value: number) => formatCurrency(value)}
-                  />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={150} />
+                  <Tooltip formatter={(value: number) => formatCurrency(value)} />
                   <Legend />
-                  <Bar 
-                    dataKey="totalRevenue" 
-                    fill="#8b5cf6" 
+                  <Bar
+                    dataKey="totalRevenue"
+                    fill="#8b5cf6"
                     name="Total Revenue"
                     radius={[0, 8, 8, 0]}
                   />
@@ -326,4 +325,3 @@ export default function AdminRevenuePage() {
     </div>
   );
 }
-

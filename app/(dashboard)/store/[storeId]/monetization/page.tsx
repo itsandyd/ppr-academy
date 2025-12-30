@@ -22,23 +22,23 @@ export default function MonetizationPage() {
 
   if (!user || !store) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex min-h-screen items-center justify-center">
         <p>Loading...</p>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-8">
+    <div className="container mx-auto space-y-8 py-8">
       <div>
-        <h1 className="text-4xl font-bold mb-2">💰 Monetization</h1>
+        <h1 className="mb-2 text-4xl font-bold">💰 Monetization</h1>
         <p className="text-muted-foreground">
           Manage coupons, affiliates, bundles, and more to grow your revenue
         </p>
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Active Coupons</CardTitle>
@@ -46,10 +46,10 @@ export default function MonetizationPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {coupons?.filter((c) => c.isActive).length || 0}
+              {coupons?.filter((c: any) => c.isActive).length || 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              {coupons?.reduce((sum, c) => sum + c.currentUses, 0) || 0} total uses
+              {coupons?.reduce((sum: number, c: any) => sum + c.currentUses, 0) || 0} total uses
             </p>
           </CardContent>
         </Card>
@@ -62,7 +62,7 @@ export default function MonetizationPage() {
           <CardContent>
             <div className="text-2xl font-bold">{affiliates?.length || 0}</div>
             <p className="text-xs text-muted-foreground">
-              {affiliates?.reduce((sum, a) => sum + a.totalSales, 0) || 0} total sales
+              {affiliates?.reduce((sum: number, a: any) => sum + a.totalSales, 0) || 0} total sales
             </p>
           </CardContent>
         </Card>
@@ -75,7 +75,7 @@ export default function MonetizationPage() {
           <CardContent>
             <div className="text-2xl font-bold">{bundles?.length || 0}</div>
             <p className="text-xs text-muted-foreground">
-              {bundles?.filter((b) => b.isPublished).length || 0} published
+              {bundles?.filter((b: any) => b.isPublished).length || 0} published
             </p>
           </CardContent>
         </Card>
@@ -87,7 +87,10 @@ export default function MonetizationPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${((affiliates?.reduce((sum, a) => sum + a.totalRevenue, 0) || 0) / 100).toFixed(0)}
+              $
+              {(
+                (affiliates?.reduce((sum: number, a: any) => sum + a.totalRevenue, 0) || 0) / 100
+              ).toFixed(0)}
             </div>
             <p className="text-xs text-muted-foreground">Generated via affiliates</p>
           </CardContent>
@@ -118,10 +121,10 @@ export default function MonetizationPage() {
             <CardContent>
               {affiliates && affiliates.length > 0 ? (
                 <div className="space-y-4">
-                  {affiliates.map((affiliate) => (
+                  {affiliates.map((affiliate: any) => (
                     <div
                       key={affiliate._id}
-                      className="flex items-center justify-between p-4 border rounded-lg"
+                      className="flex items-center justify-between rounded-lg border p-4"
                     >
                       <div>
                         <p className="font-medium">Affiliate Code: {affiliate.affiliateCode}</p>
@@ -139,10 +142,10 @@ export default function MonetizationPage() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-12">
-                  <Users className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                <div className="py-12 text-center">
+                  <Users className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
                   <p className="text-muted-foreground">No active affiliates yet</p>
-                  <p className="text-sm text-muted-foreground mt-2">
+                  <p className="mt-2 text-sm text-muted-foreground">
                     Affiliates will appear here once approved
                   </p>
                 </div>
@@ -162,10 +165,10 @@ export default function MonetizationPage() {
             <CardContent>
               {bundles && bundles.length > 0 ? (
                 <div className="space-y-4">
-                  {bundles.map((bundle) => (
+                  {bundles.map((bundle: any) => (
                     <div
                       key={bundle._id}
-                      className="flex items-center justify-between p-4 border rounded-lg"
+                      className="flex items-center justify-between rounded-lg border p-4"
                     >
                       <div>
                         <p className="font-medium">{bundle.name}</p>
@@ -174,9 +177,7 @@ export default function MonetizationPage() {
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold">
-                          ${(bundle.bundlePrice / 100).toFixed(2)}
-                        </p>
+                        <p className="font-bold">${(bundle.bundlePrice / 100).toFixed(2)}</p>
                         <p className="text-xs text-green-600">
                           Save ${(bundle.savings / 100).toFixed(2)} ({bundle.discountPercentage}%)
                         </p>
@@ -185,10 +186,10 @@ export default function MonetizationPage() {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-12">
-                  <Package className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                <div className="py-12 text-center">
+                  <Package className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
                   <p className="text-muted-foreground">No bundles created yet</p>
-                  <p className="text-sm text-muted-foreground mt-2">
+                  <p className="mt-2 text-sm text-muted-foreground">
                     Create bundles to increase average order value
                   </p>
                 </div>
@@ -206,10 +207,10 @@ export default function MonetizationPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-12">
-                <DollarSign className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+              <div className="py-12 text-center">
+                <DollarSign className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
                 <p className="text-muted-foreground">Payout system ready</p>
-                <p className="text-sm text-muted-foreground mt-2">
+                <p className="mt-2 text-sm text-muted-foreground">
                   Connect Stripe to enable automated payouts
                 </p>
               </div>
@@ -220,8 +221,3 @@ export default function MonetizationPage() {
     </div>
   );
 }
-
-
-
-
-

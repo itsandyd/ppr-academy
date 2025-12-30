@@ -12,7 +12,7 @@ import Link from "next/link";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export default function CampaignDetailPage() {
   const params = useParams();
@@ -74,7 +74,11 @@ export default function CampaignDetailPage() {
 
     const recipientCount = campaign.recipientCount || 0;
 
-    if (!confirm(`Create a new draft campaign with the same content and ${recipientCount.toLocaleString()} recipients?`)) {
+    if (
+      !confirm(
+        `Create a new draft campaign with the same content and ${recipientCount.toLocaleString()} recipients?`
+      )
+    ) {
       return;
     }
 
@@ -82,7 +86,8 @@ export default function CampaignDetailPage() {
     try {
       toast({
         title: "Duplicating campaign...",
-        description: "Copying campaign and all recipients. This may take a moment for large campaigns.",
+        description:
+          "Copying campaign and all recipients. This may take a moment for large campaigns.",
       });
 
       // Create a duplicate campaign
@@ -104,13 +109,14 @@ export default function CampaignDetailPage() {
       let cursor: string | undefined = undefined;
 
       while (hasMore) {
-        const result = await duplicateAllRecipients({
-          sourceCampaignId: campaign._id,
-          targetCampaignId: newCampaignId,
-          batchSize: 100,
-          cursor,
-          currentTotalCount: totalCopied,
-        });
+        const result: { totalCount: number; hasMore: boolean; nextCursor?: string } =
+          await duplicateAllRecipients({
+            sourceCampaignId: campaign._id,
+            targetCampaignId: newCampaignId,
+            batchSize: 100,
+            cursor,
+            currentTotalCount: totalCopied,
+          });
 
         totalCopied = result.totalCount;
         hasMore = result.hasMore;
@@ -154,35 +160,31 @@ export default function CampaignDetailPage() {
     };
 
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.draft;
-    return (
-      <Badge className={config.color}>
-        {config.label}
-      </Badge>
-    );
+    return <Badge className={config.color}>{config.label}</Badge>;
   };
 
   if (campaign === undefined) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      <div className="flex min-h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   if (campaign === null) {
     return (
-      <div className="max-w-4xl mx-auto p-6">
+      <div className="mx-auto max-w-4xl p-6">
         <Card>
           <CardHeader>
             <CardTitle>Campaign Not Found</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground mb-4">
+            <p className="mb-4 text-muted-foreground">
               The campaign you're looking for doesn't exist or has been deleted.
             </p>
             <Button asChild variant="outline">
               <Link href={`/store/${storeId}/email-campaigns`}>
-                <ArrowLeft className="w-4 h-4 mr-2" />
+                <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to Campaigns
               </Link>
             </Button>
@@ -196,14 +198,14 @@ export default function CampaignDetailPage() {
   const canResend = campaign.status === "sent" || campaign.status === "failed";
 
   return (
-    <div className="max-w-5xl mx-auto p-6 space-y-6">
+    <div className="mx-auto max-w-5xl space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <Button asChild variant="ghost" size="sm">
               <Link href={`/store/${storeId}/email-campaigns`}>
-                <ArrowLeft className="w-4 h-4 mr-2" />
+                <ArrowLeft className="mr-2 h-4 w-4" />
                 Back
               </Link>
             </Button>
@@ -224,12 +226,12 @@ export default function CampaignDetailPage() {
             <Button onClick={handleResend} disabled={isResending} variant="outline">
               {isResending ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Duplicating...
                 </>
               ) : (
                 <>
-                  <Copy className="w-4 h-4 mr-2" />
+                  <Copy className="mr-2 h-4 w-4" />
                   Resend Campaign
                 </>
               )}
@@ -240,12 +242,12 @@ export default function CampaignDetailPage() {
             <Button onClick={handleSend} disabled={isSending}>
               {isSending ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Sending...
                 </>
               ) : (
                 <>
-                  <Send className="w-4 h-4 mr-2" />
+                  <Send className="mr-2 h-4 w-4" />
                   Send Campaign
                 </>
               )}
@@ -285,7 +287,7 @@ export default function CampaignDetailPage() {
             <div className="text-2xl font-bold">{campaign.openedCount || 0}</div>
             {campaign.deliveredCount && campaign.deliveredCount > 0 && (
               <p className="text-xs text-muted-foreground">
-                {Math.round((campaign.openedCount || 0) / campaign.deliveredCount * 100)}% rate
+                {Math.round(((campaign.openedCount || 0) / campaign.deliveredCount) * 100)}% rate
               </p>
             )}
           </CardContent>
@@ -300,7 +302,7 @@ export default function CampaignDetailPage() {
             <div className="text-2xl font-bold">{campaign.clickedCount || 0}</div>
             {campaign.openedCount && campaign.openedCount > 0 && (
               <p className="text-xs text-muted-foreground">
-                {Math.round((campaign.clickedCount || 0) / campaign.openedCount * 100)}% rate
+                {Math.round(((campaign.clickedCount || 0) / campaign.openedCount) * 100)}% rate
               </p>
             )}
           </CardContent>
@@ -347,8 +349,8 @@ export default function CampaignDetailPage() {
           <CardTitle>Email Content</CardTitle>
         </CardHeader>
         <CardContent>
-          <div 
-            className="prose prose-sm max-w-none border rounded-lg p-4 bg-muted/30"
+          <div
+            className="prose prose-sm max-w-none rounded-lg border bg-muted/30 p-4"
             dangerouslySetInnerHTML={{ __html: campaign.content }}
           />
         </CardContent>
@@ -361,13 +363,14 @@ export default function CampaignDetailPage() {
             <CardTitle>Recipients</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg">
-              <Users className="w-8 h-8 text-muted-foreground" />
+            <div className="flex items-center gap-4 rounded-lg bg-muted/30 p-4">
+              <Users className="h-8 w-8 text-muted-foreground" />
               <div>
                 <p className="text-2xl font-bold">{campaign.recipientCount.toLocaleString()}</p>
                 <p className="text-sm text-muted-foreground">
                   {campaign.status === "draft" && "Ready to send"}
-                  {campaign.status === "sent" && `Sent to ${campaign.sentCount || campaign.recipientCount} recipients`}
+                  {campaign.status === "sent" &&
+                    `Sent to ${campaign.sentCount || campaign.recipientCount} recipients`}
                   {campaign.status === "sending" && "Currently sending..."}
                   {campaign.status === "failed" && "Send failed"}
                 </p>
@@ -379,4 +382,3 @@ export default function CampaignDetailPage() {
     </div>
   );
 }
-

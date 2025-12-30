@@ -414,8 +414,8 @@ ${currentCriticOutput.issues.map((i) => `- Fix ${i.type}: ${i.description}`).joi
     console.log("✍️ Stage 7: Writing final response...");
 
     // Collect all source chunks for citation building
-    const allSourceChunks = retrieverOutput.buckets.flatMap((bucket) =>
-      bucket.chunks.map((chunk) => ({
+    const allSourceChunks = retrieverOutput.buckets.flatMap((bucket: any) =>
+      bucket.chunks.map((chunk: any) => ({
         id: chunk.id,
         title: chunk.title,
         sourceType: chunk.sourceType,
@@ -779,14 +779,14 @@ export const askAgenticAI = action({
       }
 
       // Check if any actions need confirmation
-      const needsConfirmation = proposedActions.some((a) => a.requiresConfirmation);
+      const needsConfirmation = proposedActions.some((a: any) => a.requiresConfirmation);
 
       if (!needsConfirmation) {
         // Auto-execute if no confirmation needed
         console.log("⚡ Auto-executing non-confirmation actions...");
 
         const result = await ctx.runAction(internal.masterAI.tools.executor.executeTools, {
-          toolCalls: planResult.toolCalls.map((tc) => ({
+          toolCalls: planResult.toolCalls.map((tc: any) => ({
             tool: tc.tool,
             parameters: tc.parameters,
           })),

@@ -8,12 +8,7 @@ import { useEffect, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Eye, Users } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface LiveViewerBadgeProps {
@@ -22,20 +17,20 @@ interface LiveViewerBadgeProps {
   showAvatars?: boolean;
 }
 
-export function LiveViewerBadge({ 
-  courseId, 
-  chapterId, 
-  showAvatars = false 
+export function LiveViewerBadge({
+  courseId,
+  chapterId,
+  showAvatars = false,
 }: LiveViewerBadgeProps) {
   const { user } = useUser();
   const recordPresence = useMutation(api.liveViewers.recordPresence);
   const removePresence = useMutation(api.liveViewers.removePresence);
-  
+
   // Get viewer count
-  const viewerData = useQuery(
-    api.liveViewers.getLiveViewerCount,
-    { courseId, chapterId: chapterId || undefined }
-  );
+  const viewerData = useQuery(api.liveViewers.getLiveViewerCount, {
+    courseId,
+    chapterId: chapterId || undefined,
+  });
 
   // Get active viewers with details (if showing avatars)
   const activeViewers = useQuery(
@@ -50,18 +45,18 @@ export function LiveViewerBadge({
     if (!user?.id) return;
 
     // Send initial presence
-    recordPresence({ 
-      courseId, 
-      chapterId: chapterId || undefined, 
-      userId: user.id 
+    recordPresence({
+      courseId,
+      chapterId: chapterId || undefined,
+      userId: user.id,
     });
 
     // Send heartbeat every 30 seconds
     heartbeatIntervalRef.current = setInterval(() => {
-      recordPresence({ 
-        courseId, 
-        chapterId: chapterId || undefined, 
-        userId: user.id 
+      recordPresence({
+        courseId,
+        chapterId: chapterId || undefined,
+        userId: user.id,
       });
     }, 30000); // 30 seconds
 
@@ -91,7 +86,7 @@ export function LiveViewerBadge({
           >
             <Badge
               variant="secondary"
-              className="flex items-center gap-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20 transition-colors"
+              className="flex items-center gap-2 border-emerald-500/20 bg-emerald-500/10 text-emerald-600 transition-colors hover:bg-emerald-500/20 dark:text-emerald-400"
             >
               <motion.div
                 animate={{
@@ -104,13 +99,13 @@ export function LiveViewerBadge({
                   ease: "easeInOut",
                 }}
               >
-                <Eye className="w-3 h-3" aria-hidden="true" />
+                <Eye className="h-3 w-3" aria-hidden="true" />
               </motion.div>
               <span className="font-semibold">{viewerCount}</span>
               {showAvatars && activeViewers && activeViewers.length > 0 && (
                 <div className="flex -space-x-2">
-                  {activeViewers.slice(0, 3).map((viewer, index) => (
-                    <Avatar key={viewer.userId} className="w-5 h-5 border-2 border-background">
+                  {activeViewers.slice(0, 3).map((viewer: any, index: number) => (
+                    <Avatar key={viewer.userId} className="h-5 w-5 border-2 border-background">
                       <AvatarImage src={viewer.userAvatar} alt={viewer.userName || "Viewer"} />
                       <AvatarFallback className="text-[10px]">
                         {viewer.userName?.charAt(0) || "?"}
@@ -124,15 +119,15 @@ export function LiveViewerBadge({
         </TooltipTrigger>
         <TooltipContent side="bottom" className="bg-white dark:bg-black">
           <div className="space-y-2">
-            <p className="font-semibold flex items-center gap-2">
-              <Users className="w-4 h-4" aria-hidden="true" />
+            <p className="flex items-center gap-2 font-semibold">
+              <Users className="h-4 w-4" aria-hidden="true" />
               {viewerCount} {viewerCount === 1 ? "person" : "people"} watching now
             </p>
             {activeViewers && activeViewers.length > 0 && (
               <div className="space-y-1">
-                {activeViewers.slice(0, 5).map((viewer) => (
+                {activeViewers.slice(0, 5).map((viewer: any) => (
                   <div key={viewer.userId} className="flex items-center gap-2 text-sm">
-                    <Avatar className="w-4 h-4">
+                    <Avatar className="h-4 w-4">
                       <AvatarImage src={viewer.userAvatar} alt={viewer.userName || "Viewer"} />
                       <AvatarFallback className="text-[8px]">
                         {viewer.userName?.charAt(0) || "?"}
@@ -141,15 +136,13 @@ export function LiveViewerBadge({
                     <span className="text-muted-foreground">
                       {viewer.userName || "Anonymous"}
                       {viewer.chapterTitle && (
-                        <span className="text-xs ml-1">• {viewer.chapterTitle}</span>
+                        <span className="ml-1 text-xs">• {viewer.chapterTitle}</span>
                       )}
                     </span>
                   </div>
                 ))}
                 {activeViewers.length > 5 && (
-                  <p className="text-xs text-muted-foreground">
-                    +{activeViewers.length - 5} more
-                  </p>
+                  <p className="text-xs text-muted-foreground">+{activeViewers.length - 5} more</p>
                 )}
               </div>
             )}
@@ -159,4 +152,3 @@ export function LiveViewerBadge({
     </TooltipProvider>
   );
 }
-

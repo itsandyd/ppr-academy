@@ -46,42 +46,40 @@ function CourseDebugCard({
     <Card className="p-4">
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-lg mb-1">{course.title}</h3>
-            <div className="flex items-center gap-2 mb-2">
+          <div className="min-w-0 flex-1">
+            <h3 className="mb-1 text-lg font-semibold">{course.title}</h3>
+            <div className="mb-2 flex items-center gap-2">
               <Badge variant={course.isPublished ? "default" : "secondary"}>
                 {course.isPublished ? "Published" : "Draft"}
               </Badge>
               {needsFix && (
                 <Badge variant="destructive" className="gap-1">
-                  <AlertTriangle className="w-3 h-3" />
-                  {!hasStoreId 
-                    ? "Missing Store ID" 
-                    : !storeExists 
-                    ? "Store Not Found" 
-                    : "User Not Synced"}
+                  <AlertTriangle className="h-3 w-3" />
+                  {!hasStoreId
+                    ? "Missing Store ID"
+                    : !storeExists
+                      ? "Store Not Found"
+                      : "User Not Synced"}
                 </Badge>
               )}
             </div>
             {course.slug ? (
               <>
-                <div className="flex items-center gap-2 mb-2">
-                  <code className="text-sm bg-muted px-2 py-1 rounded">
-                    /courses/{course.slug}
-                  </code>
+                <div className="mb-2 flex items-center gap-2">
+                  <code className="rounded bg-muted px-2 py-1 text-sm">/courses/{course.slug}</code>
                 </div>
-                <p className="text-xs text-muted-foreground break-all">
+                <p className="break-all text-xs text-muted-foreground">
                   Preview URL: {window.location.origin}/courses/{course.slug}?preview=true
                 </p>
                 {needsFix && (
-                  <p className="text-xs text-destructive mt-2">
-                    ⚠️ This course {
-                      !hasStoreId 
-                        ? "is missing a storeId" 
-                        : !storeExists 
-                        ? "has an invalid storeId" 
-                        : "has an owner that's not synced to the database"
-                    } and will show a 404 error. Click "Fix Course" below.
+                  <p className="mt-2 text-xs text-destructive">
+                    ⚠️ This course{" "}
+                    {!hasStoreId
+                      ? "is missing a storeId"
+                      : !storeExists
+                        ? "has an invalid storeId"
+                        : "has an owner that's not synced to the database"}{" "}
+                    and will show a 404 error. Click "Fix Course" below.
                   </p>
                 )}
               </>
@@ -92,7 +90,7 @@ function CourseDebugCard({
         </div>
 
         {course.slug && (
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex flex-wrap gap-2">
             <Button
               size="sm"
               variant="outline"
@@ -101,26 +99,19 @@ function CourseDebugCard({
             >
               {copiedSlug === course.slug ? (
                 <>
-                  <CheckCircle className="w-4 h-4 text-green-600" />
+                  <CheckCircle className="h-4 w-4 text-green-600" />
                   Copied!
                 </>
               ) : (
                 <>
-                  <Copy className="w-4 h-4" />
+                  <Copy className="h-4 w-4" />
                   Copy Preview URL
                 </>
               )}
             </Button>
-            <Button
-              size="sm"
-              asChild
-            >
-              <Link
-                href={`/courses/${course.slug}?preview=true`}
-                target="_blank"
-                className="gap-2"
-              >
-                <ExternalLink className="w-4 h-4" />
+            <Button size="sm" asChild>
+              <Link href={`/courses/${course.slug}?preview=true`} target="_blank" className="gap-2">
+                <ExternalLink className="h-4 w-4" />
                 Open Preview
               </Link>
             </Button>
@@ -132,7 +123,7 @@ function CourseDebugCard({
                 disabled={fixingCourseId === course._id}
                 className="gap-2"
               >
-                <Wrench className="w-4 h-4" />
+                <Wrench className="h-4 w-4" />
                 {fixingCourseId === course._id ? "Fixing..." : "Fix Course"}
               </Button>
             )}
@@ -151,11 +142,8 @@ export default function DebugCoursesPage() {
   const [fixingCourseId, setFixingCourseId] = useState<string | null>(null);
 
   // Get user from Convex
-  const convexUser = useQuery(
-    api.users.getUserFromClerk,
-    user?.id ? { clerkId: user.id } : "skip"
-  );
-  
+  const convexUser = useQuery(api.users.getUserFromClerk, user?.id ? { clerkId: user.id } : "skip");
+
   const fixCourseStoreId = useMutation(api.debugFix.fixCourseStoreId);
 
   // Get all user's courses
@@ -176,7 +164,7 @@ export default function DebugCoursesPage() {
     setCopiedSlug(slug);
     setTimeout(() => setCopiedSlug(null), 2000);
   };
-  
+
   const handleFixCourse = async (courseId: string, courseTitle: string) => {
     if (!convexUser?._id) {
       toast({
@@ -186,14 +174,14 @@ export default function DebugCoursesPage() {
       });
       return;
     }
-    
+
     setFixingCourseId(courseId);
     try {
       const result = await fixCourseStoreId({
         courseId: courseId as any,
         userId: convexUser._id,
       });
-      
+
       if (result.success) {
         toast({
           title: "Fixed! ✅",
@@ -221,7 +209,7 @@ export default function DebugCoursesPage() {
 
   return (
     <div className="min-h-screen bg-background p-6">
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="mx-auto max-w-4xl space-y-6">
         <Card>
           <CardHeader>
             <CardTitle>🔍 Course Slug Finder</CardTitle>
@@ -239,9 +227,7 @@ export default function DebugCoursesPage() {
               />
             </div>
 
-            {!user && (
-              <p className="text-muted-foreground">Please sign in to see your courses</p>
-            )}
+            {!user && <p className="text-muted-foreground">Please sign in to see your courses</p>}
 
             {coursesToShow === undefined && user && (
               <p className="text-muted-foreground">Loading courses...</p>
@@ -249,15 +235,15 @@ export default function DebugCoursesPage() {
 
             {coursesToShow && coursesToShow.length === 0 && (
               <p className="text-muted-foreground">
-                {searchTerm.length > 2 
-                  ? "No courses found matching your search" 
+                {searchTerm.length > 2
+                  ? "No courses found matching your search"
                   : "No courses found"}
               </p>
             )}
 
             {coursesToShow && coursesToShow.length > 0 && (
               <div className="space-y-3">
-                {coursesToShow.map((course) => (
+                {coursesToShow.map((course: any) => (
                   <CourseDebugCard
                     key={course._id}
                     course={course}
@@ -278,16 +264,20 @@ export default function DebugCoursesPage() {
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <div>
-              <p className="font-medium mb-1">If your course has no slug:</p>
+              <p className="mb-1 font-medium">If your course has no slug:</p>
               <p className="text-muted-foreground">
-                The course may have been created before slug generation was added. Try editing and saving the course again to generate a slug.
+                The course may have been created before slug generation was added. Try editing and
+                saving the course again to generate a slug.
               </p>
             </div>
             <div>
-              <p className="font-medium mb-1">If you get a 404:</p>
-              <ul className="list-disc list-inside text-muted-foreground space-y-1">
+              <p className="mb-1 font-medium">If you get a 404:</p>
+              <ul className="list-inside list-disc space-y-1 text-muted-foreground">
                 <li>Make sure you're using the exact slug shown above</li>
-                <li>Include <code className="bg-muted px-1 rounded">?preview=true</code> for unpublished courses</li>
+                <li>
+                  Include <code className="rounded bg-muted px-1">?preview=true</code> for
+                  unpublished courses
+                </li>
                 <li>Check that you're signed in with the same account that created the course</li>
               </ul>
             </div>

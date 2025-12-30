@@ -5,33 +5,35 @@ import { api, internal } from "./_generated/api";
 // Get all courses for embedding generation
 export const getAllCourses = internalQuery({
   args: {},
-  returns: v.array(v.object({
-    _id: v.id("courses"),
-    _creationTime: v.number(),
-    title: v.string(),
-    description: v.optional(v.string()),
-    userId: v.string(),
-    category: v.optional(v.string()),
-    subcategory: v.optional(v.string()),
-    tags: v.optional(v.array(v.string())),
-    skillLevel: v.optional(v.string()),
-    isPublished: v.optional(v.boolean()),
-    storeId: v.optional(v.string()),
-    instructorId: v.optional(v.string()),
-    price: v.optional(v.number()),
-    slug: v.optional(v.string()),
-    imageUrl: v.optional(v.string()),
-    checkoutHeadline: v.optional(v.string()),
-    checkoutDescription: v.optional(v.string()),
-    paymentDescription: v.optional(v.string()),
-    guaranteeText: v.optional(v.string()),
-    showGuarantee: v.optional(v.boolean()),
-    acceptsStripe: v.optional(v.boolean()),
-    acceptsPayPal: v.optional(v.boolean()),
-    stripePriceId: v.optional(v.string()),
-    stripeProductId: v.optional(v.string()),
-    courseCategoryId: v.optional(v.string()),
-  })),
+  returns: v.array(
+    v.object({
+      _id: v.id("courses"),
+      _creationTime: v.number(),
+      title: v.string(),
+      description: v.optional(v.string()),
+      userId: v.string(),
+      category: v.optional(v.string()),
+      subcategory: v.optional(v.string()),
+      tags: v.optional(v.array(v.string())),
+      skillLevel: v.optional(v.string()),
+      isPublished: v.optional(v.boolean()),
+      storeId: v.optional(v.string()),
+      instructorId: v.optional(v.string()),
+      price: v.optional(v.number()),
+      slug: v.optional(v.string()),
+      imageUrl: v.optional(v.string()),
+      checkoutHeadline: v.optional(v.string()),
+      checkoutDescription: v.optional(v.string()),
+      paymentDescription: v.optional(v.string()),
+      guaranteeText: v.optional(v.string()),
+      showGuarantee: v.optional(v.boolean()),
+      acceptsStripe: v.optional(v.boolean()),
+      acceptsPayPal: v.optional(v.boolean()),
+      stripePriceId: v.optional(v.string()),
+      stripeProductId: v.optional(v.string()),
+      courseCategoryId: v.optional(v.string()),
+    })
+  ),
   handler: async (ctx) => {
     return await ctx.db.query("courses").collect();
   },
@@ -40,37 +42,43 @@ export const getAllCourses = internalQuery({
 // Get all chapters for a course
 export const getCourseChapters = internalQuery({
   args: { courseId: v.id("courses") },
-  returns: v.array(v.object({
-    _id: v.id("courseChapters"),
-    _creationTime: v.number(),
-    title: v.string(),
-    description: v.optional(v.string()),
-    courseId: v.string(),
-    position: v.number(),
-    lessonId: v.optional(v.string()),
-    audioUrl: v.optional(v.string()),
-    videoUrl: v.optional(v.string()),
-    generatedAudioUrl: v.optional(v.string()),
-    generatedVideoUrl: v.optional(v.string()),
-    audioGenerationStatus: v.optional(v.union(
-      v.literal("pending"),
-      v.literal("generating"), 
-      v.literal("completed"),
-      v.literal("failed")
-    )),
-    videoGenerationStatus: v.optional(v.union(
-      v.literal("pending"),
-      v.literal("generating"),
-      v.literal("completed"), 
-      v.literal("failed")
-    )),
-    audioGeneratedAt: v.optional(v.number()),
-    videoGeneratedAt: v.optional(v.number()),
-    audioGenerationError: v.optional(v.string()),
-    videoGenerationError: v.optional(v.string()),
-    isPublished: v.optional(v.boolean()),
-    isFree: v.optional(v.boolean()),
-  })),
+  returns: v.array(
+    v.object({
+      _id: v.id("courseChapters"),
+      _creationTime: v.number(),
+      title: v.string(),
+      description: v.optional(v.string()),
+      courseId: v.string(),
+      position: v.number(),
+      lessonId: v.optional(v.string()),
+      audioUrl: v.optional(v.string()),
+      videoUrl: v.optional(v.string()),
+      generatedAudioUrl: v.optional(v.string()),
+      generatedVideoUrl: v.optional(v.string()),
+      audioGenerationStatus: v.optional(
+        v.union(
+          v.literal("pending"),
+          v.literal("generating"),
+          v.literal("completed"),
+          v.literal("failed")
+        )
+      ),
+      videoGenerationStatus: v.optional(
+        v.union(
+          v.literal("pending"),
+          v.literal("generating"),
+          v.literal("completed"),
+          v.literal("failed")
+        )
+      ),
+      audioGeneratedAt: v.optional(v.number()),
+      videoGeneratedAt: v.optional(v.number()),
+      audioGenerationError: v.optional(v.string()),
+      videoGenerationError: v.optional(v.string()),
+      isPublished: v.optional(v.boolean()),
+      isFree: v.optional(v.boolean()),
+    })
+  ),
   handler: async (ctx, args) => {
     return await ctx.db
       .query("courseChapters")
@@ -81,16 +89,16 @@ export const getCourseChapters = internalQuery({
 
 // Check if embeddings already exist for a source
 export const checkExistingEmbeddings = internalQuery({
-  args: { 
+  args: {
     sourceId: v.string(),
     sourceType: v.union(
-      v.literal("course"), 
+      v.literal("course"),
       v.literal("chapter"),
       v.literal("lesson"),
       v.literal("document"),
       v.literal("note"),
       v.literal("custom")
-    )
+    ),
   },
   returns: v.number(),
   handler: async (ctx, args) => {
@@ -99,7 +107,7 @@ export const checkExistingEmbeddings = internalQuery({
       .withIndex("by_sourceId", (q) => q.eq("sourceId", args.sourceId))
       .filter((q) => q.eq(q.field("sourceType"), args.sourceType))
       .collect();
-    
+
     return existing.length;
   },
 });
@@ -112,7 +120,7 @@ export const getModuleLessons = internalQuery({
       .query("courseLessons")
       .withIndex("by_moduleId", (q) => q.eq("moduleId", args.moduleId))
       .collect();
-    return lessons.map(l => ({
+    return lessons.map((l) => ({
       _id: l._id,
       title: l.title,
       description: l.description,
@@ -130,7 +138,7 @@ export const getCourseModules = internalQuery({
       .query("courseModules")
       .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId))
       .collect();
-    return modules.map(m => ({
+    return modules.map((m) => ({
       _id: m._id,
       title: m.title,
       description: m.description,
@@ -146,7 +154,7 @@ export const getAllDigitalProducts = internalQuery({
   handler: async (ctx) => {
     const products = await ctx.db.query("digitalProducts").collect();
     // Return only the fields we need for embedding
-    return products.map(p => ({
+    return products.map((p) => ({
       _id: p._id,
       title: p.title,
       description: p.description,
@@ -167,7 +175,7 @@ export const getAllNotes = internalQuery({
   handler: async (ctx) => {
     const notes = await ctx.db.query("notes").collect();
     // Return only the fields we need for embedding
-    return notes.map(n => ({
+    return notes.map((n) => ({
       _id: n._id,
       title: n.title,
       content: n.content,
@@ -181,13 +189,12 @@ export const getAllNotes = internalQuery({
   },
 });
 
-
 // Delete embeddings by source (internal helper)
 export const deleteEmbeddingsBySource = internalMutation({
   args: {
     sourceId: v.string(),
     sourceType: v.union(
-      v.literal("course"), 
+      v.literal("course"),
       v.literal("chapter"),
       v.literal("lesson"),
       v.literal("document"),
@@ -223,19 +230,17 @@ export const deleteEmbeddingsBatch = internalMutation({
   }),
   handler: async (ctx, args) => {
     const batchSize = args.batchSize ?? 100;
-    
+
     // Only fetch IDs, not the full embedding data (which is huge)
-    const embeddings = await ctx.db
-      .query("embeddings")
-      .take(batchSize);
-    
+    const embeddings = await ctx.db.query("embeddings").take(batchSize);
+
     for (const embedding of embeddings) {
       await ctx.db.delete(embedding._id);
     }
 
     // Check if there are more
     const remaining = await ctx.db.query("embeddings").first();
-    
+
     return {
       deleted: embeddings.length,
       hasMore: remaining !== null,
@@ -246,7 +251,7 @@ export const deleteEmbeddingsBatch = internalMutation({
 // Internal query to count embeddings by a specific source type using pagination
 // Each call processes a batch to stay under the 16MB limit
 export const countEmbeddingsBatch = internalQuery({
-  args: { 
+  args: {
     sourceType: v.union(
       v.literal("course"),
       v.literal("chapter"),
@@ -267,16 +272,16 @@ export const countEmbeddingsBatch = internalQuery({
   }),
   handler: async (ctx, args) => {
     const batchSize = args.batchSize ?? 500; // Smaller batch to stay under limit
-    
+
     const result = await ctx.db
       .query("embeddings")
       .withIndex("by_sourceType", (q) => q.eq("sourceType", args.sourceType))
       .paginate({ numItems: batchSize, cursor: args.cursor });
-    
+
     let count = result.page.length;
     let webResearch = 0;
     let products = 0;
-    
+
     // For document type, separate products from web research
     if (args.sourceType === "document") {
       for (const e of result.page) {
@@ -285,10 +290,10 @@ export const countEmbeddingsBatch = internalQuery({
         else products++;
       }
     }
-    
-    return { 
-      count, 
-      webResearch, 
+
+    return {
+      count,
+      webResearch,
       products,
       nextCursor: result.isDone ? null : result.continueCursor,
       isDone: result.isDone,
@@ -298,7 +303,7 @@ export const countEmbeddingsBatch = internalQuery({
 
 // Internal query to count documents in a table batch using pagination
 export const countTableDocumentsBatch = internalQuery({
-  args: { 
+  args: {
     tableName: v.union(
       v.literal("courses"),
       v.literal("courseChapters"),
@@ -316,12 +321,12 @@ export const countTableDocumentsBatch = internalQuery({
   }),
   handler: async (ctx, args) => {
     const batchSize = args.batchSize ?? 1000; // Content tables are smaller per-row, can use larger batch
-    
+
     const result = await ctx.db
       .query(args.tableName)
       .paginate({ numItems: batchSize, cursor: args.cursor });
-    
-    return { 
+
+    return {
       count: result.page.length,
       nextCursor: result.isDone ? null : result.continueCursor,
       isDone: result.isDone,
@@ -331,14 +336,14 @@ export const countTableDocumentsBatch = internalQuery({
 
 // Legacy function for backward compatibility - just returns 0 if it would hit limit
 export const countTableDocuments = internalQuery({
-  args: { 
+  args: {
     tableName: v.union(
       v.literal("courses"),
       v.literal("courseChapters"),
       v.literal("courseLessons"),
       v.literal("digitalProducts"),
       v.literal("notes")
-    )
+    ),
   },
   returns: v.number(),
   handler: async (ctx, args) => {
@@ -357,23 +362,30 @@ async function countAllEmbeddingsForType(
   let totalWebResearch = 0;
   let totalProducts = 0;
   let cursor: string | null = null;
-  
+
   // Paginate through all embeddings of this type
   do {
-    const result = await ctx.runQuery(internal.embeddings.countEmbeddingsBatch, { 
-      sourceType, 
+    // @ts-ignore Convex type instantiation too deep
+    const result: {
+      count: number;
+      webResearch: number;
+      products: number;
+      nextCursor: string | null;
+      isDone: boolean;
+    } = await ctx.runQuery(internal.embeddings.countEmbeddingsBatch, {
+      sourceType,
       cursor,
       batchSize: 500, // Keep batch small to avoid 16MB limit
     });
-    
+
     totalCount += result.count;
     totalWebResearch += result.webResearch;
     totalProducts += result.products;
     cursor = result.nextCursor;
-    
+
     if (result.isDone) break;
   } while (cursor !== null);
-  
+
   return { count: totalCount, webResearch: totalWebResearch, products: totalProducts };
 }
 
@@ -409,7 +421,7 @@ export const getEmbeddingStats = action({
     const noteResult = await countAllEmbeddingsForType(ctx, "note");
     const documentResult = await countAllEmbeddingsForType(ctx, "document");
     const customResult = await countAllEmbeddingsForType(ctx, "custom");
-    
+
     const bySourceType = {
       courses: courseResult.count,
       chapters: chapterResult.count,
@@ -419,30 +431,38 @@ export const getEmbeddingStats = action({
       webResearch: documentResult.webResearch,
       other: customResult.count,
     };
-    
-    const totalEmbeddings = 
-      courseResult.count + chapterResult.count + lessonResult.count + 
-      noteResult.count + documentResult.count + customResult.count;
-    
+
+    const totalEmbeddings =
+      courseResult.count +
+      chapterResult.count +
+      lessonResult.count +
+      noteResult.count +
+      documentResult.count +
+      customResult.count;
+
     // Count content items using pagination
-    const countTable = async (tableName: "courses" | "courseChapters" | "courseLessons" | "digitalProducts" | "notes") => {
+    const countTable = async (
+      tableName: "courses" | "courseChapters" | "courseLessons" | "digitalProducts" | "notes"
+    ) => {
       let total = 0;
       let cursor: string | null = null;
       do {
-        const result = await ctx.runQuery(internal.embeddings.countTableDocumentsBatch, { 
-          tableName, 
-          cursor,
-          batchSize: 1000,
-        });
+        // @ts-ignore Convex type instantiation too deep
+        const result: { count: number; nextCursor: string | null; isDone: boolean } =
+          await ctx.runQuery(internal.embeddings.countTableDocumentsBatch, {
+            tableName,
+            cursor,
+            batchSize: 1000,
+          });
         total += result.count;
         cursor = result.nextCursor;
         if (result.isDone) break;
       } while (cursor !== null);
       return total;
     };
-    
+
     // Run counts in parallel for speed
-    const [coursesCount, chaptersCount, lessonsCount, productsCount, notesCount] = 
+    const [coursesCount, chaptersCount, lessonsCount, productsCount, notesCount] =
       await Promise.all([
         countTable("courses"),
         countTable("courseChapters"),
@@ -450,7 +470,7 @@ export const getEmbeddingStats = action({
         countTable("digitalProducts"),
         countTable("notes"),
       ]);
-    
+
     const contentCounts = {
       courses: coursesCount,
       chapters: chaptersCount,
@@ -458,12 +478,17 @@ export const getEmbeddingStats = action({
       products: productsCount,
       notes: notesCount,
     };
-    
+
     // Calculate coverage
     const totalContent = coursesCount + chaptersCount + lessonsCount + productsCount + notesCount;
-    const embeddedContent = bySourceType.courses + bySourceType.chapters + bySourceType.lessons + 
-      bySourceType.products + bySourceType.notes;
-    const coveragePercentage = totalContent > 0 ? Math.round((embeddedContent / totalContent) * 100) : 0;
+    const embeddedContent =
+      bySourceType.courses +
+      bySourceType.chapters +
+      bySourceType.lessons +
+      bySourceType.products +
+      bySourceType.notes;
+    const coveragePercentage =
+      totalContent > 0 ? Math.round((embeddedContent / totalContent) * 100) : 0;
 
     return {
       totalEmbeddings,

@@ -8,7 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { AlertCircle, ArrowLeft, CheckCircle } from "lucide-react";
 import Link from "next/link";
@@ -56,7 +62,8 @@ export default function RefundRequestPage() {
 
       toast({
         title: "Refund requested",
-        description: "Your request has been submitted and will be reviewed within 2-3 business days",
+        description:
+          "Your request has been submitted and will be reviewed within 2-3 business days",
         className: "bg-white dark:bg-black",
       });
 
@@ -74,36 +81,34 @@ export default function RefundRequestPage() {
   if (!user) {
     return (
       <div className="container mx-auto py-16 text-center">
-        <h1 className="text-2xl font-bold mb-4">Please sign in</h1>
+        <h1 className="mb-4 text-2xl font-bold">Please sign in</h1>
         <p className="text-muted-foreground">You need to be signed in to request a refund</p>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto py-8 max-w-4xl">
+    <div className="container mx-auto max-w-4xl py-8">
       <Link href="/library">
         <Button variant="ghost" className="mb-4">
-          <ArrowLeft className="w-4 h-4 mr-2" />
+          <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Library
         </Button>
       </Link>
 
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">💸 Request a Refund</h1>
+        <h1 className="mb-2 text-3xl font-bold">💸 Request a Refund</h1>
         <p className="text-muted-foreground">
           We offer a 30-day money-back guarantee on all purchases
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <Card>
             <CardHeader>
               <CardTitle>Refund Request Form</CardTitle>
-              <CardDescription>
-                Please provide details about your refund request
-              </CardDescription>
+              <CardDescription>Please provide details about your refund request</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
@@ -130,19 +135,19 @@ export default function RefundRequestPage() {
                     rows={6}
                     required
                   />
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="mt-1 text-xs text-muted-foreground">
                     This helps us improve our products and services
                   </p>
                 </div>
 
-                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-900 rounded-lg p-4">
+                <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 dark:border-yellow-900 dark:bg-yellow-900/20">
                   <div className="flex items-start gap-2">
-                    <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                    <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-yellow-600" />
                     <div className="text-sm">
-                      <p className="font-medium text-yellow-900 dark:text-yellow-100 mb-1">
+                      <p className="mb-1 font-medium text-yellow-900 dark:text-yellow-100">
                         Important Information
                       </p>
-                      <ul className="text-yellow-800 dark:text-yellow-200 space-y-1">
+                      <ul className="space-y-1 text-yellow-800 dark:text-yellow-200">
                         <li>• Access will be revoked once refund is processed</li>
                         <li>• Refunds typically process within 5-7 business days</li>
                         <li>• Refund eligibility: within 30 days of purchase</li>
@@ -168,10 +173,10 @@ export default function RefundRequestPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {userRefunds.map((refund) => (
+                  {userRefunds.map((refund: any) => (
                     <div
                       key={refund._id}
-                      className="flex items-center justify-between p-4 border rounded-lg"
+                      className="flex items-center justify-between rounded-lg border p-4"
                     >
                       <div>
                         <p className="font-medium">Order #{refund.orderId.slice(0, 8)}...</p>
@@ -181,12 +186,17 @@ export default function RefundRequestPage() {
                       </div>
                       <div className="text-right">
                         <p className="font-bold">${(refund.refundAmount / 100).toFixed(2)}</p>
-                        <p className={`text-sm ${
-                          refund.status === "processed" ? "text-green-600" :
-                          refund.status === "denied" ? "text-red-600" :
-                          refund.status === "approved" ? "text-blue-600" :
-                          "text-yellow-600"
-                        }`}>
+                        <p
+                          className={`text-sm ${
+                            refund.status === "processed"
+                              ? "text-green-600"
+                              : refund.status === "denied"
+                                ? "text-red-600"
+                                : refund.status === "approved"
+                                  ? "text-blue-600"
+                                  : "text-yellow-600"
+                          }`}
+                        >
                           {refund.status.charAt(0).toUpperCase() + refund.status.slice(1)}
                         </p>
                       </div>
@@ -207,24 +217,24 @@ export default function RefundRequestPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2 text-sm">
                 <div className="flex items-start gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                  <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-500" />
                   <p>30-day money-back guarantee</p>
                 </div>
                 <div className="flex items-start gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                  <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-500" />
                   <p>No questions asked</p>
                 </div>
                 <div className="flex items-start gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                  <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-500" />
                   <p>Full refund to original payment method</p>
                 </div>
                 <div className="flex items-start gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+                  <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-500" />
                   <p>Fast processing (2-3 business days)</p>
                 </div>
               </div>
 
-              <div className="pt-4 border-t">
+              <div className="border-t pt-4">
                 <p className="text-sm text-muted-foreground">
                   Need help? Contact support before requesting a refund - we're here to help!
                 </p>
@@ -238,19 +248,17 @@ export default function RefundRequestPage() {
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div>
-                <p className="font-medium mb-1">When will I get my money back?</p>
+                <p className="mb-1 font-medium">When will I get my money back?</p>
                 <p className="text-muted-foreground">
                   Refunds process within 5-7 business days after approval
                 </p>
               </div>
               <div>
-                <p className="font-medium mb-1">Can I repurchase later?</p>
-                <p className="text-muted-foreground">
-                  Yes, you can purchase again at any time
-                </p>
+                <p className="mb-1 font-medium">Can I repurchase later?</p>
+                <p className="text-muted-foreground">Yes, you can purchase again at any time</p>
               </div>
               <div>
-                <p className="font-medium mb-1">What about partial refunds?</p>
+                <p className="mb-1 font-medium">What about partial refunds?</p>
                 <p className="text-muted-foreground">
                   Contact support to discuss partial refund options
                 </p>
@@ -262,8 +270,3 @@ export default function RefundRequestPage() {
     </div>
   );
 }
-
-
-
-
-

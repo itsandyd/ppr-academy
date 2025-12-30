@@ -623,7 +623,7 @@ export default function CoursePlayerPage() {
                 Select a chapter from the sidebar to begin your learning journey.
               </p>
               <div className="mx-auto grid max-w-4xl grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 lg:gap-6">
-                {courseData.modules?.slice(0, 3).map((module, index) => (
+                {courseData.modules?.slice(0, 3).map((module: any, index: number) => (
                   <Card key={module._id} className="text-left">
                     <CardHeader className="pb-3">
                       <CardTitle className="text-lg">Module {index + 1}</CardTitle>
@@ -637,7 +637,7 @@ export default function CoursePlayerPage() {
                         <span>{module.lessons?.length || 0} lessons</span>
                         <span>
                           {module.lessons?.reduce(
-                            (acc, lesson) => acc + (lesson.chapters?.length || 0),
+                            (acc: number, lesson: any) => acc + (lesson.chapters?.length || 0),
                             0
                           ) || 0}{" "}
                           chapters

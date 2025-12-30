@@ -403,7 +403,7 @@ export default function AdminEmailMonitoringPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {domains.map((domain) => (
+                    {domains.map((domain: any) => (
                       <TableRow key={domain._id}>
                         <TableCell className="font-medium">
                           <Button
@@ -418,7 +418,10 @@ export default function AdminEmailMonitoringPage() {
                           <Badge variant="outline">{domain.type}</Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={domain.status === "active" ? "success" : "secondary"}>
+                          <Badge
+                            variant={domain.status === "active" ? "default" : "secondary"}
+                            className={domain.status === "active" ? "bg-green-500" : ""}
+                          >
                             {domain.status}
                           </Badge>
                         </TableCell>
@@ -530,7 +533,7 @@ export default function AdminEmailMonitoringPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {flaggedCreators.map((creator) => (
+                    {flaggedCreators.map((creator: any) => (
                       <TableRow key={creator.storeId}>
                         <TableCell className="font-medium">{creator.storeName}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">
@@ -580,7 +583,7 @@ export default function AdminEmailMonitoringPage() {
                         </TableCell>
                         <TableCell>
                           <div className="space-y-1">
-                            {creator.issues.map((issue, idx) => (
+                            {creator.issues.map((issue: any, idx: number) => (
                               <div key={idx} className="text-xs text-red-600">
                                 • {issue}
                               </div>
@@ -707,7 +710,8 @@ export default function AdminEmailMonitoringPage() {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Status:</span>
                     <Badge
-                      variant={domainDetails.domain.status === "active" ? "success" : "secondary"}
+                      variant={domainDetails.domain.status === "active" ? "default" : "secondary"}
+                      className={domainDetails.domain.status === "active" ? "bg-green-500" : ""}
                     >
                       {domainDetails.domain.status}
                     </Badge>
@@ -803,7 +807,7 @@ export default function AdminEmailMonitoringPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {domainDetails.topCreators.map((creator) => (
+                        {domainDetails.topCreators.map((creator: any) => (
                           <TableRow key={creator.storeId}>
                             <TableCell className="font-medium">{creator.storeName}</TableCell>
                             <TableCell className="text-right">
@@ -819,7 +823,8 @@ export default function AdminEmailMonitoringPage() {
                             </TableCell>
                             <TableCell>
                               <Badge
-                                variant={creator.status === "active" ? "success" : "destructive"}
+                                variant={creator.status === "active" ? "default" : "destructive"}
+                                className={creator.status === "active" ? "bg-green-500" : ""}
                               >
                                 {creator.status}
                               </Badge>

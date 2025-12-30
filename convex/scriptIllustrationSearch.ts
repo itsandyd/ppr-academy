@@ -19,26 +19,25 @@ export const searchIllustrations = action({
     query: v.string(),
     userId: v.optional(v.string()), // Filter by user
     scriptId: v.optional(v.string()), // Filter by script
-    sourceType: v.optional(v.union(
-      v.literal("course"),
-      v.literal("lesson"),
-      v.literal("script"),
-      v.literal("custom")
-    )),
+    sourceType: v.optional(
+      v.union(v.literal("course"), v.literal("lesson"), v.literal("script"), v.literal("custom"))
+    ),
     limit: v.optional(v.number()), // Default: 10
     minSimilarity: v.optional(v.number()), // Default: 0.7 (0-1 scale)
   },
   returns: v.object({
     success: v.boolean(),
-    results: v.array(v.object({
-      illustrationId: v.string(),
-      sentence: v.string(),
-      illustrationPrompt: v.string(),
-      imageUrl: v.string(),
-      similarity: v.number(),
-      sentenceIndex: v.number(),
-      sourceType: v.string(),
-    })),
+    results: v.array(
+      v.object({
+        illustrationId: v.string(),
+        sentence: v.string(),
+        illustrationPrompt: v.string(),
+        imageUrl: v.string(),
+        similarity: v.number(),
+        sentenceIndex: v.number(),
+        sourceType: v.string(),
+      })
+    ),
     error: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
@@ -61,7 +60,7 @@ export const searchIllustrations = action({
         sourceType: string;
       };
       const illustrations: IllustrationWithEmbedding[] = await ctx.runQuery(
-        internal.scriptIllustrationQueries.getAllIllustrationsWithEmbeddings, 
+        internal.scriptIllustrationQueries.getAllIllustrationsWithEmbeddings,
         {
           userId: args.userId,
           scriptId: args.scriptId,
@@ -74,17 +73,17 @@ export const searchIllustrations = action({
 
       // Calculate similarity scores
       const withSimilarity = illustrations
-        .map(item => ({
+        .map((item) => ({
           ...item,
           similarity: cosineSimilarity(queryEmbedding, item.embedding),
         }))
-        .filter(item => item.similarity >= (args.minSimilarity ?? 0.7))
+        .filter((item) => item.similarity >= (args.minSimilarity ?? 0.7))
         .sort((a, b) => b.similarity - a.similarity)
         .slice(0, args.limit ?? 10);
 
       console.log(`   Returning ${withSimilarity.length} results above similarity threshold`);
 
-      const results = withSimilarity.map(item => ({
+      const results = withSimilarity.map((item) => ({
         illustrationId: item._id,
         sentence: item.sentence,
         illustrationPrompt: item.illustrationPrompt,
@@ -98,7 +97,6 @@ export const searchIllustrations = action({
         success: true,
         results,
       };
-
     } catch (error: any) {
       console.error("❌ Error searching illustrations:", error);
       return {
@@ -121,12 +119,14 @@ export const findSimilarIllustrations = action({
   },
   returns: v.object({
     success: v.boolean(),
-    results: v.array(v.object({
-      illustrationId: v.string(),
-      sentence: v.string(),
-      imageUrl: v.string(),
-      similarity: v.number(),
-    })),
+    results: v.array(
+      v.object({
+        illustrationId: v.string(),
+        sentence: v.string(),
+        imageUrl: v.string(),
+        similarity: v.number(),
+      })
+    ),
     error: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
@@ -140,7 +140,7 @@ export const findSimilarIllustrations = action({
         embedding?: number[];
       } | null;
       const sourceIllustration: SourceIllustration = await ctx.runQuery(
-        internal.scriptIllustrationQueries.getIllustrationById, 
+        internal.scriptIllustrationQueries.getIllustrationById,
         { illustrationId: args.illustrationId }
       );
 
@@ -171,22 +171,22 @@ export const findSimilarIllustrations = action({
         sourceType: string;
       };
       const allIllustrations: IllustrationWithEmbeddingInner[] = await ctx.runQuery(
-        internal.scriptIllustrationQueries.getAllIllustrationsWithEmbeddings, 
+        internal.scriptIllustrationQueries.getAllIllustrationsWithEmbeddings,
         { limit: 1000 }
       );
 
       // Calculate similarity and filter
       const similar = allIllustrations
-        .filter(item => item._id !== args.illustrationId)
-        .map(item => ({
+        .filter((item) => item._id !== args.illustrationId)
+        .map((item) => ({
           ...item,
           similarity: cosineSimilarity(sourceIllustration.embedding!, item.embedding),
         }))
-        .filter(item => item.similarity >= (args.minSimilarity ?? 0.75))
+        .filter((item) => item.similarity >= (args.minSimilarity ?? 0.75))
         .sort((a, b) => b.similarity - a.similarity)
         .slice(0, args.limit ?? 5);
 
-      const results = similar.map(item => ({
+      const results = similar.map((item: any) => ({
         illustrationId: item._id,
         sentence: item.sentence,
         imageUrl: item.imageUrl,
@@ -197,7 +197,6 @@ export const findSimilarIllustrations = action({
         success: true,
         results,
       };
-
     } catch (error: any) {
       console.error("❌ Error finding similar illustrations:", error);
       return {
@@ -220,13 +219,15 @@ export const getRecommendedIllustrations = action({
   },
   returns: v.object({
     success: v.boolean(),
-    results: v.array(v.object({
-      illustrationId: v.string(),
-      sentence: v.string(),
-      imageUrl: v.string(),
-      relevanceScore: v.number(),
-      matchedConcepts: v.array(v.string()),
-    })),
+    results: v.array(
+      v.object({
+        illustrationId: v.string(),
+        sentence: v.string(),
+        imageUrl: v.string(),
+        relevanceScore: v.number(),
+        matchedConcepts: v.array(v.string()),
+      })
+    ),
     error: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
@@ -241,14 +242,17 @@ export const getRecommendedIllustrations = action({
       const allMatches: any[] = [];
 
       for (const concept of concepts) {
-        const searchResults = await ctx.runAction(internal.scriptIllustrationSearch.searchIllustrations, {
-          query: concept,
-          limit: 5,
-          minSimilarity: 0.65,
-        });
+        const searchResults = await ctx.runAction(
+          internal.scriptIllustrationSearch.searchIllustrations,
+          {
+            query: concept,
+            limit: 5,
+            minSimilarity: 0.65,
+          }
+        );
 
         if (searchResults.success) {
-          searchResults.results.forEach(result => {
+          searchResults.results.forEach((result: any) => {
             allMatches.push({
               ...result,
               matchedConcept: concept,
@@ -263,7 +267,7 @@ export const getRecommendedIllustrations = action({
         if (args.excludeScriptId && match.scriptId === args.excludeScriptId) {
           continue;
         }
-        
+
         const key = match.illustrationId;
         if (!uniqueMatches.has(key)) {
           uniqueMatches.set(key, {
@@ -295,7 +299,6 @@ export const getRecommendedIllustrations = action({
         success: true,
         results,
       };
-
     } catch (error: any) {
       console.error("❌ Error getting recommendations:", error);
       return {
@@ -364,7 +367,8 @@ async function extractKeyConcepts(scriptText: string): Promise<string[]> {
     messages: [
       {
         role: "system",
-        content: "Extract 5-10 key concepts, topics, or themes from the following text. Return them as a comma-separated list. Focus on nouns, techniques, and main ideas.",
+        content:
+          "Extract 5-10 key concepts, topics, or themes from the following text. Return them as a comma-separated list. Focus on nouns, techniques, and main ideas.",
       },
       {
         role: "user",
@@ -378,10 +382,9 @@ async function extractKeyConcepts(scriptText: string): Promise<string[]> {
   const conceptsText = response.choices[0].message.content || "";
   return conceptsText
     .split(",")
-    .map(c => c.trim())
-    .filter(c => c.length > 0);
+    .map((c) => c.trim())
+    .filter((c) => c.length > 0);
 }
 
 // Note: All queries have been moved to scriptIllustrationQueries.ts
 // to allow this file to use "use node";
-
