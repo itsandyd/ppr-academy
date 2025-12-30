@@ -6,11 +6,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { 
-  TrendingUp, 
+import {
+  TrendingUp,
   TrendingDown,
-  DollarSign, 
-  Users, 
+  DollarSign,
+  Users,
   Award,
   Eye,
   Clock,
@@ -18,7 +18,7 @@ import {
   Target,
   BarChart3,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
 } from "lucide-react";
 import { Id } from "@/convex/_generated/dataModel";
 
@@ -29,13 +29,12 @@ interface CreatorAnalyticsDashboardProps {
 
 export function CreatorAnalyticsDashboard({ creatorId, courseId }: CreatorAnalyticsDashboardProps) {
   // Get revenue analytics
-  const revenueData = useQuery(api.analytics.getRevenueAnalytics, { creatorId });
-  
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore Convex type instantiation too deep
+  const revenueData: any[] | undefined = useQuery(api.analytics.getRevenueAnalytics, { creatorId });
+
   // Get course analytics if courseId provided
-  const courseData = useQuery(
-    api.analytics.getCourseAnalytics,
-    courseId ? { courseId } : "skip"
-  );
+  const courseData = useQuery(api.analytics.getCourseAnalytics, courseId ? { courseId } : "skip");
 
   // Get at-risk students
   const atRiskStudents = useQuery(
@@ -56,21 +55,23 @@ export function CreatorAnalyticsDashboard({ creatorId, courseId }: CreatorAnalyt
   );
 
   // Calculate totals from revenue data
-  const totalRevenue = revenueData?.reduce((sum, r) => sum + r.netRevenue, 0) || 0;
-  const totalTransactions = revenueData?.reduce((sum, r) => sum + r.successfulTransactions, 0) || 0;
+  const totalRevenue = revenueData?.reduce((sum: number, r: any) => sum + r.netRevenue, 0) || 0;
+  const totalTransactions =
+    revenueData?.reduce((sum: number, r: any) => sum + r.successfulTransactions, 0) || 0;
   const avgOrderValue = totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
 
   // Calculate course metrics
-  const totalViews = courseData?.reduce((sum, c) => sum + c.views, 0) || 0;
-  const totalEnrollments = courseData?.reduce((sum, c) => sum + c.enrollments, 0) || 0;
-  const avgConversionRate = courseData && courseData.length > 0
-    ? courseData.reduce((sum, c) => sum + c.conversionRate, 0) / courseData.length
-    : 0;
+  const totalViews = courseData?.reduce((sum: number, c: any) => sum + c.views, 0) || 0;
+  const totalEnrollments = courseData?.reduce((sum: number, c: any) => sum + c.enrollments, 0) || 0;
+  const avgConversionRate =
+    courseData && courseData.length > 0
+      ? courseData.reduce((sum: number, c: any) => sum + c.conversionRate, 0) / courseData.length
+      : 0;
 
   return (
     <div className="space-y-6">
       {/* Overview Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
@@ -78,9 +79,7 @@ export function CreatorAnalyticsDashboard({ creatorId, courseId }: CreatorAnalyt
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">${totalRevenue.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">
-              {totalTransactions} transactions
-            </p>
+            <p className="text-xs text-muted-foreground">{totalTransactions} transactions</p>
           </CardContent>
         </Card>
 
@@ -91,9 +90,7 @@ export function CreatorAnalyticsDashboard({ creatorId, courseId }: CreatorAnalyt
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalEnrollments}</div>
-            <p className="text-xs text-muted-foreground">
-              {totalViews} total views
-            </p>
+            <p className="text-xs text-muted-foreground">{totalViews} total views</p>
           </CardContent>
         </Card>
 
@@ -104,9 +101,7 @@ export function CreatorAnalyticsDashboard({ creatorId, courseId }: CreatorAnalyt
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">${avgOrderValue.toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground">
-              Per transaction
-            </p>
+            <p className="text-xs text-muted-foreground">Per transaction</p>
           </CardContent>
         </Card>
 
@@ -117,9 +112,7 @@ export function CreatorAnalyticsDashboard({ creatorId, courseId }: CreatorAnalyt
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{avgConversionRate.toFixed(1)}%</div>
-            <p className="text-xs text-muted-foreground">
-              Views to enrollments
-            </p>
+            <p className="text-xs text-muted-foreground">Views to enrollments</p>
           </CardContent>
         </Card>
       </div>
@@ -138,9 +131,7 @@ export function CreatorAnalyticsDashboard({ creatorId, courseId }: CreatorAnalyt
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Course Completion</CardTitle>
-                <CardDescription>
-                  Track how many students complete your course
-                </CardDescription>
+                <CardDescription>Track how many students complete your course</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -148,10 +139,11 @@ export function CreatorAnalyticsDashboard({ creatorId, courseId }: CreatorAnalyt
                     <div>
                       <div className="text-3xl font-bold">{completionRate.completionRate}%</div>
                       <p className="text-sm text-muted-foreground">
-                        {completionRate.completedStudents} of {completionRate.totalStudents} students
+                        {completionRate.completedStudents} of {completionRate.totalStudents}{" "}
+                        students
                       </p>
                     </div>
-                    <Award className="w-12 h-12 text-primary" />
+                    <Award className="h-12 w-12 text-primary" />
                   </div>
                   <Progress value={completionRate.completionRate} className="h-2" />
                 </div>
@@ -164,14 +156,15 @@ export function CreatorAnalyticsDashboard({ creatorId, courseId }: CreatorAnalyt
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Drop-off Points</CardTitle>
-                <CardDescription>
-                  Chapters where students are most likely to stop
-                </CardDescription>
+                <CardDescription>Chapters where students are most likely to stop</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {dropOffPoints.map((chapter, index) => (
-                    <div key={chapter.chapterId} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                  {dropOffPoints.map((chapter: any, index: number) => (
+                    <div
+                      key={chapter.chapterId}
+                      className="flex items-center justify-between rounded-lg bg-muted p-3"
+                    >
                       <div className="flex-1">
                         <div className="font-medium">Chapter {chapter.chapterIndex + 1}</div>
                         <div className="text-sm text-muted-foreground">
@@ -196,22 +189,18 @@ export function CreatorAnalyticsDashboard({ creatorId, courseId }: CreatorAnalyt
           {atRiskStudents && atRiskStudents.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <AlertTriangle className="w-5 h-5 text-orange-500" />
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <AlertTriangle className="h-5 w-5 text-orange-500" />
                   At-Risk Students
                 </CardTitle>
-                <CardDescription>
-                  Students who haven't accessed the course recently
-                </CardDescription>
+                <CardDescription>Students who haven't accessed the course recently</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
                   <div className="text-2xl font-bold">{atRiskStudents.length}</div>
-                  <p className="text-sm text-muted-foreground">
-                    students need engagement
-                  </p>
-                  <Progress 
-                    value={(atRiskStudents.length / (completionRate?.totalStudents || 1)) * 100} 
+                  <p className="text-sm text-muted-foreground">students need engagement</p>
+                  <Progress
+                    value={(atRiskStudents.length / (completionRate?.totalStudents || 1)) * 100}
                     className="h-2"
                   />
                 </div>
@@ -223,22 +212,21 @@ export function CreatorAnalyticsDashboard({ creatorId, courseId }: CreatorAnalyt
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Student Engagement</CardTitle>
-              <CardDescription>
-                Average time and activity metrics
-              </CardDescription>
+              <CardDescription>Average time and activity metrics</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <div className="text-sm text-muted-foreground mb-1">Avg Time Spent</div>
+                  <div className="mb-1 text-sm text-muted-foreground">Avg Time Spent</div>
                   <div className="text-2xl font-bold">
                     {courseData && courseData.length > 0
                       ? Math.round(courseData[courseData.length - 1].avgTimeSpent)
-                      : 0}min
+                      : 0}
+                    min
                   </div>
                 </div>
                 <div>
-                  <div className="text-sm text-muted-foreground mb-1">Active Students</div>
+                  <div className="mb-1 text-sm text-muted-foreground">Active Students</div>
                   <div className="text-2xl font-bold">
                     {courseData && courseData.length > 0
                       ? courseData[courseData.length - 1].activeStudents
@@ -257,9 +245,7 @@ export function CreatorAnalyticsDashboard({ creatorId, courseId }: CreatorAnalyt
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Revenue Breakdown</CardTitle>
-                  <CardDescription>
-                    Last 30 days
-                  </CardDescription>
+                  <CardDescription>Last 30 days</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -271,9 +257,7 @@ export function CreatorAnalyticsDashboard({ creatorId, courseId }: CreatorAnalyt
                     </div>
                     <div className="flex items-center justify-between text-muted-foreground">
                       <span className="text-sm">Platform Fee</span>
-                      <span>
-                        -${revenueData[revenueData.length - 1].platformFee.toFixed(2)}
-                      </span>
+                      <span>-${revenueData[revenueData.length - 1].platformFee.toFixed(2)}</span>
                     </div>
                     <div className="flex items-center justify-between text-muted-foreground">
                       <span className="text-sm">Processing Fee</span>
@@ -300,14 +284,14 @@ export function CreatorAnalyticsDashboard({ creatorId, courseId }: CreatorAnalyt
                 <CardContent>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <div className="text-sm text-muted-foreground mb-1">New Customers</div>
-                      <div className="text-2xl font-bold flex items-center gap-2">
+                      <div className="mb-1 text-sm text-muted-foreground">New Customers</div>
+                      <div className="flex items-center gap-2 text-2xl font-bold">
                         {revenueData[revenueData.length - 1].newCustomers}
-                        <ArrowUp className="w-4 h-4 text-green-500" />
+                        <ArrowUp className="h-4 w-4 text-green-500" />
                       </div>
                     </div>
                     <div>
-                      <div className="text-sm text-muted-foreground mb-1">Returning</div>
+                      <div className="mb-1 text-sm text-muted-foreground">Returning</div>
                       <div className="text-2xl font-bold">
                         {revenueData[revenueData.length - 1].returningCustomers}
                       </div>
@@ -326,9 +310,7 @@ export function CreatorAnalyticsDashboard({ creatorId, courseId }: CreatorAnalyt
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Content Engagement</CardTitle>
-                  <CardDescription>
-                    Chapter completion and activity
-                  </CardDescription>
+                  <CardDescription>Chapter completion and activity</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -344,10 +326,11 @@ export function CreatorAnalyticsDashboard({ creatorId, courseId }: CreatorAnalyt
                         {courseData[courseData.length - 1].chaptersCompleted}
                       </span>
                     </div>
-                    <Progress 
+                    <Progress
                       value={
                         (courseData[courseData.length - 1].chaptersCompleted /
-                        courseData[courseData.length - 1].chaptersStarted) * 100
+                          courseData[courseData.length - 1].chaptersStarted) *
+                        100
                       }
                       className="h-2"
                     />
@@ -362,14 +345,12 @@ export function CreatorAnalyticsDashboard({ creatorId, courseId }: CreatorAnalyt
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center gap-4">
-                    <Award className="w-12 h-12 text-primary" />
+                    <Award className="h-12 w-12 text-primary" />
                     <div>
                       <div className="text-3xl font-bold">
                         {courseData[courseData.length - 1].certificatesIssued}
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        students earned certificates
-                      </p>
+                      <p className="text-sm text-muted-foreground">students earned certificates</p>
                     </div>
                   </div>
                 </CardContent>
@@ -381,4 +362,3 @@ export function CreatorAnalyticsDashboard({ creatorId, courseId }: CreatorAnalyt
     </div>
   );
 }
-

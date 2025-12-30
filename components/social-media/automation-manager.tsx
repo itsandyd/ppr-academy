@@ -12,15 +12,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -33,16 +39,16 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { 
-  Bot, 
-  Plus, 
-  Play, 
-  Pause, 
-  Settings, 
-  Trash2, 
-  Edit3, 
-  MessageSquare, 
-  Users, 
+import {
+  Bot,
+  Plus,
+  Play,
+  Pause,
+  Settings,
+  Trash2,
+  Edit3,
+  MessageSquare,
+  Users,
   TrendingUp,
   Zap,
   Target,
@@ -56,7 +62,7 @@ import {
   FileText,
   Tag,
   Timer,
-  Activity
+  Activity,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -66,29 +72,42 @@ interface AutomationManagerProps {
   onSwitchToAccounts?: () => void;
 }
 
+type FlowNodeType = "trigger" | "message" | "delay" | "condition" | "resource" | "tag" | "webhook";
+
+interface FlowNodeData {
+  content?: string;
+  mediaUrls?: string[];
+  delayMinutes?: number;
+  conditionType?: "keyword" | "user_response" | "time_based" | "tag_based";
+  conditionValue?: string;
+  resourceType?: "link" | "file" | "course" | "product";
+  resourceUrl?: string;
+  resourceId?: string;
+  tagName?: string;
+  webhookUrl?: string;
+  webhookData?: unknown;
+}
+
 interface FlowNode {
   id: string;
-  type: "trigger" | "message" | "delay" | "condition" | "resource" | "tag" | "webhook";
+  type: FlowNodeType;
   position: { x: number; y: number };
-  data: {
-    content?: string;
-    mediaUrls?: string[];
-    delayMinutes?: number;
-    conditionType?: "keyword" | "user_response" | "time_based" | "tag_based";
-    conditionValue?: string;
-    resourceType?: "link" | "file" | "course" | "product";
-    resourceUrl?: string;
-    resourceId?: string;
-    tagName?: string;
-    webhookUrl?: string;
-    webhookData?: any;
-  };
+  data: FlowNodeData;
 }
 
 interface FlowConnection {
   from: string;
   to: string;
   label?: string;
+}
+
+type SocialPlatform = "instagram" | "twitter" | "facebook" | "tiktok" | "linkedin";
+
+interface SocialAccount {
+  _id: Id<"socialAccounts">;
+  platform: SocialPlatform;
+  isConnected: boolean;
+  username?: string;
 }
 
 interface AutomationFlow {
@@ -142,16 +161,16 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
     useConfirmation: true,
   });
 
-  // Mutations
+  // @ts-ignore Convex type instantiation too deep
   const createAutomationFlow = useMutation(api.automation.createAutomationFlow);
   const toggleAutomationFlow = useMutation(api.automation.toggleAutomationFlow);
   const deleteAutomationFlow = useMutation(api.automation.deleteAutomationFlow);
   const testAutomationTrigger = useMutation(api.automation.testAutomationTrigger);
 
   // Queries
-  const flows = useQuery(api.automation.getAutomationFlows, { 
-    storeId, 
-    userId 
+  const flows = useQuery(api.automation.getAutomationFlows, {
+    storeId,
+    userId,
   });
 
   const socialAccounts = useQuery(api.socialMedia.getSocialAccounts, { storeId });
@@ -159,36 +178,56 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
   // Helper functions
   const getPlatformIcon = (platform: string) => {
     switch (platform) {
-      case "instagram": return "📷";
-      case "twitter": return "🐦";
-      case "facebook": return "📘";
-      case "linkedin": return "💼";
-      case "tiktok": return "🎵";
-      default: return "📱";
+      case "instagram":
+        return "📷";
+      case "twitter":
+        return "🐦";
+      case "facebook":
+        return "📘";
+      case "linkedin":
+        return "💼";
+      case "tiktok":
+        return "🎵";
+      default:
+        return "📱";
     }
   };
 
   const getTriggerIcon = (triggerType: string) => {
     switch (triggerType) {
-      case "keyword": return <Target className="h-4 w-4" />;
-      case "comment": return <MessageSquare className="h-4 w-4" />;
-      case "dm": return <MessageSquare className="h-4 w-4" />;
-      case "mention": return <Users className="h-4 w-4" />;
-      case "hashtag": return <Tag className="h-4 w-4" />;
-      case "manual": return <PlayCircle className="h-4 w-4" />;
-      default: return <Zap className="h-4 w-4" />;
+      case "keyword":
+        return <Target className="h-4 w-4" />;
+      case "comment":
+        return <MessageSquare className="h-4 w-4" />;
+      case "dm":
+        return <MessageSquare className="h-4 w-4" />;
+      case "mention":
+        return <Users className="h-4 w-4" />;
+      case "hashtag":
+        return <Tag className="h-4 w-4" />;
+      case "manual":
+        return <PlayCircle className="h-4 w-4" />;
+      default:
+        return <Zap className="h-4 w-4" />;
     }
   };
 
   const getNodeIcon = (nodeType: string) => {
     switch (nodeType) {
-      case "message": return <MessageSquare className="h-4 w-4" />;
-      case "delay": return <Timer className="h-4 w-4" />;
-      case "resource": return <FileText className="h-4 w-4" />;
-      case "tag": return <Tag className="h-4 w-4" />;
-      case "webhook": return <Webhook className="h-4 w-4" />;
-      case "condition": return <Settings className="h-4 w-4" />;
-      default: return <Bot className="h-4 w-4" />;
+      case "message":
+        return <MessageSquare className="h-4 w-4" />;
+      case "delay":
+        return <Timer className="h-4 w-4" />;
+      case "resource":
+        return <FileText className="h-4 w-4" />;
+      case "tag":
+        return <Tag className="h-4 w-4" />;
+      case "webhook":
+        return <Webhook className="h-4 w-4" />;
+      case "condition":
+        return <Settings className="h-4 w-4" />;
+      default:
+        return <Bot className="h-4 w-4" />;
     }
   };
 
@@ -213,26 +252,26 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
       }
 
       // Create flow with confirmation pattern like ManyChat
-      const nodes = [
+      const nodes: FlowNode[] = [
         {
           id: "trigger-1",
-          type: "trigger" as const,
+          type: "trigger",
           position: { x: 100, y: 100 },
           data: {},
         },
         {
-          id: "initial-message", 
-          type: "message" as const,
+          id: "initial-message",
+          type: "message",
           position: { x: 300, y: 100 },
           data: {
-            content: formData.useConfirmation ? 
-              `${formData.firstMessage}\n\n${formData.confirmationMessage}` : 
-              formData.firstMessage,
+            content: formData.useConfirmation
+              ? `${formData.firstMessage}\n\n${formData.confirmationMessage}`
+              : formData.firstMessage,
           },
         },
       ];
 
-      const connections = [
+      const connections: FlowConnection[] = [
         {
           from: "trigger-1",
           to: "initial-message",
@@ -244,7 +283,7 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
         nodes.push(
           {
             id: "wait-response",
-            type: "condition" as const,
+            type: "condition",
             position: { x: 500, y: 100 },
             data: {
               conditionType: "user_response",
@@ -253,7 +292,7 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
           },
           {
             id: "yes-message",
-            type: "message" as const,
+            type: "message",
             position: { x: 700, y: 50 },
             data: {
               content: formData.yesMessage,
@@ -261,7 +300,7 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
           },
           {
             id: "no-message",
-            type: "message" as const,
+            type: "message",
             position: { x: 700, y: 150 },
             data: {
               content: formData.noMessage,
@@ -269,7 +308,7 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
           },
           {
             id: "resource-delivery",
-            type: "resource" as const,
+            type: "resource",
             position: { x: 900, y: 50 },
             data: {
               resourceType: formData.resourceType,
@@ -289,7 +328,7 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
             label: "yes",
           },
           {
-            from: "wait-response", 
+            from: "wait-response",
             to: "no-message",
             label: "no",
           },
@@ -302,14 +341,14 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
         // Simple flow without confirmation
         nodes.push({
           id: "resource-delivery",
-          type: "resource" as const,
+          type: "resource",
           position: { x: 500, y: 100 },
           data: {
             resourceType: formData.resourceType,
             resourceUrl: formData.resourceUrl,
           },
         });
-        
+
         connections.push({
           from: "initial-message",
           to: "resource-delivery",
@@ -325,7 +364,7 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
         description: formData.description,
         triggerType: formData.triggerType,
         triggerConditions: {
-          keywords: formData.keywords.filter(k => k.trim()),
+          keywords: formData.keywords.filter((k) => k.trim()),
           platforms: formData.platforms,
           matchType: formData.matchType,
         },
@@ -343,7 +382,13 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
         description: "",
         triggerType: "keyword" as const,
         keywords: [""],
-        platforms: ["instagram"] as ("instagram" | "twitter" | "facebook" | "tiktok" | "linkedin")[],
+        platforms: ["instagram"] as (
+          | "instagram"
+          | "twitter"
+          | "facebook"
+          | "tiktok"
+          | "linkedin"
+        )[],
         matchType: "contains" as const,
         firstMessage: "Thanks for your comment! Would you like me to send you the free resource?",
         confirmationMessage: "Reply YES if you'd like me to send it to you, or NO to skip.",
@@ -353,7 +398,6 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
         resourceType: "link" as const,
         useConfirmation: true,
       });
-
     } catch (error) {
       console.error("Error creating automation:", error);
       toast({
@@ -411,7 +455,8 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
     try {
       // Check if user has connected accounts for this platform
       const hasConnectedAccount = socialAccounts?.some(
-        account => account.platform === flow.triggerConditions.platforms[0] && account.isConnected
+        (account: any) =>
+          account.platform === flow.triggerConditions.platforms[0] && account.isConnected
       );
 
       if (!hasConnectedAccount) {
@@ -436,13 +481,14 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
 
       toast({
         title: "🎉 Test Triggered Successfully!",
-        description: "Check your Convex logs to see the automation flow execution. In production, this would send a DM to the test user.",
+        description:
+          "Check your Convex logs to see the automation flow execution. In production, this would send a DM to the test user.",
       });
     } catch (error) {
       console.error("Error testing flow:", error);
       toast({
         title: "Test Failed",
-        description: String(error).includes("No connected") 
+        description: String(error).includes("No connected")
           ? "Please connect a social media account first, then try testing again."
           : "Failed to test automation flow. Please try again.",
         variant: "destructive",
@@ -461,22 +507,22 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
   };
 
   const addKeywordField = () => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       keywords: [...prev.keywords, ""],
     }));
   };
 
   const updateKeyword = (index: number, value: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      keywords: prev.keywords.map((k, i) => i === index ? value : k),
+      keywords: prev.keywords.map((k, i) => (i === index ? value : k)),
     }));
   };
 
   const removeKeyword = (index: number) => {
     if (formData.keywords.length > 1) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         keywords: prev.keywords.filter((_, i) => i !== index),
       }));
@@ -487,7 +533,7 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+          <h2 className="flex items-center gap-2 text-3xl font-bold tracking-tight">
             <Bot className="h-8 w-8" />
             Social Automation
           </h2>
@@ -495,9 +541,10 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
             Automate your social media interactions with keyword triggers and smart responses
           </p>
           {socialAccounts && socialAccounts.length === 0 && (
-            <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950/20">
               <p className="text-sm text-blue-800 dark:text-blue-200">
-                💡 <strong>Quick Start:</strong> Connect your Instagram account first, then create automation flows that will work on ALL your posts automatically!
+                💡 <strong>Quick Start:</strong> Connect your Instagram account first, then create
+                automation flows that will work on ALL your posts automatically!
               </p>
             </div>
           )}
@@ -508,12 +555,12 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
               Connect Instagram First
             </Button>
           )}
-          <Button 
+          <Button
             onClick={() => setShowCreateDialog(true)}
             disabled={!socialAccounts || socialAccounts.length === 0}
             title={
-              !socialAccounts || socialAccounts.length === 0 
-                ? "Connect a social media account first" 
+              !socialAccounts || socialAccounts.length === 0
+                ? "Connect a social media account first"
                 : "Create new automation"
             }
           >
@@ -525,9 +572,7 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="flows">
-            Automation Flows ({flows?.length || 0})
-          </TabsTrigger>
+          <TabsTrigger value="flows">Automation Flows ({flows?.length || 0})</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
@@ -535,7 +580,7 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
         <TabsContent value="flows" className="space-y-4">
           {flows && flows.length > 0 ? (
             <div className="grid gap-4">
-              {flows.map((flow) => (
+              {flows.map((flow: any) => (
                 <Card key={flow._id} className="relative">
                   <CardContent className="pt-6">
                     <div className="flex items-start justify-between">
@@ -548,15 +593,11 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
                           <Badge variant={flow.isActive ? "default" : "secondary"}>
                             {flow.isActive ? "Active" : "Paused"}
                           </Badge>
-                          <Badge variant="outline">
-                            {flow.triggerType}
-                          </Badge>
+                          <Badge variant="outline">{flow.triggerType}</Badge>
                         </div>
 
                         {flow.description && (
-                          <p className="text-sm text-muted-foreground">
-                            {flow.description}
-                          </p>
+                          <p className="text-sm text-muted-foreground">{flow.description}</p>
                         )}
 
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -576,7 +617,7 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
 
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-muted-foreground">Platforms:</span>
-                          {flow.triggerConditions.platforms.map((platform) => (
+                          {flow.triggerConditions.platforms.map((platform: any) => (
                             <span key={platform} className="text-xs">
                               {getPlatformIcon(platform)}
                             </span>
@@ -584,13 +625,15 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
                         </div>
 
                         {flow.triggerConditions.keywords && (
-                          <div className="flex items-center gap-2 flex-wrap">
+                          <div className="flex flex-wrap items-center gap-2">
                             <span className="text-xs text-muted-foreground">Keywords:</span>
-                            {flow.triggerConditions.keywords.slice(0, 3).map((keyword, i) => (
-                              <Badge key={i} variant="outline" className="text-xs">
-                                {keyword}
-                              </Badge>
-                            ))}
+                            {flow.triggerConditions.keywords
+                              .slice(0, 3)
+                              .map((keyword: any, i: number) => (
+                                <Badge key={i} variant="outline" className="text-xs">
+                                  {keyword}
+                                </Badge>
+                              ))}
                             {flow.triggerConditions.keywords.length > 3 && (
                               <Badge variant="outline" className="text-xs">
                                 +{flow.triggerConditions.keywords.length - 3} more
@@ -601,7 +644,7 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
 
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <span>Flow has {flow.flowDefinition.nodes.length} steps</span>
-                          {flow.flowDefinition.nodes.slice(1).map((node, i) => (
+                          {flow.flowDefinition.nodes.slice(1).map((node: any, i: number) => (
                             <div key={i} className="flex items-center gap-1">
                               {getNodeIcon(node.type)}
                               <span>{node.type}</span>
@@ -627,13 +670,21 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
                           variant="outline"
                           size="sm"
                           onClick={() => handleTestFlow(flow)}
-                          disabled={!socialAccounts?.some(
-                            account => flow.triggerConditions.platforms.includes(account.platform) && account.isConnected
-                          )}
+                          disabled={
+                            !socialAccounts?.some(
+                              (account: any) =>
+                                flow.triggerConditions.platforms.includes(account.platform) &&
+                                account.isConnected
+                            )
+                          }
                           title={
                             !socialAccounts?.some(
-                              account => flow.triggerConditions.platforms.includes(account.platform) && account.isConnected
-                            ) ? "Connect a social media account first to enable testing" : "Test this automation flow"
+                              (account: any) =>
+                                flow.triggerConditions.platforms.includes(account.platform) &&
+                                account.isConnected
+                            )
+                              ? "Connect a social media account first to enable testing"
+                              : "Test this automation flow"
                           }
                         >
                           <PlayCircle className="mr-1 h-3 w-3" />
@@ -685,14 +736,16 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
                                 Delete Automation Flow
                               </AlertDialogTitle>
                               <AlertDialogDescription>
-                                Are you sure you want to delete "{flow.name}"? This will stop all active automations and delete all related data. This action cannot be undone.
+                                Are you sure you want to delete "{flow.name}"? This will stop all
+                                active automations and delete all related data. This action cannot
+                                be undone.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
                               <AlertDialogAction
                                 onClick={() => handleDeleteFlow(flow._id)}
-                                className="bg-red-600 hover:bg-red-700 text-white"
+                                className="bg-red-600 text-white hover:bg-red-700"
                               >
                                 <Trash2 className="mr-1 h-3 w-3" />
                                 Delete Flow
@@ -709,10 +762,11 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
           ) : (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12">
-                <Bot className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No automation flows yet</h3>
-                <p className="text-muted-foreground text-center mb-4">
-                  Create your first automation flow to start automating your social media interactions
+                <Bot className="mb-4 h-12 w-12 text-muted-foreground" />
+                <h3 className="mb-2 text-lg font-semibold">No automation flows yet</h3>
+                <p className="mb-4 text-center text-muted-foreground">
+                  Create your first automation flow to start automating your social media
+                  interactions
                 </p>
                 <Button onClick={() => setShowCreateDialog(true)}>
                   <Plus className="mr-2 h-4 w-4" />
@@ -734,7 +788,7 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
               <CardContent>
                 <div className="text-2xl font-bold">{flows?.length || 0}</div>
                 <p className="text-xs text-muted-foreground">
-                  {flows?.filter(f => f.isActive).length || 0} active
+                  {flows?.filter((f: any) => f.isActive).length || 0} active
                 </p>
               </CardContent>
             </Card>
@@ -746,11 +800,9 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {flows?.reduce((sum, flow) => sum + flow.totalTriggers, 0) || 0}
+                  {flows?.reduce((sum: number, flow: any) => sum + flow.totalTriggers, 0) || 0}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  All time triggers
-                </p>
+                <p className="text-xs text-muted-foreground">All time triggers</p>
               </CardContent>
             </Card>
 
@@ -761,11 +813,9 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {flows?.reduce((sum, flow) => sum + flow.totalCompletions, 0) || 0}
+                  {flows?.reduce((sum: number, flow: any) => sum + flow.totalCompletions, 0) || 0}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Successful completions
-                </p>
+                <p className="text-xs text-muted-foreground">Successful completions</p>
               </CardContent>
             </Card>
 
@@ -776,16 +826,19 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">
-                  {flows && flows.length > 0 
+                  {flows && flows.length > 0
                     ? Math.round(
-                        (flows.reduce((sum, flow) => sum + flow.totalCompletions, 0) / 
-                         Math.max(flows.reduce((sum, flow) => sum + flow.totalTriggers, 0), 1)) * 100
+                        (flows.reduce((sum: number, flow: any) => sum + flow.totalCompletions, 0) /
+                          Math.max(
+                            flows.reduce((sum: number, flow: any) => sum + flow.totalTriggers, 0),
+                            1
+                          )) *
+                          100
                       )
-                    : 0}%
+                    : 0}
+                  %
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Completion rate
-                </p>
+                <p className="text-xs text-muted-foreground">Completion rate</p>
               </CardContent>
             </Card>
           </div>
@@ -794,7 +847,7 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
 
       {/* Create Automation Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="bg-white dark:bg-black max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto bg-white dark:bg-black">
           <DialogHeader className="pb-6">
             <DialogTitle className="text-xl">Create New Automation Flow</DialogTitle>
             <DialogDescription className="text-base">
@@ -802,19 +855,19 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
             {/* Left Column - Configuration */}
             <div className="space-y-6">
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Basic Setup</h3>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="name">Flow Name *</Label>
                   <Input
                     id="name"
                     placeholder="e.g., Free Beat Pack Lead Magnet"
                     value={formData.name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
                     className="text-base"
                   />
                 </div>
@@ -825,7 +878,9 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
                     id="description"
                     placeholder="Describe what this automation does..."
                     value={formData.description}
-                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, description: e.target.value }))
+                    }
                     rows={2}
                   />
                 </div>
@@ -833,12 +888,14 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
 
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Trigger Settings</h3>
-                
+
                 <div className="space-y-2">
                   <Label>Trigger Type</Label>
                   <Select
                     value={formData.triggerType}
-                    onValueChange={(value: any) => setFormData(prev => ({ ...prev, triggerType: value }))}
+                    onValueChange={(value: any) =>
+                      setFormData((prev) => ({ ...prev, triggerType: value }))
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -887,7 +944,9 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
                   <Label>Match Type</Label>
                   <Select
                     value={formData.matchType}
-                    onValueChange={(value: any) => setFormData(prev => ({ ...prev, matchType: value }))}
+                    onValueChange={(value: any) =>
+                      setFormData((prev) => ({ ...prev, matchType: value }))
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -907,37 +966,46 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
                     {["instagram", "twitter", "facebook", "linkedin", "tiktok"].map((platform) => {
                       const isComingSoon = platform !== "instagram" && platform !== "facebook";
                       return (
-                        <div key={platform} className="flex items-center space-x-3 p-2 border rounded-lg relative">
-                        <input
-                          type="checkbox"
-                          id={platform}
-                          checked={formData.platforms.includes(platform as any)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setFormData(prev => ({
-                                ...prev,
-                                platforms: [...prev.platforms, platform as any]
-                              }));
-                            } else {
-                              setFormData(prev => ({
-                                ...prev,
-                                platforms: prev.platforms.filter(p => p !== platform)
-                              }));
-                            }
-                          }}
-                          className="w-4 h-4"
+                        <div
+                          key={platform}
+                          className="relative flex items-center space-x-3 rounded-lg border p-2"
+                        >
+                          <input
+                            type="checkbox"
+                            id={platform}
+                            checked={formData.platforms.includes(platform as any)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  platforms: [...prev.platforms, platform as any],
+                                }));
+                              } else {
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  platforms: prev.platforms.filter((p) => p !== platform),
+                                }));
+                              }
+                            }}
+                            className="h-4 w-4"
                             disabled={isComingSoon}
-                        />
-                          <Label htmlFor={platform} className={`capitalize flex items-center gap-2 ${isComingSoon ? 'text-muted-foreground' : ''}`}>
-                          <span className="text-base">{getPlatformIcon(platform)}</span>
-                          <span>{platform}</span>
-                        </Label>
+                          />
+                          <Label
+                            htmlFor={platform}
+                            className={`flex items-center gap-2 capitalize ${isComingSoon ? "text-muted-foreground" : ""}`}
+                          >
+                            <span className="text-base">{getPlatformIcon(platform)}</span>
+                            <span>{platform}</span>
+                          </Label>
                           {isComingSoon && (
-                            <Badge variant="secondary" className="absolute top-1 right-1 text-xs bg-orange-100 dark:bg-orange-950 text-orange-700 dark:text-orange-300 border-orange-300 dark:border-orange-800">
+                            <Badge
+                              variant="secondary"
+                              className="absolute right-1 top-1 border-orange-300 bg-orange-100 text-xs text-orange-700 dark:border-orange-800 dark:bg-orange-950 dark:text-orange-300"
+                            >
                               Soon
                             </Badge>
                           )}
-                      </div>
+                        </div>
                       );
                     })}
                   </div>
@@ -946,22 +1014,25 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
 
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Message Flow</h3>
-                
+
                 <div className="space-y-3">
-                  <div className="flex items-center space-x-3 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                  <div className="flex items-center space-x-3 rounded-lg bg-blue-50 p-3 dark:bg-blue-950/20">
                     <input
                       type="checkbox"
                       id="useConfirmation"
                       checked={formData.useConfirmation}
-                      onChange={(e) => setFormData(prev => ({ ...prev, useConfirmation: e.target.checked }))}
-                      className="w-4 h-4"
+                      onChange={(e) =>
+                        setFormData((prev) => ({ ...prev, useConfirmation: e.target.checked }))
+                      }
+                      className="h-4 w-4"
                     />
                     <div>
                       <Label htmlFor="useConfirmation" className="text-sm font-semibold">
                         Use ManyChat-style confirmation ✨
                       </Label>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Ask for permission before sending resources - improves engagement and compliance
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Ask for permission before sending resources - improves engagement and
+                        compliance
                       </p>
                     </div>
                   </div>
@@ -973,11 +1044,15 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
                   </Label>
                   <Textarea
                     id="firstMessage"
-                    placeholder={formData.useConfirmation ? 
-                      "e.g., Thanks for your comment! Would you like the free guide?" : 
-                      "e.g., Thanks for your comment! Here's your free guide..."}
+                    placeholder={
+                      formData.useConfirmation
+                        ? "e.g., Thanks for your comment! Would you like the free guide?"
+                        : "e.g., Thanks for your comment! Here's your free guide..."
+                    }
                     value={formData.firstMessage}
-                    onChange={(e) => setFormData(prev => ({ ...prev, firstMessage: e.target.value }))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, firstMessage: e.target.value }))
+                    }
                     rows={2}
                     className="text-base"
                   />
@@ -991,7 +1066,9 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
                         id="confirmationMessage"
                         placeholder="e.g., Reply YES to receive it, or NO to skip."
                         value={formData.confirmationMessage}
-                        onChange={(e) => setFormData(prev => ({ ...prev, confirmationMessage: e.target.value }))}
+                        onChange={(e) =>
+                          setFormData((prev) => ({ ...prev, confirmationMessage: e.target.value }))
+                        }
                         className="text-base"
                       />
                     </div>
@@ -1003,7 +1080,9 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
                           id="yesMessage"
                           placeholder="e.g., Perfect! Here's your resource:"
                           value={formData.yesMessage}
-                          onChange={(e) => setFormData(prev => ({ ...prev, yesMessage: e.target.value }))}
+                          onChange={(e) =>
+                            setFormData((prev) => ({ ...prev, yesMessage: e.target.value }))
+                          }
                           rows={2}
                         />
                       </div>
@@ -1014,7 +1093,9 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
                           id="noMessage"
                           placeholder="e.g., No problem! Feel free to ask anytime."
                           value={formData.noMessage}
-                          onChange={(e) => setFormData(prev => ({ ...prev, noMessage: e.target.value }))}
+                          onChange={(e) =>
+                            setFormData((prev) => ({ ...prev, noMessage: e.target.value }))
+                          }
                           rows={2}
                         />
                       </div>
@@ -1028,7 +1109,9 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
                     id="resourceUrl"
                     placeholder="e.g., https://yoursite.com/free-guide"
                     value={formData.resourceUrl}
-                    onChange={(e) => setFormData(prev => ({ ...prev, resourceUrl: e.target.value }))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, resourceUrl: e.target.value }))
+                    }
                     className="text-base"
                   />
                   <p className="text-xs text-muted-foreground">
@@ -1041,7 +1124,9 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
                     <Label>Resource Type</Label>
                     <Select
                       value={formData.resourceType}
-                      onValueChange={(value: any) => setFormData(prev => ({ ...prev, resourceType: value }))}
+                      onValueChange={(value: any) =>
+                        setFormData((prev) => ({ ...prev, resourceType: value }))
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -1061,29 +1146,29 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
             {/* Right Column - Preview */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Live Preview</h3>
-              
-              {(formData.firstMessage || formData.resourceUrl) ? (
+
+              {formData.firstMessage || formData.resourceUrl ? (
                 <div className="sticky top-4">
-                  <div className="border-2 rounded-xl p-4 bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-black">
-                    <div className="text-xs font-semibold text-muted-foreground mb-4 flex items-center gap-2">
+                  <div className="rounded-xl border-2 bg-gradient-to-b from-gray-50 to-white p-4 dark:from-gray-900 dark:to-black">
+                    <div className="mb-4 flex items-center gap-2 text-xs font-semibold text-muted-foreground">
                       📱 Instagram DM Preview
                     </div>
-                    
-                    <div className="space-y-3 max-h-96 overflow-y-auto">
+
+                    <div className="max-h-96 space-y-3 overflow-y-auto">
                       {/* User comment trigger */}
                       <div className="flex justify-end">
-                        <div className="bg-blue-500 text-white px-4 py-2 rounded-2xl text-sm max-w-xs">
+                        <div className="max-w-xs rounded-2xl bg-blue-500 px-4 py-2 text-sm text-white">
                           💬 {formData.keywords[0] || "keyword"}
                         </div>
                       </div>
-                      
+
                       {/* Bot initial message */}
                       <div className="flex justify-start">
-                        <div className="bg-gray-100 dark:bg-gray-800 px-4 py-3 rounded-2xl text-sm max-w-xs">
+                        <div className="max-w-xs rounded-2xl bg-gray-100 px-4 py-3 text-sm dark:bg-gray-800">
                           {formData.firstMessage}
                           {formData.useConfirmation && formData.confirmationMessage && (
                             <>
-                              <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+                              <div className="mt-2 border-t border-gray-200 pt-2 dark:border-gray-600">
                                 {formData.confirmationMessage}
                               </div>
                             </>
@@ -1095,20 +1180,20 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
                         <>
                           {/* User YES response */}
                           <div className="flex justify-end">
-                            <div className="bg-blue-500 text-white px-4 py-2 rounded-2xl text-sm max-w-xs">
+                            <div className="max-w-xs rounded-2xl bg-blue-500 px-4 py-2 text-sm text-white">
                               ✅ YES
                             </div>
                           </div>
-                          
+
                           {/* Bot YES response */}
                           <div className="flex justify-start">
-                            <div className="bg-gray-100 dark:bg-gray-800 px-4 py-3 rounded-2xl text-sm max-w-xs">
+                            <div className="max-w-xs rounded-2xl bg-gray-100 px-4 py-3 text-sm dark:bg-gray-800">
                               {formData.yesMessage}
                               {formData.resourceUrl && (
-                                <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
-                                  <div className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
+                                <div className="mt-2 border-t border-gray-200 pt-2 dark:border-gray-600">
+                                  <div className="flex items-center gap-2 rounded-lg bg-blue-50 p-2 dark:bg-blue-950/30">
                                     <span>🔗</span>
-                                    <span className="text-blue-600 dark:text-blue-400 text-xs font-medium truncate">
+                                    <span className="truncate text-xs font-medium text-blue-600 dark:text-blue-400">
                                       {formData.resourceUrl}
                                     </span>
                                   </div>
@@ -1118,15 +1203,17 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
                           </div>
 
                           {/* Show NO path too */}
-                          <div className="border-t pt-3 mt-4">
-                            <div className="text-xs text-muted-foreground mb-2">If user says NO:</div>
+                          <div className="mt-4 border-t pt-3">
+                            <div className="mb-2 text-xs text-muted-foreground">
+                              If user says NO:
+                            </div>
                             <div className="flex justify-end">
-                              <div className="bg-gray-400 text-white px-4 py-2 rounded-2xl text-sm max-w-xs">
+                              <div className="max-w-xs rounded-2xl bg-gray-400 px-4 py-2 text-sm text-white">
                                 ❌ NO
                               </div>
                             </div>
-                            <div className="flex justify-start mt-2">
-                              <div className="bg-gray-100 dark:bg-gray-800 px-4 py-3 rounded-2xl text-sm max-w-xs">
+                            <div className="mt-2 flex justify-start">
+                              <div className="max-w-xs rounded-2xl bg-gray-100 px-4 py-3 text-sm dark:bg-gray-800">
                                 {formData.noMessage}
                               </div>
                             </div>
@@ -1137,10 +1224,10 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
                       {/* Direct resource delivery (no confirmation) */}
                       {!formData.useConfirmation && formData.resourceUrl && (
                         <div className="flex justify-start">
-                          <div className="bg-gray-100 dark:bg-gray-800 px-4 py-3 rounded-2xl text-sm max-w-xs">
-                            <div className="flex items-center gap-2 p-2 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
+                          <div className="max-w-xs rounded-2xl bg-gray-100 px-4 py-3 text-sm dark:bg-gray-800">
+                            <div className="flex items-center gap-2 rounded-lg bg-blue-50 p-2 dark:bg-blue-950/30">
                               <span>🔗</span>
-                              <span className="text-blue-600 dark:text-blue-400 text-xs font-medium truncate">
+                              <span className="truncate text-xs font-medium text-blue-600 dark:text-blue-400">
                                 {formData.resourceUrl}
                               </span>
                             </div>
@@ -1157,10 +1244,10 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
                       </div>
                     )}
                   </div>
-                  
+
                   {!formData.firstMessage && (
-                    <div className="border-2 border-dashed rounded-xl p-8 text-center">
-                      <MessageSquare className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                    <div className="rounded-xl border-2 border-dashed p-8 text-center">
+                      <MessageSquare className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
                       <p className="text-sm text-muted-foreground">
                         Fill out the form to see your conversation preview
                       </p>
@@ -1168,8 +1255,8 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
                   )}
                 </div>
               ) : (
-                <div className="border-2 border-dashed rounded-xl p-8 text-center">
-                  <Bot className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                <div className="rounded-xl border-2 border-dashed p-8 text-center">
+                  <Bot className="mx-auto mb-3 h-12 w-12 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">
                     Configure your automation to see the live preview
                   </p>
@@ -1178,14 +1265,11 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
             </div>
           </div>
 
-          <DialogFooter className="pt-6 border-t">
+          <DialogFooter className="border-t pt-6">
             <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
               Cancel
             </Button>
-            <Button 
-              onClick={handleCreateFlow}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
+            <Button onClick={handleCreateFlow} className="bg-blue-600 text-white hover:bg-blue-700">
               <Bot className="mr-2 h-4 w-4" />
               Create Automation
             </Button>
@@ -1195,22 +1279,20 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
 
       {/* Flow Details Dialog */}
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
-        <DialogContent className="bg-white dark:bg-black max-w-4xl">
+        <DialogContent className="max-w-4xl bg-white dark:bg-black">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Bot className="h-5 w-5" />
               {selectedFlow?.name}
             </DialogTitle>
-            <DialogDescription>
-              Automation flow details and configuration
-            </DialogDescription>
+            <DialogDescription>Automation flow details and configuration</DialogDescription>
           </DialogHeader>
 
           {selectedFlow && (
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h4 className="font-semibold mb-2">Trigger Configuration</h4>
+                  <h4 className="mb-2 font-semibold">Trigger Configuration</h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Type:</span>
@@ -1223,7 +1305,7 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Platforms:</span>
                       <div className="flex gap-1">
-                        {selectedFlow.triggerConditions.platforms.map(p => (
+                        {selectedFlow.triggerConditions.platforms.map((p) => (
                           <span key={p}>{getPlatformIcon(p)}</span>
                         ))}
                       </div>
@@ -1232,7 +1314,7 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
                 </div>
 
                 <div>
-                  <h4 className="font-semibold mb-2">Performance</h4>
+                  <h4 className="mb-2 font-semibold">Performance</h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Total Triggers:</span>
@@ -1245,9 +1327,12 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Success Rate:</span>
                       <span>
-                        {selectedFlow.totalTriggers > 0 
-                          ? Math.round((selectedFlow.totalCompletions / selectedFlow.totalTriggers) * 100)
-                          : 0}%
+                        {selectedFlow.totalTriggers > 0
+                          ? Math.round(
+                              (selectedFlow.totalCompletions / selectedFlow.totalTriggers) * 100
+                            )
+                          : 0}
+                        %
                       </span>
                     </div>
                     <div className="flex justify-between">
@@ -1260,21 +1345,23 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
 
               {selectedFlow.triggerConditions.keywords && (
                 <div>
-                  <h4 className="font-semibold mb-2">Keywords</h4>
+                  <h4 className="mb-2 font-semibold">Keywords</h4>
                   <div className="flex flex-wrap gap-2">
                     {selectedFlow.triggerConditions.keywords.map((keyword, i) => (
-                      <Badge key={i} variant="outline">{keyword}</Badge>
+                      <Badge key={i} variant="outline">
+                        {keyword}
+                      </Badge>
                     ))}
                   </div>
                 </div>
               )}
 
               <div>
-                <h4 className="font-semibold mb-2">Flow Steps</h4>
+                <h4 className="mb-2 font-semibold">Flow Steps</h4>
                 <div className="space-y-2">
                   {selectedFlow.flowDefinition.nodes.slice(1).map((node, i) => (
-                    <div key={node.id} className="flex items-center gap-3 p-3 border rounded-lg">
-                      <div className="flex items-center justify-center w-8 h-8 bg-muted rounded-full">
+                    <div key={node.id} className="flex items-center gap-3 rounded-lg border p-3">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
                         {getNodeIcon(node.type)}
                       </div>
                       <div className="flex-1">
@@ -1308,10 +1395,12 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
             <Button variant="outline" onClick={() => setShowDetailsDialog(false)}>
               Close
             </Button>
-            <Button onClick={() => {
-              setShowDetailsDialog(false);
-              // TODO: Open flow builder
-            }}>
+            <Button
+              onClick={() => {
+                setShowDetailsDialog(false);
+                // TODO: Open flow builder
+              }}
+            >
               <Edit3 className="mr-2 h-4 w-4" />
               Edit Flow
             </Button>

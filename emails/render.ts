@@ -56,8 +56,8 @@ export async function renderEmailTemplate(
       throw new Error(`Unknown email template type: ${type}`);
   }
 
-  const html = render(Component(props));
-  const text = render(Component(props), { plainText: true });
+  const html = await render(Component(props as any));
+  const text = await render(Component(props as any), { plainText: true });
 
   return { html, text };
 }
@@ -120,7 +120,7 @@ export function validateTemplateProps(
   props: EmailTemplateProps
 ): { valid: boolean; missing: string[] } {
   const template = getAvailableTemplates().find((t) => t.type === type);
-  
+
   if (!template) {
     return { valid: false, missing: [] };
   }
@@ -141,7 +141,7 @@ export function replaceTemplateVariables(
   variables: Record<string, string>
 ): string {
   let result = content;
-  
+
   Object.entries(variables).forEach(([key, value]) => {
     const regex = new RegExp(`\\{${key}\\}`, "g");
     result = result.replace(regex, value);
@@ -233,4 +233,3 @@ export function getExampleProps(type: EmailTemplateType): EmailTemplateProps {
 
   return examples[type] || {};
 }
-

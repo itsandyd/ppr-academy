@@ -124,6 +124,15 @@ export const getCampaignsByStore = query({
   },
 });
 
+// Admin query - returns ALL campaigns across all stores
+export const getAllDripCampaigns = query({
+  args: {},
+  returns: v.array(v.any()),
+  handler: async (ctx) => {
+    return await ctx.db.query("dripCampaigns").order("desc").collect();
+  },
+});
+
 export const toggleCampaign = mutation({
   args: { campaignId: v.id("dripCampaigns") },
   returns: v.object({ isActive: v.boolean() }),

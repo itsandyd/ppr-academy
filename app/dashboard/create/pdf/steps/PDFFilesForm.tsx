@@ -17,7 +17,9 @@ export function PDFFilesForm() {
   const handleBack = () => {
     const prevStep = state.data.pricingModel === "free_with_gate" ? "followGate" : "pricing";
     const pdfType = state.data.pdfType || "sample-pdf";
-    router.push(`/dashboard/create/pdf?type=${pdfType}&step=${prevStep}${state.pdfId ? `&pdfId=${state.pdfId}` : ''}`);
+    router.push(
+      `/dashboard/create/pdf?type=${pdfType}&step=${prevStep}${state.pdfId ? `&pdfId=${state.pdfId}` : ""}`
+    );
   };
 
   const handlePublish = async () => {
@@ -31,8 +33,10 @@ export function PDFFilesForm() {
     }
   };
 
-  const handleFilesUploaded = (uploadedFiles: Array<{ name: string; storageId: string; size: number; type: string }>) => {
-    const newFiles = uploadedFiles.map(f => ({
+  const handleFilesUploaded = (
+    uploadedFiles: Array<{ name: string; storageId: string; size: number; type: string }>
+  ) => {
+    const newFiles = uploadedFiles.map((f) => ({
       id: f.storageId,
       name: f.name,
       url: f.storageId, // Store the storage ID
@@ -40,18 +44,19 @@ export function PDFFilesForm() {
       type: f.type,
       storageId: f.storageId,
     }));
-    
+
     const currentFiles = state.data.files || [];
     updateData("files", { files: [...currentFiles, ...newFiles] });
   };
 
   const removeFile = (fileId: string) => {
-    const updatedFiles = (state.data.files || []).filter(f => f.id !== fileId);
+    const updatedFiles = (state.data.files || []).filter((f) => f.id !== fileId);
     updateData("files", { files: updatedFiles });
   };
 
   const getAcceptedFileTypes = () => {
-    switch (state.data.pdfType) {
+    const pdfType = state.data.pdfType as string | undefined;
+    switch (pdfType) {
       case "sample-pdf":
         return "audio/*,.wav,.mp3,.aiff,.flac,.ogg";
       case "midi-pdf":
@@ -67,7 +72,7 @@ export function PDFFilesForm() {
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold">PDF Files</h2>
-        <p className="text-muted-foreground mt-1">
+        <p className="mt-1 text-muted-foreground">
           Upload your {state.data.pdfType?.replace("-", " ")} files
         </p>
       </div>
@@ -76,7 +81,9 @@ export function PDFFilesForm() {
       <Card>
         <CardHeader>
           <CardTitle>Download URL</CardTitle>
-          <CardDescription>Or provide a direct download link (Dropbox, Google Drive, etc.)</CardDescription>
+          <CardDescription>
+            Or provide a direct download link (Dropbox, Google Drive, etc.)
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Input
@@ -108,11 +115,8 @@ export function PDFFilesForm() {
           {/* Uploaded Files List */}
           {state.data.files && state.data.files.length > 0 && (
             <div className="mt-4">
-              <p className="text-sm font-medium mb-2">Uploaded Files ({state.data.files.length})</p>
-              <FileList 
-                files={state.data.files as any} 
-                onRemove={removeFile}
-              />
+              <p className="mb-2 text-sm font-medium">Uploaded Files ({state.data.files.length})</p>
+              <FileList files={state.data.files as any} onRemove={removeFile} />
             </div>
           )}
 
@@ -139,4 +143,3 @@ export function PDFFilesForm() {
     </div>
   );
 }
-

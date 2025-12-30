@@ -27,11 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Brain,
@@ -101,14 +97,11 @@ interface Agent {
   suggestedQuestions?: string[];
   enabledTools?: string[];
   systemPrompt?: string;
-  suggestedQuestions?: string[];
-  systemPrompt?: string;
   knowledgeFilters?: {
     categories?: string[];
     sourceTypes?: string[];
     tags?: string[];
   };
-  enabledTools?: string[];
   defaultSettings?: {
     preset?: string;
     responseStyle?: string;
@@ -117,7 +110,7 @@ interface Agent {
     enableWebResearch?: boolean;
     enableCreativeMode?: boolean;
   };
-  conversationCount: number;
+  conversationCount?: number;
   rating?: number;
   ratingCount?: number;
   isBuiltIn: boolean;
@@ -158,6 +151,14 @@ interface ActionProposal {
   summary: string;
 }
 
+interface ScriptResult {
+  script?: string;
+  hook?: string;
+  cta?: string;
+  hashtags?: string[];
+  notes?: string;
+}
+
 interface ToolCallResult {
   tool: string;
   success: boolean;
@@ -166,6 +167,8 @@ interface ToolCallResult {
     link?: string;
     courseId?: string;
     slug?: string;
+    script?: ScriptResult;
+    content?: Array<{ platform: string; text: string }>;
     [key: string]: unknown;
   };
   error?: string;
@@ -200,28 +203,36 @@ interface PipelineStatus {
 // ============================================================================
 
 const PRESET_ICONS: Record<PresetId, React.ReactNode> = {
-  budget: <Feather className="w-4 h-4" />,
-  speed: <Zap className="w-4 h-4" />,
-  balanced: <Scale className="w-4 h-4" />,
-  deepReasoning: <Brain className="w-4 h-4" />,
-  premium: <Crown className="w-4 h-4" />,
+  budget: <Feather className="h-4 w-4" />,
+  speed: <Zap className="h-4 w-4" />,
+  balanced: <Scale className="h-4 w-4" />,
+  deepReasoning: <Brain className="h-4 w-4" />,
+  premium: <Crown className="h-4 w-4" />,
 };
 
-const RESPONSE_STYLE_OPTIONS: Record<ResponseStyle, { name: string; description: string; icon: React.ReactNode }> = {
+const RESPONSE_STYLE_OPTIONS: Record<
+  ResponseStyle,
+  { name: string; description: string; icon: React.ReactNode }
+> = {
   structured: {
     name: "Structured",
     description: "Organized with headings and bullet points",
-    icon: <LayoutList className="w-4 h-4" />,
+    icon: <LayoutList className="h-4 w-4" />,
   },
   conversational: {
     name: "Conversational",
     description: "Natural, flowing responses",
-    icon: <Bot className="w-4 h-4" />,
+    icon: <Bot className="h-4 w-4" />,
   },
   concise: {
     name: "Concise",
     description: "Brief and to the point",
-    icon: <Zap className="w-4 h-4" />,
+    icon: <Zap className="h-4 w-4" />,
+  },
+  educational: {
+    name: "Educational",
+    description: "Detailed explanations with examples",
+    icon: <BookOpen className="h-4 w-4" />,
   },
 };
 
@@ -242,67 +253,68 @@ export default function AIAssistantPage() {
   const [pipelineStatus, setPipelineStatus] = useState<PipelineStatus | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settings, setSettings] = useState<ChatSettings>(DEFAULT_CHAT_SETTINGS);
-  
+
   // Conversation management
-  const [currentConversationId, setCurrentConversationId] = useState<Id<"aiConversations"> | null>(null);
+  const [currentConversationId, setCurrentConversationId] = useState<Id<"aiConversations"> | null>(
+    null
+  );
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  
+
   // Agent selection
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
-  
+
   // Action proposal state
   const [pendingProposal, setPendingProposal] = useState<{
     messageId: string;
     proposal: ActionProposal;
   } | null>(null);
   const [isExecutingActions, setIsExecutingActions] = useState(false);
-  
+
   // Agentic mode toggle
   const [agenticMode, setAgenticMode] = useState(true);
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const activeConversationRef = useRef<string | null>(null);
 
-  // Convex actions
+  // @ts-expect-error Convex useAction type instantiation too deep
   const askMasterAI = useAction((api as any).masterAI.index.askMasterAI);
   const askAgenticAI = useAction((api as any).masterAI.index.askAgenticAI);
   const executeConfirmedActions = useAction((api as any).masterAI.index.executeConfirmedActions);
-  
-  // Conversation mutations
+
   const createConversation = useMutation(api.aiConversations.createConversation);
   const saveMessage = useMutation(api.aiConversations.saveMessage);
   const updateConversationSettings = useMutation(api.aiConversations.updateConversationSettings);
-  
+
   // Feedback mutation
   const submitFeedback = useMutation(api.aiMessageFeedback.submitFeedback);
-  
+
   // Query to get conversation details (including settings)
   const currentConversation = useQuery(
     api.aiConversations.getConversation,
     currentConversationId ? { conversationId: currentConversationId } : "skip"
   );
-  
+
   // Query to get agent details if conversation has an agent
   const conversationAgent = useQuery(
     api.aiAgents.getAgent,
     currentConversation?.agentId ? { agentId: currentConversation.agentId } : "skip"
   );
-  
+
   // Load conversation messages when switching
   // Use a high limit to ensure all messages are fetched for long conversations
   const conversationMessages = useQuery(
     api.aiConversations.getConversationMessages,
     currentConversationId ? { conversationId: currentConversationId, limit: 1000 } : "skip"
   );
-  
+
   // Get user's long-term memories for context
   const userMemories = useQuery(
     api.aiMemories.getRelevantMemories,
     user ? { userId: user.id, limit: 5 } : "skip"
   );
-  
+
   // Cancel any pending request and reset state when conversation changes
   useEffect(() => {
     // Cancel any pending request from previous conversation
@@ -310,11 +322,11 @@ export default function AIAssistantPage() {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
-    
+
     // Reset loading state
     setIsLoading(false);
     setPipelineStatus(null);
-    
+
     // Update active conversation ref
     activeConversationRef.current = currentConversationId;
   }, [currentConversationId]);
@@ -328,16 +340,18 @@ export default function AIAssistantPage() {
         content: m.content,
         citations: m.citations,
         timestamp: new Date(m.createdAt),
-        pipelineMetadata: m.pipelineMetadata ? {
-          processingTimeMs: m.pipelineMetadata.processingTimeMs,
-          totalChunksProcessed: m.pipelineMetadata.totalChunksProcessed,
-          facetsUsed: m.facetsUsed,
-        } : undefined,
+        pipelineMetadata: m.pipelineMetadata
+          ? {
+              processingTimeMs: m.pipelineMetadata.processingTimeMs,
+              totalChunksProcessed: m.pipelineMetadata.totalChunksProcessed,
+              facetsUsed: m.facetsUsed,
+            }
+          : undefined,
       }));
       setMessages(loadedMessages);
     }
   }, [conversationMessages]);
-  
+
   // Sync agent when conversation changes
   useEffect(() => {
     if (currentConversation) {
@@ -350,7 +364,7 @@ export default function AIAssistantPage() {
       }
     }
   }, [currentConversation, conversationAgent]);
-  
+
   // Load settings when conversation changes
   useEffect(() => {
     if (currentConversation?.settings) {
@@ -358,15 +372,29 @@ export default function AIAssistantPage() {
       setSettings({
         preset: (currentConversation.settings.preset as PresetId) || "balanced",
         maxFacets: currentConversation.settings.maxFacets ?? DEFAULT_CHAT_SETTINGS.maxFacets,
-        chunksPerFacet: currentConversation.settings.chunksPerFacet ?? DEFAULT_CHAT_SETTINGS.chunksPerFacet,
-        similarityThreshold: currentConversation.settings.similarityThreshold ?? DEFAULT_CHAT_SETTINGS.similarityThreshold,
-        enableCritic: currentConversation.settings.enableCritic ?? DEFAULT_CHAT_SETTINGS.enableCritic,
-        enableCreativeMode: currentConversation.settings.enableCreativeMode ?? DEFAULT_CHAT_SETTINGS.enableCreativeMode,
-        enableWebResearch: currentConversation.settings.enableWebResearch ?? DEFAULT_CHAT_SETTINGS.enableWebResearch,
-        enableFactVerification: currentConversation.settings.enableFactVerification ?? DEFAULT_CHAT_SETTINGS.enableFactVerification,
-        autoSaveWebResearch: currentConversation.settings.autoSaveWebResearch ?? DEFAULT_CHAT_SETTINGS.autoSaveWebResearch,
-        webSearchMaxResults: currentConversation.settings.webSearchMaxResults ?? DEFAULT_CHAT_SETTINGS.webSearchMaxResults,
-        responseStyle: (currentConversation.settings.responseStyle as ResponseStyle) || "structured",
+        chunksPerFacet:
+          currentConversation.settings.chunksPerFacet ?? DEFAULT_CHAT_SETTINGS.chunksPerFacet,
+        similarityThreshold:
+          currentConversation.settings.similarityThreshold ??
+          DEFAULT_CHAT_SETTINGS.similarityThreshold,
+        enableCritic:
+          currentConversation.settings.enableCritic ?? DEFAULT_CHAT_SETTINGS.enableCritic,
+        enableCreativeMode:
+          currentConversation.settings.enableCreativeMode ??
+          DEFAULT_CHAT_SETTINGS.enableCreativeMode,
+        enableWebResearch:
+          currentConversation.settings.enableWebResearch ?? DEFAULT_CHAT_SETTINGS.enableWebResearch,
+        enableFactVerification:
+          currentConversation.settings.enableFactVerification ??
+          DEFAULT_CHAT_SETTINGS.enableFactVerification,
+        autoSaveWebResearch:
+          currentConversation.settings.autoSaveWebResearch ??
+          DEFAULT_CHAT_SETTINGS.autoSaveWebResearch,
+        webSearchMaxResults:
+          currentConversation.settings.webSearchMaxResults ??
+          DEFAULT_CHAT_SETTINGS.webSearchMaxResults,
+        responseStyle:
+          (currentConversation.settings.responseStyle as ResponseStyle) || "structured",
       });
       if (currentConversation.settings.agenticMode !== undefined) {
         setAgenticMode(currentConversation.settings.agenticMode);
@@ -374,31 +402,31 @@ export default function AIAssistantPage() {
     } else if (currentConversation && !currentConversation.settings) {
       // Legacy conversation - use preset/responseStyle if available
       if (currentConversation.preset) {
-        setSettings(prev => ({
+        setSettings((prev) => ({
           ...prev,
           preset: currentConversation.preset as PresetId,
         }));
       }
       if (currentConversation.responseStyle) {
-        setSettings(prev => ({
+        setSettings((prev) => ({
           ...prev,
           responseStyle: currentConversation.responseStyle as ResponseStyle,
         }));
       }
     }
   }, [currentConversation]);
-  
+
   // Save settings when they change (debounced)
   const settingsToSaveRef = useRef<ChatSettings | null>(null);
   const agenticModeRef = useRef(agenticMode);
   agenticModeRef.current = agenticMode;
-  
+
   useEffect(() => {
     if (!currentConversationId) return;
-    
+
     // Store current settings for saving
     settingsToSaveRef.current = settings;
-    
+
     // Debounce the save operation
     const timeoutId = setTimeout(async () => {
       if (settingsToSaveRef.current && currentConversationId) {
@@ -425,14 +453,14 @@ export default function AIAssistantPage() {
         }
       }
     }, 1000); // 1 second debounce
-    
+
     return () => clearTimeout(timeoutId);
   }, [settings, currentConversationId, updateConversationSettings]);
-  
+
   // Also save when agentic mode changes
   useEffect(() => {
     if (!currentConversationId) return;
-    
+
     const timeoutId = setTimeout(async () => {
       if (settingsToSaveRef.current && currentConversationId) {
         try {
@@ -448,10 +476,10 @@ export default function AIAssistantPage() {
         }
       }
     }, 500);
-    
+
     return () => clearTimeout(timeoutId);
   }, [agenticMode, currentConversationId, updateConversationSettings]);
-  
+
   // Clear messages when starting a new conversation
   const handleNewConversation = (agent?: Agent | null) => {
     setCurrentConversationId(null);
@@ -463,7 +491,7 @@ export default function AIAssistantPage() {
     }
     inputRef.current?.focus();
   };
-  
+
   // Select an existing conversation
   const handleSelectConversation = (id: Id<"aiConversations"> | null) => {
     setCurrentConversationId(id);
@@ -475,7 +503,7 @@ export default function AIAssistantPage() {
 
   // Load more messages handler
   const handleLoadMoreMessages = useCallback(() => {
-    setVisibleMessageCount(prev => prev + LOAD_MORE_INCREMENT);
+    setVisibleMessageCount((prev) => prev + LOAD_MORE_INCREMENT);
   }, []);
 
   // Compute visible messages (memoized for performance)
@@ -559,7 +587,7 @@ export default function AIAssistantPage() {
       role: m.role,
       content: m.content,
     }));
-    
+
     // Note: Long-term memories are now fetched and formatted by the backend pipeline
     // This is more reliable and doesn't pollute the question text
 
@@ -567,11 +595,11 @@ export default function AIAssistantPage() {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
-    
+
     // Create new AbortController for this request
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
-    
+
     // Track which conversation this request is for
     activeConversationRef.current = conversationId;
 
@@ -596,7 +624,7 @@ export default function AIAssistantPage() {
       if (!response.ok) {
         throw new Error("API request failed");
       }
-      
+
       // Check if this request is still relevant (conversation hasn't changed)
       if (activeConversationRef.current !== conversationId) {
         console.log("Ignoring response - conversation changed");
@@ -637,7 +665,7 @@ export default function AIAssistantPage() {
             try {
               const event = JSON.parse(line.replace("data: ", ""));
               handleStreamEvent(event, assistantMessageId);
-              
+
               // Capture the final response for saving to database
               if (event.type === "complete") {
                 finalResponse = event.response;
@@ -648,7 +676,7 @@ export default function AIAssistantPage() {
           }
         }
       }
-      
+
       // Save assistant message to database after streaming completes
       if (conversationId && finalResponse) {
         try {
@@ -659,13 +687,15 @@ export default function AIAssistantPage() {
             content: finalResponse.answer,
             citations: finalResponse.citations,
             facetsUsed: finalResponse.facetsUsed,
-            pipelineMetadata: finalResponse.pipelineMetadata ? {
-              processingTimeMs: finalResponse.pipelineMetadata.processingTimeMs,
-              totalChunksProcessed: finalResponse.pipelineMetadata.totalChunksProcessed,
-              plannerModel: finalResponse.pipelineMetadata.plannerModel,
-              summarizerModel: finalResponse.pipelineMetadata.summarizerModel,
-              finalWriterModel: finalResponse.pipelineMetadata.finalWriterModel,
-            } : undefined,
+            pipelineMetadata: finalResponse.pipelineMetadata
+              ? {
+                  processingTimeMs: finalResponse.pipelineMetadata.processingTimeMs,
+                  totalChunksProcessed: finalResponse.pipelineMetadata.totalChunksProcessed,
+                  plannerModel: finalResponse.pipelineMetadata.plannerModel,
+                  summarizerModel: finalResponse.pipelineMetadata.summarizerModel,
+                  finalWriterModel: finalResponse.pipelineMetadata.finalWriterModel,
+                }
+              : undefined,
           });
         } catch (error) {
           console.error("Failed to save assistant message:", error);
@@ -677,15 +707,15 @@ export default function AIAssistantPage() {
         console.log("Request cancelled - user switched conversations");
         return; // Don't show error, just exit
       }
-      
+
       // Check if conversation changed during request
       if (activeConversationRef.current !== conversationId) {
         console.log("Ignoring error - conversation changed");
         return;
       }
-      
+
       console.error("Chat error:", error);
-      
+
       // Fallback to direct Convex action
       try {
         // Use agentic endpoint if enabled, otherwise use standard
@@ -704,7 +734,7 @@ export default function AIAssistantPage() {
           });
 
           const assistantMessageId = (Date.now() + 1).toString();
-          
+
           // Check if this is an action proposal
           if (result.type === "action_proposal") {
             const assistantMessage: Message = {
@@ -714,12 +744,12 @@ export default function AIAssistantPage() {
               timestamp: new Date(),
               actionProposal: result,
             };
-            
+
             setMessages((prev) => {
               const filtered = prev.filter((m) => !m.isStreaming);
               return [...filtered, assistantMessage];
             });
-            
+
             // Set pending proposal for confirmation
             setPendingProposal({
               messageId: assistantMessageId,
@@ -733,7 +763,7 @@ export default function AIAssistantPage() {
               timestamp: new Date(),
               executedActions: result,
             };
-            
+
             setMessages((prev) => {
               const filtered = prev.filter((m) => !m.isStreaming);
               return [...filtered, assistantMessage];
@@ -752,7 +782,7 @@ export default function AIAssistantPage() {
                 facetsUsed: result.facetsUsed,
               },
             };
-            
+
             setMessages((prev) => {
               const filtered = prev.filter((m) => !m.isStreaming);
               return [...filtered, assistantMessage];
@@ -816,7 +846,8 @@ export default function AIAssistantPage() {
           {
             id: (Date.now() + 1).toString(),
             role: "assistant",
-            content: "I'm sorry, I encountered an error while processing your question. Please try again.",
+            content:
+              "I'm sorry, I encountered an error while processing your question. Please try again.",
             timestamp: new Date(),
           },
         ]);
@@ -840,94 +871,122 @@ export default function AIAssistantPage() {
         break;
 
       case "stage_complete":
-        setPipelineStatus((prev) =>
-          prev ? { ...prev, isActive: false } : null
-        );
+        setPipelineStatus((prev) => (prev ? { ...prev, isActive: false } : null));
         break;
 
       case "facets_identified":
-        setPipelineStatus((prev) => prev ? { ...prev, facets: event.facets } : null);
+        setPipelineStatus((prev) => (prev ? { ...prev, facets: event.facets } : null));
         break;
 
       case "chunks_retrieved":
-        setPipelineStatus((prev) => prev ? { 
-          ...prev, 
-          chunksRetrieved: (prev.chunksRetrieved || 0) + event.count,
-          details: `${event.facet}: ${event.count} sources`
-        } : null);
+        setPipelineStatus((prev) =>
+          prev
+            ? {
+                ...prev,
+                chunksRetrieved: (prev.chunksRetrieved || 0) + event.count,
+                details: `${event.facet}: ${event.count} sources`,
+              }
+            : null
+        );
         break;
 
       case "web_research_start":
-        setPipelineStatus((prev) => prev ? { ...prev, details: "Searching web..." } : null);
+        setPipelineStatus((prev) => (prev ? { ...prev, details: "Searching web..." } : null));
         break;
 
       case "web_research_result":
-        setPipelineStatus((prev) => prev ? { 
-          ...prev, 
-          webResults: (prev.webResults || 0) + event.count,
-          details: `Web: ${event.facet} (${event.count} results)`
-        } : null);
+        setPipelineStatus((prev) =>
+          prev
+            ? {
+                ...prev,
+                webResults: (prev.webResults || 0) + event.count,
+                details: `Web: ${event.facet} (${event.count} results)`,
+              }
+            : null
+        );
         break;
 
       case "web_research_complete":
-        setPipelineStatus((prev) => prev ? { 
-          ...prev, 
-          webResults: event.totalResults,
-          details: event.savedToEmbeddings ? "Web results saved to knowledge" : undefined
-        } : null);
+        setPipelineStatus((prev) =>
+          prev
+            ? {
+                ...prev,
+                webResults: event.totalResults,
+                details: event.savedToEmbeddings ? "Web results saved to knowledge" : undefined,
+              }
+            : null
+        );
         break;
 
       case "summary_generated":
-        setPipelineStatus((prev) => prev ? { 
-          ...prev, 
-          summariesGenerated: (prev.summariesGenerated || 0) + 1,
-          details: `Summarizing: ${event.facet}`
-        } : null);
+        setPipelineStatus((prev) =>
+          prev
+            ? {
+                ...prev,
+                summariesGenerated: (prev.summariesGenerated || 0) + 1,
+                details: `Summarizing: ${event.facet}`,
+              }
+            : null
+        );
         break;
 
       case "ideas_generated":
-        setPipelineStatus((prev) => prev ? { 
-          ...prev, 
-          ideasGenerated: event.count 
-        } : null);
+        setPipelineStatus((prev) =>
+          prev
+            ? {
+                ...prev,
+                ideasGenerated: event.count,
+              }
+            : null
+        );
         break;
 
       case "fact_verification_start":
-        setPipelineStatus((prev) => prev ? { 
-          ...prev, 
-          details: `Verifying ${event.claimCount} claims...`
-        } : null);
+        setPipelineStatus((prev) =>
+          prev
+            ? {
+                ...prev,
+                details: `Verifying ${event.claimCount} claims...`,
+              }
+            : null
+        );
         break;
 
       case "fact_verification_complete":
-        setPipelineStatus((prev) => prev ? { 
-          ...prev, 
-          verifiedClaims: event.verifiedCount,
-          confidence: event.confidence
-        } : null);
+        setPipelineStatus((prev) =>
+          prev
+            ? {
+                ...prev,
+                verifiedClaims: event.verifiedCount,
+                confidence: event.confidence,
+              }
+            : null
+        );
         break;
 
       case "critic_review":
-        setPipelineStatus((prev) => prev ? { 
-          ...prev, 
-          details: event.approved ? `Quality: ${Math.round(event.quality * 100)}%` : "Revising..."
-        } : null);
+        setPipelineStatus((prev) =>
+          prev
+            ? {
+                ...prev,
+                details: event.approved
+                  ? `Quality: ${Math.round(event.quality * 100)}%`
+                  : "Revising...",
+              }
+            : null
+        );
         break;
 
       case "text_delta":
         setMessages((prev) =>
-          prev.map((m) =>
-            m.id === messageId
-              ? { ...m, content: m.content + event.delta }
-              : m
-          )
+          prev.map((m) => (m.id === messageId ? { ...m, content: m.content + event.delta } : m))
         );
         break;
 
       case "complete":
         // Handle different response types (standard Q&A vs agentic responses)
         const response = event.response;
-        
+
         // Check if this is an action proposal or executed actions (from agentic AI)
         if (response.type === "action_proposal") {
           setMessages((prev) =>
@@ -970,11 +1029,13 @@ export default function AIAssistantPage() {
                     content: response.answer,
                     citations: response.citations,
                     isStreaming: false,
-                    pipelineMetadata: response.pipelineMetadata ? {
-                      processingTimeMs: response.pipelineMetadata.processingTimeMs,
-                      totalChunksProcessed: response.pipelineMetadata.totalChunksProcessed,
-                      facetsUsed: response.facetsUsed,
-                    } : undefined,
+                    pipelineMetadata: response.pipelineMetadata
+                      ? {
+                          processingTimeMs: response.pipelineMetadata.processingTimeMs,
+                          totalChunksProcessed: response.pipelineMetadata.totalChunksProcessed,
+                          facetsUsed: response.facetsUsed,
+                        }
+                      : undefined,
                   }
                 : m
             )
@@ -999,83 +1060,89 @@ export default function AIAssistantPage() {
   };
 
   // Handle feedback submission
-  const handleFeedback = useCallback(async (messageId: string, vote: "up" | "down") => {
-    if (!user || !currentConversationId) return;
-    
-    // Find the message to get its database ID
-    const message = messages.find(m => m.id === messageId);
-    if (!message?.dbId) {
-      console.warn("No database ID for message, feedback not saved");
-      return;
-    }
-    
-    try {
-      await submitFeedback({
-        messageId: message.dbId,
-        conversationId: currentConversationId,
-        userId: user.id,
-        vote,
-      });
-      console.log(`Feedback ${vote} submitted for message ${messageId}`);
-    } catch (error) {
-      console.error("Failed to submit feedback:", error);
-    }
-  }, [user, currentConversationId, messages, submitFeedback]);
+  const handleFeedback = useCallback(
+    async (messageId: string, vote: "up" | "down") => {
+      if (!user || !currentConversationId) return;
+
+      // Find the message to get its database ID
+      const message = messages.find((m) => m.id === messageId);
+      if (!message?.dbId) {
+        console.warn("No database ID for message, feedback not saved");
+        return;
+      }
+
+      try {
+        await submitFeedback({
+          messageId: message.dbId,
+          conversationId: currentConversationId,
+          userId: user.id,
+          vote,
+        });
+        console.log(`Feedback ${vote} submitted for message ${messageId}`);
+      } catch (error) {
+        console.error("Failed to submit feedback:", error);
+      }
+    },
+    [user, currentConversationId, messages, submitFeedback]
+  );
 
   // Handle regenerating a response
-  const handleRegenerate = useCallback((messageId: string, customSettings?: { preset?: PresetId; responseStyle?: ResponseStyle }) => {
-    if (!user || isLoading) return;
-    
-    // Find the AI message and the preceding user message
-    const messageIndex = messages.findIndex(m => m.id === messageId);
-    if (messageIndex === -1) return;
-    
-    // Look for the user message before this AI message
-    let userMessageIndex = messageIndex - 1;
-    while (userMessageIndex >= 0 && messages[userMessageIndex].role !== "user") {
-      userMessageIndex--;
-    }
-    
-    if (userMessageIndex < 0) {
-      console.warn("Could not find user message to regenerate from");
-      return;
-    }
-    
-    const userMessage = messages[userMessageIndex];
-    
-    // If custom settings provided, update the settings first
-    if (customSettings) {
-      setSettings(prev => ({
-        ...prev,
-        ...(customSettings.preset && { preset: customSettings.preset }),
-        ...(customSettings.responseStyle && { responseStyle: customSettings.responseStyle }),
-      }));
-    }
-    
-    // Remove the AI response we're regenerating (and any responses after it)
-    setMessages(prev => prev.slice(0, messageIndex));
-    
-    // Re-submit the user's question by setting input and triggering form submit
-    setInputValue(userMessage.content);
-    
-    // Use a ref-based approach to submit the form (slight delay to allow settings to update)
-    setTimeout(() => {
-      inputRef.current?.form?.requestSubmit();
-    }, 100);
-  }, [user, isLoading, messages]);
+  const handleRegenerate = useCallback(
+    (messageId: string, customSettings?: { preset?: PresetId; responseStyle?: ResponseStyle }) => {
+      if (!user || isLoading) return;
+
+      // Find the AI message and the preceding user message
+      const messageIndex = messages.findIndex((m) => m.id === messageId);
+      if (messageIndex === -1) return;
+
+      // Look for the user message before this AI message
+      let userMessageIndex = messageIndex - 1;
+      while (userMessageIndex >= 0 && messages[userMessageIndex].role !== "user") {
+        userMessageIndex--;
+      }
+
+      if (userMessageIndex < 0) {
+        console.warn("Could not find user message to regenerate from");
+        return;
+      }
+
+      const userMessage = messages[userMessageIndex];
+
+      // If custom settings provided, update the settings first
+      if (customSettings) {
+        setSettings((prev) => ({
+          ...prev,
+          ...(customSettings.preset && { preset: customSettings.preset }),
+          ...(customSettings.responseStyle && { responseStyle: customSettings.responseStyle }),
+        }));
+      }
+
+      // Remove the AI response we're regenerating (and any responses after it)
+      setMessages((prev) => prev.slice(0, messageIndex));
+
+      // Re-submit the user's question by setting input and triggering form submit
+      setInputValue(userMessage.content);
+
+      // Use a ref-based approach to submit the form (slight delay to allow settings to update)
+      setTimeout(() => {
+        inputRef.current?.form?.requestSubmit();
+      }, 100);
+    },
+    [user, isLoading, messages]
+  );
 
   // Handle confirming proposed actions
   const handleConfirmActions = useCallback(async () => {
     if (!pendingProposal || !user) return;
-    
+
     setIsExecutingActions(true);
-    
+
     try {
       // Get the user's store ID (you may need to fetch this differently)
       const storeId = ""; // TODO: Get from user context or query
-      
+
       const result = await executeConfirmedActions({
-        actions: pendingProposal.proposal.proposedActions.map(a => ({
+        actions: pendingProposal.proposal.proposedActions.map((a) => ({
           tool: a.tool,
           parameters: a.parameters,
         })),
@@ -1084,30 +1151,34 @@ export default function AIAssistantPage() {
       });
 
       // Update the message with executed actions
-      setMessages(prev => prev.map(m => 
-        m.id === pendingProposal.messageId
-          ? {
-              ...m,
-              content: result.summary,
-              actionProposal: undefined,
-              executedActions: result,
-            }
-          : m
-      ));
-      
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === pendingProposal.messageId
+            ? {
+                ...m,
+                content: result.summary,
+                actionProposal: undefined,
+                executedActions: result,
+              }
+            : m
+        )
+      );
+
       setPendingProposal(null);
     } catch (error) {
       console.error("Failed to execute actions:", error);
       // Add error message
-      setMessages(prev => prev.map(m => 
-        m.id === pendingProposal.messageId
-          ? {
-              ...m,
-              content: `Error executing actions: ${error instanceof Error ? error.message : 'Unknown error'}`,
-              actionProposal: undefined,
-            }
-          : m
-      ));
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === pendingProposal.messageId
+            ? {
+                ...m,
+                content: `Error executing actions: ${error instanceof Error ? error.message : "Unknown error"}`,
+                actionProposal: undefined,
+              }
+            : m
+        )
+      );
       setPendingProposal(null);
     } finally {
       setIsExecutingActions(false);
@@ -1117,26 +1188,29 @@ export default function AIAssistantPage() {
   // Handle canceling proposed actions
   const handleCancelActions = useCallback(() => {
     if (!pendingProposal) return;
-    
+
     // Update the message to show cancellation
-    setMessages(prev => prev.map(m => 
-      m.id === pendingProposal.messageId
-        ? {
-            ...m,
-            content: "I've cancelled the proposed actions. Let me know if you'd like to try something different!",
-            actionProposal: undefined,
-          }
-        : m
-    ));
-    
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === pendingProposal.messageId
+          ? {
+              ...m,
+              content:
+                "I've cancelled the proposed actions. Let me know if you'd like to try something different!",
+              actionProposal: undefined,
+            }
+          : m
+      )
+    );
+
     setPendingProposal(null);
   }, [pendingProposal]);
 
   // Not loaded yet
   if (!isLoaded) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -1144,8 +1218,8 @@ export default function AIAssistantPage() {
   // Not authenticated
   if (!user) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-4">
-        <Brain className="w-16 h-16 text-muted-foreground" />
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4">
+        <Brain className="h-16 w-16 text-muted-foreground" />
         <h1 className="text-2xl font-bold">AI Assistant</h1>
         <p className="text-muted-foreground">Please sign in to use the AI Assistant</p>
       </div>
@@ -1153,7 +1227,7 @@ export default function AIAssistantPage() {
   }
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-background">
       {/* Conversation Sidebar */}
       {user && (
         <ConversationSidebar
@@ -1165,34 +1239,38 @@ export default function AIAssistantPage() {
           onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
       )}
-      
+
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {/* Header */}
-        <header className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 border-b border-border bg-card overflow-x-hidden">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+        <header className="flex items-center justify-between overflow-x-hidden border-b border-border bg-card px-3 py-3 sm:px-6 sm:py-4">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             {/* Mobile sidebar toggle */}
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden flex-shrink-0"
+              className="flex-shrink-0 md:hidden"
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
             >
-              {sidebarCollapsed ? <PanelLeft className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
+              {sidebarCollapsed ? (
+                <PanelLeft className="h-4 w-4" />
+              ) : (
+                <PanelLeftClose className="h-4 w-4" />
+              )}
             </Button>
-            
-            <div className="p-2 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex-shrink-0 hidden sm:flex">
-              <Brain className="w-6 h-6 text-white" />
+
+            <div className="hidden flex-shrink-0 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 p-2 sm:flex">
+              <Brain className="h-6 w-6 text-white" />
             </div>
-            <div className="min-w-0 hidden sm:block">
-              <h1 className="text-xl font-bold truncate">AI Assistant</h1>
-              <p className="text-sm text-muted-foreground truncate">
+            <div className="hidden min-w-0 sm:block">
+              <h1 className="truncate text-xl font-bold">AI Assistant</h1>
+              <p className="truncate text-sm text-muted-foreground">
                 {currentConversationId ? "Continue conversation" : "New conversation"}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 sm:gap-3 flex-shrink-0">
+          <div className="flex flex-shrink-0 items-center gap-1.5 sm:gap-3">
             {/* Agent Picker */}
             <AgentPicker
               selectedAgentId={selectedAgent?._id}
@@ -1206,40 +1284,46 @@ export default function AIAssistantPage() {
                 }
               }}
               trigger={
-                <Button variant="outline" size="sm" className="h-8 sm:h-9 gap-2 text-xs sm:text-sm">
+                <Button variant="outline" size="sm" className="h-8 gap-2 text-xs sm:h-9 sm:text-sm">
                   {selectedAgent ? (
                     <>
                       <span className="text-base">{selectedAgent.icon}</span>
-                      <span className="hidden sm:inline max-w-[100px] truncate">{selectedAgent.name}</span>
+                      <span className="hidden max-w-[100px] truncate sm:inline">
+                        {selectedAgent.name}
+                      </span>
                     </>
                   ) : (
                     <>
-                      <Bot className="w-4 h-4" />
+                      <Bot className="h-4 w-4" />
                       <span className="hidden sm:inline">Default</span>
                     </>
                   )}
-                  <ChevronDown className="w-3 h-3 opacity-50" />
+                  <ChevronDown className="h-3 w-3 opacity-50" />
                 </Button>
               }
             />
-            
+
             {/* Memory indicator - hidden on mobile */}
             {userMemories && userMemories.length > 0 && (
-              <Badge variant="secondary" className="hidden lg:flex items-center gap-1.5">
-                <Brain className="w-3 h-3" />
+              <Badge variant="secondary" className="hidden items-center gap-1.5 lg:flex">
+                <Brain className="h-3 w-3" />
                 <span>{userMemories.length} memories</span>
               </Badge>
             )}
-            
+
             {/* Model Preset Selector */}
             <Select
               value={settings.preset}
-              onValueChange={(value: PresetId) => setSettings(prev => ({ ...prev, preset: value }))}
+              onValueChange={(value: PresetId) =>
+                setSettings((prev) => ({ ...prev, preset: value }))
+              }
             >
-              <SelectTrigger className="w-[100px] sm:w-[130px] md:w-[150px] h-8 sm:h-9 bg-background text-xs sm:text-sm">
+              <SelectTrigger className="h-8 w-[100px] bg-background text-xs sm:h-9 sm:w-[130px] sm:text-sm md:w-[150px]">
                 <div className="flex items-center gap-1 sm:gap-2">
                   {PRESET_ICONS[settings.preset]}
-                  <span className="truncate hidden xs:inline">{MODEL_PRESETS[settings.preset].name}</span>
+                  <span className="xs:inline hidden truncate">
+                    {MODEL_PRESETS[settings.preset].name}
+                  </span>
                 </div>
               </SelectTrigger>
               <SelectContent className="bg-white dark:bg-black">
@@ -1249,7 +1333,7 @@ export default function AIAssistantPage() {
                       {PRESET_ICONS[presetId]}
                       <div className="flex flex-col">
                         <span className="font-medium">{MODEL_PRESETS[presetId].name}</span>
-                        <span className="text-xs text-muted-foreground hidden sm:block">
+                        <span className="hidden text-xs text-muted-foreground sm:block">
                           {MODEL_PRESETS[presetId].description}
                         </span>
                       </div>
@@ -1262,12 +1346,16 @@ export default function AIAssistantPage() {
             {/* Response Style Selector - hidden on smallest screens */}
             <Select
               value={settings.responseStyle}
-              onValueChange={(value: ResponseStyle) => setSettings(prev => ({ ...prev, responseStyle: value }))}
+              onValueChange={(value: ResponseStyle) =>
+                setSettings((prev) => ({ ...prev, responseStyle: value }))
+              }
             >
-              <SelectTrigger className="w-[90px] sm:w-[120px] md:w-[140px] h-8 sm:h-9 bg-background text-xs sm:text-sm hidden xs:flex">
+              <SelectTrigger className="xs:flex hidden h-8 w-[90px] bg-background text-xs sm:h-9 sm:w-[120px] sm:text-sm md:w-[140px]">
                 <div className="flex items-center gap-1 sm:gap-2">
                   {RESPONSE_STYLE_OPTIONS[settings.responseStyle].icon}
-                  <span className="truncate hidden sm:inline">{RESPONSE_STYLE_OPTIONS[settings.responseStyle].name}</span>
+                  <span className="hidden truncate sm:inline">
+                    {RESPONSE_STYLE_OPTIONS[settings.responseStyle].name}
+                  </span>
                 </div>
               </SelectTrigger>
               <SelectContent className="bg-white dark:bg-black">
@@ -1277,7 +1365,7 @@ export default function AIAssistantPage() {
                       {RESPONSE_STYLE_OPTIONS[style].icon}
                       <div className="flex flex-col">
                         <span className="font-medium">{RESPONSE_STYLE_OPTIONS[style].name}</span>
-                        <span className="text-xs text-muted-foreground hidden sm:block">
+                        <span className="hidden text-xs text-muted-foreground sm:block">
                           {RESPONSE_STYLE_OPTIONS[style].description}
                         </span>
                       </div>
@@ -1286,34 +1374,40 @@ export default function AIAssistantPage() {
                 ))}
               </SelectContent>
             </Select>
-            
+
             {/* Agentic Mode Toggle */}
-            <div className="hidden md:flex items-center gap-2">
-              <Label htmlFor="agentic-mode" className="text-xs text-muted-foreground cursor-pointer">
+            <div className="hidden items-center gap-2 md:flex">
+              <Label
+                htmlFor="agentic-mode"
+                className="cursor-pointer text-xs text-muted-foreground"
+              >
                 Actions
               </Label>
-              <Switch
-                id="agentic-mode"
-                checked={agenticMode}
-                onCheckedChange={setAgenticMode}
-              />
+              <Switch id="agentic-mode" checked={agenticMode} onCheckedChange={setAgenticMode} />
             </div>
 
             {/* Settings Button */}
             <Sheet open={settingsOpen} onOpenChange={setSettingsOpen}>
               <SheetTrigger asChild>
-                <Button variant="outline" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 flex-shrink-0">
-                  <Settings className="w-4 h-4" />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8 flex-shrink-0 sm:h-9 sm:w-9"
+                >
+                  <Settings className="h-4 w-4" />
                 </Button>
               </SheetTrigger>
-              <SheetContent className="bg-white dark:bg-black w-full sm:w-[400px]">
+              <SheetContent className="w-full bg-white dark:bg-black sm:w-[400px]">
                 <SheetHeader>
                   <SheetTitle>Chat Settings</SheetTitle>
-                  <SheetDescription>
-                    Configure the AI pipeline behavior
-                  </SheetDescription>
+                  <SheetDescription>Configure the AI pipeline behavior</SheetDescription>
                 </SheetHeader>
-                <SettingsPanel settings={settings} setSettings={setSettings} agenticMode={agenticMode} setAgenticMode={setAgenticMode} />
+                <SettingsPanel
+                  settings={settings}
+                  setSettings={setSettings}
+                  agenticMode={agenticMode}
+                  setAgenticMode={setAgenticMode}
+                />
               </SheetContent>
             </Sheet>
           </div>
@@ -1321,10 +1415,8 @@ export default function AIAssistantPage() {
 
         {/* Messages Area */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-6">
-          <div className="max-w-4xl mx-auto space-y-6 w-full">
-            {messages.length === 0 && (
-              <WelcomeMessage agent={selectedAgent} />
-            )}
+          <div className="mx-auto w-full max-w-4xl space-y-6">
+            {messages.length === 0 && <WelcomeMessage agent={selectedAgent} />}
 
             {/* Load more button for older messages */}
             {hasHiddenMessages && (
@@ -1335,8 +1427,9 @@ export default function AIAssistantPage() {
                   onClick={handleLoadMoreMessages}
                   className="text-muted-foreground hover:text-foreground"
                 >
-                  <ChevronDown className="w-4 h-4 mr-2 rotate-180" />
-                  Load {Math.min(LOAD_MORE_INCREMENT, messages.length - visibleMessageCount)} older messages
+                  <ChevronDown className="mr-2 h-4 w-4 rotate-180" />
+                  Load {Math.min(LOAD_MORE_INCREMENT, messages.length - visibleMessageCount)} older
+                  messages
                   <span className="ml-2 text-xs opacity-60">
                     ({messages.length - visibleMessageCount} hidden)
                   </span>
@@ -1346,14 +1439,14 @@ export default function AIAssistantPage() {
 
             {visibleMessages.map((message) => (
               <div key={message.id}>
-                <MemoizedMessageBubble 
+                <MemoizedMessageBubble
                   message={message}
                   onFeedback={handleFeedback}
                   currentConversationId={currentConversationId}
                   onRegenerate={message.role === "assistant" ? handleRegenerate : undefined}
                   currentSettings={settings}
                 />
-                
+
                 {/* Show Action Proposal Card if this message has one */}
                 {message.actionProposal && pendingProposal?.messageId === message.id && (
                   <ActionProposalCard
@@ -1363,7 +1456,7 @@ export default function AIAssistantPage() {
                     isExecuting={isExecutingActions}
                   />
                 )}
-                
+
                 {/* Show Executed Actions if this message has them */}
                 {message.executedActions && (
                   <ExecutedActionsCard executedActions={message.executedActions} />
@@ -1373,9 +1466,9 @@ export default function AIAssistantPage() {
 
             {/* Pipeline Status */}
             {isLoading && pipelineStatus && (
-              <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+              <div className="space-y-2 rounded-lg bg-muted/50 p-3">
                 <div className="flex items-center gap-3 text-sm">
-                  <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
                   <span className="font-medium">
                     {pipelineStatus.stage === "planner" && "📋 Analyzing question..."}
                     {pipelineStatus.stage === "retriever" && "🔍 Searching knowledge base..."}
@@ -1386,11 +1479,11 @@ export default function AIAssistantPage() {
                     {pipelineStatus.stage === "critic" && "🎯 Quality review..."}
                     {pipelineStatus.stage === "finalWriter" && "✍️ Writing response..."}
                   </span>
-                  <Badge variant="secondary" className="text-xs ml-auto">
+                  <Badge variant="secondary" className="ml-auto text-xs">
                     {pipelineStatus.model}
                   </Badge>
                 </div>
-                
+
                 {/* Progress details */}
                 <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                   {pipelineStatus.facets && pipelineStatus.facets.length > 0 && (
@@ -1398,45 +1491,46 @@ export default function AIAssistantPage() {
                       Topics: {pipelineStatus.facets.join(", ")}
                     </span>
                   )}
-                  {pipelineStatus.chunksRetrieved !== undefined && pipelineStatus.chunksRetrieved > 0 && (
-                    <Badge variant="outline" className="text-xs">
-                      📚 {pipelineStatus.chunksRetrieved} sources
-                    </Badge>
-                  )}
+                  {pipelineStatus.chunksRetrieved !== undefined &&
+                    pipelineStatus.chunksRetrieved > 0 && (
+                      <Badge variant="outline" className="text-xs">
+                        📚 {pipelineStatus.chunksRetrieved} sources
+                      </Badge>
+                    )}
                   {pipelineStatus.webResults !== undefined && pipelineStatus.webResults > 0 && (
                     <Badge variant="outline" className="text-xs">
                       🌐 {pipelineStatus.webResults} web results
                     </Badge>
                   )}
-                  {pipelineStatus.summariesGenerated !== undefined && pipelineStatus.summariesGenerated > 0 && (
-                    <Badge variant="outline" className="text-xs">
-                      📝 {pipelineStatus.summariesGenerated} summaries
-                    </Badge>
-                  )}
-                  {pipelineStatus.ideasGenerated !== undefined && pipelineStatus.ideasGenerated > 0 && (
-                    <Badge variant="outline" className="text-xs">
-                      💡 {pipelineStatus.ideasGenerated} ideas
-                    </Badge>
-                  )}
+                  {pipelineStatus.summariesGenerated !== undefined &&
+                    pipelineStatus.summariesGenerated > 0 && (
+                      <Badge variant="outline" className="text-xs">
+                        📝 {pipelineStatus.summariesGenerated} summaries
+                      </Badge>
+                    )}
+                  {pipelineStatus.ideasGenerated !== undefined &&
+                    pipelineStatus.ideasGenerated > 0 && (
+                      <Badge variant="outline" className="text-xs">
+                        💡 {pipelineStatus.ideasGenerated} ideas
+                      </Badge>
+                    )}
                   {pipelineStatus.confidence !== undefined && (
                     <Badge variant="outline" className="text-xs">
                       ✓ {Math.round(pipelineStatus.confidence * 100)}% verified
                     </Badge>
                   )}
                 </div>
-                
+
                 {/* Current detail */}
                 {pipelineStatus.details && (
-                  <p className="text-xs text-muted-foreground italic">
-                    {pipelineStatus.details}
-                  </p>
+                  <p className="text-xs italic text-muted-foreground">{pipelineStatus.details}</p>
                 )}
               </div>
             )}
 
             {isLoading && !pipelineStatus && (
-              <div className="flex items-center gap-3 text-sm text-muted-foreground animate-pulse">
-                <Loader2 className="w-4 h-4 animate-spin" />
+              <div className="flex animate-pulse items-center gap-3 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
                 <span>Connecting...</span>
               </div>
             )}
@@ -1447,7 +1541,7 @@ export default function AIAssistantPage() {
 
         {/* Input Area */}
         <div className="border-t border-border bg-card p-4">
-          <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
+          <form onSubmit={handleSubmit} className="mx-auto max-w-4xl">
             <div className="flex gap-3">
               <Input
                 ref={inputRef}
@@ -1460,12 +1554,12 @@ export default function AIAssistantPage() {
               <Button
                 type="submit"
                 disabled={!inputValue.trim() || isLoading}
-                className="bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white"
+                className="bg-gradient-to-r from-violet-500 to-purple-600 text-white hover:from-violet-600 hover:to-purple-700"
               >
                 {isLoading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <Send className="w-4 h-4" />
+                  <Send className="h-4 w-4" />
                 )}
               </Button>
             </div>
@@ -1501,38 +1595,41 @@ const COLOR_TEXT_CLASSES: Record<string, string> = {
 };
 
 function WelcomeMessage({ agent }: { agent?: Agent | null }) {
-  const bgColor = agent?.color ? COLOR_BG_CLASSES[agent.color] : "from-violet-500/10 to-purple-600/10";
+  const bgColor = agent?.color
+    ? COLOR_BG_CLASSES[agent.color]
+    : "from-violet-500/10 to-purple-600/10";
   const textColor = agent?.color ? COLOR_TEXT_CLASSES[agent.color] : "text-violet-500";
-  
+
   // Default suggestions if no agent or agent has no suggestions
   const defaultSuggestions = [
     "How do I create a Rufus Du Sol style lead?",
     "What are the best mixing techniques for vocals?",
     "Explain sidechain compression",
   ];
-  
-  const suggestions = agent?.suggestedQuestions?.length 
-    ? agent.suggestedQuestions 
+
+  const suggestions = agent?.suggestedQuestions?.length
+    ? agent.suggestedQuestions
     : defaultSuggestions;
 
   return (
-    <div className="text-center py-12">
-      <div className={cn("inline-flex p-4 rounded-full bg-gradient-to-br mb-4", bgColor)}>
+    <div className="py-12 text-center">
+      <div className={cn("mb-4 inline-flex rounded-full bg-gradient-to-br p-4", bgColor)}>
         {agent ? (
           <span className="text-5xl">{agent.icon}</span>
         ) : (
-          <Sparkles className={cn("w-12 h-12", textColor)} />
+          <Sparkles className={cn("h-12 w-12", textColor)} />
         )}
       </div>
-      <h2 className="text-2xl font-bold mb-2">
+      <h2 className="mb-2 text-2xl font-bold">
         {agent ? `Chat with ${agent.name}` : "Welcome to AI Assistant"}
       </h2>
-      <p className="text-muted-foreground max-w-md mx-auto mb-6">
-        {agent?.welcomeMessage || agent?.description || 
+      <p className="mx-auto mb-6 max-w-md text-muted-foreground">
+        {agent?.welcomeMessage ||
+          agent?.description ||
           "Ask me anything about your courses. I'll search through your knowledge base and provide comprehensive answers with sources."}
       </p>
       {agent?.longDescription && (
-        <p className="text-sm text-muted-foreground max-w-lg mx-auto mb-6 opacity-80">
+        <p className="mx-auto mb-6 max-w-lg text-sm text-muted-foreground opacity-80">
           {agent.longDescription}
         </p>
       )}
@@ -1547,7 +1644,7 @@ function WelcomeMessage({ agent }: { agent?: Agent | null }) {
 
 function SuggestionChip({ text }: { text: string }) {
   return (
-    <button className="px-4 py-2 rounded-full border border-border hover:bg-muted transition-colors text-sm text-muted-foreground hover:text-foreground">
+    <button className="rounded-full border border-border px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
       {text}
     </button>
   );
@@ -1557,38 +1654,47 @@ function SuggestionChip({ text }: { text: string }) {
 // MESSAGE BUBBLE
 // ============================================================================
 
-function MessageBubble({ 
-  message, 
+function MessageBubble({
+  message,
   onFeedback,
   currentConversationId,
   onCopy,
   onRegenerate,
   currentSettings,
-}: { 
+}: {
   message: Message;
   onFeedback?: (messageId: string, vote: "up" | "down") => void;
   currentConversationId?: Id<"aiConversations"> | null;
   onCopy?: (content: string) => void;
-  onRegenerate?: (messageId: string, settings?: { preset?: PresetId; responseStyle?: ResponseStyle }) => void;
+  onRegenerate?: (
+    messageId: string,
+    settings?: { preset?: PresetId; responseStyle?: ResponseStyle }
+  ) => void;
   currentSettings?: ChatSettings;
 }) {
   const isUser = message.role === "user";
-  const [localFeedback, setLocalFeedback] = useState<"up" | "down" | null>(message.feedback || null);
+  const [localFeedback, setLocalFeedback] = useState<"up" | "down" | null>(
+    message.feedback || null
+  );
   const [copied, setCopied] = useState(false);
   const [regenPopoverOpen, setRegenPopoverOpen] = useState(false);
-  const [selectedPreset, setSelectedPreset] = useState<PresetId>(currentSettings?.preset || "balanced");
-  const [selectedStyle, setSelectedStyle] = useState<ResponseStyle>(currentSettings?.responseStyle || "structured");
+  const [selectedPreset, setSelectedPreset] = useState<PresetId>(
+    currentSettings?.preset || "balanced"
+  );
+  const [selectedStyle, setSelectedStyle] = useState<ResponseStyle>(
+    currentSettings?.responseStyle || "structured"
+  );
 
   // Sync with current settings when they change (use specific values, not the object)
   const currentPreset = currentSettings?.preset;
   const currentResponseStyle = currentSettings?.responseStyle;
-  
+
   useEffect(() => {
     if (currentPreset) {
       setSelectedPreset(currentPreset);
     }
   }, [currentPreset]);
-  
+
   useEffect(() => {
     if (currentResponseStyle) {
       setSelectedStyle(currentResponseStyle);
@@ -1624,53 +1730,58 @@ function MessageBubble({
   };
 
   return (
-    <div className={cn("flex gap-3 w-full overflow-hidden", isUser ? "justify-end" : "justify-start")}>
+    <div
+      className={cn("flex w-full gap-3 overflow-hidden", isUser ? "justify-end" : "justify-start")}
+    >
       {!isUser && (
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-          <Bot className="w-4 h-4 text-white" />
+        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-purple-600">
+          <Bot className="h-4 w-4 text-white" />
         </div>
       )}
 
       <div
         className={cn(
-          "max-w-[85%] sm:max-w-[80%] rounded-2xl px-4 py-3 overflow-hidden break-words",
+          "max-w-[85%] overflow-hidden break-words rounded-2xl px-4 py-3 sm:max-w-[80%]",
           isUser
             ? "bg-gradient-to-r from-violet-500 to-purple-600 text-white"
-            : "bg-card border border-border"
+            : "border border-border bg-card"
         )}
       >
         {/* Content */}
         <div
-          className={cn(
-            "prose prose-sm max-w-none",
-            isUser ? "prose-invert" : "dark:prose-invert"
-          )}
+          className={cn("prose prose-sm max-w-none", isUser ? "prose-invert" : "dark:prose-invert")}
         >
           {message.isStreaming && !message.content ? (
             <div className="flex items-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" />
               <span className="text-sm">Generating response...</span>
             </div>
           ) : (
             <ReactMarkdown
               components={{
                 p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-                ul: ({ children }) => <ul className="list-disc ml-4 mb-2 space-y-1">{children}</ul>,
-                ol: ({ children }) => <ol className="list-decimal ml-4 mb-2 space-y-1">{children}</ol>,
+                ul: ({ children }) => <ul className="mb-2 ml-4 list-disc space-y-1">{children}</ul>,
+                ol: ({ children }) => (
+                  <ol className="mb-2 ml-4 list-decimal space-y-1">{children}</ol>
+                ),
                 li: ({ children }) => <li className="text-sm">{children}</li>,
                 strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
                 code: ({ children }) => (
                   <code
                     className={cn(
-                      "px-1.5 py-0.5 rounded text-xs font-mono",
+                      "rounded px-1.5 py-0.5 font-mono text-xs",
                       isUser ? "bg-white/20" : "bg-muted"
                     )}
                   >
                     {children}
                   </code>
                 ),
-                h2: ({ children }) => <h2 className="text-lg font-semibold mt-4 mb-2">{children}</h2>,
-                h3: ({ children }) => <h3 className="text-base font-semibold mt-3 mb-1">{children}</h3>,
+                h2: ({ children }) => (
+                  <h2 className="mb-2 mt-4 text-lg font-semibold">{children}</h2>
+                ),
+                h3: ({ children }) => (
+                  <h3 className="mb-1 mt-3 text-base font-semibold">{children}</h3>
+                ),
               }}
             >
               {message.content}
@@ -1680,19 +1791,17 @@ function MessageBubble({
 
         {/* Citations */}
         {message.citations && message.citations.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-border/50">
-            <p className="text-xs font-medium text-muted-foreground mb-2">
-              Sources:
-            </p>
+          <div className="mt-3 border-t border-border/50 pt-3">
+            <p className="mb-2 text-xs font-medium text-muted-foreground">Sources:</p>
             <div className="flex flex-wrap gap-1.5">
               {message.citations.map((citation) => (
                 <Badge
                   key={citation.id}
                   variant="secondary"
-                  className="text-xs flex items-center gap-1"
+                  className="flex items-center gap-1 text-xs"
                 >
                   <span className="font-mono">[{citation.id}]</span>
-                  <span className="truncate max-w-[150px]">{citation.title}</span>
+                  <span className="max-w-[150px] truncate">{citation.title}</span>
                 </Badge>
               ))}
             </div>
@@ -1701,74 +1810,66 @@ function MessageBubble({
 
         {/* Action buttons for user messages */}
         {isUser && !message.isStreaming && (
-          <div className="mt-2 pt-2 border-t border-white/20 flex items-center justify-end gap-1">
+          <div className="mt-2 flex items-center justify-end gap-1 border-t border-white/20 pt-2">
             <button
               onClick={handleCopy}
-              className="p-1.5 rounded-md transition-colors text-white/70 hover:bg-white/20 hover:text-white"
+              className="rounded-md p-1.5 text-white/70 transition-colors hover:bg-white/20 hover:text-white"
               title="Copy message"
             >
-              {copied ? (
-                <CheckCheck className="w-3.5 h-3.5" />
-              ) : (
-                <Copy className="w-3.5 h-3.5" />
-              )}
+              {copied ? <CheckCheck className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
             </button>
           </div>
         )}
 
         {/* Metadata + Feedback + Actions for AI messages */}
         {!isUser && !message.isStreaming && (
-          <div className="mt-3 pt-2 border-t border-border/30 flex items-center justify-between">
+          <div className="mt-3 flex items-center justify-between border-t border-border/30 pt-2">
             <div className="flex items-center gap-3 text-xs text-muted-foreground">
               {message.pipelineMetadata && (
                 <>
                   <span className="flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
+                    <Clock className="h-3 w-3" />
                     {(message.pipelineMetadata.processingTimeMs / 1000).toFixed(1)}s
                   </span>
                   <span className="flex items-center gap-1">
-                    <Database className="w-3 h-3" />
+                    <Database className="h-3 w-3" />
                     {message.pipelineMetadata.totalChunksProcessed} sources
                   </span>
                 </>
               )}
             </div>
-            
+
             {/* Action Buttons: Copy, Regenerate, Feedback */}
             <div className="flex items-center gap-1">
               {/* Copy Button */}
               <button
                 onClick={handleCopy}
                 className={cn(
-                  "p-1.5 rounded-md transition-colors",
+                  "rounded-md p-1.5 transition-colors",
                   copied
                     ? "bg-green-500/20 text-green-500"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
                 title="Copy response"
               >
-                {copied ? (
-                  <CheckCheck className="w-3.5 h-3.5" />
-                ) : (
-                  <Copy className="w-3.5 h-3.5" />
-                )}
+                {copied ? <CheckCheck className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
               </button>
-              
+
               {/* Regenerate Button with Options */}
               {onRegenerate && (
                 <Popover open={regenPopoverOpen} onOpenChange={setRegenPopoverOpen}>
                   <PopoverTrigger asChild>
                     <button
-                      className="p-1.5 rounded-md transition-colors text-muted-foreground hover:bg-muted hover:text-foreground"
+                      className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                       title="Regenerate response"
                     >
-                      <RefreshCw className="w-3.5 h-3.5" />
+                      <RefreshCw className="h-3.5 w-3.5" />
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-72 p-3 bg-white dark:bg-black" align="end">
+                  <PopoverContent className="w-72 bg-white p-3 dark:bg-black" align="end">
                     <div className="space-y-3">
-                      <div className="font-medium text-sm">Regenerate Response</div>
-                      
+                      <div className="text-sm font-medium">Regenerate Response</div>
+
                       {/* Quick regenerate with current settings */}
                       <Button
                         size="sm"
@@ -1776,13 +1877,15 @@ function MessageBubble({
                         className="w-full justify-start gap-2"
                         onClick={() => handleRegenerate(false)}
                       >
-                        <RefreshCw className="w-4 h-4" />
+                        <RefreshCw className="h-4 w-4" />
                         Use current settings
                       </Button>
-                      
-                      <div className="border-t pt-3 space-y-2">
-                        <div className="text-xs text-muted-foreground font-medium">Or customize:</div>
-                        
+
+                      <div className="space-y-2 border-t pt-3">
+                        <div className="text-xs font-medium text-muted-foreground">
+                          Or customize:
+                        </div>
+
                         {/* Preset selector */}
                         <div className="space-y-1">
                           <Label className="text-xs">Model Preset</Label>
@@ -1808,7 +1911,7 @@ function MessageBubble({
                             </SelectContent>
                           </Select>
                         </div>
-                        
+
                         {/* Response style selector */}
                         <div className="space-y-1">
                           <Label className="text-xs">Response Style</Label>
@@ -1823,25 +1926,27 @@ function MessageBubble({
                               </div>
                             </SelectTrigger>
                             <SelectContent className="bg-white dark:bg-black">
-                              {(Object.keys(RESPONSE_STYLE_OPTIONS) as ResponseStyle[]).map((style) => (
-                                <SelectItem key={style} value={style} className="text-xs">
-                                  <div className="flex items-center gap-2">
-                                    {RESPONSE_STYLE_OPTIONS[style].icon}
-                                    <span>{RESPONSE_STYLE_OPTIONS[style].name}</span>
-                                  </div>
-                                </SelectItem>
-                              ))}
+                              {(Object.keys(RESPONSE_STYLE_OPTIONS) as ResponseStyle[]).map(
+                                (style) => (
+                                  <SelectItem key={style} value={style} className="text-xs">
+                                    <div className="flex items-center gap-2">
+                                      {RESPONSE_STYLE_OPTIONS[style].icon}
+                                      <span>{RESPONSE_STYLE_OPTIONS[style].name}</span>
+                                    </div>
+                                  </SelectItem>
+                                )
+                              )}
                             </SelectContent>
                           </Select>
                         </div>
-                        
+
                         {/* Regenerate with custom settings */}
                         <Button
                           size="sm"
-                          className="w-full mt-2 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white"
+                          className="mt-2 w-full bg-gradient-to-r from-violet-500 to-purple-600 text-white hover:from-violet-600 hover:to-purple-700"
                           onClick={() => handleRegenerate(true)}
                         >
-                          <Sparkles className="w-4 h-4 mr-2" />
+                          <Sparkles className="mr-2 h-4 w-4" />
                           Regenerate with these settings
                         </Button>
                       </div>
@@ -1849,34 +1954,34 @@ function MessageBubble({
                   </PopoverContent>
                 </Popover>
               )}
-              
+
               {/* Divider */}
-              <div className="w-px h-4 bg-border mx-1" />
-              
+              <div className="mx-1 h-4 w-px bg-border" />
+
               {/* Feedback Buttons */}
               <button
                 onClick={() => handleFeedback("up")}
                 className={cn(
-                  "p-1.5 rounded-md transition-colors",
+                  "rounded-md p-1.5 transition-colors",
                   localFeedback === "up"
                     ? "bg-green-500/20 text-green-500"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
                 title="Helpful response"
               >
-                <ThumbsUp className="w-3.5 h-3.5" />
+                <ThumbsUp className="h-3.5 w-3.5" />
               </button>
               <button
                 onClick={() => handleFeedback("down")}
                 className={cn(
-                  "p-1.5 rounded-md transition-colors",
+                  "rounded-md p-1.5 transition-colors",
                   localFeedback === "down"
                     ? "bg-red-500/20 text-red-500"
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
                 title="Not helpful"
               >
-                <ThumbsDown className="w-3.5 h-3.5" />
+                <ThumbsDown className="h-3.5 w-3.5" />
               </button>
             </div>
           </div>
@@ -1884,8 +1989,8 @@ function MessageBubble({
       </div>
 
       {isUser && (
-        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-          <User className="w-4 h-4 text-muted-foreground" />
+        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-muted">
+          <User className="h-4 w-4 text-muted-foreground" />
         </div>
       )}
     </div>
@@ -1922,13 +2027,15 @@ function SettingsPanel({
   setAgenticMode?: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
   return (
-    <div className="h-[calc(100vh-120px)] mt-4 overflow-y-auto overflow-x-hidden">
+    <div className="mt-4 h-[calc(100vh-120px)] overflow-y-auto overflow-x-hidden">
       <div className="space-y-6 pb-8 pr-4">
         {/* Agentic Mode Toggle (visible on mobile) */}
         {setAgenticMode && (
-          <div className="flex items-center justify-between md:hidden p-3 rounded-lg bg-muted/50 border border-border">
+          <div className="flex items-center justify-between rounded-lg border border-border bg-muted/50 p-3 md:hidden">
             <div>
-              <Label htmlFor="agentic-mode-settings" className="font-medium">Action Mode</Label>
+              <Label htmlFor="agentic-mode-settings" className="font-medium">
+                Action Mode
+              </Label>
               <p className="text-xs text-muted-foreground">
                 Allow AI to create courses, lessons, etc.
               </p>
@@ -1940,15 +2047,13 @@ function SettingsPanel({
             />
           </div>
         )}
-        
+
         {/* Preset Selection */}
         <div className="space-y-3">
           <Label>Model Preset</Label>
           <Select
             value={settings.preset}
-            onValueChange={(value: PresetId) =>
-              setSettings((prev) => ({ ...prev, preset: value }))
-            }
+            onValueChange={(value: PresetId) => setSettings((prev) => ({ ...prev, preset: value }))}
           >
             <SelectTrigger className="bg-background">
               <SelectValue />
@@ -1961,9 +2066,7 @@ function SettingsPanel({
                     <div className="flex items-center gap-2">
                       {PRESET_ICONS[presetId]}
                       <span>{preset.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {preset.description}
-                      </span>
+                      <span className="text-xs text-muted-foreground">{preset.description}</span>
                     </div>
                   </SelectItem>
                 );
@@ -1972,240 +2075,219 @@ function SettingsPanel({
           </Select>
         </div>
 
-      {/* Max Facets */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <Label>Max Facets</Label>
-          <span className="text-sm text-muted-foreground">{settings.maxFacets}</span>
-        </div>
-        <Slider
-          value={[settings.maxFacets]}
-          onValueChange={([value]) =>
-            setSettings((prev) => ({ ...prev, maxFacets: value }))
-          }
-          min={1}
-          max={5}
-          step={1}
-        />
-        <p className="text-xs text-muted-foreground">
-          Number of sub-topics to analyze
-        </p>
-      </div>
-
-      {/* Chunks per Facet */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <Label>Chunks per Facet</Label>
-          <span className="text-sm text-muted-foreground">{settings.chunksPerFacet}</span>
-        </div>
-        <Slider
-          value={[settings.chunksPerFacet]}
-          onValueChange={([value]) =>
-            setSettings((prev) => ({ ...prev, chunksPerFacet: value }))
-          }
-          min={5}
-          max={50}
-          step={5}
-        />
-        <p className="text-xs text-muted-foreground">
-          Amount of knowledge to retrieve per topic
-        </p>
-      </div>
-
-      {/* Similarity Threshold */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <Label>Similarity Threshold</Label>
-          <span className="text-sm text-muted-foreground">
-            {settings.similarityThreshold.toFixed(2)}
-          </span>
-        </div>
-        <Slider
-          value={[settings.similarityThreshold]}
-          onValueChange={([value]) =>
-            setSettings((prev) => ({ ...prev, similarityThreshold: value }))
-          }
-          min={0.5}
-          max={0.95}
-          step={0.05}
-        />
-        <p className="text-xs text-muted-foreground">
-          Minimum relevance score for sources
-        </p>
-      </div>
-
-      {/* Feature Toggles */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            <Label>Critic Stage</Label>
-            <p className="text-xs text-muted-foreground">
-              Quality review before response
-            </p>
+        {/* Max Facets */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label>Max Facets</Label>
+            <span className="text-sm text-muted-foreground">{settings.maxFacets}</span>
           </div>
-          <Switch
-            className="flex-shrink-0"
-            checked={settings.enableCritic}
-            onCheckedChange={(checked) =>
-              setSettings((prev) => ({ ...prev, enableCritic: checked }))
-            }
+          <Slider
+            value={[settings.maxFacets]}
+            onValueChange={([value]) => setSettings((prev) => ({ ...prev, maxFacets: value }))}
+            min={1}
+            max={5}
+            step={1}
           />
+          <p className="text-xs text-muted-foreground">Number of sub-topics to analyze</p>
         </div>
 
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            <Label>Creative Mode</Label>
-            <p className="text-xs text-muted-foreground">
-              Generate new ideas beyond sources
-            </p>
+        {/* Chunks per Facet */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label>Chunks per Facet</Label>
+            <span className="text-sm text-muted-foreground">{settings.chunksPerFacet}</span>
           </div>
-          <Switch
-            className="flex-shrink-0"
-            checked={settings.enableCreativeMode}
-            onCheckedChange={(checked) =>
-              setSettings((prev) => ({ ...prev, enableCreativeMode: checked }))
-            }
+          <Slider
+            value={[settings.chunksPerFacet]}
+            onValueChange={([value]) => setSettings((prev) => ({ ...prev, chunksPerFacet: value }))}
+            min={5}
+            max={50}
+            step={5}
           />
+          <p className="text-xs text-muted-foreground">Amount of knowledge to retrieve per topic</p>
         </div>
-      </div>
 
-      {/* Research & Verification */}
-      <div className="space-y-4 pt-4 border-t border-border">
-        <Label className="text-sm font-medium flex items-center gap-2">
-          <Globe className="w-4 h-4" />
-          Research & Verification
-        </Label>
-        
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            <Label className="text-sm">Web Research</Label>
-            <p className="text-xs text-muted-foreground">
-              Search web for additional context (uses Tavily API)
-            </p>
+        {/* Similarity Threshold */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label>Similarity Threshold</Label>
+            <span className="text-sm text-muted-foreground">
+              {settings.similarityThreshold.toFixed(2)}
+            </span>
           </div>
-          <Switch
-            className="flex-shrink-0"
-            checked={settings.enableWebResearch}
-            onCheckedChange={(checked) =>
-              setSettings((prev) => ({ ...prev, enableWebResearch: checked }))
+          <Slider
+            value={[settings.similarityThreshold]}
+            onValueChange={([value]) =>
+              setSettings((prev) => ({ ...prev, similarityThreshold: value }))
             }
+            min={0.5}
+            max={0.95}
+            step={0.05}
           />
+          <p className="text-xs text-muted-foreground">Minimum relevance score for sources</p>
         </div>
 
-        {settings.enableWebResearch && (
-          <div className="ml-4 space-y-3">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                <Label className="text-sm">Auto-Save to Knowledge</Label>
-                <p className="text-xs text-muted-foreground">
-                  Save web findings for future queries
-                </p>
-              </div>
-              <Switch
-                className="flex-shrink-0"
-                checked={settings.autoSaveWebResearch}
-                onCheckedChange={(checked) =>
-                  setSettings((prev) => ({ ...prev, autoSaveWebResearch: checked }))
-                }
-              />
+        {/* Feature Toggles */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <Label>Critic Stage</Label>
+              <p className="text-xs text-muted-foreground">Quality review before response</p>
             </div>
-            
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs">Results per Topic</Label>
-                <span className="text-xs text-muted-foreground font-mono">
-                  {settings.webSearchMaxResults || 3}
-                </span>
-              </div>
-              <Slider
-                value={[settings.webSearchMaxResults || 3]}
-                onValueChange={([value]) =>
-                  setSettings((prev) => ({ ...prev, webSearchMaxResults: value }))
-                }
-                min={1}
-                max={10}
-                step={1}
-              />
+            <Switch
+              className="flex-shrink-0"
+              checked={settings.enableCritic}
+              onCheckedChange={(checked) =>
+                setSettings((prev) => ({ ...prev, enableCritic: checked }))
+              }
+            />
+          </div>
+
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <Label>Creative Mode</Label>
+              <p className="text-xs text-muted-foreground">Generate new ideas beyond sources</p>
             </div>
+            <Switch
+              className="flex-shrink-0"
+              checked={settings.enableCreativeMode}
+              onCheckedChange={(checked) =>
+                setSettings((prev) => ({ ...prev, enableCreativeMode: checked }))
+              }
+            />
           </div>
-        )}
-
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            <Label className="text-sm">Fact Verification</Label>
-            <p className="text-xs text-muted-foreground">
-              Cross-check claims against sources
-            </p>
-          </div>
-          <Switch
-            className="flex-shrink-0"
-            checked={settings.enableFactVerification}
-            onCheckedChange={(checked) =>
-              setSettings((prev) => ({ ...prev, enableFactVerification: checked }))
-            }
-          />
         </div>
-      </div>
 
-      {/* Response Style - Visual Cards */}
-      <div className="space-y-3">
-        <Label>Response Style</Label>
-        <div className="grid gap-2">
-          {[
-            {
-              value: "structured" as const,
-              icon: "📋",
-              label: "Structured",
-              description: "Bullet points, numbered lists, clear sections",
-            },
-            {
-              value: "conversational" as const,
-              icon: "💬",
-              label: "Conversational",
-              description: "Flowing paragraphs, essay-style prose",
-            },
-            {
-              value: "concise" as const,
-              icon: "⚡",
-              label: "Concise",
-              description: "Brief, direct answers without fluff",
-            },
-          ].map((style) => {
-            const isSelected = (settings.responseStyle || "structured") === style.value;
-            return (
-              <button
-                key={style.value}
-                type="button"
-                onClick={() => setSettings((prev) => ({ ...prev, responseStyle: style.value }))}
-                className={cn(
-                  "flex items-start gap-3 p-3 rounded-lg border text-left transition-all",
-                  isSelected
-                    ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                    : "border-border hover:border-muted-foreground/30 hover:bg-muted/30"
-                )}
-              >
-                <span className="text-xl mt-0.5">{style.icon}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className={cn(
-                      "font-medium text-sm",
-                      isSelected && "text-primary"
-                    )}>
-                      {style.label}
-                    </span>
-                    {isSelected && (
-                      <div className="w-2 h-2 rounded-full bg-primary" />
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                    {style.description}
+        {/* Research & Verification */}
+        <div className="space-y-4 border-t border-border pt-4">
+          <Label className="flex items-center gap-2 text-sm font-medium">
+            <Globe className="h-4 w-4" />
+            Research & Verification
+          </Label>
+
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <Label className="text-sm">Web Research</Label>
+              <p className="text-xs text-muted-foreground">
+                Search web for additional context (uses Tavily API)
+              </p>
+            </div>
+            <Switch
+              className="flex-shrink-0"
+              checked={settings.enableWebResearch}
+              onCheckedChange={(checked) =>
+                setSettings((prev) => ({ ...prev, enableWebResearch: checked }))
+              }
+            />
+          </div>
+
+          {settings.enableWebResearch && (
+            <div className="ml-4 space-y-3">
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <Label className="text-sm">Auto-Save to Knowledge</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Save web findings for future queries
                   </p>
                 </div>
-              </button>
-            );
-          })}
+                <Switch
+                  className="flex-shrink-0"
+                  checked={settings.autoSaveWebResearch}
+                  onCheckedChange={(checked) =>
+                    setSettings((prev) => ({ ...prev, autoSaveWebResearch: checked }))
+                  }
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">Results per Topic</Label>
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {settings.webSearchMaxResults || 3}
+                  </span>
+                </div>
+                <Slider
+                  value={[settings.webSearchMaxResults || 3]}
+                  onValueChange={([value]) =>
+                    setSettings((prev) => ({ ...prev, webSearchMaxResults: value }))
+                  }
+                  min={1}
+                  max={10}
+                  step={1}
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0 flex-1">
+              <Label className="text-sm">Fact Verification</Label>
+              <p className="text-xs text-muted-foreground">Cross-check claims against sources</p>
+            </div>
+            <Switch
+              className="flex-shrink-0"
+              checked={settings.enableFactVerification}
+              onCheckedChange={(checked) =>
+                setSettings((prev) => ({ ...prev, enableFactVerification: checked }))
+              }
+            />
+          </div>
         </div>
-      </div>
+
+        {/* Response Style - Visual Cards */}
+        <div className="space-y-3">
+          <Label>Response Style</Label>
+          <div className="grid gap-2">
+            {[
+              {
+                value: "structured" as const,
+                icon: "📋",
+                label: "Structured",
+                description: "Bullet points, numbered lists, clear sections",
+              },
+              {
+                value: "conversational" as const,
+                icon: "💬",
+                label: "Conversational",
+                description: "Flowing paragraphs, essay-style prose",
+              },
+              {
+                value: "concise" as const,
+                icon: "⚡",
+                label: "Concise",
+                description: "Brief, direct answers without fluff",
+              },
+            ].map((style) => {
+              const isSelected = (settings.responseStyle || "structured") === style.value;
+              return (
+                <button
+                  key={style.value}
+                  type="button"
+                  onClick={() => setSettings((prev) => ({ ...prev, responseStyle: style.value }))}
+                  className={cn(
+                    "flex items-start gap-3 rounded-lg border p-3 text-left transition-all",
+                    isSelected
+                      ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                      : "border-border hover:border-muted-foreground/30 hover:bg-muted/30"
+                  )}
+                >
+                  <span className="mt-0.5 text-xl">{style.icon}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className={cn("text-sm font-medium", isSelected && "text-primary")}>
+                        {style.label}
+                      </span>
+                      {isSelected && <div className="h-2 w-2 rounded-full bg-primary" />}
+                    </div>
+                    <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                      {style.description}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -2228,38 +2310,38 @@ function ActionProposalCard({
 }) {
   const getToolIcon = (toolName: string) => {
     if (toolName.includes("Course") || toolName.includes("course")) {
-      return <BookOpen className="w-4 h-4" />;
+      return <BookOpen className="h-4 w-4" />;
     }
     if (toolName.includes("Lesson") || toolName.includes("lesson")) {
-      return <FileText className="w-4 h-4" />;
+      return <FileText className="h-4 w-4" />;
     }
     if (toolName.includes("Module") || toolName.includes("module")) {
-      return <LayoutList className="w-4 h-4" />;
+      return <LayoutList className="h-4 w-4" />;
     }
     if (toolName.includes("generate") || toolName.includes("Generate")) {
-      return <Wand2 className="w-4 h-4" />;
+      return <Wand2 className="h-4 w-4" />;
     }
     if (toolName.includes("update") || toolName.includes("Update")) {
-      return <Pencil className="w-4 h-4" />;
+      return <Pencil className="h-4 w-4" />;
     }
     if (toolName.includes("delete") || toolName.includes("Delete")) {
-      return <Trash2 className="w-4 h-4" />;
+      return <Trash2 className="h-4 w-4" />;
     }
     if (toolName.includes("duplicate") || toolName.includes("Duplicate")) {
-      return <Copy className="w-4 h-4" />;
+      return <Copy className="h-4 w-4" />;
     }
     if (toolName.includes("list") || toolName.includes("List")) {
-      return <LayoutList className="w-4 h-4" />;
+      return <LayoutList className="h-4 w-4" />;
     }
-    return <Wand2 className="w-4 h-4" />;
+    return <Wand2 className="h-4 w-4" />;
   };
 
   return (
     <Card className="mt-4 border-amber-500/50 bg-amber-50/10 dark:bg-amber-950/20">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
-          <div className="p-1.5 rounded-md bg-amber-500/10">
-            <Wand2 className="w-5 h-5 text-amber-500" />
+          <div className="rounded-md bg-amber-500/10 p-1.5">
+            <Wand2 className="h-5 w-5 text-amber-500" />
           </div>
           I'd like to take these actions:
         </CardTitle>
@@ -2270,14 +2352,12 @@ function ActionProposalCard({
           {proposal.proposedActions.map((action, i) => (
             <div
               key={i}
-              className="flex items-start gap-3 p-3 rounded-lg bg-background/50 border border-border/50"
+              className="flex items-start gap-3 rounded-lg border border-border/50 bg-background/50 p-3"
             >
-              <div className="p-1.5 rounded-md bg-primary/10">
-                {getToolIcon(action.tool)}
-              </div>
-              <div className="flex-1 min-w-0">
+              <div className="rounded-md bg-primary/10 p-1.5">{getToolIcon(action.tool)}</div>
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="text-xs font-mono">
+                  <Badge variant="outline" className="font-mono text-xs">
                     {action.tool}
                   </Badge>
                   {action.requiresConfirmation && (
@@ -2286,12 +2366,10 @@ function ActionProposalCard({
                     </Badge>
                   )}
                 </div>
-                <p className="text-sm mt-1 text-muted-foreground">
-                  {action.description}
-                </p>
+                <p className="mt-1 text-sm text-muted-foreground">{action.description}</p>
                 {/* Show parameters */}
                 {Object.keys(action.parameters).length > 0 && (
-                  <div className="mt-2 p-2 rounded bg-muted/50 text-xs font-mono">
+                  <div className="mt-2 rounded bg-muted/50 p-2 font-mono text-xs">
                     {Object.entries(action.parameters)
                       .filter(([_, v]) => v !== undefined && v !== null)
                       .slice(0, 5)
@@ -2299,8 +2377,8 @@ function ActionProposalCard({
                         <div key={key} className="flex gap-2">
                           <span className="text-muted-foreground">{key}:</span>
                           <span className="truncate">
-                            {typeof value === "string" 
-                              ? `"${value.substring(0, 50)}${value.length > 50 ? '...' : ''}"`
+                            {typeof value === "string"
+                              ? `"${value.substring(0, 50)}${value.length > 50 ? "..." : ""}"`
                               : JSON.stringify(value).substring(0, 50)}
                           </span>
                         </div>
@@ -2317,26 +2395,22 @@ function ActionProposalCard({
           <Button
             onClick={onConfirm}
             disabled={isExecuting}
-            className="bg-green-600 hover:bg-green-700 text-white"
+            className="bg-green-600 text-white hover:bg-green-700"
           >
             {isExecuting ? (
               <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Executing...
               </>
             ) : (
               <>
-                <Check className="w-4 h-4 mr-2" />
+                <Check className="mr-2 h-4 w-4" />
                 Confirm & Execute
               </>
             )}
           </Button>
-          <Button
-            variant="outline"
-            onClick={onCancel}
-            disabled={isExecuting}
-          >
-            <X className="w-4 h-4 mr-2" />
+          <Button variant="outline" onClick={onCancel} disabled={isExecuting}>
+            <X className="mr-2 h-4 w-4" />
             Cancel
           </Button>
         </div>
@@ -2350,30 +2424,34 @@ function ActionProposalCard({
 // ============================================================================
 
 function ExecutedActionsCard({ executedActions }: { executedActions: ActionsExecuted }) {
-  const successCount = executedActions.results.filter(r => r.success).length;
+  const successCount = executedActions.results.filter((r) => r.success).length;
   const failureCount = executedActions.results.length - successCount;
 
   return (
-    <Card className={cn(
-      "mt-4",
-      failureCount > 0 
-        ? "border-amber-500/50 bg-amber-50/10 dark:bg-amber-950/20"
-        : "border-green-500/50 bg-green-50/10 dark:bg-green-950/20"
-    )}>
+    <Card
+      className={cn(
+        "mt-4",
+        failureCount > 0
+          ? "border-amber-500/50 bg-amber-50/10 dark:bg-amber-950/20"
+          : "border-green-500/50 bg-green-50/10 dark:bg-green-950/20"
+      )}
+    >
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-base">
-          <div className={cn(
-            "p-1.5 rounded-md",
-            failureCount > 0 ? "bg-amber-500/10" : "bg-green-500/10"
-          )}>
+          <div
+            className={cn(
+              "rounded-md p-1.5",
+              failureCount > 0 ? "bg-amber-500/10" : "bg-green-500/10"
+            )}
+          >
             {failureCount > 0 ? (
-              <AlertCircle className="w-5 h-5 text-amber-500" />
+              <AlertCircle className="h-5 w-5 text-amber-500" />
             ) : (
-              <Check className="w-5 h-5 text-green-500" />
+              <Check className="h-5 w-5 text-green-500" />
             )}
           </div>
-          {failureCount === 0 
-            ? `${successCount} action${successCount !== 1 ? 's' : ''} completed successfully`
+          {failureCount === 0
+            ? `${successCount} action${successCount !== 1 ? "s" : ""} completed successfully`
             : `${successCount}/${executedActions.results.length} actions completed`}
         </CardTitle>
       </CardHeader>
@@ -2384,25 +2462,23 @@ function ExecutedActionsCard({ executedActions }: { executedActions: ActionsExec
             <div
               key={i}
               className={cn(
-                "flex items-start gap-3 p-3 rounded-lg border",
-                result.success 
-                  ? "bg-green-500/5 border-green-500/20"
-                  : "bg-red-500/5 border-red-500/20"
+                "flex items-start gap-3 rounded-lg border p-3",
+                result.success
+                  ? "border-green-500/20 bg-green-500/5"
+                  : "border-red-500/20 bg-red-500/5"
               )}
             >
-              <div className={cn(
-                "p-1 rounded-full",
-                result.success ? "bg-green-500/20 text-green-500" : "bg-red-500/20 text-red-500"
-              )}>
-                {result.success ? (
-                  <Check className="w-4 h-4" />
-                ) : (
-                  <X className="w-4 h-4" />
+              <div
+                className={cn(
+                  "rounded-full p-1",
+                  result.success ? "bg-green-500/20 text-green-500" : "bg-red-500/20 text-red-500"
                 )}
+              >
+                {result.success ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
               </div>
-              <div className="flex-1 min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="text-xs font-mono">
+                  <Badge variant="outline" className="font-mono text-xs">
                     {result.tool}
                   </Badge>
                   {result.success && result.result?.link && (
@@ -2410,115 +2486,134 @@ function ExecutedActionsCard({ executedActions }: { executedActions: ActionsExec
                       href={result.result.link}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-xs text-primary hover:underline flex items-center gap-1"
+                      className="flex items-center gap-1 text-xs text-primary hover:underline"
                     >
-                      <Link className="w-3 h-3" />
+                      <Link className="h-3 w-3" />
                       View
                     </a>
                   )}
                 </div>
-                <p className="text-sm mt-1">
-                  {result.success 
+                <p className="mt-1 text-sm">
+                  {result.success
                     ? result.result?.message || "Completed successfully"
                     : result.error || "Failed"}
                 </p>
-                
+
                 {/* Display generated content for content-generation tools */}
                 {result.success && result.result?.script && (
                   <div className="mt-3 space-y-3">
                     {/* Main Script */}
                     {result.result.script.script && (
-                      <div className="bg-black/5 dark:bg-white/5 rounded-lg p-4 border border-border">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Script</span>
+                      <div className="rounded-lg border border-border bg-black/5 p-4 dark:bg-white/5">
+                        <div className="mb-2 flex items-center justify-between">
+                          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            Script
+                          </span>
                           <Button
                             size="sm"
                             variant="ghost"
                             className="h-7 text-xs"
                             onClick={() => {
-                              navigator.clipboard.writeText(result.result.script.script);
+                              if (result.result?.script?.script) {
+                                navigator.clipboard.writeText(result.result.script.script);
+                              }
                             }}
                           >
-                            <Copy className="w-3 h-3 mr-1" />
+                            <Copy className="mr-1 h-3 w-3" />
                             Copy
                           </Button>
                         </div>
-                        <div className="text-sm whitespace-pre-wrap">{result.result.script.script}</div>
+                        <div className="whitespace-pre-wrap text-sm">
+                          {result.result.script.script}
+                        </div>
                       </div>
                     )}
-                    
+
                     {/* Hook */}
                     {result.result.script.hook && (
-                      <div className="bg-amber-500/5 dark:bg-amber-500/10 rounded-lg p-3 border border-amber-500/20">
-                        <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wide">🪝 Hook</span>
-                        <p className="text-sm mt-1">{result.result.script.hook}</p>
+                      <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 dark:bg-amber-500/10">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">
+                          🪝 Hook
+                        </span>
+                        <p className="mt-1 text-sm">{result.result.script.hook}</p>
                       </div>
                     )}
-                    
+
                     {/* CTA */}
                     {result.result.script.cta && (
-                      <div className="bg-blue-500/5 dark:bg-blue-500/10 rounded-lg p-3 border border-blue-500/20">
-                        <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wide">📢 Call to Action</span>
-                        <p className="text-sm mt-1">{result.result.script.cta}</p>
+                      <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 p-3 dark:bg-blue-500/10">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400">
+                          📢 Call to Action
+                        </span>
+                        <p className="mt-1 text-sm">{result.result.script.cta}</p>
                       </div>
                     )}
-                    
+
                     {/* Hashtags */}
                     {result.result.script.hashtags && result.result.script.hashtags.length > 0 && (
                       <div className="flex flex-wrap gap-1.5">
                         {result.result.script.hashtags.map((tag: string, tagIndex: number) => (
                           <Badge key={tagIndex} variant="secondary" className="text-xs">
-                            #{tag.replace(/^#/, '')}
+                            #{tag.replace(/^#/, "")}
                           </Badge>
                         ))}
                       </div>
                     )}
-                    
+
                     {/* Production Notes */}
                     {result.result.script.notes && (
-                      <div className="bg-purple-500/5 dark:bg-purple-500/10 rounded-lg p-3 border border-purple-500/20">
-                        <span className="text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wide">📝 Production Notes</span>
-                        <p className="text-sm mt-1 whitespace-pre-wrap">{result.result.script.notes}</p>
+                      <div className="rounded-lg border border-purple-500/20 bg-purple-500/5 p-3 dark:bg-purple-500/10">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-purple-600 dark:text-purple-400">
+                          📝 Production Notes
+                        </span>
+                        <p className="mt-1 whitespace-pre-wrap text-sm">
+                          {result.result.script.notes}
+                        </p>
                       </div>
                     )}
                   </div>
                 )}
-                
+
                 {/* Display multi-platform content */}
-                {result.success && result.result?.content && Array.isArray(result.result.content) && (
-                  <div className="mt-3 space-y-3">
-                    {result.result.content.map((item: any, itemIndex: number) => (
-                      <div key={itemIndex} className="bg-black/5 dark:bg-white/5 rounded-lg p-4 border border-border">
-                        <div className="flex items-center justify-between mb-2">
-                          <Badge variant="outline" className="text-xs capitalize">
-                            {item.platform}
-                          </Badge>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-7 text-xs"
-                            onClick={() => {
-                              navigator.clipboard.writeText(item.content);
-                            }}
-                          >
-                            <Copy className="w-3 h-3 mr-1" />
-                            Copy
-                          </Button>
-                        </div>
-                        <div className="text-sm whitespace-pre-wrap">{item.content}</div>
-                        {item.hashtags && item.hashtags.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {item.hashtags.map((tag: string, tagIdx: number) => (
-                              <Badge key={tagIdx} variant="secondary" className="text-xs">
-                                #{tag.replace(/^#/, '')}
-                              </Badge>
-                            ))}
+                {result.success &&
+                  result.result?.content &&
+                  Array.isArray(result.result.content) && (
+                    <div className="mt-3 space-y-3">
+                      {result.result.content.map((item: any, itemIndex: number) => (
+                        <div
+                          key={itemIndex}
+                          className="rounded-lg border border-border bg-black/5 p-4 dark:bg-white/5"
+                        >
+                          <div className="mb-2 flex items-center justify-between">
+                            <Badge variant="outline" className="text-xs capitalize">
+                              {item.platform}
+                            </Badge>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 text-xs"
+                              onClick={() => {
+                                navigator.clipboard.writeText(item.content);
+                              }}
+                            >
+                              <Copy className="mr-1 h-3 w-3" />
+                              Copy
+                            </Button>
                           </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                          <div className="whitespace-pre-wrap text-sm">{item.content}</div>
+                          {item.hashtags && item.hashtags.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-1">
+                              {item.hashtags.map((tag: string, tagIdx: number) => (
+                                <Badge key={tagIdx} variant="secondary" className="text-xs">
+                                  #{tag.replace(/^#/, "")}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
               </div>
             </div>
           ))}
@@ -2526,8 +2621,8 @@ function ExecutedActionsCard({ executedActions }: { executedActions: ActionsExec
 
         {/* Quick Links */}
         {executedActions.links && executedActions.links.length > 0 && (
-          <div className="pt-2 border-t border-border">
-            <p className="text-xs text-muted-foreground mb-2">Quick Links:</p>
+          <div className="border-t border-border pt-2">
+            <p className="mb-2 text-xs text-muted-foreground">Quick Links:</p>
             <div className="flex flex-wrap gap-2">
               {executedActions.links.map((link, i) => (
                 <a
@@ -2535,9 +2630,9 @@ function ExecutedActionsCard({ executedActions }: { executedActions: ActionsExec
                   href={link.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm hover:bg-primary/20 transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-sm text-primary transition-colors hover:bg-primary/20"
                 >
-                  <ExternalLink className="w-3 h-3" />
+                  <ExternalLink className="h-3 w-3" />
                   {link.label}
                 </a>
               ))}

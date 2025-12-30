@@ -7,7 +7,7 @@ import { api } from "./_generated/api";
 // Helper function to send confirmation email
 async function sendConfirmationEmailHelper(ctx: any, args: any, product: any) {
   console.log("🚀 STARTING EMAIL PROCESS - this should always appear");
-  
+
   try {
     console.log("📧 Checking email configuration for product:", {
       productId: args.productId,
@@ -16,26 +16,30 @@ async function sendConfirmationEmailHelper(ctx: any, args: any, product: any) {
       hasEmailSubject: !!product?.confirmationEmailSubject,
       hasEmailBody: !!product?.confirmationEmailBody,
       emailSubject: product?.confirmationEmailSubject,
-      emailBody: product?.confirmationEmailBody?.slice(0, 100) + "..." // First 100 chars
+      emailBody: product?.confirmationEmailBody?.slice(0, 100) + "...", // First 100 chars
     });
 
     // Send confirmation email to customer with download link
     if (product?.downloadUrl && product.confirmationEmailSubject && product.confirmationEmailBody) {
       console.log("📧 ✅ All email requirements met! Sending confirmation email for:", args.email);
-      
+
       try {
         // Use the centralized email action to send confirmation email
         console.log("🔄 About to schedule email action...");
-        const emailResult = await ctx.scheduler.runAfter(0, (internal as any).emails.sendLeadMagnetConfirmation, {
-          storeId: args.storeId as any,
-          customerEmail: args.email,
-          customerName: args.name,
-          productName: product.title,
-          downloadUrl: product.downloadUrl,
-          confirmationSubject: product.confirmationEmailSubject,
-          confirmationBody: product.confirmationEmailBody,
-        });
-        
+        const emailResult = await ctx.scheduler.runAfter(
+          0,
+          (internal as any).emails.sendLeadMagnetConfirmation,
+          {
+            storeId: args.storeId as any,
+            customerEmail: args.email,
+            customerName: args.name,
+            productName: product.title,
+            downloadUrl: product.downloadUrl,
+            confirmationSubject: product.confirmationEmailSubject,
+            confirmationBody: product.confirmationEmailBody,
+          }
+        );
+
         console.log("✅ Lead magnet confirmation email scheduled successfully:", emailResult);
       } catch (scheduleError) {
         console.error("❌ Failed to schedule email:", scheduleError);
@@ -45,13 +49,13 @@ async function sendConfirmationEmailHelper(ctx: any, args: any, product: any) {
         hasDownloadUrl: !!product?.downloadUrl,
         hasEmailSubject: !!product?.confirmationEmailSubject,
         hasEmailBody: !!product?.confirmationEmailBody,
-        productTitle: product?.title
+        productTitle: product?.title,
       });
     }
   } catch (emailError) {
     console.error("⚠️ Email sending failed, but lead was still recorded:", emailError);
   }
-  
+
   console.log("🏁 EMAIL PROCESS COMPLETE - this should always appear");
 }
 
@@ -76,7 +80,7 @@ export const submitLead = mutation({
     // Check if this email has already opted in for this product
     const existingSubmission = await ctx.db
       .query("leadSubmissions")
-      .withIndex("by_email_and_product", (q) => 
+      .withIndex("by_email_and_product", (q) =>
         q.eq("email", args.email).eq("productId", args.productId)
       )
       .unique();
@@ -84,11 +88,11 @@ export const submitLead = mutation({
     if (existingSubmission) {
       // User already opted in - send email again and return existing submission
       const product = await ctx.db.get(args.productId);
-      
+
       // Send email even for returning users
       console.log("🔄 Returning user - sending confirmation email again");
       await sendConfirmationEmailHelper(ctx, args, product);
-      
+
       // Send admin notification for returning user engagement
       try {
         console.log("📧 Scheduling admin notification for returning user...");
@@ -107,20 +111,24 @@ export const submitLead = mutation({
       // Trigger workflows for returning user activity
       try {
         console.log("🔄 Checking for returning user workflows to trigger...");
-        await ctx.scheduler.runAfter(0, (internal as any).emailWorkflows.triggerLeadSignupWorkflows, {
-          storeId: args.storeId,
-          customerEmail: args.email,
-          customerName: args.name,
-          productId: args.productId,
-          productName: product?.title || "Lead Magnet",
-          source: (args.source || "storefront") + " (returning user)",
-          isReturningUser: true,
-        });
+        await ctx.scheduler.runAfter(
+          0,
+          (internal as any).emailWorkflows.triggerLeadSignupWorkflows,
+          {
+            storeId: args.storeId,
+            customerEmail: args.email,
+            customerName: args.name,
+            productId: args.productId,
+            productName: product?.title || "Lead Magnet",
+            source: (args.source || "storefront") + " (returning user)",
+            isReturningUser: true,
+          }
+        );
         console.log("✅ Returning user workflow triggers scheduled successfully");
       } catch (workflowError) {
         console.error("⚠️ Returning user workflow triggering failed:", workflowError);
       }
-      
+
       return {
         submissionId: existingSubmission._id,
         hasAccess: true,
@@ -144,13 +152,13 @@ export const submitLead = mutation({
 
     // Get the product to determine the source name
     const product = await ctx.db.get(args.productId);
-    
+
     // Create or update customer record automatically
     try {
       // Check if customer already exists for this store
       const existingCustomer = await ctx.db
         .query("customers")
-        .withIndex("by_email_and_store", (q) => 
+        .withIndex("by_email_and_store", (q) =>
           q.eq("email", args.email).eq("storeId", args.storeId)
         )
         .unique();
@@ -197,7 +205,10 @@ export const submitLead = mutation({
       });
       console.log("✅ Admin notification scheduled successfully");
     } catch (adminNotificationError) {
-      console.error("⚠️ Admin notification failed, but lead was still recorded:", adminNotificationError);
+      console.error(
+        "⚠️ Admin notification failed, but lead was still recorded:",
+        adminNotificationError
+      );
     }
 
     // Trigger email automation workflows
@@ -214,6 +225,29 @@ export const submitLead = mutation({
       console.log("✅ Workflow triggers scheduled successfully");
     } catch (workflowError) {
       console.error("⚠️ Workflow triggering failed, but lead was still recorded:", workflowError);
+    }
+
+    // Trigger drip campaigns for lead signup
+    try {
+      console.log("🔄 Checking for drip campaigns to trigger...");
+      await ctx.scheduler.runAfter(
+        0,
+        (internal as any).dripCampaignActions.triggerCampaignsForEvent,
+        {
+          storeId: args.storeId,
+          triggerType: "lead_signup",
+          email: args.email,
+          name: args.name,
+          metadata: {
+            productId: args.productId,
+            productName: product?.title,
+            source: args.source || "storefront",
+          },
+        }
+      );
+      console.log("✅ Drip campaign triggers scheduled successfully");
+    } catch (dripError) {
+      console.error("⚠️ Drip campaign triggering failed, but lead was still recorded:", dripError);
     }
 
     return {
@@ -233,17 +267,19 @@ export const checkDownloadAccess = query({
   returns: v.object({
     hasAccess: v.boolean(),
     downloadUrl: v.optional(v.string()),
-    submissionInfo: v.optional(v.object({
-      _id: v.id("leadSubmissions"),
-      name: v.string(),
-      downloadCount: v.optional(v.number()),
-      lastDownloadAt: v.optional(v.number()),
-    })),
+    submissionInfo: v.optional(
+      v.object({
+        _id: v.id("leadSubmissions"),
+        name: v.string(),
+        downloadCount: v.optional(v.number()),
+        lastDownloadAt: v.optional(v.number()),
+      })
+    ),
   }),
   handler: async (ctx, args) => {
     const submission = await ctx.db
       .query("leadSubmissions")
-      .withIndex("by_email_and_product", (q) => 
+      .withIndex("by_email_and_product", (q) =>
         q.eq("email", args.email).eq("productId", args.productId)
       )
       .unique();
@@ -277,7 +313,7 @@ export const trackDownload = mutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const submission = await ctx.db.get(args.submissionId);
-    
+
     if (submission) {
       await ctx.db.patch(args.submissionId, {
         hasDownloaded: true,
@@ -293,20 +329,22 @@ export const trackDownload = mutation({
 // Get all leads for an admin
 export const getLeadsForAdmin = query({
   args: { adminUserId: v.string() },
-  returns: v.array(v.object({
-    _id: v.id("leadSubmissions"),
-    _creationTime: v.number(),
-    name: v.string(),
-    email: v.string(),
-    productId: v.id("digitalProducts"),
-    storeId: v.string(),
-    adminUserId: v.string(),
-    hasDownloaded: v.optional(v.boolean()),
-    downloadCount: v.optional(v.number()),
-    lastDownloadAt: v.optional(v.number()),
-    source: v.optional(v.string()),
-    productTitle: v.optional(v.string()),
-  })),
+  returns: v.array(
+    v.object({
+      _id: v.id("leadSubmissions"),
+      _creationTime: v.number(),
+      name: v.string(),
+      email: v.string(),
+      productId: v.id("digitalProducts"),
+      storeId: v.string(),
+      adminUserId: v.string(),
+      hasDownloaded: v.optional(v.boolean()),
+      downloadCount: v.optional(v.number()),
+      lastDownloadAt: v.optional(v.number()),
+      source: v.optional(v.string()),
+      productTitle: v.optional(v.string()),
+    })
+  ),
   handler: async (ctx, args) => {
     const submissions = await ctx.db
       .query("leadSubmissions")
@@ -332,16 +370,18 @@ export const getLeadsForAdmin = query({
 // Get leads for a specific product
 export const getLeadsForProduct = query({
   args: { productId: v.id("digitalProducts") },
-  returns: v.array(v.object({
-    _id: v.id("leadSubmissions"),
-    _creationTime: v.number(),
-    name: v.string(),
-    email: v.string(),
-    hasDownloaded: v.optional(v.boolean()),
-    downloadCount: v.optional(v.number()),
-    lastDownloadAt: v.optional(v.number()),
-    source: v.optional(v.string()),
-  })),
+  returns: v.array(
+    v.object({
+      _id: v.id("leadSubmissions"),
+      _creationTime: v.number(),
+      name: v.string(),
+      email: v.string(),
+      hasDownloaded: v.optional(v.boolean()),
+      downloadCount: v.optional(v.number()),
+      lastDownloadAt: v.optional(v.number()),
+      source: v.optional(v.string()),
+    })
+  ),
   handler: async (ctx, args) => {
     return await ctx.db
       .query("leadSubmissions")
@@ -354,18 +394,20 @@ export const getLeadsForProduct = query({
 // Get leads for a specific store
 export const getLeadsForStore = query({
   args: { storeId: v.string() },
-  returns: v.array(v.object({
-    _id: v.id("leadSubmissions"),
-    _creationTime: v.number(),
-    name: v.string(),
-    email: v.string(),
-    productId: v.id("digitalProducts"),
-    hasDownloaded: v.optional(v.boolean()),
-    downloadCount: v.optional(v.number()),
-    lastDownloadAt: v.optional(v.number()),
-    source: v.optional(v.string()),
-    productTitle: v.optional(v.string()),
-  })),
+  returns: v.array(
+    v.object({
+      _id: v.id("leadSubmissions"),
+      _creationTime: v.number(),
+      name: v.string(),
+      email: v.string(),
+      productId: v.id("digitalProducts"),
+      hasDownloaded: v.optional(v.boolean()),
+      downloadCount: v.optional(v.number()),
+      lastDownloadAt: v.optional(v.number()),
+      source: v.optional(v.string()),
+      productTitle: v.optional(v.string()),
+    })
+  ),
   handler: async (ctx, args) => {
     const submissions = await ctx.db
       .query("leadSubmissions")
@@ -405,7 +447,7 @@ export const getLeadStats = query({
 
     const totalLeads = submissions.length;
     const totalDownloads = submissions.reduce((sum, sub) => sum + (sub.downloadCount || 0), 0);
-    const uniqueDownloaders = submissions.filter(sub => sub.hasDownloaded).length;
+    const uniqueDownloaders = submissions.filter((sub) => sub.hasDownloaded).length;
     const conversionRate = totalLeads > 0 ? (uniqueDownloaders / totalLeads) * 100 : 0;
 
     return {
@@ -415,4 +457,4 @@ export const getLeadStats = query({
       conversionRate,
     };
   },
-}); 
+});

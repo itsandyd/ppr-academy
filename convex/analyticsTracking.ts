@@ -9,6 +9,7 @@ export const trackEvent = mutation({
     userId: v.string(),
     storeId: v.optional(v.string()),
     eventType: v.union(
+      // Core events
       v.literal("page_view"),
       v.literal("product_view"),
       v.literal("course_view"),
@@ -21,29 +22,75 @@ export const trackEvent = mutation({
       v.literal("search"),
       v.literal("click"),
       v.literal("signup"),
-      v.literal("login")
+      v.literal("login"),
+      // Creator funnel events
+      v.literal("creator_started"),
+      v.literal("creator_profile_completed"),
+      v.literal("creator_published"),
+      v.literal("first_sale"),
+      // Learner activation events
+      v.literal("enrollment"),
+      v.literal("return_week_2"),
+      // Email & campaign events
+      v.literal("email_sent"),
+      v.literal("email_delivered"),
+      v.literal("email_opened"),
+      v.literal("email_clicked"),
+      v.literal("email_bounced"),
+      v.literal("email_complained"),
+      // Campaign & outreach events
+      v.literal("dm_sent"),
+      v.literal("cta_clicked"),
+      v.literal("campaign_view"),
+      // System events
+      v.literal("error"),
+      v.literal("webhook_failed")
     ),
     resourceId: v.optional(v.string()),
-    resourceType: v.optional(v.union(
-      v.literal("course"),
-      v.literal("digitalProduct"),
-      v.literal("lesson"),
-      v.literal("chapter"),
-      v.literal("page")
-    )),
-    metadata: v.optional(v.object({
-      page: v.optional(v.string()),
-      referrer: v.optional(v.string()),
-      searchTerm: v.optional(v.string()),
-      duration: v.optional(v.number()),
-      progress: v.optional(v.number()),
-      value: v.optional(v.number()),
-      country: v.optional(v.string()),
-      city: v.optional(v.string()),
-      device: v.optional(v.string()),
-      browser: v.optional(v.string()),
-      os: v.optional(v.string()),
-    })),
+    resourceType: v.optional(
+      v.union(
+        v.literal("course"),
+        v.literal("digitalProduct"),
+        v.literal("lesson"),
+        v.literal("chapter"),
+        v.literal("page")
+      )
+    ),
+    metadata: v.optional(
+      v.object({
+        // Core metadata
+        page: v.optional(v.string()),
+        referrer: v.optional(v.string()),
+        searchTerm: v.optional(v.string()),
+        duration: v.optional(v.number()),
+        progress: v.optional(v.number()),
+        value: v.optional(v.number()),
+        country: v.optional(v.string()),
+        city: v.optional(v.string()),
+        device: v.optional(v.string()),
+        browser: v.optional(v.string()),
+        os: v.optional(v.string()),
+        // Campaign tracking
+        source: v.optional(v.string()),
+        campaign_id: v.optional(v.string()),
+        utm_source: v.optional(v.string()),
+        utm_medium: v.optional(v.string()),
+        utm_campaign: v.optional(v.string()),
+        // Creator-specific
+        daw: v.optional(v.string()),
+        audience_size: v.optional(v.number()),
+        // Product/revenue specific
+        product_id: v.optional(v.string()),
+        amount_cents: v.optional(v.number()),
+        currency: v.optional(v.string()),
+        // Experiment tracking
+        experiment_id: v.optional(v.string()),
+        variant: v.optional(v.string()),
+        // Error tracking
+        error_code: v.optional(v.string()),
+        error_message: v.optional(v.string()),
+      })
+    ),
     sessionId: v.optional(v.string()),
     ipAddress: v.optional(v.string()),
     userAgent: v.optional(v.string()),
@@ -91,7 +138,12 @@ export const trackRevenue = mutation({
     creatorId: v.string(),
     purchaseId: v.id("purchases"),
     resourceId: v.string(),
-    resourceType: v.union(v.literal("course"), v.literal("digitalProduct"), v.literal("coaching"), v.literal("bundle")),
+    resourceType: v.union(
+      v.literal("course"),
+      v.literal("digitalProduct"),
+      v.literal("coaching"),
+      v.literal("bundle")
+    ),
     grossAmount: v.number(),
     platformFee: v.number(),
     processingFee: v.number(),
@@ -133,7 +185,7 @@ export const trackSession = mutation({
   returns: v.union(v.id("userSessions"), v.null()),
   handler: async (ctx, args) => {
     const { sessionId, userId } = args;
-    
+
     // Try to find existing session
     const existingSession = await ctx.db
       .query("userSessions")
@@ -177,57 +229,98 @@ export const trackSession = mutation({
 /**
  * Batch track multiple events for performance
  */
+const eventTypeValidator = v.union(
+  v.literal("page_view"),
+  v.literal("product_view"),
+  v.literal("course_view"),
+  v.literal("purchase"),
+  v.literal("download"),
+  v.literal("video_play"),
+  v.literal("video_complete"),
+  v.literal("lesson_complete"),
+  v.literal("course_complete"),
+  v.literal("search"),
+  v.literal("click"),
+  v.literal("signup"),
+  v.literal("login"),
+  v.literal("creator_started"),
+  v.literal("creator_profile_completed"),
+  v.literal("creator_published"),
+  v.literal("first_sale"),
+  v.literal("enrollment"),
+  v.literal("return_week_2"),
+  v.literal("email_sent"),
+  v.literal("email_delivered"),
+  v.literal("email_opened"),
+  v.literal("email_clicked"),
+  v.literal("email_bounced"),
+  v.literal("email_complained"),
+  v.literal("dm_sent"),
+  v.literal("cta_clicked"),
+  v.literal("campaign_view"),
+  v.literal("error"),
+  v.literal("webhook_failed")
+);
+
+const metadataValidator = v.optional(
+  v.object({
+    page: v.optional(v.string()),
+    referrer: v.optional(v.string()),
+    searchTerm: v.optional(v.string()),
+    duration: v.optional(v.number()),
+    progress: v.optional(v.number()),
+    value: v.optional(v.number()),
+    country: v.optional(v.string()),
+    city: v.optional(v.string()),
+    device: v.optional(v.string()),
+    browser: v.optional(v.string()),
+    os: v.optional(v.string()),
+    source: v.optional(v.string()),
+    campaign_id: v.optional(v.string()),
+    utm_source: v.optional(v.string()),
+    utm_medium: v.optional(v.string()),
+    utm_campaign: v.optional(v.string()),
+    daw: v.optional(v.string()),
+    audience_size: v.optional(v.number()),
+    product_id: v.optional(v.string()),
+    amount_cents: v.optional(v.number()),
+    currency: v.optional(v.string()),
+    experiment_id: v.optional(v.string()),
+    variant: v.optional(v.string()),
+    error_code: v.optional(v.string()),
+    error_message: v.optional(v.string()),
+  })
+);
+
 export const trackEventsBatch = mutation({
   args: {
-    events: v.array(v.object({
-      userId: v.string(),
-      storeId: v.optional(v.string()),
-      eventType: v.union(
-        v.literal("page_view"),
-        v.literal("product_view"),
-        v.literal("course_view"),
-        v.literal("purchase"),
-        v.literal("download"),
-        v.literal("video_play"),
-        v.literal("video_complete"),
-        v.literal("lesson_complete"),
-        v.literal("course_complete"),
-        v.literal("search"),
-        v.literal("click"),
-        v.literal("signup"),
-        v.literal("login")
-      ),
-      resourceId: v.optional(v.string()),
-      resourceType: v.optional(v.union(
-        v.literal("course"),
-        v.literal("digitalProduct"),
-        v.literal("lesson"),
-        v.literal("chapter"),
-        v.literal("page")
-      )),
-      metadata: v.optional(v.object({
-        page: v.optional(v.string()),
-        referrer: v.optional(v.string()),
-        searchTerm: v.optional(v.string()),
-        duration: v.optional(v.number()),
-        progress: v.optional(v.number()),
-        value: v.optional(v.number()),
-        country: v.optional(v.string()),
-        city: v.optional(v.string()),
-        device: v.optional(v.string()),
-        browser: v.optional(v.string()),
-        os: v.optional(v.string()),
-      })),
-      sessionId: v.optional(v.string()),
-      ipAddress: v.optional(v.string()),
-      userAgent: v.optional(v.string()),
-    })),
+    events: v.array(
+      v.object({
+        userId: v.string(),
+        storeId: v.optional(v.string()),
+        eventType: eventTypeValidator,
+        resourceId: v.optional(v.string()),
+        resourceType: v.optional(
+          v.union(
+            v.literal("course"),
+            v.literal("digitalProduct"),
+            v.literal("lesson"),
+            v.literal("chapter"),
+            v.literal("page")
+          )
+        ),
+        metadata: metadataValidator,
+        sessionId: v.optional(v.string()),
+        ipAddress: v.optional(v.string()),
+        userAgent: v.optional(v.string()),
+      })
+    ),
   },
   returns: v.array(v.id("analyticsEvents")),
   handler: async (ctx, args) => {
     const results = [];
     const timestamp = Date.now();
-    
+
     for (const event of args.events) {
       const id = await ctx.db.insert("analyticsEvents", {
         ...event,
@@ -235,7 +328,7 @@ export const trackEventsBatch = mutation({
       });
       results.push(id);
     }
-    
+
     return results;
   },
 });

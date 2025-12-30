@@ -58,7 +58,7 @@ export default function AdminEmailMonitoringPage() {
   const [newDomainName, setNewDomainName] = useState("");
   const [newDomainType, setNewDomainType] = useState<"shared" | "dedicated" | "custom">("shared");
   const [isAdding, setIsAdding] = useState(false);
-  
+
   // Fetch data
   const overview = useQuery(api.adminEmailMonitoring?.getPlatformOverview);
   const domains = useQuery(api.adminEmailMonitoring?.listEmailDomains);
@@ -67,17 +67,17 @@ export default function AdminEmailMonitoringPage() {
     api.adminEmailMonitoring?.getDomainDetails,
     selectedDomainId ? { domainId: selectedDomainId } : "skip"
   );
-  
+
   // Mutations
   const addDomain = useMutation(api.adminEmailMonitoring?.addEmailDomain);
   const updateDomainStatus = useMutation(api.adminEmailMonitoring?.updateDomainStatus);
   const resolveAlert = useMutation(api.adminEmailMonitoring?.resolveAlert);
   const deleteDomain = useMutation(api.adminEmailMonitoring?.deleteEmailDomain);
-  
+
   // Actions
   const syncDomainsFromResend = useAction(api.resendDomainSync?.syncDomainsFromResend);
   const verifyDomain = useAction(api.resendDomainSync?.verifyDomainInResend);
-  
+
   const handleAddDomain = async () => {
     if (!newDomainName.trim()) {
       toast({
@@ -87,19 +87,19 @@ export default function AdminEmailMonitoringPage() {
       });
       return;
     }
-    
+
     setIsAdding(true);
     try {
       const domainId = await addDomain({
         domain: newDomainName,
         type: newDomainType,
       });
-      
+
       toast({
         title: "Domain Added!",
         description: `${newDomainName} has been added. Configure DNS to verify.`,
       });
-      
+
       setIsAddDomainOpen(false);
       setNewDomainName("");
       setNewDomainType("shared");
@@ -113,7 +113,7 @@ export default function AdminEmailMonitoringPage() {
       setIsAdding(false);
     }
   };
-  
+
   const getStatusBadge = (status: string) => {
     const variants = {
       excellent: { color: "bg-green-100 text-green-800 border-green-200", icon: CheckCircle2 },
@@ -122,28 +122,28 @@ export default function AdminEmailMonitoringPage() {
       poor: { color: "bg-orange-100 text-orange-800 border-orange-200", icon: AlertCircle },
       critical: { color: "bg-red-100 text-red-800 border-red-200", icon: XCircle },
     };
-    
+
     const variant = variants[status as keyof typeof variants] || variants.fair;
     const Icon = variant.icon;
-    
+
     return (
       <Badge className={variant.color}>
-        <Icon className="w-3 h-3 mr-1" />
+        <Icon className="mr-1 h-3 w-3" />
         {status}
       </Badge>
     );
   };
-  
+
   const formatNumber = (num: number) => {
     return new Intl.NumberFormat().format(num);
   };
-  
+
   const formatPercent = (num: number) => {
     return `${num.toFixed(2)}%`;
   };
-  
+
   return (
-    <div className="p-8 space-y-6">
+    <div className="space-y-6 p-8">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -153,9 +153,9 @@ export default function AdminEmailMonitoringPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={async () => {
               try {
                 const result = await syncDomainsFromResend();
@@ -172,19 +172,19 @@ export default function AdminEmailMonitoringPage() {
               }
             }}
           >
-            <RefreshCw className="w-4 h-4 mr-2" />
+            <RefreshCw className="mr-2 h-4 w-4" />
             Sync from Resend
           </Button>
           <Button size="sm" onClick={() => setIsAddDomainOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
+            <Plus className="mr-2 h-4 w-4" />
             Add Domain
           </Button>
         </div>
       </div>
-      
+
       {/* Overview Stats */}
       {overview && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           {/* Today's Volume */}
           <Card>
             <CardHeader className="pb-2">
@@ -194,11 +194,9 @@ export default function AdminEmailMonitoringPage() {
             </CardHeader>
             <CardContent>
               <div className="flex items-baseline justify-between">
-                <div className="text-2xl font-bold">
-                  {formatNumber(overview.today.sent)}
-                </div>
+                <div className="text-2xl font-bold">{formatNumber(overview.today.sent)}</div>
                 <Badge variant="outline" className="text-xs">
-                  <TrendingUp className="w-3 h-3 mr-1" />
+                  <TrendingUp className="mr-1 h-3 w-3" />
                   {formatNumber(overview.trend.sent)} (7d)
                 </Badge>
               </div>
@@ -207,7 +205,7 @@ export default function AdminEmailMonitoringPage() {
               </div>
             </CardContent>
           </Card>
-          
+
           {/* Delivery Rate */}
           <Card>
             <CardHeader className="pb-2">
@@ -217,11 +215,20 @@ export default function AdminEmailMonitoringPage() {
             </CardHeader>
             <CardContent>
               <div className="flex items-baseline justify-between">
-                <div className={`text-2xl font-bold ${overview.today.deliveryRate >= 95 ? 'text-green-600' : overview.today.deliveryRate >= 90 ? 'text-yellow-600' : 'text-red-600'}`}>
+                <div
+                  className={`text-2xl font-bold ${overview.today.deliveryRate >= 95 ? "text-green-600" : overview.today.deliveryRate >= 90 ? "text-yellow-600" : "text-red-600"}`}
+                >
                   {formatPercent(overview.today.deliveryRate)}
                 </div>
-                <Badge variant={overview.today.deliveryRate >= 95 ? "success" : "destructive"} className="text-xs">
-                  {overview.today.deliveryRate >= 95 ? 'Excellent' : overview.today.deliveryRate >= 90 ? 'Good' : 'Poor'}
+                <Badge
+                  variant={overview.today.deliveryRate >= 95 ? "default" : "destructive"}
+                  className="text-xs"
+                >
+                  {overview.today.deliveryRate >= 95
+                    ? "Excellent"
+                    : overview.today.deliveryRate >= 90
+                      ? "Good"
+                      : "Poor"}
                 </Badge>
               </div>
               <div className="mt-2 text-xs text-muted-foreground">
@@ -229,7 +236,7 @@ export default function AdminEmailMonitoringPage() {
               </div>
             </CardContent>
           </Card>
-          
+
           {/* Bounce Rate */}
           <Card>
             <CardHeader className="pb-2">
@@ -239,12 +246,14 @@ export default function AdminEmailMonitoringPage() {
             </CardHeader>
             <CardContent>
               <div className="flex items-baseline justify-between">
-                <div className={`text-2xl font-bold ${overview.today.bounceRate < 2 ? 'text-green-600' : overview.today.bounceRate < 5 ? 'text-yellow-600' : 'text-red-600'}`}>
+                <div
+                  className={`text-2xl font-bold ${overview.today.bounceRate < 2 ? "text-green-600" : overview.today.bounceRate < 5 ? "text-yellow-600" : "text-red-600"}`}
+                >
                   {formatPercent(overview.today.bounceRate)}
                 </div>
                 {overview.today.bounceRate >= 5 && (
                   <Badge variant="destructive" className="text-xs">
-                    <AlertCircle className="w-3 h-3 mr-1" />
+                    <AlertCircle className="mr-1 h-3 w-3" />
                     Critical
                   </Badge>
                 )}
@@ -254,19 +263,15 @@ export default function AdminEmailMonitoringPage() {
               </div>
             </CardContent>
           </Card>
-          
+
           {/* Open Rate */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Open Rate
-              </CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground">Open Rate</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-baseline justify-between">
-                <div className="text-2xl font-bold">
-                  {formatPercent(overview.today.openRate)}
-                </div>
+                <div className="text-2xl font-bold">{formatPercent(overview.today.openRate)}</div>
                 <Badge variant="outline" className="text-xs">
                   7d: {formatPercent(overview.trend.openRate)}
                 </Badge>
@@ -278,14 +283,14 @@ export default function AdminEmailMonitoringPage() {
           </Card>
         </div>
       )}
-      
+
       {/* Platform Health */}
       {overview && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Server className="w-4 h-4" />
+              <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                <Server className="h-4 w-4" />
                 Domains
               </CardTitle>
             </CardHeader>
@@ -306,11 +311,11 @@ export default function AdminEmailMonitoringPage() {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Users className="w-4 h-4" />
+              <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                <Users className="h-4 w-4" />
                 Creators
               </CardTitle>
             </CardHeader>
@@ -331,20 +336,18 @@ export default function AdminEmailMonitoringPage() {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4" />
+              <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                <AlertTriangle className="h-4 w-4" />
                 Active Alerts
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-red-600">
-                {overview.alerts}
-              </div>
+              <div className="text-3xl font-bold text-red-600">{overview.alerts}</div>
               {overview.alerts > 0 && (
-                <Button variant="link" className="mt-2 px-0 h-auto text-xs">
+                <Button variant="link" className="mt-2 h-auto px-0 text-xs">
                   View all alerts →
                 </Button>
               )}
@@ -352,28 +355,28 @@ export default function AdminEmailMonitoringPage() {
           </Card>
         </div>
       )}
-      
+
       {/* Main Content Tabs */}
       <Tabs defaultValue="domains" className="space-y-4">
         <TabsList>
           <TabsTrigger value="domains">
-            <Server className="w-4 h-4 mr-2" />
+            <Server className="mr-2 h-4 w-4" />
             Domains ({domains?.length || 0})
           </TabsTrigger>
           <TabsTrigger value="creators">
-            <Users className="w-4 h-4 mr-2" />
+            <Users className="mr-2 h-4 w-4" />
             Flagged Creators ({flaggedCreators?.length || 0})
           </TabsTrigger>
           <TabsTrigger value="analytics">
-            <BarChart3 className="w-4 h-4 mr-2" />
+            <BarChart3 className="mr-2 h-4 w-4" />
             Analytics
           </TabsTrigger>
           <TabsTrigger value="activity">
-            <Activity className="w-4 h-4 mr-2" />
+            <Activity className="mr-2 h-4 w-4" />
             Live Activity
           </TabsTrigger>
         </TabsList>
-        
+
         {/* Domains Tab */}
         <TabsContent value="domains" className="space-y-4">
           <Card>
@@ -405,7 +408,7 @@ export default function AdminEmailMonitoringPage() {
                         <TableCell className="font-medium">
                           <Button
                             variant="link"
-                            className="px-0 h-auto"
+                            className="h-auto px-0"
                             onClick={() => setSelectedDomainId(domain._id)}
                           >
                             {domain.domain}
@@ -415,9 +418,7 @@ export default function AdminEmailMonitoringPage() {
                           <Badge variant="outline">{domain.type}</Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge 
-                            variant={domain.status === "active" ? "success" : "secondary"}
-                          >
+                          <Badge variant={domain.status === "active" ? "success" : "secondary"}>
                             {domain.status}
                           </Badge>
                         </TableCell>
@@ -428,36 +429,41 @@ export default function AdminEmailMonitoringPage() {
                           </span>
                         </TableCell>
                         <TableCell className="text-right">
-                          {domain.todayStats 
-                            ? formatNumber(domain.todayStats.sent)
-                            : "-"
-                          }
+                          {domain.todayStats ? formatNumber(domain.todayStats.sent) : "-"}
                         </TableCell>
                         <TableCell className="text-right">
                           {domain.todayStats ? (
-                            <span className={
-                              domain.todayStats.bounceRate < 2 
-                                ? "text-green-600" 
-                                : domain.todayStats.bounceRate < 5 
-                                  ? "text-yellow-600" 
-                                  : "text-red-600"
-                            }>
+                            <span
+                              className={
+                                domain.todayStats.bounceRate < 2
+                                  ? "text-green-600"
+                                  : domain.todayStats.bounceRate < 5
+                                    ? "text-yellow-600"
+                                    : "text-red-600"
+                              }
+                            >
                               {formatPercent(domain.todayStats.bounceRate)}
                             </span>
-                          ) : "-"}
+                          ) : (
+                            "-"
+                          )}
                         </TableCell>
                         <TableCell className="text-right">
                           {domain.todayStats ? (
-                            <span className={
-                              domain.todayStats.spamRate < 0.01
-                                ? "text-green-600"
-                                : domain.todayStats.spamRate < 0.1
-                                  ? "text-yellow-600"
-                                  : "text-red-600"
-                            }>
+                            <span
+                              className={
+                                domain.todayStats.spamRate < 0.01
+                                  ? "text-green-600"
+                                  : domain.todayStats.spamRate < 0.1
+                                    ? "text-yellow-600"
+                                    : "text-red-600"
+                              }
+                            >
                               {formatPercent(domain.todayStats.spamRate)}
                             </span>
-                          ) : "-"}
+                          ) : (
+                            "-"
+                          )}
                         </TableCell>
                         <TableCell className="text-right">
                           {domain.alerts > 0 ? (
@@ -483,14 +489,14 @@ export default function AdminEmailMonitoringPage() {
                   </TableBody>
                 </Table>
               ) : (
-                <div className="text-center py-12">
-                  <Server className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-medium mb-2">No domains configured</h3>
-                  <p className="text-muted-foreground mb-4">
+                <div className="py-12 text-center">
+                  <Server className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+                  <h3 className="mb-2 text-lg font-medium">No domains configured</h3>
+                  <p className="mb-4 text-muted-foreground">
                     Add your first sending domain to start monitoring
                   </p>
                   <Button onClick={() => setIsAddDomainOpen(true)}>
-                    <Plus className="w-4 h-4 mr-2" />
+                    <Plus className="mr-2 h-4 w-4" />
                     Add Domain
                   </Button>
                 </div>
@@ -498,7 +504,7 @@ export default function AdminEmailMonitoringPage() {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         {/* Flagged Creators Tab */}
         <TabsContent value="creators" className="space-y-4">
           <Card>
@@ -526,49 +532,49 @@ export default function AdminEmailMonitoringPage() {
                   <TableBody>
                     {flaggedCreators.map((creator) => (
                       <TableRow key={creator.storeId}>
-                        <TableCell className="font-medium">
-                          {creator.storeName}
-                        </TableCell>
+                        <TableCell className="font-medium">{creator.storeName}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {creator.domain}
                         </TableCell>
                         <TableCell>
-                          <Badge 
-                            variant={
-                              creator.status === "suspended" 
-                                ? "destructive" 
-                                : "secondary"
-                            }
+                          <Badge
+                            variant={creator.status === "suspended" ? "destructive" : "secondary"}
                           >
                             {creator.status}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <span className={
-                            creator.bounceRate >= 5 
-                              ? "text-red-600 font-medium" 
-                              : "text-yellow-600"
-                          }>
+                          <span
+                            className={
+                              creator.bounceRate >= 5
+                                ? "font-medium text-red-600"
+                                : "text-yellow-600"
+                            }
+                          >
                             {formatPercent(creator.bounceRate)}
                           </span>
                         </TableCell>
                         <TableCell>
-                          <span className={
-                            creator.spamRate >= 0.1 
-                              ? "text-red-600 font-medium" 
-                              : "text-yellow-600"
-                          }>
+                          <span
+                            className={
+                              creator.spamRate >= 0.1
+                                ? "font-medium text-red-600"
+                                : "text-yellow-600"
+                            }
+                          >
                             {formatPercent(creator.spamRate)}
                           </span>
                         </TableCell>
                         <TableCell>
-                          <span className={
-                            creator.reputationScore < 30 
-                              ? "text-red-600" 
-                              : creator.reputationScore < 50 
-                                ? "text-yellow-600" 
-                                : "text-green-600"
-                          }>
+                          <span
+                            className={
+                              creator.reputationScore < 30
+                                ? "text-red-600"
+                                : creator.reputationScore < 50
+                                  ? "text-yellow-600"
+                                  : "text-green-600"
+                            }
+                          >
                             {creator.reputationScore}/100
                           </span>
                         </TableCell>
@@ -598,56 +604,50 @@ export default function AdminEmailMonitoringPage() {
                   </TableBody>
                 </Table>
               ) : (
-                <div className="text-center py-12">
-                  <CheckCircle2 className="w-12 h-12 mx-auto text-green-500 mb-4" />
-                  <h3 className="text-lg font-medium mb-2">All clear!</h3>
-                  <p className="text-muted-foreground">
-                    No creators currently flagged for issues
-                  </p>
+                <div className="py-12 text-center">
+                  <CheckCircle2 className="mx-auto mb-4 h-12 w-12 text-green-500" />
+                  <h3 className="mb-2 text-lg font-medium">All clear!</h3>
+                  <p className="text-muted-foreground">No creators currently flagged for issues</p>
                 </div>
               )}
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         {/* Analytics Tab */}
         <TabsContent value="analytics" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Email Analytics</CardTitle>
-              <CardDescription>
-                Detailed platform-wide email performance metrics
-              </CardDescription>
+              <CardDescription>Detailed platform-wide email performance metrics</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-12 text-muted-foreground">
+              <div className="py-12 text-center text-muted-foreground">
                 Charts and detailed analytics coming soon...
               </div>
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         {/* Live Activity Tab */}
         <TabsContent value="activity" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Live Activity Feed</CardTitle>
-              <CardDescription>
-                Real-time email events across all domains
-              </CardDescription>
+              <CardDescription>Real-time email events across all domains</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-12 text-muted-foreground">
+              <div className="py-12 text-center text-muted-foreground">
                 Live activity feed coming soon...
               </div>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
-      
+
       {/* Domain Details Dialog */}
       <Dialog open={!!selectedDomainId} onOpenChange={(open) => !open && setSelectedDomainId(null)}>
-        <DialogContent className="bg-white dark:bg-black max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto bg-white dark:bg-black">
           <DialogHeader>
             <div className="flex items-start justify-between">
               <div>
@@ -661,8 +661,10 @@ export default function AdminEmailMonitoringPage() {
                 size="sm"
                 onClick={async () => {
                   if (!selectedDomainId) return;
-                  
-                  if (confirm("Are you sure you want to delete this domain? This cannot be undone.")) {
+
+                  if (
+                    confirm("Are you sure you want to delete this domain? This cannot be undone.")
+                  ) {
                     try {
                       await deleteDomain({ domainId: selectedDomainId });
                       toast({
@@ -673,7 +675,8 @@ export default function AdminEmailMonitoringPage() {
                     } catch (error) {
                       toast({
                         title: "Cannot Delete",
-                        description: error instanceof Error ? error.message : "Failed to delete domain",
+                        description:
+                          error instanceof Error ? error.message : "Failed to delete domain",
                         variant: "destructive",
                       });
                     }
@@ -684,7 +687,7 @@ export default function AdminEmailMonitoringPage() {
               </Button>
             </div>
           </DialogHeader>
-          
+
           {domainDetails && (
             <div className="space-y-6 py-4">
               {/* Domain Info */}
@@ -703,7 +706,9 @@ export default function AdminEmailMonitoringPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Status:</span>
-                    <Badge variant={domainDetails.domain.status === "active" ? "success" : "secondary"}>
+                    <Badge
+                      variant={domainDetails.domain.status === "active" ? "success" : "secondary"}
+                    >
                       {domainDetails.domain.status}
                     </Badge>
                   </div>
@@ -713,7 +718,7 @@ export default function AdminEmailMonitoringPage() {
                   </div>
                 </CardContent>
               </Card>
-              
+
               {/* Today's Stats */}
               {domainDetails.analytics.today && (
                 <Card>
@@ -721,9 +726,11 @@ export default function AdminEmailMonitoringPage() {
                     <CardTitle className="text-lg">Today's Performance</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
                       <div className="text-center">
-                        <div className="text-2xl font-bold">{formatNumber(domainDetails.analytics.today.totalSent)}</div>
+                        <div className="text-2xl font-bold">
+                          {formatNumber(domainDetails.analytics.today.totalSent)}
+                        </div>
                         <div className="text-xs text-muted-foreground">Sent</div>
                       </div>
                       <div className="text-center">
@@ -733,7 +740,9 @@ export default function AdminEmailMonitoringPage() {
                         <div className="text-xs text-muted-foreground">Delivery Rate</div>
                       </div>
                       <div className="text-center">
-                        <div className="text-2xl font-bold">{formatPercent(domainDetails.analytics.today.openRate)}</div>
+                        <div className="text-2xl font-bold">
+                          {formatPercent(domainDetails.analytics.today.openRate)}
+                        </div>
                         <div className="text-xs text-muted-foreground">Open Rate</div>
                       </div>
                       <div className="text-center">
@@ -746,7 +755,7 @@ export default function AdminEmailMonitoringPage() {
                   </CardContent>
                 </Card>
               )}
-              
+
               {/* 30-Day Stats */}
               <Card>
                 <CardHeader>
@@ -755,21 +764,27 @@ export default function AdminEmailMonitoringPage() {
                 <CardContent>
                   <div className="grid grid-cols-3 gap-4">
                     <div className="text-center">
-                      <div className="text-xl font-bold">{formatNumber(domainDetails.analytics.last30Days.totalSent)}</div>
+                      <div className="text-xl font-bold">
+                        {formatNumber(domainDetails.analytics.last30Days.totalSent)}
+                      </div>
                       <div className="text-xs text-muted-foreground">Total Sent</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-xl font-bold">{formatPercent(domainDetails.analytics.last30Days.avgDeliveryRate)}</div>
+                      <div className="text-xl font-bold">
+                        {formatPercent(domainDetails.analytics.last30Days.avgDeliveryRate)}
+                      </div>
                       <div className="text-xs text-muted-foreground">Avg Delivery</div>
                     </div>
                     <div className="text-center">
-                      <div className="text-xl font-bold">{formatPercent(domainDetails.analytics.last30Days.avgOpenRate)}</div>
+                      <div className="text-xl font-bold">
+                        {formatPercent(domainDetails.analytics.last30Days.avgOpenRate)}
+                      </div>
                       <div className="text-xs text-muted-foreground">Avg Open Rate</div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
-              
+
               {/* Top Creators */}
               {domainDetails.topCreators && domainDetails.topCreators.length > 0 && (
                 <Card>
@@ -791,15 +806,21 @@ export default function AdminEmailMonitoringPage() {
                         {domainDetails.topCreators.map((creator) => (
                           <TableRow key={creator.storeId}>
                             <TableCell className="font-medium">{creator.storeName}</TableCell>
-                            <TableCell className="text-right">{formatNumber(creator.sent)}</TableCell>
+                            <TableCell className="text-right">
+                              {formatNumber(creator.sent)}
+                            </TableCell>
                             <TableCell className="text-right">
                               <span className={creator.bounceRate > 5 ? "text-red-600" : ""}>
                                 {formatPercent(creator.bounceRate)}
                               </span>
                             </TableCell>
-                            <TableCell className="text-right">{formatPercent(creator.openRate)}</TableCell>
+                            <TableCell className="text-right">
+                              {formatPercent(creator.openRate)}
+                            </TableCell>
                             <TableCell>
-                              <Badge variant={creator.status === "active" ? "success" : "destructive"}>
+                              <Badge
+                                variant={creator.status === "active" ? "success" : "destructive"}
+                              >
                                 {creator.status}
                               </Badge>
                             </TableCell>
@@ -810,7 +831,7 @@ export default function AdminEmailMonitoringPage() {
                   </CardContent>
                 </Card>
               )}
-              
+
               {/* Active Alerts */}
               {domainDetails.alerts && domainDetails.alerts.length > 0 && (
                 <Card>
@@ -820,21 +841,23 @@ export default function AdminEmailMonitoringPage() {
                   <CardContent>
                     <div className="space-y-2">
                       {domainDetails.alerts.map((alert: any) => (
-                        <div 
+                        <div
                           key={alert._id}
-                          className={`p-3 rounded-lg border ${
-                            alert.severity === "critical" 
-                              ? "bg-red-50 border-red-200" 
+                          className={`rounded-lg border p-3 ${
+                            alert.severity === "critical"
+                              ? "border-red-200 bg-red-50"
                               : alert.severity === "warning"
-                                ? "bg-yellow-50 border-yellow-200"
-                                : "bg-blue-50 border-blue-200"
+                                ? "border-yellow-200 bg-yellow-50"
+                                : "border-blue-200 bg-blue-50"
                           }`}
                         >
                           <div className="flex items-start justify-between">
                             <div>
                               <div className="font-medium">{alert.message}</div>
                               {alert.details && (
-                                <div className="text-sm text-muted-foreground mt-1">{alert.details}</div>
+                                <div className="mt-1 text-sm text-muted-foreground">
+                                  {alert.details}
+                                </div>
                               )}
                             </div>
                             <Button
@@ -855,17 +878,18 @@ export default function AdminEmailMonitoringPage() {
           )}
         </DialogContent>
       </Dialog>
-      
+
       {/* Add Domain Dialog */}
       <Dialog open={isAddDomainOpen} onOpenChange={setIsAddDomainOpen}>
         <DialogContent className="bg-white dark:bg-black">
           <DialogHeader>
             <DialogTitle>Add Email Domain</DialogTitle>
             <DialogDescription>
-              Add a new sending domain to monitor. You'll need to configure DNS records after adding.
+              Add a new sending domain to monitor. You'll need to configure DNS records after
+              adding.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="domain">Domain Name *</Label>
@@ -879,7 +903,7 @@ export default function AdminEmailMonitoringPage() {
                 Example: mail.pauseplayrepeat.com or yourdomain.com
               </p>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="type">Domain Type *</Label>
               <Select value={newDomainType} onValueChange={(value: any) => setNewDomainType(value)}>
@@ -894,7 +918,7 @@ export default function AdminEmailMonitoringPage() {
               </Select>
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button
               variant="outline"
@@ -915,4 +939,3 @@ export default function AdminEmailMonitoringPage() {
     </div>
   );
 }
-

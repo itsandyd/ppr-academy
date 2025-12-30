@@ -16,11 +16,11 @@ export interface PDFData {
   pdfType?: PDFType;
   tags?: string[];
   thumbnail?: string;
-  
+
   // Pricing
   price?: string;
   pricingModel?: "free_with_gate" | "paid";
-  
+
   // Follow Gate (if free)
   followGateEnabled?: boolean;
   followGateRequirements?: {
@@ -38,12 +38,20 @@ export interface PDFData {
     spotify?: string;
   };
   followGateMessage?: string;
-  
+
   // PDF-specific
   pageCount?: number;
   fileSize?: number;
   downloadUrl?: string;
   previewUrl?: string;
+  files?: Array<{
+    id: string;
+    name: string;
+    url: string;
+    size: number;
+    type: string;
+    storageId: string;
+  }>;
 }
 
 export interface StepCompletion {
@@ -83,11 +91,8 @@ export function PDFCreationProvider({ children }: { children: React.ReactNode })
 
   // Fetch user's stores
   // @ts-ignore
-  const stores = useQuery(
-    api.stores.getStoresByUser,
-    user?.id ? { userId: user.id } : "skip"
-  );
-  
+  const stores = useQuery(api.stores.getStoresByUser, user?.id ? { userId: user.id } : "skip");
+
   const storeId = stores?.[0]?._id;
 
   // Redirect if no store
@@ -98,7 +103,7 @@ export function PDFCreationProvider({ children }: { children: React.ReactNode })
         description: "You need to set up a store before creating products.",
         variant: "destructive",
       });
-      router.push('/dashboard?mode=create');
+      router.push("/dashboard?mode=create");
     }
   }, [user, stores, router, toast]);
 
@@ -106,7 +111,7 @@ export function PDFCreationProvider({ children }: { children: React.ReactNode })
   const createPDFMutation: any = useMutation(api.universalProducts.createUniversalProduct as any);
   // @ts-ignore
   const updatePDFMutation: any = useMutation(api.digitalProducts.updateProduct as any);
-  
+
   // Get existing PDF if editing
   // @ts-ignore
   const existingPDF: any = useQuery(
@@ -149,15 +154,16 @@ export function PDFCreationProvider({ children }: { children: React.ReactNode })
         followGateSocialLinks: existingPDF.followGateSocialLinks,
         followGateMessage: existingPDF.followGateMessage,
       };
-      
+
       const stepCompletion = {
         basics: !!(newData.title && newData.description),
         pricing: !!newData.pricingModel,
-        followGate: newData.pricingModel === "free_with_gate" ? !!newData.followGateRequirements : true,
+        followGate:
+          newData.pricingModel === "free_with_gate" ? !!newData.followGateRequirements : true,
         files: true,
       };
-      
-      setState(prev => ({
+
+      setState((prev) => ({
         ...prev,
         pdfId: existingPDF._id,
         data: newData,
@@ -185,7 +191,7 @@ export function PDFCreationProvider({ children }: { children: React.ReactNode })
   };
 
   const updateData = (step: string, newData: Partial<PDFData>) => {
-    setState(prev => {
+    setState((prev) => {
       const updatedData = { ...prev.data, ...newData };
       const stepCompletion = {
         ...prev.stepCompletion,
@@ -201,9 +207,9 @@ export function PDFCreationProvider({ children }: { children: React.ReactNode })
 
   const savePDF = async () => {
     if (state.isSaving || !user?.id || !storeId) return;
-    
-    setState(prev => ({ ...prev, isSaving: true }));
-    
+
+    setState((prev) => ({ ...prev, isSaving: true }));
+
     try {
       if (state.pdfId) {
         // Update existing
@@ -226,23 +232,26 @@ export function PDFCreationProvider({ children }: { children: React.ReactNode })
           productType: "digital",
           productCategory: "pdf",
           pricingModel: state.data.pricingModel || "paid",
-          price: state.data.pricingModel === "free_with_gate" ? 0 : parseFloat(state.data.price || "9.99"),
+          price:
+            state.data.pricingModel === "free_with_gate"
+              ? 0
+              : parseFloat(state.data.price || "9.99"),
           imageUrl: state.data.thumbnail,
           downloadUrl: state.data.downloadUrl,
           tags: state.data.tags,
         });
 
         if (result) {
-          setState(prev => ({ ...prev, pdfId: result }));
+          setState((prev) => ({ ...prev, pdfId: result }));
           const currentStep = searchParams.get("step") || "basics";
           router.replace(`/dashboard/create/pdf?pdfId=${result}&step=${currentStep}`);
         }
       }
 
-      setState(prev => ({ 
-        ...prev, 
-        isSaving: false, 
-        lastSaved: new Date() 
+      setState((prev) => ({
+        ...prev,
+        isSaving: false,
+        lastSaved: new Date(),
       }));
 
       toast({
@@ -252,7 +261,7 @@ export function PDFCreationProvider({ children }: { children: React.ReactNode })
       });
     } catch (error) {
       console.error("Failed to save PDF:", error);
-      setState(prev => ({ ...prev, isSaving: false }));
+      setState((prev) => ({ ...prev, isSaving: false }));
       toast({
         title: "Save Failed",
         description: "Failed to save your PDF. Please try again.",
@@ -280,7 +289,7 @@ export function PDFCreationProvider({ children }: { children: React.ReactNode })
           id: state.pdfId,
           isPublished: true,
         });
-        
+
         toast({
           title: "PDF Published!",
           description: "Your PDF is now live.",
@@ -319,4 +328,3 @@ export function usePDFCreation() {
   }
   return context;
 }
-

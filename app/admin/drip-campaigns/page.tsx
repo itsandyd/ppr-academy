@@ -60,9 +60,9 @@ export default function DripCampaignsPage() {
     triggerType: "lead_signup" as "lead_signup" | "product_purchase" | "tag_added" | "manual",
   });
 
-  const storeId = user?.id || "";
+  const storeId = user?.id || "admin";
 
-  const campaigns = useQuery(api.dripCampaigns.getCampaignsByStore, { storeId });
+  const campaigns = useQuery(api.dripCampaigns.getAllDripCampaigns);
   const createCampaign = useMutation(api.dripCampaigns.createCampaign);
   const toggleCampaign = useMutation(api.dripCampaigns.toggleCampaign);
   const deleteCampaign = useMutation(api.dripCampaigns.deleteCampaign);
