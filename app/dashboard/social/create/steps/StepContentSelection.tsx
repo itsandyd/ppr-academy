@@ -237,7 +237,7 @@ export function StepContentSelection() {
   };
 
   const handleLoadDraft = (postId: string) => {
-    router.push(`/dashboard/social/create?postId=${postId}&step=content`);
+    router.push(`/dashboard/social/create?postId=${postId}&step=content&mode=create`);
   };
 
   const formatDate = (timestamp: number) => {

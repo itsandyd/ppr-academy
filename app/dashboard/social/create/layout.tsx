@@ -78,8 +78,20 @@ function LayoutContent({ children }: SocialCreateLayoutProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const currentStep = searchParams.get("step") || "content";
+  const mode = searchParams.get("mode");
 
   const { state, canComplete, completePost, savePost, goToStep } = useSocialPost();
+
+  React.useEffect(() => {
+    if (!mode) {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("mode", "create");
+      router.replace(`/dashboard/social/create?${params.toString()}`);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("dashboard-mode", "create");
+      }
+    }
+  }, [mode, searchParams, router]);
 
   // @ts-ignore - Convex type inference
   const stores = useQuery(api.stores.getStoresByUser, user?.id ? { userId: user.id } : "skip");
@@ -95,7 +107,7 @@ function LayoutContent({ children }: SocialCreateLayoutProps) {
   const handleComplete = async () => {
     const result = await completePost();
     if (result.success) {
-      router.push("/dashboard/social");
+      router.push("/dashboard?mode=create");
     }
   };
 
@@ -122,7 +134,7 @@ function LayoutContent({ children }: SocialCreateLayoutProps) {
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link href="/dashboard/social">
+              <Link href="/dashboard?mode=create">
                 <Button variant="ghost" size="icon" className="rounded-full">
                   <ArrowLeft className="h-5 w-5" />
                 </Button>

@@ -1,51 +1,68 @@
-'use client';
+"use client";
 
-import { useSearchParams, useRouter } from 'next/navigation';
-import { useUser } from '@clerk/nextjs';
-import { useQuery } from 'convex/react';
-import { api } from '@/convex/_generated/api';
-import { DashboardShell } from './components/DashboardShell';
-import { useEffect } from 'react';
-import { Skeleton } from '@/components/ui/skeleton';
+import { useSearchParams, useRouter } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { DashboardShell } from "./components/DashboardShell";
+import { useEffect } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
-type DashboardMode = 'learn' | 'create';
+type DashboardMode = "learn" | "create";
+
+const MODE_STORAGE_KEY = "dashboard-mode";
+
+function getStoredMode(): DashboardMode | null {
+  if (typeof window === "undefined") return null;
+  const stored = localStorage.getItem(MODE_STORAGE_KEY);
+  if (stored === "learn" || stored === "create") return stored;
+  return null;
+}
+
+function setStoredMode(mode: DashboardMode) {
+  if (typeof window !== "undefined") {
+    localStorage.setItem(MODE_STORAGE_KEY, mode);
+  }
+}
 
 export default function DashboardPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user, isLoaded } = useUser();
-  
-  const mode = searchParams.get('mode') as DashboardMode | null;
+
+  const mode = searchParams.get("mode") as DashboardMode | null;
 
   // Get user from Convex
-  const convexUser = useQuery(
-    api.users.getUserFromClerk,
-    user?.id ? { clerkId: user.id } : 'skip'
-  );
+  const convexUser = useQuery(api.users.getUserFromClerk, user?.id ? { clerkId: user.id } : "skip");
 
   // Get stores
-  const stores = useQuery(
-    api.stores.getStoresByUser,
-    user?.id ? { userId: user.id } : 'skip'
-  );
+  const stores = useQuery(api.stores.getStoresByUser, user?.id ? { userId: user.id } : "skip");
 
-  // Redirect if no mode specified
+  useEffect(() => {
+    if (mode === "learn" || mode === "create") {
+      setStoredMode(mode);
+    }
+  }, [mode]);
+
   useEffect(() => {
     if (!isLoaded) return;
-    
-    if (!mode || (mode !== 'learn' && mode !== 'create')) {
-      // Check for saved preference
+
+    if (!mode || (mode !== "learn" && mode !== "create")) {
+      const localMode = getStoredMode();
+      if (localMode) {
+        router.replace(`/dashboard?mode=${localMode}`);
+        return;
+      }
+
       const preference = convexUser?.dashboardPreference as DashboardMode | undefined;
-      
-      if (preference && (preference === 'learn' || preference === 'create')) {
+      if (preference && (preference === "learn" || preference === "create")) {
         router.replace(`/dashboard?mode=${preference}`);
         return;
       }
 
-      // Default based on whether they have stores
-      const defaultMode: DashboardMode = stores && stores.length > 0 ? 'create' : 'learn';
+      const defaultMode: DashboardMode = stores && stores.length > 0 ? "create" : "learn";
       router.replace(`/dashboard?mode=${defaultMode}`);
     }
   }, [mode, convexUser, stores, router, isLoaded]);
@@ -53,16 +70,16 @@ export default function DashboardPage() {
   // Loading state
   if (!isLoaded || !user || convexUser === undefined) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center">
         <Skeleton className="h-screen w-full" />
       </div>
     );
   }
 
   // If no valid mode yet, show loading
-  if (!mode || (mode !== 'learn' && mode !== 'create')) {
+  if (!mode || (mode !== "learn" && mode !== "create")) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex min-h-screen items-center justify-center">
         <Skeleton className="h-screen w-full" />
       </div>
     );
@@ -70,4 +87,3 @@ export default function DashboardPage() {
 
   return <DashboardShell mode={mode} />;
 }
-
