@@ -326,6 +326,8 @@ const COMBINE_SCRIPTS_PROMPT = `You are an expert social media content strategis
 # TEXT-TO-SPEECH OPTIMIZATION (CRITICAL)
 
 The script will be read aloud by AI text-to-speech. You MUST:
+- USE CONTRACTIONS for natural speech (you're, you'll, don't, won't, can't, it's, that's, there's, we're, they're, I'm, let's, here's, what's, who's, couldn't, wouldn't, shouldn't, isn't, aren't, wasn't, weren't, haven't, hasn't, hadn't)
+- NEVER use formal forms like "you are", "you will", "do not", "will not", "can not", "it is", "that is" - always contract them
 - Write out all abbreviations in full (e.g., "W" becomes "whole step", "H" becomes "half step")
 - Avoid mathematical notation or formulas (e.g., "C + W = D" should be "start on C, move up a whole step to D")
 - Write numbers as words when under 100 (e.g., "five" not "5")
@@ -441,8 +443,24 @@ export const combineScripts = action({
 
     console.log(`🔗 Combining scripts into unified script`);
 
-    const combinePrompt = `${COMBINE_SCRIPTS_PROMPT}
+    const ctaInstruction = ctaText
+      ? `
 
+# CALL-TO-ACTION (MUST INCLUDE)
+You MUST end the script by naturally transitioning into this exact CTA. Create a smooth, conversational bridge to the CTA - don't just append it awkwardly. The transition should feel like a natural conclusion to the content.
+
+CTA to integrate: "${ctaText}"
+
+Examples of good transitions:
+- "So if you want to master this technique..."
+- "And here's the thing..."  
+- "Now, if you're ready to take this further..."
+- "Want me to show you exactly how this works?"
+`
+      : "";
+
+    const combinePrompt = `${COMBINE_SCRIPTS_PROMPT}
+${ctaInstruction}
 # TIKTOK SCRIPT:
 ${tiktokScript}
 
@@ -452,7 +470,7 @@ ${youtubeScript}
 # INSTAGRAM SCRIPT:
 ${instagramScript}
 
-Create a unified script that takes the best from each:`;
+Create a unified script that takes the best from each${ctaText ? " and ends with the CTA integrated naturally" : ""}:`;
 
     const response = await callLLM({
       model: DEFAULT_MODEL,
@@ -462,13 +480,12 @@ Create a unified script that takes the best from each:`;
     });
 
     const combinedScript = response.content.trim();
-    const scriptWithCta = ctaText ? `${combinedScript}\n\n${ctaText}` : combinedScript;
 
     console.log(`   ✅ Scripts combined (${combinedScript.length} chars)`);
 
     return {
       combinedScript,
-      scriptWithCta,
+      scriptWithCta: combinedScript,
     };
   },
 });

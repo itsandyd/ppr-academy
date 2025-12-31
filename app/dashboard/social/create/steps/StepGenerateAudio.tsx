@@ -172,7 +172,15 @@ export function StepGenerateAudio() {
           </div>
         </CardHeader>
         <CardContent>
-          {audioUrl ? (
+          {isGenerating ? (
+            <div className="py-12 text-center">
+              <Loader2 className="mx-auto mb-4 h-12 w-12 animate-spin text-primary" />
+              <p className="font-medium">Generating Audio...</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                This may take 30-60 seconds depending on script length
+              </p>
+            </div>
+          ) : audioUrl ? (
             <div className="space-y-4">
               <audio ref={audioRef} src={audioUrl} onEnded={handleAudioEnded} className="hidden" />
               <div className="flex items-center gap-4 rounded-lg bg-muted p-4">
