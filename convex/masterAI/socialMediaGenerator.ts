@@ -136,14 +136,13 @@ Infer the topic from the sources provided. This is for MUSIC PRODUCTION content.
 - Do not use semicolons.
 - Do not use emojis.
 - Do not use asterisks.
-- Do not use adjectives and adverbs.
 - Do NOT use these words:
 "can, may, just, that, very, really, literally, actually, certainly, probably, basically, could, maybe, delve, embark, enlightening, esteemed, shed light, craft, crafting, imagine, realm, game-changer, unlock, discover, skyrocket, abyss, you're not alone, in a world where, revolutionize, disruptive, utilize, utilizing, dive deep, tapestry, illuminate, unveil, pivotal, enrich, intricate, elucidate, hence, furthermore, realm, however, harness, exciting, groundbreaking, cutting-edge, remarkable, it remains to be seen, glimpse into, navigating, landscape, stark, testament, in summary, in conclusion, moreover, boost, bustling, opened up, powerful, inquiries, ever-evolving"
 </writing_style>
 
 # HOOK TEMPLATES
 
-Study these 100 proven viral hook structures. Pick ONE that fits the content best:
+Use one of these proven viral hook structures for your FIRST LINE:
 
 ${TIKTOK_HOOK_TEMPLATES}
 
@@ -154,17 +153,66 @@ Your goal is to write a viral TikTok script based on the provided sources.
 1. Analyze the provided sources thoroughly.
 2. Identify: the NICHE (music production), PAIN POINT, DESIRED RESULT, and TARGET AUDIENCE
 3. Pick a hook template from the list above that fits the content
-4. Write using the 4-sentence structure below
+4. Study the examples below for structure and length
 
-# OUTPUT STRUCTURE
+<example1>
+We all know mixing in the bedroom is hard.
 
-Write a short video script with this structure:
-- First sentence: Use a hook template from above, adapted to the content
-- Second sentence: Agitate the pain - make the viewer feel the problem
-- Third sentence: Agitate more - add stakes or consequences
-- Fourth sentence: Promise the solution if they keep watching, encourage saving the video
+This is a technique that took me years to figure out.
 
-Use 5th grade vocabulary. Keep it punchy.
+I didn't know this, but most producers EQ before they even set their levels.
+
+And even though you think you're fixing problems, you're creating new ones.
+
+Your low end gets muddy.
+
+Your highs get harsh.
+
+And you, as a producer, you don't know why it sounds off.
+
+Here's the fix: gain staging first, then EQ.
+
+Set every track to hit around -18dB before you touch a single plugin.
+
+Now when you EQ, you're making surgical moves, not guessing.
+
+Your mix will open up. Your headroom stays clean.
+
+Save this video so you don't forget.
+</example1>
+
+<example2>
+Here are 5 mixing mistakes that are killing your tracks.
+
+If you're not checking these, you're falling behind thousands of producers who already figured this out.
+
+Save this video so you can fix these one by one.
+
+First mistake: too much low end on every track. Only your kick and bass need that sub energy.
+
+Second mistake: panning everything center. Spread your elements. Give each sound its own space.
+
+Third mistake: mixing too loud. Turn it down. Your ears lie to you at high volumes.
+
+Fourth mistake: no reference track. Always A/B your mix against a pro track in the same genre.
+
+Fifth mistake: mixing in solo. Your snare sounds great alone but disappears in the mix.
+
+Save this and check your current project against all five.
+
+Hit follow for more production tips.
+</example2>
+
+# OUTPUT
+Write a TikTok script that:
+- Opens with a hook adapted from the templates above
+- Explains the problem and why it matters
+- Delivers 3-5 specific, actionable points
+- Uses line breaks between ideas (spoken delivery style)
+- Ends with a save/follow prompt
+- Aim for 150-250 words
+
+Use 5th grade vocabulary. Make every sentence count.
 
 # INPUT
 Use the following information sources:
@@ -379,8 +427,52 @@ The TikTok script opening is specifically designed to be scroll-stopping. USE IT
 # TEXT-TO-SPEECH OPTIMIZATION (CRITICAL)
 
 The script will be read aloud by AI text-to-speech. You MUST:
-- USE CONTRACTIONS for natural speech (you're, you'll, don't, won't, can't, it's, that's, there's, we're, they're, I'm, let's, here's, what's, who's, couldn't, wouldn't, shouldn't, isn't, aren't, wasn't, weren't, haven't, hasn't, hadn't)
-- NEVER use formal forms like "you are", "you will", "do not", "will not", "can not", "it is", "that is" - always contract them
+
+## MANDATORY CONTRACTIONS - ALWAYS USE THESE:
+| Write this | NOT this |
+|------------|----------|
+| you're | you are |
+| you'll | you will |
+| you've | you have |
+| you'd | you would, you had |
+| don't | do not |
+| won't | will not |
+| can't | cannot, can not |
+| couldn't | could not |
+| wouldn't | would not |
+| shouldn't | should not |
+| isn't | is not |
+| aren't | are not |
+| wasn't | was not |
+| weren't | were not |
+| haven't | have not |
+| hasn't | has not |
+| hadn't | had not |
+| doesn't | does not |
+| didn't | did not |
+| it's | it is, it has |
+| that's | that is, that has |
+| there's | there is, there has |
+| here's | here is |
+| what's | what is, what has |
+| who's | who is, who has |
+| let's | let us |
+| we're | we are |
+| we've | we have |
+| we'll | we will |
+| we'd | we would, we had |
+| they're | they are |
+| they've | they have |
+| they'll | they will |
+| they'd | they would, they had |
+| I'm | I am |
+| I've | I have |
+| I'll | I will |
+| I'd | I would, I had |
+| he's | he is, he has |
+| she's | she is, she has |
+
+## OTHER TTS RULES:
 - Write out all abbreviations in full (e.g., "W" becomes "whole step", "H" becomes "half step")
 - Avoid mathematical notation or formulas (e.g., "C + W = D" should be "start on C, move up a whole step to D")
 - Write numbers as words when under 100 (e.g., "five" not "5")
