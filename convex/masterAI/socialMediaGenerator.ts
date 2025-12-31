@@ -486,9 +486,12 @@ The script will be read aloud by AI text-to-speech. You MUST:
 Return ONLY the combined script text, nothing else. No explanations, no headers, just the script.
 `;
 
-const IMAGE_PROMPT_GENERATOR = `You are an expert at creating image prompts for educational content illustrations. Given a social media script about music production, identify 3-5 key concepts or sentences that would benefit from visual illustration.
+const IMAGE_PROMPT_GENERATOR = `You are an expert at creating image prompts for educational content illustrations.
 
-For each concept, create an image generation prompt following these rules:
+# TASK
+Given a social media script, create an image prompt for EVERY meaningful sentence or line break. Each slide in a carousel should have its own image.
+
+Split the script by line breaks. For each non-empty line, create an image prompt.
 
 # MANDATORY VISUAL STYLE: Excalidraw Hand-Drawn Aesthetic
 
@@ -506,14 +509,17 @@ For each concept, create an image generation prompt following these rules:
 {
   "imagePrompts": [
     {
-      "sentence": "The exact sentence or concept from the script",
+      "sentence": "The EXACT text from this line of the script (copy verbatim)",
       "prompt": "Excalidraw-style hand-drawn illustration showing [detailed description]. White background, flat indigo and purple colors, wobbly sketch lines, simple icons and shapes. Educational diagram style.",
-      "aspectRatio": "16:9" or "9:16"
+      "aspectRatio": "9:16"
     }
   ]
 }
 
-Alternate between 16:9 (landscape for YouTube thumbnails) and 9:16 (vertical for TikTok/Reels).
+IMPORTANT:
+- Create one entry for EVERY line/sentence in the script
+- The "sentence" field must contain the EXACT text from the script, not a paraphrase
+- Use the requested aspect ratio for all images (passed as parameter)
 `;
 
 export const generatePlatformScripts = action({
@@ -649,6 +655,7 @@ export const generateImagePrompts = action({
   args: {
     script: v.string(),
     numImages: v.optional(v.number()),
+    aspectRatio: v.optional(v.union(v.literal("16:9"), v.literal("9:16"))),
   },
   returns: v.array(
     v.object({
@@ -658,20 +665,21 @@ export const generateImagePrompts = action({
     })
   ),
   handler: async (ctx, args) => {
-    const { script, numImages = 5 } = args;
+    const { script, aspectRatio = "9:16" } = args;
 
-    console.log(`🖼️ Generating ${numImages} image prompts from script`);
+    const lineCount = script.split("\n").filter((line) => line.trim().length > 0).length;
+    console.log(`🖼️ Generating image prompts for ${lineCount} lines of script`);
 
     const response = await callLLM({
       model: DEFAULT_MODEL,
       messages: [
         {
           role: "user",
-          content: `${IMAGE_PROMPT_GENERATOR}\n\nGenerate exactly ${numImages} image prompts for this script:\n\n${script}`,
+          content: `${IMAGE_PROMPT_GENERATOR}\n\nAspect ratio to use: ${aspectRatio}\n\nCreate an image prompt for EVERY line in this script:\n\n${script}`,
         },
       ],
       temperature: 0.7,
-      maxTokens: 2000,
+      maxTokens: 4000,
       responseFormat: "json",
     });
 
@@ -683,9 +691,14 @@ export const generateImagePrompts = action({
       }>;
     }>(response.content, { imagePrompts: [] });
 
-    console.log(`   ✅ Generated ${parsed.imagePrompts.length} image prompts`);
+    const prompts = parsed.imagePrompts.map((p) => ({
+      ...p,
+      aspectRatio: aspectRatio,
+    }));
 
-    return parsed.imagePrompts;
+    console.log(`   ✅ Generated ${prompts.length} image prompts`);
+
+    return prompts;
   },
 });
 

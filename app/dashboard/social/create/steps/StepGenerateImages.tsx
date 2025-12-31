@@ -52,7 +52,7 @@ export function StepGenerateImages() {
     try {
       const result = await generateImagePrompts({
         script: state.data.combinedScript || "",
-        numImages: 12,
+        aspectRatio,
       });
 
       if (result && result.length > 0) {
@@ -313,10 +313,15 @@ export function StepGenerateImages() {
                       )}
                     </div>
                     <CardContent className="space-y-3 p-4">
-                      <p className="line-clamp-2 text-sm text-muted-foreground">{image.sentence}</p>
-                      <p className="line-clamp-2 text-xs text-muted-foreground/70">
-                        Prompt: {image.prompt}
-                      </p>
+                      <div className="rounded-md bg-muted/50 p-2">
+                        <p className="text-sm font-medium text-foreground">{image.sentence}</p>
+                      </div>
+                      <details className="text-xs text-muted-foreground/70">
+                        <summary className="cursor-pointer hover:text-muted-foreground">
+                          Show prompt
+                        </summary>
+                        <p className="mt-1">{image.prompt}</p>
+                      </details>
                       <div className="flex gap-2">
                         <Button
                           size="sm"

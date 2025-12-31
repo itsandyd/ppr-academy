@@ -53,6 +53,14 @@ export function StepReview() {
   const imageCount = state.data.images?.filter((img) => img.url).length || 0;
   const hasAudio = !!state.data.audioUrl;
 
+  const sanitizeFilename = (text: string): string => {
+    return text
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, "")
+      .replace(/\s+/g, "-")
+      .slice(0, 50);
+  };
+
   const handleDownloadAllImages = async () => {
     const images = state.data.images?.filter((img) => img.url) || [];
     if (images.length === 0) return;
@@ -65,7 +73,10 @@ export function StepReview() {
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `carousel-${i + 1}.png`;
+        const filename = image.sentence
+          ? `${String(i + 1).padStart(2, "0")}-${sanitizeFilename(image.sentence)}.png`
+          : `carousel-${i + 1}.png`;
+        a.download = filename;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
