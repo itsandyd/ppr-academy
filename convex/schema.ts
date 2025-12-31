@@ -4480,6 +4480,10 @@ export default defineSchema({
     audioDuration: v.optional(v.number()), // Duration in seconds
     audioScript: v.optional(v.string()), // The exact text sent to TTS (may differ from combinedScript)
 
+    // Generated captions with hashtags
+    instagramCaption: v.optional(v.string()), // Caption with hashtags for Instagram
+    tiktokCaption: v.optional(v.string()), // Caption with hashtags for TikTok
+
     // Generation status tracking
     status: v.union(
       v.literal("draft"), // Initial state

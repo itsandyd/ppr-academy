@@ -44,6 +44,9 @@ export interface SocialPostData {
   audioVoiceId?: string;
   audioDuration?: number;
   audioScript?: string;
+
+  instagramCaption?: string;
+  tiktokCaption?: string;
 }
 
 export interface StepCompletion {
@@ -112,6 +115,7 @@ export function SocialPostProvider({ children }: { children: React.ReactNode }) 
   const updateCombinedMutation = useMutation(api.socialMediaPosts.updateSocialMediaPostCombined);
   const updateImagesMutation = useMutation(api.socialMediaPosts.updateSocialMediaPostImages);
   const updateAudioMutation = useMutation(api.socialMediaPosts.updateSocialMediaPostAudio);
+  const updateCaptionsMutation = useMutation(api.socialMediaPosts.updateSocialMediaPostCaptions);
   const completePostMutation = useMutation(api.socialMediaPosts.completeSocialMediaPost);
   const updateTitleMutation = useMutation(api.socialMediaPosts.updateSocialMediaPostTitle);
 
@@ -179,6 +183,8 @@ export function SocialPostProvider({ children }: { children: React.ReactNode }) 
         audioVoiceId: existingPost.audioVoiceId,
         audioDuration: existingPost.audioDuration,
         audioScript: existingPost.audioScript,
+        instagramCaption: existingPost.instagramCaption,
+        tiktokCaption: existingPost.tiktokCaption,
       };
 
       const stepCompletion: StepCompletion = {
@@ -297,6 +303,14 @@ export function SocialPostProvider({ children }: { children: React.ReactNode }) 
             title: state.data.title,
           });
         }
+
+        if (state.data.instagramCaption || state.data.tiktokCaption) {
+          await updateCaptionsMutation({
+            postId: currentPostId,
+            instagramCaption: state.data.instagramCaption,
+            tiktokCaption: state.data.tiktokCaption,
+          });
+        }
       }
 
       setState((prev) => ({
@@ -331,6 +345,7 @@ export function SocialPostProvider({ children }: { children: React.ReactNode }) 
     updateCombinedMutation,
     updateImagesMutation,
     updateAudioMutation,
+    updateCaptionsMutation,
     updateTitleMutation,
     searchParams,
     router,

@@ -486,6 +486,59 @@ The script will be read aloud by AI text-to-speech. You MUST:
 Return ONLY the combined script text, nothing else. No explanations, no headers, just the script.
 `;
 
+const INSTAGRAM_CAPTION_PROMPT = `You are an expert Instagram marketer. Create a caption for a music production educational reel.
+
+# STRUCTURE
+1. Hook/Title line (attention-grabbing, relates to the content)
+2. One sentence describing the value
+3. Call to action (from the script's CTA)
+4. Line break
+5. Relevant hashtags (15-20 hashtags, mix of popular and niche)
+
+# HASHTAG RULES
+- Include broad hashtags: #musicproduction #producer #beatmaker #musicproducer
+- Include niche hashtags specific to the topic
+- Include trending hashtags: #producertips #mixingtips #producerlife
+- NO spaces in hashtags
+- All lowercase
+
+# OUTPUT
+Return ONLY the caption text with hashtags. No explanations.
+
+Example format:
+🎹 [Hook/Title]
+
+[Value sentence]
+
+[CTA]
+
+#musicproduction #producer #beatmaker #mixingtips #producerlife #homestudio #daw #mixing #mastering #beatmaking
+`;
+
+const TIKTOK_CAPTION_PROMPT = `You are an expert TikTok marketer. Create a caption for a music production educational video.
+
+# STRUCTURE
+1. Hook that makes people want to watch (use curiosity or controversy)
+2. Call to action (from the script's CTA)
+3. 3-5 highly relevant hashtags only
+
+# HASHTAG RULES
+- TikTok prefers FEWER hashtags (3-5 max)
+- Use hashtags that are trending in the music/producer space
+- Mix broad (#fyp #musicproduction) with specific topic hashtags
+- NO spaces in hashtags
+
+# OUTPUT
+Return ONLY the caption text with hashtags. No explanations.
+
+Example format:
+[Hook] 👀
+
+[CTA]
+
+#musicproduction #producertok #fyp #beatmaker
+`;
+
 const IMAGE_PROMPT_GENERATOR = `You are an expert at creating image prompts for educational content illustrations.
 
 # TASK
@@ -647,6 +700,61 @@ Create a unified script. START with the TikTok hook, then weave in the best cont
     return {
       combinedScript,
       scriptWithCta: combinedScript,
+    };
+  },
+});
+
+export const generateCaptions = action({
+  args: {
+    script: v.string(),
+    title: v.optional(v.string()),
+    ctaText: v.optional(v.string()),
+  },
+  returns: v.object({
+    instagramCaption: v.string(),
+    tiktokCaption: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    const { script, title, ctaText } = args;
+
+    console.log(`📝 Generating captions for script (${script.length} chars)`);
+
+    const contextInfo = [title && `Title: ${title}`, ctaText && `CTA: ${ctaText}`]
+      .filter(Boolean)
+      .join("\n");
+
+    const scriptWithContext = contextInfo ? `${contextInfo}\n\nScript:\n${script}` : script;
+
+    const [instagramResponse, tiktokResponse] = await Promise.all([
+      callLLM({
+        model: DEFAULT_MODEL,
+        messages: [
+          {
+            role: "user",
+            content: `${INSTAGRAM_CAPTION_PROMPT}\n\nCreate a caption for this script:\n\n${scriptWithContext}`,
+          },
+        ],
+        temperature: 0.7,
+        maxTokens: 500,
+      }),
+      callLLM({
+        model: DEFAULT_MODEL,
+        messages: [
+          {
+            role: "user",
+            content: `${TIKTOK_CAPTION_PROMPT}\n\nCreate a caption for this script:\n\n${scriptWithContext}`,
+          },
+        ],
+        temperature: 0.7,
+        maxTokens: 300,
+      }),
+    ]);
+
+    console.log(`   ✅ Captions generated`);
+
+    return {
+      instagramCaption: instagramResponse.content.trim(),
+      tiktokCaption: tiktokResponse.content.trim(),
     };
   },
 });

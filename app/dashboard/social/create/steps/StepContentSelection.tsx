@@ -31,7 +31,11 @@ import {
   AlertCircle,
   CheckCircle,
   Hash,
+  FolderOpen,
+  Clock,
+  Trash2,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 interface Heading {
@@ -85,6 +89,7 @@ function extractSectionContent(html: string, heading: Heading, nextHeading?: Hea
 
 export function StepContentSelection() {
   const { user } = useUser();
+  const router = useRouter();
   const { state, updateData, goToStep, savePost } = useSocialPost();
 
   const [sourceTab, setSourceTab] = useState<"course" | "custom">(
@@ -104,6 +109,12 @@ export function StepContentSelection() {
   );
   const [title, setTitle] = useState(state.data.title || "");
   const [isLoadingContent, setIsLoadingContent] = useState(false);
+  const [showDrafts, setShowDrafts] = useState(!state.postId);
+
+  const savedPosts = useQuery(
+    api.socialMediaPosts.getSocialMediaPostsByUser,
+    user?.id ? { userId: user.id, limit: 10 } : "skip"
+  );
 
   // @ts-ignore
   const userCourses = useQuery(
@@ -225,14 +236,85 @@ export function StepContentSelection() {
     }
   };
 
+  const handleLoadDraft = (postId: string) => {
+    router.push(`/dashboard/social/create?postId=${postId}&step=content`);
+  };
+
+  const formatDate = (timestamp: number) => {
+    return new Date(timestamp).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "completed":
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+      case "draft":
+        return "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200";
+      default:
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+    }
+  };
+
   return (
     <div className="space-y-8">
-      <div>
-        <h2 className="mb-2 text-2xl font-bold text-foreground">Select Content</h2>
-        <p className="text-muted-foreground">
-          Choose content from your courses or paste custom text to generate social media scripts.
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="mb-2 text-2xl font-bold text-foreground">Select Content</h2>
+          <p className="text-muted-foreground">
+            Choose content from your courses or paste custom text to generate social media scripts.
+          </p>
+        </div>
+        {!state.postId && savedPosts && savedPosts.length > 0 && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowDrafts(!showDrafts)}
+            className="gap-2"
+          >
+            <FolderOpen className="h-4 w-4" />
+            {showDrafts ? "Hide" : "Show"} Saved Posts ({savedPosts.length})
+          </Button>
+        )}
       </div>
+
+      {showDrafts && savedPosts && savedPosts.length > 0 && !state.postId && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <FolderOpen className="h-5 w-5" />
+              Saved Posts
+            </CardTitle>
+            <CardDescription>Continue working on a previous post</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="max-h-[250px]">
+              <div className="space-y-2">
+                {savedPosts.map((post: any) => (
+                  <button
+                    key={post._id}
+                    onClick={() => handleLoadDraft(post._id)}
+                    className="flex w-full items-center justify-between rounded-lg border p-3 text-left transition-colors hover:bg-muted"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium">{post.title || "Untitled Post"}</p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Clock className="h-3 w-3" />
+                        {formatDate(post.updatedAt)}
+                      </div>
+                    </div>
+                    <Badge className={cn("ml-2", getStatusColor(post.status))}>{post.status}</Badge>
+                  </button>
+                ))}
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="space-y-4">
         <Label htmlFor="post-title">Post Title (for organization)</Label>

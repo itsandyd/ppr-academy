@@ -273,6 +273,26 @@ export const updateSocialMediaPostAudio = mutation({
   },
 });
 
+export const updateSocialMediaPostCaptions = mutation({
+  args: {
+    postId: v.id("socialMediaPosts"),
+    instagramCaption: v.optional(v.string()),
+    tiktokCaption: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const { postId, instagramCaption, tiktokCaption } = args;
+
+    const updates: Record<string, string | number> = { updatedAt: Date.now() };
+    if (instagramCaption !== undefined) updates.instagramCaption = instagramCaption;
+    if (tiktokCaption !== undefined) updates.tiktokCaption = tiktokCaption;
+
+    await ctx.db.patch(postId, updates);
+
+    return null;
+  },
+});
+
 export const completeSocialMediaPost = mutation({
   args: {
     postId: v.id("socialMediaPosts"),

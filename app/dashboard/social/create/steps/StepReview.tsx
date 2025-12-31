@@ -1,12 +1,16 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { useAction } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { useSocialPost } from "../context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
 import {
   CheckCircle,
   ChevronLeft,
@@ -14,18 +18,70 @@ import {
   FileText,
   Image,
   Volume2,
-  Megaphone,
   Play,
   Pause,
   Download,
-  ExternalLink,
+  Copy,
+  Sparkles,
+  Instagram,
+  Hash,
 } from "lucide-react";
 
 export function StepReview() {
-  const { state, goToStep, completePost, canComplete } = useSocialPost();
+  const { state, goToStep, completePost, canComplete, updateData, savePost } = useSocialPost();
+  const { toast } = useToast();
   const [isCompleting, setIsCompleting] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isGeneratingCaptions, setIsGeneratingCaptions] = useState(false);
+  const [instagramCaption, setInstagramCaption] = useState(state.data.instagramCaption || "");
+  const [tiktokCaption, setTiktokCaption] = useState(state.data.tiktokCaption || "");
   const audioRef = useRef<HTMLAudioElement>(null);
+
+  // @ts-ignore - Convex type inference depth issue
+  const generateCaptions = useAction(api.masterAI.socialMediaGenerator.generateCaptions);
+
+  const handleGenerateCaptions = async () => {
+    if (!state.data.combinedScript) return;
+
+    setIsGeneratingCaptions(true);
+    try {
+      const result = await generateCaptions({
+        script: state.data.combinedScript,
+        title: state.data.title,
+        ctaText: state.data.ctaText,
+      });
+
+      setInstagramCaption(result.instagramCaption);
+      setTiktokCaption(result.tiktokCaption);
+      updateData("captions", {
+        instagramCaption: result.instagramCaption,
+        tiktokCaption: result.tiktokCaption,
+      });
+      toast({
+        title: "Captions Generated",
+        description: "Instagram and TikTok captions are ready!",
+      });
+    } catch (error) {
+      console.error("Failed to generate captions:", error);
+      toast({
+        title: "Generation Failed",
+        description: "Failed to generate captions.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingCaptions(false);
+    }
+  };
+
+  const handleCopyCaption = async (caption: string, platform: string) => {
+    await navigator.clipboard.writeText(caption);
+    toast({ title: "Copied!", description: `${platform} caption copied to clipboard.` });
+  };
+
+  const handleSaveCaptions = () => {
+    updateData("captions", { instagramCaption, tiktokCaption });
+    savePost();
+  };
 
   const handleComplete = async () => {
     setIsCompleting(true);
@@ -225,6 +281,105 @@ export function StepReview() {
 
       <Card>
         <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Hash className="h-5 w-5" />
+                Captions with Hashtags
+                {(instagramCaption || tiktokCaption) && <Badge variant="secondary">Ready</Badge>}
+              </CardTitle>
+              <CardDescription>Platform-specific captions for Instagram and TikTok</CardDescription>
+            </div>
+            <Button
+              onClick={handleGenerateCaptions}
+              disabled={isGeneratingCaptions || !state.data.combinedScript}
+              className="gap-2"
+            >
+              {isGeneratingCaptions ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4" />
+                  {instagramCaption || tiktokCaption ? "Regenerate" : "Generate Captions"}
+                </>
+              )}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {instagramCaption || tiktokCaption ? (
+            <Tabs defaultValue="instagram" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="instagram" className="gap-2">
+                  <Instagram className="h-4 w-4" />
+                  Instagram
+                </TabsTrigger>
+                <TabsTrigger value="tiktok" className="gap-2">
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
+                  </svg>
+                  TikTok
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="instagram" className="space-y-3">
+                <Textarea
+                  value={instagramCaption}
+                  onChange={(e) => setInstagramCaption(e.target.value)}
+                  className="min-h-[200px] font-mono text-sm"
+                />
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleCopyCaption(instagramCaption, "Instagram")}
+                    className="gap-2"
+                  >
+                    <Copy className="h-4 w-4" />
+                    Copy
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleSaveCaptions}>
+                    Save Changes
+                  </Button>
+                </div>
+              </TabsContent>
+              <TabsContent value="tiktok" className="space-y-3">
+                <Textarea
+                  value={tiktokCaption}
+                  onChange={(e) => setTiktokCaption(e.target.value)}
+                  className="min-h-[150px] font-mono text-sm"
+                />
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleCopyCaption(tiktokCaption, "TikTok")}
+                    className="gap-2"
+                  >
+                    <Copy className="h-4 w-4" />
+                    Copy
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleSaveCaptions}>
+                    Save Changes
+                  </Button>
+                </div>
+              </TabsContent>
+            </Tabs>
+          ) : (
+            <div className="py-8 text-center text-muted-foreground">
+              <Hash className="mx-auto mb-2 h-8 w-8 opacity-50" />
+              <p className="text-sm">
+                Click "Generate Captions" to create platform-specific captions with hashtags
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Completion Checklist</CardTitle>
         </CardHeader>
         <CardContent>
@@ -267,6 +422,14 @@ export function StepReview() {
               />
               <span className={hasAudio ? "" : "text-muted-foreground"}>
                 Audio narration generated (optional)
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              <CheckCircle
+                className={`h-5 w-5 ${instagramCaption || tiktokCaption ? "text-green-500" : "text-muted-foreground"}`}
+              />
+              <span className={instagramCaption || tiktokCaption ? "" : "text-muted-foreground"}>
+                Captions with hashtags (optional)
               </span>
             </div>
           </div>
