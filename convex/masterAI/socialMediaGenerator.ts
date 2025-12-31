@@ -888,6 +888,85 @@ export const generateSocialImage = action({
   },
 });
 
+export const editSocialImage = action({
+  args: {
+    imageUrl: v.string(),
+    prompt: v.string(),
+    aspectRatio: v.union(v.literal("16:9"), v.literal("9:16")),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    storageId: v.optional(v.id("_storage")),
+    imageUrl: v.optional(v.string()),
+    error: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    const { imageUrl, prompt, aspectRatio } = args;
+
+    console.log(`✏️ Editing social image (${aspectRatio})`);
+    console.log(`   📝 Edit prompt: ${prompt.substring(0, 100)}...`);
+
+    const falApiKey = process.env.FAL_KEY;
+    if (!falApiKey) {
+      return {
+        success: false,
+        error: "FAL_KEY not configured in environment",
+      };
+    }
+
+    try {
+      const falClient = createFalClient();
+
+      const result = await falClient.subscribe("fal-ai/nano-banana-pro/edit", {
+        input: {
+          prompt,
+          image_urls: [imageUrl],
+          num_images: 1,
+          aspect_ratio: aspectRatio,
+          output_format: "png",
+          resolution: "1K",
+        },
+        logs: true,
+        onQueueUpdate: (update) => {
+          if (update.status === "IN_PROGRESS" && update.logs) {
+            update.logs.map((log) => log.message).forEach((msg) => console.log(`   📝 ${msg}`));
+          }
+        },
+      });
+
+      const imageData = result.data as {
+        images?: Array<{ url: string; width?: number; height?: number }>;
+      };
+
+      if (!imageData?.images?.[0]?.url) {
+        console.error("❌ No image URL in FAL edit response");
+        return {
+          success: false,
+          error: "No image URL in FAL response",
+        };
+      }
+
+      const editedImageUrl = imageData.images[0].url;
+      console.log(`   ✅ Image edited: ${editedImageUrl.substring(0, 60)}...`);
+
+      const storageId = await uploadImageToStorage(ctx, editedImageUrl);
+      const convexUrl = await ctx.storage.getUrl(storageId);
+
+      return {
+        success: true,
+        storageId,
+        imageUrl: convexUrl || editedImageUrl,
+      };
+    } catch (error) {
+      console.error("❌ FAL edit API error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown FAL error",
+      };
+    }
+  },
+});
+
 async function uploadImageToStorage(ctx: any, imageUrl: string): Promise<Id<"_storage">> {
   console.log(`   📥 Downloading image from: ${imageUrl.substring(0, 50)}...`);
 

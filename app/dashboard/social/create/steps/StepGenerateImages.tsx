@@ -8,6 +8,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import {
   Image,
@@ -19,6 +28,7 @@ import {
   Trash2,
   Download,
   RefreshCw,
+  Pencil,
 } from "lucide-react";
 
 export function StepGenerateImages() {
@@ -38,6 +48,15 @@ export function StepGenerateImages() {
   const generateImagePrompts = useAction(api.masterAI.socialMediaGenerator.generateImagePrompts);
   // @ts-ignore - Convex type inference depth issue
   const generateSocialImage = useAction(api.masterAI.socialMediaGenerator.generateSocialImage);
+  // @ts-ignore - Convex type inference depth issue
+  const editSocialImage = useAction(api.masterAI.socialMediaGenerator.editSocialImage);
+
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [editPrompt, setEditPrompt] = useState("");
+  const [editedPreviewUrl, setEditedPreviewUrl] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editResult, setEditResult] = useState<{ storageId: string; url: string } | null>(null);
 
   const updateImages = (newImages: ImageData[]) => {
     imagesRef.current = newImages;
@@ -177,6 +196,71 @@ export function StepGenerateImages() {
     const updatedImages = imagesRef.current.filter((_, i) => i !== index);
     updateImages(updatedImages);
     updateData("images", { images: updatedImages });
+  };
+
+  const handleOpenEditDialog = (index: number) => {
+    const image = imagesRef.current[index];
+    if (!image?.url) return;
+    setEditingIndex(index);
+    setEditPrompt("");
+    setEditedPreviewUrl(null);
+    setEditResult(null);
+    setEditDialogOpen(true);
+  };
+
+  const handleEditImage = async () => {
+    if (editingIndex === null || !editPrompt.trim()) return;
+    const image = imagesRef.current[editingIndex];
+    if (!image?.url) return;
+
+    setIsEditing(true);
+    setEditedPreviewUrl(null);
+    setEditResult(null);
+
+    try {
+      const result = await editSocialImage({
+        imageUrl: image.url,
+        prompt: editPrompt,
+        aspectRatio,
+      });
+
+      if (result.success && result.storageId && result.imageUrl) {
+        setEditedPreviewUrl(result.imageUrl);
+        setEditResult({ storageId: result.storageId, url: result.imageUrl });
+      }
+    } catch (error) {
+      console.error("Failed to edit image:", error);
+    } finally {
+      setIsEditing(false);
+    }
+  };
+
+  const handleSaveEditedImage = () => {
+    if (editingIndex === null || !editResult) return;
+
+    const latestImages = [...imagesRef.current];
+    latestImages[editingIndex] = {
+      ...latestImages[editingIndex],
+      storageId: editResult.storageId as any,
+      url: editResult.url,
+      prompt: `${latestImages[editingIndex].prompt} [Edited: ${editPrompt}]`,
+    };
+    updateImages(latestImages);
+    updateData("images", { images: latestImages });
+
+    setEditDialogOpen(false);
+    setEditingIndex(null);
+    setEditPrompt("");
+    setEditedPreviewUrl(null);
+    setEditResult(null);
+  };
+
+  const handleCloseEditDialog = () => {
+    setEditDialogOpen(false);
+    setEditingIndex(null);
+    setEditPrompt("");
+    setEditedPreviewUrl(null);
+    setEditResult(null);
   };
 
   const handleContinue = async () => {
@@ -353,6 +437,16 @@ export function StepGenerateImages() {
                             </>
                           )}
                         </Button>
+                        {image.url && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleOpenEditDialog(index)}
+                            title="Edit image"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           variant="ghost"
@@ -390,6 +484,102 @@ export function StepGenerateImages() {
           )}
         </Button>
       </div>
+
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-2xl bg-white dark:bg-black">
+          <DialogHeader>
+            <DialogTitle>Edit Image</DialogTitle>
+            <DialogDescription>
+              Describe the changes you want to make to this image using nano-banana-pro.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {editingIndex !== null && imagesRef.current[editingIndex] && (
+              <div className="grid gap-4 md:grid-cols-2">
+                <div>
+                  <p className="mb-2 text-sm font-medium">Original</p>
+                  <div
+                    className={`overflow-hidden rounded-lg border ${aspectRatio === "9:16" ? "aspect-[9/16]" : "aspect-video"}`}
+                  >
+                    <img
+                      src={imagesRef.current[editingIndex].url}
+                      alt="Original"
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <p className="mb-2 text-sm font-medium">
+                    {editedPreviewUrl ? "Edited Result" : "Preview"}
+                  </p>
+                  <div
+                    className={`flex items-center justify-center overflow-hidden rounded-lg border bg-muted ${aspectRatio === "9:16" ? "aspect-[9/16]" : "aspect-video"}`}
+                  >
+                    {isEditing ? (
+                      <div className="flex flex-col items-center gap-2">
+                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">Editing...</p>
+                      </div>
+                    ) : editedPreviewUrl ? (
+                      <img
+                        src={editedPreviewUrl}
+                        alt="Edited"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Enter a prompt and click Edit</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <label htmlFor="edit-prompt" className="text-sm font-medium">
+                Edit Prompt
+              </label>
+              <Textarea
+                id="edit-prompt"
+                placeholder="e.g., Make the background blue, Add a sunset, Remove the text..."
+                value={editPrompt}
+                onChange={(e) => setEditPrompt(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={handleCloseEditDialog}>
+              Cancel
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleEditImage}
+              disabled={isEditing || !editPrompt.trim()}
+              className="gap-2"
+            >
+              {isEditing ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Editing...
+                </>
+              ) : (
+                <>
+                  <Pencil className="h-4 w-4" />
+                  Edit Image
+                </>
+              )}
+            </Button>
+            {editResult && (
+              <Button onClick={handleSaveEditedImage} className="gap-2">
+                <Sparkles className="h-4 w-4" />
+                Save Changes
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
