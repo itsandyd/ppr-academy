@@ -2,7 +2,7 @@
 
 import { action, internalAction } from "../_generated/server";
 import { v } from "convex/values";
-import { internal } from "../_generated/api";
+import { api, internal } from "../_generated/api";
 import { Id } from "../_generated/dataModel";
 import { callLLM, safeParseJson } from "./llmClient";
 import { type ModelId } from "./types";
@@ -856,3 +856,238 @@ export const extractSectionContent = action({
     return plainText;
   },
 });
+
+export const generatePostImageEmbeddings = action({
+  args: {
+    postId: v.id("socialMediaPosts"),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    processedCount: v.number(),
+    errors: v.array(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    const { postId } = args;
+
+    const post = await ctx.runQuery(api.socialMediaPosts.getSocialMediaPostById, {
+      postId,
+    });
+
+    if (!post) {
+      return { success: false, processedCount: 0, errors: ["Post not found"] };
+    }
+
+    if (!post.images || post.images.length === 0) {
+      return { success: false, processedCount: 0, errors: ["No images in post"] };
+    }
+
+    const openaiKey = process.env.OPENAI_API_KEY;
+    if (!openaiKey) {
+      return { success: false, processedCount: 0, errors: ["OpenAI API key not configured"] };
+    }
+
+    const errors: string[] = [];
+    let processedCount = 0;
+    const updatedImages = [...post.images];
+
+    for (let i = 0; i < updatedImages.length; i++) {
+      const image = updatedImages[i];
+
+      if (image.embedding && image.embedding.length > 0) {
+        processedCount++;
+        continue;
+      }
+
+      if (!image.url) {
+        continue;
+      }
+
+      try {
+        console.log(`🧮 Generating embedding for image ${i + 1}/${updatedImages.length}`);
+
+        const descriptionResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${openaiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "gpt-4o-mini",
+            messages: [
+              {
+                role: "user",
+                content: [
+                  {
+                    type: "text",
+                    text: `Describe this educational illustration for semantic search. Context: ${image.sentence || image.prompt}. Be concise (2-3 sentences).`,
+                  },
+                  {
+                    type: "image_url",
+                    image_url: { url: image.url },
+                  },
+                ],
+              },
+            ],
+            max_tokens: 200,
+          }),
+        });
+
+        if (!descriptionResponse.ok) {
+          throw new Error(`Vision API error: ${descriptionResponse.status}`);
+        }
+
+        const descData = (await descriptionResponse.json()) as any;
+        const imageDescription =
+          descData.choices?.[0]?.message?.content || image.sentence || image.prompt;
+
+        const embeddingResponse = await fetch("https://api.openai.com/v1/embeddings", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${openaiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "text-embedding-3-small",
+            input: imageDescription,
+          }),
+        });
+
+        if (!embeddingResponse.ok) {
+          throw new Error(`Embedding API error: ${embeddingResponse.status}`);
+        }
+
+        const embData = (await embeddingResponse.json()) as any;
+        const embedding = embData.data?.[0]?.embedding || [];
+
+        if (embedding.length > 0) {
+          updatedImages[i] = { ...image, embedding };
+          processedCount++;
+          console.log(`   ✅ Generated ${embedding.length}-dim embedding for image ${i + 1}`);
+        }
+      } catch (error) {
+        const errorMsg = `Image ${i + 1}: ${error instanceof Error ? error.message : "Unknown error"}`;
+        errors.push(errorMsg);
+        console.error(`   ❌ ${errorMsg}`);
+      }
+    }
+
+    if (processedCount > 0) {
+      await ctx.runMutation(api.socialMediaPosts.updateSocialMediaPostImages, {
+        postId,
+        images: updatedImages,
+      });
+    }
+
+    return {
+      success: errors.length === 0,
+      processedCount,
+      errors,
+    };
+  },
+});
+export const searchPostImages = action({
+  args: {
+    userId: v.string(),
+    query: v.string(),
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(
+    v.object({
+      postId: v.id("socialMediaPosts"),
+      imageIndex: v.number(),
+      imageUrl: v.string(),
+      prompt: v.string(),
+      sentence: v.optional(v.string()),
+      similarity: v.number(),
+      postTitle: v.optional(v.string()),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const { userId, query, limit = 20 } = args;
+
+    const openaiKey = process.env.OPENAI_API_KEY;
+    if (!openaiKey) {
+      console.warn("⚠️ No OpenAI key, cannot search");
+      return [];
+    }
+
+    const embeddingResponse = await fetch("https://api.openai.com/v1/embeddings", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${openaiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "text-embedding-3-small",
+        input: query,
+      }),
+    });
+
+    if (!embeddingResponse.ok) {
+      console.error("Failed to generate query embedding");
+      return [];
+    }
+
+    const embData = (await embeddingResponse.json()) as any;
+    const queryEmbedding = embData.data?.[0]?.embedding;
+
+    if (!queryEmbedding || queryEmbedding.length === 0) {
+      return [];
+    }
+
+    const posts = await ctx.runQuery(api.socialMediaPosts.getSocialMediaPostsByUser, {
+      userId,
+      limit: 100,
+    });
+
+    const results: Array<{
+      postId: any;
+      imageIndex: number;
+      imageUrl: string;
+      prompt: string;
+      sentence: string | undefined;
+      similarity: number;
+      postTitle: string | undefined;
+    }> = [];
+
+    for (const post of posts) {
+      if (!post.images) continue;
+
+      for (let i = 0; i < post.images.length; i++) {
+        const image = post.images[i];
+        if (!image.embedding || image.embedding.length === 0 || !image.url) continue;
+
+        const similarity = cosineSimilarity(queryEmbedding, image.embedding);
+
+        results.push({
+          postId: post._id,
+          imageIndex: i,
+          imageUrl: image.url,
+          prompt: image.prompt,
+          sentence: image.sentence,
+          similarity,
+          postTitle: post.title,
+        });
+      }
+    }
+
+    return results.sort((a, b) => b.similarity - a.similarity).slice(0, limit);
+  },
+});
+
+function cosineSimilarity(a: number[], b: number[]): number {
+  if (a.length !== b.length) return 0;
+
+  let dotProduct = 0;
+  let normA = 0;
+  let normB = 0;
+
+  for (let i = 0; i < a.length; i++) {
+    dotProduct += a[i] * b[i];
+    normA += a[i] * a[i];
+    normB += b[i] * b[i];
+  }
+
+  const magnitude = Math.sqrt(normA) * Math.sqrt(normB);
+  return magnitude === 0 ? 0 : dotProduct / magnitude;
+}

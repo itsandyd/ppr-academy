@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useAction, useMutation } from "convex/react";
+import { useState, useRef } from "react";
+import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useSocialPost, ImageData } from "../context";
 import { Button } from "@/components/ui/button";
@@ -30,11 +30,18 @@ export function StepGenerateImages() {
   const [images, setImages] = useState<ImageData[]>(state.data.images || []);
   const [isGenerating, setIsGeneratingLocal] = useState(false);
   const [generatingIndex, setGeneratingIndex] = useState<number | null>(null);
+  const [generatingAll, setGeneratingAll] = useState(false);
+  const imagesRef = useRef<ImageData[]>(images);
 
   // @ts-ignore - Convex type inference depth issue
   const generateImagePrompts = useAction(api.masterAI.socialMediaGenerator.generateImagePrompts);
   // @ts-ignore - Convex type inference depth issue
   const generateSocialImage = useAction(api.masterAI.socialMediaGenerator.generateSocialImage);
+
+  const updateImages = (newImages: ImageData[]) => {
+    imagesRef.current = newImages;
+    setImages(newImages);
+  };
 
   const handleGeneratePrompts = async () => {
     if (!state.data.combinedScript) return;
@@ -45,7 +52,7 @@ export function StepGenerateImages() {
     try {
       const result = await generateImagePrompts({
         script: state.data.combinedScript || "",
-        numImages: 5,
+        numImages: 12,
       });
 
       if (result && result.length > 0) {
@@ -56,7 +63,7 @@ export function StepGenerateImages() {
           prompt: p.prompt,
           sentence: p.sentence,
         }));
-        setImages(newImages);
+        updateImages(newImages);
       }
     } catch (error) {
       console.error("Failed to generate image prompts:", error);
@@ -66,12 +73,15 @@ export function StepGenerateImages() {
     }
   };
 
-  const handleGenerateImage = async (index: number) => {
-    const image = images[index];
+  const handleGenerateImage = async (index: number, batchMode = false) => {
+    const currentImages = imagesRef.current;
+    const image = currentImages[index];
     if (!image?.prompt) return;
 
-    setGeneratingIndex(index);
-    setGenerating(true);
+    if (!batchMode) {
+      setGeneratingIndex(index);
+      setGenerating(true);
+    }
 
     try {
       const result = await generateSocialImage({
@@ -80,35 +90,48 @@ export function StepGenerateImages() {
       });
 
       if (result.success && result.storageId && result.imageUrl) {
-        const updatedImages = [...images];
-        updatedImages[index] = {
-          ...image,
+        const latestImages = [...imagesRef.current];
+        latestImages[index] = {
+          ...latestImages[index],
           storageId: result.storageId,
           url: result.imageUrl,
           aspectRatio,
         };
-        setImages(updatedImages);
-        updateData("images", { images: updatedImages });
+        updateImages(latestImages);
+        updateData("images", { images: latestImages });
       }
     } catch (error) {
       console.error("Failed to generate image:", error);
     } finally {
-      setGeneratingIndex(null);
-      setGenerating(false);
-    }
-  };
-
-  const handleGenerateAllImages = async () => {
-    for (let i = 0; i < images.length; i++) {
-      if (!images[i].url) {
-        await handleGenerateImage(i);
+      if (!batchMode) {
+        setGeneratingIndex(null);
+        setGenerating(false);
       }
     }
   };
 
+  const handleGenerateAllImages = async () => {
+    setGeneratingAll(true);
+    setGenerating(true);
+
+    const currentImages = imagesRef.current;
+    const indicesToGenerate = currentImages
+      .map((img, idx) => (!img.url ? idx : -1))
+      .filter((idx) => idx !== -1);
+
+    for (const idx of indicesToGenerate) {
+      setGeneratingIndex(idx);
+      await handleGenerateImage(idx, true);
+    }
+
+    setGeneratingIndex(null);
+    setGeneratingAll(false);
+    setGenerating(false);
+  };
+
   const handleRemoveImage = (index: number) => {
-    const updatedImages = images.filter((_, i) => i !== index);
-    setImages(updatedImages);
+    const updatedImages = imagesRef.current.filter((_, i) => i !== index);
+    updateImages(updatedImages);
     updateData("images", { images: updatedImages });
   };
 
@@ -203,11 +226,20 @@ export function StepGenerateImages() {
               {images.length > 0 && (
                 <Button
                   onClick={handleGenerateAllImages}
-                  disabled={isGenerating || generatedCount === images.length}
+                  disabled={isGenerating || generatingAll || generatedCount === images.length}
                   className="gap-2"
                 >
-                  <Sparkles className="h-4 w-4" />
-                  Generate All Images
+                  {generatingAll ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Generating {generatedCount + 1}/{images.length}...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4" />
+                      Generate All Images
+                    </>
+                  )}
                 </Button>
               )}
             </div>
