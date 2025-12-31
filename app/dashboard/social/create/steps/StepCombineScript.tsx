@@ -73,9 +73,10 @@ export function StepCombineScript() {
         ctaText: ctaText || undefined,
       });
 
-      if (result.combinedScript) {
-        setCombinedScript(result.combinedScript);
-        updateData("combine", { combinedScript: result.combinedScript });
+      const finalScript = ctaText ? result.scriptWithCta : result.combinedScript;
+      if (finalScript) {
+        setCombinedScript(finalScript);
+        updateData("combine", { combinedScript: finalScript });
       }
     } catch (error) {
       console.error("Failed to combine scripts:", error);

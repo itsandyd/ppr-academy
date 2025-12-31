@@ -323,6 +323,18 @@ const COMBINE_SCRIPTS_PROMPT = `You are an expert social media content strategis
 6. Focus on VALUE and ACTIONABLE insights
 7. End with a natural transition to the CTA (but don't include the CTA itself - that will be added separately)
 
+# TEXT-TO-SPEECH OPTIMIZATION (CRITICAL)
+
+The script will be read aloud by AI text-to-speech. You MUST:
+- Write out all abbreviations in full (e.g., "W" becomes "whole step", "H" becomes "half step")
+- Avoid mathematical notation or formulas (e.g., "C + W = D" should be "start on C, move up a whole step to D")
+- Write numbers as words when under 100 (e.g., "five" not "5")
+- Avoid parentheses - rephrase to flow naturally
+- Avoid symbols like +, =, /, @ in the middle of sentences
+- Write musical notes conversationally (e.g., "the note C" not just "C")
+- Spell out any acronyms the first time (e.g., "DAW, which stands for Digital Audio Workstation")
+- Avoid bullet points or lists - use flowing sentences instead
+
 # OUTPUT FORMAT
 Return ONLY the combined script text, nothing else. No explanations, no headers, just the script.
 `;
