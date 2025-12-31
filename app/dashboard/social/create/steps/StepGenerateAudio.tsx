@@ -42,12 +42,28 @@ export function StepGenerateAudio() {
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
-    if (!initialized && state.data.combinedScript && !state.data.audioScript) {
-      const scriptWithCta = buildScriptWithCta(state.data.combinedScript, state.data.ctaText || "");
-      setAudioScript(scriptWithCta);
+    if (!initialized && state.data.combinedScript) {
+      if (state.data.audioScript) {
+        setAudioScript(state.data.audioScript);
+      } else {
+        const scriptWithCta = buildScriptWithCta(
+          state.data.combinedScript,
+          state.data.ctaText || ""
+        );
+        setAudioScript(scriptWithCta);
+      }
+      if (state.data.audioUrl) {
+        setAudioUrl(state.data.audioUrl);
+      }
       setInitialized(true);
     }
-  }, [state.data.combinedScript, state.data.ctaText, state.data.audioScript, initialized]);
+  }, [
+    state.data.combinedScript,
+    state.data.ctaText,
+    state.data.audioScript,
+    state.data.audioUrl,
+    initialized,
+  ]);
   const [audioUrl, setAudioUrl] = useState(state.data.audioUrl || "");
   const [isGenerating, setIsGeneratingLocal] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);

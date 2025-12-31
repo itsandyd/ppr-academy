@@ -52,6 +52,23 @@ export function StepCombineScript() {
   const [newTemplateName, setNewTemplateName] = useState("");
   const [newTemplateKeyword, setNewTemplateKeyword] = useState("");
   const [newTemplateText, setNewTemplateText] = useState("");
+  const [hasInitialized, setHasInitialized] = useState(false);
+
+  useEffect(() => {
+    if (!hasInitialized && state.data.combinedScript) {
+      setCombinedScript(state.data.combinedScript);
+      if (state.data.ctaKeyword) setCtaKeyword(state.data.ctaKeyword);
+      if (state.data.ctaText) setCtaText(state.data.ctaText);
+      if (state.data.ctaTemplateId) setSelectedTemplateId(state.data.ctaTemplateId);
+      setHasInitialized(true);
+    }
+  }, [
+    state.data.combinedScript,
+    state.data.ctaKeyword,
+    state.data.ctaText,
+    state.data.ctaTemplateId,
+    hasInitialized,
+  ]);
 
   const ctaTemplates = useQuery(
     api.socialMediaPosts.getCTATemplatesByUser,

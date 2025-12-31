@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useSocialPost, ImageData } from "../context";
@@ -31,6 +31,7 @@ export function StepGenerateImages() {
   const [isGenerating, setIsGeneratingLocal] = useState(false);
   const [generatingIndex, setGeneratingIndex] = useState<number | null>(null);
   const [generatingAll, setGeneratingAll] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
   const imagesRef = useRef<ImageData[]>(images);
 
   // @ts-ignore - Convex type inference depth issue
@@ -42,6 +43,16 @@ export function StepGenerateImages() {
     imagesRef.current = newImages;
     setImages(newImages);
   };
+
+  useEffect(() => {
+    if (!hasInitialized && state.data.images && state.data.images.length > 0) {
+      updateImages(state.data.images);
+      if (state.data.imageAspectRatio) {
+        setAspectRatio(state.data.imageAspectRatio);
+      }
+      setHasInitialized(true);
+    }
+  }, [state.data.images, state.data.imageAspectRatio, hasInitialized]);
 
   const handleGeneratePrompts = async () => {
     if (!state.data.combinedScript) return;

@@ -280,10 +280,13 @@ export function SocialPostProvider({ children }: { children: React.ReactNode }) 
         }
 
         if (state.data.images && state.data.images.length > 0) {
-          await updateImagesMutation({
-            postId: currentPostId,
-            images: state.data.images,
-          });
+          const validImages = state.data.images.filter((img) => img.storageId && img.url);
+          if (validImages.length > 0) {
+            await updateImagesMutation({
+              postId: currentPostId,
+              images: validImages,
+            });
+          }
         }
 
         if (state.data.audioStorageId && state.data.audioUrl) {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useUser } from "@clerk/nextjs";
-import { useQuery, useAction } from "convex/react";
+import { useQuery, useAction, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useSocialPost } from "../context";
@@ -115,6 +115,8 @@ export function StepContentSelection() {
     api.socialMediaPosts.getSocialMediaPostsByUser,
     user?.id ? { userId: user.id, limit: 10 } : "skip"
   );
+
+  const deletePostMutation = useMutation(api.socialMediaPosts.deleteSocialMediaPost);
 
   // @ts-ignore
   const userCourses = useQuery(
@@ -240,6 +242,13 @@ export function StepContentSelection() {
     router.push(`/dashboard/social/create?postId=${postId}&step=content&mode=create`);
   };
 
+  const handleDeletePost = async (e: React.MouseEvent, postId: string) => {
+    e.stopPropagation();
+    if (confirm("Delete this post?")) {
+      await deletePostMutation({ postId: postId as any });
+    }
+  };
+
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleDateString("en-US", {
       month: "short",
@@ -295,10 +304,13 @@ export function StepContentSelection() {
             <div className="max-h-[250px] overflow-y-auto">
               <div className="space-y-2 pr-2">
                 {savedPosts.map((post: any) => (
-                  <button
+                  <div
                     key={post._id}
                     onClick={() => handleLoadDraft(post._id)}
-                    className="flex w-full items-center justify-between rounded-lg border p-3 text-left transition-colors hover:bg-muted"
+                    className="flex w-full cursor-pointer items-center justify-between rounded-lg border p-3 text-left transition-colors hover:bg-muted"
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => e.key === "Enter" && handleLoadDraft(post._id)}
                   >
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium">{post.title || "Untitled Post"}</p>
@@ -308,7 +320,14 @@ export function StepContentSelection() {
                       </div>
                     </div>
                     <Badge className={cn("ml-2", getStatusColor(post.status))}>{post.status}</Badge>
-                  </button>
+                    <button
+                      onClick={(e) => handleDeletePost(e, post._id)}
+                      className="ml-2 rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                      title="Delete post"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 ))}
               </div>
             </div>

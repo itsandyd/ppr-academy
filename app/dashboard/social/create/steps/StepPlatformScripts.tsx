@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useSocialPost } from "../context";
@@ -32,6 +32,24 @@ export function StepPlatformScripts() {
   const [tiktokScript, setTiktokScript] = useState(state.data.tiktokScript || "");
   const [youtubeScript, setYoutubeScript] = useState(state.data.youtubeScript || "");
   const [instagramScript, setInstagramScript] = useState(state.data.instagramScript || "");
+  const [hasInitialized, setHasInitialized] = useState(false);
+
+  useEffect(() => {
+    if (
+      !hasInitialized &&
+      (state.data.tiktokScript || state.data.youtubeScript || state.data.instagramScript)
+    ) {
+      if (state.data.tiktokScript) setTiktokScript(state.data.tiktokScript);
+      if (state.data.youtubeScript) setYoutubeScript(state.data.youtubeScript);
+      if (state.data.instagramScript) setInstagramScript(state.data.instagramScript);
+      setHasInitialized(true);
+    }
+  }, [
+    state.data.tiktokScript,
+    state.data.youtubeScript,
+    state.data.instagramScript,
+    hasInitialized,
+  ]);
 
   const generateScripts = useAction(api.masterAI.socialMediaGenerator.generatePlatformScripts);
 
