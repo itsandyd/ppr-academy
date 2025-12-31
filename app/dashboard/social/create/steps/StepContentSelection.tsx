@@ -171,7 +171,7 @@ export function StepContentSelection() {
 
   const contentLength = finalContent.length;
   const isContentValid = contentLength >= 100;
-  const isContentTooLong = contentLength > 10000;
+  const isContentLong = contentLength > 15000;
 
   useEffect(() => {
     if (sourceTab === "course" && selectedChapterId) {
@@ -219,7 +219,7 @@ export function StepContentSelection() {
   };
 
   const handleContinue = async () => {
-    if (isContentValid && !isContentTooLong) {
+    if (isContentValid) {
       await savePost();
       goToStep("scripts");
     }
@@ -397,35 +397,34 @@ export function StepContentSelection() {
       <Card
         className={cn(
           "border-2 transition-colors",
-          isContentValid && !isContentTooLong
-            ? "border-green-500/50 bg-green-500/5"
-            : isContentTooLong
-              ? "border-red-500/50 bg-red-500/5"
-              : "border-orange-500/50 bg-orange-500/5"
+          isContentValid
+            ? isContentLong
+              ? "border-amber-500/50 bg-amber-500/5"
+              : "border-green-500/50 bg-green-500/5"
+            : "border-orange-500/50 bg-orange-500/5"
         )}
       >
         <CardContent className="pt-6">
           <div className="flex items-start gap-4">
-            {isContentValid && !isContentTooLong ? (
-              <CheckCircle className="mt-0.5 h-5 w-5 text-green-500" />
+            {isContentValid ? (
+              isContentLong ? (
+                <AlertCircle className="mt-0.5 h-5 w-5 text-amber-500" />
+              ) : (
+                <CheckCircle className="mt-0.5 h-5 w-5 text-green-500" />
+              )
             ) : (
-              <AlertCircle
-                className={cn(
-                  "mt-0.5 h-5 w-5",
-                  isContentTooLong ? "text-red-500" : "text-orange-500"
-                )}
-              />
+              <AlertCircle className="mt-0.5 h-5 w-5 text-orange-500" />
             )}
             <div className="flex-1">
               <div className="flex items-center justify-between">
                 <h4 className="font-semibold">Content Status</h4>
-                <Badge variant={isContentValid && !isContentTooLong ? "default" : "secondary"}>
+                <Badge variant={isContentValid ? "default" : "secondary"}>
                   {contentLength.toLocaleString()} characters
                 </Badge>
               </div>
               <p className="mt-1 text-sm text-muted-foreground">
-                {isContentTooLong
-                  ? "Content is too long. Maximum 10,000 characters recommended for best results."
+                {isContentLong
+                  ? "Long content detected. Generation may take longer and use more tokens."
                   : isContentValid
                     ? "Content is ready for script generation."
                     : `Need at least 100 characters. Add ${100 - contentLength} more.`}
@@ -438,7 +437,7 @@ export function StepContentSelection() {
       <div className="flex justify-end">
         <Button
           onClick={handleContinue}
-          disabled={!isContentValid || isContentTooLong || state.isSaving}
+          disabled={!isContentValid || state.isSaving}
           className="gap-2"
           size="lg"
         >
