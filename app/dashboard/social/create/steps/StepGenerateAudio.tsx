@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Slider } from "@/components/ui/slider";
+import { useToast } from "@/hooks/use-toast";
 import {
   Volume2,
   ChevronRight,
@@ -24,6 +25,7 @@ const ANDREW_1_VOICE_ID = "IXQAN2tgDlb8raWmXvzP";
 
 export function StepGenerateAudio() {
   const { state, updateData, goToStep, savePost, setGenerating } = useSocialPost();
+  const { toast } = useToast();
 
   const buildScriptWithCta = (script: string, cta: string) => {
     if (!cta) return script;
@@ -49,21 +51,29 @@ export function StepGenerateAudio() {
   const [audioUrl, setAudioUrl] = useState(state.data.audioUrl || "");
   const [isGenerating, setIsGeneratingLocal] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const isGeneratingRef = useRef(false);
 
+  // @ts-ignore - Convex type inference depth issue
   const generateAudio = useAction(api.masterAI.socialMediaGenerator.generateSocialAudio);
 
   const handleGenerateAudio = async () => {
-    if (!audioScript) return;
+    if (!audioScript || isGeneratingRef.current) return;
 
+    isGeneratingRef.current = true;
     setIsGeneratingLocal(true);
     setGenerating(true);
+    setError(null);
 
     try {
+      console.log("Starting audio generation...");
       const result = await generateAudio({
         script: audioScript,
         voiceId: ANDREW_1_VOICE_ID,
       });
+
+      console.log("Audio generation result:", result);
 
       if (result.success && result.storageId && result.audioUrl) {
         setAudioUrl(result.audioUrl);
@@ -74,10 +84,29 @@ export function StepGenerateAudio() {
           audioDuration: result.duration,
           audioScript,
         });
+        toast({
+          title: "Audio Generated",
+          description: "Your voiceover has been created successfully.",
+        });
+      } else if (result.error) {
+        setError(result.error);
+        toast({
+          title: "Audio Generation Failed",
+          description: result.error,
+          variant: "destructive",
+        });
       }
     } catch (error) {
       console.error("Failed to generate audio:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+      setError(errorMessage);
+      toast({
+        title: "Audio Generation Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
     } finally {
+      isGeneratingRef.current = false;
       setIsGeneratingLocal(false);
       setGenerating(false);
     }

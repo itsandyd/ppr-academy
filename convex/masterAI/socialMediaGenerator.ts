@@ -830,6 +830,11 @@ export const generateSocialAudio = action({
         .replace(/#\w+/g, "")
         .trim();
 
+      console.log(
+        `   📝 Script length: ${cleanedScript.length} chars, ${cleanedScript.split(/\s+/).length} words`
+      );
+      console.log(`   🌐 Calling ElevenLabs API...`);
+
       const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
         method: "POST",
         headers: {
@@ -846,17 +851,23 @@ export const generateSocialAudio = action({
         }),
       });
 
+      console.log(`   📡 ElevenLabs response status: ${response.status}`);
+
       if (!response.ok) {
         const errorText = await response.text();
+        console.error(`   ❌ ElevenLabs error: ${errorText}`);
         throw new Error(`ElevenLabs API error: ${response.status} ${errorText}`);
       }
 
+      console.log(`   ⏳ Downloading audio buffer...`);
       const audioArrayBuffer = await response.arrayBuffer();
 
       console.log(`   ✅ Audio generated (${Math.round(audioArrayBuffer.byteLength / 1024)}KB)`);
 
+      console.log(`   📤 Getting upload URL...`);
       const uploadUrl = await ctx.storage.generateUploadUrl();
 
+      console.log(`   📤 Uploading to Convex storage...`);
       const uploadResult = await fetch(uploadUrl, {
         method: "POST",
         headers: { "Content-Type": "audio/mpeg" },
@@ -864,6 +875,7 @@ export const generateSocialAudio = action({
       });
 
       if (!uploadResult.ok) {
+        console.error(`   ❌ Upload failed: ${uploadResult.status}`);
         throw new Error("Failed to upload audio to Convex storage");
       }
 
@@ -871,6 +883,7 @@ export const generateSocialAudio = action({
         storageId: Id<"_storage">;
       };
 
+      console.log(`   ✅ Uploaded: ${storageId}`);
       const audioUrl = await ctx.storage.getUrl(storageId);
 
       const estimatedDuration = Math.round(cleanedScript.split(/\s+/).length / 2.5);
