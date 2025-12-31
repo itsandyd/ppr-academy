@@ -53,6 +53,30 @@ export function StepReview() {
   const imageCount = state.data.images?.filter((img) => img.url).length || 0;
   const hasAudio = !!state.data.audioUrl;
 
+  const handleDownloadAllImages = async () => {
+    const images = state.data.images?.filter((img) => img.url) || [];
+    if (images.length === 0) return;
+
+    for (let i = 0; i < images.length; i++) {
+      const image = images[i];
+      try {
+        const response = await fetch(image.url);
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `carousel-${i + 1}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        await new Promise((r) => setTimeout(r, 300));
+      } catch (error) {
+        console.error(`Failed to download image ${i + 1}:`, error);
+      }
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div>
@@ -88,14 +112,29 @@ export function StepReview() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Image className="h-5 w-5" />
-              Images
-              <Badge variant="secondary">{imageCount} generated</Badge>
-            </CardTitle>
-            <CardDescription>
-              {state.data.imageAspectRatio || "9:16"} carousel images
-            </CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Image className="h-5 w-5" />
+                  Images
+                  <Badge variant="secondary">{imageCount} generated</Badge>
+                </CardTitle>
+                <CardDescription>
+                  {state.data.imageAspectRatio || "9:16"} carousel images
+                </CardDescription>
+              </div>
+              {imageCount > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDownloadAllImages}
+                  className="gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  Download All
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {imageCount > 0 ? (
@@ -157,14 +196,12 @@ export function StepReview() {
                     : "Duration unknown"}
                 </p>
               </div>
-              <a
-                href={state.data.audioUrl}
-                download="narration.mp3"
-                className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
-              >
-                <Download className="h-4 w-4" />
-                Download
-              </a>
+              <Button variant="outline" size="sm" asChild className="gap-2">
+                <a href={state.data.audioUrl} download="narration.mp3">
+                  <Download className="h-4 w-4" />
+                  Download
+                </a>
+              </Button>
             </div>
           ) : (
             <div className="py-8 text-center text-muted-foreground">

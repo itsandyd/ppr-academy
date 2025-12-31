@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useSocialPost } from "../context";
@@ -25,19 +25,27 @@ const ANDREW_1_VOICE_ID = "IXQAN2tgDlb8raWmXvzP";
 export function StepGenerateAudio() {
   const { state, updateData, goToStep, savePost, setGenerating } = useSocialPost();
 
-  const getDefaultAudioScript = () => {
-    if (state.data.audioScript) return state.data.audioScript;
-
-    const script = state.data.combinedScript || "";
-    const cta = state.data.ctaText || "";
-
-    if (cta && script && !script.includes(cta)) {
-      return `${script}\n\n${cta}`;
-    }
-    return script;
+  const buildScriptWithCta = (script: string, cta: string) => {
+    if (!cta) return script;
+    if (script.trim().endsWith(cta.trim())) return script;
+    return `${script}\n\n${cta}`;
   };
 
-  const [audioScript, setAudioScript] = useState(getDefaultAudioScript);
+  const getInitialScript = () => {
+    if (state.data.audioScript) return state.data.audioScript;
+    return buildScriptWithCta(state.data.combinedScript || "", state.data.ctaText || "");
+  };
+
+  const [audioScript, setAudioScript] = useState(getInitialScript);
+  const [initialized, setInitialized] = useState(false);
+
+  useEffect(() => {
+    if (!initialized && state.data.combinedScript && !state.data.audioScript) {
+      const scriptWithCta = buildScriptWithCta(state.data.combinedScript, state.data.ctaText || "");
+      setAudioScript(scriptWithCta);
+      setInitialized(true);
+    }
+  }, [state.data.combinedScript, state.data.ctaText, state.data.audioScript, initialized]);
   const [audioUrl, setAudioUrl] = useState(state.data.audioUrl || "");
   const [isGenerating, setIsGeneratingLocal] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
