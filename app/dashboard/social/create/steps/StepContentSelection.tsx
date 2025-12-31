@@ -292,8 +292,8 @@ export function StepContentSelection() {
             <CardDescription>Continue working on a previous post</CardDescription>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="max-h-[250px]">
-              <div className="space-y-2">
+            <div className="max-h-[250px] overflow-y-auto">
+              <div className="space-y-2 pr-2">
                 {savedPosts.map((post: any) => (
                   <button
                     key={post._id}
@@ -311,7 +311,7 @@ export function StepContentSelection() {
                   </button>
                 ))}
               </div>
-            </ScrollArea>
+            </div>
           </CardContent>
         </Card>
       )}
