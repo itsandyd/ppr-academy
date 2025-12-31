@@ -25,9 +25,19 @@ const ANDREW_1_VOICE_ID = "IXQAN2tgDlb8raWmXvzP";
 export function StepGenerateAudio() {
   const { state, updateData, goToStep, savePost, setGenerating } = useSocialPost();
 
-  const [audioScript, setAudioScript] = useState(
-    state.data.audioScript || state.data.combinedScript || ""
-  );
+  const getDefaultAudioScript = () => {
+    if (state.data.audioScript) return state.data.audioScript;
+
+    const script = state.data.combinedScript || "";
+    const cta = state.data.ctaText || "";
+
+    if (cta && script && !script.includes(cta)) {
+      return `${script}\n\n${cta}`;
+    }
+    return script;
+  };
+
+  const [audioScript, setAudioScript] = useState(getDefaultAudioScript);
   const [audioUrl, setAudioUrl] = useState(state.data.audioUrl || "");
   const [isGenerating, setIsGeneratingLocal] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);

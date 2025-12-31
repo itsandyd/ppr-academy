@@ -110,6 +110,8 @@ export function StepGenerateImages() {
     }
   };
 
+  const [generatingIndices, setGeneratingIndices] = useState<Set<number>>(new Set());
+
   const handleGenerateAllImages = async () => {
     setGeneratingAll(true);
     setGenerating(true);
@@ -119,12 +121,43 @@ export function StepGenerateImages() {
       .map((img, idx) => (!img.url ? idx : -1))
       .filter((idx) => idx !== -1);
 
-    for (const idx of indicesToGenerate) {
-      setGeneratingIndex(idx);
-      await handleGenerateImage(idx, true);
-    }
+    setGeneratingIndices(new Set(indicesToGenerate));
 
-    setGeneratingIndex(null);
+    const generateOne = async (index: number) => {
+      const image = imagesRef.current[index];
+      if (!image?.prompt) return;
+
+      try {
+        const result = await generateSocialImage({
+          prompt: image.prompt,
+          aspectRatio,
+        });
+
+        if (result.success && result.storageId && result.imageUrl) {
+          const latestImages = [...imagesRef.current];
+          latestImages[index] = {
+            ...latestImages[index],
+            storageId: result.storageId,
+            url: result.imageUrl,
+            aspectRatio,
+          };
+          updateImages(latestImages);
+          updateData("images", { images: latestImages });
+        }
+      } catch (error) {
+        console.error(`Failed to generate image ${index}:`, error);
+      } finally {
+        setGeneratingIndices((prev) => {
+          const next = new Set(prev);
+          next.delete(index);
+          return next;
+        });
+      }
+    };
+
+    await Promise.all(indicesToGenerate.map(generateOne));
+
+    setGeneratingIndices(new Set());
     setGeneratingAll(false);
     setGenerating(false);
   };
@@ -232,7 +265,10 @@ export function StepGenerateImages() {
                   {generatingAll ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Generating {generatedCount + 1}/{images.length}...
+                      Generating{" "}
+                      {generatingIndices.size > 0
+                        ? `${generatingIndices.size} in parallel...`
+                        : "..."}
                     </>
                   ) : (
                     <>
@@ -270,7 +306,7 @@ export function StepGenerateImages() {
                           <Image className="h-8 w-8 text-muted-foreground" />
                         </div>
                       )}
-                      {generatingIndex === index && (
+                      {(generatingIndex === index || generatingIndices.has(index)) && (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/50">
                           <Loader2 className="h-8 w-8 animate-spin text-white" />
                         </div>
