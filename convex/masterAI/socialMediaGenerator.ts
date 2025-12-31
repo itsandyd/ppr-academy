@@ -11,30 +11,126 @@ import { createFalClient } from "@fal-ai/client";
 const ANDREW_1_VOICE_ID = "IXQAN2tgDlb8raWmXvzP";
 const DEFAULT_MODEL: ModelId = "gemini-2.5-flash";
 
+const TIKTOK_HOOK_TEMPLATES = `
+1. If I had to start all over again…
+2. I spent X hours collecting (RELATED TO NICHE) from 100+ (RELATED TO NICHE)…
+3. I've always been (PAIN POINT), but…
+4. Mistakes I made when (TARGET AUDIENCE)
+5. X (RELATED TO NICHE) that (DESIRED RESULT)
+6. X steps to (DESIRED RESULT)
+7. Most people suck at (PAIN POINT)
+8. If you're not (DESIRED RESULT), you're falling behind
+9. Fun fact: (FACT)
+10. The craziest thing just happened at (PLACE), you will never believe it
+11. Did you know that (FACT)
+12. This is the only thing you need to know about (RELATED TO NICHE)
+13. Don't hate me, but (HARD TRUTH)
+14. This is why your (ACTION) isn't working
+15. This is a story about how I lost $XXX by doing something stupid
+16. Stop doing (PAIN POINT OF TARGET AUDIENCE) right now! Instead (DESIRED RESULT)
+17. These X (HACK/TIP/TRICK) feel illegal to know
+18. Here's how we (DESIRED RESULT)
+19. 8 (RELATED TO NICHE) tools that will save you hundreds of hours of work
+20. Let's figure out why (PAIN POINT TO TARGET AUDIENCE)
+21. What happens when we (DESIRED RESULT)
+22. (HACK/TIP/TRICK) I wish I knew earlier
+23. I tried every (HACK/TIP/TRICK), so you don't have to
+24. This simple mistake could be costing you ($)
+25. Ever ask yourself why (PAIN POINT)
+26. What if you could achieve (DESIRED RESULT) without (PAIN POINT OF TARGET AUDIENCE)
+27. What if I told you there's a simple way to (DESIRED RESULT)
+28. Why doesn't anyone talk about (RELATED TO NICHE)
+29. Is it just me, or (ACTION)
+30. (TARGET AUDIENCE) will never admit these "secrets"
+31. How to get (DESIRED RESULT) step-by-step
+32. (RELATED TO NICHE) are dead
+33. The dark secret behind (RELATED TO NICHE)
+34. Steal my secret strategy on (DESIRED RESULT)
+35. How I went from (PAST SITUATION) to (DESIRED RESULT) in just (TIME) years
+36. The (NUMBER) secrets to (DESIRED RESULT)
+37. Here's how I (DESIRED RESULT), (AGAINST COMMON BELIEF)
+38. Here's (NUMBER) underestimated (HACK/TIP/TRICK) to (DESIRED RESULT)
+39. This one mistake could be costing you (NUMBER)
+40. Exposing my secret to (DESIRED RESULT)
+41. How to get (DESIRED RESULT) in (TIME)
+42. Here are 3 quick ways to get (DESIRED RESULT)
+43. (NUMBER) things that feel illegal to know
+44. (NUMBER) things about (NICHE) I wish I knew earlier
+45. This will change the way you use (RELATED TO NICHE)
+46. Why 99% of (TARGET AUDIENCE) won't (RELATED TO NICHE)
+47. Everything you knew about (SUBJECT) is WRONG!
+48. Stop doing (RELATED TO NICHE) if you want to do (DESIRED RESULT)
+49. Struggling with (PAIN POINT OF TARGET AUDIENCE), here's a secret tip I wish I knew earlier
+50. If you [do this], I automatically assume [desired outcome]
+51. I recently [did something] and I found out something that EVERYONE needs to know.
+52. Am I the only one who's realized...
+53. Here's the simplest way to [desired outcome].
+54. This Simple Method Gets my 250+ Comments (It Just Works)
+55. 98% of (NICHE) Gets This Wrong (Maybe You Do?)
+56. How I gained 300000 new followers in 174 days
+57. People pay me $XX to learn this. Today, I'm giving it to you for free.
+58. I invested over $XXX with top coaches. Here's what I learned.
+59. My Clients Pay $XXX to Learn This (Today It's Free)
+60. If you do X, you're going to Y.
+61. Here's 5 things you can do to X.
+62. Why aren't more people talking about this?
+63. I'm sure nobody saw this coming…
+64. I don't know who needs to hear this but…
+65. You will never guess what just happened.
+66. Here's what to do if…
+67. X and Y are NOT the same thing.
+68. 99% of [target audience] DO NOT understand this!
+69. Has this happened to anyone else?
+70. I just X, here's how…
+71. I gotta say it… [hot take].
+72. If you've ever wanted to [target audience desire], now's your chance.
+73. If there's one thing that I know for sure, it's this…
+74. Let me put y'all onto something quick.
+75. Here's how to [video topic].
+76. This is my biggest secret to [desired outcome].
+77. If you're struggling with [this], all you need to do is [that].
+78. I'm about to spill my secret on [topic], but I don't even care.
+79. This might be the best way to [topic].
+80. I bet you didn't know this [niche tip].
+81. This is my #1 tip for [niche].
+82. This is the EASIEST way to [desired outcome].
+83. I WISH someone would've told me this when I was starting as a [target audience].
+84. This is how you [desired outcome] in X seconds.
+85. I have a confession…
+86. If you do X, you're going to [negative result].
+87. Here's 5 things you're doing completely wrong when it comes to X.
+88. You live under a rock if you don't know about this.
+89. You're not going to like this but…
+90. STOP doing [specific thing].
+91. This is the number one killer of [niche topic].
+92. Do not make this mistake when…
+93. Do not do [this] if you want [that].
+94. [niche topic] is bullshit.
+95. I'm probably going to get a lot of hate for this, but I don't care.
+96. If you're a [target audience], you're not going to like this…
+97. You need to STOP doing this…
+98. This is why [target audience tactic] isn't working.
+99. [topic] is overrated.
+100. The [people in your niche] are going to hate me for this but…
+`;
+
 const TIKTOK_PROMPT = `# CONTEXT
 
-Infer the topic from the sources provided.
+Infer the topic from the sources provided. This is for MUSIC PRODUCTION content.
 
 # WRITING STYLE
 
-Here's how you always write:
-
 <writing_style>
-
 - Your writing style is spartan and informative.
 - Use clear, simple language.
 - Employ short, impactful sentences.
-- Incorporate bullet points for easy readability.
 - Use frequent line breaks to separate ideas.
 - Use active voice; avoid passive voice.
 - Focus on practical, actionable insights.
-- Use specific examples and personal experiences to illustrate points.
-- Incorporate data or statistics to support claims when possible.
-- Ask thought-provoking questions to encourage reader reflection.
+- Use specific examples to illustrate points.
 - Use "you" and "your" to directly address the reader.
 - Avoid metaphors and clichés.
 - Avoid generalizations.
-- Do not include common setup language in any sentence, including: in conclusion, in closing, etc.
 - Do not output warnings or notes—just the output requested.
 - Do not use hashtags.
 - Do not use semicolons.
@@ -42,88 +138,33 @@ Here's how you always write:
 - Do not use asterisks.
 - Do not use adjectives and adverbs.
 - Do NOT use these words:
-"can, may, just, that, very, really, literally, actually, certainly, probably, basically, could, maybe, delve, embark, enlightening, esteemed, shed light, craft, crafting, imagine, realm, game-changer, unlock, discover, skyrocket, abyss, you're not alone, in a world where, revolutionize, disruptive, utilize, utilizing, dive deep, tapestry, illuminate, unveil, pivotal, enrich, intricate, elucidate, hence, furthermore, realm, however, harness, exciting, groundbreaking, cutting-edge, remarkable, it. remains to be seen, glimpse into, navigating, landscape, stark, testament, in summary, in conclusion, moreover, boost, bustling, opened up, powerful, inquiries, ever-evolving"
-
+"can, may, just, that, very, really, literally, actually, certainly, probably, basically, could, maybe, delve, embark, enlightening, esteemed, shed light, craft, crafting, imagine, realm, game-changer, unlock, discover, skyrocket, abyss, you're not alone, in a world where, revolutionize, disruptive, utilize, utilizing, dive deep, tapestry, illuminate, unveil, pivotal, enrich, intricate, elucidate, hence, furthermore, realm, however, harness, exciting, groundbreaking, cutting-edge, remarkable, it remains to be seen, glimpse into, navigating, landscape, stark, testament, in summary, in conclusion, moreover, boost, bustling, opened up, powerful, inquiries, ever-evolving"
 </writing_style>
+
+# HOOK TEMPLATES
+
+Study these 100 proven viral hook structures. Pick ONE that fits the content best:
+
+${TIKTOK_HOOK_TEMPLATES}
 
 # PLANNING
 
-Your goal is to write a viral social media post based on the provided sources.
+Your goal is to write a viral TikTok script based on the provided sources.
 
 1. Analyze the provided sources thoroughly.
-2. Study the <example1> and <example2> posts below carefully. You will be asked to replicate their:
-    - Overall structure.
-    - Tone and voice.
-    - Formatting (including line breaks and spacing).
-    - Length (aim for a similarly detailed post).
-    - Absence of emojis.
-    - Use of special characters (if any).
-    - Emotional resonance.
+2. Identify: the NICHE (music production), PAIN POINT, DESIRED RESULT, and TARGET AUDIENCE
+3. Pick a hook template from the list above that fits the content
+4. Write using the 4-sentence structure below
 
-<example1>
-We all know healthcare in the US is super broken. 
+# OUTPUT STRUCTURE
 
-This is a fascinating application of AI where this woman is using AI to help you fight health insurance denials. 
+Write a short video script with this structure:
+- First sentence: Use a hook template from above, adapted to the content
+- Second sentence: Agitate the pain - make the viewer feel the problem
+- Third sentence: Agitate more - add stakes or consequences
+- Fourth sentence: Promise the solution if they keep watching, encourage saving the video
 
-I didn't know this, but health insurers reject about one in seven claims for treatment. 
-
-And even though you can file an appeal, doctors often just don't have time. 
-
-They're swamped with other stuff. 
-
-And you, as a consumer, you don't know how to do it. 
-
-It's a lot of paperwork, it's complicated. 
-
-Fight health insurance is an open source platform that takes advantage of AI to help you generate health insurance appeals
-
-And she has done this herself, and so she has experience and she knows how it worked, how to navigate it. 
-
-Slogan is make your health insurance company cry too. 
-
-And the whole premise is that many health insurance denials can be successfully appealed. 
-
-You just need to know what to write, how to do it, who to send it to.
-</example1>
-
-<example2>
-Here are 8 youtube channels that will teach you more skills than a four year college degree. 
-
-If you're not using YouTube for learning, you are literally falling behind millions of other people that are using it to learn to code, learn about AI, learn about chatGPT, learn about how to build a side hustle, learn about entrepreneurship.
-
-Save this video so you can go back and check out all these channels.
-
-The first channel is called MIT Open Courseware. It's run by MIT the Massachusetts Institute Technology. They're one of the best colleges in the entire world and all their content is free.
-
-The second YouTube channel is called Free Code Camp and that's where you can learn to code for free and they have a ton of different courses.
-
-The third YouTube channel is called Big Think and they bring on lots of different experts that give educational content across all kinds of topics.
-
-The fourth YouTube channel is YCombinator. It gives you everything you need to know about building a successful tech startup.
-
-Fifth channel is smarter every day and it explores the world using science. Every single day, you'll learn something new about science.
-
-Sixth channel is TED from the TED conference. Best leaders, thinkers, and doers around the world share information and insights for free.
-
-7th Channel is called Crash Course for short and entertaining educational courses on a variety of different subjects channel.
-
-8th Channel is Thomas Frank he teaches you productivity growth mindset and how to learn more effectively to reach your potential.
-
-Save this video for the future so you can check out all these YouTube channels and learn really important stuff for free.
-
-Get better every day, get smarter every day.
-
-Hit follow if you want more content like this.
-</example2>
-
-# OUTPUT
-Follow the GUIDELINES below to write the post. Use your analysis from step 1 and step 2. Use the provided sources as the foundation for your post, expanding on it significantly while maintaining the style and structure of the examples provided from step 2. You MUST use information from the provided sources. Make sure you adhere to your <writing_style>.
-
-Here are the guidelines:
-<guidelines>
-Use 8th grade reading level. The first sentence should be bold, controversial, and scroll-stopping.
-</guidelines>
-Take a deep breath and take it step-by-step!
+Use 5th grade vocabulary. Keep it punchy.
 
 # INPUT
 Use the following information sources:
@@ -323,6 +364,18 @@ const COMBINE_SCRIPTS_PROMPT = `You are an expert social media content strategis
 6. Focus on VALUE and ACTIONABLE insights
 7. End with a natural transition to the CTA (but don't include the CTA itself - that will be added separately)
 
+# OPENING HOOK (CRITICAL - USE THE TIKTOK HOOK)
+The TikTok script opening is specifically designed to be scroll-stopping. USE IT AS YOUR FIRST LINE.
+- Keep the TikTok hook as-is or tighten it slightly
+- Do NOT replace it with a weaker opening from YouTube/Instagram scripts
+- The hook should create curiosity, not preach
+
+# TIGHTENING (CRITICAL)
+- Cut ruthlessly. If two sentences say the same thing differently, keep only the stronger one.
+- Each sentence should add NEW information or a NEW angle
+- Remove filler phrases: "the thing is", "what I mean is", "in other words"
+- If you repeat an idea for emphasis, do it ONCE, not multiple times
+
 # TEXT-TO-SPEECH OPTIMIZATION (CRITICAL)
 
 The script will be read aloud by AI text-to-speech. You MUST:
@@ -447,30 +500,40 @@ export const combineScripts = action({
       ? `
 
 # CALL-TO-ACTION (MUST INCLUDE)
-You MUST end the script by naturally transitioning into this exact CTA. Create a smooth, conversational bridge to the CTA - don't just append it awkwardly. The transition should feel like a natural conclusion to the content.
+You MUST end the script by naturally transitioning into this exact CTA. The CTA should feel like the LOGICAL NEXT STEP, not a sales pitch bolted on at the end.
 
 CTA to integrate: "${ctaText}"
 
-Examples of good transitions:
-- "So if you want to master this technique..."
-- "And here's the thing..."  
-- "Now, if you're ready to take this further..."
-- "Want me to show you exactly how this works?"
+# CTA TRANSITION RULES:
+1. The CTA should answer an unspoken question the content creates
+2. Bridge from the VALUE you just gave to the ACTION they should take
+3. Keep the same conversational tone - don't suddenly get "pitchy"
+4. The viewer should think "yes, that makes sense" not "oh, here comes the ad"
+
+BAD transitions (tone shift):
+- "So if you want to learn more, go check out..."
+- "Anyway, link in bio for..."
+- "Now, before you go..."
+
+GOOD transitions (natural flow):
+- [After teaching a concept] "Now, this is one of twelve techniques I cover in my course. If you want the full breakdown..."
+- [After showing a quick tip] "And if you want to see this in action..."
+- [After explaining why something matters] "So here's how to actually do it..."
 `
       : "";
 
     const combinePrompt = `${COMBINE_SCRIPTS_PROMPT}
 ${ctaInstruction}
-# TIKTOK SCRIPT:
+# TIKTOK SCRIPT (USE THIS HOOK AS YOUR OPENING):
 ${tiktokScript}
 
-# YOUTUBE SCRIPT:
+# YOUTUBE SCRIPT (USE FOR DEPTH AND STRUCTURE):
 ${youtubeScript}
 
-# INSTAGRAM SCRIPT:
+# INSTAGRAM SCRIPT (USE FOR CONCISE PHRASING):
 ${instagramScript}
 
-Create a unified script that takes the best from each${ctaText ? " and ends with the CTA integrated naturally" : ""}:`;
+Create a unified script. START with the TikTok hook, then weave in the best content from YouTube and Instagram${ctaText ? ", ending with the CTA integrated naturally" : ""}:`;
 
     const response = await callLLM({
       model: DEFAULT_MODEL,
