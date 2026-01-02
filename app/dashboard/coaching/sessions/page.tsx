@@ -36,7 +36,13 @@ import {
   MessageCircle,
   Settings,
   Pencil,
+  Trash2,
+  Eye,
+  EyeOff,
+  Globe,
+  Lock,
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import Link from "next/link";
 import { format, formatDistanceToNow, isPast } from "date-fns";
 import { toast } from "sonner";
@@ -98,6 +104,9 @@ export default function CoachSessionsPage() {
   );
 
   const updateStatus = useMutation(api.coachingProducts.updateSessionStatus);
+  const deleteSession = useMutation(api.coachingProducts.deleteCoachingSession);
+  const publishProduct = useMutation(api.coachingProducts.publishCoachingProduct);
+  const unpublishProduct = useMutation(api.coachingProducts.unpublishCoachingProduct);
 
   const handleStatusChange = async (
     sessionId: Id<"coachingSessions">,
@@ -114,6 +123,40 @@ export default function CoachSessionsPage() {
       }
     } catch (error) {
       toast.error("Failed to update session");
+    }
+  };
+
+  const handleDeleteSession = async (sessionId: Id<"coachingSessions">) => {
+    if (!confirm("Are you sure you want to delete this session? This cannot be undone.")) {
+      return;
+    }
+    try {
+      const result = await deleteSession({ sessionId });
+      if (result.success) {
+        toast.success("Session deleted");
+      } else {
+        toast.error(result.error || "Failed to delete session");
+      }
+    } catch (error) {
+      toast.error("Failed to delete session");
+    }
+  };
+
+  const handleTogglePublish = async (
+    productId: Id<"digitalProducts">,
+    isCurrentlyPublished: boolean
+  ) => {
+    try {
+      const result = isCurrentlyPublished
+        ? await unpublishProduct({ productId })
+        : await publishProduct({ productId });
+      if (result.success) {
+        toast.success(isCurrentlyPublished ? "Product is now private" : "Product is now public");
+      } else {
+        toast.error(result.error || "Failed to update product");
+      }
+    } catch (error) {
+      toast.error("Failed to update product");
     }
   };
 
@@ -157,23 +200,44 @@ export default function CoachSessionsPage() {
                 >
                   <div className="flex items-center gap-3">
                     <div>
-                      <p className="font-medium">{product.title}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {product.duration || 60} min · ${product.price}
-                        {!product.isPublished && (
-                          <Badge variant="outline" className="ml-2">
-                            Draft
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">{product.title}</p>
+                        {product.isPublished ? (
+                          <Badge variant="default" className="bg-green-600">
+                            <Globe className="mr-1 h-3 w-3" />
+                            Public
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline">
+                            <Lock className="mr-1 h-3 w-3" />
+                            Private
                           </Badge>
                         )}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {product.duration || 60} min · ${product.price}
                       </p>
                     </div>
                   </div>
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href={`/dashboard/coaching/${product._id}/edit`}>
-                      <Pencil className="mr-2 h-4 w-4" />
-                      Edit Schedule
-                    </Link>
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 rounded-lg border px-3 py-1.5">
+                      <span className="text-xs text-muted-foreground">
+                        {product.isPublished ? "Public" : "Private"}
+                      </span>
+                      <Switch
+                        checked={product.isPublished || false}
+                        onCheckedChange={() =>
+                          handleTogglePublish(product._id, product.isPublished || false)
+                        }
+                      />
+                    </div>
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={`/dashboard/coaching/${product._id}/edit`}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Edit
+                      </Link>
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -228,6 +292,7 @@ export default function CoachSessionsPage() {
                 key={session._id}
                 session={session}
                 onStatusChange={handleStatusChange}
+                onDelete={handleDeleteSession}
                 onAddNotes={(s) => {
                   setSelectedSession(s);
                   setSessionNotes(s.notes || "");
@@ -252,6 +317,7 @@ export default function CoachSessionsPage() {
                 key={session._id}
                 session={session}
                 onStatusChange={handleStatusChange}
+                onDelete={handleDeleteSession}
                 onAddNotes={(s) => {
                   setSelectedSession(s);
                   setSessionNotes(s.notes || "");
@@ -303,10 +369,12 @@ export default function CoachSessionsPage() {
 function SessionCard({
   session,
   onStatusChange,
+  onDelete,
   onAddNotes,
 }: {
   session: any;
   onStatusChange: (id: Id<"coachingSessions">, status: SessionStatus, notes?: string) => void;
+  onDelete: (id: Id<"coachingSessions">) => void;
   onAddNotes: (session: any) => void;
 }) {
   const statusConfig = STATUS_CONFIG[session.status as SessionStatus];
@@ -401,6 +469,13 @@ function SessionCard({
               <DropdownMenuItem onClick={() => onAddNotes(session)}>
                 <MessageCircle className="mr-2 h-4 w-4" />
                 {session.notes ? "Edit Notes" : "Add Notes"}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => onDelete(session._id)}
+                className="text-red-600 focus:text-red-600"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Session
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

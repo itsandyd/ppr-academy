@@ -289,7 +289,6 @@ export const updateCoachingProduct = mutation({
   },
 });
 
-// Publish coaching product
 export const publishCoachingProduct = mutation({
   args: { productId: v.id("digitalProducts") },
   returns: v.object({
@@ -302,6 +301,51 @@ export const publishCoachingProduct = mutation({
       return { success: true };
     } catch (error: any) {
       console.error("Error publishing coaching product:", error);
+      return { success: false, error: error.message };
+    }
+  },
+});
+
+export const unpublishCoachingProduct = mutation({
+  args: { productId: v.id("digitalProducts") },
+  returns: v.object({
+    success: v.boolean(),
+    error: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    try {
+      await ctx.db.patch(args.productId, { isPublished: false });
+      return { success: true };
+    } catch (error: any) {
+      console.error("Error unpublishing coaching product:", error);
+      return { success: false, error: error.message };
+    }
+  },
+});
+
+export const deleteCoachingSession = mutation({
+  args: { sessionId: v.id("coachingSessions") },
+  returns: v.object({
+    success: v.boolean(),
+    error: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    try {
+      const session = await ctx.db.get(args.sessionId);
+      if (!session) {
+        return { success: false, error: "Session not found" };
+      }
+
+      if (session.discordChannelId || session.discordRoleId) {
+        await ctx.scheduler.runAfter(0, internal.coachingDiscordActions.cleanupSessionDiscord, {
+          sessionId: args.sessionId,
+        });
+      }
+
+      await ctx.db.delete(args.sessionId);
+      return { success: true };
+    } catch (error: any) {
+      console.error("Error deleting coaching session:", error);
       return { success: false, error: error.message };
     }
   },

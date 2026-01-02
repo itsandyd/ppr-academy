@@ -27,6 +27,7 @@ import {
   ArrowRight,
   DollarSign,
   Mail,
+  Video,
 } from "lucide-react";
 import {
   Sidebar,
@@ -95,6 +96,12 @@ const createLinks = [
     label: "My Courses",
     icon: BookOpen,
     color: "text-green-500",
+  },
+  {
+    href: "/dashboard/coaching/sessions",
+    label: "Coaching",
+    icon: Video,
+    color: "text-teal-500",
   },
   {
     href: "/dashboard/notes?mode=create",
@@ -345,6 +352,17 @@ export function DashboardSidebar({ mode, onModeChange }: DashboardSidebarProps) 
                       <Link href="/dashboard/create/course?category=course">
                         <BookOpen className="mr-2 h-3 w-3" />
                         Course
+                      </Link>
+                    </Button>
+                    <Button
+                      asChild
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-full justify-start text-xs"
+                    >
+                      <Link href="/dashboard/create/coaching">
+                        <Video className="mr-2 h-3 w-3" />
+                        Coaching
                       </Link>
                     </Button>
                     <Button
