@@ -2,7 +2,7 @@
 
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useParams } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 import { Id } from "@/convex/_generated/dataModel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,7 @@ import {
   CheckCircle,
   XCircle,
   ExternalLink,
+  ArrowLeft,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import Link from "next/link";
@@ -91,20 +92,59 @@ function ClaimStatusBadge({ status }: { status: CopyrightClaim["status"] }) {
 }
 
 export default function CopyrightDashboardPage() {
-  const params = useParams();
-  const storeId = params.storeId as Id<"stores">;
+  const { user } = useUser();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const claims = useQuery((api as any).copyright.getStoreCopyrightClaims, {
-    storeId,
-  }) as CopyrightClaim[] | undefined;
+  const store = useQuery((api as any).stores.getUserStore, user?.id ? { userId: user.id } : "skip");
+
+  const storeId = store?._id as Id<"stores"> | undefined;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const strikeStatus = useQuery((api as any).copyright.getStoreStrikeStatus, {
-    storeId,
-  }) as { strikes: number; isSuspended: boolean; strikeHistory: any[] } | undefined;
+  const claims = useQuery(
+    (api as any).copyright.getStoreCopyrightClaims,
+    storeId ? { storeId } : "skip"
+  ) as CopyrightClaim[] | undefined;
 
-  const isLoading = claims === undefined || strikeStatus === undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const strikeStatus = useQuery(
+    (api as any).copyright.getStoreStrikeStatus,
+    storeId ? { storeId } : "skip"
+  ) as { strikes: number; isSuspended: boolean; strikeHistory: any[] } | undefined;
+
+  const isLoading =
+    store === undefined || (storeId && (claims === undefined || strikeStatus === undefined));
+
+  if (!user) {
+    return (
+      <div className="mx-auto max-w-5xl px-8 pt-10">
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Not Authenticated</AlertTitle>
+          <AlertDescription>Please sign in to view your copyright status.</AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  if (store === null) {
+    return (
+      <div className="mx-auto max-w-5xl px-8 pt-10">
+        <Alert>
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>No Store Found</AlertTitle>
+          <AlertDescription>
+            You need to create a store before you can view copyright claims.
+          </AlertDescription>
+        </Alert>
+        <Button asChild className="mt-4">
+          <Link href="/dashboard?mode=create">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Go to Dashboard
+          </Link>
+        </Button>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -123,6 +163,15 @@ export default function CopyrightDashboardPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-8 pb-24 pt-10">
+      <div className="mb-6">
+        <Button variant="ghost" asChild size="sm">
+          <Link href="/dashboard?mode=create">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Dashboard
+          </Link>
+        </Button>
+      </div>
+
       <div className="mb-8">
         <h1 className="mb-2 text-3xl font-bold">Copyright & DMCA</h1>
         <p className="text-gray-600 dark:text-gray-400">
