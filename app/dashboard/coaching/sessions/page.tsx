@@ -34,7 +34,10 @@ import {
   AlertCircle,
   Loader2,
   MessageCircle,
+  Settings,
+  Pencil,
 } from "lucide-react";
+import Link from "next/link";
 import { format, formatDistanceToNow, isPast } from "date-fns";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
@@ -89,6 +92,11 @@ export default function CoachSessionsPage() {
     user?.id ? { coachId: user.id } : "skip"
   );
 
+  const coachingProducts = useQuery(
+    api.coachingProducts.getCoachingProductsByCoach,
+    user?.id ? { coachId: user.id } : "skip"
+  );
+
   const updateStatus = useMutation(api.coachingProducts.updateSessionStatus);
 
   const handleStatusChange = async (
@@ -129,6 +137,49 @@ export default function CoachSessionsPage() {
         <h1 className="text-3xl font-bold">Coaching Sessions</h1>
         <p className="mt-1 text-muted-foreground">Manage your coaching bookings</p>
       </div>
+
+      {coachingProducts && coachingProducts.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Settings className="h-5 w-5" />
+                Your Coaching Products
+              </CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {coachingProducts.map((product) => (
+                <div
+                  key={product._id}
+                  className="flex items-center justify-between rounded-lg border p-3"
+                >
+                  <div className="flex items-center gap-3">
+                    <div>
+                      <p className="font-medium">{product.title}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {product.duration || 60} min · ${product.price}
+                        {!product.isPublished && (
+                          <Badge variant="outline" className="ml-2">
+                            Draft
+                          </Badge>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href={`/dashboard/coaching/${product._id}/edit`}>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Edit Schedule
+                    </Link>
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <Card>

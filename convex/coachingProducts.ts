@@ -95,7 +95,45 @@ export const getPublishedCoachingProductsByStore = query({
   },
 });
 
-// Get single coaching product
+export const getCoachingProductsByCoach = query({
+  args: { coachId: v.string() },
+  returns: v.array(
+    v.object({
+      _id: v.id("digitalProducts"),
+      _creationTime: v.number(),
+      title: v.string(),
+      description: v.optional(v.string()),
+      price: v.number(),
+      imageUrl: v.optional(v.string()),
+      storeId: v.string(),
+      isPublished: v.optional(v.boolean()),
+      duration: v.optional(v.number()),
+      sessionType: v.optional(v.string()),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const products = await ctx.db
+      .query("digitalProducts")
+      .withIndex("by_userId", (q) => q.eq("userId", args.coachId))
+      .collect();
+
+    return products
+      .filter((p) => (p as any).productType === "coaching")
+      .map((p) => ({
+        _id: p._id,
+        _creationTime: p._creationTime,
+        title: p.title,
+        description: p.description,
+        price: p.price,
+        imageUrl: p.imageUrl,
+        storeId: p.storeId,
+        isPublished: p.isPublished,
+        duration: (p as any).duration,
+        sessionType: (p as any).sessionType,
+      }));
+  },
+});
+
 export const getCoachingProductById = query({
   args: { productId: v.id("digitalProducts") },
   returns: v.union(

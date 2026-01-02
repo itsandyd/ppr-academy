@@ -1,25 +1,64 @@
 "use client";
 
+import { useEffect } from "react";
 import { useCoachingCreation } from "../context";
 import { useRouter } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageCircle, Shield, Zap, CheckCircle } from "lucide-react";
+import { MessageCircle, Bell, CheckCircle, Shield, AlertCircle, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export function DiscordForm() {
   const { state, updateData, saveCoaching } = useCoachingCreation();
   const router = useRouter();
+  const { user } = useUser();
+
+  const discordConnection = useQuery(
+    api.discordPublic.getUserDiscordConnection,
+    user?.id ? { userId: user.id } : "skip"
+  );
+
+  useEffect(() => {
+    updateData("discord", {
+      discordConfig: {
+        ...state.data.discordConfig,
+        requireDiscord: true,
+        autoCreateChannel: true,
+      } as any,
+    });
+  }, []);
 
   const handleNext = async () => {
     await saveCoaching();
-    router.push(`/dashboard/create/coaching?step=availability${state.coachingId ? `&coachingId=${state.coachingId}` : ''}`);
+    router.push(
+      `/dashboard/create/coaching?step=availability${state.coachingId ? `&coachingId=${state.coachingId}` : ""}`
+    );
   };
 
   const handleBack = () => {
-    router.push(`/dashboard/create/coaching?step=pricing${state.coachingId ? `&coachingId=${state.coachingId}` : ''}`);
+    const price = state.data.price;
+    const isFree = !price || price === "0" || parseFloat(price) === 0;
+    const previousStep = isFree ? "follow-gate" : "pricing";
+    router.push(
+      `/dashboard/create/coaching?step=${previousStep}${state.coachingId ? `&coachingId=${state.coachingId}` : ""}`
+    );
+  };
+
+  const handleConnectDiscord = () => {
+    const returnUrl = `/dashboard/create/coaching?step=discord${state.coachingId ? `&coachingId=${state.coachingId}` : ""}`;
+    const clientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID;
+    if (!clientId) {
+      alert("Discord not configured. Please contact support.");
+      return;
+    }
+    const redirectUri = encodeURIComponent(`${window.location.origin}/api/auth/discord/callback`);
+    const scope = encodeURIComponent("identify guilds.join");
+    const stateParam = encodeURIComponent(returnUrl);
+    window.location.href = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&state=${stateParam}`;
   };
 
   const updateDiscordConfig = (field: string, value: any) => {
@@ -27,136 +66,147 @@ export function DiscordForm() {
       discordConfig: {
         ...state.data.discordConfig,
         [field]: value,
-      } as any
+      } as any,
     });
   };
+
+  const isCoachConnected = !!discordConnection;
+  const isLoading = discordConnection === undefined;
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold">Discord Integration</h2>
-        <p className="text-muted-foreground mt-1">
-          Auto-create private channels for each booking
+        <h2 className="text-2xl font-bold">Discord Setup</h2>
+        <p className="mt-1 text-muted-foreground">
+          All coaching sessions happen on PPR Academy Discord
         </p>
       </div>
 
-      {/* Require Discord */}
-      <Card className="border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-950/20">
+      <Card className="border-purple-200 bg-purple-50 dark:border-purple-800 dark:bg-purple-950/20">
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <MessageCircle className="w-5 h-5 text-purple-600" />
-                Require Discord (Recommended)
-              </CardTitle>
-              <CardDescription>Students must connect Discord to book</CardDescription>
-            </div>
-            <Switch
-              checked={state.data.discordConfig?.requireDiscord}
-              onCheckedChange={(checked) => updateDiscordConfig("requireDiscord", checked)}
-            />
-          </div>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5 text-purple-600" />
+            Platform Verified Sessions
+          </CardTitle>
+          <CardDescription>
+            To ensure quality and accountability, all coaching sessions are conducted on our Discord
+            server
+          </CardDescription>
         </CardHeader>
-        {state.data.discordConfig?.requireDiscord && (
-          <CardContent>
-            <div className="space-y-3 text-sm">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-purple-600" />
-                <span>Students see Discord connect button during checkout</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-purple-600" />
-                <span>Booking blocked until Discord is connected</span>
-              </div>
+        <CardContent>
+          <div className="space-y-3 text-sm">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-purple-600" />
+              <span>Students must connect Discord to book</span>
             </div>
-          </CardContent>
-        )}
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-purple-600" />
+              <span>Private channel created automatically for each session</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-purple-600" />
+              <span>Only you and your student can access the channel</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-purple-600" />
+              <span>Channel cleaned up after session completion</span>
+            </div>
+          </div>
+        </CardContent>
       </Card>
 
-      {/* Auto-Create Channels */}
-      <Card>
+      <Card
+        className={
+          isCoachConnected
+            ? "border-green-200 dark:border-green-800"
+            : "border-orange-200 dark:border-orange-800"
+        }
+      >
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
-                <Zap className="w-5 h-5 text-green-600" />
-                Auto-Create Private Channels
+                <MessageCircle className="h-5 w-5" />
+                Your Discord Connection
               </CardTitle>
-              <CardDescription>Automatically create a private Discord channel for each booking</CardDescription>
+              <CardDescription>
+                You need Discord connected to receive session notifications
+              </CardDescription>
             </div>
-            <Switch
-              checked={state.data.discordConfig?.autoCreateChannel}
-              onCheckedChange={(checked) => updateDiscordConfig("autoCreateChannel", checked)}
-            />
+            {isLoading ? (
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            ) : isCoachConnected ? (
+              <Badge variant="default" className="bg-green-600">
+                <CheckCircle className="mr-1 h-3 w-3" />
+                Connected
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="border-orange-500 text-orange-600">
+                <AlertCircle className="mr-1 h-3 w-3" />
+                Not Connected
+              </Badge>
+            )}
           </div>
         </CardHeader>
-        {state.data.discordConfig?.autoCreateChannel && (
-          <CardContent>
-            <div className="space-y-4">
-              <div className="space-y-3 text-sm">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  <span>Channel created when booking confirmed</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  <span>Only you and the student have access</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  <span>Channel includes session details and countdown</span>
-                </div>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Checking connection...
+            </div>
+          ) : isCoachConnected ? (
+            <div className="flex items-center gap-3 rounded-lg bg-green-50 p-3 dark:bg-green-950/20">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 font-bold text-green-700 dark:bg-green-900 dark:text-green-300">
+                {discordConnection.discordUsername?.[0]?.toUpperCase() || "?"}
               </div>
-
-              <div className="p-3 bg-muted rounded-lg">
+              <div>
+                <p className="font-medium">{discordConnection.discordUsername}</p>
                 <p className="text-xs text-muted-foreground">
-                  <strong>Channel name format:</strong> coaching-studentname-dec15
+                  Connected {new Date(discordConnection.connectedAt).toLocaleDateString()}
                 </p>
               </div>
             </div>
-          </CardContent>
-        )}
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-orange-700 dark:text-orange-300">
+                Connect your Discord to be added to session channels and receive booking
+                notifications.
+              </p>
+              <Button onClick={handleConnectDiscord} variant="outline" className="w-full">
+                <MessageCircle className="mr-2 h-4 w-4" />
+                Connect Discord
+              </Button>
+            </div>
+          )}
+        </CardContent>
       </Card>
 
-      {/* Notifications */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
-                <Shield className="w-5 h-5 text-blue-600" />
+                <Bell className="h-5 w-5 text-blue-600" />
                 Booking Notifications
               </CardTitle>
-              <CardDescription>Get notified in Discord when someone books</CardDescription>
+              <CardDescription>Get a Discord DM when someone books a session</CardDescription>
             </div>
             <Switch
-              checked={state.data.discordConfig?.notifyOnBooking}
+              checked={state.data.discordConfig?.notifyOnBooking ?? true}
               onCheckedChange={(checked) => updateDiscordConfig("notifyOnBooking", checked)}
             />
           </div>
         </CardHeader>
       </Card>
 
-      {/* Info */}
-      <Card className="bg-muted/50 border-dashed">
-        <CardContent className="p-4">
-          <p className="text-sm text-muted-foreground">
-            💡 <strong>Discord integration is optional</strong> but highly recommended. 
-            It creates a seamless experience for both you and your students.
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* Navigation */}
       <div className="flex justify-between pt-4">
         <Button variant="outline" onClick={handleBack}>
           ← Back
         </Button>
-        <Button onClick={handleNext}>
-          Continue to Availability →
+        <Button onClick={handleNext} disabled={!isCoachConnected}>
+          {!isCoachConnected ? "Connect Discord to Continue" : "Continue to Availability →"}
         </Button>
       </div>
     </div>
   );
 }
-

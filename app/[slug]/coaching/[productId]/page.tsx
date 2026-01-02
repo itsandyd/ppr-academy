@@ -113,7 +113,7 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
       return;
     }
 
-    if (product.discordRequired && !discordConnection?.isConnected) {
+    if (!discordConnection?.isConnected) {
       toast.error("Please connect your Discord account first");
       return;
     }
@@ -413,27 +413,49 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
                   </div>
                 </div>
 
-                {product.discordRequired && (
-                  <div
-                    className={`rounded-lg p-3 ${discordConnection?.isConnected ? "bg-green-50 dark:bg-green-950/20" : "bg-yellow-50 dark:bg-yellow-950/20"}`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <MessageCircle
-                        className={`h-4 w-4 ${discordConnection?.isConnected ? "text-green-600" : "text-yellow-600"}`}
-                      />
-                      <span className="text-sm font-medium">
-                        {discordConnection?.isConnected
-                          ? `Discord: ${discordConnection.discordUsername}`
-                          : "Discord Required"}
-                      </span>
-                    </div>
-                    {!discordConnection?.isConnected && (
-                      <Button variant="outline" size="sm" className="mt-2 w-full" asChild>
-                        <Link href="/dashboard/settings/discord">Connect Discord</Link>
-                      </Button>
-                    )}
+                <div
+                  className={`rounded-lg p-3 ${discordConnection?.isConnected ? "bg-green-50 dark:bg-green-950/20" : "bg-orange-50 dark:bg-orange-950/20"}`}
+                >
+                  <div className="flex items-center gap-2">
+                    <MessageCircle
+                      className={`h-4 w-4 ${discordConnection?.isConnected ? "text-green-600" : "text-orange-600"}`}
+                    />
+                    <span className="text-sm font-medium">
+                      {discordConnection?.isConnected
+                        ? `Discord: ${discordConnection.discordUsername}`
+                        : "Discord Required"}
+                    </span>
                   </div>
-                )}
+                  {!discordConnection?.isConnected && (
+                    <>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Sessions are held on Discord for quality assurance
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-2 w-full"
+                        onClick={() => {
+                          const returnUrl = window.location.pathname;
+                          const clientId = process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID;
+                          if (!clientId) {
+                            toast.error("Discord not configured");
+                            return;
+                          }
+                          const redirectUri = encodeURIComponent(
+                            `${window.location.origin}/api/auth/discord/callback`
+                          );
+                          const scope = encodeURIComponent("identify guilds.join");
+                          const stateParam = encodeURIComponent(returnUrl);
+                          window.location.href = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&state=${stateParam}`;
+                        }}
+                      >
+                        <MessageCircle className="mr-2 h-4 w-4" />
+                        Connect Discord
+                      </Button>
+                    </>
+                  )}
+                </div>
 
                 {!userLoaded ? (
                   <Button disabled className="w-full">
@@ -453,10 +475,7 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
                     className="w-full"
                     size="lg"
                     disabled={
-                      !selectedDate ||
-                      !selectedSlot ||
-                      isBooking ||
-                      (product.discordRequired && !discordConnection?.isConnected)
+                      !selectedDate || !selectedSlot || isBooking || !discordConnection?.isConnected
                     }
                     onClick={handleBookSession}
                   >
