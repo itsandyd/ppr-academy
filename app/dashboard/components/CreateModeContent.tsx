@@ -1,20 +1,20 @@
-'use client';
+"use client";
 
-import { useUser } from '@clerk/nextjs';
-import { useQuery } from 'convex/react';
-import { api } from '@/convex/_generated/api';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { MetricCardEnhanced } from '@/components/ui/metric-card-enhanced';
-import { PostSetupGuidance } from '@/components/dashboard/post-setup-guidance';
-import { OnboardingHints, creatorOnboardingHints } from '@/components/onboarding/onboarding-hints';
-import { AchievementCard, creatorAchievements } from '@/components/gamification/achievement-system';
-import { DiscordStatsWidget } from '@/components/discord/discord-stats-widget';
-import { discordConfig } from '@/lib/discord-config';
-import { NoProductsEmptyState } from '@/components/ui/empty-state-enhanced';
-import { StoreSetupWizardEnhanced } from '@/components/dashboard/store-setup-wizard-enhanced';
+import { useUser } from "@clerk/nextjs";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { MetricCardEnhanced } from "@/components/ui/metric-card-enhanced";
+import { PostSetupGuidance } from "@/components/dashboard/post-setup-guidance";
+import { OnboardingHints, creatorOnboardingHints } from "@/components/onboarding/onboarding-hints";
+import { AchievementCard, creatorAchievements } from "@/components/gamification/achievement-system";
+import { DiscordStatsWidget } from "@/components/discord/discord-stats-widget";
+import { discordConfig } from "@/lib/discord-config";
+import { NoProductsEmptyState } from "@/components/ui/empty-state-enhanced";
+import { StoreSetupWizardEnhanced } from "@/components/dashboard/store-setup-wizard-enhanced";
 import {
   Music,
   Package,
@@ -29,59 +29,63 @@ import {
   BarChart3,
   Star,
   Eye,
-} from 'lucide-react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useMemo } from 'react';
-import { toast } from 'sonner';
+  AlertTriangle,
+} from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useMemo } from "react";
+import { toast } from "sonner";
 
 export function CreateModeContent() {
   const { user } = useUser();
   const router = useRouter();
-  
+
   // Get Convex user
-  const convexUser = useQuery(
-    api.users.getUserFromClerk,
-    user?.id ? { clerkId: user.id } : 'skip'
-  );
+  const convexUser = useQuery(api.users.getUserFromClerk, user?.id ? { clerkId: user.id } : "skip");
 
   // Get user's stores
-  const stores = useQuery(
-    api.stores.getStoresByUser,
-    user?.id ? { userId: user.id } : 'skip'
-  );
+  const stores = useQuery(api.stores.getStoresByUser, user?.id ? { userId: user.id } : "skip");
   const storeId = stores?.[0]?._id;
 
   // Fetch created courses (using clerkId)
   const userCourses = useQuery(
     api.courses.getCoursesByUser,
-    convexUser?.clerkId ? { userId: convexUser.clerkId } : 'skip'
+    convexUser?.clerkId ? { userId: convexUser.clerkId } : "skip"
   );
 
   // Fetch digital products (using storeId)
   const digitalProducts = useQuery(
     api.digitalProducts.getProductsByStore,
-    storeId ? { storeId } : 'skip'
+    storeId ? { storeId } : "skip"
   );
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const copyrightClaims = useQuery(
+    (api as any).copyright.getStoreCopyrightClaims,
+    storeId ? { storeId } : "skip"
+  ) as Array<{ status: string }> | undefined;
+
+  const pendingClaimsCount = copyrightClaims?.filter((c) => c.status === "pending").length || 0;
 
   // Combine products for unified display
   const products = useMemo(() => {
     const coursesToUse = userCourses || [];
     const digitalProductsToUse = digitalProducts || [];
-    
+
     const courseProducts = coursesToUse.map((course: any) => ({
       ...course,
-      type: 'course' as const,
+      type: "course" as const,
       price: course.price || 0,
       downloadCount: 0,
-      category: course.category || 'Music Production'
+      category: course.category || "Music Production",
     }));
 
     const digitalProductItems = digitalProductsToUse.map((product: any) => ({
       ...product,
-      type: 'digital' as const,
+      type: "digital" as const,
       downloadCount: (product as any).downloadCount || 0,
-      category: (product as any).category || 'Sample Pack'
+      category: (product as any).category || "Sample Pack",
     }));
 
     return [...courseProducts, ...digitalProductItems];
@@ -90,64 +94,70 @@ export function CreateModeContent() {
   // Calculate metrics
   const metrics = useMemo(() => {
     const totalReleases = products.length;
-    const totalDownloads = products.reduce((sum: number, p: any) => sum + (p.downloadCount || 0), 0);
-    const totalRevenue = products.reduce((sum: number, p: any) => sum + ((p.price || 0) * (p.downloadCount || 0)), 0);
+    const totalDownloads = products.reduce(
+      (sum: number, p: any) => sum + (p.downloadCount || 0),
+      0
+    );
+    const totalRevenue = products.reduce(
+      (sum: number, p: any) => sum + (p.price || 0) * (p.downloadCount || 0),
+      0
+    );
     const avgRating = 4.5;
 
     return {
       totalReleases,
-      totalDownloads, 
+      totalDownloads,
       totalRevenue,
-      avgRating
+      avgRating,
     };
   }, [products]);
 
   // Quick actions for music creators
   const quickActions = useMemo(() => {
-    const baseStoreId = storeId || 'setup';
+    const baseStoreId = storeId || "setup";
     return [
       {
         title: "Upload Sample Pack",
         description: "Share your beats and loops",
         icon: Music,
         color: "from-purple-500 to-pink-500",
-        href: `/dashboard/create/pack?type=sample-pack`
+        href: `/dashboard/create/pack?type=sample-pack`,
       },
       {
         title: "Create Preset",
         description: "Upload synth presets",
         icon: Package,
-        color: "from-blue-500 to-cyan-500", 
-        href: `/dashboard/create/pack?type=preset-pack`
+        color: "from-blue-500 to-cyan-500",
+        href: `/dashboard/create/pack?type=preset-pack`,
       },
       {
         title: "New Course",
         description: "Teach production skills",
         icon: Play,
         color: "from-green-500 to-emerald-500",
-        href: `/dashboard/create/course?category=course`
+        href: `/dashboard/create/course?category=course`,
       },
       {
         title: "Offer Coaching",
         description: "1-on-1 mentoring",
         icon: Headphones,
         color: "from-orange-500 to-red-500",
-        href: `/dashboard/create/coaching?category=coaching`
+        href: `/dashboard/create/coaching?category=coaching`,
       },
       {
         title: "View Analytics",
         description: "Track your performance",
         icon: BarChart3,
         color: "from-indigo-500 to-purple-500",
-        href: `/store/${baseStoreId}/analytics`
+        href: `/store/${baseStoreId}/analytics`,
       },
       {
         title: "Lead Magnet Ideas",
         description: "Generate visual ideas",
         icon: Star,
         color: "from-amber-500 to-yellow-500",
-        href: `/dashboard/lead-magnet-ideas`
-      }
+        href: `/dashboard/lead-magnet-ideas`,
+      },
     ];
   }, [storeId]);
 
@@ -162,16 +172,16 @@ export function CreateModeContent() {
     return (
       <div className="space-y-6">
         <div className="text-center">
-          <h2 className="text-2xl font-bold mb-2">Welcome to Creator Mode! 🎨</h2>
+          <h2 className="mb-2 text-2xl font-bold">Welcome to Creator Mode! 🎨</h2>
           <p className="text-muted-foreground">
             Let's set up your creator store to start selling your music content
           </p>
         </div>
-        <StoreSetupWizardEnhanced 
+        <StoreSetupWizardEnhanced
           onStoreCreated={(storeId) => {
             // Refresh the page to show the new store
             window.location.reload();
-          }} 
+          }}
         />
       </div>
     );
@@ -185,12 +195,13 @@ export function CreateModeContent() {
       {/* Welcome Header */}
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
-            <Music className="w-6 h-6 text-white" />
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-r from-purple-500 to-pink-500">
+            <Music className="h-6 w-6 text-white" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-foreground">
-              Welcome back, {user.firstName || user.primaryEmailAddress?.emailAddress?.split('@')[0]}! 🎵
+              Welcome back,{" "}
+              {user.firstName || user.primaryEmailAddress?.emailAddress?.split("@")[0]}! 🎵
             </h1>
             <p className="text-muted-foreground">
               Ready to create some amazing music content today?
@@ -199,10 +210,33 @@ export function CreateModeContent() {
         </div>
       </div>
 
-      {/* Post-Setup Guidance (for new stores) */}
-      {products.length === 0 && storeId && (
-        <PostSetupGuidance storeId={storeId} />
+      {pendingClaimsCount > 0 && (
+        <Alert
+          variant="destructive"
+          className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20"
+        >
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Copyright Claim{pendingClaimsCount > 1 ? "s" : ""} Pending</AlertTitle>
+          <AlertDescription className="flex items-center justify-between">
+            <span>
+              You have {pendingClaimsCount} pending copyright claim
+              {pendingClaimsCount > 1 ? "s" : ""} that require{pendingClaimsCount === 1 ? "s" : ""}{" "}
+              your attention.
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+              className="ml-4 border-red-300 hover:bg-red-100 dark:border-red-700 dark:hover:bg-red-900/40"
+            >
+              <Link href="/dashboard/copyright">Review Claims</Link>
+            </Button>
+          </AlertDescription>
+        </Alert>
       )}
+
+      {/* Post-Setup Guidance (for new stores) */}
+      {products.length === 0 && storeId && <PostSetupGuidance storeId={storeId} />}
 
       {/* Custom Domain Promotion (if not set up) */}
       {stores?.[0] && !(stores[0] as any).customDomain && (
@@ -210,11 +244,11 @@ export function CreateModeContent() {
           <CardContent className="p-6">
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
+                <div className="mb-2 flex items-center gap-2">
                   <Badge className="bg-chart-1 text-primary-foreground">Pro Feature</Badge>
                 </div>
-                <h3 className="text-lg font-bold mb-2">Use Your Own Domain</h3>
-                <p className="text-muted-foreground mb-4">
+                <h3 className="mb-2 text-lg font-bold">Use Your Own Domain</h3>
+                <p className="mb-4 text-muted-foreground">
                   Point your domain (like beatsbymike.com) to your storefront and build your brand.
                 </p>
                 <div className="flex gap-3">
@@ -223,12 +257,15 @@ export function CreateModeContent() {
                       Connect Your Domain
                     </Button>
                   </Link>
-                  <Button variant="outline" onClick={() => {
-                    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://ppr-academy.com';
-                    const domain = appUrl.replace('https://', '').replace('http://', '');
-                    navigator.clipboard.writeText(`${appUrl}/${stores?.[0]?.slug}`);
-                    toast.success(`Copied: ${domain}/${stores?.[0]?.slug}`);
-                  }}>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppr-academy.com";
+                      const domain = appUrl.replace("https://", "").replace("http://", "");
+                      navigator.clipboard.writeText(`${appUrl}/${stores?.[0]?.slug}`);
+                      toast.success(`Copied: ${domain}/${stores?.[0]?.slug}`);
+                    }}
+                  >
                     Copy Shareable Link
                   </Button>
                 </div>
@@ -239,7 +276,7 @@ export function CreateModeContent() {
       )}
 
       {/* Onboarding Hints */}
-      <OnboardingHints 
+      <OnboardingHints
         hints={creatorOnboardingHints}
         storageKey="creator-dashboard-hints"
         autoRotate={true}
@@ -248,26 +285,26 @@ export function CreateModeContent() {
 
       {/* Quick Actions */}
       <div>
-        <h2 className="text-lg font-semibold mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <h2 className="mb-4 text-lg font-semibold">Quick Actions</h2>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           {quickActions.map((action) => (
-            <Card 
+            <Card
               key={action.title}
-              className="group cursor-pointer hover:shadow-md transition-all duration-200 border-border"
+              className="group cursor-pointer border-border transition-all duration-200 hover:shadow-md"
             >
               <Link href={action.href}>
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-lg bg-gradient-to-r ${action.color} flex items-center justify-center flex-shrink-0`}>
-                      <action.icon className="w-5 h-5 text-white" />
+                    <div
+                      className={`h-10 w-10 rounded-lg bg-gradient-to-r ${action.color} flex flex-shrink-0 items-center justify-center`}
+                    >
+                      <action.icon className="h-5 w-5 text-white" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h3 className="font-medium text-sm text-foreground group-hover:text-purple-600 transition-colors">
+                      <h3 className="text-sm font-medium text-foreground transition-colors group-hover:text-purple-600">
                         {action.title}
                       </h3>
-                      <p className="text-xs text-muted-foreground">
-                        {action.description}
-                      </p>
+                      <p className="text-xs text-muted-foreground">{action.description}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -278,7 +315,7 @@ export function CreateModeContent() {
       </div>
 
       {/* Metrics Overview - Enhanced */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
         <MetricCardEnhanced
           title="Total Releases"
           value={metrics.totalReleases}
@@ -288,7 +325,7 @@ export function CreateModeContent() {
           trend={{
             value: 12,
             label: "vs last month",
-            direction: "up"
+            direction: "up",
           }}
           sparklineData={[2, 3, 3, 5, 6, 8, 10]}
         />
@@ -302,7 +339,7 @@ export function CreateModeContent() {
           trend={{
             value: 8,
             label: "vs last month",
-            direction: "up"
+            direction: "up",
           }}
           sparklineData={[10, 15, 12, 20, 25, 30, 35]}
         />
@@ -316,7 +353,7 @@ export function CreateModeContent() {
           trend={{
             value: 15,
             label: "vs last month",
-            direction: "up"
+            direction: "up",
           }}
           sparklineData={[100, 150, 120, 200, 250, 300, 350]}
         />
@@ -330,22 +367,23 @@ export function CreateModeContent() {
           trend={{
             value: 0,
             label: "No change",
-            direction: "neutral"
+            direction: "neutral",
           }}
         />
       </div>
 
       {/* Content Breakdown */}
       <div>
-        <h2 className="text-lg font-semibold mb-4">Content Breakdown</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <h2 className="mb-4 text-lg font-semibold">Content Breakdown</h2>
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
           <Card className="text-center">
             <CardContent className="p-6">
-              <div className="w-12 h-12 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                <Music className="w-6 h-6 text-purple-600" />
+              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-900/20">
+                <Music className="h-6 w-6 text-purple-600" />
               </div>
               <p className="text-2xl font-bold text-foreground">
-                {digitalProducts?.filter((p: any) => p.productCategory === 'sample-pack').length || 0}
+                {digitalProducts?.filter((p: any) => p.productCategory === "sample-pack").length ||
+                  0}
               </p>
               <p className="text-sm text-muted-foreground">Sample Packs</p>
             </CardContent>
@@ -353,11 +391,12 @@ export function CreateModeContent() {
 
           <Card className="text-center">
             <CardContent className="p-6">
-              <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                <Package className="w-6 h-6 text-blue-600" />
+              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/20">
+                <Package className="h-6 w-6 text-blue-600" />
               </div>
               <p className="text-2xl font-bold text-foreground">
-                {digitalProducts?.filter((p: any) => p.productCategory === 'preset-pack').length || 0}
+                {digitalProducts?.filter((p: any) => p.productCategory === "preset-pack").length ||
+                  0}
               </p>
               <p className="text-sm text-muted-foreground">Presets</p>
             </CardContent>
@@ -365,8 +404,8 @@ export function CreateModeContent() {
 
           <Card className="text-center">
             <CardContent className="p-6">
-              <div className="w-12 h-12 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                <Play className="w-6 h-6 text-green-600" />
+              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/20">
+                <Play className="h-6 w-6 text-green-600" />
               </div>
               <p className="text-2xl font-bold text-foreground">{userCourses?.length || 0}</p>
               <p className="text-sm text-muted-foreground">Courses</p>
@@ -375,11 +414,11 @@ export function CreateModeContent() {
 
           <Card className="text-center">
             <CardContent className="p-6">
-              <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                <Headphones className="w-6 h-6 text-orange-600" />
+              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/20">
+                <Headphones className="h-6 w-6 text-orange-600" />
               </div>
               <p className="text-2xl font-bold text-foreground">
-                {digitalProducts?.filter((p: any) => p.productCategory === 'coaching').length || 0}
+                {digitalProducts?.filter((p: any) => p.productCategory === "coaching").length || 0}
               </p>
               <p className="text-sm text-muted-foreground">Coaching</p>
             </CardContent>
@@ -389,19 +428,19 @@ export function CreateModeContent() {
 
       {/* Achievements Section */}
       <div>
-        <div className="flex items-center justify-between mb-4">
+        <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold">Your Achievements</h2>
           <Button variant="outline" size="sm" asChild>
             <Link href="/achievements">View All</Link>
           </Button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {creatorAchievements.slice(0, 3).map((achievement) => (
             <AchievementCard
               key={achievement.id}
               achievement={{
                 ...achievement,
-                unlocked: achievement.id === 'first-product'
+                unlocked: achievement.id === "first-product",
               }}
             />
           ))}
@@ -410,17 +449,17 @@ export function CreateModeContent() {
 
       {/* Discord Community */}
       <div>
-        <h2 className="text-lg font-semibold mb-4">Community</h2>
+        <h2 className="mb-4 text-lg font-semibold">Community</h2>
         <DiscordStatsWidget inviteUrl={discordConfig.inviteUrl} />
       </div>
 
       {/* Recent Products */}
       {products.length > 0 && (
         <div>
-          <div className="flex items-center justify-between mb-4">
+          <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-semibold">Recent Releases</h2>
             <Button variant="outline" size="sm" asChild>
-              <Link href={`/store/${storeId || 'setup'}/products`}>View All</Link>
+              <Link href={`/store/${storeId || "setup"}/products`}>View All</Link>
             </Button>
           </div>
           <div className="space-y-4">
@@ -428,22 +467,20 @@ export function CreateModeContent() {
               <Card key={product._id}>
                 <CardContent className="p-4">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                      {product.type === 'course' ? (
-                        <Play className="w-6 h-6 text-white" />
+                    <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-r from-purple-500 to-pink-500">
+                      {product.type === "course" ? (
+                        <Play className="h-6 w-6 text-white" />
                       ) : (
-                        <Music className="w-6 h-6 text-white" />
+                        <Music className="h-6 w-6 text-white" />
                       )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-foreground truncate">{product.title}</h3>
-                      <div className="flex items-center gap-2 mt-1">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="truncate font-medium text-foreground">{product.title}</h3>
+                      <div className="mt-1 flex items-center gap-2">
                         <Badge variant="secondary" className="text-xs">
-                          {product.type === 'course' ? 'Course' : 'Digital Product'}
+                          {product.type === "course" ? "Course" : "Digital Product"}
                         </Badge>
-                        <span className="text-sm text-muted-foreground">
-                          ${product.price || 0}
-                        </span>
+                        <span className="text-sm text-muted-foreground">${product.price || 0}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -451,7 +488,7 @@ export function CreateModeContent() {
                         {product.downloadCount || 0} downloads
                       </span>
                       <Button variant="ghost" size="sm">
-                        <Eye className="w-4 h-4" />
+                        <Eye className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
@@ -463,9 +500,7 @@ export function CreateModeContent() {
       )}
 
       {/* Empty State */}
-      {products.length === 0 && (
-        <NoProductsEmptyState storeId={storeId} />
-      )}
+      {products.length === 0 && <NoProductsEmptyState storeId={storeId} />}
     </div>
   );
 }
@@ -474,13 +509,13 @@ function LoadingState() {
   return (
     <div className="space-y-8">
       <Skeleton className="h-32 w-full" />
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
         {[1, 2, 3, 4, 5].map((i) => (
           <Skeleton key={i} className="h-32" />
         ))}
       </div>
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     </div>
   );
