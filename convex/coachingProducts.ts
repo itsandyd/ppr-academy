@@ -240,7 +240,7 @@ export const updateCoachingProduct = mutation({
   handler: async (ctx, args) => {
     try {
       const { productId, ...updates } = args;
-      
+
       await ctx.db.patch(productId, updates);
 
       return { success: true };
@@ -315,9 +315,7 @@ export const bookCoachingSession = mutation({
       const endMinutes = hours * 60 + minutes + duration;
       const endHours = Math.floor(endMinutes / 60);
       const endMins = endMinutes % 60;
-      const endTime = `${String(endHours).padStart(2, "0")}:${String(
-        endMins
-      ).padStart(2, "0")}`;
+      const endTime = `${String(endHours).padStart(2, "0")}:${String(endMins).padStart(2, "0")}`;
 
       // Create session
       const sessionId = await ctx.db.insert("coachingSessions", {
@@ -337,22 +335,348 @@ export const bookCoachingSession = mutation({
       });
 
       // Schedule Discord setup (will create channel and assign role)
-      await ctx.scheduler.runAfter(
-        0,
-        internal.coachingDiscordActions.setupDiscordForSession,
-        {
-          sessionId,
-          coachId,
-          studentId: args.studentId,
-          productId: args.productId,
-        }
-      );
+      await ctx.scheduler.runAfter(0, internal.coachingDiscordActions.setupDiscordForSession, {
+        sessionId,
+        coachId,
+        studentId: args.studentId,
+        productId: args.productId,
+      });
 
       return { success: true, sessionId };
     } catch (error: any) {
       console.error("Error booking coaching session:", error);
       return { success: false, error: error.message };
     }
+  },
+});
+
+// ==================== COACH SESSION MANAGEMENT ====================
+
+export const getCoachSessions = query({
+  args: {
+    coachId: v.string(),
+    status: v.optional(v.string()),
+  },
+  returns: v.array(
+    v.object({
+      _id: v.id("coachingSessions"),
+      _creationTime: v.number(),
+      productId: v.id("digitalProducts"),
+      productTitle: v.string(),
+      studentId: v.string(),
+      studentName: v.optional(v.string()),
+      studentEmail: v.optional(v.string()),
+      scheduledDate: v.number(),
+      startTime: v.string(),
+      endTime: v.string(),
+      duration: v.number(),
+      status: v.string(),
+      notes: v.optional(v.string()),
+      totalCost: v.number(),
+      discordSetupComplete: v.optional(v.boolean()),
+    })
+  ),
+  handler: async (ctx, args) => {
+    let sessions = await ctx.db
+      .query("coachingSessions")
+      .withIndex("by_coachId", (q) => q.eq("coachId", args.coachId))
+      .collect();
+
+    if (args.status) {
+      sessions = sessions.filter((s) => s.status === args.status);
+    }
+
+    const enriched = await Promise.all(
+      sessions.map(async (session) => {
+        const product = await ctx.db.get(session.productId);
+        const student = await ctx.db
+          .query("users")
+          .withIndex("by_clerkId", (q) => q.eq("clerkId", session.studentId))
+          .first();
+
+        return {
+          _id: session._id,
+          _creationTime: session._creationTime,
+          productId: session.productId,
+          productTitle: product?.title || "Unknown Session",
+          studentId: session.studentId,
+          studentName: student?.name,
+          studentEmail: student?.email,
+          scheduledDate: session.scheduledDate,
+          startTime: session.startTime,
+          endTime: session.endTime,
+          duration: session.duration,
+          status: session.status,
+          notes: session.notes,
+          totalCost: session.totalCost,
+          discordSetupComplete: session.discordSetupComplete,
+        };
+      })
+    );
+
+    return enriched.sort((a, b) => b.scheduledDate - a.scheduledDate);
+  },
+});
+
+export const updateSessionStatus = mutation({
+  args: {
+    sessionId: v.id("coachingSessions"),
+    status: v.union(
+      v.literal("SCHEDULED"),
+      v.literal("IN_PROGRESS"),
+      v.literal("COMPLETED"),
+      v.literal("CANCELLED"),
+      v.literal("NO_SHOW")
+    ),
+    notes: v.optional(v.string()),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    error: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    try {
+      const updates: Record<string, any> = { status: args.status };
+      if (args.notes !== undefined) {
+        updates.notes = args.notes;
+      }
+      await ctx.db.patch(args.sessionId, updates);
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  },
+});
+
+export const getStudentSessions = query({
+  args: {
+    studentId: v.string(),
+  },
+  returns: v.array(
+    v.object({
+      _id: v.id("coachingSessions"),
+      _creationTime: v.number(),
+      productId: v.id("digitalProducts"),
+      productTitle: v.string(),
+      coachId: v.string(),
+      coachName: v.optional(v.string()),
+      storeName: v.optional(v.string()),
+      storeSlug: v.optional(v.string()),
+      scheduledDate: v.number(),
+      startTime: v.string(),
+      endTime: v.string(),
+      duration: v.number(),
+      status: v.string(),
+      notes: v.optional(v.string()),
+      totalCost: v.number(),
+      discordChannelId: v.optional(v.string()),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const sessions = await ctx.db
+      .query("coachingSessions")
+      .withIndex("by_studentId", (q) => q.eq("studentId", args.studentId))
+      .collect();
+
+    const enriched = await Promise.all(
+      sessions.map(async (session) => {
+        const product = await ctx.db.get(session.productId);
+        const store = product?.storeId
+          ? await ctx.db
+              .query("stores")
+              .filter((q) => q.eq(q.field("_id"), product.storeId))
+              .first()
+          : null;
+
+        return {
+          _id: session._id,
+          _creationTime: session._creationTime,
+          productId: session.productId,
+          productTitle: product?.title || "Coaching Session",
+          coachId: session.coachId,
+          coachName: store?.name,
+          storeName: store?.name,
+          storeSlug: store?.slug,
+          scheduledDate: session.scheduledDate,
+          startTime: session.startTime,
+          endTime: session.endTime,
+          duration: session.duration,
+          status: session.status,
+          notes: session.notes,
+          totalCost: session.totalCost,
+          discordChannelId: session.discordChannelId,
+        };
+      })
+    );
+
+    return enriched.sort((a, b) => b.scheduledDate - a.scheduledDate);
+  },
+});
+
+export const getCoachSessionStats = query({
+  args: { coachId: v.string() },
+  returns: v.object({
+    total: v.number(),
+    upcoming: v.number(),
+    completed: v.number(),
+    cancelled: v.number(),
+    revenue: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    const sessions = await ctx.db
+      .query("coachingSessions")
+      .withIndex("by_coachId", (q) => q.eq("coachId", args.coachId))
+      .collect();
+
+    const now = Date.now();
+    return {
+      total: sessions.length,
+      upcoming: sessions.filter((s) => s.status === "SCHEDULED" && s.scheduledDate > now).length,
+      completed: sessions.filter((s) => s.status === "COMPLETED").length,
+      cancelled: sessions.filter((s) => s.status === "CANCELLED").length,
+      revenue: sessions
+        .filter((s) => s.status === "COMPLETED")
+        .reduce((sum, s) => sum + s.totalCost, 0),
+    };
+  },
+});
+
+// ==================== AVAILABILITY QUERIES ====================
+
+// Get available time slots for a coaching product on a specific date
+export const getAvailableSlots = query({
+  args: {
+    productId: v.id("digitalProducts"),
+    date: v.number(),
+  },
+  returns: v.array(
+    v.object({
+      start: v.string(),
+      end: v.string(),
+      available: v.boolean(),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const product = await ctx.db.get(args.productId);
+    if (!product) return [];
+
+    const availability = (product as any).availability;
+    if (!availability?.weekSchedule?.schedule) return [];
+
+    const dateObj = new Date(args.date);
+    const dayOfWeek = dateObj.toLocaleDateString("en-US", { weekday: "long" }).toLowerCase();
+
+    const daySchedule = availability.weekSchedule.schedule.find(
+      (d: any) => d.day === dayOfWeek && d.enabled
+    );
+
+    if (!daySchedule || !daySchedule.timeSlots) return [];
+
+    const existingSessions = await ctx.db
+      .query("coachingSessions")
+      .withIndex("by_productId", (q) => q.eq("productId", args.productId))
+      .collect();
+
+    const dateStart = new Date(args.date);
+    dateStart.setHours(0, 0, 0, 0);
+    const dateEnd = new Date(args.date);
+    dateEnd.setHours(23, 59, 59, 999);
+
+    const bookedSlots = existingSessions.filter((s) => {
+      return (
+        s.scheduledDate >= dateStart.getTime() &&
+        s.scheduledDate <= dateEnd.getTime() &&
+        s.status !== "CANCELLED"
+      );
+    });
+
+    return daySchedule.timeSlots.map((slot: any) => {
+      const isBooked = bookedSlots.some((s) => s.startTime === slot.start);
+      return {
+        start: slot.start,
+        end: slot.end,
+        available: slot.available && !isBooked,
+      };
+    });
+  },
+});
+
+// Get booked sessions for a date range (for calendar display)
+export const getBookedSessions = query({
+  args: {
+    productId: v.id("digitalProducts"),
+    startDate: v.number(),
+    endDate: v.number(),
+  },
+  returns: v.array(
+    v.object({
+      date: v.number(),
+      startTime: v.string(),
+      endTime: v.string(),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const sessions = await ctx.db
+      .query("coachingSessions")
+      .withIndex("by_productId", (q) => q.eq("productId", args.productId))
+      .collect();
+
+    return sessions
+      .filter(
+        (s) =>
+          s.scheduledDate >= args.startDate &&
+          s.scheduledDate <= args.endDate &&
+          s.status !== "CANCELLED"
+      )
+      .map((s) => ({
+        date: s.scheduledDate,
+        startTime: s.startTime,
+        endTime: s.endTime,
+      }));
+  },
+});
+
+// Get coaching product with full details for booking page
+export const getCoachingProductForBooking = query({
+  args: { productId: v.id("digitalProducts") },
+  returns: v.union(
+    v.object({
+      _id: v.id("digitalProducts"),
+      title: v.string(),
+      description: v.optional(v.string()),
+      price: v.number(),
+      imageUrl: v.optional(v.string()),
+      storeId: v.string(),
+      userId: v.string(),
+      duration: v.optional(v.number()),
+      sessionType: v.optional(v.string()),
+      deliverables: v.optional(v.string()),
+      availability: v.optional(v.any()),
+      discordRequired: v.optional(v.boolean()),
+      pricingModel: v.optional(v.string()),
+    }),
+    v.null()
+  ),
+  handler: async (ctx, args) => {
+    const product = await ctx.db.get(args.productId);
+    if (!product || !product.isPublished) return null;
+    if ((product as any).productType !== "coaching") return null;
+
+    return {
+      _id: product._id,
+      title: product.title,
+      description: product.description,
+      price: product.price,
+      imageUrl: product.imageUrl,
+      storeId: product.storeId,
+      userId: product.userId,
+      duration: (product as any).duration,
+      sessionType: (product as any).sessionType,
+      deliverables: (product as any).deliverables,
+      availability: (product as any).availability,
+      discordRequired: (product as any).discordConfig?.requireDiscord ?? true,
+      pricingModel: (product as any).pricingModel,
+    };
   },
 });
 
@@ -419,4 +743,3 @@ export const getSessionForCleanup = internalQuery({
     };
   },
 });
-

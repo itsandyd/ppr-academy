@@ -11,6 +11,10 @@ export { default as CopyrightClaimNoticeEmail } from "./templates/CopyrightClaim
 export { default as CopyrightClaimResolvedEmail } from "./templates/CopyrightClaimResolvedEmail";
 export { default as CopyrightStrikeEmail } from "./templates/CopyrightStrikeEmail";
 
+export { default as CoachingBookingConfirmationEmail } from "./templates/CoachingBookingConfirmationEmail";
+export { default as CoachingNewBookingEmail } from "./templates/CoachingNewBookingEmail";
+export { default as CoachingSessionReminderEmail } from "./templates/CoachingSessionReminderEmail";
+
 // Export layout
 export { default as EmailLayout } from "./components/EmailLayout";
 

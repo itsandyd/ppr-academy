@@ -47,6 +47,7 @@ import type * as certificates from "../certificates.js";
 import type * as certificatesSchema from "../certificatesSchema.js";
 import type * as clerkSync from "../clerkSync.js";
 import type * as coachingDiscordActions from "../coachingDiscordActions.js";
+import type * as coachingEmails from "../coachingEmails.js";
 import type * as coachingProducts from "../coachingProducts.js";
 import type * as coachingSessionManager from "../coachingSessionManager.js";
 import type * as coachingSessionQueries from "../coachingSessionQueries.js";
@@ -248,6 +249,7 @@ declare const fullApi: ApiFromModules<{
   certificatesSchema: typeof certificatesSchema;
   clerkSync: typeof clerkSync;
   coachingDiscordActions: typeof coachingDiscordActions;
+  coachingEmails: typeof coachingEmails;
   coachingProducts: typeof coachingProducts;
   coachingSessionManager: typeof coachingSessionManager;
   coachingSessionQueries: typeof coachingSessionQueries;

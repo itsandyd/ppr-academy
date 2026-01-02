@@ -15,18 +15,19 @@ export function CoachingFollowGateForm() {
   const router = useRouter();
 
   const handleNext = async () => {
-    // Make sure follow gate is enabled before saving
     if (!state.data.followGateEnabled) {
       updateData("followGate", { followGateEnabled: true });
     }
     await saveCoaching();
-    const coachingType = state.data.coachingType || "sample-coaching";
-    router.push(`/dashboard/create/coaching?type=${coachingType}&step=files${state.coachingId ? `&coachingId=${state.coachingId}` : ''}`);
+    router.push(
+      `/dashboard/create/coaching?step=discord${state.coachingId ? `&coachingId=${state.coachingId}` : ""}`
+    );
   };
 
   const handleBack = () => {
-    const coachingType = state.data.coachingType || "sample-coaching";
-    router.push(`/dashboard/create/coaching?type=${coachingType}&step=pricing${state.coachingId ? `&coachingId=${state.coachingId}` : ''}`);
+    router.push(
+      `/dashboard/create/coaching?step=pricing${state.coachingId ? `&coachingId=${state.coachingId}` : ""}`
+    );
   };
 
   const updateRequirement = (field: string, value: boolean) => {
@@ -48,19 +49,19 @@ export function CoachingFollowGateForm() {
     });
   };
 
-  const canProceed = state.data.followGateRequirements && (
-    state.data.followGateRequirements.requireEmail ||
-    state.data.followGateRequirements.requireInstagram ||
-    state.data.followGateRequirements.requireTiktok ||
-    state.data.followGateRequirements.requireYoutube ||
-    state.data.followGateRequirements.requireSpotify
-  );
+  const canProceed =
+    state.data.followGateRequirements &&
+    (state.data.followGateRequirements.requireEmail ||
+      state.data.followGateRequirements.requireInstagram ||
+      state.data.followGateRequirements.requireTiktok ||
+      state.data.followGateRequirements.requireYoutube ||
+      state.data.followGateRequirements.requireSpotify);
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold">Download Gate</h2>
-        <p className="text-muted-foreground mt-1">
+        <p className="mt-1 text-muted-foreground">
           Require follows or email to unlock your free coaching
         </p>
       </div>
@@ -74,7 +75,7 @@ export function CoachingFollowGateForm() {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Mail className="w-5 h-5 text-muted-foreground" />
+              <Mail className="h-5 w-5 text-muted-foreground" />
               <Label>Require Email</Label>
             </div>
             <Switch
@@ -86,7 +87,7 @@ export function CoachingFollowGateForm() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Instagram className="w-5 h-5 text-muted-foreground" />
+                <Instagram className="h-5 w-5 text-muted-foreground" />
                 <Label>Require Instagram Follow</Label>
               </div>
               <Switch
@@ -107,7 +108,7 @@ export function CoachingFollowGateForm() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <TikTok className="w-5 h-5 text-muted-foreground" />
+                <TikTok className="h-5 w-5 text-muted-foreground" />
                 <Label>Require TikTok Follow</Label>
               </div>
               <Switch
@@ -128,7 +129,7 @@ export function CoachingFollowGateForm() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Youtube className="w-5 h-5 text-muted-foreground" />
+                <Youtube className="h-5 w-5 text-muted-foreground" />
                 <Label>Require YouTube Subscribe</Label>
               </div>
               <Switch
@@ -149,7 +150,7 @@ export function CoachingFollowGateForm() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Music2 className="w-5 h-5 text-muted-foreground" />
+                <Music2 className="h-5 w-5 text-muted-foreground" />
                 <Label>Require Spotify Follow</Label>
               </div>
               <Switch
@@ -196,4 +197,3 @@ export function CoachingFollowGateForm() {
     </div>
   );
 }
-
