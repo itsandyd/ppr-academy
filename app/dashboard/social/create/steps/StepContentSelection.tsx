@@ -270,11 +270,13 @@ export function StepContentSelection() {
   };
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-start justify-between">
+    <div className="space-y-4 sm:space-y-8">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="mb-2 text-2xl font-bold text-foreground">Select Content</h2>
-          <p className="text-muted-foreground">
+          <h2 className="mb-1 text-lg font-bold text-foreground sm:mb-2 sm:text-2xl">
+            Select Content
+          </h2>
+          <p className="text-sm text-muted-foreground sm:text-base">
             Choose content from your courses or paste custom text to generate social media scripts.
           </p>
         </div>
@@ -283,7 +285,7 @@ export function StepContentSelection() {
             variant="outline"
             size="sm"
             onClick={() => setShowDrafts(!showDrafts)}
-            className="gap-2"
+            className="w-full gap-2 sm:w-auto"
           >
             <FolderOpen className="h-4 w-4" />
             {showDrafts ? "Hide" : "Show"} Saved Posts ({savedPosts.length})
@@ -335,33 +337,35 @@ export function StepContentSelection() {
         </Card>
       )}
 
-      <div className="space-y-4">
-        <Label htmlFor="post-title">Post Title (for organization)</Label>
+      <div className="space-y-2 sm:space-y-4">
+        <Label htmlFor="post-title" className="text-sm sm:text-base">
+          Post Title (for organization)
+        </Label>
         <Input
           id="post-title"
           placeholder="e.g., Compression Tips from Chapter 3"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="max-w-md"
+          className="w-full sm:max-w-md"
         />
       </div>
 
       <Tabs value={sourceTab} onValueChange={(v) => setSourceTab(v as "course" | "custom")}>
-        <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="course" className="gap-2">
-            <BookOpen className="h-4 w-4" />
+        <TabsList className="grid w-full grid-cols-2 sm:max-w-md">
+          <TabsTrigger value="course" className="gap-1 text-xs sm:gap-2 sm:text-sm">
+            <BookOpen className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             From Course
           </TabsTrigger>
-          <TabsTrigger value="custom" className="gap-2">
-            <Edit3 className="h-4 w-4" />
+          <TabsTrigger value="custom" className="gap-1 text-xs sm:gap-2 sm:text-sm">
+            <Edit3 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             Custom Text
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="course" className="mt-6 space-y-6">
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="space-y-4">
-              <Label>Select Course</Label>
+        <TabsContent value="course" className="mt-4 space-y-4 sm:mt-6 sm:space-y-6">
+          <div className="grid gap-4 sm:gap-6 md:grid-cols-2">
+            <div className="space-y-2 sm:space-y-4">
+              <Label className="text-sm sm:text-base">Select Course</Label>
               <Select
                 value={selectedCourseId}
                 onValueChange={(v) => {
@@ -383,8 +387,8 @@ export function StepContentSelection() {
               </Select>
             </div>
 
-            <div className="space-y-4">
-              <Label>Select Chapter</Label>
+            <div className="space-y-2 sm:space-y-4">
+              <Label className="text-sm sm:text-base">Select Chapter</Label>
               <Select
                 value={selectedChapterId}
                 onValueChange={(v) => {
@@ -481,15 +485,17 @@ export function StepContentSelection() {
           )}
         </TabsContent>
 
-        <TabsContent value="custom" className="mt-6 space-y-6">
-          <div className="space-y-4">
-            <Label htmlFor="custom-content">Paste Your Content</Label>
+        <TabsContent value="custom" className="mt-4 space-y-4 sm:mt-6 sm:space-y-6">
+          <div className="space-y-2 sm:space-y-4">
+            <Label htmlFor="custom-content" className="text-sm sm:text-base">
+              Paste Your Content
+            </Label>
             <Textarea
               id="custom-content"
               placeholder="Paste your course content, blog post, or any text you want to turn into social media scripts..."
               value={customContent}
               onChange={(e) => setCustomContent(e.target.value)}
-              className="min-h-[400px] font-mono text-sm"
+              className="min-h-[250px] font-mono text-sm sm:min-h-[400px]"
             />
           </div>
         </TabsContent>
@@ -505,25 +511,25 @@ export function StepContentSelection() {
             : "border-orange-500/50 bg-orange-500/5"
         )}
       >
-        <CardContent className="pt-6">
-          <div className="flex items-start gap-4">
+        <CardContent className="p-4 sm:pt-6">
+          <div className="flex items-start gap-3 sm:gap-4">
             {isContentValid ? (
               isContentLong ? (
-                <AlertCircle className="mt-0.5 h-5 w-5 text-amber-500" />
+                <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-500 sm:h-5 sm:w-5" />
               ) : (
-                <CheckCircle className="mt-0.5 h-5 w-5 text-green-500" />
+                <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-500 sm:h-5 sm:w-5" />
               )
             ) : (
-              <AlertCircle className="mt-0.5 h-5 w-5 text-orange-500" />
+              <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-orange-500 sm:h-5 sm:w-5" />
             )}
-            <div className="flex-1">
-              <div className="flex items-center justify-between">
-                <h4 className="font-semibold">Content Status</h4>
-                <Badge variant={isContentValid ? "default" : "secondary"}>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                <h4 className="text-sm font-semibold sm:text-base">Content Status</h4>
+                <Badge variant={isContentValid ? "default" : "secondary"} className="w-fit text-xs">
                   {contentLength.toLocaleString()} characters
                 </Badge>
               </div>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
                 {isContentLong
                   ? "Long content detected. Generation may take longer and use more tokens."
                   : isContentValid
@@ -539,7 +545,7 @@ export function StepContentSelection() {
         <Button
           onClick={handleContinue}
           disabled={!isContentValid || state.isSaving}
-          className="gap-2"
+          className="w-full gap-2 sm:w-auto"
           size="lg"
         >
           {state.isSaving ? (

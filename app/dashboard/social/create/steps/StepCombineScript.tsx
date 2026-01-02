@@ -147,27 +147,31 @@ export function StepCombineScript() {
   }, [combinedScript]);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 sm:space-y-8">
       <div>
-        <h2 className="mb-2 text-2xl font-bold text-foreground">Combine Scripts & Add CTA</h2>
-        <p className="text-muted-foreground">
+        <h2 className="mb-1 text-lg font-bold text-foreground sm:mb-2 sm:text-2xl">
+          Combine Scripts & Add CTA
+        </h2>
+        <p className="text-sm text-muted-foreground sm:text-base">
           Merge your platform scripts into one unified script and add a call-to-action.
         </p>
       </div>
 
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="p-4 sm:p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <Megaphone className="h-5 w-5" />
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <Megaphone className="h-4 w-4 sm:h-5 sm:w-5" />
                 Call-to-Action
               </CardTitle>
-              <CardDescription>Select a template or create a custom CTA</CardDescription>
+              <CardDescription className="text-xs sm:text-sm">
+                Select a template or create a custom CTA
+              </CardDescription>
             </div>
             <Dialog open={showNewTemplateDialog} onOpenChange={setShowNewTemplateDialog}>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
+                <Button variant="outline" size="sm" className="w-full gap-2 sm:w-auto">
                   <Plus className="h-4 w-4" />
                   New Template
                 </Button>
@@ -213,10 +217,10 @@ export function StepCombineScript() {
             </Dialog>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Select Template</Label>
+        <CardContent className="space-y-3 p-4 pt-0 sm:space-y-4 sm:p-6 sm:pt-0">
+          <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label className="text-xs sm:text-sm">Select Template</Label>
               <Select value={selectedTemplateId} onValueChange={handleSelectTemplate}>
                 <SelectTrigger>
                   <SelectValue placeholder="Choose a CTA template" />
@@ -232,38 +236,46 @@ export function StepCombineScript() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label>Keyword</Label>
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label className="text-xs sm:text-sm">Keyword</Label>
               <Input
                 placeholder="e.g., COMPRESSION"
                 value={ctaKeyword}
                 onChange={(e) => setCtaKeyword(e.target.value.toUpperCase())}
+                className="text-sm"
               />
             </div>
           </div>
-          <div className="space-y-2">
-            <Label>CTA Text</Label>
+          <div className="space-y-1.5 sm:space-y-2">
+            <Label className="text-xs sm:text-sm">CTA Text</Label>
             <Textarea
-              placeholder="Comment COMPRESSION and I'll DM you access to my free compression masterclass..."
+              placeholder="Comment COMPRESSION and I'll DM you access..."
               value={ctaText}
               onChange={(e) => setCtaText(e.target.value)}
-              className="min-h-[100px]"
+              className="min-h-[80px] text-sm sm:min-h-[100px]"
             />
           </div>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="p-4 sm:p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <Layers className="h-5 w-5" />
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <Layers className="h-4 w-4 sm:h-5 sm:w-5" />
                 Combined Script
               </CardTitle>
-              <CardDescription>The final unified script for all platforms</CardDescription>
+              <CardDescription className="text-xs sm:text-sm">
+                The final unified script
+              </CardDescription>
             </div>
-            <Button onClick={handleCombineScripts} disabled={isGenerating} className="gap-2">
+            <Button
+              onClick={handleCombineScripts}
+              disabled={isGenerating}
+              className="w-full gap-2 sm:w-auto"
+              size="sm"
+            >
               {isGenerating ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -278,33 +290,39 @@ export function StepCombineScript() {
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
           <Textarea
             value={combinedScript}
             onChange={(e) => setCombinedScript(e.target.value)}
             placeholder="Combined script will appear here..."
-            className="min-h-[400px] font-mono text-sm"
+            className="min-h-[250px] font-mono text-sm sm:min-h-[400px]"
           />
           {combinedScript && (
-            <div className="mt-4 flex items-center gap-2">
-              <Badge variant="secondary">{combinedScript.length} characters</Badge>
-              <Badge variant="outline">
-                ~{Math.ceil(combinedScript.split(/\s+/).length / 150)} min read
+            <div className="mt-3 flex flex-wrap items-center gap-2 sm:mt-4">
+              <Badge variant="secondary" className="text-xs">
+                {combinedScript.length} chars
+              </Badge>
+              <Badge variant="outline" className="text-xs">
+                ~{Math.ceil(combinedScript.split(/\s+/).length / 150)} min
               </Badge>
             </div>
           )}
         </CardContent>
       </Card>
 
-      <div className="flex justify-between">
-        <Button variant="outline" onClick={() => goToStep("scripts")} className="gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
+        <Button
+          variant="outline"
+          onClick={() => goToStep("scripts")}
+          className="order-2 gap-2 sm:order-1"
+        >
           <ChevronLeft className="h-4 w-4" />
           Back
         </Button>
         <Button
           onClick={handleContinue}
           disabled={!combinedScript || state.isSaving}
-          className="gap-2"
+          className="order-1 gap-2 sm:order-2"
           size="lg"
         >
           {state.isSaving ? (

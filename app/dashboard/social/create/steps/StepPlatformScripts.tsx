@@ -94,25 +94,30 @@ export function StepPlatformScripts() {
   const hasAnyScript = tiktokScript || youtubeScript || instagramScript;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 sm:space-y-8">
       <div>
-        <h2 className="mb-2 text-2xl font-bold text-foreground">Generate Platform Scripts</h2>
-        <p className="text-muted-foreground">
+        <h2 className="mb-1 text-lg font-bold text-foreground sm:mb-2 sm:text-2xl">
+          Generate Platform Scripts
+        </h2>
+        <p className="text-sm text-muted-foreground sm:text-base">
           AI will create optimized scripts for TikTok, YouTube Shorts, and Instagram Reels.
         </p>
       </div>
 
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="p-4 sm:p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <CardTitle>Source Content</CardTitle>
-              <CardDescription>{state.data.sourceContent?.length || 0} characters</CardDescription>
+              <CardTitle className="text-base sm:text-lg">Source Content</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
+                {state.data.sourceContent?.length || 0} characters
+              </CardDescription>
             </div>
             <Button
               onClick={handleGenerateAll}
               disabled={isGenerating || !state.data.sourceContent}
-              className="gap-2"
+              className="w-full gap-2 sm:w-auto"
+              size="sm"
             >
               {isGenerating ? (
                 <>
@@ -137,105 +142,124 @@ export function StepPlatformScripts() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="tiktok" className="gap-2">
+          <TabsTrigger value="tiktok" className="gap-1 px-2 text-xs sm:gap-2 sm:px-3 sm:text-sm">
             <TikTokIcon />
-            TikTok
+            <span className="xs:inline hidden">TikTok</span>
             {tiktokScript && (
-              <Badge variant="secondary" className="ml-1">
+              <Badge
+                variant="secondary"
+                className="ml-0.5 hidden text-[10px] sm:ml-1 sm:inline-flex sm:text-xs"
+              >
                 Ready
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="youtube" className="gap-2">
-            <Youtube className="h-4 w-4" />
-            YouTube
+          <TabsTrigger value="youtube" className="gap-1 px-2 text-xs sm:gap-2 sm:px-3 sm:text-sm">
+            <Youtube className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="xs:inline hidden">YouTube</span>
             {youtubeScript && (
-              <Badge variant="secondary" className="ml-1">
+              <Badge
+                variant="secondary"
+                className="ml-0.5 hidden text-[10px] sm:ml-1 sm:inline-flex sm:text-xs"
+              >
                 Ready
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="instagram" className="gap-2">
-            <Instagram className="h-4 w-4" />
-            Instagram
+          <TabsTrigger value="instagram" className="gap-1 px-2 text-xs sm:gap-2 sm:px-3 sm:text-sm">
+            <Instagram className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="xs:inline hidden">IG</span>
             {instagramScript && (
-              <Badge variant="secondary" className="ml-1">
+              <Badge
+                variant="secondary"
+                className="ml-0.5 hidden text-[10px] sm:ml-1 sm:inline-flex sm:text-xs"
+              >
                 Ready
               </Badge>
             )}
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="tiktok" className="mt-6">
+        <TabsContent value="tiktok" className="mt-4 sm:mt-6">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
                 <TikTokIcon />
                 TikTok Script
               </CardTitle>
-              <CardDescription>Fast-paced, hook-driven, under 60 seconds</CardDescription>
+              <CardDescription className="text-xs sm:text-sm">
+                Fast-paced, hook-driven, under 60 seconds
+              </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
               <Textarea
                 value={tiktokScript}
                 onChange={(e) => setTiktokScript(e.target.value)}
                 placeholder="TikTok script will appear here after generation..."
-                className="min-h-[300px] font-mono text-sm"
+                className="min-h-[200px] font-mono text-sm sm:min-h-[300px]"
               />
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="youtube" className="mt-6">
+        <TabsContent value="youtube" className="mt-4 sm:mt-6">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Youtube className="h-5 w-5 text-red-500" />
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <Youtube className="h-4 w-4 text-red-500 sm:h-5 sm:w-5" />
                 YouTube Shorts Script
               </CardTitle>
-              <CardDescription>Educational tone, clear structure</CardDescription>
+              <CardDescription className="text-xs sm:text-sm">
+                Educational tone, clear structure
+              </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
               <Textarea
                 value={youtubeScript}
                 onChange={(e) => setYoutubeScript(e.target.value)}
                 placeholder="YouTube Shorts script will appear here after generation..."
-                className="min-h-[300px] font-mono text-sm"
+                className="min-h-[200px] font-mono text-sm sm:min-h-[300px]"
               />
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="instagram" className="mt-6">
+        <TabsContent value="instagram" className="mt-4 sm:mt-6">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Instagram className="h-5 w-5 text-pink-500" />
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <Instagram className="h-4 w-4 text-pink-500 sm:h-5 sm:w-5" />
                 Instagram Reels Script
               </CardTitle>
-              <CardDescription>Visual-friendly, trendy language</CardDescription>
+              <CardDescription className="text-xs sm:text-sm">
+                Visual-friendly, trendy language
+              </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
               <Textarea
                 value={instagramScript}
                 onChange={(e) => setInstagramScript(e.target.value)}
                 placeholder="Instagram Reels script will appear here after generation..."
-                className="min-h-[300px] font-mono text-sm"
+                className="min-h-[200px] font-mono text-sm sm:min-h-[300px]"
               />
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
 
-      <div className="flex justify-between">
-        <Button variant="outline" onClick={() => goToStep("content")} className="gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
+        <Button
+          variant="outline"
+          onClick={() => goToStep("content")}
+          className="order-2 gap-2 sm:order-1"
+        >
           <ChevronLeft className="h-4 w-4" />
           Back
         </Button>
         <Button
           onClick={handleContinue}
           disabled={!hasAnyScript || state.isSaving}
-          className="gap-2"
+          className="order-1 gap-2 sm:order-2"
           size="lg"
         >
           {state.isSaving ? (

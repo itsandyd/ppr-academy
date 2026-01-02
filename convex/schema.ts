@@ -338,6 +338,23 @@ export default defineSchema({
       )
     ),
     trialEndsAt: v.optional(v.number()),
+    // Copyright Strike System
+    copyrightStrikes: v.optional(v.number()), // 0-3 strikes
+    lastStrikeAt: v.optional(v.number()), // Timestamp of last strike
+    strikeHistory: v.optional(
+      v.array(
+        v.object({
+          strikeNumber: v.number(),
+          reportId: v.string(),
+          reason: v.string(),
+          issuedAt: v.number(),
+          issuedBy: v.string(), // Admin who issued
+        })
+      )
+    ),
+    suspendedAt: v.optional(v.number()), // Account suspension timestamp
+    suspensionReason: v.optional(v.string()),
+    suspensionEndsAt: v.optional(v.number()), // For temporary suspensions
     // Email Sender Configuration (API key handled centrally via environment variables)
     emailConfig: v.optional(
       v.object({
@@ -3115,30 +3132,65 @@ export default defineSchema({
       v.literal("course"),
       v.literal("comment"),
       v.literal("user"),
-      v.literal("product")
+      v.literal("product"),
+      v.literal("sample"),
+      v.literal("copyright")
     ),
     status: v.union(
       v.literal("pending"),
       v.literal("reviewed"),
       v.literal("resolved"),
-      v.literal("dismissed")
+      v.literal("dismissed"),
+      v.literal("counter_notice")
     ),
-    reportedBy: v.string(), // Clerk ID of reporter
+    reportedBy: v.string(),
     reportedAt: v.number(),
     reason: v.string(),
-    contentId: v.string(), // ID of the reported content
+    contentId: v.string(),
     contentTitle: v.string(),
     contentPreview: v.optional(v.string()),
     reporterName: v.string(),
     reportedUserName: v.optional(v.string()),
-    reviewedBy: v.optional(v.string()), // Admin who reviewed
+    reviewedBy: v.optional(v.string()),
     reviewedAt: v.optional(v.number()),
-    resolution: v.optional(v.string()), // Notes about resolution
+    resolution: v.optional(v.string()),
+    storeId: v.optional(v.string()),
+    contentType: v.optional(v.string()),
+    takenDownAt: v.optional(v.number()),
+    restoredAt: v.optional(v.number()),
+    copyrightClaim: v.optional(
+      v.object({
+        claimantName: v.string(),
+        claimantEmail: v.string(),
+        claimantAddress: v.optional(v.string()),
+        claimantPhone: v.optional(v.string()),
+        originalWorkDescription: v.string(),
+        originalWorkUrl: v.optional(v.string()),
+        infringementDescription: v.string(),
+        goodFaithStatement: v.boolean(),
+        accuracyStatement: v.boolean(),
+        signatureDate: v.number(),
+        digitalSignature: v.string(),
+      })
+    ),
+    counterNotice: v.optional(
+      v.object({
+        respondentName: v.string(),
+        respondentEmail: v.string(),
+        respondentAddress: v.string(),
+        explanation: v.string(),
+        statementOfGoodFaith: v.boolean(),
+        consentToJurisdiction: v.boolean(),
+        signatureDate: v.number(),
+        digitalSignature: v.string(),
+      })
+    ),
   })
     .index("by_status", ["status"])
     .index("by_type", ["type"])
     .index("by_reported_by", ["reportedBy"])
-    .index("by_content_id", ["contentId"]),
+    .index("by_content_id", ["contentId"])
+    .index("by_store_id", ["storeId"]),
 
   // Resend Email System (New comprehensive system)
   resendConnections: emailSchema.resendConnectionsTable

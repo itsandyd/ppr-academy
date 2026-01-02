@@ -27,14 +27,15 @@ export const getReportsByStatus = query({
       v.literal("pending"),
       v.literal("reviewed"),
       v.literal("resolved"),
-      v.literal("dismissed")
+      v.literal("dismissed"),
+      v.literal("counter_notice")
     ),
   },
   returns: v.array(v.any()),
   handler: async (ctx, args) => {
     // Verify admin access
     await verifyAdmin(ctx, args.clerkId);
-    
+
     return await ctx.db
       .query("reports")
       .withIndex("by_status", (q) => q.eq("status", args.status))
@@ -52,7 +53,7 @@ export const getAllReports = query({
   handler: async (ctx, args) => {
     // Verify admin access
     await verifyAdmin(ctx, args.clerkId);
-    
+
     return await ctx.db.query("reports").order("desc").collect();
   },
 });
@@ -67,12 +68,12 @@ export const getReportStats = query({
     reviewed: v.number(),
     resolved: v.number(),
     dismissed: v.number(),
+    counter_notice: v.number(),
     total: v.number(),
   }),
   handler: async (ctx, args) => {
-    // Verify admin access
     await verifyAdmin(ctx, args.clerkId);
-    
+
     const allReports = await ctx.db.query("reports").collect();
 
     return {
@@ -80,19 +81,21 @@ export const getReportStats = query({
       reviewed: allReports.filter((r) => r.status === "reviewed").length,
       resolved: allReports.filter((r) => r.status === "resolved").length,
       dismissed: allReports.filter((r) => r.status === "dismissed").length,
+      counter_notice: allReports.filter((r) => r.status === "counter_notice").length,
       total: allReports.length,
     };
   },
 });
 
-// Create a new report
 export const createReport = mutation({
   args: {
     type: v.union(
       v.literal("course"),
       v.literal("comment"),
       v.literal("user"),
-      v.literal("product")
+      v.literal("product"),
+      v.literal("sample"),
+      v.literal("copyright")
     ),
     reportedBy: v.string(),
     reason: v.string(),
@@ -101,6 +104,8 @@ export const createReport = mutation({
     contentPreview: v.optional(v.string()),
     reporterName: v.string(),
     reportedUserName: v.optional(v.string()),
+    storeId: v.optional(v.string()),
+    contentType: v.optional(v.string()),
   },
   returns: v.id("reports"),
   handler: async (ctx, args) => {
@@ -115,6 +120,8 @@ export const createReport = mutation({
       contentPreview: args.contentPreview,
       reporterName: args.reporterName,
       reportedUserName: args.reportedUserName,
+      storeId: args.storeId,
+      contentType: args.contentType,
     });
   },
 });
@@ -130,7 +137,7 @@ export const markAsReviewed = mutation({
   handler: async (ctx, args) => {
     // Verify admin access
     await verifyAdmin(ctx, args.clerkId);
-    
+
     await ctx.db.patch(args.reportId, {
       status: "reviewed",
       reviewedBy: args.reviewedBy,
@@ -152,7 +159,7 @@ export const markAsResolved = mutation({
   handler: async (ctx, args) => {
     // Verify admin access
     await verifyAdmin(ctx, args.clerkId);
-    
+
     await ctx.db.patch(args.reportId, {
       status: "resolved",
       reviewedBy: args.reviewedBy,
@@ -175,7 +182,7 @@ export const markAsDismissed = mutation({
   handler: async (ctx, args) => {
     // Verify admin access
     await verifyAdmin(ctx, args.clerkId);
-    
+
     await ctx.db.patch(args.reportId, {
       status: "dismissed",
       reviewedBy: args.reviewedBy,
@@ -196,7 +203,7 @@ export const deleteReport = mutation({
   handler: async (ctx, args) => {
     // Verify admin access
     await verifyAdmin(ctx, args.clerkId);
-    
+
     await ctx.db.delete(args.reportId);
     return null;
   },
@@ -265,4 +272,3 @@ export const createSampleReports = mutation({
     return null;
   },
 });
-

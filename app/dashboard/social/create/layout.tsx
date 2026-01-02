@@ -131,31 +131,35 @@ function LayoutContent({ children }: SocialCreateLayoutProps) {
   return (
     <div className="min-h-screen">
       <div className="sticky top-0 z-40 border-b border-border/50 bg-card/80 backdrop-blur-lg">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between">
-            <div className="flex items-center gap-4">
+        <div className="mx-auto max-w-5xl px-3 sm:px-6 lg:px-8">
+          <div className="flex h-14 items-center justify-between sm:h-16">
+            <div className="flex items-center gap-2 sm:gap-4">
               <Link href="/dashboard?mode=create">
-                <Button variant="ghost" size="icon" className="rounded-full">
-                  <ArrowLeft className="h-5 w-5" />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-full sm:h-10 sm:w-10"
+                >
+                  <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
               </Link>
-              <div className="rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 p-2">
-                <Sparkles className="h-5 w-5 text-white" />
+              <div className="hidden rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 p-1.5 sm:block sm:p-2">
+                <Sparkles className="h-4 w-4 text-white sm:h-5 sm:w-5" />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-foreground">Social Post Generator</h1>
-                <p className="text-xs text-muted-foreground">
-                  Step {currentStepIndex + 1} of {steps.length}
+                <h1 className="text-sm font-bold text-foreground sm:text-lg">Social Post</h1>
+                <p className="text-[10px] text-muted-foreground sm:text-xs">
+                  Step {currentStepIndex + 1}/{steps.length}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <div className="hidden items-center gap-2 rounded-full bg-muted px-3 py-1 sm:flex">
                 <div className="h-2 w-2 animate-pulse rounded-full bg-green-500"></div>
                 <span className="text-xs text-muted-foreground">Auto-saving</span>
               </div>
-              <Progress value={progressPercentage} className="h-2 w-24" />
-              <span className="text-sm font-medium text-foreground">
+              <Progress value={progressPercentage} className="h-1.5 w-16 sm:h-2 sm:w-24" />
+              <span className="text-xs font-medium text-foreground sm:text-sm">
                 {Math.round(progressPercentage)}%
               </span>
             </div>
@@ -163,10 +167,14 @@ function LayoutContent({ children }: SocialCreateLayoutProps) {
         </div>
       </div>
 
-      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <div className="mb-6 flex items-center justify-center">
-            <div className="flex items-center overflow-x-auto rounded-full border border-border bg-card p-2 shadow-lg">
+      <div className="mx-auto max-w-5xl px-3 py-4 sm:px-6 sm:py-8 lg:px-8">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-4 sm:mb-8"
+        >
+          <div className="mb-6 flex items-center justify-center px-2">
+            <div className="scrollbar-hide flex items-center gap-0 overflow-x-auto rounded-full border border-border bg-card p-1.5 shadow-lg sm:gap-0 sm:p-2">
               {steps.map((step, index) => {
                 const Icon = step.icon;
                 const isActive = currentStep === step.id;
@@ -180,7 +188,7 @@ function LayoutContent({ children }: SocialCreateLayoutProps) {
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       onClick={() => navigateToStep(step.id)}
-                      className={`relative rounded-full p-3 transition-all duration-300 ${
+                      className={`relative flex-shrink-0 rounded-full p-2 transition-all duration-300 sm:p-3 ${
                         isActive
                           ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg"
                           : isComplete || isPrevious
@@ -188,7 +196,7 @@ function LayoutContent({ children }: SocialCreateLayoutProps) {
                             : "bg-muted text-muted-foreground hover:bg-muted/80"
                       }`}
                     >
-                      <Icon className="h-5 w-5" />
+                      <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
                       {isComplete && !isActive && (
                         <div className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-green-500">
                           <CheckCircle className="h-3 w-3 text-white" />
@@ -197,7 +205,7 @@ function LayoutContent({ children }: SocialCreateLayoutProps) {
                     </motion.button>
                     {index < steps.length - 1 && (
                       <div
-                        className={`mx-2 h-0.5 w-8 ${
+                        className={`mx-1 h-0.5 w-4 flex-shrink-0 sm:mx-2 sm:w-8 ${
                           isPrevious || isComplete ? "bg-green-300 dark:bg-green-700" : "bg-border"
                         }`}
                       />
@@ -209,19 +217,19 @@ function LayoutContent({ children }: SocialCreateLayoutProps) {
           </div>
 
           <div className="text-center">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 shadow-sm">
+            <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 shadow-sm sm:mb-4 sm:px-4 sm:py-2">
               <div
-                className={`rounded-lg bg-gradient-to-r p-2 ${steps.find((s) => s.id === currentStep)?.color} text-white`}
+                className={`rounded-lg bg-gradient-to-r p-1.5 sm:p-2 ${steps.find((s) => s.id === currentStep)?.color} text-white`}
               >
                 {React.createElement(steps.find((s) => s.id === currentStep)?.icon || FileText, {
-                  className: "w-4 h-4",
+                  className: "w-3 h-3 sm:w-4 sm:h-4",
                 })}
               </div>
-              <span className="font-semibold text-foreground">
+              <span className="text-sm font-semibold text-foreground sm:text-base">
                 {steps.find((s) => s.id === currentStep)?.label}
               </span>
             </div>
-            <p className="mx-auto max-w-md text-muted-foreground">
+            <p className="mx-auto max-w-md text-xs text-muted-foreground sm:text-sm">
               {steps.find((s) => s.id === currentStep)?.description}
             </p>
           </div>
@@ -233,10 +241,10 @@ function LayoutContent({ children }: SocialCreateLayoutProps) {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
           transition={{ duration: 0.4, ease: "easeInOut" }}
-          className="mb-8"
+          className="mb-4 sm:mb-8"
         >
-          <div className="overflow-hidden rounded-2xl border border-border/50 bg-card shadow-xl">
-            <div className="p-8 lg:p-12">{children}</div>
+          <div className="overflow-hidden rounded-xl border border-border/50 bg-card shadow-xl sm:rounded-2xl">
+            <div className="p-4 sm:p-8 lg:p-12">{children}</div>
           </div>
         </motion.div>
 
@@ -244,18 +252,18 @@ function LayoutContent({ children }: SocialCreateLayoutProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="rounded-2xl border border-border/50 bg-card p-6 shadow-lg"
+          className="rounded-xl border border-border/50 bg-card p-4 shadow-lg sm:rounded-2xl sm:p-6"
         >
-          <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-wrap items-center justify-center gap-3 sm:justify-start">
               {state.lastSaved && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground sm:text-sm">
                   <div className="h-2 w-2 rounded-full bg-green-500"></div>
                   Saved {state.lastSaved.toLocaleTimeString()}
                 </div>
               )}
               <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Progress:</span>
+                <span className="text-xs text-muted-foreground sm:text-sm">Progress:</span>
                 <div className="flex gap-1">
                   {steps.map((_, index) => (
                     <div
@@ -269,12 +277,12 @@ function LayoutContent({ children }: SocialCreateLayoutProps) {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex w-full flex-col gap-2 sm:flex-row sm:justify-end sm:gap-3">
               <Button
                 variant="outline"
                 onClick={handleSaveDraft}
                 disabled={state.isSaving}
-                className="h-12 rounded-xl px-6 transition-all hover:shadow-md"
+                className="h-11 w-full rounded-xl px-6 transition-all hover:shadow-md sm:h-12 sm:w-auto"
               >
                 <Save className="mr-2 h-4 w-4" />
                 {state.isSaving ? "Saving..." : "Save Draft"}
@@ -283,7 +291,7 @@ function LayoutContent({ children }: SocialCreateLayoutProps) {
               <Button
                 onClick={handleComplete}
                 disabled={!canComplete()}
-                className={`h-12 rounded-xl px-8 font-semibold transition-all ${
+                className={`h-11 w-full rounded-xl px-8 font-semibold transition-all sm:h-12 sm:w-auto ${
                   canComplete()
                     ? "bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg hover:from-purple-700 hover:to-pink-700 hover:shadow-xl"
                     : "cursor-not-allowed bg-muted text-muted-foreground"

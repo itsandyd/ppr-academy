@@ -52,6 +52,8 @@ import type * as coachingSessionManager from "../coachingSessionManager.js";
 import type * as coachingSessionQueries from "../coachingSessionQueries.js";
 import type * as collaborativeNotes from "../collaborativeNotes.js";
 import type * as contentGeneration from "../contentGeneration.js";
+import type * as copyright from "../copyright.js";
+import type * as copyrightEmails from "../copyrightEmails.js";
 import type * as coupons from "../coupons.js";
 import type * as courseNotificationQueries from "../courseNotificationQueries.js";
 import type * as courseNotifications from "../courseNotifications.js";
@@ -251,6 +253,8 @@ declare const fullApi: ApiFromModules<{
   coachingSessionQueries: typeof coachingSessionQueries;
   collaborativeNotes: typeof collaborativeNotes;
   contentGeneration: typeof contentGeneration;
+  copyright: typeof copyright;
+  copyrightEmails: typeof copyrightEmails;
   coupons: typeof coupons;
   courseNotificationQueries: typeof courseNotificationQueries;
   courseNotifications: typeof courseNotifications;

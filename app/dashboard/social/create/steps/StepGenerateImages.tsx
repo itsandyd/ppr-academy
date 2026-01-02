@@ -272,103 +272,108 @@ export function StepGenerateImages() {
   const generatedCount = images.filter((img) => img.url).length;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 sm:space-y-8">
       <div>
-        <h2 className="mb-2 text-2xl font-bold text-foreground">Generate Carousel Images</h2>
-        <p className="text-muted-foreground">
+        <h2 className="mb-1 text-lg font-bold text-foreground sm:mb-2 sm:text-2xl">
+          Generate Carousel Images
+        </h2>
+        <p className="text-sm text-muted-foreground sm:text-base">
           Create Excalidraw-style images for your social media carousel.
         </p>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Aspect Ratio</CardTitle>
-          <CardDescription>Choose the format for your images</CardDescription>
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-base sm:text-lg">Aspect Ratio</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">
+            Choose the format for your images
+          </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="flex gap-4">
+        <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+          <div className="flex flex-col gap-2 sm:flex-row sm:gap-4">
             <button
               type="button"
               onClick={() => setAspectRatio("9:16")}
               className={cn(
-                "flex items-center gap-3 rounded-lg border-2 p-4 transition-colors",
+                "flex flex-1 items-center gap-2 rounded-lg border-2 p-3 transition-colors sm:gap-3 sm:p-4",
                 aspectRatio === "9:16"
                   ? "border-primary bg-primary/5"
                   : "border-border hover:border-primary/50"
               )}
             >
-              <div className="h-10 w-6 rounded border-2 border-current" />
-              <span className="text-sm font-medium">9:16 (Portrait - TikTok, Reels)</span>
+              <div className="h-8 w-5 flex-shrink-0 rounded border-2 border-current sm:h-10 sm:w-6" />
+              <span className="text-xs font-medium sm:text-sm">9:16 (Portrait)</span>
             </button>
             <button
               type="button"
               onClick={() => setAspectRatio("16:9")}
               className={cn(
-                "flex items-center gap-3 rounded-lg border-2 p-4 transition-colors",
+                "flex flex-1 items-center gap-2 rounded-lg border-2 p-3 transition-colors sm:gap-3 sm:p-4",
                 aspectRatio === "16:9"
                   ? "border-primary bg-primary/5"
                   : "border-border hover:border-primary/50"
               )}
             >
-              <div className="h-6 w-10 rounded border-2 border-current" />
-              <span className="text-sm font-medium">16:9 (Landscape - YouTube)</span>
+              <div className="h-5 w-8 flex-shrink-0 rounded border-2 border-current sm:h-6 sm:w-10" />
+              <span className="text-xs font-medium sm:text-sm">16:9 (Landscape)</span>
             </button>
           </div>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="p-4 sm:p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <Image className="h-5 w-5" />
+              <CardTitle className="flex flex-wrap items-center gap-2 text-base sm:text-lg">
+                <Image className="h-4 w-4 sm:h-5 sm:w-5" />
                 Image Prompts
                 {images.length > 0 && (
-                  <Badge variant="secondary">
-                    {generatedCount}/{images.length} generated
+                  <Badge variant="secondary" className="text-xs">
+                    {generatedCount}/{images.length}
                   </Badge>
                 )}
               </CardTitle>
-              <CardDescription>AI-generated prompts based on your script content</CardDescription>
+              <CardDescription className="text-xs sm:text-sm">
+                AI-generated prompts based on your script
+              </CardDescription>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row">
               <Button
                 variant="outline"
+                size="sm"
                 onClick={handleGeneratePrompts}
                 disabled={isGenerating || !state.data.combinedScript}
-                className="gap-2"
+                className="gap-2 text-xs sm:text-sm"
               >
                 {isGenerating && generatingIndex === null ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-3.5 w-3.5 animate-spin sm:h-4 sm:w-4" />
                     Generating...
                   </>
                 ) : (
                   <>
-                    <RefreshCw className="h-4 w-4" />
-                    {images.length > 0 ? "Regenerate Prompts" : "Generate Prompts"}
+                    <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    {images.length > 0 ? "Regenerate" : "Generate Prompts"}
                   </>
                 )}
               </Button>
               {images.length > 0 && (
                 <Button
+                  size="sm"
                   onClick={handleGenerateAllImages}
                   disabled={isGenerating || generatingAll || generatedCount === images.length}
-                  className="gap-2"
+                  className="gap-2 text-xs sm:text-sm"
                 >
                   {generatingAll ? (
                     <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Generating{" "}
-                      {generatingIndices.size > 0
-                        ? `${generatingIndices.size} in parallel...`
-                        : "..."}
+                      <Loader2 className="h-3.5 w-3.5 animate-spin sm:h-4 sm:w-4" />
+                      Generating...
                     </>
                   ) : (
                     <>
-                      <Sparkles className="h-4 w-4" />
-                      Generate All Images
+                      <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      Generate All
                     </>
                   )}
                 </Button>
@@ -376,15 +381,15 @@ export function StepGenerateImages() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
           {images.length === 0 ? (
-            <div className="py-12 text-center text-muted-foreground">
-              <Image className="mx-auto mb-4 h-12 w-12 opacity-50" />
-              <p>Click "Generate Prompts" to create image ideas from your script</p>
+            <div className="py-8 text-center text-muted-foreground sm:py-12">
+              <Image className="mx-auto mb-3 h-10 w-10 opacity-50 sm:mb-4 sm:h-12 sm:w-12" />
+              <p className="text-sm sm:text-base">Click "Generate Prompts" to create image ideas</p>
             </div>
           ) : (
-            <ScrollArea className="h-[500px]">
-              <div className="grid gap-4 md:grid-cols-2">
+            <ScrollArea className="h-[400px] sm:h-[500px]">
+              <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
                 {images.map((image, index) => (
                   <Card key={index} className="overflow-hidden">
                     <div
@@ -465,12 +470,21 @@ export function StepGenerateImages() {
         </CardContent>
       </Card>
 
-      <div className="flex justify-between">
-        <Button variant="outline" onClick={() => goToStep("combine")} className="gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
+        <Button
+          variant="outline"
+          onClick={() => goToStep("combine")}
+          className="order-2 gap-2 sm:order-1"
+        >
           <ChevronLeft className="h-4 w-4" />
           Back
         </Button>
-        <Button onClick={handleContinue} disabled={state.isSaving} className="gap-2" size="lg">
+        <Button
+          onClick={handleContinue}
+          disabled={state.isSaving}
+          className="order-1 gap-2 sm:order-2"
+          size="lg"
+        >
           {state.isSaving ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -486,21 +500,21 @@ export function StepGenerateImages() {
       </div>
 
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-2xl bg-white dark:bg-black">
+        <DialogContent className="max-h-[90vh] w-[95vw] max-w-2xl overflow-y-auto bg-white dark:bg-black sm:w-auto">
           <DialogHeader>
-            <DialogTitle>Edit Image</DialogTitle>
-            <DialogDescription>
-              Describe the changes you want to make to this image using nano-banana-pro.
+            <DialogTitle className="text-base sm:text-lg">Edit Image</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
+              Describe the changes you want to make to this image.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {editingIndex !== null && imagesRef.current[editingIndex] && (
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
                 <div>
-                  <p className="mb-2 text-sm font-medium">Original</p>
+                  <p className="mb-1.5 text-xs font-medium sm:mb-2 sm:text-sm">Original</p>
                   <div
-                    className={`overflow-hidden rounded-lg border ${aspectRatio === "9:16" ? "aspect-[9/16]" : "aspect-video"}`}
+                    className={`overflow-hidden rounded-lg border ${aspectRatio === "9:16" ? "aspect-[9/16] max-h-[200px] sm:max-h-none" : "aspect-video"}`}
                   >
                     <img
                       src={imagesRef.current[editingIndex].url}
@@ -510,16 +524,16 @@ export function StepGenerateImages() {
                   </div>
                 </div>
                 <div>
-                  <p className="mb-2 text-sm font-medium">
+                  <p className="mb-1.5 text-xs font-medium sm:mb-2 sm:text-sm">
                     {editedPreviewUrl ? "Edited Result" : "Preview"}
                   </p>
                   <div
-                    className={`flex items-center justify-center overflow-hidden rounded-lg border bg-muted ${aspectRatio === "9:16" ? "aspect-[9/16]" : "aspect-video"}`}
+                    className={`flex items-center justify-center overflow-hidden rounded-lg border bg-muted ${aspectRatio === "9:16" ? "aspect-[9/16] max-h-[200px] sm:max-h-none" : "aspect-video"}`}
                   >
                     {isEditing ? (
                       <div className="flex flex-col items-center gap-2">
-                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                        <p className="text-sm text-muted-foreground">Editing...</p>
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground sm:h-8 sm:w-8" />
+                        <p className="text-xs text-muted-foreground sm:text-sm">Editing...</p>
                       </div>
                     ) : editedPreviewUrl ? (
                       <img
@@ -528,36 +542,45 @@ export function StepGenerateImages() {
                         className="h-full w-full object-cover"
                       />
                     ) : (
-                      <p className="text-sm text-muted-foreground">Enter a prompt and click Edit</p>
+                      <p className="p-4 text-center text-xs text-muted-foreground sm:text-sm">
+                        Enter a prompt and click Edit
+                      </p>
                     )}
                   </div>
                 </div>
               </div>
             )}
 
-            <div className="space-y-2">
-              <label htmlFor="edit-prompt" className="text-sm font-medium">
+            <div className="space-y-1.5 sm:space-y-2">
+              <label htmlFor="edit-prompt" className="text-xs font-medium sm:text-sm">
                 Edit Prompt
               </label>
               <Textarea
                 id="edit-prompt"
-                placeholder="e.g., Make the background blue, Add a sunset, Remove the text..."
+                placeholder="e.g., Make the background blue, Add a sunset..."
                 value={editPrompt}
                 onChange={(e) => setEditPrompt(e.target.value)}
-                rows={3}
+                rows={2}
+                className="text-sm"
               />
             </div>
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={handleCloseEditDialog}>
+          <DialogFooter className="flex-col gap-2 sm:flex-row sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={handleCloseEditDialog}
+              size="sm"
+              className="w-full sm:w-auto"
+            >
               Cancel
             </Button>
             <Button
               variant="outline"
               onClick={handleEditImage}
               disabled={isEditing || !editPrompt.trim()}
-              className="gap-2"
+              className="w-full gap-2 sm:w-auto"
+              size="sm"
             >
               {isEditing ? (
                 <>
@@ -572,7 +595,7 @@ export function StepGenerateImages() {
               )}
             </Button>
             {editResult && (
-              <Button onClick={handleSaveEditedImage} className="gap-2">
+              <Button onClick={handleSaveEditedImage} className="w-full gap-2 sm:w-auto" size="sm">
                 <Sparkles className="h-4 w-4" />
                 Save Changes
               </Button>

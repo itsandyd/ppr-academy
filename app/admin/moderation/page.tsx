@@ -10,6 +10,13 @@ import { api } from "@/convex/_generated/api";
 import { useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Search,
   AlertTriangle,
   CheckCircle,
@@ -21,29 +28,38 @@ import {
   User,
   MessageSquare,
   FileText,
+  Shield,
+  Music,
+  Ban,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
 
-type ReportStatus = "pending" | "reviewed" | "resolved" | "dismissed";
-type ReportType = "course" | "comment" | "user" | "product";
+type ReportStatus = "pending" | "reviewed" | "resolved" | "dismissed" | "counter_notice";
+type ReportType = "course" | "comment" | "user" | "product" | "sample" | "copyright";
 
 export default function ContentModerationPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<ReportStatus>("pending");
+  const [typeFilter, setTypeFilter] = useState<"all" | "copyright" | "general">("all");
   const { user } = useUser();
 
-  // Fetch reports from Convex
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const reports =
     useQuery(
-      api.reports.getReportsByStatus,
+      (api as any).reports.getReportsByStatus,
       user?.id ? { status: activeTab, clerkId: user.id } : "skip"
     ) || [];
-  const stats = useQuery(api.reports.getReportStats, user?.id ? { clerkId: user.id } : "skip") || {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const stats = useQuery(
+    (api as any).reports.getReportStats,
+    user?.id ? { clerkId: user.id } : "skip"
+  ) || {
     pending: 0,
     reviewed: 0,
     resolved: 0,
     dismissed: 0,
+    counter_notice: 0,
     total: 0,
   };
 
@@ -52,12 +68,24 @@ export default function ContentModerationPage() {
   const markAsResolved = useMutation(api.reports.markAsResolved);
   const markAsDismissed = useMutation(api.reports.markAsDismissed);
 
-  const filteredReports = reports.filter(
-    (report: any) =>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const issueCopyrightStrike = useMutation((api as any).copyright.issueCopyrightStrike);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const takedownContent = useMutation((api as any).copyright.takedownContent);
+
+  const filteredReports = reports.filter((report: any) => {
+    const matchesSearch =
       report.contentTitle?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       report.reason?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      report.reporterName?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+      report.reporterName?.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesType =
+      typeFilter === "all" ||
+      (typeFilter === "copyright" && report.type === "copyright") ||
+      (typeFilter === "general" && report.type !== "copyright");
+
+    return matchesSearch && matchesType;
+  });
 
   const handleApprove = async (reportId: Id<"reports">) => {
     if (!user?.id) {
@@ -115,6 +143,64 @@ export default function ContentModerationPage() {
     }
   };
 
+  const handleTakedown = async (reportId: Id<"reports">, report: any) => {
+    if (!user?.id) {
+      toast.error("You must be logged in");
+      return;
+    }
+
+    if (
+      !confirm(
+        `Take down "${report.contentTitle}"? This will remove the content from the platform.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await takedownContent({
+        reportId,
+        adminId: user.id,
+        reason: "Copyright infringement - DMCA takedown",
+      });
+      toast.success("Content taken down successfully");
+    } catch (error) {
+      toast.error("Failed to take down content");
+    }
+  };
+
+  const handleIssueStrike = async (report: any) => {
+    if (!user?.id || !report.storeId) {
+      toast.error("Missing required information");
+      return;
+    }
+
+    if (
+      !confirm(`Issue a copyright strike to this creator? 3 strikes result in account suspension.`)
+    ) {
+      return;
+    }
+
+    try {
+      const result = await issueCopyrightStrike({
+        storeId: report.storeId as Id<"stores">,
+        reportId: report._id,
+        adminId: user.id,
+        reason: `Copyright claim: ${report.contentTitle}`,
+      });
+
+      if (result.suspended) {
+        toast.warning(
+          `Strike issued. Creator has been suspended (${result.totalStrikes} strikes).`
+        );
+      } else {
+        toast.success(`Strike issued. Creator now has ${result.totalStrikes} strike(s).`);
+      }
+    } catch (error) {
+      toast.error("Failed to issue strike");
+    }
+  };
+
   const getReportTypeIcon = (type: ReportType) => {
     switch (type) {
       case "course":
@@ -125,6 +211,10 @@ export default function ContentModerationPage() {
         return <User className="h-4 w-4" />;
       case "product":
         return <FileText className="h-4 w-4" />;
+      case "sample":
+        return <Music className="h-4 w-4" />;
+      case "copyright":
+        return <Shield className="h-4 w-4 text-red-600" />;
       default:
         return <Flag className="h-4 w-4" />;
     }
@@ -234,15 +324,34 @@ export default function ContentModerationPage() {
         </Card>
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 transform text-muted-foreground" />
-        <Input
-          placeholder="Search by title, reason, or reporter..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="h-12 pl-11 text-base"
-        />
+      <div className="flex gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 transform text-muted-foreground" />
+          <Input
+            placeholder="Search by title, reason, or reporter..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-12 pl-11 text-base"
+          />
+        </div>
+        <Select
+          value={typeFilter}
+          onValueChange={(v: "all" | "copyright" | "general") => setTypeFilter(v)}
+        >
+          <SelectTrigger className="h-12 w-[180px]">
+            <SelectValue placeholder="Filter by type" />
+          </SelectTrigger>
+          <SelectContent className="bg-white dark:bg-black">
+            <SelectItem value="all">All Reports</SelectItem>
+            <SelectItem value="copyright">
+              <div className="flex items-center gap-2">
+                <Shield className="h-4 w-4 text-red-600" />
+                Copyright Claims
+              </div>
+            </SelectItem>
+            <SelectItem value="general">General Reports</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Tabs */}
@@ -353,8 +462,7 @@ export default function ContentModerationPage() {
                           </div>
                         </div>
 
-                        {/* Action Buttons */}
-                        <div className="flex min-w-[120px] flex-col gap-2">
+                        <div className="flex min-w-[140px] flex-col gap-2">
                           <Button variant="outline" size="default" className="gap-2">
                             <Eye className="h-4 w-4" />
                             View
@@ -370,15 +478,40 @@ export default function ContentModerationPage() {
                                 <Clock className="h-4 w-4" />
                                 Review
                               </Button>
-                              <Button
-                                variant="destructive"
-                                size="default"
-                                onClick={() => handleApprove(report._id)}
-                                className="gap-2"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                                Remove
-                              </Button>
+                              {report.type === "copyright" ? (
+                                <>
+                                  <Button
+                                    variant="destructive"
+                                    size="default"
+                                    onClick={() => handleTakedown(report._id, report)}
+                                    className="gap-2"
+                                  >
+                                    <Ban className="h-4 w-4" />
+                                    Take Down
+                                  </Button>
+                                  {report.storeId && (
+                                    <Button
+                                      variant="outline"
+                                      size="default"
+                                      onClick={() => handleIssueStrike(report)}
+                                      className="gap-2 border-orange-500 text-orange-600 hover:bg-orange-50"
+                                    >
+                                      <Shield className="h-4 w-4" />
+                                      Issue Strike
+                                    </Button>
+                                  )}
+                                </>
+                              ) : (
+                                <Button
+                                  variant="destructive"
+                                  size="default"
+                                  onClick={() => handleApprove(report._id)}
+                                  className="gap-2"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                  Remove
+                                </Button>
+                              )}
                               <Button
                                 variant="ghost"
                                 size="default"
@@ -392,15 +525,40 @@ export default function ContentModerationPage() {
                           )}
                           {report.status === "reviewed" && (
                             <>
-                              <Button
-                                variant="destructive"
-                                size="default"
-                                onClick={() => handleApprove(report._id)}
-                                className="gap-2"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                                Remove
-                              </Button>
+                              {report.type === "copyright" ? (
+                                <>
+                                  <Button
+                                    variant="destructive"
+                                    size="default"
+                                    onClick={() => handleTakedown(report._id, report)}
+                                    className="gap-2"
+                                  >
+                                    <Ban className="h-4 w-4" />
+                                    Take Down
+                                  </Button>
+                                  {report.storeId && (
+                                    <Button
+                                      variant="outline"
+                                      size="default"
+                                      onClick={() => handleIssueStrike(report)}
+                                      className="gap-2 border-orange-500 text-orange-600 hover:bg-orange-50"
+                                    >
+                                      <Shield className="h-4 w-4" />
+                                      Issue Strike
+                                    </Button>
+                                  )}
+                                </>
+                              ) : (
+                                <Button
+                                  variant="destructive"
+                                  size="default"
+                                  onClick={() => handleApprove(report._id)}
+                                  className="gap-2"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                  Remove
+                                </Button>
+                              )}
                               <Button
                                 variant="ghost"
                                 size="default"

@@ -153,49 +153,58 @@ export function StepGenerateAudio() {
   const estimatedDuration = Math.ceil(wordCount / 150);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 sm:space-y-8">
       <div>
-        <h2 className="mb-2 text-2xl font-bold text-foreground">Generate Audio Narration</h2>
-        <p className="text-muted-foreground">
+        <h2 className="mb-1 text-lg font-bold text-foreground sm:mb-2 sm:text-2xl">
+          Generate Audio Narration
+        </h2>
+        <p className="text-sm text-muted-foreground sm:text-base">
           Create voiceover using ElevenLabs TTS with the Andrew 1 voice.
         </p>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Volume2 className="h-5 w-5" />
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <Volume2 className="h-4 w-4 sm:h-5 sm:w-5" />
             Audio Script
           </CardTitle>
-          <CardDescription>
-            Edit the script that will be converted to speech. This defaults to your combined script.
+          <CardDescription className="text-xs sm:text-sm">
+            Edit the script that will be converted to speech.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3 p-4 pt-0 sm:space-y-4 sm:p-6 sm:pt-0">
           <Textarea
             value={audioScript}
             onChange={(e) => setAudioScript(e.target.value)}
             placeholder="Enter or edit the script for audio narration..."
-            className="min-h-[300px] font-mono text-sm"
+            className="min-h-[200px] font-mono text-sm sm:min-h-[300px]"
           />
-          <div className="flex items-center gap-4">
-            <Badge variant="secondary">{wordCount} words</Badge>
-            <Badge variant="outline">~{estimatedDuration} min</Badge>
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+            <Badge variant="secondary" className="text-xs">
+              {wordCount} words
+            </Badge>
+            <Badge variant="outline" className="text-xs">
+              ~{estimatedDuration} min
+            </Badge>
           </div>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="p-4 sm:p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <CardTitle>Voice Preview</CardTitle>
-              <CardDescription>Using ElevenLabs "Andrew 1" voice</CardDescription>
+              <CardTitle className="text-base sm:text-lg">Voice Preview</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
+                Using ElevenLabs "Andrew 1" voice
+              </CardDescription>
             </div>
             <Button
               onClick={handleGenerateAudio}
               disabled={isGenerating || !audioScript}
-              className="gap-2"
+              className="w-full gap-2 sm:w-auto"
+              size="sm"
             >
               {isGenerating ? (
                 <>
@@ -216,53 +225,68 @@ export function StepGenerateAudio() {
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
           {isGenerating ? (
-            <div className="py-12 text-center">
-              <Loader2 className="mx-auto mb-4 h-12 w-12 animate-spin text-primary" />
-              <p className="font-medium">Generating Audio...</p>
-              <p className="mt-2 text-sm text-muted-foreground">
-                This may take 30-60 seconds depending on script length
+            <div className="py-8 text-center sm:py-12">
+              <Loader2 className="mx-auto mb-3 h-10 w-10 animate-spin text-primary sm:mb-4 sm:h-12 sm:w-12" />
+              <p className="text-sm font-medium sm:text-base">Generating Audio...</p>
+              <p className="mt-1 text-xs text-muted-foreground sm:mt-2 sm:text-sm">
+                This may take 30-60 seconds
               </p>
             </div>
           ) : audioUrl ? (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               <audio ref={audioRef} src={audioUrl} onEnded={handleAudioEnded} className="hidden" />
-              <div className="flex items-center gap-4 rounded-lg bg-muted p-4">
+              <div className="flex items-center gap-3 rounded-lg bg-muted p-3 sm:gap-4 sm:p-4">
                 <Button
                   size="icon"
                   variant="outline"
                   onClick={togglePlayback}
-                  className="h-12 w-12 rounded-full"
+                  className="h-10 w-10 flex-shrink-0 rounded-full sm:h-12 sm:w-12"
                 >
-                  {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="ml-0.5 h-5 w-5" />}
+                  {isPlaying ? (
+                    <Pause className="h-4 w-4 sm:h-5 sm:w-5" />
+                  ) : (
+                    <Play className="ml-0.5 h-4 w-4 sm:h-5 sm:w-5" />
+                  )}
                 </Button>
-                <div className="flex-1">
-                  <p className="font-medium">Audio Generated</p>
-                  <p className="text-sm text-muted-foreground">
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium sm:text-base">Audio Generated</p>
+                  <p className="text-xs text-muted-foreground sm:text-sm">
                     {state.data.audioDuration
                       ? `${Math.floor(state.data.audioDuration / 60)}:${String(Math.floor(state.data.audioDuration % 60)).padStart(2, "0")}`
                       : `~${estimatedDuration} min`}
                   </p>
                 </div>
-                <Badge variant="secondary">Andrew 1</Badge>
+                <Badge variant="secondary" className="hidden text-xs sm:inline-flex">
+                  Andrew 1
+                </Badge>
               </div>
             </div>
           ) : (
-            <div className="py-12 text-center text-muted-foreground">
-              <Volume2 className="mx-auto mb-4 h-12 w-12 opacity-50" />
-              <p>Click "Generate Audio" to create voiceover</p>
+            <div className="py-8 text-center text-muted-foreground sm:py-12">
+              <Volume2 className="mx-auto mb-3 h-10 w-10 opacity-50 sm:mb-4 sm:h-12 sm:w-12" />
+              <p className="text-sm sm:text-base">Click "Generate Audio" to create voiceover</p>
             </div>
           )}
         </CardContent>
       </Card>
 
-      <div className="flex justify-between">
-        <Button variant="outline" onClick={() => goToStep("images")} className="gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:justify-between">
+        <Button
+          variant="outline"
+          onClick={() => goToStep("images")}
+          className="order-2 gap-2 sm:order-1"
+        >
           <ChevronLeft className="h-4 w-4" />
           Back
         </Button>
-        <Button onClick={handleContinue} disabled={state.isSaving} className="gap-2" size="lg">
+        <Button
+          onClick={handleContinue}
+          disabled={state.isSaving}
+          className="order-1 gap-2 sm:order-2"
+          size="lg"
+        >
           {state.isSaving ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />

@@ -7,18 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import {
-  ExternalLink,
-  Play,
-  Music,
-  Tag,
-  DollarSign,
-  User,
-  ArrowLeft,
-} from "lucide-react";
+import { ExternalLink, Play, Music, Tag, DollarSign, User, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Image from "next/image";
+import { ReportButton } from "@/components/shared/report-button";
 
 interface PluginPageProps {
   params: Promise<{
@@ -33,8 +26,8 @@ export default function PluginDetailPage({ params }: PluginPageProps) {
   // Handle loading state
   if (plugin === undefined) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-primary" />
       </div>
     );
   }
@@ -54,68 +47,55 @@ export default function PluginDetailPage({ params }: PluginPageProps) {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="border-b border-border bg-card/50 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           <Link href="/marketplace/plugins">
             <Button variant="ghost" size="sm" className="mb-4">
-              <ArrowLeft className="w-4 h-4 mr-2" />
+              <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Plugins
             </Button>
           </Link>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-8">
+          <div className="space-y-8 lg:col-span-2">
             {/* Plugin Header */}
             <div>
-              <div className="flex items-start gap-4 mb-6">
+              <div className="mb-6 flex items-start gap-4">
                 {plugin.image && (
-                  <div className="relative w-24 h-24 rounded-lg overflow-hidden border border-border flex-shrink-0">
-                    <Image
-                      src={plugin.image}
-                      alt={plugin.name}
-                      fill
-                      className="object-cover"
-                    />
+                  <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg border border-border">
+                    <Image src={plugin.image} alt={plugin.name} fill className="object-cover" />
                   </div>
                 )}
                 <div className="flex-1">
-                  <h1 className="text-4xl font-bold mb-2">{plugin.name}</h1>
+                  <h1 className="mb-2 text-4xl font-bold">{plugin.name}</h1>
                   {plugin.author && (
-                    <div className="flex items-center gap-2 text-muted-foreground mb-3">
-                      <User className="w-4 h-4" />
+                    <div className="mb-3 flex items-center gap-2 text-muted-foreground">
+                      <User className="h-4 w-4" />
                       <span>{plugin.author}</span>
                     </div>
                   )}
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge
-                      variant={
-                        plugin.pricingType === "FREE"
-                          ? "secondary"
-                          : "default"
-                      }
-                    >
+                    <Badge variant={plugin.pricingType === "FREE" ? "secondary" : "default"}>
                       {plugin.pricingType}
                     </Badge>
                     {plugin.categoryName && (
                       <Badge variant="outline">
-                        <Tag className="w-3 h-3 mr-1" />
+                        <Tag className="mr-1 h-3 w-3" />
                         {plugin.categoryName}
                       </Badge>
                     )}
-                    {plugin.typeName && (
-                      <Badge variant="outline">{plugin.typeName}</Badge>
-                    )}
+                    {plugin.typeName && <Badge variant="outline">{plugin.typeName}</Badge>}
                   </div>
                 </div>
               </div>
 
               {/* Description */}
               {plugin.description && (
-                <div 
-                  className="prose dark:prose-invert max-w-none text-lg text-muted-foreground leading-relaxed"
+                <div
+                  className="prose max-w-none text-lg leading-relaxed text-muted-foreground dark:prose-invert"
                   dangerouslySetInnerHTML={{ __html: plugin.description }}
                 />
               )}
@@ -128,26 +108,22 @@ export default function PluginDetailPage({ params }: PluginPageProps) {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Play className="w-5 h-5" />
+                    <Play className="h-5 w-5" />
                     Video Demo
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="aspect-video rounded-lg overflow-hidden bg-muted">
+                  <div className="aspect-video overflow-hidden rounded-lg bg-muted">
                     {plugin.videoUrl.includes("youtube.com") ||
                     plugin.videoUrl.includes("youtu.be") ? (
                       <iframe
                         src={plugin.videoUrl.replace("watch?v=", "embed/")}
-                        className="w-full h-full"
+                        className="h-full w-full"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         allowFullScreen
                       />
                     ) : (
-                      <video
-                        src={plugin.videoUrl}
-                        controls
-                        className="w-full h-full"
-                      />
+                      <video src={plugin.videoUrl} controls className="h-full w-full" />
                     )}
                   </div>
                 </CardContent>
@@ -159,7 +135,7 @@ export default function PluginDetailPage({ params }: PluginPageProps) {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <Music className="w-5 h-5" />
+                    <Music className="h-5 w-5" />
                     Audio Demo
                   </CardTitle>
                 </CardHeader>
@@ -176,7 +152,7 @@ export default function PluginDetailPage({ params }: PluginPageProps) {
                   <CardTitle>About This Plugin</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="prose dark:prose-invert max-w-none">
+                  <div className="prose max-w-none dark:prose-invert">
                     <p className="whitespace-pre-wrap">{plugin.videoScript}</p>
                   </div>
                 </CardContent>
@@ -187,11 +163,11 @@ export default function PluginDetailPage({ params }: PluginPageProps) {
           {/* Sidebar */}
           <div className="lg:col-span-1">
             <Card className="sticky top-4">
-              <CardContent className="p-6 space-y-6">
+              <CardContent className="space-y-6 p-6">
                 {/* Price */}
-                <div className="text-center py-4">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    <DollarSign className="w-6 h-6 text-muted-foreground" />
+                <div className="py-4 text-center">
+                  <div className="mb-2 flex items-center justify-center gap-2">
+                    <DollarSign className="h-6 w-6 text-muted-foreground" />
                     <span className="text-4xl font-bold">
                       {formatPrice(plugin.price, plugin.pricingType)}
                     </span>
@@ -211,31 +187,18 @@ export default function PluginDetailPage({ params }: PluginPageProps) {
                       size="lg"
                       className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
                     >
-                      <a
-                        href={plugin.purchaseUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
+                      <a href={plugin.purchaseUrl} target="_blank" rel="noopener noreferrer">
                         {plugin.pricingType === "FREE" ? "Get Free" : "Buy Now"}
-                        <ExternalLink className="w-4 h-4 ml-2" />
+                        <ExternalLink className="ml-2 h-4 w-4" />
                       </a>
                     </Button>
                   )}
 
                   {plugin.optInFormUrl && (
-                    <Button
-                      asChild
-                      variant="outline"
-                      size="lg"
-                      className="w-full"
-                    >
-                      <a
-                        href={plugin.optInFormUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
+                    <Button asChild variant="outline" size="lg" className="w-full">
+                      <a href={plugin.optInFormUrl} target="_blank" rel="noopener noreferrer">
                         Learn More
-                        <ExternalLink className="w-4 h-4 ml-2" />
+                        <ExternalLink className="ml-2 h-4 w-4" />
                       </a>
                     </Button>
                   )}
@@ -251,7 +214,7 @@ export default function PluginDetailPage({ params }: PluginPageProps) {
                           ?.scrollIntoView({ behavior: "smooth" });
                       }}
                     >
-                      <Play className="w-4 h-4 mr-2" />
+                      <Play className="mr-2 h-4 w-4" />
                       Watch Demo
                     </Button>
                   )}
@@ -267,7 +230,7 @@ export default function PluginDetailPage({ params }: PluginPageProps) {
                           ?.scrollIntoView({ behavior: "smooth" });
                       }}
                     >
-                      <Music className="w-4 h-4 mr-2" />
+                      <Music className="mr-2 h-4 w-4" />
                       Listen to Demo
                     </Button>
                   )}
@@ -277,8 +240,8 @@ export default function PluginDetailPage({ params }: PluginPageProps) {
 
                 {/* Plugin Details */}
                 <div className="space-y-4 text-sm">
-                  <h3 className="font-semibold text-base">Plugin Details</h3>
-                  
+                  <h3 className="text-base font-semibold">Plugin Details</h3>
+
                   {plugin.author && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Developer</span>
@@ -305,6 +268,18 @@ export default function PluginDetailPage({ params }: PluginPageProps) {
                     <span className="font-medium">{plugin.pricingType}</span>
                   </div>
                 </div>
+
+                <Separator />
+
+                <div className="flex justify-center">
+                  <ReportButton
+                    contentId={plugin._id}
+                    contentType="product"
+                    contentTitle={plugin.name}
+                    creatorName={plugin.author}
+                    variant="text"
+                  />
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -313,4 +288,3 @@ export default function PluginDetailPage({ params }: PluginPageProps) {
     </div>
   );
 }
-
