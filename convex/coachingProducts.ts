@@ -342,6 +342,52 @@ export const bookCoachingSession = mutation({
         productId: args.productId,
       });
 
+      // Send confirmation emails
+      const student = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", args.studentId))
+        .unique();
+      const coach = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", coachId))
+        .unique();
+
+      if (student?.email && coach?.email) {
+        const sessionDate = new Date(args.scheduledDate).toLocaleDateString("en-US", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
+        const studentName = student.name || student.firstName || "Student";
+        const coachName = coach.name || coach.firstName || "Coach";
+
+        // Email to student
+        await ctx.scheduler.runAfter(0, internal.coachingEmails.sendBookingConfirmationEmail, {
+          studentName,
+          studentEmail: student.email,
+          sessionTitle: product.title,
+          coachName,
+          sessionDate,
+          sessionTime: args.startTime,
+          duration,
+        });
+
+        // Email to coach
+        await ctx.scheduler.runAfter(0, internal.coachingEmails.sendNewBookingNotificationEmail, {
+          coachName,
+          coachEmail: coach.email,
+          studentName,
+          studentEmail: student.email,
+          sessionTitle: product.title,
+          sessionDate,
+          sessionTime: args.startTime,
+          duration,
+          amount: product.price,
+          notes: args.notes,
+        });
+      }
+
       return { success: true, sessionId };
     } catch (error: any) {
       console.error("Error booking coaching session:", error);
