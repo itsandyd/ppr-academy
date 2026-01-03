@@ -28,8 +28,18 @@ import {
 } from "@/components/ui/dialog";
 import { WysiwygEditor } from "@/components/ui/wysiwyg-editor";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Trash2, AlertTriangle, Check, UserPlus, Search } from "lucide-react";
+import {
+  ArrowLeft,
+  Save,
+  Trash2,
+  AlertTriangle,
+  Check,
+  UserPlus,
+  Search,
+  Power,
+} from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import NodeSidebar from "./components/NodeSidebar";
 import WorkflowCanvas from "./components/WorkflowCanvas";
 
@@ -144,6 +154,7 @@ export default function WorkflowBuilderPage() {
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
   const [contactSearchQuery, setContactSearchQuery] = useState("");
   const [isEnrolling, setIsEnrolling] = useState(false);
+  const [isActive, setIsActive] = useState(false);
 
   const storeId = user?.id ?? "";
 
@@ -163,10 +174,12 @@ export default function WorkflowBuilderPage() {
   const updateWorkflow = useMutation(api.emailWorkflows.updateWorkflow);
   const deleteWorkflow = useMutation(api.emailWorkflows.deleteWorkflow);
   const bulkEnrollContacts = useMutation(api.emailWorkflows.bulkEnrollContactsInWorkflow);
+  const toggleActive = useMutation(api.emailWorkflows.toggleWorkflowActive);
 
   useEffect(() => {
     if (existingWorkflow) {
       setWorkflowName(existingWorkflow.name || "New Workflow");
+      setIsActive(existingWorkflow.isActive || false);
       if (existingWorkflow.nodes) {
         setNodes(existingWorkflow.nodes);
       }
@@ -384,6 +397,29 @@ export default function WorkflowBuilderPage() {
           )}
           {workflowId && (
             <>
+              <div className="flex items-center gap-2 rounded-md border px-2 py-1 md:px-3 md:py-1.5">
+                <Power
+                  className={`h-3.5 w-3.5 md:h-4 md:w-4 ${isActive ? "text-green-600" : "text-muted-foreground"}`}
+                />
+                <span className="hidden text-sm md:inline">{isActive ? "Active" : "Inactive"}</span>
+                <Switch
+                  checked={isActive}
+                  onCheckedChange={async (checked) => {
+                    setIsActive(checked);
+                    await toggleActive({
+                      workflowId: workflowId as Id<"emailWorkflows">,
+                      isActive: checked,
+                    });
+                    toast({
+                      title: checked ? "Workflow Activated" : "Workflow Deactivated",
+                      description: checked
+                        ? "Enrolled contacts will now receive emails"
+                        : "Email sending paused",
+                    });
+                  }}
+                  className="scale-75 md:scale-90"
+                />
+              </div>
               <Button
                 variant="outline"
                 size="icon"
