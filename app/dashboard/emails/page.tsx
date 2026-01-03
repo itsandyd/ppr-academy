@@ -5,8 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useUser } from "@clerk/nextjs";
-import Link from "next/link";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,8 +32,6 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Mail,
   Plus,
-  Play,
-  Pause,
   Trash2,
   Users,
   CheckCircle2,
@@ -42,11 +39,11 @@ import {
   Send,
   Tag,
   Workflow,
-  UserPlus,
-  Upload,
   MoreHorizontal,
   Search,
-  Filter,
+  Play,
+  Upload,
+  UserPlus,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -68,8 +65,8 @@ export default function EmailCampaignsPage() {
 
   const [activeTab, setActiveTab] = useState("sequences");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isCreateTagOpen, setIsCreateTagOpen] = useState(false);
   const [isCreateContactOpen, setIsCreateContactOpen] = useState(false);
+  const [isCreateTagOpen, setIsCreateTagOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   const [newCampaign, setNewCampaign] = useState({
@@ -78,10 +75,10 @@ export default function EmailCampaignsPage() {
     triggerType: "lead_signup" as "lead_signup" | "product_purchase" | "tag_added" | "manual",
   });
 
-  const [newTag, setNewTag] = useState({ name: "", color: "#3b82f6", description: "" });
   const [newContact, setNewContact] = useState({ email: "", firstName: "", lastName: "" });
+  const [newTag, setNewTag] = useState({ name: "", color: "#3b82f6", description: "" });
 
-  const storeId = user?.id || "";
+  const storeId = user?.id ?? "";
 
   const campaigns = useQuery(api.dripCampaigns.getCampaignsByStore, storeId ? { storeId } : "skip");
   const contacts = useQuery(api.emailContacts.listContacts, storeId ? { storeId } : "skip");
@@ -92,10 +89,10 @@ export default function EmailCampaignsPage() {
   const createCampaign = useMutation(api.dripCampaigns.createCampaign);
   const toggleCampaign = useMutation(api.dripCampaigns.toggleCampaign);
   const deleteCampaign = useMutation(api.dripCampaigns.deleteCampaign);
-  const createTag = useMutation(api.emailTags.createTag);
-  const deleteTag = useMutation(api.emailTags.deleteTag);
   const createContact = useMutation(api.emailContacts.createContact);
   const deleteContact = useMutation(api.emailContacts.deleteContact);
+  const createTag = useMutation(api.emailTags.createTag);
+  const deleteTag = useMutation(api.emailTags.deleteTag);
 
   if (isLoaded && mode !== "create") {
     router.push("/dashboard?mode=create");
@@ -124,9 +121,9 @@ export default function EmailCampaignsPage() {
     }
   };
 
-  const handleToggle = async (campaignId: any) => {
+  const handleToggle = async (campaignId: string) => {
     try {
-      const result = await toggleCampaign({ campaignId });
+      const result = await toggleCampaign({ campaignId: campaignId as any });
       toast({
         title: result.isActive ? "Sequence activated" : "Sequence paused",
       });
@@ -135,47 +132,14 @@ export default function EmailCampaignsPage() {
     }
   };
 
-  const handleDeleteCampaign = async (campaignId: any) => {
+  const handleDeleteCampaign = async (campaignId: string) => {
     if (!confirm("Delete this sequence and all its steps?")) return;
 
     try {
-      await deleteCampaign({ campaignId });
+      await deleteCampaign({ campaignId: campaignId as any });
       toast({ title: "Sequence deleted" });
     } catch {
       toast({ title: "Failed to delete sequence", variant: "destructive" });
-    }
-  };
-
-  const handleCreateTag = async () => {
-    if (!newTag.name.trim()) {
-      toast({ title: "Tag name required", variant: "destructive" });
-      return;
-    }
-
-    try {
-      await createTag({
-        storeId,
-        name: newTag.name,
-        color: newTag.color,
-        description: newTag.description || undefined,
-      });
-
-      toast({ title: "Tag created!" });
-      setIsCreateTagOpen(false);
-      setNewTag({ name: "", color: "#3b82f6", description: "" });
-    } catch {
-      toast({ title: "Failed to create tag", variant: "destructive" });
-    }
-  };
-
-  const handleDeleteTag = async (tagId: any) => {
-    if (!confirm("Delete this tag? It will be removed from all contacts.")) return;
-
-    try {
-      await deleteTag({ tagId });
-      toast({ title: "Tag deleted" });
-    } catch {
-      toast({ title: "Failed to delete tag", variant: "destructive" });
     }
   };
 
@@ -202,14 +166,47 @@ export default function EmailCampaignsPage() {
     }
   };
 
-  const handleDeleteContact = async (contactId: any) => {
-    if (!confirm("Delete this contact and all their activity history?")) return;
+  const handleDeleteContact = async (contactId: string) => {
+    if (!confirm("Delete this contact?")) return;
 
     try {
-      await deleteContact({ contactId });
+      await deleteContact({ contactId: contactId as any });
       toast({ title: "Contact deleted" });
     } catch {
       toast({ title: "Failed to delete contact", variant: "destructive" });
+    }
+  };
+
+  const handleCreateTag = async () => {
+    if (!newTag.name.trim()) {
+      toast({ title: "Tag name required", variant: "destructive" });
+      return;
+    }
+
+    try {
+      await createTag({
+        storeId,
+        name: newTag.name,
+        color: newTag.color,
+        description: newTag.description || undefined,
+      });
+
+      toast({ title: "Tag created!" });
+      setIsCreateTagOpen(false);
+      setNewTag({ name: "", color: "#3b82f6", description: "" });
+    } catch {
+      toast({ title: "Failed to create tag", variant: "destructive" });
+    }
+  };
+
+  const handleDeleteTag = async (tagId: string) => {
+    if (!confirm("Delete this tag?")) return;
+
+    try {
+      await deleteTag({ tagId: tagId as any });
+      toast({ title: "Tag deleted" });
+    } catch {
+      toast({ title: "Failed to delete tag", variant: "destructive" });
     }
   };
 
@@ -251,7 +248,7 @@ export default function EmailCampaignsPage() {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     return (
-      c.email.toLowerCase().includes(query) ||
+      c.email?.toLowerCase().includes(query) ||
       c.firstName?.toLowerCase().includes(query) ||
       c.lastName?.toLowerCase().includes(query)
     );
@@ -418,7 +415,9 @@ export default function EmailCampaignsPage() {
                 <Card
                   key={campaign._id}
                   className="cursor-pointer transition-shadow hover:shadow-md"
-                  onClick={() => router.push(`/dashboard/emails/${campaign._id}?mode=create`)}
+                  onClick={() =>
+                    router.push(`/dashboard/emails/sequences/${campaign._id}?mode=create`)
+                  }
                 >
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
@@ -598,9 +597,6 @@ export default function EmailCampaignsPage() {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <Button variant="outline" size="icon">
-              <Filter className="h-4 w-4" />
-            </Button>
           </div>
 
           {!filteredContacts || filteredContacts.length === 0 ? (
@@ -627,12 +623,12 @@ export default function EmailCampaignsPage() {
                       <th className="p-4 font-medium">Status</th>
                       <th className="p-4 font-medium">Tags</th>
                       <th className="p-4 font-medium">Engagement</th>
-                      <th className="p-4 font-medium">Subscribed</th>
+                      <th className="p-4 font-medium">Added</th>
                       <th className="w-10 p-4 font-medium"></th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredContacts.map((contact: any) => (
+                    {filteredContacts.slice(0, 50).map((contact: any) => (
                       <tr key={contact._id} className="border-b hover:bg-muted/50">
                         <td className="p-4">
                           <div className="font-medium">
@@ -644,7 +640,6 @@ export default function EmailCampaignsPage() {
                         </td>
                         <td className="p-4">
                           <Badge
-                            variant={contact.status === "subscribed" ? "default" : "secondary"}
                             className={cn(
                               contact.status === "subscribed" &&
                                 "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
@@ -682,7 +677,7 @@ export default function EmailCampaignsPage() {
                           </div>
                         </td>
                         <td className="p-4 text-sm text-muted-foreground">
-                          {new Date(contact.subscribedAt).toLocaleDateString()}
+                          {new Date(contact.createdAt).toLocaleDateString()}
                         </td>
                         <td className="p-4">
                           <DropdownMenu>
@@ -716,6 +711,11 @@ export default function EmailCampaignsPage() {
                   </tbody>
                 </table>
               </div>
+              {filteredContacts.length > 50 && (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                  Showing 50 of {filteredContacts.length} contacts
+                </div>
+              )}
             </Card>
           )}
         </TabsContent>

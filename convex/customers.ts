@@ -2,8 +2,8 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
 import { paginationOptsValidator } from "convex/server";
+import { internal } from "./_generated/api";
 
-// Create or update a customer
 export const upsertCustomer = mutation({
   args: {
     name: v.string(),
@@ -15,16 +15,18 @@ export const upsertCustomer = mutation({
   },
   returns: v.id("customers"),
   handler: async (ctx, args) => {
-    // Check if customer already exists
     const existingCustomer = await ctx.db
       .query("customers")
-      .withIndex("by_email_and_store", (q) => 
-        q.eq("email", args.email).eq("storeId", args.storeId)
-      )
+      .withIndex("by_email_and_store", (q) => q.eq("email", args.email).eq("storeId", args.storeId))
       .unique();
 
+    const nameParts = args.name?.split(" ") || [];
+    const firstName = nameParts[0] || undefined;
+    const lastName = nameParts.slice(1).join(" ") || undefined;
+
+    let customerId: Id<"customers">;
+
     if (existingCustomer) {
-      // Update existing customer
       await ctx.db.patch(existingCustomer._id, {
         name: args.name,
         type: args.type,
@@ -32,10 +34,9 @@ export const upsertCustomer = mutation({
         source: args.source || existingCustomer.source,
         status: "active",
       });
-      return existingCustomer._id;
+      customerId = existingCustomer._id;
     } else {
-      // Create new customer
-      return await ctx.db.insert("customers", {
+      customerId = await ctx.db.insert("customers", {
         name: args.name,
         email: args.email,
         storeId: args.storeId,
@@ -47,26 +48,38 @@ export const upsertCustomer = mutation({
         source: args.source,
       });
     }
+
+    await ctx.scheduler.runAfter(0, internal.emailContacts.upsertFromCustomer, {
+      storeId: args.storeId,
+      email: args.email,
+      firstName,
+      lastName,
+      source: args.source,
+      customerId,
+    });
+
+    return customerId;
   },
 });
 
-// Get all customers for an admin
 export const getCustomersForAdmin = query({
   args: { adminUserId: v.string() },
-  returns: v.array(v.object({
-    _id: v.id("customers"),
-    _creationTime: v.number(),
-    name: v.string(),
-    email: v.string(),
-    storeId: v.string(),
-    adminUserId: v.string(),
-    type: v.union(v.literal("lead"), v.literal("paying"), v.literal("subscription")),
-    status: v.union(v.literal("active"), v.literal("inactive")),
-    totalSpent: v.optional(v.number()),
-    lastActivity: v.optional(v.number()),
-    source: v.optional(v.string()),
-    notes: v.optional(v.string()),
-  })),
+  returns: v.array(
+    v.object({
+      _id: v.id("customers"),
+      _creationTime: v.number(),
+      name: v.string(),
+      email: v.string(),
+      storeId: v.string(),
+      adminUserId: v.string(),
+      type: v.union(v.literal("lead"), v.literal("paying"), v.literal("subscription")),
+      status: v.union(v.literal("active"), v.literal("inactive")),
+      totalSpent: v.optional(v.number()),
+      lastActivity: v.optional(v.number()),
+      source: v.optional(v.string()),
+      notes: v.optional(v.string()),
+    })
+  ),
   handler: async (ctx, args) => {
     return await ctx.db
       .query("customers")
@@ -115,63 +128,78 @@ export const getCustomerCount = query({
 // Get all fans (customers + users) for a store
 export const getFansForStore = query({
   args: { storeId: v.string() },
-  returns: v.array(v.object({
-    _id: v.union(v.id("customers"), v.id("users")),
-    _creationTime: v.number(),
-    name: v.string(),
-    email: v.string(),
-    storeId: v.optional(v.string()),
-    adminUserId: v.optional(v.string()),
-    type: v.union(v.literal("lead"), v.literal("paying"), v.literal("subscription"), v.literal("user")),
-    status: v.optional(v.union(v.literal("active"), v.literal("inactive"))),
-    totalSpent: v.optional(v.number()),
-    lastActivity: v.optional(v.number()),
-    source: v.optional(v.string()),
-    notes: v.optional(v.string()),
-    imageUrl: v.optional(v.string()),
-    
-    // ActiveCampaign / Fan fields
-    phone: v.optional(v.string()),
-    tags: v.optional(v.array(v.string())),
-    score: v.optional(v.number()),
-    daw: v.optional(v.string()),
-    typeOfMusic: v.optional(v.string()),
-    goals: v.optional(v.string()),
-    musicAlias: v.optional(v.string()),
-    studentLevel: v.optional(v.string()),
-    howLongProducing: v.optional(v.string()),
-    whySignedUp: v.optional(v.string()),
-    genreSpecialty: v.optional(v.string()),
-    opensEmail: v.optional(v.boolean()),
-    clicksLinks: v.optional(v.boolean()),
-    lastOpenDate: v.optional(v.number()),
-    city: v.optional(v.string()),
-    state: v.optional(v.string()),
-    stateCode: v.optional(v.string()),
-    zipCode: v.optional(v.string()),
-    country: v.optional(v.string()),
-    countryCode: v.optional(v.string()),
-    activeCampaignId: v.optional(v.string()),
-    
-    enrolledCourses: v.optional(v.array(v.object({
-      courseId: v.id("courses"),
-      courseTitle: v.string(),
-      enrolledAt: v.number(),
-      progress: v.optional(v.number()),
-    }))),
-    purchasedProducts: v.optional(v.array(v.object({
-      productId: v.id("digitalProducts"),
-      productTitle: v.string(),
-      purchasedAt: v.number(),
-    }))),
-  })),
+  returns: v.array(
+    v.object({
+      _id: v.union(v.id("customers"), v.id("users")),
+      _creationTime: v.number(),
+      name: v.string(),
+      email: v.string(),
+      storeId: v.optional(v.string()),
+      adminUserId: v.optional(v.string()),
+      type: v.union(
+        v.literal("lead"),
+        v.literal("paying"),
+        v.literal("subscription"),
+        v.literal("user")
+      ),
+      status: v.optional(v.union(v.literal("active"), v.literal("inactive"))),
+      totalSpent: v.optional(v.number()),
+      lastActivity: v.optional(v.number()),
+      source: v.optional(v.string()),
+      notes: v.optional(v.string()),
+      imageUrl: v.optional(v.string()),
+
+      // ActiveCampaign / Fan fields
+      phone: v.optional(v.string()),
+      tags: v.optional(v.array(v.string())),
+      score: v.optional(v.number()),
+      daw: v.optional(v.string()),
+      typeOfMusic: v.optional(v.string()),
+      goals: v.optional(v.string()),
+      musicAlias: v.optional(v.string()),
+      studentLevel: v.optional(v.string()),
+      howLongProducing: v.optional(v.string()),
+      whySignedUp: v.optional(v.string()),
+      genreSpecialty: v.optional(v.string()),
+      opensEmail: v.optional(v.boolean()),
+      clicksLinks: v.optional(v.boolean()),
+      lastOpenDate: v.optional(v.number()),
+      city: v.optional(v.string()),
+      state: v.optional(v.string()),
+      stateCode: v.optional(v.string()),
+      zipCode: v.optional(v.string()),
+      country: v.optional(v.string()),
+      countryCode: v.optional(v.string()),
+      activeCampaignId: v.optional(v.string()),
+
+      enrolledCourses: v.optional(
+        v.array(
+          v.object({
+            courseId: v.id("courses"),
+            courseTitle: v.string(),
+            enrolledAt: v.number(),
+            progress: v.optional(v.number()),
+          })
+        )
+      ),
+      purchasedProducts: v.optional(
+        v.array(
+          v.object({
+            productId: v.id("digitalProducts"),
+            productTitle: v.string(),
+            purchasedAt: v.number(),
+          })
+        )
+      ),
+    })
+  ),
   handler: async (ctx, args) => {
     // Get store to find the admin user
     const store = await ctx.db
       .query("stores")
       .filter((q) => q.eq(q.field("_id"), args.storeId))
       .first();
-    
+
     if (!store) {
       return [];
     }
@@ -184,18 +212,15 @@ export const getFansForStore = query({
       .take(5000);
 
     // 2. Get all users (registered accounts) - up to 5000
-    const allUsers = await ctx.db
-      .query("users")
-      .order("desc")
-      .take(5000);
+    const allUsers = await ctx.db.query("users").order("desc").take(5000);
 
     // 3. Deduplicate by email (customers take priority over users)
-    const customerEmails = new Set(customers.map(c => c.email.toLowerCase()));
-    
+    const customerEmails = new Set(customers.map((c) => c.email.toLowerCase()));
+
     // 4. Convert users to fan format (only if not already a customer)
     const usersAsFans = allUsers
-      .filter(user => !customerEmails.has(user.email?.toLowerCase() || ""))
-      .map(user => ({
+      .filter((user) => !customerEmails.has(user.email?.toLowerCase() || ""))
+      .map((user) => ({
         _id: user._id as Id<"customers"> | Id<"users">,
         _creationTime: user._creationTime,
         name: user.name || "Unknown",
@@ -214,8 +239,8 @@ export const getFansForStore = query({
 
     // 5. Combine and return (max ~10,000 total)
     const fans = [
-      ...customers.map(c => ({ ...c, enrolledCourses: [], purchasedProducts: [] })),
-      ...usersAsFans
+      ...customers.map((c) => ({ ...c, enrolledCourses: [], purchasedProducts: [] })),
+      ...usersAsFans,
     ];
 
     // Sort by creation time (most recent first)
@@ -226,55 +251,65 @@ export const getFansForStore = query({
 // Get customers by store with enrollment details
 export const getCustomersForStore = query({
   args: { storeId: v.string() },
-  returns: v.array(v.object({
-    _id: v.id("customers"),
-    _creationTime: v.number(),
-    name: v.string(),
-    email: v.string(),
-    storeId: v.string(),
-    adminUserId: v.string(),
-    type: v.union(v.literal("lead"), v.literal("paying"), v.literal("subscription")),
-    status: v.union(v.literal("active"), v.literal("inactive")),
-    totalSpent: v.optional(v.number()),
-    lastActivity: v.optional(v.number()),
-    source: v.optional(v.string()),
-    notes: v.optional(v.string()),
-    
-    // ActiveCampaign / Fan fields
-    phone: v.optional(v.string()),
-    tags: v.optional(v.array(v.string())),
-    score: v.optional(v.number()),
-    daw: v.optional(v.string()),
-    typeOfMusic: v.optional(v.string()),
-    goals: v.optional(v.string()),
-    musicAlias: v.optional(v.string()),
-    studentLevel: v.optional(v.string()),
-    howLongProducing: v.optional(v.string()),
-    whySignedUp: v.optional(v.string()),
-    genreSpecialty: v.optional(v.string()),
-    opensEmail: v.optional(v.boolean()),
-    clicksLinks: v.optional(v.boolean()),
-    lastOpenDate: v.optional(v.number()),
-    city: v.optional(v.string()),
-    state: v.optional(v.string()),
-    stateCode: v.optional(v.string()),
-    zipCode: v.optional(v.string()),
-    country: v.optional(v.string()),
-    countryCode: v.optional(v.string()),
-    activeCampaignId: v.optional(v.string()),
-    
-    enrolledCourses: v.optional(v.array(v.object({
-      courseId: v.id("courses"),
-      courseTitle: v.string(),
-      enrolledAt: v.number(),
-      progress: v.optional(v.number()),
-    }))),
-    purchasedProducts: v.optional(v.array(v.object({
-      productId: v.id("digitalProducts"),
-      productTitle: v.string(),
-      purchasedAt: v.number(),
-    }))),
-  })),
+  returns: v.array(
+    v.object({
+      _id: v.id("customers"),
+      _creationTime: v.number(),
+      name: v.string(),
+      email: v.string(),
+      storeId: v.string(),
+      adminUserId: v.string(),
+      type: v.union(v.literal("lead"), v.literal("paying"), v.literal("subscription")),
+      status: v.union(v.literal("active"), v.literal("inactive")),
+      totalSpent: v.optional(v.number()),
+      lastActivity: v.optional(v.number()),
+      source: v.optional(v.string()),
+      notes: v.optional(v.string()),
+
+      // ActiveCampaign / Fan fields
+      phone: v.optional(v.string()),
+      tags: v.optional(v.array(v.string())),
+      score: v.optional(v.number()),
+      daw: v.optional(v.string()),
+      typeOfMusic: v.optional(v.string()),
+      goals: v.optional(v.string()),
+      musicAlias: v.optional(v.string()),
+      studentLevel: v.optional(v.string()),
+      howLongProducing: v.optional(v.string()),
+      whySignedUp: v.optional(v.string()),
+      genreSpecialty: v.optional(v.string()),
+      opensEmail: v.optional(v.boolean()),
+      clicksLinks: v.optional(v.boolean()),
+      lastOpenDate: v.optional(v.number()),
+      city: v.optional(v.string()),
+      state: v.optional(v.string()),
+      stateCode: v.optional(v.string()),
+      zipCode: v.optional(v.string()),
+      country: v.optional(v.string()),
+      countryCode: v.optional(v.string()),
+      activeCampaignId: v.optional(v.string()),
+
+      enrolledCourses: v.optional(
+        v.array(
+          v.object({
+            courseId: v.id("courses"),
+            courseTitle: v.string(),
+            enrolledAt: v.number(),
+            progress: v.optional(v.number()),
+          })
+        )
+      ),
+      purchasedProducts: v.optional(
+        v.array(
+          v.object({
+            productId: v.id("digitalProducts"),
+            productTitle: v.string(),
+            purchasedAt: v.number(),
+          })
+        )
+      ),
+    })
+  ),
   handler: async (ctx, args) => {
     // Convex has a hard limit of 8,192 items in array returns
     // For large datasets, return up to 5,000 customers
@@ -285,7 +320,7 @@ export const getCustomersForStore = query({
       .take(5000); // Limited to 5000 to stay well under 8192 limit
 
     // Return basic customer data without enrichment for performance
-    return customers.map(customer => ({
+    return customers.map((customer) => ({
       ...customer,
       enrolledCourses: [],
       purchasedProducts: [],
@@ -295,7 +330,7 @@ export const getCustomersForStore = query({
 
 // Paginated version for very large datasets (50k+)
 export const getCustomersForStorePaginated = query({
-  args: { 
+  args: {
     storeId: v.string(),
     paginationOpts: paginationOptsValidator,
   },
@@ -310,66 +345,76 @@ export const getCustomersForStorePaginated = query({
 
 // Search customers by name or email
 export const searchCustomersForStore = query({
-  args: { 
+  args: {
     storeId: v.string(),
     searchTerm: v.string(),
   },
-  returns: v.array(v.object({
-    _id: v.id("customers"),
-    _creationTime: v.number(),
-    name: v.string(),
-    email: v.string(),
-    storeId: v.string(),
-    adminUserId: v.string(),
-    type: v.union(v.literal("lead"), v.literal("paying"), v.literal("subscription")),
-    status: v.union(v.literal("active"), v.literal("inactive")),
-    totalSpent: v.optional(v.number()),
-    lastActivity: v.optional(v.number()),
-    source: v.optional(v.string()),
-    notes: v.optional(v.string()),
-    
-    // ActiveCampaign / Fan fields
-    phone: v.optional(v.string()),
-    tags: v.optional(v.array(v.string())),
-    score: v.optional(v.number()),
-    daw: v.optional(v.string()),
-    typeOfMusic: v.optional(v.string()),
-    goals: v.optional(v.string()),
-    musicAlias: v.optional(v.string()),
-    studentLevel: v.optional(v.string()),
-    howLongProducing: v.optional(v.string()),
-    whySignedUp: v.optional(v.string()),
-    genreSpecialty: v.optional(v.string()),
-    opensEmail: v.optional(v.boolean()),
-    clicksLinks: v.optional(v.boolean()),
-    lastOpenDate: v.optional(v.number()),
-    city: v.optional(v.string()),
-    state: v.optional(v.string()),
-    stateCode: v.optional(v.string()),
-    zipCode: v.optional(v.string()),
-    country: v.optional(v.string()),
-    countryCode: v.optional(v.string()),
-    activeCampaignId: v.optional(v.string()),
-    
-    enrolledCourses: v.optional(v.array(v.object({
-      courseId: v.id("courses"),
-      courseTitle: v.string(),
-      enrolledAt: v.number(),
-      progress: v.optional(v.number()),
-    }))),
-    purchasedProducts: v.optional(v.array(v.object({
-      productId: v.id("digitalProducts"),
-      productTitle: v.string(),
-      purchasedAt: v.number(),
-    }))),
-  })),
+  returns: v.array(
+    v.object({
+      _id: v.id("customers"),
+      _creationTime: v.number(),
+      name: v.string(),
+      email: v.string(),
+      storeId: v.string(),
+      adminUserId: v.string(),
+      type: v.union(v.literal("lead"), v.literal("paying"), v.literal("subscription")),
+      status: v.union(v.literal("active"), v.literal("inactive")),
+      totalSpent: v.optional(v.number()),
+      lastActivity: v.optional(v.number()),
+      source: v.optional(v.string()),
+      notes: v.optional(v.string()),
+
+      // ActiveCampaign / Fan fields
+      phone: v.optional(v.string()),
+      tags: v.optional(v.array(v.string())),
+      score: v.optional(v.number()),
+      daw: v.optional(v.string()),
+      typeOfMusic: v.optional(v.string()),
+      goals: v.optional(v.string()),
+      musicAlias: v.optional(v.string()),
+      studentLevel: v.optional(v.string()),
+      howLongProducing: v.optional(v.string()),
+      whySignedUp: v.optional(v.string()),
+      genreSpecialty: v.optional(v.string()),
+      opensEmail: v.optional(v.boolean()),
+      clicksLinks: v.optional(v.boolean()),
+      lastOpenDate: v.optional(v.number()),
+      city: v.optional(v.string()),
+      state: v.optional(v.string()),
+      stateCode: v.optional(v.string()),
+      zipCode: v.optional(v.string()),
+      country: v.optional(v.string()),
+      countryCode: v.optional(v.string()),
+      activeCampaignId: v.optional(v.string()),
+
+      enrolledCourses: v.optional(
+        v.array(
+          v.object({
+            courseId: v.id("courses"),
+            courseTitle: v.string(),
+            enrolledAt: v.number(),
+            progress: v.optional(v.number()),
+          })
+        )
+      ),
+      purchasedProducts: v.optional(
+        v.array(
+          v.object({
+            productId: v.id("digitalProducts"),
+            productTitle: v.string(),
+            purchasedAt: v.number(),
+          })
+        )
+      ),
+    })
+  ),
   handler: async (ctx, args) => {
     if (!args.searchTerm || args.searchTerm.length < 2) {
       return [];
     }
 
     const searchLower = args.searchTerm.toLowerCase().trim();
-    
+
     // Get a large sample of customers to search through
     // We'll search both recent AND older customers to maximize coverage
     const recentCustomers = await ctx.db
@@ -377,32 +422,30 @@ export const searchCustomersForStore = query({
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .order("desc")
       .take(4000); // Recent 4000
-    
+
     const olderCustomers = await ctx.db
       .query("customers")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .order("asc")
       .take(4000); // Oldest 4000
-    
+
     // Combine for 8000 total coverage (mix of old and new)
     const allCustomers = [...recentCustomers, ...olderCustomers];
-    
+
     // Deduplicate
-    const uniqueCustomers = Array.from(
-      new Map(allCustomers.map(c => [c._id, c])).values()
-    );
+    const uniqueCustomers = Array.from(new Map(allCustomers.map((c) => [c._id, c])).values());
 
     // Filter by search term - be very aggressive with matching
-    const matches = uniqueCustomers.filter(customer => {
+    const matches = uniqueCustomers.filter((customer) => {
       const nameMatch = customer.name?.toLowerCase().includes(searchLower);
       const emailMatch = customer.email?.toLowerCase().includes(searchLower);
       const sourceMatch = customer.source?.toLowerCase().includes(searchLower);
-      
+
       return nameMatch || emailMatch || sourceMatch;
     });
 
     // Return top 200 matches
-    return matches.slice(0, 200).map(customer => ({
+    return matches.slice(0, 200).map((customer) => ({
       ...customer,
       enrolledCourses: [],
       purchasedProducts: [],
@@ -417,41 +460,41 @@ export const debugEmailDomains = query({
     totalChecked: v.number(),
     gmailCount: v.number(),
     sampleEmails: v.array(v.string()),
-    domains: v.array(v.object({
-      domain: v.string(),
-      count: v.number(),
-    })),
+    domains: v.array(
+      v.object({
+        domain: v.string(),
+        count: v.number(),
+      })
+    ),
   }),
   handler: async (ctx, args) => {
     const customers = await ctx.db
       .query("customers")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .take(1000);
-    
-    const gmailCustomers = customers.filter(c => 
-      c.email?.toLowerCase().includes('@gmail.com')
-    );
-    
+
+    const gmailCustomers = customers.filter((c) => c.email?.toLowerCase().includes("@gmail.com"));
+
     // Count domains
     const domainCounts = new Map<string, number>();
-    customers.forEach(c => {
+    customers.forEach((c) => {
       if (c.email) {
-        const domain = c.email.split('@')[1]?.toLowerCase();
+        const domain = c.email.split("@")[1]?.toLowerCase();
         if (domain) {
           domainCounts.set(domain, (domainCounts.get(domain) || 0) + 1);
         }
       }
     });
-    
+
     const domains = Array.from(domainCounts.entries())
       .map(([domain, count]) => ({ domain, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 10);
-    
+
     return {
       totalChecked: customers.length,
       gmailCount: gmailCustomers.length,
-      sampleEmails: customers.slice(0, 20).map(c => c.email),
+      sampleEmails: customers.slice(0, 20).map((c) => c.email),
       domains,
     };
   },
@@ -459,24 +502,26 @@ export const debugEmailDomains = query({
 
 // Get customers by type
 export const getCustomersByType = query({
-  args: { 
-    adminUserId: v.string(),
-    type: v.union(v.literal("lead"), v.literal("paying"), v.literal("subscription"))
-  },
-  returns: v.array(v.object({
-    _id: v.id("customers"),
-    _creationTime: v.number(),
-    name: v.string(),
-    email: v.string(),
-    storeId: v.string(),
+  args: {
     adminUserId: v.string(),
     type: v.union(v.literal("lead"), v.literal("paying"), v.literal("subscription")),
-    status: v.union(v.literal("active"), v.literal("inactive")),
-    totalSpent: v.optional(v.number()),
-    lastActivity: v.optional(v.number()),
-    source: v.optional(v.string()),
-    notes: v.optional(v.string()),
-  })),
+  },
+  returns: v.array(
+    v.object({
+      _id: v.id("customers"),
+      _creationTime: v.number(),
+      name: v.string(),
+      email: v.string(),
+      storeId: v.string(),
+      adminUserId: v.string(),
+      type: v.union(v.literal("lead"), v.literal("paying"), v.literal("subscription")),
+      status: v.union(v.literal("active"), v.literal("inactive")),
+      totalSpent: v.optional(v.number()),
+      lastActivity: v.optional(v.number()),
+      source: v.optional(v.string()),
+      notes: v.optional(v.string()),
+    })
+  ),
   handler: async (ctx, args) => {
     // Use filter directly in the query to avoid collecting all customers
     const customers = await ctx.db
@@ -484,7 +529,7 @@ export const getCustomersByType = query({
       .withIndex("by_adminUserId", (q) => q.eq("adminUserId", args.adminUserId))
       .filter((q) => q.eq(q.field("type"), args.type))
       .take(5000); // Limit to 5000 to stay under read limits
-    
+
     return customers;
   },
 });
@@ -548,11 +593,13 @@ export const createSubscription = mutation({
   },
   returns: v.id("subscriptions"),
   handler: async (ctx, args) => {
-    const nextBillingDate = Date.now() + (
-      args.billingInterval === "monthly" ? 30 * 24 * 60 * 60 * 1000 :
-      args.billingInterval === "yearly" ? 365 * 24 * 60 * 60 * 1000 :
-      7 * 24 * 60 * 60 * 1000 // weekly
-    );
+    const nextBillingDate =
+      Date.now() +
+      (args.billingInterval === "monthly"
+        ? 30 * 24 * 60 * 60 * 1000
+        : args.billingInterval === "yearly"
+          ? 365 * 24 * 60 * 60 * 1000
+          : 7 * 24 * 60 * 60 * 1000); // weekly
 
     const subscriptionDbId = await ctx.db.insert("subscriptions", {
       customerId: args.customerId,
@@ -634,7 +681,7 @@ export const getCustomerStats = query({
     const recentPurchases = await ctx.db
       .query("purchases")
       .withIndex("by_adminUserId", (q) => q.eq("adminUserId", args.adminUserId))
-      .filter(q => q.eq(q.field("status"), "completed"))
+      .filter((q) => q.eq(q.field("status"), "completed"))
       .order("desc")
       .take(500); // Small sample of recent purchases
 
@@ -655,26 +702,33 @@ export const getCustomerStats = query({
 // Get purchases for a customer
 export const getPurchasesForCustomer = query({
   args: { customerId: v.id("customers") },
-  returns: v.array(v.object({
-    _id: v.id("purchases"),
-    _creationTime: v.number(),
-    userId: v.string(),
-    customerId: v.optional(v.id("customers")),
-    productId: v.optional(v.id("digitalProducts")),
-    courseId: v.optional(v.id("courses")),
-    storeId: v.string(),
-    adminUserId: v.string(),
-    amount: v.number(),
-    currency: v.optional(v.string()),
-    status: v.union(v.literal("pending"), v.literal("completed"), v.literal("refunded")),
-    paymentMethod: v.optional(v.string()),
-    transactionId: v.optional(v.string()),
-    productType: v.union(v.literal("digitalProduct"), v.literal("course"), v.literal("coaching"), v.literal("bundle")),
-    accessGranted: v.optional(v.boolean()),
-    accessExpiresAt: v.optional(v.number()),
-    downloadCount: v.optional(v.number()),
-    lastAccessedAt: v.optional(v.number()),
-  })),
+  returns: v.array(
+    v.object({
+      _id: v.id("purchases"),
+      _creationTime: v.number(),
+      userId: v.string(),
+      customerId: v.optional(v.id("customers")),
+      productId: v.optional(v.id("digitalProducts")),
+      courseId: v.optional(v.id("courses")),
+      storeId: v.string(),
+      adminUserId: v.string(),
+      amount: v.number(),
+      currency: v.optional(v.string()),
+      status: v.union(v.literal("pending"), v.literal("completed"), v.literal("refunded")),
+      paymentMethod: v.optional(v.string()),
+      transactionId: v.optional(v.string()),
+      productType: v.union(
+        v.literal("digitalProduct"),
+        v.literal("course"),
+        v.literal("coaching"),
+        v.literal("bundle")
+      ),
+      accessGranted: v.optional(v.boolean()),
+      accessExpiresAt: v.optional(v.number()),
+      downloadCount: v.optional(v.number()),
+      lastAccessedAt: v.optional(v.number()),
+    })
+  ),
   handler: async (ctx, args) => {
     return await ctx.db
       .query("purchases")
@@ -697,4 +751,4 @@ export const updateCustomerNotes = mutation({
     });
     return null;
   },
-}); 
+});

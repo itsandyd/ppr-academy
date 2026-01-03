@@ -443,6 +443,128 @@ export const recordEmailClicked = internalMutation({
   },
 });
 
+export const upsertFromCustomer = internalMutation({
+  args: {
+    storeId: v.string(),
+    email: v.string(),
+    firstName: v.optional(v.string()),
+    lastName: v.optional(v.string()),
+    source: v.optional(v.string()),
+    customerId: v.optional(v.id("customers")),
+  },
+  returns: v.id("emailContacts"),
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("emailContacts")
+      .withIndex("by_storeId_and_email", (q) =>
+        q.eq("storeId", args.storeId).eq("email", args.email.toLowerCase())
+      )
+      .first();
+
+    const now = Date.now();
+
+    if (existing) {
+      const updates: Record<string, unknown> = { updatedAt: now };
+      if (args.firstName && !existing.firstName) updates.firstName = args.firstName;
+      if (args.lastName && !existing.lastName) updates.lastName = args.lastName;
+      if (args.customerId) updates.customerId = args.customerId;
+
+      await ctx.db.patch(existing._id, updates);
+      return existing._id;
+    }
+
+    return await ctx.db.insert("emailContacts", {
+      storeId: args.storeId,
+      email: args.email.toLowerCase(),
+      firstName: args.firstName,
+      lastName: args.lastName,
+      status: "subscribed",
+      subscribedAt: now,
+      tagIds: [],
+      source: args.source || "customer",
+      customerId: args.customerId,
+      emailsSent: 0,
+      emailsOpened: 0,
+      emailsClicked: 0,
+      createdAt: now,
+      updatedAt: now,
+    });
+  },
+});
+
+export const syncCustomersToEmailContacts = mutation({
+  args: {
+    storeId: v.string(),
+    batchSize: v.optional(v.number()),
+  },
+  returns: v.object({
+    synced: v.number(),
+    skipped: v.number(),
+    total: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    const batchSize = args.batchSize || 500;
+    let synced = 0;
+    let skipped = 0;
+
+    const customers = await ctx.db
+      .query("customers")
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+      .take(batchSize);
+
+    const now = Date.now();
+
+    for (const customer of customers) {
+      const existing = await ctx.db
+        .query("emailContacts")
+        .withIndex("by_storeId_and_email", (q) =>
+          q.eq("storeId", args.storeId).eq("email", customer.email.toLowerCase())
+        )
+        .first();
+
+      if (existing) {
+        if (!existing.customerId) {
+          await ctx.db.patch(existing._id, {
+            customerId: customer._id,
+            updatedAt: now,
+          });
+        }
+        skipped++;
+        continue;
+      }
+
+      const nameParts = customer.name?.split(" ") || [];
+      const firstName = nameParts[0] || undefined;
+      const lastName = nameParts.slice(1).join(" ") || undefined;
+
+      await ctx.db.insert("emailContacts", {
+        storeId: args.storeId,
+        email: customer.email.toLowerCase(),
+        firstName,
+        lastName,
+        status: "subscribed",
+        subscribedAt: customer._creationTime,
+        tagIds: [],
+        source: customer.source || "customer_sync",
+        customerId: customer._id,
+        emailsSent: 0,
+        emailsOpened: 0,
+        emailsClicked: 0,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      synced++;
+    }
+
+    return {
+      synced,
+      skipped,
+      total: customers.length,
+    };
+  },
+});
+
 export const bulkImportContacts = mutation({
   args: {
     storeId: v.string(),
