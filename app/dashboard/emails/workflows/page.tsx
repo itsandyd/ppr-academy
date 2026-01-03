@@ -22,12 +22,13 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { WysiwygEditor } from "@/components/ui/wysiwyg-editor";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Trash2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Save, Trash2, AlertTriangle, Check } from "lucide-react";
 import NodeSidebar from "./components/NodeSidebar";
 import WorkflowCanvas from "./components/WorkflowCanvas";
 
@@ -563,17 +564,25 @@ export default function WorkflowBuilderPage() {
                   </>
                 )}
 
-                <div className="pt-4">
+                <DialogFooter className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">
                   <Button
                     variant="destructive"
                     size="sm"
                     onClick={() => deleteNode(selectedNode.id)}
-                    className="w-full gap-2"
+                    className="gap-2"
                   >
                     <Trash2 className="h-4 w-4" />
                     Delete Node
                   </Button>
-                </div>
+                  <Button
+                    size="sm"
+                    onClick={() => setSelectedNode(null)}
+                    className="gap-2"
+                  >
+                    <Check className="h-4 w-4" />
+                    Done
+                  </Button>
+                </DialogFooter>
               </div>
             )}
           </DialogContent>
