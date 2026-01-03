@@ -446,6 +446,7 @@ export default defineSchema({
   workflowExecutions: defineTable({
     workflowId: v.id("emailWorkflows"),
     storeId: v.string(),
+    contactId: v.optional(v.id("emailContacts")),
     customerId: v.optional(v.string()),
     customerEmail: v.string(),
     status: v.union(
@@ -465,6 +466,7 @@ export default defineSchema({
   })
     .index("by_workflowId", ["workflowId"])
     .index("by_storeId", ["storeId"])
+    .index("by_contactId", ["contactId"])
     .index("by_status", ["status"])
     .index("by_scheduledFor", ["scheduledFor"]),
 
@@ -4531,7 +4533,7 @@ export default defineSchema({
 
     // Link to existing customer record (if any)
     customerId: v.optional(v.id("customers")),
-    
+
     // Link to user record (for enrolled users)
     userId: v.optional(v.id("users")),
 
