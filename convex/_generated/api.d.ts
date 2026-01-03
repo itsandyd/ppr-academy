@@ -207,6 +207,8 @@ import type * as users from "../users.js";
 import type * as vercelDomainManager from "../vercelDomainManager.js";
 import type * as webhooks_instagram from "../webhooks/instagram.js";
 import type * as webhooks_stripe from "../webhooks/stripe.js";
+import type * as workflowActions from "../workflowActions.js";
+import type * as workflowHelpers from "../workflowHelpers.js";
 
 /**
  * A utility for referencing Convex functions in your app's API.
@@ -411,6 +413,8 @@ declare const fullApi: ApiFromModules<{
   vercelDomainManager: typeof vercelDomainManager;
   "webhooks/instagram": typeof webhooks_instagram;
   "webhooks/stripe": typeof webhooks_stripe;
+  workflowActions: typeof workflowActions;
+  workflowHelpers: typeof workflowHelpers;
 }>;
 export declare const api: FilterApi<
   typeof fullApi,

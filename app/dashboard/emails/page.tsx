@@ -98,7 +98,7 @@ export default function EmailCampaignsPage() {
   const deleteCampaign = useMutation(api.dripCampaigns.deleteCampaign);
   const createContact = useMutation(api.emailContacts.createContact);
   const deleteContact = useMutation(api.emailContacts.deleteContact);
-  const syncEnrolledUsers = useMutation(api.emailContacts.syncEnrolledUsersToEmailContacts);
+  const syncCustomers = useMutation(api.emailContacts.syncCustomersToEmailContacts);
   const createTag = useMutation(api.emailTags.createTag);
   const deleteTag = useMutation(api.emailTags.deleteTag);
   const enrollContact = useMutation(api.emailWorkflows.enrollContactInWorkflow);
@@ -227,28 +227,16 @@ export default function EmailCampaignsPage() {
   const handleSyncCustomers = async () => {
     setIsSyncing(true);
     try {
-      const result = await syncEnrolledUsers({ storeId });
-      if (result.errors.length > 0 && result.synced === 0 && result.skipped === 0) {
-        // Only errors, no syncs
-        toast({
-          title: "Sync Failed",
-          description: result.errors[0],
-          variant: "destructive",
-        });
-      } else {
-        const description = result.errors.length > 0
-          ? `Added ${result.synced} contacts, ${result.skipped} already existed. ${result.errors.length} errors.`
-          : `Added ${result.synced} contacts, ${result.skipped} already existed (${result.total} total enrolled users)`;
-        toast({
-          title: "Sync Complete",
-          description,
-        });
-      }
+      const result = await syncCustomers({ storeId });
+      toast({
+        title: "Sync Complete",
+        description: `Added ${result.synced} contacts, ${result.skipped} already existed`,
+      });
     } catch (error: any) {
-      toast({ 
-        title: "Failed to sync enrolled users", 
+      toast({
+        title: "Failed to sync customers",
         description: error.message || "Unknown error",
-        variant: "destructive" 
+        variant: "destructive",
       });
     } finally {
       setIsSyncing(false);
@@ -1249,22 +1237,120 @@ export default function EmailCampaignsPage() {
         </TabsContent>
 
         <TabsContent value="automations" className="mt-4 space-y-4 md:mt-6">
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-10 md:py-16">
-              <Workflow className="mb-3 h-12 w-12 text-muted-foreground/30 md:mb-4 md:h-16 md:w-16" />
-              <h3 className="mb-2 text-lg font-semibold md:text-xl">Visual Workflow Builder</h3>
-              <p className="mb-4 max-w-md text-center text-sm text-muted-foreground md:mb-6">
-                Build complex automation workflows with our drag-and-drop visual editor.
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Automations</h2>
+              <p className="text-sm text-muted-foreground">
+                {workflows?.length || 0} workflow{workflows?.length !== 1 ? "s" : ""}
               </p>
-              <Button
-                onClick={() => router.push("/dashboard/emails/workflows?mode=create")}
-                className="gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                Create Workflow
-              </Button>
-            </CardContent>
-          </Card>
+            </div>
+            <Button
+              onClick={() => router.push("/dashboard/emails/workflows?mode=create")}
+              className="gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">New Workflow</span>
+              <span className="sm:hidden">New</span>
+            </Button>
+          </div>
+
+          {!workflows || workflows.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-10 md:py-16">
+                <Workflow className="mb-3 h-12 w-12 text-muted-foreground/30 md:mb-4 md:h-16 md:w-16" />
+                <h3 className="mb-2 text-lg font-semibold md:text-xl">Visual Workflow Builder</h3>
+                <p className="mb-4 max-w-md text-center text-sm text-muted-foreground md:mb-6">
+                  Build complex automation workflows with our drag-and-drop visual editor.
+                </p>
+                <Button
+                  onClick={() => router.push("/dashboard/emails/workflows?mode=create")}
+                  className="gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Create Your First Workflow
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-2 md:space-y-3">
+              {workflows.map((workflow: any) => (
+                <Card
+                  key={workflow._id}
+                  className="cursor-pointer transition-shadow hover:shadow-md"
+                  onClick={() =>
+                    router.push(`/dashboard/emails/workflows?mode=create&id=${workflow._id}`)
+                  }
+                >
+                  <CardContent className="p-3 md:p-4">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                      <div className="flex items-center gap-3 md:gap-4">
+                        <div
+                          className={cn(
+                            "shrink-0 rounded-lg p-1.5 md:p-2",
+                            workflow.isActive
+                              ? "bg-green-100 dark:bg-green-900"
+                              : "bg-slate-100 dark:bg-slate-800"
+                          )}
+                        >
+                          <Workflow
+                            className={cn(
+                              "h-4 w-4 md:h-5 md:w-5",
+                              workflow.isActive ? "text-green-600" : "text-slate-400"
+                            )}
+                          />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
+                            <span className="truncate text-sm font-semibold md:text-base">
+                              {workflow.name}
+                            </span>
+                            <Badge
+                              variant={workflow.isActive ? "default" : "secondary"}
+                              className="shrink-0 text-[10px] md:text-xs"
+                            >
+                              {workflow.isActive ? "Active" : "Draft"}
+                            </Badge>
+                          </div>
+                          <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground md:gap-2 md:text-sm">
+                            <span>
+                              {workflow.trigger?.type
+                                ? getTriggerLabel(workflow.trigger.type)
+                                : "No trigger"}
+                            </span>
+                            <span>•</span>
+                            <span>{workflow.nodes?.length || 0} nodes</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between border-t border-border/50 pt-2 md:justify-end md:gap-6 md:border-t-0 md:pt-0">
+                        <div className="flex items-center gap-4 md:gap-6">
+                          <div className="text-center md:text-right">
+                            <div className="text-xs font-medium md:text-sm">
+                              {workflow.totalExecutions || 0}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground md:text-xs">
+                              executions
+                            </div>
+                          </div>
+                          <div className="text-center md:text-right">
+                            <div className="text-xs font-medium md:text-sm">
+                              {workflow.lastExecuted
+                                ? new Date(workflow.lastExecuted).toLocaleDateString()
+                                : "Never"}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground md:text-xs">
+                              last run
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>

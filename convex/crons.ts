@@ -27,9 +27,9 @@ crons.interval(
 );
 
 crons.interval(
-  "process scheduled workflow executions",
-  { minutes: 30 },
-  internal.emailWorkflows.processScheduledExecutions,
+  "process workflow executions",
+  { minutes: 5 },
+  internal.workflowActions.processWorkflowExecutions,
   {}
 );
 
