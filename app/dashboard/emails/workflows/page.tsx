@@ -20,12 +20,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Save, Trash2, AlertTriangle } from "lucide-react";
 import NodeSidebar from "./components/NodeSidebar";
@@ -334,12 +334,12 @@ export default function WorkflowBuilderPage() {
           />
         </div>
 
-        <Sheet open={!!selectedNode} onOpenChange={(open) => !open && setSelectedNode(null)}>
-          <SheetContent className="w-full bg-white dark:bg-black sm:w-80">
-            <SheetHeader>
-              <SheetTitle className="capitalize">{selectedNode?.type} Settings</SheetTitle>
-              <SheetDescription>Configure this node</SheetDescription>
-            </SheetHeader>
+        <Dialog open={!!selectedNode} onOpenChange={(open) => !open && setSelectedNode(null)}>
+          <DialogContent className="max-h-[85vh] overflow-y-auto bg-white dark:bg-black sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="capitalize">{selectedNode?.type} Settings</DialogTitle>
+              <DialogDescription>Configure this node</DialogDescription>
+            </DialogHeader>
 
             {selectedNode && (
               <div className="mt-6 space-y-4">
@@ -576,8 +576,8 @@ export default function WorkflowBuilderPage() {
                 </div>
               </div>
             )}
-          </SheetContent>
-        </Sheet>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
