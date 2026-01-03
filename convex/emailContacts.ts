@@ -567,7 +567,7 @@ export const syncCustomersToEmailContacts = mutation({
 
 export const syncEnrolledUsersToEmailContacts = mutation({
   args: {
-    storeId: v.string(),
+    storeId: v.string(), // This is actually the Clerk userId passed from frontend
   },
   returns: v.object({
     synced: v.number(),
@@ -581,23 +581,49 @@ export const syncEnrolledUsersToEmailContacts = mutation({
     const errors: string[] = [];
     const now = Date.now();
 
-    // Step 1: Get all courses for this store
+    // Step 1: Get the actual store by userId (the storeId passed is the Clerk user ID)
+    const store = await ctx.db
+      .query("stores")
+      .withIndex("by_userId", (q) => q.eq("userId", args.storeId))
+      .first();
+
+    if (!store) {
+      return { synced: 0, skipped: 0, total: 0, errors: ["No store found for this user"] };
+    }
+
+    const actualStoreId = store._id;
+
+    // Step 2: Get all courses for this store (using actual Convex store ID)
     const courses = await ctx.db
       .query("courses")
-      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+      .withIndex("by_storeId", (q) => q.eq("storeId", actualStoreId))
       .collect();
 
-    if (courses.length === 0) {
+    // Also get courses by userId (in case storeId isn't set on some courses)
+    const coursesByUserId = await ctx.db
+      .query("courses")
+      .withIndex("by_userId", (q) => q.eq("userId", args.storeId))
+      .collect();
+
+    // Merge and deduplicate courses
+    const allCourses = [...courses];
+    for (const course of coursesByUserId) {
+      if (!allCourses.some((c) => c._id === course._id)) {
+        allCourses.push(course);
+      }
+    }
+
+    if (allCourses.length === 0) {
       return { synced: 0, skipped: 0, total: 0, errors: ["No courses found for this store"] };
     }
 
-    const courseIds = new Set(courses.map((c) => c._id.toString()));
+    const courseIds = new Set(allCourses.map((c) => c._id.toString()));
 
-    // Step 2: Get all enrollments
-    const allEnrollments = await ctx.db.query("enrollments").collect();
+    // Step 3: Get all enrollments
+    const allEnrollmentsRaw = await ctx.db.query("enrollments").collect();
     
     // Filter enrollments to only those for courses in this store
-    const storeEnrollments = allEnrollments.filter((e) => courseIds.has(e.courseId));
+    const storeEnrollments = allEnrollmentsRaw.filter((e) => courseIds.has(e.courseId));
 
     if (storeEnrollments.length === 0) {
       return { synced: 0, skipped: 0, total: 0, errors: ["No enrollments found for store courses"] };
@@ -645,7 +671,7 @@ export const syncEnrolledUsersToEmailContacts = mutation({
         const enrolledCourseIds = userEnrollments.map((e) => e.courseId);
         
         // Get the first enrolled course for source reference
-        const firstEnrolledCourse = courses.find((c) => c._id.toString() === enrolledCourseIds[0]);
+        const firstEnrolledCourse = allCourses.find((c) => c._id.toString() === enrolledCourseIds[0]);
 
         // Create new contact
         await ctx.db.insert("emailContacts", {
