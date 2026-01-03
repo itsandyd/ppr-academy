@@ -565,6 +565,122 @@ export const syncCustomersToEmailContacts = mutation({
   },
 });
 
+export const syncEnrolledUsersToEmailContacts = mutation({
+  args: {
+    storeId: v.string(),
+  },
+  returns: v.object({
+    synced: v.number(),
+    skipped: v.number(),
+    total: v.number(),
+    errors: v.array(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    let synced = 0;
+    let skipped = 0;
+    const errors: string[] = [];
+    const now = Date.now();
+
+    // Step 1: Get all courses for this store
+    const courses = await ctx.db
+      .query("courses")
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+      .collect();
+
+    if (courses.length === 0) {
+      return { synced: 0, skipped: 0, total: 0, errors: ["No courses found for this store"] };
+    }
+
+    const courseIds = new Set(courses.map((c) => c._id.toString()));
+
+    // Step 2: Get all enrollments
+    const allEnrollments = await ctx.db.query("enrollments").collect();
+    
+    // Filter enrollments to only those for courses in this store
+    const storeEnrollments = allEnrollments.filter((e) => courseIds.has(e.courseId));
+
+    if (storeEnrollments.length === 0) {
+      return { synced: 0, skipped: 0, total: 0, errors: ["No enrollments found for store courses"] };
+    }
+
+    // Get unique user IDs from enrollments
+    const uniqueUserIds = [...new Set(storeEnrollments.map((e) => e.userId))];
+
+    // Step 3: For each unique enrolled user, look up their info and create contact
+    for (const clerkId of uniqueUserIds) {
+      try {
+        // Find user by clerkId
+        const user = await ctx.db
+          .query("users")
+          .withIndex("by_clerkId", (q) => q.eq("clerkId", clerkId))
+          .first();
+
+        if (!user || !user.email) {
+          errors.push(`User ${clerkId} not found or has no email`);
+          continue;
+        }
+
+        // Check if contact already exists
+        const existing = await ctx.db
+          .query("emailContacts")
+          .withIndex("by_storeId_and_email", (q) =>
+            q.eq("storeId", args.storeId).eq("email", user.email!.toLowerCase())
+          )
+          .first();
+
+        if (existing) {
+          // Update with enrollment info if missing
+          if (!existing.userId) {
+            await ctx.db.patch(existing._id, {
+              userId: user._id,
+              updatedAt: now,
+            });
+          }
+          skipped++;
+          continue;
+        }
+
+        // Find which courses this user is enrolled in (for tagging)
+        const userEnrollments = storeEnrollments.filter((e) => e.userId === clerkId);
+        const enrolledCourseIds = userEnrollments.map((e) => e.courseId);
+        
+        // Get the first enrolled course for source reference
+        const firstEnrolledCourse = courses.find((c) => c._id.toString() === enrolledCourseIds[0]);
+
+        // Create new contact
+        await ctx.db.insert("emailContacts", {
+          storeId: args.storeId,
+          email: user.email.toLowerCase(),
+          firstName: user.firstName || user.name?.split(" ")[0],
+          lastName: user.lastName || user.name?.split(" ").slice(1).join(" "),
+          status: "subscribed",
+          subscribedAt: now,
+          tagIds: [],
+          source: "course_enrollment",
+          sourceCourseId: firstEnrolledCourse?._id,
+          userId: user._id,
+          emailsSent: 0,
+          emailsOpened: 0,
+          emailsClicked: 0,
+          createdAt: now,
+          updatedAt: now,
+        });
+
+        synced++;
+      } catch (error) {
+        errors.push(`Failed to process user ${clerkId}: ${error}`);
+      }
+    }
+
+    return {
+      synced,
+      skipped,
+      total: uniqueUserIds.length,
+      errors,
+    };
+  },
+});
+
 export const bulkImportContacts = mutation({
   args: {
     storeId: v.string(),

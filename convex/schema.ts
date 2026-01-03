@@ -4531,6 +4531,9 @@ export default defineSchema({
 
     // Link to existing customer record (if any)
     customerId: v.optional(v.id("customers")),
+    
+    // Link to user record (for enrolled users)
+    userId: v.optional(v.id("users")),
 
     // Timestamps
     createdAt: v.number(),

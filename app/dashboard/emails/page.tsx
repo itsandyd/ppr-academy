@@ -92,7 +92,7 @@ export default function EmailCampaignsPage() {
   const deleteCampaign = useMutation(api.dripCampaigns.deleteCampaign);
   const createContact = useMutation(api.emailContacts.createContact);
   const deleteContact = useMutation(api.emailContacts.deleteContact);
-  const syncCustomers = useMutation(api.emailContacts.syncCustomersToEmailContacts);
+  const syncEnrolledUsers = useMutation(api.emailContacts.syncEnrolledUsersToEmailContacts);
   const createTag = useMutation(api.emailTags.createTag);
   const deleteTag = useMutation(api.emailTags.deleteTag);
 
@@ -217,13 +217,16 @@ export default function EmailCampaignsPage() {
   const handleSyncCustomers = async () => {
     setIsSyncing(true);
     try {
-      const result = await syncCustomers({ storeId });
+      const result = await syncEnrolledUsers({ storeId });
+      const description = result.errors.length > 0
+        ? `Added ${result.synced} contacts, ${result.skipped} already existed. ${result.errors.length} errors.`
+        : `Added ${result.synced} contacts, ${result.skipped} already existed (${result.total} total enrolled users)`;
       toast({
         title: "Sync Complete",
-        description: `Added ${result.synced} contacts, ${result.skipped} already existed`,
+        description,
       });
     } catch {
-      toast({ title: "Failed to sync customers", variant: "destructive" });
+      toast({ title: "Failed to sync enrolled users", variant: "destructive" });
     } finally {
       setIsSyncing(false);
     }
@@ -586,7 +589,7 @@ export default function EmailCampaignsPage() {
                   className={cn("h-3.5 w-3.5 md:h-4 md:w-4", isSyncing && "animate-spin")}
                 />
                 <span className="hidden sm:inline">
-                  {isSyncing ? "Syncing..." : "Sync Customers"}
+                  {isSyncing ? "Syncing..." : "Sync Enrolled Users"}
                 </span>
               </Button>
               <Button variant="outline" size="sm" className="gap-2 md:h-10 md:px-4">
