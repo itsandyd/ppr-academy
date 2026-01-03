@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState, DragEvent } from "react";
+import { useCallback, useRef, useState, useEffect, DragEvent } from "react";
 import ReactFlow, {
   Node,
   Edge,
@@ -44,6 +44,7 @@ interface WorkflowCanvasProps {
   onNodesChange?: (nodes: Node[]) => void;
   onEdgesChange?: (edges: Edge[]) => void;
   onNodeSelect?: (node: Node | null) => void;
+  onAddNodeRef?: (addNode: (type: string) => void) => void;
 }
 
 let nodeId = 0;
@@ -55,11 +56,32 @@ function WorkflowCanvasInner({
   onNodesChange: onNodesChangeCallback,
   onEdgesChange: onEdgesChangeCallback,
   onNodeSelect,
+  onAddNodeRef,
 }: WorkflowCanvasProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
+
+  const addNodeToCanvas = useCallback(
+    (type: string) => {
+      const yOffset = nodes.length * 100;
+      const newNode: Node = {
+        id: getId(),
+        type,
+        position: { x: 250, y: 50 + yOffset },
+        data: { ...defaultNodeData[type] },
+      };
+      const newNodes = [...nodes, newNode];
+      setNodes(newNodes);
+      onNodesChangeCallback?.(newNodes);
+    },
+    [nodes, setNodes, onNodesChangeCallback]
+  );
+
+  useEffect(() => {
+    onAddNodeRef?.(addNodeToCanvas);
+  }, [onAddNodeRef, addNodeToCanvas]);
 
   const onConnect = useCallback(
     (connection: Connection) => {

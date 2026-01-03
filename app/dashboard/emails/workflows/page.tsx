@@ -20,12 +20,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Save, Trash2, AlertTriangle } from "lucide-react";
 import NodeSidebar from "./components/NodeSidebar";
@@ -137,6 +137,7 @@ export default function WorkflowBuilderPage() {
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
+  const [addNodeFn, setAddNodeFn] = useState<((type: string) => void) | null>(null);
 
   const storeId = user?.id ?? "";
 
@@ -322,7 +323,7 @@ export default function WorkflowBuilderPage() {
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
-        <NodeSidebar />
+        <NodeSidebar onAddNode={addNodeFn || undefined} />
 
         <div className="min-h-0 flex-1">
           <WorkflowCanvas
@@ -331,15 +332,19 @@ export default function WorkflowBuilderPage() {
             onNodesChange={handleNodesChange}
             onEdgesChange={handleEdgesChange}
             onNodeSelect={handleNodeSelect}
+            onAddNodeRef={(fn) => setAddNodeFn(() => fn)}
           />
         </div>
 
-        <Dialog open={!!selectedNode} onOpenChange={(open) => !open && setSelectedNode(null)}>
-          <DialogContent className="max-h-[85vh] overflow-y-auto bg-white dark:bg-black sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="capitalize">{selectedNode?.type} Settings</DialogTitle>
-              <DialogDescription>Configure this node</DialogDescription>
-            </DialogHeader>
+        <Sheet open={!!selectedNode} onOpenChange={(open) => !open && setSelectedNode(null)}>
+          <SheetContent
+            side="bottom"
+            className="max-h-[70vh] overflow-y-auto bg-white dark:bg-black"
+          >
+            <SheetHeader>
+              <SheetTitle className="capitalize">{selectedNode?.type} Settings</SheetTitle>
+              <SheetDescription>Configure this node</SheetDescription>
+            </SheetHeader>
 
             {selectedNode && (
               <div className="mt-6 space-y-4">
@@ -576,8 +581,8 @@ export default function WorkflowBuilderPage() {
                 </div>
               </div>
             )}
-          </DialogContent>
-        </Dialog>
+          </SheetContent>
+        </Sheet>
       </div>
     </div>
   );

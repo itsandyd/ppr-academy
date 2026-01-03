@@ -1,7 +1,7 @@
 "use client";
 
 import { DragEvent } from "react";
-import { Zap, Mail, Clock, GitBranch, Tag } from "lucide-react";
+import { Zap, Mail, Clock, GitBranch, Tag, Plus } from "lucide-react";
 
 const nodeTypes = [
   {
@@ -51,7 +51,11 @@ const nodeTypes = [
   },
 ];
 
-export default function NodeSidebar() {
+interface NodeSidebarProps {
+  onAddNode?: (type: string) => void;
+}
+
+export default function NodeSidebar({ onAddNode }: NodeSidebarProps) {
   const onDragStart = (event: DragEvent, nodeType: string) => {
     event.dataTransfer.setData("application/reactflow", nodeType);
     event.dataTransfer.effectAllowed = "move";
@@ -91,21 +95,23 @@ export default function NodeSidebar() {
         </div>
       </div>
 
-      {/* Mobile: Bottom bar */}
+      {/* Mobile: Bottom bar - tap to add */}
       <div className="order-last flex shrink-0 items-center gap-2 overflow-x-auto border-t border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-950 md:order-none md:hidden">
-        <span className="shrink-0 text-xs font-medium text-zinc-500 dark:text-zinc-400">Drag:</span>
+        <span className="shrink-0 text-xs font-medium text-zinc-500 dark:text-zinc-400">
+          <Plus className="inline h-3 w-3" /> Add:
+        </span>
         {nodeTypes.map((node) => (
-          <div
+          <button
             key={node.type}
-            draggable
-            onDragStart={(e) => onDragStart(e, node.type)}
-            className={`flex shrink-0 cursor-grab items-center gap-2 rounded-lg border ${node.borderColor} bg-white px-2.5 py-1.5 shadow-sm active:cursor-grabbing dark:bg-zinc-900`}
+            type="button"
+            onClick={() => onAddNode?.(node.type)}
+            className={`flex shrink-0 items-center gap-2 rounded-lg border ${node.borderColor} bg-white px-2.5 py-1.5 shadow-sm transition-transform active:scale-95 dark:bg-zinc-900`}
           >
             <div className={`flex h-6 w-6 items-center justify-center rounded ${node.bgColor}`}>
               <node.icon className={`h-3.5 w-3.5 ${node.color}`} />
             </div>
             <span className="text-xs font-medium text-zinc-900 dark:text-white">{node.label}</span>
-          </div>
+          </button>
         ))}
       </div>
     </>
