@@ -44,6 +44,7 @@ import {
   Play,
   Upload,
   UserPlus,
+  RefreshCw,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -91,8 +92,11 @@ export default function EmailCampaignsPage() {
   const deleteCampaign = useMutation(api.dripCampaigns.deleteCampaign);
   const createContact = useMutation(api.emailContacts.createContact);
   const deleteContact = useMutation(api.emailContacts.deleteContact);
+  const syncCustomers = useMutation(api.emailContacts.syncCustomersToEmailContacts);
   const createTag = useMutation(api.emailTags.createTag);
   const deleteTag = useMutation(api.emailTags.deleteTag);
+
+  const [isSyncing, setIsSyncing] = useState(false);
 
   if (isLoaded && mode !== "create") {
     router.push("/dashboard?mode=create");
@@ -210,6 +214,21 @@ export default function EmailCampaignsPage() {
     }
   };
 
+  const handleSyncCustomers = async () => {
+    setIsSyncing(true);
+    try {
+      const result = await syncCustomers({ storeId });
+      toast({
+        title: "Sync Complete",
+        description: `Added ${result.synced} contacts, ${result.skipped} already existed`,
+      });
+    } catch {
+      toast({ title: "Failed to sync customers", variant: "destructive" });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const getTriggerIcon = (type: string) => {
     switch (type) {
       case "lead_signup":
@@ -270,22 +289,34 @@ export default function EmailCampaignsPage() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 bg-transparent p-0 md:grid md:grid-cols-4 md:gap-0 md:bg-muted md:p-1">
-          <TabsTrigger value="sequences" className="gap-1.5 rounded-md border border-transparent bg-muted px-3 py-1.5 text-sm data-[state=active]:border-border data-[state=active]:bg-background md:gap-2 md:border-0 md:bg-transparent md:px-4 md:py-2 md:data-[state=active]:border-0">
+          <TabsTrigger
+            value="sequences"
+            className="gap-1.5 rounded-md border border-transparent bg-muted px-3 py-1.5 text-sm data-[state=active]:border-border data-[state=active]:bg-background md:gap-2 md:border-0 md:bg-transparent md:px-4 md:py-2 md:data-[state=active]:border-0"
+          >
             <Send className="h-3.5 w-3.5 md:h-4 md:w-4" />
-            <span className="hidden xs:inline">Sequences</span>
+            <span className="xs:inline hidden">Sequences</span>
             <span className="xs:hidden">Seq</span>
           </TabsTrigger>
-          <TabsTrigger value="contacts" className="gap-1.5 rounded-md border border-transparent bg-muted px-3 py-1.5 text-sm data-[state=active]:border-border data-[state=active]:bg-background md:gap-2 md:border-0 md:bg-transparent md:px-4 md:py-2 md:data-[state=active]:border-0">
+          <TabsTrigger
+            value="contacts"
+            className="gap-1.5 rounded-md border border-transparent bg-muted px-3 py-1.5 text-sm data-[state=active]:border-border data-[state=active]:bg-background md:gap-2 md:border-0 md:bg-transparent md:px-4 md:py-2 md:data-[state=active]:border-0"
+          >
             <Users className="h-3.5 w-3.5 md:h-4 md:w-4" />
             Contacts
           </TabsTrigger>
-          <TabsTrigger value="tags" className="gap-1.5 rounded-md border border-transparent bg-muted px-3 py-1.5 text-sm data-[state=active]:border-border data-[state=active]:bg-background md:gap-2 md:border-0 md:bg-transparent md:px-4 md:py-2 md:data-[state=active]:border-0">
+          <TabsTrigger
+            value="tags"
+            className="gap-1.5 rounded-md border border-transparent bg-muted px-3 py-1.5 text-sm data-[state=active]:border-border data-[state=active]:bg-background md:gap-2 md:border-0 md:bg-transparent md:px-4 md:py-2 md:data-[state=active]:border-0"
+          >
             <Tag className="h-3.5 w-3.5 md:h-4 md:w-4" />
             Tags
           </TabsTrigger>
-          <TabsTrigger value="automations" className="gap-1.5 rounded-md border border-transparent bg-muted px-3 py-1.5 text-sm data-[state=active]:border-border data-[state=active]:bg-background md:gap-2 md:border-0 md:bg-transparent md:px-4 md:py-2 md:data-[state=active]:border-0">
+          <TabsTrigger
+            value="automations"
+            className="gap-1.5 rounded-md border border-transparent bg-muted px-3 py-1.5 text-sm data-[state=active]:border-border data-[state=active]:bg-background md:gap-2 md:border-0 md:bg-transparent md:px-4 md:py-2 md:data-[state=active]:border-0"
+          >
             <Workflow className="h-3.5 w-3.5 md:h-4 md:w-4" />
-            <span className="hidden xs:inline">Automations</span>
+            <span className="xs:inline hidden">Automations</span>
             <span className="xs:hidden">Auto</span>
           </TabsTrigger>
         </TabsList>
@@ -442,7 +473,9 @@ export default function EmailCampaignsPage() {
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
-                            <span className="truncate text-sm font-semibold md:text-base">{campaign.name}</span>
+                            <span className="truncate text-sm font-semibold md:text-base">
+                              {campaign.name}
+                            </span>
                             <Badge
                               variant={campaign.isActive ? "default" : "secondary"}
                               className="shrink-0 text-[10px] md:text-xs"
@@ -463,12 +496,20 @@ export default function EmailCampaignsPage() {
                       <div className="flex items-center justify-between border-t border-border/50 pt-2 md:justify-end md:gap-6 md:border-t-0 md:pt-0">
                         <div className="flex items-center gap-4 md:gap-6">
                           <div className="text-center md:text-right">
-                            <div className="text-xs font-medium md:text-sm">{campaign.totalEnrolled || 0}</div>
-                            <div className="text-[10px] text-muted-foreground md:text-xs">enrolled</div>
+                            <div className="text-xs font-medium md:text-sm">
+                              {campaign.totalEnrolled || 0}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground md:text-xs">
+                              enrolled
+                            </div>
                           </div>
                           <div className="text-center md:text-right">
-                            <div className="text-xs font-medium md:text-sm">{campaign.totalCompleted || 0}</div>
-                            <div className="text-[10px] text-muted-foreground md:text-xs">completed</div>
+                            <div className="text-xs font-medium md:text-sm">
+                              {campaign.totalCompleted || 0}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground md:text-xs">
+                              completed
+                            </div>
                           </div>
                         </div>
                         <div
@@ -525,13 +566,29 @@ export default function EmailCampaignsPage() {
               </Card>
               <Card>
                 <CardContent className="p-3 md:pt-4">
-                  <div className="text-lg font-bold md:text-xl">{contactStats?.avgEngagement || 0}%</div>
+                  <div className="text-lg font-bold md:text-xl">
+                    {contactStats?.avgEngagement || 0}%
+                  </div>
                   <div className="text-[10px] text-muted-foreground md:text-xs">Avg Engagement</div>
                 </CardContent>
               </Card>
             </div>
 
             <div className="flex gap-2 self-end md:self-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 md:h-10 md:px-4"
+                onClick={handleSyncCustomers}
+                disabled={isSyncing}
+              >
+                <RefreshCw
+                  className={cn("h-3.5 w-3.5 md:h-4 md:w-4", isSyncing && "animate-spin")}
+                />
+                <span className="hidden sm:inline">
+                  {isSyncing ? "Syncing..." : "Sync Customers"}
+                </span>
+              </Button>
               <Button variant="outline" size="sm" className="gap-2 md:h-10 md:px-4">
                 <Upload className="h-3.5 w-3.5 md:h-4 md:w-4" />
                 <span className="hidden sm:inline">Import</span>
@@ -651,7 +708,9 @@ export default function EmailCampaignsPage() {
                               {contact.status}
                             </Badge>
                           </div>
-                          <div className="mt-0.5 truncate text-xs text-muted-foreground">{contact.email}</div>
+                          <div className="mt-0.5 truncate text-xs text-muted-foreground">
+                            {contact.email}
+                          </div>
                         </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -662,9 +721,7 @@ export default function EmailCampaignsPage() {
                           <DropdownMenuContent align="end" className="bg-white dark:bg-black">
                             <DropdownMenuItem
                               onClick={() =>
-                                router.push(
-                                  `/dashboard/emails/contacts/${contact._id}?mode=create`
-                                )
+                                router.push(`/dashboard/emails/contacts/${contact._id}?mode=create`)
                               }
                             >
                               View Profile
@@ -832,7 +889,9 @@ export default function EmailCampaignsPage() {
               </Card>
               <Card>
                 <CardContent className="p-3 md:pt-4">
-                  <div className="text-lg font-bold md:text-xl">{tagStats?.totalTaggedContacts || 0}</div>
+                  <div className="text-lg font-bold md:text-xl">
+                    {tagStats?.totalTaggedContacts || 0}
+                  </div>
                   <div className="text-[10px] text-muted-foreground md:text-xs">Tagged</div>
                 </CardContent>
               </Card>
@@ -944,7 +1003,9 @@ export default function EmailCampaignsPage() {
                           style={{ backgroundColor: tag.color || "#3b82f6" }}
                         />
                         <div className="min-w-0">
-                          <div className="truncate text-sm font-medium md:text-base">{tag.name}</div>
+                          <div className="truncate text-sm font-medium md:text-base">
+                            {tag.name}
+                          </div>
                           <div className="text-xs text-muted-foreground md:text-sm">
                             {tag.contactCount} contact{tag.contactCount !== 1 ? "s" : ""}
                           </div>
@@ -973,7 +1034,9 @@ export default function EmailCampaignsPage() {
                       </DropdownMenu>
                     </div>
                     {tag.description && (
-                      <p className="mt-1.5 line-clamp-2 text-xs text-muted-foreground md:mt-2 md:text-sm">{tag.description}</p>
+                      <p className="mt-1.5 line-clamp-2 text-xs text-muted-foreground md:mt-2 md:text-sm">
+                        {tag.description}
+                      </p>
                     )}
                   </CardContent>
                 </Card>
