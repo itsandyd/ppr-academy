@@ -228,37 +228,46 @@ export default function WorkflowBuilderPage() {
     setValidationErrors([]);
     setIsSaving(true);
     try {
-      const workflowData = {
-        name: workflowName,
-        storeId,
-        userId: user.id,
-        trigger: {
-          type: (triggerNode.data.triggerType || "lead_signup") as TriggerType,
-          config: triggerNode.data,
-        },
-        nodes: nodes.map((n) => ({
-          id: n.id,
-          type: n.type as "trigger" | "email" | "delay" | "condition" | "action",
-          position: n.position,
-          data: n.data,
-        })),
-        edges: edges.map((e) => ({
-          id: e.id,
-          source: e.source,
-          target: e.target,
-          sourceHandle: e.sourceHandle || undefined,
-          targetHandle: e.targetHandle || undefined,
-        })),
+      const nodesData = nodes.map((n) => ({
+        id: n.id,
+        type: n.type as "trigger" | "email" | "delay" | "condition" | "action",
+        position: n.position,
+        data: n.data,
+      }));
+      
+      const edgesData = edges.map((e) => ({
+        id: e.id,
+        source: e.source,
+        target: e.target,
+        sourceHandle: e.sourceHandle || undefined,
+        targetHandle: e.targetHandle || undefined,
+      }));
+
+      const triggerData = {
+        type: (triggerNode.data.triggerType || "lead_signup") as TriggerType,
+        config: triggerNode.data,
       };
 
       if (workflowId) {
+        // Update existing workflow - don't pass storeId/userId
         await updateWorkflow({
           workflowId: workflowId as Id<"emailWorkflows">,
-          ...workflowData,
+          name: workflowName,
+          trigger: triggerData,
+          nodes: nodesData,
+          edges: edgesData,
         });
         toast({ title: "Saved", description: "Workflow updated successfully" });
       } else {
-        const newId = await createWorkflow(workflowData);
+        // Create new workflow - include storeId/userId
+        const newId = await createWorkflow({
+          name: workflowName,
+          storeId,
+          userId: user.id,
+          trigger: triggerData,
+          nodes: nodesData,
+          edges: edgesData,
+        });
         toast({ title: "Saved", description: "Workflow created successfully" });
         router.push(`/dashboard/emails/workflows?mode=create&id=${newId}`);
       }
