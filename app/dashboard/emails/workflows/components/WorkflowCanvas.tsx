@@ -59,9 +59,23 @@ function WorkflowCanvasInner({
   onAddNodeRef,
 }: WorkflowCanvasProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
+  const [initialized, setInitialized] = useState(false);
+
+  useEffect(() => {
+    if (initialNodes.length > 0 || initialEdges.length > 0) {
+      setNodes(initialNodes);
+      setEdges(initialEdges);
+      setInitialized(true);
+      const maxId = initialNodes.reduce((max, n) => {
+        const match = n.id.match(/node_(\d+)/);
+        return match ? Math.max(max, parseInt(match[1], 10)) : max;
+      }, 0);
+      nodeId = maxId + 1;
+    }
+  }, [initialNodes, initialEdges, setNodes, setEdges]);
 
   const addNodeToCanvas = useCallback(
     (type: string) => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useQuery, useMutation } from "convex/react";
@@ -164,6 +164,18 @@ export default function WorkflowBuilderPage() {
   const deleteWorkflow = useMutation(api.emailWorkflows.deleteWorkflow);
   const bulkEnrollContacts = useMutation(api.emailWorkflows.bulkEnrollContactsInWorkflow);
 
+  useEffect(() => {
+    if (existingWorkflow) {
+      setWorkflowName(existingWorkflow.name || "New Workflow");
+      if (existingWorkflow.nodes) {
+        setNodes(existingWorkflow.nodes);
+      }
+      if (existingWorkflow.edges) {
+        setEdges(existingWorkflow.edges);
+      }
+    }
+  }, [existingWorkflow]);
+
   const handleNodesChange = useCallback((newNodes: Node[]) => {
     setNodes(newNodes);
   }, []);
@@ -234,7 +246,7 @@ export default function WorkflowBuilderPage() {
         position: n.position,
         data: n.data,
       }));
-      
+
       const edgesData = edges.map((e) => ({
         id: e.id,
         source: e.source,
@@ -409,8 +421,8 @@ export default function WorkflowBuilderPage() {
 
         <div className="min-h-0 flex-1">
           <WorkflowCanvas
-            initialNodes={existingWorkflow?.nodes || []}
-            initialEdges={existingWorkflow?.edges || []}
+            initialNodes={nodes}
+            initialEdges={edges}
             onNodesChange={handleNodesChange}
             onEdgesChange={handleEdgesChange}
             onNodeSelect={handleNodeSelect}
