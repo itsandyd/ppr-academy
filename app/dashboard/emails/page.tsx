@@ -255,77 +255,79 @@ export default function EmailCampaignsPage() {
   });
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 p-6">
-      <div className="flex items-center justify-between">
+    <div className="mx-auto max-w-6xl space-y-4 p-4 md:space-y-6 md:p-6">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="flex items-center gap-2 text-2xl font-bold">
-            <Mail className="h-6 w-6 text-cyan-600" />
+          <h1 className="flex items-center gap-2 text-xl font-bold md:text-2xl">
+            <Mail className="h-5 w-5 text-cyan-600 md:h-6 md:w-6" />
             Email Marketing
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-xs text-muted-foreground md:text-sm">
             Manage contacts, tags, and automated email sequences
           </p>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="sequences" className="gap-2">
-            <Send className="h-4 w-4" />
-            Sequences
+        <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 bg-transparent p-0 md:grid md:grid-cols-4 md:gap-0 md:bg-muted md:p-1">
+          <TabsTrigger value="sequences" className="gap-1.5 rounded-md border border-transparent bg-muted px-3 py-1.5 text-sm data-[state=active]:border-border data-[state=active]:bg-background md:gap-2 md:border-0 md:bg-transparent md:px-4 md:py-2 md:data-[state=active]:border-0">
+            <Send className="h-3.5 w-3.5 md:h-4 md:w-4" />
+            <span className="hidden xs:inline">Sequences</span>
+            <span className="xs:hidden">Seq</span>
           </TabsTrigger>
-          <TabsTrigger value="contacts" className="gap-2">
-            <Users className="h-4 w-4" />
+          <TabsTrigger value="contacts" className="gap-1.5 rounded-md border border-transparent bg-muted px-3 py-1.5 text-sm data-[state=active]:border-border data-[state=active]:bg-background md:gap-2 md:border-0 md:bg-transparent md:px-4 md:py-2 md:data-[state=active]:border-0">
+            <Users className="h-3.5 w-3.5 md:h-4 md:w-4" />
             Contacts
           </TabsTrigger>
-          <TabsTrigger value="tags" className="gap-2">
-            <Tag className="h-4 w-4" />
+          <TabsTrigger value="tags" className="gap-1.5 rounded-md border border-transparent bg-muted px-3 py-1.5 text-sm data-[state=active]:border-border data-[state=active]:bg-background md:gap-2 md:border-0 md:bg-transparent md:px-4 md:py-2 md:data-[state=active]:border-0">
+            <Tag className="h-3.5 w-3.5 md:h-4 md:w-4" />
             Tags
           </TabsTrigger>
-          <TabsTrigger value="automations" className="gap-2">
-            <Workflow className="h-4 w-4" />
-            Automations
+          <TabsTrigger value="automations" className="gap-1.5 rounded-md border border-transparent bg-muted px-3 py-1.5 text-sm data-[state=active]:border-border data-[state=active]:bg-background md:gap-2 md:border-0 md:bg-transparent md:px-4 md:py-2 md:data-[state=active]:border-0">
+            <Workflow className="h-3.5 w-3.5 md:h-4 md:w-4" />
+            <span className="hidden xs:inline">Automations</span>
+            <span className="xs:hidden">Auto</span>
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="sequences" className="mt-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="mr-4 grid flex-1 grid-cols-3 gap-4">
+        <TabsContent value="sequences" className="mt-4 space-y-4 md:mt-6">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="grid flex-1 grid-cols-3 gap-2 md:mr-4 md:gap-4">
               <Card>
-                <CardContent className="pt-4">
-                  <div className="flex items-center gap-3">
-                    <div className="rounded-lg bg-cyan-100 p-2 dark:bg-cyan-900">
-                      <Send className="h-4 w-4 text-cyan-600" />
+                <CardContent className="p-3 md:pt-4">
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <div className="rounded-lg bg-cyan-100 p-1.5 dark:bg-cyan-900 md:p-2">
+                      <Send className="h-3.5 w-3.5 text-cyan-600 md:h-4 md:w-4" />
                     </div>
                     <div>
-                      <div className="text-xl font-bold">{activeCampaigns}</div>
-                      <div className="text-xs text-muted-foreground">Active</div>
+                      <div className="text-lg font-bold md:text-xl">{activeCampaigns}</div>
+                      <div className="text-[10px] text-muted-foreground md:text-xs">Active</div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
               <Card>
-                <CardContent className="pt-4">
-                  <div className="flex items-center gap-3">
-                    <div className="rounded-lg bg-blue-100 p-2 dark:bg-blue-900">
-                      <Users className="h-4 w-4 text-blue-600" />
+                <CardContent className="p-3 md:pt-4">
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <div className="rounded-lg bg-blue-100 p-1.5 dark:bg-blue-900 md:p-2">
+                      <Users className="h-3.5 w-3.5 text-blue-600 md:h-4 md:w-4" />
                     </div>
                     <div>
-                      <div className="text-xl font-bold">{totalEnrolled}</div>
-                      <div className="text-xs text-muted-foreground">Enrolled</div>
+                      <div className="text-lg font-bold md:text-xl">{totalEnrolled}</div>
+                      <div className="text-[10px] text-muted-foreground md:text-xs">Enrolled</div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
               <Card>
-                <CardContent className="pt-4">
-                  <div className="flex items-center gap-3">
-                    <div className="rounded-lg bg-green-100 p-2 dark:bg-green-900">
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                <CardContent className="p-3 md:pt-4">
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <div className="rounded-lg bg-green-100 p-1.5 dark:bg-green-900 md:p-2">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-green-600 md:h-4 md:w-4" />
                     </div>
                     <div>
-                      <div className="text-xl font-bold">{totalCompleted}</div>
-                      <div className="text-xs text-muted-foreground">Completed</div>
+                      <div className="text-lg font-bold md:text-xl">{totalCompleted}</div>
+                      <div className="text-[10px] text-muted-foreground md:text-xs">Completed</div>
                     </div>
                   </div>
                 </CardContent>
@@ -334,9 +336,10 @@ export default function EmailCampaignsPage() {
 
             <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
               <DialogTrigger asChild>
-                <Button className="gap-2">
+                <Button className="gap-2 self-end md:self-auto">
                   <Plus className="h-4 w-4" />
-                  New Sequence
+                  <span className="hidden sm:inline">New Sequence</span>
+                  <span className="sm:hidden">New</span>
                 </Button>
               </DialogTrigger>
               <DialogContent className="bg-white dark:bg-black">
@@ -397,10 +400,10 @@ export default function EmailCampaignsPage() {
 
           {!campaigns || campaigns.length === 0 ? (
             <Card>
-              <CardContent className="flex flex-col items-center justify-center py-16">
-                <Mail className="mb-4 h-16 w-16 text-muted-foreground/30" />
-                <h3 className="mb-2 text-xl font-semibold">No email sequences yet</h3>
-                <p className="mb-6 max-w-md text-center text-muted-foreground">
+              <CardContent className="flex flex-col items-center justify-center py-10 md:py-16">
+                <Mail className="mb-3 h-12 w-12 text-muted-foreground/30 md:mb-4 md:h-16 md:w-16" />
+                <h3 className="mb-2 text-lg font-semibold md:text-xl">No email sequences yet</h3>
+                <p className="mb-4 max-w-md text-center text-sm text-muted-foreground md:mb-6">
                   Create automated email sequences to nurture leads and drive sales on autopilot.
                 </p>
                 <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
@@ -410,7 +413,7 @@ export default function EmailCampaignsPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2 md:space-y-3">
               {campaigns.map((campaign: any) => (
                 <Card
                   key={campaign._id}
@@ -419,12 +422,12 @@ export default function EmailCampaignsPage() {
                     router.push(`/dashboard/emails/sequences/${campaign._id}?mode=create`)
                   }
                 >
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
+                  <CardContent className="p-3 md:p-4">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                      <div className="flex items-center gap-3 md:gap-4">
                         <div
                           className={cn(
-                            "rounded-lg p-2",
+                            "shrink-0 rounded-lg p-1.5 md:p-2",
                             campaign.isActive
                               ? "bg-green-100 dark:bg-green-900"
                               : "bg-slate-100 dark:bg-slate-800"
@@ -432,53 +435,58 @@ export default function EmailCampaignsPage() {
                         >
                           <Mail
                             className={cn(
-                              "h-5 w-5",
+                              "h-4 w-4 md:h-5 md:w-5",
                               campaign.isActive ? "text-green-600" : "text-slate-400"
                             )}
                           />
                         </div>
-                        <div>
-                          <div className="flex items-center gap-2 font-semibold">
-                            {campaign.name}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
+                            <span className="truncate text-sm font-semibold md:text-base">{campaign.name}</span>
                             <Badge
                               variant={campaign.isActive ? "default" : "secondary"}
-                              className="text-xs"
+                              className="shrink-0 text-[10px] md:text-xs"
                             >
                               {campaign.isActive ? "Active" : "Paused"}
                             </Badge>
                           </div>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground md:gap-2 md:text-sm">
                             {getTriggerIcon(campaign.triggerType)}
-                            {getTriggerLabel(campaign.triggerType)}
-                            {campaign.description && ` • ${campaign.description}`}
+                            <span className="truncate">
+                              {getTriggerLabel(campaign.triggerType)}
+                              {campaign.description && ` • ${campaign.description}`}
+                            </span>
                           </div>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-6">
-                        <div className="text-right">
-                          <div className="text-sm font-medium">{campaign.totalEnrolled || 0}</div>
-                          <div className="text-xs text-muted-foreground">enrolled</div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-sm font-medium">{campaign.totalCompleted || 0}</div>
-                          <div className="text-xs text-muted-foreground">completed</div>
+                      <div className="flex items-center justify-between border-t border-border/50 pt-2 md:justify-end md:gap-6 md:border-t-0 md:pt-0">
+                        <div className="flex items-center gap-4 md:gap-6">
+                          <div className="text-center md:text-right">
+                            <div className="text-xs font-medium md:text-sm">{campaign.totalEnrolled || 0}</div>
+                            <div className="text-[10px] text-muted-foreground md:text-xs">enrolled</div>
+                          </div>
+                          <div className="text-center md:text-right">
+                            <div className="text-xs font-medium md:text-sm">{campaign.totalCompleted || 0}</div>
+                            <div className="text-[10px] text-muted-foreground md:text-xs">completed</div>
+                          </div>
                         </div>
                         <div
-                          className="flex items-center gap-2"
+                          className="flex items-center gap-1 md:gap-2"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <Switch
                             checked={campaign.isActive}
                             onCheckedChange={() => handleToggle(campaign._id)}
+                            className="scale-90 md:scale-100"
                           />
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => handleDeleteCampaign(campaign._id)}
-                            className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                            className="h-8 w-8 text-red-600 hover:bg-red-50 hover:text-red-700 md:h-9 md:w-9"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4" />
                           </Button>
                         </div>
                       </div>
@@ -490,49 +498,50 @@ export default function EmailCampaignsPage() {
           )}
         </TabsContent>
 
-        <TabsContent value="contacts" className="mt-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="mr-4 grid flex-1 grid-cols-4 gap-4">
+        <TabsContent value="contacts" className="mt-4 space-y-4 md:mt-6">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="grid flex-1 grid-cols-2 gap-2 md:mr-4 md:grid-cols-4 md:gap-4">
               <Card>
-                <CardContent className="pt-4">
-                  <div className="text-xl font-bold">{contactStats?.total || 0}</div>
-                  <div className="text-xs text-muted-foreground">Total Contacts</div>
+                <CardContent className="p-3 md:pt-4">
+                  <div className="text-lg font-bold md:text-xl">{contactStats?.total || 0}</div>
+                  <div className="text-[10px] text-muted-foreground md:text-xs">Total Contacts</div>
                 </CardContent>
               </Card>
               <Card>
-                <CardContent className="pt-4">
-                  <div className="text-xl font-bold text-green-600">
+                <CardContent className="p-3 md:pt-4">
+                  <div className="text-lg font-bold text-green-600 md:text-xl">
                     {contactStats?.subscribed || 0}
                   </div>
-                  <div className="text-xs text-muted-foreground">Subscribed</div>
+                  <div className="text-[10px] text-muted-foreground md:text-xs">Subscribed</div>
                 </CardContent>
               </Card>
               <Card>
-                <CardContent className="pt-4">
-                  <div className="text-xl font-bold text-amber-600">
+                <CardContent className="p-3 md:pt-4">
+                  <div className="text-lg font-bold text-amber-600 md:text-xl">
                     {contactStats?.unsubscribed || 0}
                   </div>
-                  <div className="text-xs text-muted-foreground">Unsubscribed</div>
+                  <div className="text-[10px] text-muted-foreground md:text-xs">Unsubscribed</div>
                 </CardContent>
               </Card>
               <Card>
-                <CardContent className="pt-4">
-                  <div className="text-xl font-bold">{contactStats?.avgEngagement || 0}%</div>
-                  <div className="text-xs text-muted-foreground">Avg Engagement</div>
+                <CardContent className="p-3 md:pt-4">
+                  <div className="text-lg font-bold md:text-xl">{contactStats?.avgEngagement || 0}%</div>
+                  <div className="text-[10px] text-muted-foreground md:text-xs">Avg Engagement</div>
                 </CardContent>
               </Card>
             </div>
 
-            <div className="flex gap-2">
-              <Button variant="outline" className="gap-2">
-                <Upload className="h-4 w-4" />
-                Import
+            <div className="flex gap-2 self-end md:self-auto">
+              <Button variant="outline" size="sm" className="gap-2 md:h-10 md:px-4">
+                <Upload className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                <span className="hidden sm:inline">Import</span>
               </Button>
               <Dialog open={isCreateContactOpen} onOpenChange={setIsCreateContactOpen}>
                 <DialogTrigger asChild>
-                  <Button className="gap-2">
-                    <UserPlus className="h-4 w-4" />
-                    Add Contact
+                  <Button size="sm" className="gap-2 md:h-10 md:px-4">
+                    <UserPlus className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                    <span className="hidden sm:inline">Add Contact</span>
+                    <span className="sm:hidden">Add</span>
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="bg-white dark:bg-black">
@@ -588,7 +597,7 @@ export default function EmailCampaignsPage() {
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="relative max-w-sm flex-1">
+            <div className="relative flex-1 md:max-w-sm">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search contacts..."
@@ -601,10 +610,10 @@ export default function EmailCampaignsPage() {
 
           {!filteredContacts || filteredContacts.length === 0 ? (
             <Card>
-              <CardContent className="flex flex-col items-center justify-center py-16">
-                <Users className="mb-4 h-16 w-16 text-muted-foreground/30" />
-                <h3 className="mb-2 text-xl font-semibold">No contacts yet</h3>
-                <p className="mb-6 max-w-md text-center text-muted-foreground">
+              <CardContent className="flex flex-col items-center justify-center py-10 md:py-16">
+                <Users className="mb-3 h-12 w-12 text-muted-foreground/30 md:mb-4 md:h-16 md:w-16" />
+                <h3 className="mb-2 text-lg font-semibold md:text-xl">No contacts yet</h3>
+                <p className="mb-4 max-w-md text-center text-sm text-muted-foreground md:mb-6">
                   Add contacts manually or import from a CSV file to start building your email list.
                 </p>
                 <Button onClick={() => setIsCreateContactOpen(true)} className="gap-2">
@@ -614,142 +623,235 @@ export default function EmailCampaignsPage() {
               </CardContent>
             </Card>
           ) : (
-            <Card>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="border-b">
-                    <tr className="text-left text-sm text-muted-foreground">
-                      <th className="p-4 font-medium">Contact</th>
-                      <th className="p-4 font-medium">Status</th>
-                      <th className="p-4 font-medium">Tags</th>
-                      <th className="p-4 font-medium">Engagement</th>
-                      <th className="p-4 font-medium">Added</th>
-                      <th className="w-10 p-4 font-medium"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredContacts.slice(0, 50).map((contact: any) => (
-                      <tr key={contact._id} className="border-b hover:bg-muted/50">
-                        <td className="p-4">
-                          <div className="font-medium">
-                            {contact.firstName || contact.lastName
-                              ? `${contact.firstName || ""} ${contact.lastName || ""}`.trim()
-                              : "—"}
+            <>
+              {/* Mobile: Card-based layout */}
+              <div className="space-y-2 md:hidden">
+                {filteredContacts.slice(0, 50).map((contact: any) => (
+                  <Card key={contact._id} className="overflow-hidden">
+                    <CardContent className="p-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="truncate text-sm font-medium">
+                              {contact.firstName || contact.lastName
+                                ? `${contact.firstName || ""} ${contact.lastName || ""}`.trim()
+                                : "—"}
+                            </span>
+                            <Badge
+                              className={cn(
+                                "shrink-0 text-[10px]",
+                                contact.status === "subscribed" &&
+                                  "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
+                                contact.status === "unsubscribed" &&
+                                  "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
+                                contact.status === "bounced" &&
+                                  "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
+                              )}
+                            >
+                              {contact.status}
+                            </Badge>
                           </div>
-                          <div className="text-sm text-muted-foreground">{contact.email}</div>
-                        </td>
-                        <td className="p-4">
-                          <Badge
-                            className={cn(
-                              contact.status === "subscribed" &&
-                                "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
-                              contact.status === "unsubscribed" &&
-                                "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
-                              contact.status === "bounced" &&
-                                "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
-                            )}
-                          >
-                            {contact.status}
-                          </Badge>
-                        </td>
-                        <td className="p-4">
-                          <div className="flex flex-wrap gap-1">
-                            {contact.tags?.slice(0, 3).map((tag: any) => (
-                              <Badge
-                                key={tag._id}
-                                variant="outline"
-                                style={{ borderColor: tag.color, color: tag.color }}
-                                className="text-xs"
-                              >
-                                {tag.name}
-                              </Badge>
-                            ))}
-                            {contact.tags?.length > 3 && (
-                              <Badge variant="outline" className="text-xs">
-                                +{contact.tags.length - 3}
-                              </Badge>
-                            )}
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <div className="text-sm">
-                            {contact.emailsOpened}/{contact.emailsSent} opened
-                          </div>
-                        </td>
-                        <td className="p-4 text-sm text-muted-foreground">
+                          <div className="mt-0.5 truncate text-xs text-muted-foreground">{contact.email}</div>
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
+                              <MoreHorizontal className="h-3.5 w-3.5" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="bg-white dark:bg-black">
+                            <DropdownMenuItem
+                              onClick={() =>
+                                router.push(
+                                  `/dashboard/emails/contacts/${contact._id}?mode=create`
+                                )
+                              }
+                            >
+                              View Profile
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>Add Tag</DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-red-600"
+                              onClick={() => handleDeleteContact(contact._id)}
+                            >
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-border/50 pt-2">
+                        <span className="text-[10px] text-muted-foreground">
+                          {contact.emailsOpened}/{contact.emailsSent} opened
+                        </span>
+                        <span className="text-muted-foreground/50">•</span>
+                        <span className="text-[10px] text-muted-foreground">
                           {new Date(contact.createdAt).toLocaleDateString()}
-                        </td>
-                        <td className="p-4">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="bg-white dark:bg-black">
-                              <DropdownMenuItem
-                                onClick={() =>
-                                  router.push(
-                                    `/dashboard/emails/contacts/${contact._id}?mode=create`
-                                  )
-                                }
-                              >
-                                View Profile
-                              </DropdownMenuItem>
-                              <DropdownMenuItem>Add Tag</DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="text-red-600"
-                                onClick={() => handleDeleteContact(contact._id)}
-                              >
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        </span>
+                        {contact.tags?.slice(0, 2).map((tag: any) => (
+                          <Badge
+                            key={tag._id}
+                            variant="outline"
+                            style={{ borderColor: tag.color, color: tag.color }}
+                            className="text-[10px]"
+                          >
+                            {tag.name}
+                          </Badge>
+                        ))}
+                        {contact.tags?.length > 2 && (
+                          <Badge variant="outline" className="text-[10px]">
+                            +{contact.tags.length - 2}
+                          </Badge>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+                {filteredContacts.length > 50 && (
+                  <div className="py-3 text-center text-xs text-muted-foreground">
+                    Showing 50 of {filteredContacts.length} contacts
+                  </div>
+                )}
               </div>
-              {filteredContacts.length > 50 && (
-                <div className="p-4 text-center text-sm text-muted-foreground">
-                  Showing 50 of {filteredContacts.length} contacts
+
+              {/* Desktop: Table layout */}
+              <Card className="hidden md:block">
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="border-b">
+                      <tr className="text-left text-sm text-muted-foreground">
+                        <th className="p-4 font-medium">Contact</th>
+                        <th className="p-4 font-medium">Status</th>
+                        <th className="p-4 font-medium">Tags</th>
+                        <th className="p-4 font-medium">Engagement</th>
+                        <th className="p-4 font-medium">Added</th>
+                        <th className="w-10 p-4 font-medium"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredContacts.slice(0, 50).map((contact: any) => (
+                        <tr key={contact._id} className="border-b hover:bg-muted/50">
+                          <td className="p-4">
+                            <div className="font-medium">
+                              {contact.firstName || contact.lastName
+                                ? `${contact.firstName || ""} ${contact.lastName || ""}`.trim()
+                                : "—"}
+                            </div>
+                            <div className="text-sm text-muted-foreground">{contact.email}</div>
+                          </td>
+                          <td className="p-4">
+                            <Badge
+                              className={cn(
+                                contact.status === "subscribed" &&
+                                  "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
+                                contact.status === "unsubscribed" &&
+                                  "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
+                                contact.status === "bounced" &&
+                                  "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
+                              )}
+                            >
+                              {contact.status}
+                            </Badge>
+                          </td>
+                          <td className="p-4">
+                            <div className="flex flex-wrap gap-1">
+                              {contact.tags?.slice(0, 3).map((tag: any) => (
+                                <Badge
+                                  key={tag._id}
+                                  variant="outline"
+                                  style={{ borderColor: tag.color, color: tag.color }}
+                                  className="text-xs"
+                                >
+                                  {tag.name}
+                                </Badge>
+                              ))}
+                              {contact.tags?.length > 3 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{contact.tags.length - 3}
+                                </Badge>
+                              )}
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <div className="text-sm">
+                              {contact.emailsOpened}/{contact.emailsSent} opened
+                            </div>
+                          </td>
+                          <td className="p-4 text-sm text-muted-foreground">
+                            {new Date(contact.createdAt).toLocaleDateString()}
+                          </td>
+                          <td className="p-4">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="bg-white dark:bg-black">
+                                <DropdownMenuItem
+                                  onClick={() =>
+                                    router.push(
+                                      `/dashboard/emails/contacts/${contact._id}?mode=create`
+                                    )
+                                  }
+                                >
+                                  View Profile
+                                </DropdownMenuItem>
+                                <DropdownMenuItem>Add Tag</DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-red-600"
+                                  onClick={() => handleDeleteContact(contact._id)}
+                                >
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              )}
-            </Card>
+                {filteredContacts.length > 50 && (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    Showing 50 of {filteredContacts.length} contacts
+                  </div>
+                )}
+              </Card>
+            </>
           )}
         </TabsContent>
 
-        <TabsContent value="tags" className="mt-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="mr-4 grid flex-1 grid-cols-3 gap-4">
+        <TabsContent value="tags" className="mt-4 space-y-4 md:mt-6">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="grid flex-1 grid-cols-3 gap-2 md:mr-4 md:gap-4">
               <Card>
-                <CardContent className="pt-4">
-                  <div className="text-xl font-bold">{tagStats?.totalTags || 0}</div>
-                  <div className="text-xs text-muted-foreground">Total Tags</div>
+                <CardContent className="p-3 md:pt-4">
+                  <div className="text-lg font-bold md:text-xl">{tagStats?.totalTags || 0}</div>
+                  <div className="text-[10px] text-muted-foreground md:text-xs">Total Tags</div>
                 </CardContent>
               </Card>
               <Card>
-                <CardContent className="pt-4">
-                  <div className="text-xl font-bold">{tagStats?.totalTaggedContacts || 0}</div>
-                  <div className="text-xs text-muted-foreground">Tagged Contacts</div>
+                <CardContent className="p-3 md:pt-4">
+                  <div className="text-lg font-bold md:text-xl">{tagStats?.totalTaggedContacts || 0}</div>
+                  <div className="text-[10px] text-muted-foreground md:text-xs">Tagged</div>
                 </CardContent>
               </Card>
               <Card>
-                <CardContent className="pt-4">
-                  <div className="text-xl font-bold">
+                <CardContent className="p-3 md:pt-4">
+                  <div className="truncate text-lg font-bold md:text-xl">
                     {tagStats?.mostUsedTags?.[0]?.name || "—"}
                   </div>
-                  <div className="text-xs text-muted-foreground">Most Used Tag</div>
+                  <div className="text-[10px] text-muted-foreground md:text-xs">Most Used</div>
                 </CardContent>
               </Card>
             </div>
 
             <Dialog open={isCreateTagOpen} onOpenChange={setIsCreateTagOpen}>
               <DialogTrigger asChild>
-                <Button className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  New Tag
+                <Button size="sm" className="gap-2 self-end md:h-10 md:self-auto md:px-4">
+                  <Plus className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                  <span className="hidden sm:inline">New Tag</span>
+                  <span className="sm:hidden">New</span>
                 </Button>
               </DialogTrigger>
               <DialogContent className="bg-white dark:bg-black">
@@ -818,10 +920,10 @@ export default function EmailCampaignsPage() {
 
           {!tags || tags.length === 0 ? (
             <Card>
-              <CardContent className="flex flex-col items-center justify-center py-16">
-                <Tag className="mb-4 h-16 w-16 text-muted-foreground/30" />
-                <h3 className="mb-2 text-xl font-semibold">No tags yet</h3>
-                <p className="mb-6 max-w-md text-center text-muted-foreground">
+              <CardContent className="flex flex-col items-center justify-center py-10 md:py-16">
+                <Tag className="mb-3 h-12 w-12 text-muted-foreground/30 md:mb-4 md:h-16 md:w-16" />
+                <h3 className="mb-2 text-lg font-semibold md:text-xl">No tags yet</h3>
+                <p className="mb-4 max-w-md text-center text-sm text-muted-foreground md:mb-6">
                   Create tags to segment your contacts and trigger automated sequences.
                 </p>
                 <Button onClick={() => setIsCreateTagOpen(true)} className="gap-2">
@@ -831,19 +933,19 @@ export default function EmailCampaignsPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 md:gap-4 lg:grid-cols-3">
               {tags.map((tag: any) => (
                 <Card key={tag._id} className="group">
-                  <CardContent className="p-4">
+                  <CardContent className="p-3 md:p-4">
                     <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2 md:gap-3">
                         <div
-                          className="h-4 w-4 rounded-full"
+                          className="h-3.5 w-3.5 shrink-0 rounded-full md:h-4 md:w-4"
                           style={{ backgroundColor: tag.color || "#3b82f6" }}
                         />
-                        <div>
-                          <div className="font-medium">{tag.name}</div>
-                          <div className="text-sm text-muted-foreground">
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-medium md:text-base">{tag.name}</div>
+                          <div className="text-xs text-muted-foreground md:text-sm">
                             {tag.contactCount} contact{tag.contactCount !== 1 ? "s" : ""}
                           </div>
                         </div>
@@ -853,9 +955,9 @@ export default function EmailCampaignsPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="opacity-0 transition-opacity group-hover:opacity-100"
+                            className="h-7 w-7 opacity-100 transition-opacity md:h-8 md:w-8 md:opacity-0 md:group-hover:opacity-100"
                           >
-                            <MoreHorizontal className="h-4 w-4" />
+                            <MoreHorizontal className="h-3.5 w-3.5 md:h-4 md:w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="bg-white dark:bg-black">
@@ -871,7 +973,7 @@ export default function EmailCampaignsPage() {
                       </DropdownMenu>
                     </div>
                     {tag.description && (
-                      <p className="mt-2 text-sm text-muted-foreground">{tag.description}</p>
+                      <p className="mt-1.5 line-clamp-2 text-xs text-muted-foreground md:mt-2 md:text-sm">{tag.description}</p>
                     )}
                   </CardContent>
                 </Card>
@@ -880,12 +982,12 @@ export default function EmailCampaignsPage() {
           )}
         </TabsContent>
 
-        <TabsContent value="automations" className="mt-6 space-y-4">
+        <TabsContent value="automations" className="mt-4 space-y-4 md:mt-6">
           <Card>
-            <CardContent className="flex flex-col items-center justify-center py-16">
-              <Workflow className="mb-4 h-16 w-16 text-muted-foreground/30" />
-              <h3 className="mb-2 text-xl font-semibold">Visual Workflow Builder</h3>
-              <p className="mb-6 max-w-md text-center text-muted-foreground">
+            <CardContent className="flex flex-col items-center justify-center py-10 md:py-16">
+              <Workflow className="mb-3 h-12 w-12 text-muted-foreground/30 md:mb-4 md:h-16 md:w-16" />
+              <h3 className="mb-2 text-lg font-semibold md:text-xl">Visual Workflow Builder</h3>
+              <p className="mb-4 max-w-md text-center text-sm text-muted-foreground md:mb-6">
                 Build complex automation workflows with our drag-and-drop visual editor.
               </p>
               <Button
