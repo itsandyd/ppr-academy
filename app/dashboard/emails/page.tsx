@@ -98,7 +98,7 @@ export default function EmailCampaignsPage() {
   const deleteCampaign = useMutation(api.dripCampaigns.deleteCampaign);
   const createContact = useMutation(api.emailContacts.createContact);
   const deleteContact = useMutation(api.emailContacts.deleteContact);
-  const syncCustomers = useMutation(api.emailContacts.syncCustomersToEmailContacts);
+  const syncEnrolledUsers = useMutation(api.emailContacts.syncEnrolledUsersToEmailContacts);
   const createTag = useMutation(api.emailTags.createTag);
   const deleteTag = useMutation(api.emailTags.deleteTag);
   const enrollContact = useMutation(api.emailWorkflows.enrollContactInWorkflow);
@@ -227,13 +227,29 @@ export default function EmailCampaignsPage() {
   const handleSyncCustomers = async () => {
     setIsSyncing(true);
     try {
-      const result = await syncCustomers({ storeId });
-      toast({
-        title: "Sync Complete",
-        description: `Added ${result.synced} contacts, ${result.skipped} already existed`,
+      const result = await syncEnrolledUsers({ storeId });
+      if (result.errors.length > 0 && result.synced === 0 && result.skipped === 0) {
+        // Only errors, no syncs
+        toast({
+          title: "Sync Failed",
+          description: result.errors[0],
+          variant: "destructive",
+        });
+      } else {
+        const description = result.errors.length > 0
+          ? `Added ${result.synced} contacts, ${result.skipped} already existed. ${result.errors.length} errors.`
+          : `Added ${result.synced} contacts, ${result.skipped} already existed (${result.total} total enrolled users)`;
+        toast({
+          title: "Sync Complete",
+          description,
+        });
+      }
+    } catch (error: any) {
+      toast({ 
+        title: "Failed to sync enrolled users", 
+        description: error.message || "Unknown error",
+        variant: "destructive" 
       });
-    } catch {
-      toast({ title: "Failed to sync customers", variant: "destructive" });
     } finally {
       setIsSyncing(false);
     }
