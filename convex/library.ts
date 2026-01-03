@@ -1,10 +1,11 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
+import { internal } from "./_generated/api";
 
 // Check if user already has access to a specific course
 export const hasUserPurchasedCourse = query({
-  args: { 
+  args: {
     userId: v.string(),
     courseId: v.id("courses"),
   },
@@ -12,9 +13,7 @@ export const hasUserPurchasedCourse = query({
   handler: async (ctx, args) => {
     const existingPurchase = await ctx.db
       .query("purchases")
-      .withIndex("by_user_course", (q) => 
-        q.eq("userId", args.userId).eq("courseId", args.courseId)
-      )
+      .withIndex("by_user_course", (q) => q.eq("userId", args.userId).eq("courseId", args.courseId))
       .filter((q) => q.eq(q.field("status"), "completed"))
       .first();
 
@@ -25,28 +24,35 @@ export const hasUserPurchasedCourse = query({
 // Get all purchases for a user (for library overview)
 export const getUserPurchases = query({
   args: { userId: v.string() },
-  returns: v.array(v.object({
-    _id: v.id("purchases"),
-    _creationTime: v.number(),
-    userId: v.string(),
-    productType: v.union(v.literal("digitalProduct"), v.literal("course"), v.literal("coaching"), v.literal("bundle")),
-    amount: v.number(),
-    currency: v.optional(v.string()),
-    status: v.union(v.literal("pending"), v.literal("completed"), v.literal("refunded")),
-    accessGranted: v.optional(v.boolean()),
-    downloadCount: v.optional(v.number()),
-    lastAccessedAt: v.optional(v.number()),
-    // Product details
-    productId: v.optional(v.id("digitalProducts")),
-    courseId: v.optional(v.id("courses")),
-    productTitle: v.optional(v.string()),
-    productImageUrl: v.optional(v.string()),
-    productDescription: v.optional(v.string()),
-    storeName: v.optional(v.string()),
-    storeSlug: v.optional(v.string()),
-    // Full product object for packs (includes packFiles)
-    product: v.optional(v.any()),
-  })),
+  returns: v.array(
+    v.object({
+      _id: v.id("purchases"),
+      _creationTime: v.number(),
+      userId: v.string(),
+      productType: v.union(
+        v.literal("digitalProduct"),
+        v.literal("course"),
+        v.literal("coaching"),
+        v.literal("bundle")
+      ),
+      amount: v.number(),
+      currency: v.optional(v.string()),
+      status: v.union(v.literal("pending"), v.literal("completed"), v.literal("refunded")),
+      accessGranted: v.optional(v.boolean()),
+      downloadCount: v.optional(v.number()),
+      lastAccessedAt: v.optional(v.number()),
+      // Product details
+      productId: v.optional(v.id("digitalProducts")),
+      courseId: v.optional(v.id("courses")),
+      productTitle: v.optional(v.string()),
+      productImageUrl: v.optional(v.string()),
+      productDescription: v.optional(v.string()),
+      storeName: v.optional(v.string()),
+      storeSlug: v.optional(v.string()),
+      // Full product object for packs (includes packFiles)
+      product: v.optional(v.any()),
+    })
+  ),
   handler: async (ctx, args) => {
     const purchases = await ctx.db
       .query("purchases")
@@ -89,7 +95,7 @@ export const getUserPurchases = query({
             productTitle = product.title;
             productImageUrl = product.imageUrl || "";
             productDescription = product.description || "";
-            
+
             // Return full product object for packs (needed for packFiles)
             return {
               _id: purchase._id,
@@ -143,42 +149,39 @@ export const getUserPurchases = query({
 // Get purchased courses for a user
 export const getUserCourses = query({
   args: { userId: v.string() },
-  returns: v.array(v.object({
-    _id: v.id("courses"),
-    _creationTime: v.number(),
-    title: v.string(),
-    description: v.optional(v.string()),
-    imageUrl: v.optional(v.string()),
-    slug: v.optional(v.string()),
-    category: v.optional(v.string()),
-    subcategory: v.optional(v.string()),
-    tags: v.optional(v.array(v.string())),
-    skillLevel: v.optional(v.string()),
-    purchaseDate: v.number(),
-    progress: v.optional(v.number()),
-    lastAccessedAt: v.optional(v.number()),
-    storeName: v.optional(v.string()),
-    storeSlug: v.optional(v.string()),
-  })),
+  returns: v.array(
+    v.object({
+      _id: v.id("courses"),
+      _creationTime: v.number(),
+      title: v.string(),
+      description: v.optional(v.string()),
+      imageUrl: v.optional(v.string()),
+      slug: v.optional(v.string()),
+      category: v.optional(v.string()),
+      subcategory: v.optional(v.string()),
+      tags: v.optional(v.array(v.string())),
+      skillLevel: v.optional(v.string()),
+      purchaseDate: v.number(),
+      progress: v.optional(v.number()),
+      lastAccessedAt: v.optional(v.number()),
+      storeName: v.optional(v.string()),
+      storeSlug: v.optional(v.string()),
+    })
+  ),
   handler: async (ctx, args) => {
     // Get course purchases for user
     const coursePurchases = await ctx.db
       .query("purchases")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .filter((q) => 
-        q.and(
-          q.eq(q.field("status"), "completed"),
-          q.eq(q.field("productType"), "course")
-        )
+      .filter((q) =>
+        q.and(q.eq(q.field("status"), "completed"), q.eq(q.field("productType"), "course"))
       )
       .collect();
 
     // Deduplicate courses by courseId (in case user has multiple purchases for same course)
-    const uniqueCourseIds = Array.from(new Set(
-      coursePurchases
-        .filter(p => p.courseId)
-        .map(p => p.courseId!)
-    ));
+    const uniqueCourseIds = Array.from(
+      new Set(coursePurchases.filter((p) => p.courseId).map((p) => p.courseId!))
+    );
 
     // Get course details and progress for unique courses only
     const userCourses = await Promise.all(
@@ -188,15 +191,13 @@ export const getUserCourses = query({
 
         // Get the most recent purchase for this course
         const purchase = coursePurchases
-          .filter(p => p.courseId === courseId)
+          .filter((p) => p.courseId === courseId)
           .sort((a, b) => b._creationTime - a._creationTime)[0];
 
         // Get user progress for this course
         const userProgress = await ctx.db
           .query("userProgress")
-          .withIndex("by_user_course", (q) => 
-            q.eq("userId", args.userId).eq("courseId", courseId)
-          )
+          .withIndex("by_user_course", (q) => q.eq("userId", args.userId).eq("courseId", courseId))
           .collect();
 
         // Calculate overall progress
@@ -205,9 +206,11 @@ export const getUserCourses = query({
           .withIndex("by_courseId", (q) => q.eq("courseId", course._id))
           .collect();
 
-        const completedChapters = userProgress.filter(p => p.isCompleted).length;
-        const progress = totalChapters.length > 0 ? 
-          Math.round((completedChapters / totalChapters.length) * 100) : 0;
+        const completedChapters = userProgress.filter((p) => p.isCompleted).length;
+        const progress =
+          totalChapters.length > 0
+            ? Math.round((completedChapters / totalChapters.length) * 100)
+            : 0;
 
         // Get store details
         const store = await ctx.db
@@ -242,32 +245,39 @@ export const getUserCourses = query({
 // Get purchased digital products for a user
 export const getUserDigitalProducts = query({
   args: { userId: v.string() },
-  returns: v.array(v.object({
-    _id: v.id("digitalProducts"),
-    _creationTime: v.number(),
-    title: v.string(),
-    description: v.optional(v.string()),
-    imageUrl: v.optional(v.string()),
-    downloadUrl: v.optional(v.string()),
-    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"))),
-    url: v.optional(v.string()),
-    style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))),
-    purchaseDate: v.number(),
-    downloadCount: v.optional(v.number()),
-    lastAccessedAt: v.optional(v.number()),
-    storeName: v.optional(v.string()),
-    storeSlug: v.optional(v.string()),
-  })),
+  returns: v.array(
+    v.object({
+      _id: v.id("digitalProducts"),
+      _creationTime: v.number(),
+      title: v.string(),
+      description: v.optional(v.string()),
+      imageUrl: v.optional(v.string()),
+      downloadUrl: v.optional(v.string()),
+      productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"))),
+      url: v.optional(v.string()),
+      style: v.optional(
+        v.union(
+          v.literal("button"),
+          v.literal("callout"),
+          v.literal("preview"),
+          v.literal("card"),
+          v.literal("minimal")
+        )
+      ),
+      purchaseDate: v.number(),
+      downloadCount: v.optional(v.number()),
+      lastAccessedAt: v.optional(v.number()),
+      storeName: v.optional(v.string()),
+      storeSlug: v.optional(v.string()),
+    })
+  ),
   handler: async (ctx, args) => {
     // Get digital product purchases for user
     const productPurchases = await ctx.db
       .query("purchases")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .filter((q) => 
-        q.and(
-          q.eq(q.field("status"), "completed"),
-          q.eq(q.field("productType"), "digitalProduct")
-        )
+      .filter((q) =>
+        q.and(q.eq(q.field("status"), "completed"), q.eq(q.field("productType"), "digitalProduct"))
       )
       .collect();
 
@@ -275,7 +285,7 @@ export const getUserDigitalProducts = query({
     const userProducts = await Promise.all(
       productPurchases.map(async (purchase) => {
         if (!purchase.productId) return null;
-        
+
         const product = await ctx.db.get(purchase.productId);
         if (!product) return null;
 
@@ -310,9 +320,9 @@ export const getUserDigitalProducts = query({
 
 // Verify user has access to a specific course
 export const verifyCourseAccess = query({
-  args: { 
+  args: {
     userId: v.string(),
-    slug: v.string()
+    slug: v.string(),
   },
   returns: v.object({
     hasAccess: v.boolean(),
@@ -332,9 +342,7 @@ export const verifyCourseAccess = query({
 
     const purchase = await ctx.db
       .query("purchases")
-      .withIndex("by_user_course", (q) => 
-        q.eq("userId", args.userId).eq("courseId", course._id)
-      )
+      .withIndex("by_user_course", (q) => q.eq("userId", args.userId).eq("courseId", course._id))
       .filter((q) => q.eq(q.field("status"), "completed"))
       .first();
 
@@ -345,9 +353,7 @@ export const verifyCourseAccess = query({
     // Calculate progress
     const userProgress = await ctx.db
       .query("userProgress")
-      .withIndex("by_user_course", (q) => 
-        q.eq("userId", args.userId).eq("courseId", course._id)
-      )
+      .withIndex("by_user_course", (q) => q.eq("userId", args.userId).eq("courseId", course._id))
       .collect();
 
     const totalChapters = await ctx.db
@@ -355,9 +361,9 @@ export const verifyCourseAccess = query({
       .withIndex("by_courseId", (q) => q.eq("courseId", course._id))
       .collect();
 
-    const completedChapters = userProgress.filter(p => p.isCompleted).length;
-    const progress = totalChapters.length > 0 ? 
-      Math.round((completedChapters / totalChapters.length) * 100) : 0;
+    const completedChapters = userProgress.filter((p) => p.isCompleted).length;
+    const progress =
+      totalChapters.length > 0 ? Math.round((completedChapters / totalChapters.length) * 100) : 0;
 
     return {
       hasAccess: true,
@@ -369,9 +375,9 @@ export const verifyCourseAccess = query({
 
 // Verify user has access to a digital product
 export const verifyProductAccess = query({
-  args: { 
+  args: {
     userId: v.string(),
-    productId: v.id("digitalProducts")
+    productId: v.id("digitalProducts"),
   },
   returns: v.object({
     hasAccess: v.boolean(),
@@ -381,7 +387,7 @@ export const verifyProductAccess = query({
   handler: async (ctx, args) => {
     const purchase = await ctx.db
       .query("purchases")
-      .withIndex("by_user_product", (q) => 
+      .withIndex("by_user_product", (q) =>
         q.eq("userId", args.userId).eq("productId", args.productId)
       )
       .filter((q) => q.eq(q.field("status"), "completed"))
@@ -424,7 +430,7 @@ export const updateProgress = mutation({
     // Check if progress record exists
     const existingProgress = await ctx.db
       .query("userProgress")
-      .withIndex("by_user_chapter", (q) => 
+      .withIndex("by_user_chapter", (q) =>
         q.eq("userId", args.userId).eq("chapterId", args.chapterId)
       )
       .unique();
@@ -454,7 +460,12 @@ export const updateProgress = mutation({
 export const trackLibrarySession = mutation({
   args: {
     userId: v.string(),
-    sessionType: v.union(v.literal("course"), v.literal("download"), v.literal("coaching"), v.literal("browse")),
+    sessionType: v.union(
+      v.literal("course"),
+      v.literal("download"),
+      v.literal("coaching"),
+      v.literal("browse")
+    ),
     resourceId: v.optional(v.string()),
     duration: v.optional(v.number()),
     deviceType: v.optional(v.string()),
@@ -467,7 +478,7 @@ export const trackLibrarySession = mutation({
       sessionType: args.sessionType,
       resourceId: args.resourceId,
       startedAt: Date.now(),
-      endedAt: args.duration ? Date.now() + (args.duration * 1000) : undefined,
+      endedAt: args.duration ? Date.now() + args.duration * 1000 : undefined,
       duration: args.duration,
       deviceType: args.deviceType,
       userAgent: args.userAgent,
@@ -485,7 +496,7 @@ export const trackDownload = mutation({
   handler: async (ctx, args) => {
     const purchase = await ctx.db
       .query("purchases")
-      .withIndex("by_user_product", (q) => 
+      .withIndex("by_user_product", (q) =>
         q.eq("userId", args.userId).eq("productId", args.productId)
       )
       .filter((q) => q.eq(q.field("status"), "completed"))
@@ -502,50 +513,79 @@ export const trackDownload = mutation({
 
 // Get course content with user progress
 export const getCourseWithProgress = query({
-  args: { 
+  args: {
     userId: v.string(),
-    slug: v.string()
+    slug: v.string(),
   },
-  returns: v.union(v.object({
-    _id: v.id("courses"),
-    _creationTime: v.number(),
-    title: v.string(),
-    description: v.optional(v.string()),
-    imageUrl: v.optional(v.string()),
-    slug: v.optional(v.string()),
-    category: v.optional(v.string()),
-    subcategory: v.optional(v.string()),
-    tags: v.optional(v.array(v.string())),
-    skillLevel: v.optional(v.string()),
-    modules: v.optional(v.array(v.object({
-      _id: v.string(),
+  returns: v.union(
+    v.object({
+      _id: v.id("courses"),
+      _creationTime: v.number(),
       title: v.string(),
       description: v.optional(v.string()),
-      position: v.number(),
-      lessons: v.optional(v.array(v.object({
-        _id: v.string(),
-        title: v.string(),
-        description: v.optional(v.string()),
-        position: v.number(),
-        chapters: v.optional(v.array(v.object({
-          _id: v.string(),
-          title: v.string(),
-          description: v.optional(v.string()),
-          videoUrl: v.optional(v.string()),
-          audioUrl: v.optional(v.string()),
-          generatedAudioUrl: v.optional(v.string()),
-          generatedVideoUrl: v.optional(v.string()),
-          audioGenerationStatus: v.optional(v.union(v.literal("pending"), v.literal("generating"), v.literal("completed"), v.literal("failed"))),
-          videoGenerationStatus: v.optional(v.union(v.literal("pending"), v.literal("generating"), v.literal("completed"), v.literal("failed"))),
-          position: v.number(),
-          isCompleted: v.optional(v.boolean()),
-          timeSpent: v.optional(v.number()),
-        }))),
-      }))),
-    }))),
-    overallProgress: v.number(),
-    lastAccessedChapter: v.optional(v.string()),
-  }), v.null()),
+      imageUrl: v.optional(v.string()),
+      slug: v.optional(v.string()),
+      category: v.optional(v.string()),
+      subcategory: v.optional(v.string()),
+      tags: v.optional(v.array(v.string())),
+      skillLevel: v.optional(v.string()),
+      modules: v.optional(
+        v.array(
+          v.object({
+            _id: v.string(),
+            title: v.string(),
+            description: v.optional(v.string()),
+            position: v.number(),
+            lessons: v.optional(
+              v.array(
+                v.object({
+                  _id: v.string(),
+                  title: v.string(),
+                  description: v.optional(v.string()),
+                  position: v.number(),
+                  chapters: v.optional(
+                    v.array(
+                      v.object({
+                        _id: v.string(),
+                        title: v.string(),
+                        description: v.optional(v.string()),
+                        videoUrl: v.optional(v.string()),
+                        audioUrl: v.optional(v.string()),
+                        generatedAudioUrl: v.optional(v.string()),
+                        generatedVideoUrl: v.optional(v.string()),
+                        audioGenerationStatus: v.optional(
+                          v.union(
+                            v.literal("pending"),
+                            v.literal("generating"),
+                            v.literal("completed"),
+                            v.literal("failed")
+                          )
+                        ),
+                        videoGenerationStatus: v.optional(
+                          v.union(
+                            v.literal("pending"),
+                            v.literal("generating"),
+                            v.literal("completed"),
+                            v.literal("failed")
+                          )
+                        ),
+                        position: v.number(),
+                        isCompleted: v.optional(v.boolean()),
+                        timeSpent: v.optional(v.number()),
+                      })
+                    )
+                  ),
+                })
+              )
+            ),
+          })
+        )
+      ),
+      overallProgress: v.number(),
+      lastAccessedChapter: v.optional(v.string()),
+    }),
+    v.null()
+  ),
   handler: async (ctx, args) => {
     // First, get the course by slug
     const course = await ctx.db
@@ -560,9 +600,7 @@ export const getCourseWithProgress = query({
     // Verify access
     const hasAccess = await ctx.db
       .query("purchases")
-      .withIndex("by_user_course", (q) => 
-        q.eq("userId", args.userId).eq("courseId", course._id)
-      )
+      .withIndex("by_user_course", (q) => q.eq("userId", args.userId).eq("courseId", course._id))
       .filter((q) => q.eq(q.field("status"), "completed"))
       .first();
 
@@ -580,12 +618,10 @@ export const getCourseWithProgress = query({
     // Get user progress
     const userProgress = await ctx.db
       .query("userProgress")
-      .withIndex("by_user_course", (q) => 
-        q.eq("userId", args.userId).eq("courseId", course._id)
-      )
+      .withIndex("by_user_course", (q) => q.eq("userId", args.userId).eq("courseId", course._id))
       .collect();
 
-    const progressMap = new Map(userProgress.map(p => [p.chapterId, p]));
+    const progressMap = new Map(userProgress.map((p) => [p.chapterId, p]));
 
     // Build course structure with progress
     const modules = await Promise.all(
@@ -604,7 +640,7 @@ export const getCourseWithProgress = query({
               .order("asc")
               .collect();
 
-            const chaptersWithProgress = chapters.map(chapter => {
+            const chaptersWithProgress = chapters.map((chapter) => {
               const progress = progressMap.get(chapter._id);
               return {
                 _id: chapter._id,
@@ -648,13 +684,14 @@ export const getCourseWithProgress = query({
       .withIndex("by_courseId", (q) => q.eq("courseId", course._id))
       .collect();
 
-    const completedChapters = userProgress.filter(p => p.isCompleted).length;
-    const overallProgress = allChapters.length > 0 ? 
-      Math.round((completedChapters / allChapters.length) * 100) : 0;
+    const completedChapters = userProgress.filter((p) => p.isCompleted).length;
+    const overallProgress =
+      allChapters.length > 0 ? Math.round((completedChapters / allChapters.length) * 100) : 0;
 
     // Get last accessed chapter
-    const lastAccessed = userProgress
-      .sort((a, b) => (b.lastAccessedAt || 0) - (a.lastAccessedAt || 0))[0];
+    const lastAccessed = userProgress.sort(
+      (a, b) => (b.lastAccessedAt || 0) - (a.lastAccessedAt || 0)
+    )[0];
 
     return {
       _id: course._id,
@@ -694,9 +731,7 @@ export const createCourseEnrollment = mutation({
     // Check if user already has this course
     const existingPurchase = await ctx.db
       .query("purchases")
-      .withIndex("by_user_course", (q) => 
-        q.eq("userId", args.userId).eq("courseId", args.courseId)
-      )
+      .withIndex("by_user_course", (q) => q.eq("userId", args.userId).eq("courseId", args.courseId))
       .filter((q) => q.eq(q.field("status"), "completed"))
       .first();
 
@@ -724,9 +759,7 @@ export const createCourseEnrollment = mutation({
     // Create enrollment record for backward compatibility
     const existingEnrollment = await ctx.db
       .query("enrollments")
-      .withIndex("by_user_course", (q) => 
-        q.eq("userId", args.userId).eq("courseId", args.courseId)
-      )
+      .withIndex("by_user_course", (q) => q.eq("userId", args.userId).eq("courseId", args.courseId))
       .unique();
 
     if (!existingEnrollment) {
@@ -740,18 +773,18 @@ export const createCourseEnrollment = mutation({
     // Create or update customer record for this purchase
     try {
       const storeId = course.storeId || course.userId;
-      
+
       // Get user info for customer record
       const user = await ctx.db
         .query("users")
         .withIndex("by_clerkId", (q) => q.eq("clerkId", args.userId))
         .unique();
-      
+
       if (user && storeId) {
         // Check if customer already exists
         const existingCustomer = await ctx.db
           .query("customers")
-          .withIndex("by_email_and_store", (q) => 
+          .withIndex("by_email_and_store", (q) =>
             q.eq("email", user.email || "").eq("storeId", storeId)
           )
           .unique();
@@ -765,17 +798,18 @@ export const createCourseEnrollment = mutation({
             lastActivity: Date.now(),
             status: "active",
           };
-          
+
           if (args.amount > 0) {
             updates.type = "paying";
             updates.totalSpent = (existingCustomer.totalSpent || 0) + args.amount;
           }
-          
+
           await ctx.db.patch(existingCustomer._id, updates);
         } else {
           // Create new customer record
           await ctx.db.insert("customers", {
-            name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email || "Unknown",
+            name:
+              `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email || "Unknown",
             email: user.email || args.userId,
             storeId: storeId,
             adminUserId: course.userId,
@@ -788,8 +822,25 @@ export const createCourseEnrollment = mutation({
         }
       }
     } catch (error) {
-      // Log error but don't fail the enrollment
       console.error("Failed to create/update customer record:", error);
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.userId))
+      .unique();
+
+    if (user?.email) {
+      await ctx.scheduler.runAfter(0, internal.emailWorkflows.triggerProductPurchaseWorkflows, {
+        storeId: course.storeId || course.userId,
+        customerEmail: user.email,
+        customerName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
+        productId: args.courseId,
+        productName: course.title,
+        productType: "course",
+        orderId: purchaseId,
+        amount: args.amount,
+      });
     }
 
     return purchaseId;
