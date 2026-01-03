@@ -4477,6 +4477,112 @@ export default defineSchema({
     .index("by_status_and_nextSendAt", ["status", "nextSendAt"]),
 
   // ============================================================================
+  // EMAIL MARKETING CONTACTS & TAGS (ActiveCampaign-style)
+  // ============================================================================
+
+  // Email Tags - For segmentation and automation triggers
+  emailTags: defineTable({
+    storeId: v.string(),
+    name: v.string(),
+    color: v.optional(v.string()), // Hex color for UI display
+    description: v.optional(v.string()),
+    contactCount: v.number(), // Denormalized count for performance
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_storeId", ["storeId"])
+    .index("by_storeId_and_name", ["storeId", "name"]),
+
+  // Email Contacts - Subscribers for email marketing
+  emailContacts: defineTable({
+    storeId: v.string(),
+    email: v.string(),
+    firstName: v.optional(v.string()),
+    lastName: v.optional(v.string()),
+
+    // Subscription status
+    status: v.union(
+      v.literal("subscribed"),
+      v.literal("unsubscribed"),
+      v.literal("bounced"),
+      v.literal("complained")
+    ),
+    subscribedAt: v.number(),
+    unsubscribedAt: v.optional(v.number()),
+
+    // Tags for segmentation (array of tag IDs)
+    tagIds: v.array(v.id("emailTags")),
+
+    // Source tracking
+    source: v.optional(v.string()), // "lead_magnet", "checkout", "manual", "import"
+    sourceProductId: v.optional(v.id("digitalProducts")),
+    sourceCourseId: v.optional(v.id("courses")),
+
+    // Engagement metrics
+    emailsSent: v.number(),
+    emailsOpened: v.number(),
+    emailsClicked: v.number(),
+    lastOpenedAt: v.optional(v.number()),
+    lastClickedAt: v.optional(v.number()),
+    engagementScore: v.optional(v.number()), // 0-100 calculated score
+
+    // Custom fields (flexible JSON for user-defined fields)
+    customFields: v.optional(v.any()),
+
+    // Link to existing customer record (if any)
+    customerId: v.optional(v.id("customers")),
+
+    // Timestamps
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_storeId", ["storeId"])
+    .index("by_email", ["email"])
+    .index("by_storeId_and_email", ["storeId", "email"])
+    .index("by_status", ["status"])
+    .index("by_storeId_and_status", ["storeId", "status"])
+    .index("by_subscribedAt", ["subscribedAt"])
+    .index("by_engagementScore", ["engagementScore"]),
+
+  // Contact Activity Log - Track all contact interactions
+  emailContactActivity: defineTable({
+    contactId: v.id("emailContacts"),
+    storeId: v.string(),
+    activityType: v.union(
+      v.literal("subscribed"),
+      v.literal("unsubscribed"),
+      v.literal("email_sent"),
+      v.literal("email_opened"),
+      v.literal("email_clicked"),
+      v.literal("email_bounced"),
+      v.literal("tag_added"),
+      v.literal("tag_removed"),
+      v.literal("campaign_enrolled"),
+      v.literal("campaign_completed"),
+      v.literal("custom_field_updated")
+    ),
+    // Activity details
+    metadata: v.optional(
+      v.object({
+        campaignId: v.optional(v.id("dripCampaigns")),
+        emailSubject: v.optional(v.string()),
+        tagId: v.optional(v.id("emailTags")),
+        tagName: v.optional(v.string()),
+        linkClicked: v.optional(v.string()),
+        fieldName: v.optional(v.string()),
+        oldValue: v.optional(v.string()),
+        newValue: v.optional(v.string()),
+      })
+    ),
+    timestamp: v.number(),
+  })
+    .index("by_contactId", ["contactId"])
+    .index("by_storeId", ["storeId"])
+    .index("by_activityType", ["activityType"])
+    .index("by_contactId_and_timestamp", ["contactId", "timestamp"])
+    .index("by_storeId_and_timestamp", ["storeId", "timestamp"]),
+
+  // ============================================================================
   // SOCIAL MEDIA POST GENERATOR
   // ============================================================================
 
