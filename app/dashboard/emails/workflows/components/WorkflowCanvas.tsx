@@ -45,6 +45,8 @@ interface WorkflowCanvasProps {
   onEdgesChange?: (edges: Edge[]) => void;
   onNodeSelect?: (node: Node | null) => void;
   onAddNodeRef?: (addNode: (type: string) => void) => void;
+  onUpdateNodeDataRef?: (updateFn: (nodeId: string, data: Record<string, unknown>) => void) => void;
+  onDeleteNodeRef?: (deleteFn: (nodeId: string) => void) => void;
 }
 
 let nodeId = 0;
@@ -57,6 +59,8 @@ function WorkflowCanvasInner({
   onEdgesChange: onEdgesChangeCallback,
   onNodeSelect,
   onAddNodeRef,
+  onUpdateNodeDataRef,
+  onDeleteNodeRef,
 }: WorkflowCanvasProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
@@ -79,9 +83,46 @@ function WorkflowCanvasInner({
     [nodes, setNodes, onNodesChangeCallback]
   );
 
+  const updateNodeData = useCallback(
+    (nodeId: string, data: Record<string, unknown>) => {
+      setNodes((nds) => {
+        const newNodes = nds.map((n) =>
+          n.id === nodeId ? { ...n, data: { ...n.data, ...data } } : n
+        );
+        onNodesChangeCallback?.(newNodes);
+        return newNodes;
+      });
+    },
+    [setNodes, onNodesChangeCallback]
+  );
+
+  const deleteNodeFromCanvas = useCallback(
+    (nodeId: string) => {
+      setNodes((nds) => {
+        const newNodes = nds.filter((n) => n.id !== nodeId);
+        onNodesChangeCallback?.(newNodes);
+        return newNodes;
+      });
+      setEdges((eds) => {
+        const newEdges = eds.filter((e) => e.source !== nodeId && e.target !== nodeId);
+        onEdgesChangeCallback?.(newEdges);
+        return newEdges;
+      });
+    },
+    [setNodes, setEdges, onNodesChangeCallback, onEdgesChangeCallback]
+  );
+
   useEffect(() => {
     onAddNodeRef?.(addNodeToCanvas);
   }, [onAddNodeRef, addNodeToCanvas]);
+
+  useEffect(() => {
+    onUpdateNodeDataRef?.(updateNodeData);
+  }, [onUpdateNodeDataRef, updateNodeData]);
+
+  useEffect(() => {
+    onDeleteNodeRef?.(deleteNodeFromCanvas);
+  }, [onDeleteNodeRef, deleteNodeFromCanvas]);
 
   const onConnect = useCallback(
     (connection: Connection) => {

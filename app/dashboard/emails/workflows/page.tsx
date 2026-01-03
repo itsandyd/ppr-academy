@@ -139,6 +139,8 @@ export default function WorkflowBuilderPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [addNodeFn, setAddNodeFn] = useState<((type: string) => void) | null>(null);
+  const [updateNodeDataFn, setUpdateNodeDataFn] = useState<((nodeId: string, data: Record<string, unknown>) => void) | null>(null);
+  const [deleteNodeFn, setDeleteNodeFn] = useState<((nodeId: string) => void) | null>(null);
 
   const storeId = user?.id ?? "";
 
@@ -170,21 +172,25 @@ export default function WorkflowBuilderPage() {
 
   const updateNodeData = useCallback(
     (nodeId: string, data: Record<string, unknown>) => {
-      setNodes((nds) =>
-        nds.map((n) => (n.id === nodeId ? { ...n, data: { ...n.data, ...data } } : n))
-      );
+      // Update the canvas nodes (source of truth)
+      if (updateNodeDataFn) {
+        updateNodeDataFn(nodeId, data);
+      }
+      // Also update the selected node for the dialog display
       if (selectedNode?.id === nodeId) {
         setSelectedNode((prev) => (prev ? { ...prev, data: { ...prev.data, ...data } } : null));
       }
     },
-    [selectedNode]
+    [selectedNode, updateNodeDataFn]
   );
 
   const deleteNode = useCallback((nodeId: string) => {
-    setNodes((nds) => nds.filter((n) => n.id !== nodeId));
-    setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
+    // Delete from canvas (source of truth)
+    if (deleteNodeFn) {
+      deleteNodeFn(nodeId);
+    }
     setSelectedNode(null);
-  }, []);
+  }, [deleteNodeFn]);
 
   const handleSave = async () => {
     if (!storeId || !user?.id) {
@@ -334,6 +340,8 @@ export default function WorkflowBuilderPage() {
             onEdgesChange={handleEdgesChange}
             onNodeSelect={handleNodeSelect}
             onAddNodeRef={(fn) => setAddNodeFn(() => fn)}
+            onUpdateNodeDataRef={(fn) => setUpdateNodeDataFn(() => fn)}
+            onDeleteNodeRef={(fn) => setDeleteNodeFn(() => fn)}
           />
         </div>
 
