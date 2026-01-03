@@ -272,11 +272,12 @@ export default function WorkflowBuilderPage() {
 
   return (
     <div className="flex h-screen flex-col">
-      <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950">
-        <div className="flex items-center gap-4">
+      <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-2 py-2 dark:border-zinc-800 dark:bg-zinc-950 md:px-4 md:py-3">
+        <div className="flex min-w-0 flex-1 items-center gap-2 md:gap-4">
           <Button
             variant="ghost"
             size="icon"
+            className="shrink-0"
             onClick={() => router.push("/dashboard/emails?mode=create")}
           >
             <ArrowLeft className="h-4 w-4" />
@@ -284,38 +285,46 @@ export default function WorkflowBuilderPage() {
           <Input
             value={workflowName}
             onChange={(e) => setWorkflowName(e.target.value)}
-            className="w-64 border-none bg-transparent text-lg font-semibold focus-visible:ring-0"
+            className="min-w-0 flex-1 border-none bg-transparent text-base font-semibold focus-visible:ring-0 md:max-w-64 md:text-lg"
           />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5 md:gap-2">
           {validationErrors.length > 0 && (
-            <div className="flex items-center gap-1.5 rounded-md bg-amber-100 px-2.5 py-1 text-sm text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
-              <AlertTriangle className="h-4 w-4" />
-              {validationErrors.length} issue{validationErrors.length > 1 ? "s" : ""}
+            <div className="flex items-center gap-1 rounded-md bg-amber-100 px-1.5 py-1 text-xs text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 md:gap-1.5 md:px-2.5 md:text-sm">
+              <AlertTriangle className="h-3.5 w-3.5 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">
+                {validationErrors.length} issue{validationErrors.length > 1 ? "s" : ""}
+              </span>
+              <span className="sm:hidden">{validationErrors.length}</span>
             </div>
           )}
           {workflowId && (
             <Button
               variant="outline"
-              size="sm"
+              size="icon"
               onClick={handleDelete}
-              className="gap-2 text-red-600"
+              className="h-8 w-8 text-red-600 md:h-9 md:w-auto md:gap-2 md:px-3"
             >
               <Trash2 className="h-4 w-4" />
-              Delete
+              <span className="hidden md:inline">Delete</span>
             </Button>
           )}
-          <Button size="sm" onClick={handleSave} disabled={isSaving} className="gap-2">
+          <Button
+            size="icon"
+            onClick={handleSave}
+            disabled={isSaving}
+            className="h-8 w-8 md:h-9 md:w-auto md:gap-2 md:px-3"
+          >
             <Save className="h-4 w-4" />
-            {isSaving ? "Saving..." : "Save"}
+            <span className="hidden md:inline">{isSaving ? "Saving..." : "Save"}</span>
           </Button>
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
         <NodeSidebar />
 
-        <div className="flex-1">
+        <div className="min-h-0 flex-1">
           <WorkflowCanvas
             initialNodes={existingWorkflow?.nodes || []}
             initialEdges={existingWorkflow?.edges || []}
@@ -326,7 +335,7 @@ export default function WorkflowBuilderPage() {
         </div>
 
         <Sheet open={!!selectedNode} onOpenChange={(open) => !open && setSelectedNode(null)}>
-          <SheetContent className="w-80 bg-white dark:bg-black">
+          <SheetContent className="w-full bg-white dark:bg-black sm:w-80">
             <SheetHeader>
               <SheetTitle className="capitalize">{selectedNode?.type} Settings</SheetTitle>
               <SheetDescription>Configure this node</SheetDescription>
@@ -391,20 +400,21 @@ export default function WorkflowBuilderPage() {
                             <SelectValue placeholder="Choose a template..." />
                           </SelectTrigger>
                           <SelectContent className="bg-white dark:bg-black">
-                            {emailTemplates?.map((template) => (
-                              <SelectItem key={template._id} value={template._id}>
-                                {template.name}
-                                {template.category && (
-                                  <span className="ml-2 text-xs text-zinc-500">
-                                    ({template.category})
-                                  </span>
-                                )}
-                              </SelectItem>
-                            ))}
-                            {(!emailTemplates || emailTemplates.length === 0) && (
-                              <SelectItem value="" disabled>
+                            {emailTemplates && emailTemplates.length > 0 ? (
+                              emailTemplates.map((template) => (
+                                <SelectItem key={template._id} value={template._id}>
+                                  {template.name}
+                                  {template.category && (
+                                    <span className="ml-2 text-xs text-zinc-500">
+                                      ({template.category})
+                                    </span>
+                                  )}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <div className="px-2 py-1.5 text-sm text-zinc-500">
                                 No templates found
-                              </SelectItem>
+                              </div>
                             )}
                           </SelectContent>
                         </Select>
