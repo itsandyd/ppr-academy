@@ -10,7 +10,6 @@ import { Node, Edge } from "reactflow";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
@@ -20,12 +19,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { WysiwygEditor } from "@/components/ui/wysiwyg-editor";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Save, Trash2, AlertTriangle } from "lucide-react";
 import NodeSidebar from "./components/NodeSidebar";
@@ -336,15 +336,12 @@ export default function WorkflowBuilderPage() {
           />
         </div>
 
-        <Sheet open={!!selectedNode} onOpenChange={(open) => !open && setSelectedNode(null)}>
-          <SheetContent
-            side="bottom"
-            className="max-h-[70vh] overflow-y-auto bg-white dark:bg-black"
-          >
-            <SheetHeader>
-              <SheetTitle className="capitalize">{selectedNode?.type} Settings</SheetTitle>
-              <SheetDescription>Configure this node</SheetDescription>
-            </SheetHeader>
+        <Dialog open={!!selectedNode} onOpenChange={(open) => !open && setSelectedNode(null)}>
+          <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto bg-white dark:bg-black">
+            <DialogHeader>
+              <DialogTitle className="capitalize">{selectedNode?.type} Settings</DialogTitle>
+              <DialogDescription>Configure this node</DialogDescription>
+            </DialogHeader>
 
             {selectedNode && (
               <div className="mt-6 space-y-4">
@@ -454,13 +451,11 @@ export default function WorkflowBuilderPage() {
                         </div>
                         <div className="space-y-2">
                           <Label>Email Body</Label>
-                          <Textarea
-                            value={selectedNode.data.body || ""}
-                            onChange={(e) =>
-                              updateNodeData(selectedNode.id, { body: e.target.value })
-                            }
+                          <WysiwygEditor
+                            content={selectedNode.data.body || ""}
+                            onChange={(html) => updateNodeData(selectedNode.id, { body: html })}
                             placeholder="Write your email content here..."
-                            className="min-h-[120px]"
+                            className="min-h-[200px]"
                           />
                         </div>
                       </>
@@ -581,8 +576,8 @@ export default function WorkflowBuilderPage() {
                 </div>
               </div>
             )}
-          </SheetContent>
-        </Sheet>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
