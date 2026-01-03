@@ -120,6 +120,32 @@ export const processExecution = internalAction({
         await processActionNode(ctx, args.executionId, execution, workflow, currentNode);
         break;
 
+      case "stop":
+        console.log(`[Workflow] Stop node reached, completing execution`);
+        await ctx.runMutation(internal.workflowHelpers.markExecutionCompleted, {
+          executionId: args.executionId,
+        });
+        break;
+
+      case "webhook":
+        await processWebhookNode(ctx, args.executionId, execution, workflow, currentNode);
+        break;
+
+      case "split":
+        await processSplitNode(ctx, args.executionId, workflow, currentNode);
+        break;
+
+      case "notify":
+        await processNotifyNode(ctx, args.executionId, execution, workflow, currentNode);
+        break;
+
+      case "goal":
+        console.log(`[Workflow] Goal reached: ${currentNode.data?.goalType || "unknown"}`);
+        await ctx.runMutation(internal.workflowHelpers.markExecutionCompleted, {
+          executionId: args.executionId,
+        });
+        break;
+
       default:
         await processNextNode(ctx, args.executionId, workflow, currentNode);
     }
@@ -334,6 +360,135 @@ async function processActionNode(
   await processNextNode(ctx, executionId, workflow, node);
 }
 
+async function processWebhookNode(
+  ctx: any,
+  executionId: Id<"workflowExecutions">,
+  execution: any,
+  workflow: any,
+  node: any
+) {
+  const nodeData = node.data || {};
+  const webhookUrl = nodeData.webhookUrl;
+
+  if (webhookUrl) {
+    try {
+      const contact = execution.contactId
+        ? await ctx.runQuery(internal.workflowHelpers.getContactInternal, {
+            contactId: execution.contactId,
+          })
+        : null;
+
+      const payload = {
+        event: "workflow_webhook",
+        workflowId: workflow._id,
+        workflowName: workflow.name,
+        executionId,
+        contact: contact
+          ? {
+              email: contact.email,
+              firstName: contact.firstName,
+              lastName: contact.lastName,
+            }
+          : { email: execution.customerEmail },
+        executionData: execution.executionData,
+        timestamp: Date.now(),
+      };
+
+      await ctx.runAction(internal.workflowActions.sendWebhook, {
+        url: webhookUrl,
+        payload: JSON.stringify(payload),
+      });
+
+      console.log(`[Workflow] Webhook sent to ${webhookUrl}`);
+    } catch (error) {
+      console.error(`[Workflow] Webhook failed:`, error);
+    }
+  }
+
+  await processNextNode(ctx, executionId, workflow, node);
+}
+
+async function processSplitNode(
+  ctx: any,
+  executionId: Id<"workflowExecutions">,
+  workflow: any,
+  node: any
+) {
+  const nodeData = node.data || {};
+  const splitPercentage = nodeData.splitPercentage || 50;
+
+  const random = Math.random() * 100;
+  const pathId = random < splitPercentage ? "a" : "b";
+
+  const nextEdge = workflow.edges.find(
+    (e: any) => e.source === node.id && e.sourceHandle === pathId
+  );
+
+  if (!nextEdge) {
+    const fallbackEdge = workflow.edges.find((e: any) => e.source === node.id);
+    if (fallbackEdge) {
+      await ctx.runMutation(internal.workflowHelpers.scheduleNextNode, {
+        executionId,
+        nextNodeId: fallbackEdge.target,
+        scheduledFor: Date.now(),
+      });
+    } else {
+      await ctx.runMutation(internal.workflowHelpers.markExecutionCompleted, {
+        executionId,
+      });
+    }
+    return;
+  }
+
+  console.log(
+    `[Workflow] Split: took path ${pathId.toUpperCase()} (${random.toFixed(1)}% < ${splitPercentage}%)`
+  );
+
+  await ctx.runMutation(internal.workflowHelpers.scheduleNextNode, {
+    executionId,
+    nextNodeId: nextEdge.target,
+    scheduledFor: Date.now(),
+  });
+}
+
+async function processNotifyNode(
+  ctx: any,
+  executionId: Id<"workflowExecutions">,
+  execution: any,
+  workflow: any,
+  node: any
+) {
+  const nodeData = node.data || {};
+  const notifyMethod = nodeData.notifyMethod || "email";
+  const message = nodeData.message || "Workflow notification";
+
+  const contact = execution.contactId
+    ? await ctx.runQuery(internal.workflowHelpers.getContactInternal, {
+        contactId: execution.contactId,
+      })
+    : null;
+
+  const notificationMessage = `${message}\n\nContact: ${contact?.email || execution.customerEmail}\nWorkflow: ${workflow.name}`;
+
+  if (notifyMethod === "email") {
+    const store = await ctx.runQuery(internal.workflowHelpers.getStoreOwnerEmail, {
+      storeId: execution.storeId,
+    });
+
+    if (store?.ownerEmail) {
+      await ctx.runAction(internal.workflowActions.sendNotificationEmail, {
+        to: store.ownerEmail,
+        subject: `[Workflow] ${workflow.name} - Notification`,
+        message: notificationMessage,
+      });
+    }
+  }
+
+  console.log(`[Workflow] Notification sent via ${notifyMethod}`);
+
+  await processNextNode(ctx, executionId, workflow, node);
+}
+
 async function processNextNode(
   ctx: any,
   executionId: Id<"workflowExecutions">,
@@ -416,5 +571,53 @@ export const sendWorkflowEmail = internalAction({
     });
 
     console.log(`[Workflow] Email sent to ${args.email}: "${personalizedSubject}"`);
+  },
+});
+
+export const sendWebhook = internalAction({
+  args: {
+    url: v.string(),
+    payload: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const response = await fetch(args.url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: args.payload,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Webhook failed: ${response.status} ${response.statusText}`);
+    }
+
+    console.log(`[Workflow] Webhook sent to ${args.url}: ${response.status}`);
+  },
+});
+
+export const sendNotificationEmail = internalAction({
+  args: {
+    to: v.string(),
+    subject: v.string(),
+    message: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const { Resend } = await import("resend");
+
+    const resend = new Resend(process.env.RESEND_API_KEY);
+
+    const fromEmail = process.env.FROM_EMAIL || "noreply@ppracademy.com";
+    const fromName = process.env.FROM_NAME || "PPR Academy";
+
+    await resend.emails.send({
+      from: `${fromName} <${fromEmail}>`,
+      to: args.to,
+      subject: args.subject,
+      text: args.message,
+      html: `<pre style="font-family: sans-serif; white-space: pre-wrap;">${args.message}</pre>`,
+    });
+
+    console.log(`[Workflow] Notification email sent to ${args.to}`);
   },
 });

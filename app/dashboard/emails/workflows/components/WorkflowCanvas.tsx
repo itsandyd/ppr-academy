@@ -21,6 +21,11 @@ import EmailNode from "./nodes/EmailNode";
 import DelayNode from "./nodes/DelayNode";
 import ConditionNode from "./nodes/ConditionNode";
 import ActionNode from "./nodes/ActionNode";
+import StopNode from "./nodes/StopNode";
+import WebhookNode from "./nodes/WebhookNode";
+import SplitNode from "./nodes/SplitNode";
+import NotifyNode from "./nodes/NotifyNode";
+import GoalNode from "./nodes/GoalNode";
 
 const nodeTypes = {
   trigger: TriggerNode,
@@ -28,6 +33,11 @@ const nodeTypes = {
   delay: DelayNode,
   condition: ConditionNode,
   action: ActionNode,
+  stop: StopNode,
+  webhook: WebhookNode,
+  split: SplitNode,
+  notify: NotifyNode,
+  goal: GoalNode,
 };
 
 const defaultNodeData: Record<string, object> = {
@@ -36,11 +46,17 @@ const defaultNodeData: Record<string, object> = {
   delay: { delayValue: 1, delayUnit: "days" },
   condition: { conditionType: "opened_email", description: "" },
   action: { actionType: "add_tag", value: "" },
+  stop: {},
+  webhook: { webhookUrl: "", method: "POST" },
+  split: { splitPercentage: 50 },
+  notify: { notifyMethod: "email", message: "" },
+  goal: { goalType: "purchase" },
 };
 
 interface WorkflowCanvasProps {
   initialNodes?: Node[];
   initialEdges?: Edge[];
+  nodeExecutionCounts?: Record<string, number>;
   onNodesChange?: (nodes: Node[]) => void;
   onEdgesChange?: (edges: Edge[]) => void;
   onNodeSelect?: (node: Node | null) => void;
@@ -53,6 +69,7 @@ const getId = () => `node_${nodeId++}`;
 function WorkflowCanvasInner({
   initialNodes = [],
   initialEdges = [],
+  nodeExecutionCounts = {},
   onNodesChange: onNodesChangeCallback,
   onEdgesChange: onEdgesChangeCallback,
   onNodeSelect,
@@ -76,6 +93,14 @@ function WorkflowCanvasInner({
       nodeId = maxId + 1;
     }
   }, [initialNodes, initialEdges, setNodes, setEdges]);
+
+  const nodesWithCounts = nodes.map((node) => ({
+    ...node,
+    data: {
+      ...node.data,
+      waitingCount: nodeExecutionCounts[node.id] || 0,
+    },
+  }));
 
   const addNodeToCanvas = useCallback(
     (type: string) => {
@@ -180,7 +205,7 @@ function WorkflowCanvasInner({
   return (
     <div ref={reactFlowWrapper} className="h-full w-full">
       <ReactFlow
-        nodes={nodes}
+        nodes={nodesWithCounts}
         edges={edges}
         onNodesChange={handleNodesChange}
         onEdgesChange={handleEdgesChange}

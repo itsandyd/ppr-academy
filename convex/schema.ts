@@ -413,13 +413,18 @@ export default defineSchema({
           v.literal("email"),
           v.literal("delay"),
           v.literal("condition"),
-          v.literal("action")
+          v.literal("action"),
+          v.literal("stop"),
+          v.literal("webhook"),
+          v.literal("split"),
+          v.literal("notify"),
+          v.literal("goal")
         ),
         position: v.object({
           x: v.number(),
           y: v.number(),
         }),
-        data: v.any(), // Node-specific data
+        data: v.any(),
       })
     ),
     edges: v.array(

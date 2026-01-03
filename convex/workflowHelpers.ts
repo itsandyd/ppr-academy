@@ -210,3 +210,25 @@ export const removeTagFromContact = internalMutation({
     }
   },
 });
+
+export const getStoreOwnerEmail = internalQuery({
+  args: { storeId: v.string() },
+  handler: async (ctx, args) => {
+    const store = await ctx.db
+      .query("stores")
+      .filter((q) => q.eq(q.field("userId"), args.storeId))
+      .first();
+
+    if (!store) return null;
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", store.userId))
+      .first();
+
+    return {
+      ownerEmail: user?.email || null,
+      storeName: store.name,
+    };
+  },
+});

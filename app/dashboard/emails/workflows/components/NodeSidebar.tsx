@@ -1,7 +1,19 @@
 "use client";
 
 import { DragEvent } from "react";
-import { Zap, Mail, Clock, GitBranch, Tag, Plus } from "lucide-react";
+import {
+  Zap,
+  Mail,
+  Clock,
+  GitBranch,
+  Tag,
+  Plus,
+  StopCircle,
+  Webhook,
+  Split,
+  Bell,
+  Target,
+} from "lucide-react";
 
 const nodeTypes = [
   {
@@ -41,6 +53,15 @@ const nodeTypes = [
     description: "Split based on condition",
   },
   {
+    type: "split",
+    label: "A/B Split",
+    icon: Split,
+    color: "text-pink-500",
+    bgColor: "bg-pink-500/10",
+    borderColor: "border-pink-500/30",
+    description: "Random split test",
+  },
+  {
     type: "action",
     label: "Action",
     icon: Tag,
@@ -48,6 +69,42 @@ const nodeTypes = [
     bgColor: "bg-cyan-500/10",
     borderColor: "border-cyan-500/30",
     description: "Add/remove tags",
+  },
+  {
+    type: "webhook",
+    label: "Webhook",
+    icon: Webhook,
+    color: "text-indigo-500",
+    bgColor: "bg-indigo-500/10",
+    borderColor: "border-indigo-500/30",
+    description: "Send to external URL",
+  },
+  {
+    type: "notify",
+    label: "Notify",
+    icon: Bell,
+    color: "text-amber-500",
+    bgColor: "bg-amber-500/10",
+    borderColor: "border-amber-500/30",
+    description: "Alert team member",
+  },
+  {
+    type: "goal",
+    label: "Goal",
+    icon: Target,
+    color: "text-emerald-500",
+    bgColor: "bg-emerald-500/10",
+    borderColor: "border-emerald-500/30",
+    description: "Track conversion",
+  },
+  {
+    type: "stop",
+    label: "Stop",
+    icon: StopCircle,
+    color: "text-red-500",
+    bgColor: "bg-red-500/10",
+    borderColor: "border-red-500/30",
+    description: "End workflow",
   },
 ];
 

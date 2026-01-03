@@ -42,7 +42,12 @@ const nodeValidator = v.object({
     v.literal("email"),
     v.literal("delay"),
     v.literal("condition"),
-    v.literal("action")
+    v.literal("action"),
+    v.literal("stop"),
+    v.literal("webhook"),
+    v.literal("split"),
+    v.literal("notify"),
+    v.literal("goal")
   ),
   position: v.object({
     x: v.number(),
@@ -150,6 +155,26 @@ export const getWorkflow = query({
   },
 });
 
+export const getNodeExecutionCounts = query({
+  args: { workflowId: v.id("emailWorkflows") },
+  returns: v.any(),
+  handler: async (ctx, args) => {
+    const executions = await ctx.db
+      .query("workflowExecutions")
+      .withIndex("by_workflowId", (q) => q.eq("workflowId", args.workflowId))
+      .filter((q) => q.eq(q.field("status"), "pending"))
+      .collect();
+
+    const counts: Record<string, number> = {};
+    for (const exec of executions) {
+      if (exec.currentNodeId) {
+        counts[exec.currentNodeId] = (counts[exec.currentNodeId] || 0) + 1;
+      }
+    }
+    return counts;
+  },
+});
+
 export const listWorkflows = query({
   args: { storeId: v.string() },
   returns: v.array(v.any()),
@@ -224,7 +249,10 @@ export const triggerLeadSignupWorkflows = internalMutation({
   args: {
     storeId: v.string(),
     customerEmail: v.string(),
-    customerId: v.optional(v.string()),
+    customerName: v.optional(v.string()),
+    productId: v.optional(v.string()),
+    productName: v.optional(v.string()),
+    source: v.optional(v.string()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -236,24 +264,152 @@ export const triggerLeadSignupWorkflows = internalMutation({
 
     const leadSignupWorkflows = activeWorkflows.filter((w) => w.trigger.type === "lead_signup");
 
+    if (leadSignupWorkflows.length === 0) {
+      console.log(`[Workflows] No active lead_signup workflows for store ${args.storeId}`);
+      return null;
+    }
+
+    const contact = await ctx.db
+      .query("emailContacts")
+      .withIndex("by_storeId_and_email", (q) =>
+        q.eq("storeId", args.storeId).eq("email", args.customerEmail.toLowerCase())
+      )
+      .first();
+
     const now = Date.now();
 
     for (const workflow of leadSignupWorkflows) {
+      const existingExecution = await ctx.db
+        .query("workflowExecutions")
+        .withIndex("by_workflowId", (q) => q.eq("workflowId", workflow._id))
+        .filter((q) =>
+          q.and(
+            q.eq(q.field("customerEmail"), args.customerEmail.toLowerCase()),
+            q.or(q.eq(q.field("status"), "pending"), q.eq(q.field("status"), "running"))
+          )
+        )
+        .first();
+
+      if (existingExecution) {
+        console.log(`[Workflows] ${args.customerEmail} already in workflow ${workflow.name}`);
+        continue;
+      }
+
+      const firstNode = workflow.nodes.find((n: { type: string }) => n.type !== "trigger");
+
       await ctx.db.insert("workflowExecutions", {
         workflowId: workflow._id,
         storeId: args.storeId,
-        customerId: args.customerId,
-        customerEmail: args.customerEmail,
+        contactId: contact?._id,
+        customerEmail: args.customerEmail.toLowerCase(),
         status: "pending",
-        currentNodeId: workflow.nodes[0]?.id,
+        currentNodeId: firstNode?.id || workflow.nodes[0]?.id,
         scheduledFor: now,
-        executionData: {},
+        executionData: {
+          triggerType: "lead_signup",
+          productId: args.productId,
+          productName: args.productName,
+          source: args.source,
+        },
       });
 
       await ctx.db.patch(workflow._id, {
         totalExecutions: (workflow.totalExecutions || 0) + 1,
         lastExecuted: now,
       });
+
+      console.log(`[Workflows] Enrolled ${args.customerEmail} in workflow "${workflow.name}"`);
+    }
+
+    return null;
+  },
+});
+
+export const triggerProductPurchaseWorkflows = internalMutation({
+  args: {
+    storeId: v.string(),
+    customerEmail: v.string(),
+    customerName: v.optional(v.string()),
+    productId: v.optional(v.string()),
+    productName: v.optional(v.string()),
+    productType: v.optional(v.string()),
+    orderId: v.optional(v.string()),
+    amount: v.optional(v.number()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const activeWorkflows = await ctx.db
+      .query("emailWorkflows")
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+      .filter((q) => q.eq(q.field("isActive"), true))
+      .collect();
+
+    const purchaseWorkflows = activeWorkflows.filter((w) => w.trigger.type === "product_purchase");
+
+    if (purchaseWorkflows.length === 0) {
+      console.log(`[Workflows] No active product_purchase workflows for store ${args.storeId}`);
+      return null;
+    }
+
+    const contact = await ctx.db
+      .query("emailContacts")
+      .withIndex("by_storeId_and_email", (q) =>
+        q.eq("storeId", args.storeId).eq("email", args.customerEmail.toLowerCase())
+      )
+      .first();
+
+    const now = Date.now();
+
+    for (const workflow of purchaseWorkflows) {
+      const triggerConfig = workflow.trigger?.config || {};
+      if (triggerConfig.productId && triggerConfig.productId !== args.productId) {
+        continue;
+      }
+
+      const existingExecution = await ctx.db
+        .query("workflowExecutions")
+        .withIndex("by_workflowId", (q) => q.eq("workflowId", workflow._id))
+        .filter((q) =>
+          q.and(
+            q.eq(q.field("customerEmail"), args.customerEmail.toLowerCase()),
+            q.or(q.eq(q.field("status"), "pending"), q.eq(q.field("status"), "running"))
+          )
+        )
+        .first();
+
+      if (existingExecution) {
+        console.log(`[Workflows] ${args.customerEmail} already in workflow ${workflow.name}`);
+        continue;
+      }
+
+      const firstNode = workflow.nodes.find((n: { type: string }) => n.type !== "trigger");
+
+      await ctx.db.insert("workflowExecutions", {
+        workflowId: workflow._id,
+        storeId: args.storeId,
+        contactId: contact?._id,
+        customerEmail: args.customerEmail.toLowerCase(),
+        status: "pending",
+        currentNodeId: firstNode?.id || workflow.nodes[0]?.id,
+        scheduledFor: now,
+        executionData: {
+          triggerType: "product_purchase",
+          productId: args.productId,
+          productName: args.productName,
+          productType: args.productType,
+          orderId: args.orderId,
+          amount: args.amount,
+        },
+      });
+
+      await ctx.db.patch(workflow._id, {
+        totalExecutions: (workflow.totalExecutions || 0) + 1,
+        lastExecuted: now,
+      });
+
+      console.log(
+        `[Workflows] Enrolled ${args.customerEmail} in purchase workflow "${workflow.name}"`
+      );
     }
 
     return null;

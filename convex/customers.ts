@@ -573,6 +573,18 @@ export const createPurchase = mutation({
         lastActivity: Date.now(),
         status: "active",
       });
+
+      const product = await ctx.db.get(args.productId);
+      await ctx.scheduler.runAfter(0, internal.emailWorkflows.triggerProductPurchaseWorkflows, {
+        storeId: args.storeId,
+        customerEmail: customer.email,
+        customerName: customer.name,
+        productId: args.productId,
+        productName: product?.title,
+        productType: "digitalProduct",
+        orderId: purchaseId,
+        amount: args.amount,
+      });
     }
 
     return purchaseId;

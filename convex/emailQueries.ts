@@ -93,11 +93,11 @@ export const getTemplates = query({
       .query("resendTemplates")
       .filter((q) => q.eq(q.field("connectionId"), undefined))
       .collect();
-    
+
     if (args.activeOnly) {
       return templates.filter((t) => t.isActive);
     }
-    
+
     return templates;
   },
 });
@@ -129,7 +129,7 @@ export const createTemplate = mutation({
     // Extract variables from HTML content
     const variableRegex = /\{([^}]+)\}/g;
     const variables = Array.from(args.htmlContent.matchAll(variableRegex))
-      .map(match => match[1])
+      .map((match) => match[1])
       .filter((v, i, arr) => arr.indexOf(v) === i); // unique
 
     return await ctx.db.insert("resendTemplates", {
@@ -166,12 +166,16 @@ export const createCampaign = mutation({
   },
   returns: v.id("resendCampaigns"),
   handler: async (ctx, args) => {
-    const status = args.scheduledFor && args.scheduledFor > Date.now()
-      ? "scheduled"
-      : "draft";
+    const status = args.scheduledFor && args.scheduledFor > Date.now() ? "scheduled" : "draft";
 
     // Map audienceType to targetAudience
-    let targetAudience: "all_users" | "course_students" | "store_students" | "inactive_users" | "completed_course" | "custom_list" = "all_users";
+    let targetAudience:
+      | "all_users"
+      | "course_students"
+      | "store_students"
+      | "inactive_users"
+      | "completed_course"
+      | "custom_list" = "all_users";
     if (args.audienceType === "specific") {
       targetAudience = "custom_list";
     } else if (args.audienceType === "enrolled") {
@@ -222,11 +226,11 @@ export const createAutomation = mutation({
   handler: async (ctx, args) => {
     // Map trigger names to schema triggerType
     const triggerTypeMap: Record<string, string> = {
-      "user_enrolled": "course_enrollment",
-      "course_completed": "course_completion",
-      "user_inactive": "inactivity",
-      "certificate_issued": "certificate_issued",
-      "user_registered": "user_signup",
+      user_enrolled: "course_enrollment",
+      course_completed: "course_completion",
+      user_inactive: "inactivity",
+      certificate_issued: "certificate_issued",
+      user_registered: "user_signup",
     };
 
     return await ctx.db.insert("resendAutomations", {
@@ -368,13 +372,15 @@ export const createStoreCampaign = mutation({
 export const getStoreCampaigns = query({
   args: {
     connectionId: v.id("resendConnections"),
-    status: v.optional(v.union(
-      v.literal("draft"),
-      v.literal("scheduled"),
-      v.literal("sending"),
-      v.literal("sent"),
-      v.literal("failed")
-    )),
+    status: v.optional(
+      v.union(
+        v.literal("draft"),
+        v.literal("scheduled"),
+        v.literal("sending"),
+        v.literal("sent"),
+        v.literal("failed")
+      )
+    ),
   },
   handler: async (ctx, args) => {
     const campaigns = await ctx.db
@@ -434,7 +440,7 @@ export const checkEmailCampaignRecipients = internalQuery({
       .query("emailCampaignRecipients")
       .withIndex("by_campaignId", (q) => q.eq("campaignId", args.campaignId as any))
       .first();
-    
+
     return firstRecipient !== null;
   },
 });
@@ -443,7 +449,7 @@ export const checkEmailCampaignRecipients = internalQuery({
  * Get campaign recipients (INTERNAL) - with pagination support for large campaigns
  */
 export const getCampaignRecipients = internalQuery({
-  args: { 
+  args: {
     campaignId: v.union(v.id("resendCampaigns"), v.id("emailCampaigns")),
     cursor: v.optional(v.string()),
     batchSize: v.optional(v.number()),
@@ -463,7 +469,7 @@ export const getCampaignRecipients = internalQuery({
         cursor: args.cursor || null,
         numItems: batchSize,
       });
-    
+
     // If we found recipients in emailCampaignRecipients, this is an emailCampaign
     if (paginationResult.page.length > 0) {
       // Fetch customer details for each recipient to get personalization fields
@@ -496,9 +502,10 @@ export const getCampaignRecipients = internalQuery({
     // Otherwise, this is a resendCampaign - use original logic (no pagination for now)
     // Return all recipients at once for backwards compatibility
     const resendCampaign = campaign as any;
-    
-    let recipients: Array<{ email: string; userId: string | undefined; name: string | undefined }> = [];
-    
+
+    let recipients: Array<{ email: string; userId: string | undefined; name: string | undefined }> =
+      [];
+
     // Custom recipients (specific users)
     if (resendCampaign.targetAudience === "custom_list" && resendCampaign.customRecipients) {
       // customRecipients contains user IDs, so we need to look them up
@@ -510,7 +517,7 @@ export const getCampaignRecipients = internalQuery({
           recipients.push({
             email: user.email,
             userId: "clerkId" in user ? user.clerkId : undefined,
-            name: "name" in user ? user.name : undefined
+            name: "name" in user ? user.name : undefined,
           });
         }
       }
@@ -549,9 +556,7 @@ export const getCampaignRecipients = internalQuery({
           const courseIds = courses.map((c) => c._id);
           const enrollments = await ctx.db.query("enrollments").collect();
           const storeStudentIds = new Set(
-            enrollments
-              .filter((e) => courseIds.includes(e.courseId as any))
-              .map((e) => e.userId)
+            enrollments.filter((e) => courseIds.includes(e.courseId as any)).map((e) => e.userId)
           );
           recipients = allUsers
             .filter((u) => u.email && u.clerkId && storeStudentIds.has(u.clerkId))
@@ -701,6 +706,7 @@ export const logEmail = internalMutation({
 
 /**
  * Handle webhook event from Resend
+ * Updates both resendLogs (for campaigns) and emailContacts (for workflow tracking)
  */
 export const handleWebhookEvent = mutation({
   args: {
@@ -710,19 +716,21 @@ export const handleWebhookEvent = mutation({
     metadata: v.any(),
   },
   handler: async (ctx, args) => {
-    // Find email log by Resend email ID
+    // Extract recipient email from metadata
+    const recipientEmail = args.metadata?.to;
+    const recipientEmailNormalized = Array.isArray(recipientEmail)
+      ? recipientEmail[0]?.toLowerCase()
+      : recipientEmail?.toLowerCase();
+
+    // Find email log by Resend email ID (for campaign emails)
     const log = await ctx.db
       .query("resendLogs")
       .withIndex("by_resend_id", (q) => q.eq("resendEmailId", args.emailId))
       .first();
 
-    if (!log) {
-      console.warn(`Email log not found for Resend ID: ${args.emailId}`);
-      return { success: false, message: "Email log not found" };
-    }
-
     // Determine new status based on event
-    let newStatus: "delivered" | "opened" | "clicked" | "bounced" | "complained" | "failed" = "delivered";
+    let newStatus: "delivered" | "opened" | "clicked" | "bounced" | "complained" | "failed" =
+      "delivered";
     const updates: any = { updatedAt: Date.now() };
 
     switch (args.event) {
@@ -753,19 +761,87 @@ export const handleWebhookEvent = mutation({
         break;
     }
 
-    // Update log
-    updates.status = newStatus;
-    await ctx.db.patch(log._id, updates);
+    // Update resendLogs if found (campaign emails)
+    if (log) {
+      updates.status = newStatus;
+      await ctx.db.patch(log._id, updates);
 
-    // Update campaign metrics if applicable
-    if (log.campaignId) {
-      await ctx.runMutation(internal.emailQueries.incrementCampaignMetric, {
-        campaignId: log.campaignId,
-        metric: newStatus,
-      });
+      // Update campaign metrics if applicable
+      if (log.campaignId) {
+        await ctx.runMutation(internal.emailQueries.incrementCampaignMetric, {
+          campaignId: log.campaignId,
+          metric: newStatus,
+        });
+      }
     }
 
-    return { success: true };
+    // Update email contacts for open/click tracking (works for ALL emails including workflow)
+    if (
+      recipientEmailNormalized &&
+      (args.event === "email.opened" || args.event === "email.clicked")
+    ) {
+      // Find all contacts with this email across all stores
+      const contacts = await ctx.db
+        .query("emailContacts")
+        .filter((q) => q.eq(q.field("email"), recipientEmailNormalized))
+        .collect();
+
+      for (const contact of contacts) {
+        const now = Date.now();
+
+        if (args.event === "email.opened") {
+          await ctx.db.patch(contact._id, {
+            emailsOpened: (contact.emailsOpened || 0) + 1,
+            lastOpenedAt: now,
+            updatedAt: now,
+          });
+
+          // Log activity
+          await ctx.db.insert("emailContactActivity", {
+            contactId: contact._id,
+            storeId: contact.storeId,
+            activityType: "email_opened",
+            metadata: {
+              emailId: args.emailId,
+              timestamp: args.timestamp,
+            },
+            timestamp: now,
+          });
+
+          console.log(`[Webhook] Email opened by contact ${contact._id} (${contact.email})`);
+        } else if (args.event === "email.clicked") {
+          await ctx.db.patch(contact._id, {
+            emailsClicked: (contact.emailsClicked || 0) + 1,
+            lastClickedAt: now,
+            updatedAt: now,
+          });
+
+          // Log activity
+          await ctx.db.insert("emailContactActivity", {
+            contactId: contact._id,
+            storeId: contact.storeId,
+            activityType: "email_clicked",
+            metadata: {
+              emailId: args.emailId,
+              timestamp: args.timestamp,
+              linkClicked: args.metadata?.clickedUrl,
+            },
+            timestamp: now,
+          });
+
+          console.log(`[Webhook] Email clicked by contact ${contact._id} (${contact.email})`);
+        }
+      }
+    }
+
+    if (!log && !recipientEmailNormalized) {
+      console.warn(
+        `[Webhook] No tracking possible for email ID: ${args.emailId} - no log found and no recipient email`
+      );
+      return { success: false, message: "No tracking data found" };
+    }
+
+    return { success: true, logUpdated: !!log, contactsUpdated: !!recipientEmailNormalized };
   },
 });
 
@@ -938,12 +1014,10 @@ export const getStoreEmailAnalytics = query({
       .collect();
 
     const totalSent = logs.length;
-    const delivered = logs.filter((l) => 
+    const delivered = logs.filter((l) =>
       ["delivered", "opened", "clicked"].includes(l.status)
     ).length;
-    const opened = logs.filter((l) => 
-      ["opened", "clicked"].includes(l.status)
-    ).length;
+    const opened = logs.filter((l) => ["opened", "clicked"].includes(l.status)).length;
     const clicked = logs.filter((l) => l.status === "clicked").length;
     const bounced = logs.filter((l) => l.status === "bounced").length;
     const complained = logs.filter((l) => l.status === "complained").length;
@@ -979,17 +1053,14 @@ export const getCampaignStats = query({
       throw new Error("Campaign not found");
     }
 
-    const openRate = campaign.deliveredCount > 0
-      ? (campaign.openedCount / campaign.deliveredCount) * 100
-      : 0;
+    const openRate =
+      campaign.deliveredCount > 0 ? (campaign.openedCount / campaign.deliveredCount) * 100 : 0;
 
-    const clickRate = campaign.deliveredCount > 0
-      ? (campaign.clickedCount / campaign.deliveredCount) * 100
-      : 0;
+    const clickRate =
+      campaign.deliveredCount > 0 ? (campaign.clickedCount / campaign.deliveredCount) * 100 : 0;
 
-    const bounceRate = campaign.sentCount > 0
-      ? (campaign.bouncedCount / campaign.sentCount) * 100
-      : 0;
+    const bounceRate =
+      campaign.sentCount > 0 ? (campaign.bouncedCount / campaign.sentCount) * 100 : 0;
 
     return {
       recipientCount: campaign.recipientCount,
@@ -1170,7 +1241,7 @@ export const getScheduledCampaigns = internalQuery({
     return await ctx.db
       .query("resendCampaigns")
       .withIndex("by_status", (q) => q.eq("status", "scheduled"))
-      .filter((q) => 
+      .filter((q) =>
         q.and(
           q.neq(q.field("scheduledFor"), undefined),
           q.lte(q.field("scheduledFor"), args.beforeTimestamp)
@@ -1638,10 +1709,7 @@ export const getUserDigestData = internalQuery({
     const newCourses = await ctx.db
       .query("courses")
       .filter((q) =>
-        q.and(
-          q.eq(q.field("isPublished"), true),
-          q.gt(q.field("_creationTime"), oneWeekAgo)
-        )
+        q.and(q.eq(q.field("isPublished"), true), q.gt(q.field("_creationTime"), oneWeekAgo))
       )
       .take(5);
 
@@ -1656,10 +1724,7 @@ export const getUserDigestData = internalQuery({
     const certificates = await ctx.db
       .query("certificates")
       .filter((q) =>
-        q.and(
-          q.eq(q.field("userId"), args.userId),
-          q.gt(q.field("issueDate"), oneWeekAgo)
-        )
+        q.and(q.eq(q.field("userId"), args.userId), q.gt(q.field("issueDate"), oneWeekAgo))
       )
       .collect();
 
@@ -1670,7 +1735,9 @@ export const getUserDigestData = internalQuery({
       stats: {
         activeCourses: enrollments.length,
         completedThisWeek: certificates.length,
-        totalProgress: courseProgress.reduce((sum, c) => sum + c.progress, 0) / Math.max(courseProgress.length, 1),
+        totalProgress:
+          courseProgress.reduce((sum, c) => sum + c.progress, 0) /
+          Math.max(courseProgress.length, 1),
       },
       courseProgress: courseProgress.slice(0, 3), // Top 3 in-progress courses
       newCourses: newCourses.map((c) => ({
@@ -1731,23 +1798,13 @@ export const getEmailsNeedingSync = internalQuery({
     // and haven't been updated recently
     const logs = await ctx.db
       .query("resendLogs")
-      .filter((q) =>
-        q.or(
-          q.eq(q.field("status"), "sent"),
-          q.eq(q.field("status"), "pending")
-        )
-      )
+      .filter((q) => q.or(q.eq(q.field("status"), "sent"), q.eq(q.field("status"), "pending")))
       .take(args.limit || 100);
 
     // Filter to only include those with Resend email IDs and created over 1 hour ago
     const oneHourAgo = Date.now() - 60 * 60 * 1000;
     return logs
-      .filter(
-        (log) =>
-          log.resendEmailId &&
-          log.sentAt &&
-          log.sentAt < oneHourAgo
-      )
+      .filter((log) => log.resendEmailId && log.sentAt && log.sentAt < oneHourAgo)
       .slice(0, args.limit || 100);
   },
 });
@@ -1800,4 +1857,3 @@ export const updateEmailStatusFromSync = internalMutation({
     }
   },
 });
-

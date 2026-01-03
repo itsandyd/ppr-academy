@@ -170,6 +170,11 @@ export default function WorkflowBuilderPage() {
 
   const contacts = useQuery(api.emailContacts.listContacts, storeId ? { storeId } : "skip");
 
+  const nodeExecutionCounts = useQuery(
+    api.emailWorkflows.getNodeExecutionCounts,
+    workflowId ? { workflowId: workflowId as Id<"emailWorkflows"> } : "skip"
+  );
+
   const createWorkflow = useMutation(api.emailWorkflows.createWorkflow);
   const updateWorkflow = useMutation(api.emailWorkflows.updateWorkflow);
   const deleteWorkflow = useMutation(api.emailWorkflows.deleteWorkflow);
@@ -459,6 +464,7 @@ export default function WorkflowBuilderPage() {
           <WorkflowCanvas
             initialNodes={nodes}
             initialEdges={edges}
+            nodeExecutionCounts={nodeExecutionCounts || {}}
             onNodesChange={handleNodesChange}
             onEdgesChange={handleEdgesChange}
             onNodeSelect={handleNodeSelect}
@@ -691,6 +697,121 @@ export default function WorkflowBuilderPage() {
                       />
                     </div>
                   </>
+                )}
+
+                {selectedNode.type === "webhook" && (
+                  <div className="space-y-2">
+                    <Label>Webhook URL</Label>
+                    <Input
+                      value={selectedNode.data.webhookUrl || ""}
+                      onChange={(e) =>
+                        updateNodeData(selectedNode.id, { webhookUrl: e.target.value })
+                      }
+                      placeholder="https://hooks.zapier.com/..."
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Sends contact data to this URL via POST request
+                    </p>
+                  </div>
+                )}
+
+                {selectedNode.type === "split" && (
+                  <div className="space-y-2">
+                    <Label>Split Percentage (Path A)</Label>
+                    <div className="flex items-center gap-4">
+                      <Input
+                        type="number"
+                        min="1"
+                        max="99"
+                        value={selectedNode.data.splitPercentage || 50}
+                        onChange={(e) =>
+                          updateNodeData(selectedNode.id, {
+                            splitPercentage: Math.min(
+                              99,
+                              Math.max(1, parseInt(e.target.value) || 50)
+                            ),
+                          })
+                        }
+                        className="w-24"
+                      />
+                      <span className="text-sm text-muted-foreground">
+                        Path A: {selectedNode.data.splitPercentage || 50}% / Path B:{" "}
+                        {100 - (selectedNode.data.splitPercentage || 50)}%
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {selectedNode.type === "notify" && (
+                  <>
+                    <div className="space-y-2">
+                      <Label>Notification Method</Label>
+                      <Select
+                        value={selectedNode.data.notifyMethod || "email"}
+                        onValueChange={(v) => updateNodeData(selectedNode.id, { notifyMethod: v })}
+                      >
+                        <SelectTrigger className="bg-white dark:bg-black">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white dark:bg-black">
+                          <SelectItem value="email">Email Store Owner</SelectItem>
+                          <SelectItem value="slack">Slack (coming soon)</SelectItem>
+                          <SelectItem value="discord">Discord (coming soon)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Message</Label>
+                      <Input
+                        value={selectedNode.data.message || ""}
+                        onChange={(e) =>
+                          updateNodeData(selectedNode.id, { message: e.target.value })
+                        }
+                        placeholder="New lead reached this step!"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {selectedNode.type === "goal" && (
+                  <div className="space-y-2">
+                    <Label>Goal Type</Label>
+                    <Select
+                      value={selectedNode.data.goalType || "purchase"}
+                      onValueChange={(v) => updateNodeData(selectedNode.id, { goalType: v })}
+                    >
+                      <SelectTrigger className="bg-white dark:bg-black">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white dark:bg-black">
+                        <SelectItem value="purchase">Made Purchase</SelectItem>
+                        <SelectItem value="clicked">Clicked Link</SelectItem>
+                        <SelectItem value="opened">Opened Email</SelectItem>
+                        <SelectItem value="replied">Replied to Email</SelectItem>
+                        <SelectItem value="custom">Custom Goal</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {selectedNode.data.goalType === "custom" && (
+                      <Input
+                        value={selectedNode.data.customGoal || ""}
+                        onChange={(e) =>
+                          updateNodeData(selectedNode.id, { customGoal: e.target.value })
+                        }
+                        placeholder="Describe your goal..."
+                        className="mt-2"
+                      />
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Goal nodes mark this path complete when reached
+                    </p>
+                  </div>
+                )}
+
+                {selectedNode.type === "stop" && (
+                  <p className="text-sm text-muted-foreground">
+                    This node ends the workflow. No further actions will be taken for contacts that
+                    reach this point.
+                  </p>
                 )}
 
                 <DialogFooter className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-between">

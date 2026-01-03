@@ -45,6 +45,8 @@ import {
   Upload,
   UserPlus,
   RefreshCw,
+  Pencil,
+  Power,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -103,10 +105,15 @@ export default function EmailCampaignsPage() {
   const deleteTag = useMutation(api.emailTags.deleteTag);
   const enrollContact = useMutation(api.emailWorkflows.enrollContactInWorkflow);
   const bulkEnrollContacts = useMutation(api.emailWorkflows.bulkEnrollContactsInWorkflow);
+  const updateWorkflow = useMutation(api.emailWorkflows.updateWorkflow);
+  const deleteWorkflow = useMutation(api.emailWorkflows.deleteWorkflow);
+  const toggleWorkflowActive = useMutation(api.emailWorkflows.toggleWorkflowActive);
 
   const [isSyncing, setIsSyncing] = useState(false);
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
   const [isEnrolling, setIsEnrolling] = useState(false);
+  const [renameWorkflowId, setRenameWorkflowId] = useState<string | null>(null);
+  const [renameWorkflowName, setRenameWorkflowName] = useState("");
 
   if (isLoaded && mode !== "create") {
     router.push("/dashboard?mode=create");
@@ -294,6 +301,40 @@ export default function EmailCampaignsPage() {
       setSelectedContacts(new Set());
     } else {
       setSelectedContacts(new Set(filteredContacts.map((c: any) => c._id)));
+    }
+  };
+
+  const handleRenameWorkflow = async () => {
+    if (!renameWorkflowId || !renameWorkflowName.trim()) return;
+    try {
+      await updateWorkflow({
+        workflowId: renameWorkflowId as any,
+        name: renameWorkflowName.trim(),
+      });
+      toast({ title: "Workflow renamed" });
+      setRenameWorkflowId(null);
+      setRenameWorkflowName("");
+    } catch {
+      toast({ title: "Failed to rename workflow", variant: "destructive" });
+    }
+  };
+
+  const handleDeleteWorkflow = async (workflowId: string) => {
+    if (!confirm("Delete this workflow and all its executions?")) return;
+    try {
+      await deleteWorkflow({ workflowId: workflowId as any });
+      toast({ title: "Workflow deleted" });
+    } catch {
+      toast({ title: "Failed to delete workflow", variant: "destructive" });
+    }
+  };
+
+  const handleToggleWorkflow = async (workflowId: string, currentState: boolean) => {
+    try {
+      await toggleWorkflowActive({ workflowId: workflowId as any, isActive: !currentState });
+      toast({ title: !currentState ? "Workflow activated" : "Workflow paused" });
+    } catch {
+      toast({ title: "Failed to toggle workflow", variant: "destructive" });
     }
   };
 
@@ -1344,6 +1385,45 @@ export default function EmailCampaignsPage() {
                             </div>
                           </div>
                         </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="bg-white dark:bg-black">
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setRenameWorkflowId(workflow._id);
+                                setRenameWorkflowName(workflow.name);
+                              }}
+                            >
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Rename
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleToggleWorkflow(workflow._id, workflow.isActive);
+                              }}
+                            >
+                              <Power className="mr-2 h-4 w-4" />
+                              {workflow.isActive ? "Deactivate" : "Activate"}
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-red-600"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteWorkflow(workflow._id);
+                              }}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                   </CardContent>
@@ -1353,6 +1433,34 @@ export default function EmailCampaignsPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      <Dialog open={!!renameWorkflowId} onOpenChange={(open) => !open && setRenameWorkflowId(null)}>
+        <DialogContent className="bg-white dark:bg-black">
+          <DialogHeader>
+            <DialogTitle>Rename Workflow</DialogTitle>
+            <DialogDescription>Enter a new name for this workflow</DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="workflow-name">Name</Label>
+            <Input
+              id="workflow-name"
+              value={renameWorkflowName}
+              onChange={(e) => setRenameWorkflowName(e.target.value)}
+              placeholder="Workflow name"
+              className="mt-2"
+              onKeyDown={(e) => e.key === "Enter" && handleRenameWorkflow()}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenameWorkflowId(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleRenameWorkflow} disabled={!renameWorkflowName.trim()}>
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
