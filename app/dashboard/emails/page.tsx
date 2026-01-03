@@ -51,7 +51,12 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { Checkbox } from "@/components/ui/checkbox";
 
 function cn(...classes: (string | boolean | undefined)[]) {
   return classes.filter(Boolean).join(" ");
@@ -86,17 +91,22 @@ export default function EmailCampaignsPage() {
   const contactStats = useQuery(api.emailContacts.getContactStats, storeId ? { storeId } : "skip");
   const tags = useQuery(api.emailTags.listTags, storeId ? { storeId } : "skip");
   const tagStats = useQuery(api.emailTags.getTagStats, storeId ? { storeId } : "skip");
+  const workflows = useQuery(api.emailWorkflows.listWorkflows, storeId ? { storeId } : "skip");
 
   const createCampaign = useMutation(api.dripCampaigns.createCampaign);
   const toggleCampaign = useMutation(api.dripCampaigns.toggleCampaign);
   const deleteCampaign = useMutation(api.dripCampaigns.deleteCampaign);
   const createContact = useMutation(api.emailContacts.createContact);
   const deleteContact = useMutation(api.emailContacts.deleteContact);
-  const syncEnrolledUsers = useMutation(api.emailContacts.syncEnrolledUsersToEmailContacts);
+  const syncCustomers = useMutation(api.emailContacts.syncCustomersToEmailContacts);
   const createTag = useMutation(api.emailTags.createTag);
   const deleteTag = useMutation(api.emailTags.deleteTag);
+  const enrollContact = useMutation(api.emailWorkflows.enrollContactInWorkflow);
+  const bulkEnrollContacts = useMutation(api.emailWorkflows.bulkEnrollContactsInWorkflow);
 
   const [isSyncing, setIsSyncing] = useState(false);
+  const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
+  const [isEnrolling, setIsEnrolling] = useState(false);
 
   if (isLoaded && mode !== "create") {
     router.push("/dashboard?mode=create");
@@ -217,18 +227,69 @@ export default function EmailCampaignsPage() {
   const handleSyncCustomers = async () => {
     setIsSyncing(true);
     try {
-      const result = await syncEnrolledUsers({ storeId });
-      const description = result.errors.length > 0
-        ? `Added ${result.synced} contacts, ${result.skipped} already existed. ${result.errors.length} errors.`
-        : `Added ${result.synced} contacts, ${result.skipped} already existed (${result.total} total enrolled users)`;
+      const result = await syncCustomers({ storeId });
       toast({
         title: "Sync Complete",
-        description,
+        description: `Added ${result.synced} contacts, ${result.skipped} already existed`,
       });
     } catch {
-      toast({ title: "Failed to sync enrolled users", variant: "destructive" });
+      toast({ title: "Failed to sync customers", variant: "destructive" });
     } finally {
       setIsSyncing(false);
+    }
+  };
+
+  const handleEnrollContact = async (contactId: string, workflowId: string) => {
+    try {
+      await enrollContact({ contactId: contactId as any, workflowId: workflowId as any });
+      toast({ title: "Contact enrolled in automation" });
+    } catch (error: any) {
+      toast({
+        title: "Failed to enroll",
+        description: error.message || "Contact may already be enrolled",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleBulkEnroll = async (workflowId: string) => {
+    if (selectedContacts.size === 0) return;
+    setIsEnrolling(true);
+    try {
+      const result = await bulkEnrollContacts({
+        workflowId: workflowId as any,
+        contactIds: Array.from(selectedContacts) as any[],
+      });
+      toast({
+        title: "Bulk Enrollment Complete",
+        description: `Enrolled ${result.enrolled}, skipped ${result.skipped} (already enrolled)`,
+      });
+      setSelectedContacts(new Set());
+    } catch {
+      toast({ title: "Failed to enroll contacts", variant: "destructive" });
+    } finally {
+      setIsEnrolling(false);
+    }
+  };
+
+  const toggleContactSelection = (contactId: string) => {
+    setSelectedContacts((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(contactId)) {
+        newSet.delete(contactId);
+      } else {
+        newSet.add(contactId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleAllContacts = () => {
+    if (!filteredContacts) return;
+    if (selectedContacts.size === filteredContacts.length) {
+      setSelectedContacts(new Set());
+    } else {
+      setSelectedContacts(new Set(filteredContacts.map((c: any) => c._id)));
     }
   };
 
@@ -684,35 +745,90 @@ export default function EmailCampaignsPage() {
             </Card>
           ) : (
             <>
+              {/* Bulk Action Bar */}
+              {selectedContacts.size > 0 && (
+                <Card className="border-primary bg-primary/5">
+                  <CardContent className="flex items-center justify-between p-3">
+                    <span className="text-sm font-medium">
+                      {selectedContacts.size} contact{selectedContacts.size > 1 ? "s" : ""} selected
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button size="sm" disabled={isEnrolling} className="gap-2">
+                            <Workflow className="h-4 w-4" />
+                            {isEnrolling ? "Enrolling..." : "Add to Automation"}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="bg-white dark:bg-black">
+                          {workflows && workflows.length > 0 ? (
+                            workflows.map((workflow: any) => (
+                              <DropdownMenuItem
+                                key={workflow._id}
+                                onClick={() => handleBulkEnroll(workflow._id)}
+                              >
+                                {workflow.name}
+                              </DropdownMenuItem>
+                            ))
+                          ) : (
+                            <DropdownMenuItem disabled>No automations yet</DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedContacts(new Set())}
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Mobile: Card-based layout */}
               <div className="space-y-2 md:hidden">
                 {filteredContacts.slice(0, 50).map((contact: any) => (
-                  <Card key={contact._id} className="overflow-hidden">
+                  <Card
+                    key={contact._id}
+                    className={cn(
+                      "overflow-hidden",
+                      selectedContacts.has(contact._id) && "ring-2 ring-primary"
+                    )}
+                  >
                     <CardContent className="p-3">
                       <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="truncate text-sm font-medium">
-                              {contact.firstName || contact.lastName
-                                ? `${contact.firstName || ""} ${contact.lastName || ""}`.trim()
-                                : "—"}
-                            </span>
-                            <Badge
-                              className={cn(
-                                "shrink-0 text-[10px]",
-                                contact.status === "subscribed" &&
-                                  "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
-                                contact.status === "unsubscribed" &&
-                                  "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
-                                contact.status === "bounced" &&
-                                  "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
-                              )}
-                            >
-                              {contact.status}
-                            </Badge>
-                          </div>
-                          <div className="mt-0.5 truncate text-xs text-muted-foreground">
-                            {contact.email}
+                        <div className="flex items-start gap-2">
+                          <Checkbox
+                            checked={selectedContacts.has(contact._id)}
+                            onCheckedChange={() => toggleContactSelection(contact._id)}
+                            className="mt-0.5"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="truncate text-sm font-medium">
+                                {contact.firstName || contact.lastName
+                                  ? `${contact.firstName || ""} ${contact.lastName || ""}`.trim()
+                                  : "—"}
+                              </span>
+                              <Badge
+                                className={cn(
+                                  "shrink-0 text-[10px]",
+                                  contact.status === "subscribed" &&
+                                    "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
+                                  contact.status === "unsubscribed" &&
+                                    "bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300",
+                                  contact.status === "bounced" &&
+                                    "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
+                                )}
+                              >
+                                {contact.status}
+                              </Badge>
+                            </div>
+                            <div className="mt-0.5 truncate text-xs text-muted-foreground">
+                              {contact.email}
+                            </div>
                           </div>
                         </div>
                         <DropdownMenu>
@@ -730,6 +846,27 @@ export default function EmailCampaignsPage() {
                               View Profile
                             </DropdownMenuItem>
                             <DropdownMenuItem>Add Tag</DropdownMenuItem>
+                            <DropdownMenuSub>
+                              <DropdownMenuSubTrigger>
+                                <Workflow className="mr-2 h-4 w-4" />
+                                Add to Automation
+                              </DropdownMenuSubTrigger>
+                              <DropdownMenuSubContent className="bg-white dark:bg-black">
+                                {workflows && workflows.length > 0 ? (
+                                  workflows.map((workflow: any) => (
+                                    <DropdownMenuItem
+                                      key={workflow._id}
+                                      onClick={() => handleEnrollContact(contact._id, workflow._id)}
+                                    >
+                                      {workflow.name}
+                                    </DropdownMenuItem>
+                                  ))
+                                ) : (
+                                  <DropdownMenuItem disabled>No automations yet</DropdownMenuItem>
+                                )}
+                              </DropdownMenuSubContent>
+                            </DropdownMenuSub>
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem
                               className="text-red-600"
                               onClick={() => handleDeleteContact(contact._id)}
@@ -779,6 +916,16 @@ export default function EmailCampaignsPage() {
                   <table className="w-full">
                     <thead className="border-b">
                       <tr className="text-left text-sm text-muted-foreground">
+                        <th className="w-12 p-4">
+                          <Checkbox
+                            checked={
+                              filteredContacts &&
+                              filteredContacts.length > 0 &&
+                              selectedContacts.size === filteredContacts.length
+                            }
+                            onCheckedChange={toggleAllContacts}
+                          />
+                        </th>
                         <th className="p-4 font-medium">Contact</th>
                         <th className="p-4 font-medium">Status</th>
                         <th className="p-4 font-medium">Tags</th>
@@ -789,7 +936,19 @@ export default function EmailCampaignsPage() {
                     </thead>
                     <tbody>
                       {filteredContacts.slice(0, 50).map((contact: any) => (
-                        <tr key={contact._id} className="border-b hover:bg-muted/50">
+                        <tr
+                          key={contact._id}
+                          className={cn(
+                            "border-b hover:bg-muted/50",
+                            selectedContacts.has(contact._id) && "bg-primary/5"
+                          )}
+                        >
+                          <td className="p-4">
+                            <Checkbox
+                              checked={selectedContacts.has(contact._id)}
+                              onCheckedChange={() => toggleContactSelection(contact._id)}
+                            />
+                          </td>
                           <td className="p-4">
                             <div className="font-medium">
                               {contact.firstName || contact.lastName
@@ -857,6 +1016,31 @@ export default function EmailCampaignsPage() {
                                   View Profile
                                 </DropdownMenuItem>
                                 <DropdownMenuItem>Add Tag</DropdownMenuItem>
+                                <DropdownMenuSub>
+                                  <DropdownMenuSubTrigger>
+                                    <Workflow className="mr-2 h-4 w-4" />
+                                    Add to Automation
+                                  </DropdownMenuSubTrigger>
+                                  <DropdownMenuSubContent className="bg-white dark:bg-black">
+                                    {workflows && workflows.length > 0 ? (
+                                      workflows.map((workflow: any) => (
+                                        <DropdownMenuItem
+                                          key={workflow._id}
+                                          onClick={() =>
+                                            handleEnrollContact(contact._id, workflow._id)
+                                          }
+                                        >
+                                          {workflow.name}
+                                        </DropdownMenuItem>
+                                      ))
+                                    ) : (
+                                      <DropdownMenuItem disabled>
+                                        No automations yet
+                                      </DropdownMenuItem>
+                                    )}
+                                  </DropdownMenuSubContent>
+                                </DropdownMenuSub>
+                                <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                   className="text-red-600"
                                   onClick={() => handleDeleteContact(contact._id)}

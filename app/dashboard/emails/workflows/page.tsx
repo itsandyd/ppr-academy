@@ -28,7 +28,8 @@ import {
 } from "@/components/ui/dialog";
 import { WysiwygEditor } from "@/components/ui/wysiwyg-editor";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Trash2, AlertTriangle, Check } from "lucide-react";
+import { ArrowLeft, Save, Trash2, AlertTriangle, Check, UserPlus, Search } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import NodeSidebar from "./components/NodeSidebar";
 import WorkflowCanvas from "./components/WorkflowCanvas";
 
@@ -139,6 +140,10 @@ export default function WorkflowBuilderPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [addNodeFn, setAddNodeFn] = useState<((type: string) => void) | null>(null);
+  const [isAddContactsOpen, setIsAddContactsOpen] = useState(false);
+  const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
+  const [contactSearchQuery, setContactSearchQuery] = useState("");
+  const [isEnrolling, setIsEnrolling] = useState(false);
 
   const storeId = user?.id ?? "";
 
@@ -152,9 +157,12 @@ export default function WorkflowBuilderPage() {
     workflowId ? { workflowId: workflowId as Id<"emailWorkflows"> } : "skip"
   );
 
+  const contacts = useQuery(api.emailContacts.listContacts, storeId ? { storeId } : "skip");
+
   const createWorkflow = useMutation(api.emailWorkflows.createWorkflow);
   const updateWorkflow = useMutation(api.emailWorkflows.updateWorkflow);
   const deleteWorkflow = useMutation(api.emailWorkflows.deleteWorkflow);
+  const bulkEnrollContacts = useMutation(api.emailWorkflows.bulkEnrollContactsInWorkflow);
 
   const handleNodesChange = useCallback((newNodes: Node[]) => {
     setNodes(newNodes);
@@ -272,6 +280,59 @@ export default function WorkflowBuilderPage() {
     }
   };
 
+  const filteredContacts = useMemo(() => {
+    if (!contacts) return [];
+    if (!contactSearchQuery) return contacts;
+    const query = contactSearchQuery.toLowerCase();
+    return contacts.filter(
+      (c: any) =>
+        c.email?.toLowerCase().includes(query) ||
+        c.firstName?.toLowerCase().includes(query) ||
+        c.lastName?.toLowerCase().includes(query)
+    );
+  }, [contacts, contactSearchQuery]);
+
+  const toggleContactSelection = useCallback((contactId: string) => {
+    setSelectedContacts((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(contactId)) {
+        newSet.delete(contactId);
+      } else {
+        newSet.add(contactId);
+      }
+      return newSet;
+    });
+  }, []);
+
+  const toggleAllContacts = useCallback(() => {
+    if (selectedContacts.size === filteredContacts.length && filteredContacts.length > 0) {
+      setSelectedContacts(new Set());
+    } else {
+      setSelectedContacts(new Set(filteredContacts.map((c: any) => c._id)));
+    }
+  }, [filteredContacts, selectedContacts.size]);
+
+  const handleBulkEnroll = async () => {
+    if (!workflowId || selectedContacts.size === 0) return;
+    setIsEnrolling(true);
+    try {
+      const result = await bulkEnrollContacts({
+        workflowId: workflowId as Id<"emailWorkflows">,
+        contactIds: Array.from(selectedContacts) as any[],
+      });
+      toast({
+        title: "Contacts Enrolled",
+        description: `Enrolled ${result.enrolled} contact${result.enrolled !== 1 ? "s" : ""}, skipped ${result.skipped} (already enrolled)`,
+      });
+      setSelectedContacts(new Set());
+      setIsAddContactsOpen(false);
+    } catch {
+      toast({ title: "Error", description: "Failed to enroll contacts", variant: "destructive" });
+    } finally {
+      setIsEnrolling(false);
+    }
+  };
+
   return (
     <div className="flex h-screen flex-col">
       <header className="flex items-center justify-between border-b border-zinc-200 bg-white px-2 py-2 dark:border-zinc-800 dark:bg-zinc-950 md:px-4 md:py-3">
@@ -301,15 +362,26 @@ export default function WorkflowBuilderPage() {
             </div>
           )}
           {workflowId && (
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={handleDelete}
-              className="h-8 w-8 text-red-600 md:h-9 md:w-auto md:gap-2 md:px-3"
-            >
-              <Trash2 className="h-4 w-4" />
-              <span className="hidden md:inline">Delete</span>
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setIsAddContactsOpen(true)}
+                className="h-8 w-8 md:h-9 md:w-auto md:gap-2 md:px-3"
+              >
+                <UserPlus className="h-4 w-4" />
+                <span className="hidden md:inline">Add Contacts</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleDelete}
+                className="h-8 w-8 text-red-600 md:h-9 md:w-auto md:gap-2 md:px-3"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span className="hidden md:inline">Delete</span>
+              </Button>
+            </>
           )}
           <Button
             size="icon"
@@ -574,17 +646,116 @@ export default function WorkflowBuilderPage() {
                     <Trash2 className="h-4 w-4" />
                     Delete Node
                   </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => setSelectedNode(null)}
-                    className="gap-2"
-                  >
+                  <Button size="sm" onClick={() => setSelectedNode(null)} className="gap-2">
                     <Check className="h-4 w-4" />
                     Done
                   </Button>
                 </DialogFooter>
               </div>
             )}
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isAddContactsOpen} onOpenChange={setIsAddContactsOpen}>
+          <DialogContent className="max-h-[80vh] max-w-lg bg-white dark:bg-black">
+            <DialogHeader>
+              <DialogTitle>Add Contacts to Workflow</DialogTitle>
+              <DialogDescription>
+                Select contacts to enroll in this automation workflow
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Search contacts..."
+                  className="pl-10"
+                  value={contactSearchQuery}
+                  onChange={(e) => setContactSearchQuery(e.target.value)}
+                />
+              </div>
+
+              {selectedContacts.size > 0 && (
+                <div className="flex items-center justify-between rounded-md bg-primary/10 px-3 py-2">
+                  <span className="text-sm font-medium">
+                    {selectedContacts.size} contact{selectedContacts.size !== 1 ? "s" : ""} selected
+                  </span>
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedContacts(new Set())}>
+                    Clear
+                  </Button>
+                </div>
+              )}
+
+              <div className="max-h-[300px] overflow-y-auto rounded-md border">
+                {filteredContacts.length > 0 && (
+                  <div
+                    className="flex cursor-pointer items-center gap-3 border-b bg-muted/50 px-3 py-2"
+                    onClick={toggleAllContacts}
+                  >
+                    <Checkbox
+                      checked={
+                        filteredContacts.length > 0 &&
+                        selectedContacts.size === filteredContacts.length
+                      }
+                      onCheckedChange={toggleAllContacts}
+                    />
+                    <span className="text-sm font-medium">Select All</span>
+                  </div>
+                )}
+                {filteredContacts.length === 0 ? (
+                  <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+                    {contacts === undefined ? "Loading contacts..." : "No contacts found"}
+                  </div>
+                ) : (
+                  filteredContacts.slice(0, 100).map((contact: any) => (
+                    <div
+                      key={contact._id}
+                      className="flex cursor-pointer items-center gap-3 border-b px-3 py-2 last:border-b-0 hover:bg-muted/50"
+                      onClick={() => toggleContactSelection(contact._id)}
+                    >
+                      <Checkbox
+                        checked={selectedContacts.has(contact._id)}
+                        onCheckedChange={() => toggleContactSelection(contact._id)}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-medium">
+                          {contact.firstName || contact.lastName
+                            ? `${contact.firstName || ""} ${contact.lastName || ""}`.trim()
+                            : contact.email}
+                        </div>
+                        {(contact.firstName || contact.lastName) && (
+                          <div className="truncate text-xs text-muted-foreground">
+                            {contact.email}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+                {filteredContacts.length > 100 && (
+                  <div className="px-3 py-2 text-center text-xs text-muted-foreground">
+                    Showing 100 of {filteredContacts.length} contacts
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsAddContactsOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleBulkEnroll}
+                disabled={selectedContacts.size === 0 || isEnrolling}
+                className="gap-2"
+              >
+                <UserPlus className="h-4 w-4" />
+                {isEnrolling
+                  ? "Enrolling..."
+                  : `Enroll ${selectedContacts.size} Contact${selectedContacts.size !== 1 ? "s" : ""}`}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>

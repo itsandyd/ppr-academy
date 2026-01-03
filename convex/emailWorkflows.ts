@@ -259,3 +259,152 @@ export const triggerLeadSignupWorkflows = internalMutation({
     return null;
   },
 });
+
+export const enrollContactInWorkflow = mutation({
+  args: {
+    workflowId: v.id("emailWorkflows"),
+    contactId: v.id("emailContacts"),
+  },
+  returns: v.id("workflowExecutions"),
+  handler: async (ctx, args) => {
+    const workflow = await ctx.db.get(args.workflowId);
+    if (!workflow) throw new Error("Workflow not found");
+
+    const contact = await ctx.db.get(args.contactId);
+    if (!contact) throw new Error("Contact not found");
+
+    const existingExecution = await ctx.db
+      .query("workflowExecutions")
+      .withIndex("by_workflowId", (q) => q.eq("workflowId", args.workflowId))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("customerEmail"), contact.email),
+          q.or(q.eq(q.field("status"), "pending"), q.eq(q.field("status"), "running"))
+        )
+      )
+      .first();
+
+    if (existingExecution) {
+      throw new Error("Contact is already enrolled in this workflow");
+    }
+
+    const triggerNode = workflow.nodes.find((n: { type: string }) => n.type === "trigger");
+    const firstNode = workflow.nodes.find((n: { type: string }) => n.type !== "trigger");
+
+    const now = Date.now();
+
+    const executionId = await ctx.db.insert("workflowExecutions", {
+      workflowId: args.workflowId,
+      storeId: workflow.storeId,
+      contactId: args.contactId,
+      customerEmail: contact.email,
+      status: "pending",
+      currentNodeId: firstNode?.id || triggerNode?.id,
+      scheduledFor: now,
+      executionData: { enrolledManually: true },
+    });
+
+    await ctx.db.patch(args.workflowId, {
+      totalExecutions: (workflow.totalExecutions || 0) + 1,
+      lastExecuted: now,
+    });
+
+    return executionId;
+  },
+});
+
+export const bulkEnrollContactsInWorkflow = mutation({
+  args: {
+    workflowId: v.id("emailWorkflows"),
+    contactIds: v.array(v.id("emailContacts")),
+  },
+  returns: v.object({
+    enrolled: v.number(),
+    skipped: v.number(),
+    errors: v.array(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    const workflow = await ctx.db.get(args.workflowId);
+    if (!workflow) throw new Error("Workflow not found");
+
+    let enrolled = 0;
+    let skipped = 0;
+    const errors: string[] = [];
+
+    const triggerNode = workflow.nodes.find((n: { type: string }) => n.type === "trigger");
+    const firstNode = workflow.nodes.find((n: { type: string }) => n.type !== "trigger");
+
+    const now = Date.now();
+
+    for (const contactId of args.contactIds) {
+      const contact = await ctx.db.get(contactId);
+      if (!contact) {
+        errors.push(`Contact ${contactId} not found`);
+        continue;
+      }
+
+      const existingExecution = await ctx.db
+        .query("workflowExecutions")
+        .withIndex("by_workflowId", (q) => q.eq("workflowId", args.workflowId))
+        .filter((q) =>
+          q.and(
+            q.eq(q.field("customerEmail"), contact.email),
+            q.or(q.eq(q.field("status"), "pending"), q.eq(q.field("status"), "running"))
+          )
+        )
+        .first();
+
+      if (existingExecution) {
+        skipped++;
+        continue;
+      }
+
+      await ctx.db.insert("workflowExecutions", {
+        workflowId: args.workflowId,
+        storeId: workflow.storeId,
+        contactId,
+        customerEmail: contact.email,
+        status: "pending",
+        currentNodeId: firstNode?.id || triggerNode?.id,
+        scheduledFor: now,
+        executionData: { enrolledManually: true },
+      });
+
+      enrolled++;
+    }
+
+    if (enrolled > 0) {
+      await ctx.db.patch(args.workflowId, {
+        totalExecutions: (workflow.totalExecutions || 0) + enrolled,
+        lastExecuted: now,
+      });
+    }
+
+    return { enrolled, skipped, errors };
+  },
+});
+
+export const getContactWorkflowStatus = query({
+  args: {
+    contactId: v.id("emailContacts"),
+    storeId: v.string(),
+  },
+  returns: v.array(v.any()),
+  handler: async (ctx, args) => {
+    const contact = await ctx.db.get(args.contactId);
+    if (!contact) return [];
+
+    const executions = await ctx.db
+      .query("workflowExecutions")
+      .filter((q) => q.eq(q.field("customerEmail"), contact.email))
+      .collect();
+
+    const workflowIds = [...new Set(executions.map((e) => e.workflowId))];
+    const workflows = await Promise.all(workflowIds.map((id) => ctx.db.get(id)));
+
+    return executions.map((execution) => ({
+      ...execution,
+      workflow: workflows.find((w) => w?._id === execution.workflowId),
+    }));
+  },
+});
