@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useQuery, useMutation } from "convex/react";
@@ -10,6 +10,8 @@ import { Node, Edge } from "reactflow";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -25,7 +27,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Power, Trash2 } from "lucide-react";
+import { ArrowLeft, Save, Trash2, AlertTriangle } from "lucide-react";
 import NodeSidebar from "./components/NodeSidebar";
 import WorkflowCanvas from "./components/WorkflowCanvas";
 
@@ -64,6 +66,64 @@ const delayUnits = [
   { value: "days", label: "Days" },
 ];
 
+type ValidationError = {
+  nodeId?: string;
+  edgeId?: string;
+  message: string;
+};
+
+function validateWorkflow(nodes: Node[], edges: Edge[]): ValidationError[] {
+  const errors: ValidationError[] = [];
+
+  const nodeTypeById = new Map(nodes.map((n) => [n.id, n.type || ""]));
+  const nodesWithIncomingEdge = new Set(edges.map((e) => e.target));
+  const nodesWithOutgoingEdge = new Set(edges.map((e) => e.source));
+
+  for (const edge of edges) {
+    const isEmailToEmail =
+      nodeTypeById.get(edge.source) === "email" && nodeTypeById.get(edge.target) === "email";
+    if (isEmailToEmail) {
+      errors.push({
+        edgeId: edge.id,
+        nodeId: edge.target,
+        message: "Cannot send two emails back-to-back. Add a delay node between them.",
+      });
+    }
+  }
+
+  for (const node of nodes) {
+    const isTrigger = node.type === "trigger";
+    const isOrphan = !nodesWithIncomingEdge.has(node.id) && !nodesWithOutgoingEdge.has(node.id);
+    if (!isTrigger && isOrphan) {
+      errors.push({
+        nodeId: node.id,
+        message: `Node "${node.type}" is not connected to the workflow.`,
+      });
+    }
+  }
+
+  for (const node of nodes) {
+    if (node.type !== "email") continue;
+    const mode = node.data?.mode || "custom";
+    const missingTemplate = mode === "template" && !node.data?.templateId;
+    const missingSubject = mode === "custom" && !node.data?.subject;
+    if (missingTemplate) {
+      errors.push({
+        nodeId: node.id,
+        message: "Email node using template mode must have a template selected.",
+      });
+    }
+    if (missingSubject) {
+      errors.push({
+        nodeId: node.id,
+        message: "Email node using custom mode must have a subject.",
+      });
+    }
+  }
+
+  return errors;
+}
+
 export default function WorkflowBuilderPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -76,8 +136,14 @@ export default function WorkflowBuilderPage() {
   const [edges, setEdges] = useState<Edge[]>([]);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
 
   const storeId = user?.id ?? "";
+
+  const emailTemplates = useQuery(
+    api.emailWorkflows.listEmailTemplates,
+    storeId ? { storeId } : "skip"
+  );
 
   const existingWorkflow = useQuery(
     api.emailWorkflows.getWorkflow,
@@ -138,6 +204,18 @@ export default function WorkflowBuilderPage() {
       return;
     }
 
+    const errors = validateWorkflow(nodes, edges);
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      toast({
+        title: "Validation Error",
+        description: `${errors.length} issue(s) found. Please fix them before saving.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setValidationErrors([]);
     setIsSaving(true);
     try {
       const workflowData = {
@@ -210,6 +288,12 @@ export default function WorkflowBuilderPage() {
           />
         </div>
         <div className="flex items-center gap-2">
+          {validationErrors.length > 0 && (
+            <div className="flex items-center gap-1.5 rounded-md bg-amber-100 px-2.5 py-1 text-sm text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+              <AlertTriangle className="h-4 w-4" />
+              {validationErrors.length} issue{validationErrors.length > 1 ? "s" : ""}
+            </div>
+          )}
           {workflowId && (
             <Button
               variant="outline"
@@ -274,25 +358,110 @@ export default function WorkflowBuilderPage() {
                 {selectedNode.type === "email" && (
                   <>
                     <div className="space-y-2">
-                      <Label>Subject</Label>
-                      <Input
-                        value={selectedNode.data.subject || ""}
-                        onChange={(e) =>
-                          updateNodeData(selectedNode.id, { subject: e.target.value })
+                      <Label>Email Source</Label>
+                      <Tabs
+                        value={selectedNode.data.mode || "custom"}
+                        onValueChange={(v) =>
+                          updateNodeData(selectedNode.id, { mode: v as "template" | "custom" })
                         }
-                        placeholder="Email subject"
-                      />
+                        className="w-full"
+                      >
+                        <TabsList className="grid w-full grid-cols-2">
+                          <TabsTrigger value="template">Use Template</TabsTrigger>
+                          <TabsTrigger value="custom">Custom Email</TabsTrigger>
+                        </TabsList>
+                      </Tabs>
                     </div>
-                    <div className="space-y-2">
-                      <Label>Template Name</Label>
-                      <Input
-                        value={selectedNode.data.templateName || ""}
-                        onChange={(e) =>
-                          updateNodeData(selectedNode.id, { templateName: e.target.value })
-                        }
-                        placeholder="Template name"
-                      />
-                    </div>
+
+                    {(selectedNode.data.mode || "custom") === "template" ? (
+                      <div className="space-y-2">
+                        <Label>Select Template</Label>
+                        <Select
+                          value={selectedNode.data.templateId || ""}
+                          onValueChange={(v) => {
+                            const template = emailTemplates?.find((t) => t._id === v);
+                            updateNodeData(selectedNode.id, {
+                              templateId: v,
+                              templateName: template?.name,
+                              subject: template?.subject,
+                            });
+                          }}
+                        >
+                          <SelectTrigger className="bg-white dark:bg-black">
+                            <SelectValue placeholder="Choose a template..." />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white dark:bg-black">
+                            {emailTemplates?.map((template) => (
+                              <SelectItem key={template._id} value={template._id}>
+                                {template.name}
+                                {template.category && (
+                                  <span className="ml-2 text-xs text-zinc-500">
+                                    ({template.category})
+                                  </span>
+                                )}
+                              </SelectItem>
+                            ))}
+                            {(!emailTemplates || emailTemplates.length === 0) && (
+                              <SelectItem value="" disabled>
+                                No templates found
+                              </SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                        {selectedNode.data.templateId && selectedNode.data.subject && (
+                          <div className="rounded-md border border-zinc-200 bg-zinc-50 p-2 dark:border-zinc-800 dark:bg-zinc-900">
+                            <p className="text-xs text-zinc-500">Subject:</p>
+                            <p className="text-sm">{selectedNode.data.subject}</p>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        <div className="space-y-2">
+                          <Label>Subject *</Label>
+                          <Input
+                            value={selectedNode.data.subject || ""}
+                            onChange={(e) =>
+                              updateNodeData(selectedNode.id, { subject: e.target.value })
+                            }
+                            placeholder="Email subject line"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Preview Text</Label>
+                          <Input
+                            value={selectedNode.data.previewText || ""}
+                            onChange={(e) =>
+                              updateNodeData(selectedNode.id, { previewText: e.target.value })
+                            }
+                            placeholder="Shows in inbox preview"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Email Body</Label>
+                          <Textarea
+                            value={selectedNode.data.body || ""}
+                            onChange={(e) =>
+                              updateNodeData(selectedNode.id, { body: e.target.value })
+                            }
+                            placeholder="Write your email content here..."
+                            className="min-h-[120px]"
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {validationErrors.some((e) => e.nodeId === selectedNode.id) && (
+                      <div className="rounded-md border border-red-200 bg-red-50 p-2 dark:border-red-900 dark:bg-red-900/20">
+                        {validationErrors
+                          .filter((e) => e.nodeId === selectedNode.id)
+                          .map((e, i) => (
+                            <p key={i} className="text-sm text-red-600 dark:text-red-400">
+                              {e.message}
+                            </p>
+                          ))}
+                      </div>
+                    )}
                   </>
                 )}
 

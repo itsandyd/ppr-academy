@@ -2,6 +2,39 @@ import { v } from "convex/values";
 import { mutation, query, internalMutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 
+export const listEmailTemplates = query({
+  args: { storeId: v.string() },
+  returns: v.array(
+    v.object({
+      _id: v.id("emailTemplates"),
+      name: v.string(),
+      subject: v.string(),
+      category: v.optional(v.string()),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const templates = await ctx.db
+      .query("emailTemplates")
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+      .collect();
+
+    return templates.map((t) => ({
+      _id: t._id,
+      name: t.name,
+      subject: t.subject,
+      category: t.category,
+    }));
+  },
+});
+
+export const getEmailTemplate = query({
+  args: { templateId: v.id("emailTemplates") },
+  returns: v.any(),
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.templateId);
+  },
+});
+
 const nodeValidator = v.object({
   id: v.string(),
   type: v.union(
