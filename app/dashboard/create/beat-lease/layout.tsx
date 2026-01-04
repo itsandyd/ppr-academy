@@ -57,6 +57,10 @@ function LayoutContent({ children }: BeatLeaseCreateLayoutProps) {
 
   const { state, canPublish, createBeat, saveBeat } = useBeatLeaseCreation();
 
+  // @ts-ignore - Type instantiation depth issue
+  const stores = useQuery(api.stores.getStoresByUser, user?.id ? { userId: user.id } : "skip");
+  const store = stores?.[0];
+
   const navigateToStep = (step: string) => {
     router.push(
       `/dashboard/create/beat-lease?step=${step}${state.beatId ? `&beatId=${state.beatId}` : ""}`
@@ -125,8 +129,41 @@ function LayoutContent({ children }: BeatLeaseCreateLayoutProps) {
         variant="full"
       />
 
-      {/* Content */}
-      <div className="space-y-6">{children}</div>
+      {/* Content with Preview */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">{children}</div>
+
+        <div className="hidden lg:block">
+          <div className="sticky top-24">
+            <StorefrontPreview
+              product={{
+                title: state.data.title,
+                description: state.data.description,
+                price: state.data.leaseOptions?.find((l) => l.enabled)?.price,
+                imageUrl: state.data.thumbnail,
+                productType: "beat-lease",
+              }}
+              store={
+                store
+                  ? {
+                      name: store.name,
+                      slug: store.slug,
+                    }
+                  : undefined
+              }
+              user={
+                user
+                  ? {
+                      name: user.fullName || user.firstName || undefined,
+                      imageUrl: user.imageUrl,
+                    }
+                  : undefined
+              }
+              defaultDevice="mobile"
+            />
+          </div>
+        </div>
+      </div>
 
       {/* Actions */}
       <ActionBar

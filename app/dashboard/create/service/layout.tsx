@@ -3,10 +3,13 @@
 import React from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
+import { useQuery } from "convex/react";
+import { api } from "@/lib/convex-api";
 import { ServiceCreationProvider, useServiceCreation } from "./context";
 import { Settings, DollarSign, FileCheck, Send } from "lucide-react";
 import { StepProgress, Step } from "@/app/dashboard/create/shared/StepProgress";
 import { ActionBar } from "@/app/dashboard/create/shared/ActionBar";
+import { StorefrontPreview } from "@/app/dashboard/create/shared/StorefrontPreview";
 import { Badge } from "@/components/ui/badge";
 import { SERVICE_TYPES } from "./types";
 
@@ -55,6 +58,10 @@ function LayoutContent({ children }: ServiceCreateLayoutProps) {
   const serviceType = searchParams.get("type") || "mixing";
 
   const { state, canPublish, publishService, saveService } = useServiceCreation();
+
+  // @ts-ignore - Type instantiation depth issue
+  const stores = useQuery(api.stores.getStoresByUser, user?.id ? { userId: user.id } : "skip");
+  const store = stores?.[0];
 
   const navigateToStep = (step: string) => {
     const params = new URLSearchParams();
@@ -126,7 +133,39 @@ function LayoutContent({ children }: ServiceCreateLayoutProps) {
         variant="full"
       />
 
-      <div className="space-y-6">{children}</div>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">{children}</div>
+
+        <div className="hidden lg:block">
+          <div className="sticky top-24">
+            <StorefrontPreview
+              product={{
+                title: state.data.title,
+                description: state.data.description,
+                price: state.data.pricingTiers?.[0]?.price,
+                productType: "service",
+              }}
+              store={
+                store
+                  ? {
+                      name: store.name,
+                      slug: store.slug,
+                    }
+                  : undefined
+              }
+              user={
+                user
+                  ? {
+                      name: user.fullName || user.firstName || undefined,
+                      imageUrl: user.imageUrl,
+                    }
+                  : undefined
+              }
+              defaultDevice="mobile"
+            />
+          </div>
+        </div>
+      </div>
 
       <ActionBar
         onBack={currentIndex > 0 ? () => navigateToStep(steps[currentIndex - 1].id) : undefined}

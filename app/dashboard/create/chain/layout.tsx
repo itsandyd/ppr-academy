@@ -3,47 +3,50 @@
 import React from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
+import { useQuery } from "convex/react";
+import { api } from "@/lib/convex-api";
 import { EffectChainCreationProvider, useEffectChainCreation } from "./context";
 import { Package, DollarSign, Lock, Upload, Zap } from "lucide-react";
 import { StepProgress, Step } from "@/app/dashboard/create/shared/StepProgress";
 import { ActionBar } from "@/app/dashboard/create/shared/ActionBar";
+import { StorefrontPreview } from "@/app/dashboard/create/shared/StorefrontPreview";
 import { Badge } from "@/components/ui/badge";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 interface ChainCreateLayoutProps {
   children: React.ReactNode;
 }
 
 const steps: Step[] = [
-  { 
-    id: "basics", 
-    label: "Chain Basics", 
+  {
+    id: "basics",
+    label: "Chain Basics",
     icon: Zap,
     description: "DAW type, title & description",
-    estimatedTime: "2-3 min"
+    estimatedTime: "2-3 min",
   },
-  { 
-    id: "files", 
-    label: "Files", 
+  {
+    id: "files",
+    label: "Files",
     icon: Upload,
     description: "Upload your effect chain files",
-    estimatedTime: "5-10 min"
+    estimatedTime: "5-10 min",
   },
-  { 
-    id: "pricing", 
-    label: "Pricing", 
+  {
+    id: "pricing",
+    label: "Pricing",
     icon: DollarSign,
     description: "Set your price or make it free",
-    estimatedTime: "1-2 min"
+    estimatedTime: "1-2 min",
   },
-  { 
-    id: "followGate", 
-    label: "Download Gate", 
+  {
+    id: "followGate",
+    label: "Download Gate",
     icon: Lock,
     description: "Require follows (if free)",
     conditional: true,
-    estimatedTime: "2-3 min"
+    estimatedTime: "2-3 min",
   },
 ];
 
@@ -52,12 +55,18 @@ function LayoutContent({ children }: ChainCreateLayoutProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const currentStep = searchParams.get("step") || "basics";
-  
+
   const { state, canPublish, createChain, saveChain } = useEffectChainCreation();
+
+  // @ts-ignore - Type instantiation depth issue
+  const stores = useQuery(api.stores.getStoresByUser, user?.id ? { userId: user.id } : "skip");
+  const store = stores?.[0];
 
   const navigateToStep = (step: string) => {
     const dawType = state.data.dawType || "ableton";
-    router.push(`/dashboard/create/chain?daw=${dawType}&step=${step}${state.chainId ? `&chainId=${state.chainId}` : ''}`);
+    router.push(
+      `/dashboard/create/chain?daw=${dawType}&step=${step}${state.chainId ? `&chainId=${state.chainId}` : ""}`
+    );
   };
 
   const handleSaveDraft = async () => {
@@ -74,10 +83,10 @@ function LayoutContent({ children }: ChainCreateLayoutProps) {
   if (!user) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-24">
+        <div className="mx-auto max-w-4xl px-4 pb-24 pt-10 sm:px-6 lg:px-8">
           <div className="animate-pulse">
-            <div className="h-8 bg-muted rounded w-1/4 mb-8"></div>
-            <div className="h-96 bg-muted rounded"></div>
+            <div className="mb-8 h-8 w-1/4 rounded bg-muted"></div>
+            <div className="h-96 rounded bg-muted"></div>
           </div>
         </div>
       </div>
@@ -85,22 +94,29 @@ function LayoutContent({ children }: ChainCreateLayoutProps) {
   }
 
   // Filter steps based on pricing model
-  const visibleSteps = steps.filter(step => 
-    !step.conditional || (step.id === "followGate" && state.data.pricingModel === "free_with_gate")
+  const visibleSteps = steps.filter(
+    (step) =>
+      !step.conditional ||
+      (step.id === "followGate" && state.data.pricingModel === "free_with_gate")
   );
 
   const completedStepIds = Object.entries(state.stepCompletion)
     .filter(([_, completed]) => completed)
     .map(([stepId, _]) => stepId);
 
-  const currentIndex = visibleSteps.findIndex(s => s.id === currentStep);
+  const currentIndex = visibleSteps.findIndex((s) => s.id === currentStep);
   const progressPercentage = ((currentIndex + 1) / visibleSteps.length) * 100;
 
-  const dawLabel = state.data.dawType === 'ableton' ? 'Ableton Live' :
-                   state.data.dawType === 'fl-studio' ? 'FL Studio' :
-                   state.data.dawType === 'logic' ? 'Logic Pro' :
-                   state.data.dawType === 'bitwig' ? 'Bitwig Studio' :
-                   state.data.dawType || 'Effect Chain';
+  const dawLabel =
+    state.data.dawType === "ableton"
+      ? "Ableton Live"
+      : state.data.dawType === "fl-studio"
+        ? "FL Studio"
+        : state.data.dawType === "logic"
+          ? "Logic Pro"
+          : state.data.dawType === "bitwig"
+            ? "Bitwig Studio"
+            : state.data.dawType || "Effect Chain";
 
   return (
     <div className="space-y-6">
@@ -113,9 +129,9 @@ function LayoutContent({ children }: ChainCreateLayoutProps) {
               <h1 className="text-2xl font-bold">Create Effect Chain</h1>
               <Badge variant="secondary">{dawLabel}</Badge>
             </div>
-            {visibleSteps.find(s => s.id === currentStep) && (
+            {visibleSteps.find((s) => s.id === currentStep) && (
               <p className="text-sm text-muted-foreground">
-                {visibleSteps.find(s => s.id === currentStep)?.description}
+                {visibleSteps.find((s) => s.id === currentStep)?.description}
               </p>
             )}
           </div>
@@ -131,23 +147,63 @@ function LayoutContent({ children }: ChainCreateLayoutProps) {
         variant="full"
       />
 
-      {/* Content */}
-      <div className="space-y-6">
-        {children}
+      {/* Content with Preview */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">{children}</div>
+
+        <div className="hidden lg:block">
+          <div className="sticky top-24">
+            <StorefrontPreview
+              product={{
+                title: state.data.title,
+                description: state.data.description,
+                price: state.data.pricingModel === "paid" ? Number(state.data.price) : 0,
+                imageUrl: state.data.thumbnail,
+                productType: "effect-chain",
+              }}
+              store={
+                store
+                  ? {
+                      name: store.name,
+                      slug: store.slug,
+                    }
+                  : undefined
+              }
+              user={
+                user
+                  ? {
+                      name: user.fullName || user.firstName || undefined,
+                      imageUrl: user.imageUrl,
+                    }
+                  : undefined
+              }
+              defaultDevice="mobile"
+            />
+          </div>
+        </div>
       </div>
 
       {/* Actions */}
       <ActionBar
-        onBack={currentIndex > 0 ? () => navigateToStep(visibleSteps[currentIndex - 1].id) : undefined}
-        onNext={currentIndex < visibleSteps.length - 1 ? () => navigateToStep(visibleSteps[currentIndex + 1].id) : undefined}
+        onBack={
+          currentIndex > 0 ? () => navigateToStep(visibleSteps[currentIndex - 1].id) : undefined
+        }
+        onNext={
+          currentIndex < visibleSteps.length - 1
+            ? () => navigateToStep(visibleSteps[currentIndex + 1].id)
+            : undefined
+        }
         onSaveDraft={handleSaveDraft}
         onPublish={
-          (currentStep === 'pricing' && state.data.pricingModel === 'paid') ||
-          (currentStep === 'followGate' && state.data.pricingModel === 'free_with_gate')
+          (currentStep === "pricing" && state.data.pricingModel === "paid") ||
+          (currentStep === "followGate" && state.data.pricingModel === "free_with_gate")
             ? handlePublishChain
             : undefined
         }
-        canProceed={state.stepCompletion[currentStep as keyof typeof state.stepCompletion] || currentStep === 'files'}
+        canProceed={
+          state.stepCompletion[currentStep as keyof typeof state.stepCompletion] ||
+          currentStep === "files"
+        }
         canPublish={canPublish()}
         isSaving={state.isSaving}
         nextLabel="Continue"
@@ -167,4 +223,3 @@ export default function ChainCreateLayout({ children }: ChainCreateLayoutProps) 
     </EffectChainCreationProvider>
   );
 }
-

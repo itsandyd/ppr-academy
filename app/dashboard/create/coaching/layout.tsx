@@ -3,54 +3,57 @@
 import React from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
+import { useQuery } from "convex/react";
+import { api } from "@/lib/convex-api";
 import { CoachingCreationProvider, useCoachingCreation } from "./context";
 import { Headphones, DollarSign, Calendar, Users, MessageCircle } from "lucide-react";
 import { StepProgress, Step } from "@/app/dashboard/create/shared/StepProgress";
 import { ActionBar } from "@/app/dashboard/create/shared/ActionBar";
+import { StorefrontPreview } from "@/app/dashboard/create/shared/StorefrontPreview";
 import { Badge } from "@/components/ui/badge";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 interface CoachingCreateLayoutProps {
   children: React.ReactNode;
 }
 
 const steps: Step[] = [
-  { 
-    id: "basics", 
-    label: "Session Details", 
+  {
+    id: "basics",
+    label: "Session Details",
     icon: Headphones,
     description: "Session type, duration & description",
-    estimatedTime: "3-4 min"
+    estimatedTime: "3-4 min",
   },
-  { 
-    id: "pricing", 
-    label: "Pricing", 
+  {
+    id: "pricing",
+    label: "Pricing",
     icon: DollarSign,
     description: "Free or paid sessions",
-    estimatedTime: "1 min"
+    estimatedTime: "1 min",
   },
-  { 
-    id: "followGate", 
-    label: "Download Gate", 
+  {
+    id: "followGate",
+    label: "Download Gate",
     icon: Users,
     description: "Require follows (if free)",
     conditional: true,
-    estimatedTime: "2-3 min"
+    estimatedTime: "2-3 min",
   },
-  { 
-    id: "discord", 
-    label: "Discord Setup", 
+  {
+    id: "discord",
+    label: "Discord Setup",
     icon: MessageCircle,
     description: "Auto-create private channels",
-    estimatedTime: "2-3 min"
+    estimatedTime: "2-3 min",
   },
-  { 
-    id: "availability", 
-    label: "Availability", 
+  {
+    id: "availability",
+    label: "Availability",
     icon: Calendar,
     description: "Set your schedule & timezone",
-    estimatedTime: "5-7 min"
+    estimatedTime: "5-7 min",
   },
 ];
 
@@ -59,11 +62,17 @@ function LayoutContent({ children }: CoachingCreateLayoutProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const currentStep = searchParams.get("step") || "basics";
-  
+
   const { state, canPublish, createCoaching, saveCoaching } = useCoachingCreation();
 
+  // @ts-ignore - Type instantiation depth issue
+  const stores = useQuery(api.stores.getStoresByUser, user?.id ? { userId: user.id } : "skip");
+  const store = stores?.[0];
+
   const navigateToStep = (step: string) => {
-    router.push(`/dashboard/create/coaching?step=${step}${state.coachingId ? `&coachingId=${state.coachingId}` : ''}`);
+    router.push(
+      `/dashboard/create/coaching?step=${step}${state.coachingId ? `&coachingId=${state.coachingId}` : ""}`
+    );
   };
 
   const handleSaveDraft = async () => {
@@ -80,10 +89,10 @@ function LayoutContent({ children }: CoachingCreateLayoutProps) {
   if (!user) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-24">
+        <div className="mx-auto max-w-4xl px-4 pb-24 pt-10 sm:px-6 lg:px-8">
           <div className="animate-pulse">
-            <div className="h-8 bg-muted rounded w-1/4 mb-8"></div>
-            <div className="h-96 bg-muted rounded"></div>
+            <div className="mb-8 h-8 w-1/4 rounded bg-muted"></div>
+            <div className="h-96 rounded bg-muted"></div>
           </div>
         </div>
       </div>
@@ -91,22 +100,29 @@ function LayoutContent({ children }: CoachingCreateLayoutProps) {
   }
 
   // Filter steps based on pricing model
-  const visibleSteps = steps.filter(step => 
-    !step.conditional || (step.id === "followGate" && state.data.pricingModel === "free_with_gate")
+  const visibleSteps = steps.filter(
+    (step) =>
+      !step.conditional ||
+      (step.id === "followGate" && state.data.pricingModel === "free_with_gate")
   );
 
   const completedStepIds = Object.entries(state.stepCompletion)
     .filter(([_, completed]) => completed)
     .map(([stepId, _]) => stepId);
 
-  const currentIndex = visibleSteps.findIndex(s => s.id === currentStep);
+  const currentIndex = visibleSteps.findIndex((s) => s.id === currentStep);
   const progressPercentage = ((currentIndex + 1) / visibleSteps.length) * 100;
 
-  const sessionTypeLabel = state.data.sessionType === 'production-coaching' ? 'Production Coaching' :
-                          state.data.sessionType === 'mixing-service' ? 'Mixing Service' :
-                          state.data.sessionType === 'mastering-service' ? 'Mastering Service' :
-                          state.data.sessionType === 'feedback-session' ? 'Feedback Session' :
-                          'Coaching Session';
+  const sessionTypeLabel =
+    state.data.sessionType === "production-coaching"
+      ? "Production Coaching"
+      : state.data.sessionType === "mixing-service"
+        ? "Mixing Service"
+        : state.data.sessionType === "mastering-service"
+          ? "Mastering Service"
+          : state.data.sessionType === "feedback-session"
+            ? "Feedback Session"
+            : "Coaching Session";
 
   return (
     <div className="space-y-6">
@@ -119,9 +135,9 @@ function LayoutContent({ children }: CoachingCreateLayoutProps) {
               <h1 className="text-2xl font-bold">Create Coaching Session</h1>
               <Badge variant="secondary">{sessionTypeLabel}</Badge>
             </div>
-            {steps.find(s => s.id === currentStep) && (
+            {steps.find((s) => s.id === currentStep) && (
               <p className="text-sm text-muted-foreground">
-                {steps.find(s => s.id === currentStep)?.description}
+                {steps.find((s) => s.id === currentStep)?.description}
               </p>
             )}
           </div>
@@ -137,18 +153,57 @@ function LayoutContent({ children }: CoachingCreateLayoutProps) {
         variant="full"
       />
 
-      {/* Content */}
-      <div className="space-y-6">
-        {children}
+      {/* Content with Preview */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">{children}</div>
+
+        <div className="hidden lg:block">
+          <div className="sticky top-24">
+            <StorefrontPreview
+              product={{
+                title: state.data.title,
+                description: state.data.description,
+                price: state.data.pricingModel === "paid" ? Number(state.data.price) : 0,
+                productType: "coaching",
+              }}
+              store={
+                store
+                  ? {
+                      name: store.name,
+                      slug: store.slug,
+                    }
+                  : undefined
+              }
+              user={
+                user
+                  ? {
+                      name: user.fullName || user.firstName || undefined,
+                      imageUrl: user.imageUrl,
+                    }
+                  : undefined
+              }
+              defaultDevice="mobile"
+            />
+          </div>
+        </div>
       </div>
 
       {/* Actions */}
       <ActionBar
-        onBack={currentIndex > 0 ? () => navigateToStep(visibleSteps[currentIndex - 1].id) : undefined}
-        onNext={currentIndex < visibleSteps.length - 1 ? () => navigateToStep(visibleSteps[currentIndex + 1].id) : undefined}
+        onBack={
+          currentIndex > 0 ? () => navigateToStep(visibleSteps[currentIndex - 1].id) : undefined
+        }
+        onNext={
+          currentIndex < visibleSteps.length - 1
+            ? () => navigateToStep(visibleSteps[currentIndex + 1].id)
+            : undefined
+        }
         onSaveDraft={handleSaveDraft}
-        onPublish={currentStep === 'availability' ? handlePublish : undefined}
-        canProceed={state.stepCompletion[currentStep as keyof typeof state.stepCompletion] || currentStep === 'availability'}
+        onPublish={currentStep === "availability" ? handlePublish : undefined}
+        canProceed={
+          state.stepCompletion[currentStep as keyof typeof state.stepCompletion] ||
+          currentStep === "availability"
+        }
         canPublish={canPublish()}
         isSaving={state.isSaving}
         nextLabel="Continue"
@@ -168,4 +223,3 @@ export default function CoachingCreateLayout({ children }: CoachingCreateLayoutP
     </CoachingCreationProvider>
   );
 }
-
