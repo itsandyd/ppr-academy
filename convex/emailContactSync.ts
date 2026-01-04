@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, internalMutation } from "./_generated/server";
+import { query, mutation, internalMutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 
 const GENRE_KEYWORDS: Record<string, string[]> = {
@@ -661,5 +661,234 @@ export const manualTagContact = mutation({
       contactId: contact._id,
       tagsAdded: args.tags,
     };
+  },
+});
+
+const PREBUILT_SEGMENT_TEMPLATES = [
+  {
+    name: "Hot Leads",
+    description: "Highly engaged contacts (score >= 80)",
+    tagPattern: "engagement:hot",
+    color: "#EF4444",
+  },
+  {
+    name: "Warm Leads",
+    description: "Moderately engaged contacts (score >= 50)",
+    tagPattern: "engagement:warm",
+    color: "#F59E0B",
+  },
+  {
+    name: "Customers",
+    description: "Contacts who have made a purchase",
+    tagPattern: "customer",
+    color: "#10B981",
+  },
+  {
+    name: "Beginners",
+    description: "Contacts interested in beginner content",
+    tagPattern: "skill:beginner",
+    color: "#3B82F6",
+  },
+  {
+    name: "Intermediate",
+    description: "Contacts interested in intermediate content",
+    tagPattern: "skill:intermediate",
+    color: "#6366F1",
+  },
+  {
+    name: "Advanced",
+    description: "Contacts interested in advanced content",
+    tagPattern: "skill:advanced",
+    color: "#8B5CF6",
+  },
+  {
+    name: "Techno Producers",
+    description: "Contacts interested in techno music",
+    tagPattern: "genre:techno",
+    color: "#EC4899",
+  },
+  {
+    name: "Hip-Hop Producers",
+    description: "Contacts interested in hip-hop music",
+    tagPattern: "genre:hip-hop",
+    color: "#14B8A6",
+  },
+  {
+    name: "House Producers",
+    description: "Contacts interested in house music",
+    tagPattern: "genre:house",
+    color: "#F97316",
+  },
+  {
+    name: "EDM Producers",
+    description: "Contacts interested in EDM",
+    tagPattern: "genre:edm",
+    color: "#A855F7",
+  },
+  {
+    name: "Sample Collectors",
+    description: "Contacts interested in samples",
+    tagPattern: "interest:samples",
+    color: "#06B6D4",
+  },
+  {
+    name: "Preset Hunters",
+    description: "Contacts interested in presets",
+    tagPattern: "interest:presets",
+    color: "#84CC16",
+  },
+  {
+    name: "Course Students",
+    description: "Contacts interested in learning",
+    tagPattern: "interest:learning",
+    color: "#0EA5E9",
+  },
+  {
+    name: "Mixing Enthusiasts",
+    description: "Contacts interested in mixing",
+    tagPattern: "interest:mixing",
+    color: "#D946EF",
+  },
+];
+
+export const createPrebuiltSegments = mutation({
+  args: {
+    storeId: v.string(),
+  },
+  returns: v.object({
+    created: v.number(),
+    skipped: v.number(),
+    segments: v.array(
+      v.object({
+        name: v.string(),
+        tagId: v.id("emailTags"),
+      })
+    ),
+  }),
+  handler: async (ctx, args) => {
+    let created = 0;
+    let skipped = 0;
+    const segments: Array<{ name: string; tagId: Id<"emailTags"> }> = [];
+
+    for (const template of PREBUILT_SEGMENT_TEMPLATES) {
+      const existingTag = await ctx.db
+        .query("emailTags")
+        .withIndex("by_storeId_and_name", (q) =>
+          q.eq("storeId", args.storeId).eq("name", template.tagPattern)
+        )
+        .first();
+
+      if (existingTag) {
+        segments.push({ name: template.name, tagId: existingTag._id });
+        skipped++;
+        continue;
+      }
+
+      const now = Date.now();
+      const tagId = await ctx.db.insert("emailTags", {
+        storeId: args.storeId,
+        name: template.tagPattern,
+        color: template.color,
+        description: template.description,
+        contactCount: 0,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      segments.push({ name: template.name, tagId });
+      created++;
+    }
+
+    return { created, skipped, segments };
+  },
+});
+
+export const getSegmentsByTag = query({
+  args: {
+    storeId: v.string(),
+  },
+  returns: v.array(
+    v.object({
+      tagId: v.id("emailTags"),
+      tagName: v.string(),
+      displayName: v.string(),
+      description: v.optional(v.string()),
+      color: v.string(),
+      contactCount: v.number(),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const tags = await ctx.db
+      .query("emailTags")
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+      .collect();
+
+    const displayNameMap: Record<string, string> = {};
+    for (const template of PREBUILT_SEGMENT_TEMPLATES) {
+      displayNameMap[template.tagPattern] = template.name;
+    }
+
+    return tags.map((tag) => ({
+      tagId: tag._id,
+      tagName: tag.name,
+      displayName: displayNameMap[tag.name] || tag.name,
+      description: tag.description,
+      color: tag.color,
+      contactCount: tag.contactCount,
+    }));
+  },
+});
+
+export const getContactsByTags = query({
+  args: {
+    storeId: v.string(),
+    tagIds: v.array(v.id("emailTags")),
+    mode: v.optional(v.union(v.literal("all"), v.literal("any"))),
+    excludeTagIds: v.optional(v.array(v.id("emailTags"))),
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(
+    v.object({
+      contactId: v.id("emailContacts"),
+      email: v.string(),
+      name: v.optional(v.string()),
+      engagementScore: v.optional(v.number()),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const mode = args.mode || "all";
+    const limit = args.limit || 1000;
+
+    const contacts = await ctx.db
+      .query("emailContacts")
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+      .filter((q) => q.eq(q.field("status"), "subscribed"))
+      .collect();
+
+    const matchingContacts = contacts.filter((contact) => {
+      const contactTagIds = contact.tagIds || [];
+
+      if (args.excludeTagIds && args.excludeTagIds.length > 0) {
+        const hasExcludedTag = args.excludeTagIds.some((excludeId) =>
+          contactTagIds.includes(excludeId)
+        );
+        if (hasExcludedTag) return false;
+      }
+
+      if (args.tagIds.length === 0) return true;
+
+      if (mode === "all") {
+        return args.tagIds.every((tagId) => contactTagIds.includes(tagId));
+      } else {
+        return args.tagIds.some((tagId) => contactTagIds.includes(tagId));
+      }
+    });
+
+    return matchingContacts.slice(0, limit).map((c) => ({
+      contactId: c._id,
+      email: c.email,
+      name: c.firstName ? `${c.firstName} ${c.lastName || ""}`.trim() : undefined,
+      engagementScore: c.engagementScore,
+    }));
   },
 });

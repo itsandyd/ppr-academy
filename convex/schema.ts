@@ -1124,6 +1124,9 @@ export default defineSchema({
     tags: v.optional(v.array(v.string())),
     templateId: v.optional(v.string()), // Template used to create this campaign
     updatedAt: v.optional(v.number()), // Last update timestamp
+    targetTagIds: v.optional(v.array(v.id("emailTags"))), // Filter recipients by tags (AND logic)
+    targetTagMode: v.optional(v.union(v.literal("all"), v.literal("any"))), // all=AND, any=OR
+    excludeTagIds: v.optional(v.array(v.id("emailTags"))), // Exclude contacts with these tags
   })
     .index("by_storeId", ["storeId"])
     .index("by_adminUserId", ["adminUserId"])
