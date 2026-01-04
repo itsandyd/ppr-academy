@@ -831,6 +831,14 @@ export const handleWebhookEvent = mutation({
 
           console.log(`[Webhook] Email clicked by contact ${contact._id} (${contact.email})`);
         }
+
+        await ctx.scheduler.runAfter(0, internal.emailContactSync.syncContactEngagement, {
+          storeId: contact.storeId,
+          email: contact.email,
+          eventType: args.event === "email.opened" ? "email_opened" : "email_clicked",
+          linkUrl: args.metadata?.clickedUrl,
+          emailSubject: log?.subject,
+        });
       }
     }
 

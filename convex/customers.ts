@@ -585,6 +585,14 @@ export const createPurchase = mutation({
         orderId: purchaseId,
         amount: args.amount,
       });
+
+      // Sync contact with email segmentation (auto-tags customer, infers interests)
+      await ctx.scheduler.runAfter(0, internal.emailContactSync.syncContactFromPurchase, {
+        storeId: args.storeId,
+        email: customer.email,
+        productId: args.productId,
+        amount: args.amount,
+      });
     }
 
     return purchaseId;

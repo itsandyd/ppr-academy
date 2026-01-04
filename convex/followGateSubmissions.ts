@@ -1,10 +1,11 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { internal } from "./_generated/api";
 
 /**
  * Follow Gate Submissions
- * 
+ *
  * Manages social media follow gates for digital products.
  * Allows creators to gate downloads behind email + social follows.
  */
@@ -59,7 +60,6 @@ export const submitFollowGate = mutation({
       };
     }
 
-    // Create new submission
     const submissionId = await ctx.db.insert("followGateSubmissions", {
       productId: args.productId,
       storeId: product.storeId,
@@ -72,6 +72,13 @@ export const submitFollowGate = mutation({
       userAgent: args.userAgent,
       hasDownloaded: false,
       downloadCount: 0,
+    });
+
+    await ctx.scheduler.runAfter(0, internal.emailContactSync.syncContactFromFollowGate, {
+      storeId: product.storeId,
+      email: args.email,
+      name: args.name,
+      productId: args.productId,
     });
 
     return {
@@ -264,17 +271,14 @@ export const getFollowGateAnalytics = query({
       if (s.followedPlatforms.spotify) platformBreakdown.spotify++;
     });
 
-    const conversionRate =
-      totalSubmissions > 0 ? (totalDownloads / totalSubmissions) * 100 : 0;
+    const conversionRate = totalSubmissions > 0 ? (totalDownloads / totalSubmissions) * 100 : 0;
 
     // Get recent submissions (last 10)
     const recentSubmissions = submissions
       .sort((a, b) => b.submittedAt - a.submittedAt)
       .slice(0, 10)
       .map((s) => {
-        const platformCount = Object.values(s.followedPlatforms).filter(
-          Boolean
-        ).length;
+        const platformCount = Object.values(s.followedPlatforms).filter(Boolean).length;
         return {
           email: s.email,
           submittedAt: s.submittedAt,
@@ -291,4 +295,3 @@ export const getFollowGateAnalytics = query({
     };
   },
 });
-

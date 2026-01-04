@@ -841,6 +841,13 @@ export const createCourseEnrollment = mutation({
         orderId: purchaseId,
         amount: args.amount,
       });
+
+      await ctx.scheduler.runAfter(0, internal.emailContactSync.syncContactFromEnrollment, {
+        storeId: course.storeId || course.userId,
+        email: user.email,
+        userId: args.userId,
+        courseId: args.courseId,
+      });
     }
 
     return purchaseId;

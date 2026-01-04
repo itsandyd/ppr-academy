@@ -80,6 +80,7 @@ import type * as dripCampaigns from "../dripCampaigns.js";
 import type * as emailABTesting from "../emailABTesting.js";
 import type * as emailAnalyticsRollup from "../emailAnalyticsRollup.js";
 import type * as emailCampaigns from "../emailCampaigns.js";
+import type * as emailContactSync from "../emailContactSync.js";
 import type * as emailContacts from "../emailContacts.js";
 import type * as emailCopyGenerator from "../emailCopyGenerator.js";
 import type * as emailDomainSchema from "../emailDomainSchema.js";
@@ -286,6 +287,7 @@ declare const fullApi: ApiFromModules<{
   emailABTesting: typeof emailABTesting;
   emailAnalyticsRollup: typeof emailAnalyticsRollup;
   emailCampaigns: typeof emailCampaigns;
+  emailContactSync: typeof emailContactSync;
   emailContacts: typeof emailContacts;
   emailCopyGenerator: typeof emailCopyGenerator;
   emailDomainSchema: typeof emailDomainSchema;
