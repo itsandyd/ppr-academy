@@ -55,7 +55,7 @@ export type ProductCategory =
   | "community"
   // Support
   | "tip-jar"
-  | "donation";
+  | "donation"; // Legacy - use tip-jar instead
 
 export type PricingModel = "free_with_gate" | "paid";
 
@@ -91,7 +91,7 @@ export const CATEGORY_TO_FLOW: Record<ProductCategory, CreationFlow> = {
   "blog-post": "digital",
   "community": "digital",
   "tip-jar": "digital",
-  "donation": "digital",
+  "donation": "digital", // Legacy - use tip-jar instead
   "effect-chain": "chain",  // New dedicated flow
   "masterclass": "digital",
   
@@ -287,19 +287,12 @@ export const PRODUCT_CATEGORIES = [
   {
     id: "tip-jar",
     label: "Tip Jar",
-    description: "Pay what you want",
+    description: "Let fans support your work with pay-what-you-want tips",
     category: "Support",
     icon: "☕",
     flow: "digital" as CreationFlow,
   },
-  {
-    id: "donation",
-    label: "Donation",
-    description: "One-time or recurring",
-    category: "Support",
-    icon: "💝",
-    flow: "digital" as CreationFlow,
-  },
+  // NOTE: "donation" removed - use "tip-jar" instead (they were redundant)
 ] as const;
 
 // Helper to get flow from category
