@@ -29,12 +29,28 @@ export default function EditProductPage() {
 
     if (product) {
       // Determine product type and redirect to appropriate creation flow
-      if (product.price === 0 && product.style === "card") {
+      const productCategory = (product as any).productCategory;
+      
+      // Route based on product category
+      if (productCategory === "sample-pack" || productCategory === "midi-pack" || productCategory === "preset-pack" || productCategory === "project-files" || productCategory === "mixing-template") {
+        router.push(`/dashboard/create/pack?packId=${productId}&step=basics`);
+      } else if (productCategory === "effect-chain" || productCategory === "ableton-rack" || (product as any).productType === "abletonRack" || (product as any).productType === "abletonPreset") {
+        router.push(`/dashboard/create/chain?chainId=${productId}&step=basics`);
+      } else if (productCategory === "coaching" || (product as any).productType === "coaching") {
+        router.push(`/dashboard/create/coaching?coachingId=${productId}&step=basics`);
+      } else if (productCategory === "beat-lease") {
+        router.push(`/dashboard/create/beat-lease?beatId=${productId}&step=basics`);
+      } else if (productCategory === "pdf" || productCategory === "pdf-guide" || productCategory === "cheat-sheet") {
+        router.push(`/dashboard/create/pdf?pdfId=${productId}&step=basics`);
+      } else if (productCategory === "tip-jar" || productCategory === "donation") {
+        // Tip jars use the digital creation flow
+        router.push(`/dashboard/create/digital?category=${productCategory}&productId=${productId}&step=basics`);
+      } else if (product.price === 0 && product.style === "card") {
         // This is a lead magnet - redirect to lead magnet creation with edit mode
         router.push(`/store/${storeId}/products/lead-magnet?step=thumbnail&edit=${productId}`);
       } else {
-        // This is a digital product - redirect to digital product creation with edit mode
-        router.push(`/store/${storeId}/products/digital-download/create?step=thumbnail&edit=${productId}`);
+        // Default: generic digital product editor
+        router.push(`/dashboard/create/digital?category=${productCategory || 'digital'}&productId=${productId}&step=basics`);
       }
     }
   }, [product, router, storeId, productId]);

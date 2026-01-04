@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
+import { useMutation, useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 import { CreationShell } from '../components/CreationShell';
 import { BasicsStep } from '../steps/BasicsStep';
 import { PricingStep } from '../steps/PricingStep';
@@ -10,12 +12,18 @@ import { PublishStep } from '../steps/PublishStep';
 import { ProductCategory, getProductInfo, BaseProductFormData } from '../types';
 import { Package, DollarSign, Sparkles } from 'lucide-react';
 import { useValidStoreId } from '@/hooks/useStoreId';
+import { useToast } from '@/hooks/use-toast';
 
 export default function DigitalProductCreator() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useUser();
   const storeId = useValidStoreId();
+  const { toast } = useToast();
+
+  // Mutation to create the product
+  // @ts-ignore - Type instantiation depth issue
+  const createProduct = useMutation(api.universalProducts.createUniversalProduct as any);
 
   // Get category from URL
   const category = searchParams.get('category') as ProductCategory || 'sample-pack';
@@ -107,9 +115,68 @@ export default function DigitalProductCreator() {
   };
 
   const handlePublish = async () => {
-    console.log('Publishing product:', formData);
-    // TODO: Implement publish mutation
-    router.push('/dashboard?mode=create');
+    if (!storeId || !user?.id) {
+      toast({
+        title: "Error",
+        description: "Missing store or user information. Please try again.",
+        variant: "destructive",
+        className: "bg-white dark:bg-black",
+      });
+      return;
+    }
+
+    try {
+      // Determine productType based on category
+      const productType = "digital";
+      
+      // Build the product data
+      const productData: any = {
+        title: formData.title || 'Untitled Product',
+        description: formData.description || '',
+        storeId: storeId,
+        userId: user.id,
+        productType: productType,
+        productCategory: formData.productCategory || category,
+        pricingModel: formData.pricingModel || 'paid',
+        price: formData.price || 0,
+        imageUrl: formData.imageUrl || undefined,
+        tags: formData.tags || [],
+      };
+
+      // Add follow gate config for free products
+      if (productData.pricingModel === 'free_with_gate') {
+        productData.followGateConfig = {
+          requireEmail: true,
+          requireInstagram: false,
+          requireTiktok: false,
+          requireYoutube: false,
+          requireSpotify: false,
+          minFollowsRequired: 0,
+          socialLinks: {},
+        };
+      }
+
+      console.log('Creating product:', productData);
+      
+      const productId = await createProduct(productData);
+      
+      toast({
+        title: "Product created! 🎉",
+        description: `"${formData.title}" has been published successfully.`,
+        className: "bg-white dark:bg-black",
+      });
+
+      // Navigate to the products page
+      router.push('/dashboard?mode=create');
+    } catch (error: any) {
+      console.error('Failed to create product:', error);
+      toast({
+        title: "Error creating product",
+        description: error.message || "Something went wrong. Please try again.",
+        variant: "destructive",
+        className: "bg-white dark:bg-black",
+      });
+    }
   };
 
   const canPublish = 

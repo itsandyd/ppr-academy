@@ -114,8 +114,9 @@ export function ProductsList({ products, storeId }: ProductsListProps) {
       return `/store/${storeId}/products/url-media/edit/${product._id}`;
     }
     
-    // Default: generic digital download editor
-    return `/store/${storeId}/products/digital-download/edit/${product._id}`;
+    // For tip jars and other digital products, use the redirect page
+    // which will route to the appropriate editor
+    return `/store/${storeId}/products/${product._id}`;
   };
 
   const handleDelete = async (productId: string, title: string) => {
