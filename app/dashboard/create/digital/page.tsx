@@ -139,6 +139,7 @@ export default function DigitalProductCreator() {
       case 'pricing':
         return (
           <PricingStep
+            productCategory={formData.productCategory}
             pricingModel={formData.pricingModel!}
             price={formData.price || 0}
             onPricingModelChange={(pricingModel) => setFormData({ ...formData, pricingModel })}

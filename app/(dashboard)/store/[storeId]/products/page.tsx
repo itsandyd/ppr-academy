@@ -961,35 +961,20 @@ export default function ProductsPage() {
                       <h3 className="text-xl font-bold">Support & Donations</h3>
                     </div>
                     <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-                      {[
-                        {
-                          icon: "☕",
-                          label: "Tip Jar",
-                          type: "tip-jar",
-                          route: "/dashboard/create?type=tip-jar",
-                        },
-                        {
-                          icon: "💝",
-                          label: "Donation",
-                          type: "donation",
-                          route: "/dashboard/create?type=donation",
-                        },
-                      ].map((item, index) => (
-                        <motion.div
-                          key={item.label}
-                          initial={{ opacity: 0, scale: 0.8 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ delay: 0.55 + index * 0.05 }}
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.55 }}
+                      >
+                        <Card
+                          className="cursor-pointer p-5 text-center transition-all hover:scale-105 hover:bg-accent hover:shadow-lg"
+                          onClick={() => router.push("/dashboard/create/digital?category=tip-jar")}
                         >
-                          <Card
-                            className="cursor-pointer p-5 text-center transition-all hover:scale-105 hover:bg-accent hover:shadow-lg"
-                            onClick={() => router.push(item.route)}
-                          >
-                            <div className="mb-2 text-4xl">{item.icon}</div>
-                            <p className="text-sm font-medium">{item.label}</p>
-                          </Card>
-                        </motion.div>
-                      ))}
+                          <div className="mb-2 text-4xl">☕</div>
+                          <p className="text-sm font-medium">Tip Jar</p>
+                          <p className="text-xs text-muted-foreground mt-1">Pay what you want</p>
+                        </Card>
+                      </motion.div>
                     </div>
                   </div>
                 </motion.div>
