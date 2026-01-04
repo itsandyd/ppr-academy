@@ -650,6 +650,37 @@ export default defineSchema({
         maxSubmissionsPerMonth: v.optional(v.number()), // Rate limiting
       })
     ),
+
+    // Beat Lease Configuration (for productCategory: "beat-lease")
+    beatLeaseConfig: v.optional(
+      v.object({
+        tiers: v.optional(
+          v.array(
+            v.object({
+              type: v.union(
+                v.literal("basic"),
+                v.literal("premium"),
+                v.literal("exclusive"),
+                v.literal("unlimited")
+              ),
+              enabled: v.boolean(),
+              price: v.number(),
+              name: v.string(),
+              distributionLimit: v.optional(v.number()),
+              streamingLimit: v.optional(v.number()),
+              commercialUse: v.boolean(),
+              musicVideoUse: v.boolean(),
+              radioBroadcasting: v.boolean(),
+              stemsIncluded: v.boolean(),
+              creditRequired: v.boolean(),
+            })
+          )
+        ),
+        bpm: v.optional(v.number()),
+        key: v.optional(v.string()),
+        genre: v.optional(v.string()),
+      })
+    ),
   })
     .index("by_storeId", ["storeId"])
     .index("by_userId", ["userId"])

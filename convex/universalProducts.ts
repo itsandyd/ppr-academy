@@ -4,10 +4,10 @@ import { Id } from "./_generated/dataModel";
 
 /**
  * Universal Products System
- * 
+ *
  * This module provides a unified interface for creating and managing all product types
  * with flexible pricing models (free with download gate OR paid).
- * 
+ *
  * Supported Product Types:
  * - Sample Packs
  * - Preset Packs
@@ -56,9 +56,9 @@ const playlistConfigValidator = v.object({
 
 /**
  * Create Universal Product
- * 
+ *
  * One function to create ANY product type with flexible pricing.
- * 
+ *
  * @example
  * // Create free sample pack with Instagram + Spotify follow gate
  * createUniversalProduct({
@@ -74,7 +74,7 @@ const playlistConfigValidator = v.object({
  *     socialLinks: { instagram: "@producer", spotify: "..." }
  *   }
  * })
- * 
+ *
  * @example
  * // Create paid playlist curation service
  * createUniversalProduct({
@@ -96,16 +96,16 @@ export const createUniversalProduct = mutation({
     description: v.optional(v.string()),
     storeId: v.string(),
     userId: v.string(),
-    
+
     // Product Type Classification
     productType: v.union(
       v.literal("digital"),
       v.literal("playlistCuration"),
-      v.literal("effectChain"),  // NEW
-      v.literal("abletonRack"),  // Legacy
+      v.literal("effectChain"), // NEW
+      v.literal("abletonRack"), // Legacy
       v.literal("abletonPreset"),
       v.literal("coaching"),
-      v.literal("urlMedia"),
+      v.literal("urlMedia")
     ),
     productCategory: v.union(
       // Music Production
@@ -113,8 +113,8 @@ export const createUniversalProduct = mutation({
       v.literal("preset-pack"),
       v.literal("midi-pack"),
       v.literal("bundle"),
-      v.literal("effect-chain"),  // NEW
-      v.literal("ableton-rack"),  // Legacy
+      v.literal("effect-chain"), // NEW
+      v.literal("ableton-rack"), // Legacy
       v.literal("beat-lease"),
       v.literal("project-files"),
       v.literal("mixing-template"),
@@ -129,125 +129,164 @@ export const createUniversalProduct = mutation({
       v.literal("workshop"),
       v.literal("masterclass"),
       // Digital Content
-      v.literal("pdf"),  // Consolidated PDF category
-      v.literal("pdf-guide"),  // Legacy
-      v.literal("cheat-sheet"),  // Legacy
-      v.literal("template"),  // Legacy
+      v.literal("pdf"), // Consolidated PDF category
+      v.literal("pdf-guide"), // Legacy
+      v.literal("cheat-sheet"), // Legacy
+      v.literal("template"), // Legacy
       v.literal("blog-post"),
       // Community
       v.literal("community"),
       // Support & Donations
       v.literal("tip-jar"),
-      v.literal("donation"),
+      v.literal("donation")
     ),
-    
+
     // Pricing Configuration
     pricingModel: v.union(
       v.literal("free_with_gate"), // Download gate (email + socials)
-      v.literal("paid"),            // Direct purchase
+      v.literal("paid") // Direct purchase
     ),
     price: v.number(), // $0 for free_with_gate, >$0 for paid
-    
+
     // Follow Gate Config (if pricingModel = "free_with_gate")
     followGateConfig: v.optional(followGateConfigValidator),
-    
+
     // Playlist Curation Config (if productCategory = "playlist-curation")
     playlistConfig: v.optional(playlistConfigValidator),
-    
+
     // Media
     imageUrl: v.optional(v.string()),
     downloadUrl: v.optional(v.string()), // For digital products
-    
+
     // Metadata
     tags: v.optional(v.array(v.string())),
-    
+
     // Effect Chain / DAW-specific (if productType = "effectChain")
-    dawType: v.optional(v.union(
-      v.literal("ableton"),
-      v.literal("fl-studio"),
-      v.literal("logic"),
-      v.literal("bitwig"),
-      v.literal("studio-one"),
-      v.literal("reason"),
-      v.literal("cubase"),
-      v.literal("multi-daw")
-    )),
+    dawType: v.optional(
+      v.union(
+        v.literal("ableton"),
+        v.literal("fl-studio"),
+        v.literal("logic"),
+        v.literal("bitwig"),
+        v.literal("studio-one"),
+        v.literal("reason"),
+        v.literal("cubase"),
+        v.literal("multi-daw")
+      )
+    ),
     dawVersion: v.optional(v.string()),
-    
+    effectTypes: v.optional(v.array(v.string())),
+    thirdPartyPlugins: v.optional(v.array(v.string())),
+    cpuLoad: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
+    complexity: v.optional(
+      v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced"))
+    ),
+
     // Ableton-specific (legacy - if productType = "abletonRack" or "abletonPreset")
     abletonVersion: v.optional(v.string()),
-    rackType: v.optional(v.union(
-      v.literal("audioEffect"),
-      v.literal("instrument"),
-      v.literal("midiEffect"),
-      v.literal("drumRack")
-    )),
-    
+    rackType: v.optional(
+      v.union(
+        v.literal("audioEffect"),
+        v.literal("instrument"),
+        v.literal("midiEffect"),
+        v.literal("drumRack")
+      )
+    ),
+
     // Coaching-specific (if productCategory = "coaching")
     duration: v.optional(v.number()),
     sessionType: v.optional(v.string()),
+
+    // Beat Lease-specific (if productCategory = "beat-lease")
+    beatLeaseConfig: v.optional(
+      v.object({
+        tiers: v.array(
+          v.object({
+            type: v.union(
+              v.literal("basic"),
+              v.literal("premium"),
+              v.literal("exclusive"),
+              v.literal("unlimited")
+            ),
+            enabled: v.boolean(),
+            price: v.number(),
+            name: v.string(),
+            distributionLimit: v.optional(v.number()),
+            streamingLimit: v.optional(v.number()),
+            commercialUse: v.boolean(),
+            musicVideoUse: v.boolean(),
+            radioBroadcasting: v.boolean(),
+            stemsIncluded: v.boolean(),
+            creditRequired: v.boolean(),
+          })
+        ),
+        bpm: v.optional(v.number()),
+        key: v.optional(v.string()),
+        genre: v.optional(v.string()),
+      })
+    ),
   },
   returns: v.union(v.id("digitalProducts"), v.id("courses")),
   handler: async (ctx, args) => {
     // ========================================================================
     // VALIDATION
     // ========================================================================
-    
+
     // Validate pricing model
     if (args.pricingModel === "free_with_gate" && args.price !== 0) {
       throw new Error("Free products with download gates must have price = $0");
     }
-    
+
     if (args.pricingModel === "paid" && args.price <= 0) {
       throw new Error("Paid products must have price > $0");
     }
-    
+
     // Validate follow gate config
     if (args.pricingModel === "free_with_gate" && !args.followGateConfig) {
       throw new Error("Free products with download gates must have followGateConfig");
     }
-    
+
     // Validate playlist config
     if (args.productCategory === "playlist-curation" && !args.playlistConfig) {
       throw new Error("Playlist curation products must have playlistConfig");
     }
-    
+
     // ========================================================================
     // CREATE PRODUCT
     // ========================================================================
-    
+
     // Handle courses separately (they go in courses table, not digitalProducts)
     if (args.productCategory === "course") {
       // Generate slug for course
       const generateSlug = (title: string): string => {
         return title
           .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/(^-|-$)/g, '');
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)/g, "");
       };
-      
+
       const generateUniqueSlug = async (baseSlug: string): Promise<string> => {
         let slug = baseSlug;
         let counter = 1;
-        
+
         while (true) {
           const existing = await ctx.db
             .query("courses")
             .filter((q) => q.eq(q.field("slug"), slug))
             .first();
-          
+
           if (!existing) {
             return slug;
           }
-          
+
           slug = `${baseSlug}-${counter}`;
           counter++;
         }
       };
-      
+
       const baseSlug = generateSlug(args.title);
       const uniqueSlug = await generateUniqueSlug(baseSlug);
-      
+
       const courseData = {
         userId: args.userId,
         instructorId: args.userId,
@@ -259,25 +298,27 @@ export const createUniversalProduct = mutation({
         imageUrl: args.imageUrl,
         tags: args.tags,
         isPublished: false, // Start as draft
-        
+
         // Follow Gate Setup
         followGateEnabled: args.pricingModel === "free_with_gate",
-        followGateRequirements: args.followGateConfig ? {
-          requireEmail: args.followGateConfig.requireEmail,
-          requireInstagram: args.followGateConfig.requireInstagram,
-          requireTiktok: args.followGateConfig.requireTiktok,
-          requireYoutube: args.followGateConfig.requireYoutube,
-          requireSpotify: args.followGateConfig.requireSpotify,
-          minFollowsRequired: args.followGateConfig.minFollowsRequired,
-        } : undefined,
+        followGateRequirements: args.followGateConfig
+          ? {
+              requireEmail: args.followGateConfig.requireEmail,
+              requireInstagram: args.followGateConfig.requireInstagram,
+              requireTiktok: args.followGateConfig.requireTiktok,
+              requireYoutube: args.followGateConfig.requireYoutube,
+              requireSpotify: args.followGateConfig.requireSpotify,
+              minFollowsRequired: args.followGateConfig.minFollowsRequired,
+            }
+          : undefined,
         followGateSocialLinks: args.followGateConfig?.socialLinks,
         followGateMessage: args.followGateConfig?.customMessage,
       };
-      
+
       const courseId = await ctx.db.insert("courses", courseData);
       return courseId;
     }
-    
+
     // For all other products, create in digitalProducts table
     const productData: any = {
       title: args.title,
@@ -291,45 +332,57 @@ export const createUniversalProduct = mutation({
       downloadUrl: args.downloadUrl,
       tags: args.tags,
       isPublished: false, // Start as draft
-      
+
       // Follow Gate Setup (only for digitalProducts that support it)
       // Note: digitalProducts table doesn't have follow gate fields
       // These are only for courses, so we skip them here
-      
+
       // Playlist Curation Setup
-      playlistCurationConfig: args.playlistConfig ? {
-        linkedPlaylistId: args.playlistConfig.linkedPlaylistId,
-        reviewTurnaroundDays: args.playlistConfig.reviewTurnaroundDays,
-        genresAccepted: args.playlistConfig.genresAccepted,
-        submissionGuidelines: args.playlistConfig.submissionGuidelines,
-        maxSubmissionsPerMonth: args.playlistConfig.maxSubmissionsPerMonth,
-      } : undefined,
-      
+      playlistCurationConfig: args.playlistConfig
+        ? {
+            linkedPlaylistId: args.playlistConfig.linkedPlaylistId,
+            reviewTurnaroundDays: args.playlistConfig.reviewTurnaroundDays,
+            genresAccepted: args.playlistConfig.genresAccepted,
+            submissionGuidelines: args.playlistConfig.submissionGuidelines,
+            maxSubmissionsPerMonth: args.playlistConfig.maxSubmissionsPerMonth,
+          }
+        : undefined,
+
       // Effect Chain / DAW-specific fields
       dawType: args.dawType,
       dawVersion: args.dawVersion,
-      
+      effectType: args.effectTypes,
+      thirdPartyPlugins: args.thirdPartyPlugins,
+      cpuLoad: args.cpuLoad,
+      complexity: args.complexity,
+
+      // Beat Lease config
+      beatLeaseConfig: args.beatLeaseConfig,
+      bpm: args.beatLeaseConfig?.bpm,
+      musicalKey: args.beatLeaseConfig?.key,
+      genre: args.beatLeaseConfig?.genre ? [args.beatLeaseConfig.genre] : undefined,
+
       // Ableton-specific (legacy)
       abletonVersion: args.abletonVersion,
       rackType: args.rackType,
       duration: args.duration,
       sessionType: args.sessionType,
-      
+
       // Defaults
       orderBumpEnabled: false,
       affiliateEnabled: false,
     };
-    
+
     const productId = await ctx.db.insert("digitalProducts", productData);
-    
+
     // ========================================================================
     // POST-CREATE INTEGRATIONS
     // ========================================================================
-    
+
     // If playlist curation, link product to playlist
     if (args.productCategory === "playlist-curation" && args.playlistConfig?.linkedPlaylistId) {
       const playlist = await ctx.db.get(args.playlistConfig.linkedPlaylistId);
-      
+
       if (playlist) {
         await ctx.db.patch(args.playlistConfig.linkedPlaylistId, {
           linkedProductId: productId,
@@ -343,38 +396,35 @@ export const createUniversalProduct = mutation({
         });
       }
     }
-    
+
     return productId;
   },
 });
 
 /**
  * Update Universal Product
- * 
+ *
  * Update any field of a universal product while maintaining consistency.
  */
 export const updateUniversalProduct = mutation({
   args: {
     productId: v.id("digitalProducts"),
-    
+
     // Core fields
     title: v.optional(v.string()),
     description: v.optional(v.string()),
     price: v.optional(v.number()),
     isPublished: v.optional(v.boolean()),
-    
+
     // Pricing model
-    pricingModel: v.optional(v.union(
-      v.literal("free_with_gate"),
-      v.literal("paid"),
-    )),
-    
+    pricingModel: v.optional(v.union(v.literal("free_with_gate"), v.literal("paid"))),
+
     // Follow gate config
     followGateConfig: v.optional(followGateConfigValidator),
-    
+
     // Playlist config
     playlistConfig: v.optional(playlistConfigValidator),
-    
+
     // Media
     imageUrl: v.optional(v.string()),
     downloadUrl: v.optional(v.string()),
@@ -383,13 +433,13 @@ export const updateUniversalProduct = mutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const { productId, pricingModel, followGateConfig, playlistConfig, ...updates } = args;
-    
+
     const product = await ctx.db.get(productId);
     if (!product) throw new Error("Product not found");
-    
+
     // Build update object
     const updateData: any = { ...updates };
-    
+
     // Handle pricing model changes
     if (pricingModel) {
       if (pricingModel === "free_with_gate") {
@@ -399,7 +449,7 @@ export const updateUniversalProduct = mutation({
         updateData.followGateEnabled = false;
       }
     }
-    
+
     // Update follow gate config
     if (followGateConfig) {
       updateData.followGateRequirements = {
@@ -413,7 +463,7 @@ export const updateUniversalProduct = mutation({
       updateData.followGateSocialLinks = followGateConfig.socialLinks;
       updateData.followGateMessage = followGateConfig.customMessage;
     }
-    
+
     // Update playlist config
     if (playlistConfig) {
       updateData.playlistCurationConfig = {
@@ -423,7 +473,7 @@ export const updateUniversalProduct = mutation({
         submissionGuidelines: playlistConfig.submissionGuidelines,
         maxSubmissionsPerMonth: playlistConfig.maxSubmissionsPerMonth,
       };
-      
+
       // Update linked playlist
       if (playlistConfig.linkedPlaylistId) {
         await ctx.db.patch(playlistConfig.linkedPlaylistId, {
@@ -437,7 +487,7 @@ export const updateUniversalProduct = mutation({
         });
       }
     }
-    
+
     await ctx.db.patch(productId, updateData);
     return null;
   },
@@ -449,11 +499,11 @@ export const updateUniversalProduct = mutation({
 
 /**
  * Get Universal Product with Enriched Data
- * 
+ *
  * Returns product with linked playlist data if applicable.
  */
 export const getUniversalProduct = query({
-  args: { 
+  args: {
     productId: v.id("digitalProducts"),
     userId: v.optional(v.string()), // For owner preview of unpublished
   },
@@ -461,19 +511,21 @@ export const getUniversalProduct = query({
   handler: async (ctx, args) => {
     const product = await ctx.db.get(args.productId);
     if (!product) return null;
-    
+
     // Check access permissions
     const isOwner = args.userId && product.userId === args.userId;
     if (!product.isPublished && !isOwner) {
       return null;
     }
-    
+
     // Enrich with linked data
     let enrichedProduct: any = { ...product };
-    
+
     // If playlist curation, add playlist details
-    if (product.productCategory === "playlist-curation" && 
-        product.playlistCurationConfig?.linkedPlaylistId) {
+    if (
+      product.productCategory === "playlist-curation" &&
+      product.playlistCurationConfig?.linkedPlaylistId
+    ) {
       const playlist = await ctx.db.get(product.playlistCurationConfig.linkedPlaylistId);
       if (playlist) {
         enrichedProduct.linkedPlaylist = {
@@ -487,11 +539,11 @@ export const getUniversalProduct = query({
         };
       }
     }
-    
+
     // Get creator info
     const stores = await ctx.db.query("stores").collect();
-    const store = stores.find(s => s._id === product.storeId);
-    
+    const store = stores.find((s) => s._id === product.storeId);
+
     if (store) {
       const user = await ctx.db
         .query("users")
@@ -502,14 +554,14 @@ export const getUniversalProduct = query({
         enrichedProduct.creatorAvatar = user.imageUrl;
       }
     }
-    
+
     return enrichedProduct;
   },
 });
 
 /**
  * Get Products by Category
- * 
+ *
  * Filter products by specific category (e.g., all sample packs).
  */
 export const getProductsByCategory = query({
@@ -536,7 +588,7 @@ export const getProductsByCategory = query({
       v.literal("blog-post"),
       v.literal("community"),
       v.literal("tip-jar"),
-      v.literal("donation"),
+      v.literal("donation")
     ),
     storeId: v.optional(v.string()), // Filter by store
     publishedOnly: v.optional(v.boolean()),
@@ -545,28 +597,26 @@ export const getProductsByCategory = query({
   handler: async (ctx, args) => {
     let products = await ctx.db
       .query("digitalProducts")
-      .withIndex("by_productCategory", (q) => 
-        q.eq("productCategory", args.productCategory)
-      )
+      .withIndex("by_productCategory", (q) => q.eq("productCategory", args.productCategory))
       .collect();
-    
+
     // Filter by store if provided
     if (args.storeId) {
-      products = products.filter(p => p.storeId === args.storeId);
+      products = products.filter((p) => p.storeId === args.storeId);
     }
-    
+
     // Filter by published status
     if (args.publishedOnly) {
-      products = products.filter(p => p.isPublished);
+      products = products.filter((p) => p.isPublished);
     }
-    
+
     return products;
   },
 });
 
 /**
  * Check if User Can Access Product
- * 
+ *
  * Returns whether user has access via:
  * 1. Purchase (for paid products)
  * 2. Follow gate completion (for free products)
@@ -594,7 +644,7 @@ export const canAccessProduct = query({
         requiresPurchase: false,
       };
     }
-    
+
     // Check if user is owner
     if (args.userId && product.userId === args.userId) {
       return {
@@ -604,7 +654,7 @@ export const canAccessProduct = query({
         requiresPurchase: false,
       };
     }
-    
+
     // Check if product is published
     if (!product.isPublished) {
       return {
@@ -614,7 +664,7 @@ export const canAccessProduct = query({
         requiresPurchase: false,
       };
     }
-    
+
     // Check if free with follow gate
     if (product.followGateEnabled && args.email) {
       const submission = await ctx.db
@@ -623,7 +673,7 @@ export const canAccessProduct = query({
           q.eq("email", args.email!).eq("productId", product._id)
         )
         .first();
-      
+
       if (submission) {
         return {
           canAccess: true,
@@ -632,7 +682,7 @@ export const canAccessProduct = query({
           requiresPurchase: false,
         };
       }
-      
+
       return {
         canAccess: false,
         reason: "Follow gate required",
@@ -640,14 +690,14 @@ export const canAccessProduct = query({
         requiresPurchase: false,
       };
     }
-    
+
     // Check if paid and user has purchased
     if (!product.followGateEnabled && args.userId) {
       const purchases = await ctx.db.query("purchases").collect();
-      const purchase = purchases.find(p => 
-        p.userId === args.userId && p.productId === product._id
+      const purchase = purchases.find(
+        (p) => p.userId === args.userId && p.productId === product._id
       );
-      
+
       if (purchase) {
         return {
           canAccess: true,
@@ -656,7 +706,7 @@ export const canAccessProduct = query({
           requiresPurchase: false,
         };
       }
-      
+
       return {
         canAccess: false,
         reason: "Purchase required",
@@ -664,7 +714,7 @@ export const canAccessProduct = query({
         requiresPurchase: true,
       };
     }
-    
+
     // Default: no access
     return {
       canAccess: false,
@@ -677,11 +727,11 @@ export const canAccessProduct = query({
 
 /**
  * Get All Universal Products by Store
- * 
+ *
  * Returns all products for a store with enriched data.
  */
 export const getUniversalProductsByStore = query({
-  args: { 
+  args: {
     storeId: v.string(),
     publishedOnly: v.optional(v.boolean()),
   },
@@ -691,20 +741,19 @@ export const getUniversalProductsByStore = query({
       .query("digitalProducts")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .collect();
-    
+
     if (args.publishedOnly) {
-      products = products.filter(p => p.isPublished);
+      products = products.filter((p) => p.isPublished);
     }
-    
+
     // Enrich each product with category info
-    const enrichedProducts = products.map(product => ({
+    const enrichedProducts = products.map((product) => ({
       ...product,
       pricingModel: product.followGateEnabled ? "free_with_gate" : "paid",
       hasFollowGate: product.followGateEnabled || false,
       isPaid: !product.followGateEnabled,
     }));
-    
+
     return enrichedProducts;
   },
 });
-

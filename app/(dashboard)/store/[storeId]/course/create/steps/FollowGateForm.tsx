@@ -1,10 +1,10 @@
 "use client";
 
 import { useCourseCreation } from "../context";
-import { FollowGateConfigStep } from "../../../products/create/components/FollowGateConfigStep";
+import { FollowGateConfigStep } from "@/app/dashboard/create/shared/FollowGateConfigStep";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useParams } from "next/navigation";
-import type { FollowGateConfig } from "../../../products/create/types";
+import type { FollowGateConfig } from "@/app/dashboard/create/types";
 
 export function FollowGateForm() {
   const { state, updateData } = useCourseCreation();
@@ -13,16 +13,18 @@ export function FollowGateForm() {
   const searchParams = useSearchParams();
   const storeId = params.storeId as string;
 
-  const currentConfig: FollowGateConfig | undefined = state.data.followGateRequirements ? {
-    requireEmail: state.data.followGateRequirements.requireEmail || false,
-    requireInstagram: state.data.followGateRequirements.requireInstagram || false,
-    requireTiktok: state.data.followGateRequirements.requireTiktok || false,
-    requireYoutube: state.data.followGateRequirements.requireYoutube || false,
-    requireSpotify: state.data.followGateRequirements.requireSpotify || false,
-    minFollowsRequired: state.data.followGateRequirements.minFollowsRequired || 0,
-    socialLinks: state.data.followGateSocialLinks || {},
-    customMessage: state.data.followGateMessage,
-  } : undefined;
+  const currentConfig: FollowGateConfig | undefined = state.data.followGateRequirements
+    ? {
+        requireEmail: state.data.followGateRequirements.requireEmail || false,
+        requireInstagram: state.data.followGateRequirements.requireInstagram || false,
+        requireTiktok: state.data.followGateRequirements.requireTiktok || false,
+        requireYoutube: state.data.followGateRequirements.requireYoutube || false,
+        requireSpotify: state.data.followGateRequirements.requireSpotify || false,
+        minFollowsRequired: state.data.followGateRequirements.minFollowsRequired || 0,
+        socialLinks: state.data.followGateSocialLinks || {},
+        customMessage: state.data.followGateMessage,
+      }
+    : undefined;
 
   const handleConfigChange = (config: FollowGateConfig) => {
     updateData("followGate", {
@@ -42,12 +44,16 @@ export function FollowGateForm() {
 
   const handleContinue = () => {
     const courseId = searchParams.get("courseId");
-    router.push(`/store/${storeId}/course/create?step=options${courseId ? `&courseId=${courseId}` : ""}`);
+    router.push(
+      `/store/${storeId}/course/create?step=options${courseId ? `&courseId=${courseId}` : ""}`
+    );
   };
 
   const handleBack = () => {
     const courseId = searchParams.get("courseId");
-    router.push(`/store/${storeId}/course/create?step=pricing${courseId ? `&courseId=${courseId}` : ""}`);
+    router.push(
+      `/store/${storeId}/course/create?step=pricing${courseId ? `&courseId=${courseId}` : ""}`
+    );
   };
 
   return (
@@ -59,4 +65,3 @@ export function FollowGateForm() {
     />
   );
 }
-

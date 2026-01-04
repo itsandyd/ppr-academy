@@ -1,7 +1,7 @@
 "use client";
 
 import { useCourseCreation } from "../context";
-import { PricingModelSelector } from "../../../products/create/components/PricingModelSelector";
+import { PricingModelSelector } from "@/app/dashboard/create/shared/PricingModelSelector";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useParams } from "next/navigation";
 
@@ -13,7 +13,12 @@ export function PricingModelForm() {
   const storeId = params.storeId as string;
 
   const handlePricingModelChange = (model: "free_with_gate" | "paid") => {
-    const newPrice = model === "free_with_gate" ? "0" : (state.data.price && state.data.price !== "0" ? state.data.price : "99");
+    const newPrice =
+      model === "free_with_gate"
+        ? "0"
+        : state.data.price && state.data.price !== "0"
+          ? state.data.price
+          : "99";
     updateData("pricing", {
       pricingModel: model,
       followGateEnabled: model === "free_with_gate",
@@ -28,12 +33,16 @@ export function PricingModelForm() {
   const handleContinue = () => {
     const courseId = searchParams.get("courseId");
     const nextStep = state.data.pricingModel === "free_with_gate" ? "followGate" : "checkout";
-    router.push(`/store/${storeId}/course/create?step=${nextStep}${courseId ? `&courseId=${courseId}` : ""}`);
+    router.push(
+      `/store/${storeId}/course/create?step=${nextStep}${courseId ? `&courseId=${courseId}` : ""}`
+    );
   };
 
   const handleBack = () => {
     const courseId = searchParams.get("courseId");
-    router.push(`/store/${storeId}/course/create?step=course${courseId ? `&courseId=${courseId}` : ""}`);
+    router.push(
+      `/store/${storeId}/course/create?step=course${courseId ? `&courseId=${courseId}` : ""}`
+    );
   };
 
   return (
@@ -48,4 +57,3 @@ export function PricingModelForm() {
     />
   );
 }
-
