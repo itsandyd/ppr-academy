@@ -84,38 +84,52 @@ export function ProductsList({ products, storeId }: ProductsListProps) {
   const getEditUrl = (product: Product, storeId: string) => {
     // If it's a course, route to course editor
     if (isCourse(product)) {
-      return `/store/${storeId}/course/create?step=course&courseId=${product._id}`;
+      return `/dashboard/create/course?courseId=${product._id}&step=basics`;
     }
     
     // For packs (sample/midi/preset), route to pack editor
     if (product.productCategory === "sample-pack" || 
         product.productCategory === "midi-pack" || 
-        product.productCategory === "preset-pack") {
-      return `/store/${storeId}/products/pack/create?packId=${product._id}&step=basics`;
+        product.productCategory === "preset-pack" ||
+        product.productCategory === "project-files" ||
+        product.productCategory === "mixing-template") {
+      return `/dashboard/create/pack?packId=${product._id}&step=basics`;
     }
     
     // For bundles
     if (product.productCategory === "bundle") {
-      return `/store/${storeId}/products/bundle/create?bundleId=${product._id}`;
+      return `/dashboard/create?type=bundle&productId=${product._id}`;
     }
     
-    // If it's an Ableton rack, route to Ableton rack creator with ID
-    if (product.productType === "abletonRack" || product.productType === "abletonPreset") {
-      return `/store/${storeId}/products/ableton-rack/create?id=${product._id}`;
+    // If it's an Ableton rack or effect chain, route to chain creator
+    if (product.productType === "abletonRack" || product.productType === "abletonPreset" ||
+        product.productCategory === "effect-chain" || product.productCategory === "ableton-rack") {
+      return `/dashboard/create/chain?chainId=${product._id}&step=basics`;
     }
     
     // For coaching products
-    if (product.productType === "coaching") {
-      return `/store/${storeId}/products/coaching-call/edit/${product._id}`;
+    if (product.productType === "coaching" || product.productCategory === "coaching") {
+      return `/dashboard/create/coaching?coachingId=${product._id}&step=basics`;
+    }
+    
+    // For beat leases
+    if (product.productCategory === "beat-lease") {
+      return `/dashboard/create/beat-lease?beatId=${product._id}&step=basics`;
+    }
+    
+    // For PDFs
+    if (product.productCategory === "pdf" || product.productCategory === "pdf-guide" || product.productCategory === "cheat-sheet") {
+      return `/dashboard/create/pdf?pdfId=${product._id}&step=basics`;
     }
     
     // For URL/media products
     if (product.productType === "urlMedia") {
-      return `/store/${storeId}/products/url-media/edit/${product._id}`;
+      return `/dashboard/create?type=url-media&productId=${product._id}`;
     }
     
-    // Default: generic digital download editor
-    return `/store/${storeId}/products/digital-download/edit/${product._id}`;
+    // For tip jars, donations, and other digital products
+    // Use the digital creation flow with the product category
+    return `/dashboard/create/digital?category=${product.productCategory || 'digital'}&productId=${product._id}&step=basics`;
   };
 
   const handleDelete = async (productId: string, title: string) => {

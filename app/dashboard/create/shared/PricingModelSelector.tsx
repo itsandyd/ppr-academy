@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PricingModel, ProductCategory } from "../types";
-import { Gift, DollarSign, Check } from "lucide-react";
+import { Gift, DollarSign, Check, Coffee, Heart } from "lucide-react";
+import { useEffect } from "react";
 
 interface PricingModelSelectorProps {
   productCategory: ProductCategory;
@@ -28,10 +29,104 @@ export function PricingModelSelector({
 }: PricingModelSelectorProps) {
   // Some product types can't be free with gate
   // NOTE: Courses CAN be free now! Only pure services cannot.
-  const canBeFree = !["coaching", "mixing-service", "mastering-service"].includes(productCategory);
+  const canBeFree = !["coaching", "mixing-service", "mastering-service", "tip-jar", "donation"].includes(productCategory);
   
-  // Tip jars are special - they're "pay what you want"
+  // Tip jars are special - they're always "pay what you want" (must be paid)
   const isTipJar = productCategory === "tip-jar" || productCategory === "donation";
+
+  // Auto-set pricing model to "paid" for tip jars on mount
+  useEffect(() => {
+    if (isTipJar && pricingModel !== "paid") {
+      onPricingModelChange("paid");
+      if (!price || price === 0) {
+        onPriceChange(5); // Default suggested tip amount
+      }
+    }
+  }, [isTipJar, pricingModel, price, onPricingModelChange, onPriceChange]);
+
+  // For tip jars, render a simplified UI without pricing model choice
+  if (isTipJar) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold">Set Up Your Tip Jar</h2>
+          <p className="text-muted-foreground mt-1">
+            Let your fans support your work with pay-what-you-want tips
+          </p>
+        </div>
+
+        <Card className="border-2 border-green-500/50 bg-green-50 dark:bg-green-950/20">
+          <CardHeader className="pb-4">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl">
+                <Coffee className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <CardTitle className="text-lg mb-1">Pay What You Want</CardTitle>
+                <CardDescription className="text-base">
+                  Supporters can tip any amount they choose. You set the suggested amount.
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Check className="h-4 w-4 text-green-500" />
+                  Fans choose how much to give
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Check className="h-4 w-4 text-green-500" />
+                  One-time support payments
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Check className="h-4 w-4 text-green-500" />
+                  Instant Stripe checkout
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Heart className="h-4 w-4 text-pink-500" />
+                  Thank supporters with a custom message
+                </div>
+              </div>
+
+              <div className="pt-4 border-t">
+                <Label htmlFor="price">Suggested Tip Amount (USD)</Label>
+                <div className="relative mt-1">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                    $
+                  </span>
+                  <Input
+                    id="price"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={price || 5}
+                    onChange={(e) => onPriceChange(Math.max(1, Number(e.target.value)))}
+                    className="pl-7"
+                    placeholder="5"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  This is the default amount shown. Supporters can adjust up or down.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Navigation */}
+        <div className="flex justify-between pt-4">
+          <Button variant="outline" onClick={onBack}>
+            ← Back
+          </Button>
+          <Button onClick={onContinue} disabled={!price || price < 1} size="lg">
+            Continue →
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const handlePricingChange = (value: string) => {
     const model = value as PricingModel;
