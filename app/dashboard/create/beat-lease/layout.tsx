@@ -3,46 +3,49 @@
 import React from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
+import { useQuery } from "convex/react";
+import { api } from "@/lib/convex-api";
 import { BeatLeaseCreationProvider, useBeatLeaseCreation } from "./context";
 import { Music, BarChart3, Upload, DollarSign } from "lucide-react";
 import { StepProgress, Step } from "@/app/dashboard/create/shared/StepProgress";
 import { ActionBar } from "@/app/dashboard/create/shared/ActionBar";
+import { StorefrontPreview } from "@/app/dashboard/create/shared/StorefrontPreview";
 import { Badge } from "@/components/ui/badge";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 interface BeatLeaseCreateLayoutProps {
   children: React.ReactNode;
 }
 
 const steps: Step[] = [
-  { 
-    id: "basics", 
-    label: "Beat Info", 
+  {
+    id: "basics",
+    label: "Beat Info",
     icon: Music,
     description: "Title, description & genre",
-    estimatedTime: "2-3 min"
+    estimatedTime: "2-3 min",
   },
-  { 
-    id: "metadata", 
-    label: "Beat Details", 
+  {
+    id: "metadata",
+    label: "Beat Details",
     icon: BarChart3,
     description: "BPM, key, mood & instruments",
-    estimatedTime: "2 min"
+    estimatedTime: "2 min",
   },
-  { 
-    id: "files", 
-    label: "Audio Files", 
+  {
+    id: "files",
+    label: "Audio Files",
     icon: Upload,
     description: "Upload MP3, WAV, stems & trackouts",
-    estimatedTime: "5-10 min"
+    estimatedTime: "5-10 min",
   },
-  { 
-    id: "licensing", 
-    label: "Lease Options", 
+  {
+    id: "licensing",
+    label: "Lease Options",
     icon: DollarSign,
     description: "Set pricing for different license types",
-    estimatedTime: "3-5 min"
+    estimatedTime: "3-5 min",
   },
 ];
 
@@ -51,11 +54,13 @@ function LayoutContent({ children }: BeatLeaseCreateLayoutProps) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const currentStep = searchParams.get("step") || "basics";
-  
+
   const { state, canPublish, createBeat, saveBeat } = useBeatLeaseCreation();
 
   const navigateToStep = (step: string) => {
-    router.push(`/dashboard/create/beat-lease?step=${step}${state.beatId ? `&beatId=${state.beatId}` : ''}`);
+    router.push(
+      `/dashboard/create/beat-lease?step=${step}${state.beatId ? `&beatId=${state.beatId}` : ""}`
+    );
   };
 
   const handleSaveDraft = async () => {
@@ -73,8 +78,8 @@ function LayoutContent({ children }: BeatLeaseCreateLayoutProps) {
     return (
       <div className="min-h-screen bg-background">
         <div className="animate-pulse">
-          <div className="h-8 bg-muted rounded w-1/4 mb-8"></div>
-          <div className="h-96 bg-muted rounded"></div>
+          <div className="mb-8 h-8 w-1/4 rounded bg-muted"></div>
+          <div className="h-96 rounded bg-muted"></div>
         </div>
       </div>
     );
@@ -84,10 +89,10 @@ function LayoutContent({ children }: BeatLeaseCreateLayoutProps) {
     .filter(([_, completed]) => completed)
     .map(([stepId, _]) => stepId);
 
-  const currentIndex = steps.findIndex(s => s.id === currentStep);
+  const currentIndex = steps.findIndex((s) => s.id === currentStep);
   const progressPercentage = ((currentIndex + 1) / steps.length) * 100;
 
-  const genreLabel = state.data.metadata?.genre || 'Beat';
+  const genreLabel = state.data.metadata?.genre || "Beat";
 
   return (
     <div className="space-y-6">
@@ -98,11 +103,13 @@ function LayoutContent({ children }: BeatLeaseCreateLayoutProps) {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold">Create Beat Lease</h1>
-              <Badge variant="secondary">{genreLabel.charAt(0).toUpperCase() + genreLabel.slice(1)}</Badge>
+              <Badge variant="secondary">
+                {genreLabel.charAt(0).toUpperCase() + genreLabel.slice(1)}
+              </Badge>
             </div>
-            {steps.find(s => s.id === currentStep) && (
+            {steps.find((s) => s.id === currentStep) && (
               <p className="text-sm text-muted-foreground">
-                {steps.find(s => s.id === currentStep)?.description}
+                {steps.find((s) => s.id === currentStep)?.description}
               </p>
             )}
           </div>
@@ -119,16 +126,18 @@ function LayoutContent({ children }: BeatLeaseCreateLayoutProps) {
       />
 
       {/* Content */}
-      <div className="space-y-6">
-        {children}
-      </div>
+      <div className="space-y-6">{children}</div>
 
       {/* Actions */}
       <ActionBar
         onBack={currentIndex > 0 ? () => navigateToStep(steps[currentIndex - 1].id) : undefined}
-        onNext={currentIndex < steps.length - 1 ? () => navigateToStep(steps[currentIndex + 1].id) : undefined}
+        onNext={
+          currentIndex < steps.length - 1
+            ? () => navigateToStep(steps[currentIndex + 1].id)
+            : undefined
+        }
         onSaveDraft={handleSaveDraft}
-        onPublish={currentStep === 'licensing' ? handlePublish : undefined}
+        onPublish={currentStep === "licensing" ? handlePublish : undefined}
         canProceed={state.stepCompletion[currentStep as keyof typeof state.stepCompletion]}
         canPublish={canPublish()}
         isSaving={state.isSaving}
