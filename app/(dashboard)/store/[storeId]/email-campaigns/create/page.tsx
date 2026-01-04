@@ -45,6 +45,8 @@ import {
   Loader2,
   Search,
   Plus,
+  Tags,
+  Filter,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAction } from "convex/react";
@@ -83,6 +85,10 @@ export default function CreateCampaignPage() {
   const [emailStyle, setEmailStyle] = useState<string>("casual-producer");
   const [copyLength, setCopyLength] = useState<string>("medium");
   const [recipientSearch, setRecipientSearch] = useState("");
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [excludeTagIds, setExcludeTagIds] = useState<string[]>([]);
+  const [tagMode, setTagMode] = useState<"all" | "any">("any");
+  const [isAddingFromTags, setIsAddingFromTags] = useState(false);
 
   // Ref for Tiptap editor
   const editorRef = useRef<WysiwygEditorRef>(null);
@@ -195,7 +201,21 @@ export default function CreateCampaignPage() {
   const addAllCustomersAsRecipients = useMutation(
     (api as any).emailCampaigns?.addAllCustomersAsRecipients
   );
+  const addRecipientsFromTags = useMutation((api as any).emailCampaigns?.addRecipientsFromTags);
   const generateCopy = useAction(api.emailCopyGenerator?.generateEmailCopy);
+
+  const segments = useQuery((api as any).emailContactSync?.getSegmentsByTag, { storeId });
+  const tagPreview = useQuery(
+    (api as any).emailCampaigns?.getTagPreview,
+    selectedTagIds.length > 0
+      ? {
+          storeId,
+          targetTagIds: selectedTagIds,
+          targetTagMode: tagMode,
+          excludeTagIds: excludeTagIds.length > 0 ? excludeTagIds : undefined,
+        }
+      : "skip"
+  );
 
   // Generate email copy from product + template
   const handleGenerateCopy = async () => {
@@ -363,6 +383,61 @@ export default function CreateCampaignPage() {
       });
     } finally {
       setIsAddingAllCustomers(false);
+    }
+  };
+
+  const handleAddFromTags = async () => {
+    if (selectedTagIds.length === 0) {
+      toast({
+        title: "No segments selected",
+        description: "Please select at least one segment",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!campaignName.trim() || !subject.trim() || !content.trim() || !fromEmail.trim()) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in campaign details first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsAddingFromTags(true);
+    try {
+      const newCampaignId = await createCampaign({
+        name: campaignName,
+        subject,
+        content,
+        previewText,
+        fromEmail,
+        replyToEmail,
+        storeId,
+        adminUserId: user?.id || "",
+      });
+
+      const result = await addRecipientsFromTags({
+        campaignId: newCampaignId,
+        storeId,
+        targetTagIds: selectedTagIds,
+        targetTagMode: tagMode,
+        excludeTagIds: excludeTagIds.length > 0 ? excludeTagIds : undefined,
+      });
+
+      toast({
+        title: "Campaign Created!",
+        description: `Added ${result.addedCount} recipients from selected segments`,
+      });
+      router.push(`/store/${storeId}/email-campaigns`);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create campaign",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAddingFromTags(false);
     }
   };
 
@@ -946,6 +1021,104 @@ export default function CreateCampaignPage() {
                         </>
                       )}
                     </Button>
+                  </div>
+
+                  {/* Segment Targeting */}
+                  <div className="rounded-lg border border-chart-2/20 bg-gradient-to-r from-chart-2/5 to-chart-3/5 p-4">
+                    <div className="mb-3 flex items-center gap-2">
+                      <Tags className="h-5 w-5 text-chart-2" />
+                      <h3 className="font-medium">Target by Segment</h3>
+                    </div>
+                    {segments && segments.length > 0 ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>Match:</span>
+                          <Button
+                            variant={tagMode === "any" ? "default" : "outline"}
+                            size="sm"
+                            className="h-6 px-2 text-xs"
+                            onClick={() => setTagMode("any")}
+                          >
+                            ANY tag
+                          </Button>
+                          <Button
+                            variant={tagMode === "all" ? "default" : "outline"}
+                            size="sm"
+                            className="h-6 px-2 text-xs"
+                            onClick={() => setTagMode("all")}
+                          >
+                            ALL tags
+                          </Button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          {segments.map((seg: any) => (
+                            <label
+                              key={seg.tagId}
+                              className={`flex cursor-pointer items-center gap-2 rounded-md border p-2 transition-colors ${
+                                selectedTagIds.includes(seg.tagId)
+                                  ? "border-chart-2 bg-chart-2/10"
+                                  : "border-border hover:bg-muted/50"
+                              }`}
+                            >
+                              <Checkbox
+                                checked={selectedTagIds.includes(seg.tagId)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedTagIds([...selectedTagIds, seg.tagId]);
+                                  } else {
+                                    setSelectedTagIds(
+                                      selectedTagIds.filter((id) => id !== seg.tagId)
+                                    );
+                                  }
+                                }}
+                              />
+                              <div
+                                className="h-2 w-2 rounded-full"
+                                style={{ backgroundColor: seg.color }}
+                              />
+                              <span className="flex-1 truncate text-sm">{seg.displayName}</span>
+                              <Badge variant="secondary" className="text-xs">
+                                {seg.contactCount}
+                              </Badge>
+                            </label>
+                          ))}
+                        </div>
+                        {tagPreview && selectedTagIds.length > 0 && (
+                          <div className="rounded-md bg-muted/50 p-2 text-sm">
+                            <p className="font-medium">
+                              {tagPreview.matchingCustomers} recipients match
+                            </p>
+                            {tagPreview.sampleEmails.length > 0 && (
+                              <p className="truncate text-xs text-muted-foreground">
+                                e.g. {tagPreview.sampleEmails.slice(0, 3).join(", ")}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                        <Button
+                          onClick={handleAddFromTags}
+                          disabled={isAddingFromTags || selectedTagIds.length === 0}
+                          className="w-full bg-gradient-to-r from-chart-2 to-chart-3 hover:from-chart-2/90 hover:to-chart-3/90"
+                        >
+                          {isAddingFromTags ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Creating...
+                            </>
+                          ) : (
+                            <>
+                              <Filter className="mr-2 h-4 w-4" />
+                              Add from Segments
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        No segments available. Segments are created automatically as contacts
+                        interact with your content.
+                      </p>
+                    )}
                   </div>
 
                   {/* Divider */}
