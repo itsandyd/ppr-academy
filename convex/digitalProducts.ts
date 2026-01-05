@@ -482,8 +482,41 @@ export const getProductsByUser = query({
   handler: async (ctx, args) => {
     const products = await ctx.db
       .query("digitalProducts")
-      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .collect();
+
+    // Resolve storage URLs
+    const productsWithUrls = await Promise.all(
+      products.map(async (product) => {
+        let imageUrl = product.imageUrl;
+        let downloadUrl = product.downloadUrl;
+        let demoAudioUrl = product.demoAudioUrl;
+        let chainImageUrl = product.chainImageUrl;
+
+        if (imageUrl && !imageUrl.startsWith("http")) {
+          imageUrl = (await ctx.storage.getUrl(imageUrl as any)) || imageUrl;
+        }
+        if (downloadUrl && !downloadUrl.startsWith("http")) {
+          downloadUrl = (await ctx.storage.getUrl(downloadUrl as any)) || downloadUrl;
+        }
+        if (demoAudioUrl && !demoAudioUrl.startsWith("http")) {
+          demoAudioUrl = (await ctx.storage.getUrl(demoAudioUrl as any)) || demoAudioUrl;
+        }
+        if (chainImageUrl && !chainImageUrl.startsWith("http")) {
+          chainImageUrl = (await ctx.storage.getUrl(chainImageUrl as any)) || chainImageUrl;
+        }
+
+        return {
+          ...product,
+          imageUrl,
+          downloadUrl,
+          demoAudioUrl,
+          chainImageUrl,
+        };
+      })
+    );
+
+    return productsWithUrls;
   },
 });
 
@@ -1098,12 +1131,13 @@ export const getAllPublishedProducts = query({
     v.object({
       _id: v.id("digitalProducts"),
       _creationTime: v.number(),
+      slug: v.optional(v.string()),
       title: v.string(),
       description: v.optional(v.string()),
       price: v.number(),
       imageUrl: v.optional(v.string()),
       downloadUrl: v.optional(v.string()),
-      url: v.optional(v.string()), // Added URL field for redirects
+      url: v.optional(v.string()),
       productCategory: v.optional(v.string()), // Product category (sample-pack, preset-pack, etc.)
       productType: v.optional(
         v.union(

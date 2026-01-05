@@ -49,6 +49,7 @@ export default function SectionedMarketplace() {
   const courses = useQuery(api.courses.getAllPublishedCourses) || [];
   const products = useQuery(api.digitalProducts.getAllPublishedProducts) || [];
   const samplePacks = useQuery(api.samplePacks?.getAllPublishedSamplePacks) || [];
+  const abletonRacks = useQuery(api.abletonRacks?.getPublishedAbletonRacks, {}) || [];
   const platformStats = useQuery(api.marketplace?.getPlatformStats);
   const featuredCreators = useQuery(api.marketplace?.getAllCreators, { limit: 6 }) || [];
 
@@ -58,8 +59,47 @@ export default function SectionedMarketplace() {
     [courses]
   );
 
-  const productsWithType = useMemo(
-    () => products.map((p: any) => ({ ...p, contentType: "product" as const })),
+  // Filter products by type for distinct sections
+  const beats = useMemo(
+    () =>
+      products
+        .filter((p: any) => p.productCategory === "beat-lease")
+        .map((p: any) => ({ ...p, contentType: "beat" as const })),
+    [products]
+  );
+
+  const coaching = useMemo(
+    () =>
+      products
+        .filter((p: any) => p.productType === "coaching")
+        .map((p: any) => ({ ...p, contentType: "coaching" as const })),
+    [products]
+  );
+
+  const guides = useMemo(
+    () =>
+      products
+        .filter(
+          (p: any) =>
+            p.productCategory === "pdf" ||
+            p.productCategory === "pdf-guide" ||
+            p.productCategory === "cheat-sheet"
+        )
+        .map((p: any) => ({ ...p, contentType: "guide" as const })),
+    [products]
+  );
+
+  const presets = useMemo(
+    () =>
+      products
+        .filter(
+          (p: any) =>
+            p.productType === "abletonRack" ||
+            p.productType === "abletonPreset" ||
+            p.productType === "effectChain" ||
+            p.productCategory === "preset-pack"
+        )
+        .map((p: any) => ({ ...p, contentType: "preset" as const })),
     [products]
   );
 
@@ -68,10 +108,53 @@ export default function SectionedMarketplace() {
     [samplePacks]
   );
 
-  // Combine all content
+  const racksWithType = useMemo(
+    () => abletonRacks.map((r: any) => ({ ...r, contentType: "ableton-rack" as const })),
+    [abletonRacks]
+  );
+
+  // General products (everything else not in specific categories)
+  const generalProducts = useMemo(
+    () =>
+      products
+        .filter(
+          (p: any) =>
+            p.productCategory !== "beat-lease" &&
+            p.productType !== "coaching" &&
+            p.productCategory !== "pdf" &&
+            p.productCategory !== "pdf-guide" &&
+            p.productCategory !== "cheat-sheet" &&
+            p.productType !== "abletonRack" &&
+            p.productType !== "abletonPreset" &&
+            p.productType !== "effectChain" &&
+            p.productCategory !== "preset-pack"
+        )
+        .map((p: any) => ({ ...p, contentType: "product" as const })),
+    [products]
+  );
+
+  // Combine all content for search
   const allContent = useMemo(
-    () => [...coursesWithType, ...productsWithType, ...samplePacksWithType],
-    [coursesWithType, productsWithType, samplePacksWithType]
+    () => [
+      ...coursesWithType,
+      ...beats,
+      ...coaching,
+      ...guides,
+      ...presets,
+      ...samplePacksWithType,
+      ...racksWithType,
+      ...generalProducts,
+    ],
+    [
+      coursesWithType,
+      beats,
+      coaching,
+      guides,
+      presets,
+      samplePacksWithType,
+      racksWithType,
+      generalProducts,
+    ]
   );
 
   // Filter by search term
@@ -90,11 +173,69 @@ export default function SectionedMarketplace() {
   const stats = {
     totalCreators: platformStats?.totalCreators || 0,
     totalCourses: courses.length,
-    totalProducts: products.length + samplePacks.length,
+    totalProducts: products.length + samplePacks.length + abletonRacks.length,
     totalStudents: platformStats?.totalStudents || 0,
   };
 
   const isSearching = searchTerm.length > 0;
+
+  // Section configuration with engaging copy
+  const productSections = [
+    {
+      id: "courses",
+      title: "Level Up Your Production",
+      subtitle: "In-depth courses from producers who've been where you are",
+      items: coursesWithType.slice(0, 4),
+      href: "/marketplace?contentType=courses",
+      gradient: "from-chart-1 to-chart-2",
+      icon: Video,
+    },
+    {
+      id: "sample-packs",
+      title: "Sounds That Inspire",
+      subtitle: "Drums, loops, and one-shots ready for your next track",
+      items: samplePacksWithType.slice(0, 4),
+      href: "/marketplace/samples",
+      gradient: "from-chart-2 to-chart-3",
+      icon: Music,
+    },
+    {
+      id: "presets",
+      title: "Pro Sounds, One Click Away",
+      subtitle: "Effect racks, presets, and chains from working producers",
+      items: [...presets, ...racksWithType].slice(0, 4),
+      href: "/marketplace/ableton-racks",
+      gradient: "from-chart-3 to-chart-4",
+      icon: Sliders,
+    },
+    {
+      id: "beats",
+      title: "Ready-Made Instrumentals",
+      subtitle: "Licensed beats for your next release or content",
+      items: beats.slice(0, 4),
+      href: "/marketplace/beats",
+      gradient: "from-chart-4 to-chart-5",
+      icon: Music2,
+    },
+    {
+      id: "coaching",
+      title: "Learn 1-on-1 From the Pros",
+      subtitle: "Book sessions with experienced producers and get direct feedback",
+      items: coaching.slice(0, 4),
+      href: "/marketplace/coaching",
+      gradient: "from-chart-5 to-chart-1",
+      icon: Mic2,
+    },
+    {
+      id: "guides",
+      title: "Knowledge You Can Keep",
+      subtitle: "PDFs, cheat sheets, and guides for quick reference",
+      items: guides.slice(0, 4),
+      href: "/marketplace/guides",
+      gradient: "from-chart-1 to-chart-3",
+      icon: FileText,
+    },
+  ].filter((section) => section.items.length > 0);
 
   const studentSteps = [
     {
@@ -727,49 +868,50 @@ export default function SectionedMarketplace() {
         </div>
       </section>
 
-      {/* What You Can Find Section (Explore the Academy Library) */}
-      {!isSearching && allContent.length > 0 && (
-        <section className="relative z-10 py-24">
-          <div className="absolute inset-0 bg-card/50 backdrop-blur-sm"></div>
-
-          <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <motion.div
-              className="mb-12 text-center"
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              viewport={{ once: true }}
-            >
-              <h2 className="mb-4 bg-gradient-to-r from-chart-1 to-chart-4 bg-clip-text text-3xl font-bold text-foreground text-transparent">
-                Explore the Library
-              </h2>
-              <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
-                Courses, sound packs, and presets from producers around the world — new drops every
-                week.
-              </p>
-            </motion.div>
-
-            <MarketplaceGrid content={allContent.slice(0, 6)} />
-
-            {allContent.length > 6 && (
+      {/* Product Sections - Each category with its own heading */}
+      {!isSearching &&
+        productSections.map((section, sectionIndex) => (
+          <section
+            key={section.id}
+            className={`relative z-10 py-20 ${sectionIndex % 2 === 1 ? "bg-card/30" : ""}`}
+          >
+            <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
               <motion.div
-                className="mt-12 text-center"
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 1 }}
+                className="mb-10 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
                 viewport={{ once: true }}
               >
-                <Link href="/marketplace">
-                  <Button variant="outline" size="lg" className="group">
-                    Browse All Products
-                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                <div className="flex items-start gap-4">
+                  <motion.div
+                    className={`flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br ${section.gradient} shadow-lg`}
+                    whileHover={{ scale: 1.1, rotate: 5 }}
+                  >
+                    <section.icon className="h-7 w-7 text-primary-foreground" />
+                  </motion.div>
+                  <div>
+                    <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+                      {section.title}
+                    </h2>
+                    <p className="mt-1 text-muted-foreground">{section.subtitle}</p>
+                  </div>
+                </div>
+                <Link href={section.href}>
+                  <Button
+                    variant="ghost"
+                    className="group text-muted-foreground hover:text-foreground"
+                  >
+                    View all
+                    <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </Button>
                 </Link>
               </motion.div>
-            )}
-          </div>
-        </section>
-      )}
+
+              <MarketplaceGrid content={section.items} />
+            </div>
+          </section>
+        ))}
 
       {/* Final Gradient CTA Section */}
       <section className="relative z-10 overflow-hidden py-32">
