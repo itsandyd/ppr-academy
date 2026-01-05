@@ -76,6 +76,18 @@ const learnLinks = [
     color: "text-orange-500",
   },
   {
+    href: "/dashboard/coaching?mode=learn",
+    label: "My Sessions",
+    icon: Video,
+    color: "text-teal-500",
+  },
+  {
+    href: "/dashboard/notes?mode=learn",
+    label: "My Notes",
+    icon: StickyNote,
+    color: "text-amber-500",
+  },
+  {
     href: "/dashboard/certificates?mode=learn",
     label: "Certificates",
     icon: Award,

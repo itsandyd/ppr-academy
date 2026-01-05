@@ -16,7 +16,7 @@ export const getFeaturedContent = query({
   returns: v.array(v.any()), // We'll use v.any() since we're combining different types
   handler: async (ctx, args) => {
     const limit = args.limit || 6;
-    
+
     // Get featured courses (if they have a featured field)
     const allCourses = await ctx.db
       .query("courses")
@@ -33,14 +33,12 @@ export const getFeaturedContent = query({
 
     // Combine and tag with content type
     const combined: Array<any> = [
-      ...allCourses.map(c => ({ ...c, contentType: 'course' })),
-      ...allProducts.map(p => ({ ...p, contentType: 'product' })),
+      ...allCourses.map((c) => ({ ...c, contentType: "course" })),
+      ...allProducts.map((p) => ({ ...p, contentType: "product" })),
     ];
 
     // Shuffle and limit
-    return combined
-      .sort(() => Math.random() - 0.5)
-      .slice(0, limit);
+    return combined.sort(() => Math.random() - 0.5).slice(0, limit);
   },
 });
 
@@ -77,7 +75,7 @@ export const getPlatformStats = query({
 
     // Count unique students (users who have made purchases)
     const purchases = await ctx.db.query("purchases").collect();
-    const uniqueStudents = new Set(purchases.map(p => p.userId));
+    const uniqueStudents = new Set(purchases.map((p) => p.userId));
     const totalStudents = uniqueStudents.size;
 
     return {
@@ -110,7 +108,7 @@ export const getCreatorSpotlight = query({
   handler: async (ctx) => {
     // Get all stores
     const stores = await ctx.db.query("stores").collect();
-    
+
     if (stores.length === 0) {
       return null;
     }
@@ -121,28 +119,25 @@ export const getCreatorSpotlight = query({
         // Count published courses
         const coursesCount = await ctx.db
           .query("courses")
-          .filter((q) => 
-            q.and(
-              q.eq(q.field("storeId"), store._id),
-              q.eq(q.field("isPublished"), true)
-            )
+          .filter((q) =>
+            q.and(q.eq(q.field("storeId"), store._id), q.eq(q.field("isPublished"), true))
           )
           .collect()
-          .then(c => c.length);
+          .then((c) => c.length);
 
         // Count published products
         const productsCount = await ctx.db
           .query("digitalProducts")
           .filter((q) => q.eq(q.field("storeId"), store._id))
           .collect()
-          .then(p => p.length);
+          .then((p) => p.length);
 
         // Count unique students for this store
         const storePurchases = await ctx.db
           .query("purchases")
           .filter((q) => q.eq(q.field("storeId"), store._id))
           .collect();
-        const uniqueStudents = new Set(storePurchases.map(p => p.userId));
+        const uniqueStudents = new Set(storePurchases.map((p) => p.userId));
 
         return {
           store,
@@ -189,18 +184,20 @@ export const getAllCreators = query({
     limit: v.optional(v.number()),
     offset: v.optional(v.number()),
   },
-  returns: v.array(v.object({
-    _id: v.id("stores"),
-    name: v.string(),
-    slug: v.string(),
-    bio: v.optional(v.string()),
-    avatar: v.optional(v.string()),
-    bannerImage: v.optional(v.string()),
-    totalProducts: v.number(),
-    totalCourses: v.number(),
-    totalStudents: v.number(),
-    categories: v.array(v.string()),
-  })),
+  returns: v.array(
+    v.object({
+      _id: v.id("stores"),
+      name: v.string(),
+      slug: v.string(),
+      bio: v.optional(v.string()),
+      avatar: v.optional(v.string()),
+      bannerImage: v.optional(v.string()),
+      totalProducts: v.number(),
+      totalCourses: v.number(),
+      totalStudents: v.number(),
+      categories: v.array(v.string()),
+    })
+  ),
   handler: async (ctx, args) => {
     const limit = args.limit || 20;
     const offset = args.offset || 0;
@@ -211,7 +208,7 @@ export const getAllCreators = query({
       .withIndex("by_public", (q) => q.eq("isPublic", true))
       .filter((q) => q.eq(q.field("isPublishedProfile"), true))
       .collect();
-    
+
     // Paginate
     const stores = allStores.slice(offset, offset + limit);
 
@@ -227,11 +224,8 @@ export const getAllCreators = query({
         // Count published courses
         const courses = await ctx.db
           .query("courses")
-          .filter((q) => 
-            q.and(
-              q.eq(q.field("storeId"), store._id),
-              q.eq(q.field("isPublished"), true)
-            )
+          .filter((q) =>
+            q.and(q.eq(q.field("storeId"), store._id), q.eq(q.field("isPublished"), true))
           )
           .collect();
 
@@ -252,19 +246,19 @@ export const getAllCreators = query({
           .query("purchases")
           .filter((q) => q.eq(q.field("storeId"), store._id))
           .collect();
-        const uniqueStudents = new Set(storePurchases.map(p => p.userId));
+        const uniqueStudents = new Set(storePurchases.map((p) => p.userId));
 
         // Collect unique categories from courses and products
         const categories = new Set<string>();
-        courses.forEach(c => {
+        courses.forEach((c) => {
           if (c.category) categories.add(c.category);
         });
-        products.forEach(p => {
+        products.forEach((p) => {
           if (p.category) categories.add(p.category);
         });
-        samplePacks.forEach(sp => {
+        samplePacks.forEach((sp) => {
           if (sp.categories) {
-            sp.categories.forEach(cat => categories.add(cat));
+            sp.categories.forEach((cat) => categories.add(cat));
           }
         });
 
@@ -294,29 +288,30 @@ export const getAllCreators = query({
 export const searchMarketplace = query({
   args: {
     searchTerm: v.optional(v.string()),
-    contentType: v.optional(v.union(
-      v.literal("all"),
-      v.literal("courses"),
-      v.literal("products"),
-      v.literal("coaching"),
-      v.literal("sample-packs"),
-      v.literal("plugins"),
-      v.literal("ableton-racks")
-    )),
+    contentType: v.optional(
+      v.union(
+        v.literal("all"),
+        v.literal("courses"),
+        v.literal("products"),
+        v.literal("coaching"),
+        v.literal("sample-packs"),
+        v.literal("plugins"),
+        v.literal("ableton-racks")
+      )
+    ),
     category: v.optional(v.string()),
     specificCategories: v.optional(v.array(v.string())), // Array of specific category names (Reverb, Delay, Synth, etc.)
-    priceRange: v.optional(v.union(
-      v.literal("free"),
-      v.literal("under-50"),
-      v.literal("50-100"),
-      v.literal("over-100")
-    )),
-    sortBy: v.optional(v.union(
-      v.literal("newest"),
-      v.literal("popular"),
-      v.literal("price-low"),
-      v.literal("price-high")
-    )),
+    priceRange: v.optional(
+      v.union(v.literal("free"), v.literal("under-50"), v.literal("50-100"), v.literal("over-100"))
+    ),
+    sortBy: v.optional(
+      v.union(
+        v.literal("newest"),
+        v.literal("popular"),
+        v.literal("price-low"),
+        v.literal("price-high")
+      )
+    ),
     limit: v.optional(v.number()),
     offset: v.optional(v.number()),
   },
@@ -339,9 +334,9 @@ export const searchMarketplace = query({
     // Helper function to convert storage ID to URL
     const getImageUrl = async (imageUrl: string | undefined): Promise<string | undefined> => {
       if (!imageUrl) return undefined;
-      if (imageUrl.startsWith('http')) return imageUrl; // Already a URL
+      if (imageUrl.startsWith("http")) return imageUrl; // Already a URL
       try {
-        return await ctx.storage.getUrl(imageUrl as any) || imageUrl;
+        return (await ctx.storage.getUrl(imageUrl as any)) || imageUrl;
       } catch {
         return imageUrl;
       }
@@ -363,7 +358,7 @@ export const searchMarketplace = query({
             .query("purchases")
             .filter((q) => q.eq(q.field("courseId"), course._id))
             .collect();
-          
+
           // Get creator info
           let creatorName = "Creator";
           let creatorAvatar: string | undefined = undefined;
@@ -412,10 +407,11 @@ export const searchMarketplace = query({
         .filter((q) => q.eq(q.field("isPublished"), true))
         .collect();
 
-      const digitalProducts = products.filter(p => 
-        (p as any).productType !== "coaching" &&
-        (p as any).productType !== "abletonRack" &&
-        (p as any).productType !== "abletonPreset"
+      const digitalProducts = products.filter(
+        (p) =>
+          (p as any).productType !== "coaching" &&
+          (p as any).productType !== "abletonRack" &&
+          (p as any).productType !== "abletonPreset"
       );
 
       const productsWithDetails = await Promise.all(
@@ -424,13 +420,13 @@ export const searchMarketplace = query({
             .query("purchases")
             .filter((q) => q.eq(q.field("productId"), product._id))
             .collect();
-          
+
           let creatorName = "Creator";
           let creatorAvatar: string | undefined = undefined;
 
           const stores = await ctx.db.query("stores").collect();
-          const store = stores.find(s => s._id === product.storeId);
-          
+          const store = stores.find((s) => s._id === product.storeId);
+
           if (store) {
             const user = await ctx.db
               .query("users")
@@ -446,6 +442,7 @@ export const searchMarketplace = query({
             _id: product._id,
             _creationTime: product._creationTime,
             title: product.title,
+            slug: (product as any).slug,
             description: product.description,
             price: product.price,
             imageUrl: await getImageUrl(product.imageUrl),
@@ -471,9 +468,7 @@ export const searchMarketplace = query({
         .filter((q) => q.eq(q.field("isPublished"), true))
         .collect();
 
-      const coachingProducts = allProducts.filter(p => 
-        (p as any).productType === "coaching"
-      );
+      const coachingProducts = allProducts.filter((p) => (p as any).productType === "coaching");
 
       const coachingWithDetails = await Promise.all(
         coachingProducts.map(async (product) => {
@@ -481,13 +476,13 @@ export const searchMarketplace = query({
             .query("purchases")
             .filter((q) => q.eq(q.field("productId"), product._id))
             .collect();
-          
+
           let creatorName = "Creator";
           let creatorAvatar: string | undefined = undefined;
 
           const stores = await ctx.db.query("stores").collect();
-          const store = stores.find(s => s._id === product.storeId);
-          
+          const store = stores.find((s) => s._id === product.storeId);
+
           if (store) {
             const user = await ctx.db
               .query("users")
@@ -503,6 +498,7 @@ export const searchMarketplace = query({
             _id: product._id,
             _creationTime: product._creationTime,
             title: product.title,
+            slug: (product as any).slug,
             description: product.description,
             price: product.price,
             imageUrl: await getImageUrl(product.imageUrl),
@@ -537,7 +533,7 @@ export const searchMarketplace = query({
             const category = await ctx.db.get(plugin.categoryId);
             categoryName = category?.name;
           }
-          
+
           // Get plugin type name
           if (plugin.pluginTypeId) {
             const type = await ctx.db.get(plugin.pluginTypeId);
@@ -588,7 +584,7 @@ export const searchMarketplace = query({
     if (contentType === "all" || contentType === "ableton-racks") {
       const racks = await ctx.db
         .query("digitalProducts")
-        .filter((q) => 
+        .filter((q) =>
           q.and(
             q.eq(q.field("isPublished"), true),
             q.or(
@@ -605,8 +601,8 @@ export const searchMarketplace = query({
           let creatorAvatar: string | undefined = undefined;
 
           const stores = await ctx.db.query("stores").collect();
-          const store = stores.find(s => s._id === rack.storeId);
-          
+          const store = stores.find((s) => s._id === rack.storeId);
+
           if (store) {
             const user = await ctx.db
               .query("users")
@@ -622,14 +618,14 @@ export const searchMarketplace = query({
             _id: rack._id,
             _creationTime: rack._creationTime,
             title: rack.title,
+            slug: (rack as any).slug,
             description: rack.description,
             price: rack.price || 0,
             thumbnail: await getImageUrl(rack.imageUrl),
-            category: rack.rackType, // audioEffect, instrument, etc.
+            category: rack.rackType,
             contentType: "ableton-rack" as const,
             creatorName,
             creatorAvatar: await getImageUrl(creatorAvatar),
-            // Ableton-specific fields
             abletonVersion: rack.abletonVersion,
             rackType: rack.rackType,
             cpuLoad: rack.cpuLoad,
@@ -649,21 +645,22 @@ export const searchMarketplace = query({
     // Search term filter
     if (searchTerm && searchTerm.trim()) {
       const search = searchTerm.toLowerCase().trim();
-      filtered = filtered.filter(item =>
-        item.title?.toLowerCase().includes(search) ||
-        item.description?.toLowerCase().includes(search) ||
-        item.creatorName?.toLowerCase().includes(search)
+      filtered = filtered.filter(
+        (item) =>
+          item.title?.toLowerCase().includes(search) ||
+          item.description?.toLowerCase().includes(search) ||
+          item.creatorName?.toLowerCase().includes(search)
       );
     }
 
     // Category filter
     if (category) {
-      filtered = filtered.filter(item => item.category === category);
+      filtered = filtered.filter((item) => item.category === category);
     }
 
     // Specific Categories filter (for plugins - Effect/Instrument/Studio Tool specific categories)
     if (specificCategories && specificCategories.length > 0) {
-      filtered = filtered.filter(item => {
+      filtered = filtered.filter((item) => {
         if (item.contentType === "plugin" && item.category) {
           // Check if plugin's category name matches any of the selected specific categories
           return specificCategories.includes(item.category);
@@ -674,7 +671,7 @@ export const searchMarketplace = query({
 
     // Price range filter
     if (priceRange) {
-      filtered = filtered.filter(item => {
+      filtered = filtered.filter((item) => {
         const price = item.price || 0;
         switch (priceRange) {
           case "free":
@@ -733,7 +730,7 @@ export const getMarketplaceCategories = query({
       .query("courses")
       .filter((q) => q.eq(q.field("isPublished"), true))
       .collect();
-    courses.forEach(c => {
+    courses.forEach((c) => {
       if (c.category) categories.add(c.category);
     });
 
@@ -742,7 +739,7 @@ export const getMarketplaceCategories = query({
       .query("digitalProducts")
       .filter((q) => q.eq(q.field("isPublished"), true))
       .collect();
-    products.forEach(p => {
+    products.forEach((p) => {
       if (p.category) categories.add(p.category);
     });
 

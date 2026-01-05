@@ -4,7 +4,16 @@ import { FC, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { BookOpen, Package, Users, Download, Star, ExternalLink, ShoppingCart, Plug } from "lucide-react";
+import {
+  BookOpen,
+  Package,
+  Users,
+  Download,
+  Star,
+  ExternalLink,
+  ShoppingCart,
+  Plug,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Image from "next/image";
@@ -20,14 +29,14 @@ import { Button } from "@/components/ui/button";
 // Helper function to strip HTML tags and get plain text
 const stripHtml = (html: string): string => {
   return html
-    .replace(/<[^>]*>/g, '') // Remove HTML tags
-    .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
-    .replace(/&amp;/g, '&') // Replace &amp; with &
-    .replace(/&lt;/g, '<') // Replace &lt; with <
-    .replace(/&gt;/g, '>') // Replace &gt; with >
+    .replace(/<[^>]*>/g, "") // Remove HTML tags
+    .replace(/&nbsp;/g, " ") // Replace &nbsp; with space
+    .replace(/&amp;/g, "&") // Replace &amp; with &
+    .replace(/&lt;/g, "<") // Replace &lt; with <
+    .replace(/&gt;/g, ">") // Replace &gt; with >
     .replace(/&quot;/g, '"') // Replace &quot; with "
     .replace(/&#39;/g, "'") // Replace &#39; with '
-    .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+    .replace(/\s+/g, " ") // Replace multiple spaces with single space
     .trim();
 };
 
@@ -70,33 +79,17 @@ export const MarketplaceGrid: FC<MarketplaceGridProps> = ({
 
   const handleProductClick = (item: ContentItem) => {
     if (item.contentType === "plugin") {
-      // Navigate to plugin detail page
-      const slug = item.slug || item.title.toLowerCase().replace(/\s+/g, "-");
-      router.push(`/marketplace/plugins/${slug}`);
+      router.push(`/marketplace/plugins/${item.slug || item._id}`);
     } else if (item.contentType === "ableton-rack") {
-      // Navigate to Ableton rack detail page
-      const slug = item.slug || item.title.toLowerCase().replace(/\s+/g, "-");
-      router.push(`/marketplace/ableton-racks/${slug}`);
+      router.push(`/marketplace/ableton-racks/${item.slug || item._id}`);
     } else if (item.contentType === "product" || item.contentType === "sample-pack") {
-      // Reset form state
       setEmail("");
       setName("");
       setHasSubmittedEmail(false);
-      // Debug: Log product to check URL fields
-      console.log("🔍 Product clicked:", item.title);
-      console.log("📦 Full product data:", item);
-      console.log("📥 downloadUrl:", item.downloadUrl);
-      console.log("🔗 url:", item.url);
-      console.log("✅ Has downloadUrl:", !!item.downloadUrl);
-      console.log("✅ Has url:", !!item.url);
-      console.log("🔑 All item keys:", Object.keys(item));
-      // Open modal for products and sample packs
       setSelectedProduct(item);
       setProductModalOpen(true);
     } else {
-      // Navigate for courses
-      const slug = item.slug || item.title.toLowerCase().replace(/\s+/g, "-");
-      router.push(`/courses/${slug}`);
+      router.push(`/courses/${item.slug || item._id}`);
     }
   };
 
@@ -109,10 +102,10 @@ export const MarketplaceGrid: FC<MarketplaceGridProps> = ({
       // TODO: Submit to Convex to store lead/contact
       // await mutation to save email and name
       console.log("Capturing lead:", { email, name, productId: selectedProduct._id });
-      
+
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
       setHasSubmittedEmail(true);
     } catch (error) {
       console.error("Failed to capture email:", error);
@@ -124,9 +117,9 @@ export const MarketplaceGrid: FC<MarketplaceGridProps> = ({
 
   const handleDownload = (item: ContentItem) => {
     if (item.downloadUrl) {
-      window.open(item.downloadUrl, '_blank');
+      window.open(item.downloadUrl, "_blank");
     } else if (item.url) {
-      window.open(item.url, '_blank');
+      window.open(item.url, "_blank");
     }
     // Don't close modal immediately so user sees success message
     setTimeout(() => {
@@ -136,17 +129,17 @@ export const MarketplaceGrid: FC<MarketplaceGridProps> = ({
 
   if (content.length === 0) {
     return (
-      <div className="text-center py-20">
+      <div className="py-20 text-center">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-muted flex items-center justify-center">
-            <Package className="w-10 h-10 text-muted-foreground" />
+          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-muted">
+            <Package className="h-10 w-10 text-muted-foreground" />
           </div>
-          <h3 className="text-xl font-semibold mb-2 text-foreground">No content found</h3>
-          <p className="text-muted-foreground max-w-md mx-auto">{emptyMessage}</p>
+          <h3 className="mb-2 text-xl font-semibold text-foreground">No content found</h3>
+          <p className="mx-auto max-w-md text-muted-foreground">{emptyMessage}</p>
         </motion.div>
       </div>
     );
@@ -154,16 +147,16 @@ export const MarketplaceGrid: FC<MarketplaceGridProps> = ({
 
   return (
     <>
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
-      {content.map((item, index) => (
-          <ContentCard 
-            key={item._id} 
-            item={item} 
-            index={index} 
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-2">
+        {content.map((item, index) => (
+          <ContentCard
+            key={item._id}
+            item={item}
+            index={index}
             onClick={() => handleProductClick(item)}
           />
-      ))}
-    </div>
+        ))}
+      </div>
 
       {/* Product Details Modal */}
       <Dialog open={productModalOpen} onOpenChange={setProductModalOpen}>
@@ -173,18 +166,18 @@ export const MarketplaceGrid: FC<MarketplaceGridProps> = ({
               <DialogHeader>
                 <DialogTitle className="text-2xl">{selectedProduct.title}</DialogTitle>
                 <DialogDescription>
-                  {selectedProduct.contentType === "sample-pack" 
-                    ? "Sample Pack" 
-                    : selectedProduct.contentType === "ableton-rack" 
-                    ? "Ableton Rack" 
-                    : "Digital Product"}
+                  {selectedProduct.contentType === "sample-pack"
+                    ? "Sample Pack"
+                    : selectedProduct.contentType === "ableton-rack"
+                      ? "Ableton Rack"
+                      : "Digital Product"}
                 </DialogDescription>
               </DialogHeader>
-              
+
               <div className="space-y-6">
                 {/* Product Image */}
                 {(selectedProduct.imageUrl || selectedProduct.thumbnail) && (
-                  <div className="relative h-64 rounded-lg overflow-hidden">
+                  <div className="relative h-64 overflow-hidden rounded-lg">
                     <Image
                       src={selectedProduct.imageUrl || selectedProduct.thumbnail || ""}
                       alt={selectedProduct.title}
@@ -196,11 +189,13 @@ export const MarketplaceGrid: FC<MarketplaceGridProps> = ({
 
                 {/* Price Badge */}
                 <div className="flex items-center gap-4">
-                  <Badge className="text-lg px-4 py-2">
+                  <Badge className="px-4 py-2 text-lg">
                     {selectedProduct.price === 0 ? "FREE" : `$${selectedProduct.price}`}
                   </Badge>
                   <Badge variant="outline">
-                    {selectedProduct.contentType === "sample-pack" ? "Sample Pack" : "Digital Product"}
+                    {selectedProduct.contentType === "sample-pack"
+                      ? "Sample Pack"
+                      : "Digital Product"}
                   </Badge>
                 </div>
 
@@ -209,13 +204,13 @@ export const MarketplaceGrid: FC<MarketplaceGridProps> = ({
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
                     {selectedProduct.sampleCount && (
                       <div className="flex items-center gap-2">
-                        <Package className="w-4 h-4" />
+                        <Package className="h-4 w-4" />
                         <span>{selectedProduct.sampleCount} samples</span>
                       </div>
                     )}
                     {selectedProduct.downloadCount && (
                       <div className="flex items-center gap-2">
-                        <Download className="w-4 h-4" />
+                        <Download className="h-4 w-4" />
                         <span>{selectedProduct.downloadCount} downloads</span>
                       </div>
                     )}
@@ -224,7 +219,9 @@ export const MarketplaceGrid: FC<MarketplaceGridProps> = ({
 
                 {/* Description */}
                 <div>
-                  <h3 className="font-semibold mb-2">About this {selectedProduct.contentType === "sample-pack" ? "pack" : "product"}</h3>
+                  <h3 className="mb-2 font-semibold">
+                    About this {selectedProduct.contentType === "sample-pack" ? "pack" : "product"}
+                  </h3>
                   <p className="text-muted-foreground">
                     {selectedProduct.description || "No description available."}
                   </p>
@@ -232,12 +229,10 @@ export const MarketplaceGrid: FC<MarketplaceGridProps> = ({
 
                 {/* Creator Info */}
                 {selectedProduct.creatorName && (
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                    <Avatar className="w-10 h-10">
+                  <div className="flex items-center gap-3 rounded-lg bg-muted/50 p-3">
+                    <Avatar className="h-10 w-10">
                       <AvatarImage src={selectedProduct.creatorAvatar || ""} />
-                      <AvatarFallback>
-                        {selectedProduct.creatorName.charAt(0)}
-                      </AvatarFallback>
+                      <AvatarFallback>{selectedProduct.creatorName.charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div>
                       <p className="text-sm font-medium">Created by</p>
@@ -250,14 +245,14 @@ export const MarketplaceGrid: FC<MarketplaceGridProps> = ({
                 {selectedProduct.price === 0 && !hasSubmittedEmail ? (
                   /* Show opt-in form for free products */
                   <div className="space-y-4">
-                    <div className="bg-gradient-to-r from-primary/10 to-primary/5 p-4 rounded-lg border border-primary/20">
-                      <h3 className="font-semibold mb-2">🎁 Get Free Access</h3>
-                      <p className="text-sm text-muted-foreground mb-4">
+                    <div className="rounded-lg border border-primary/20 bg-gradient-to-r from-primary/10 to-primary/5 p-4">
+                      <h3 className="mb-2 font-semibold">🎁 Get Free Access</h3>
+                      <p className="mb-4 text-sm text-muted-foreground">
                         Enter your email to download this free resource instantly
                       </p>
                       <form onSubmit={handleEmailSubmit} className="space-y-3">
                         <div>
-                          <label htmlFor="name" className="text-sm font-medium block mb-1">
+                          <label htmlFor="name" className="mb-1 block text-sm font-medium">
                             Name (optional)
                           </label>
                           <input
@@ -266,11 +261,11 @@ export const MarketplaceGrid: FC<MarketplaceGridProps> = ({
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             placeholder="Your name"
-                            className="w-full px-4 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                            className="w-full rounded-lg border border-border bg-background px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
                           />
                         </div>
                         <div>
-                          <label htmlFor="email" className="text-sm font-medium block mb-1">
+                          <label htmlFor="email" className="mb-1 block text-sm font-medium">
                             Email <span className="text-red-500">*</span>
                           </label>
                           <input
@@ -280,10 +275,10 @@ export const MarketplaceGrid: FC<MarketplaceGridProps> = ({
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="you@example.com"
                             required
-                            className="w-full px-4 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                            className="w-full rounded-lg border border-border bg-background px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary"
                           />
                         </div>
-                        <Button 
+                        <Button
                           type="submit"
                           size="lg"
                           className="w-full"
@@ -292,7 +287,7 @@ export const MarketplaceGrid: FC<MarketplaceGridProps> = ({
                           {isSubmitting ? (
                             <>
                               <motion.div
-                                className="w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"
+                                className="mr-2 h-4 w-4 rounded-full border-2 border-white border-t-transparent"
                                 animate={{ rotate: 360 }}
                                 transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                               />
@@ -300,13 +295,13 @@ export const MarketplaceGrid: FC<MarketplaceGridProps> = ({
                             </>
                           ) : (
                             <>
-                              <Download className="w-4 h-4 mr-2" />
+                              <Download className="mr-2 h-4 w-4" />
                               Get Free Access
                             </>
                           )}
                         </Button>
                       </form>
-                      <p className="text-xs text-muted-foreground text-center mt-3">
+                      <p className="mt-3 text-center text-xs text-muted-foreground">
                         🔒 We respect your privacy. Unsubscribe anytime.
                       </p>
                     </div>
@@ -315,16 +310,16 @@ export const MarketplaceGrid: FC<MarketplaceGridProps> = ({
                   /* Show action buttons after email submission or for paid products */
                   <div className="space-y-4">
                     {hasSubmittedEmail && (
-                      <div className="bg-chart-1/10 border border-chart-1/20 rounded-lg p-4">
-                        <p className="text-chart-1 text-sm font-medium">
+                      <div className="rounded-lg border border-chart-1/20 bg-chart-1/10 p-4">
+                        <p className="text-sm font-medium text-chart-1">
                           ✓ Email confirmed! Click below to access your download.
                         </p>
                       </div>
                     )}
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      {(selectedProduct.downloadUrl || selectedProduct.url) ? (
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                      {selectedProduct.downloadUrl || selectedProduct.url ? (
                         <>
-                          <Button 
+                          <Button
                             size="lg"
                             className="flex-1"
                             onClick={() => {
@@ -336,47 +331,52 @@ export const MarketplaceGrid: FC<MarketplaceGridProps> = ({
                           >
                             {selectedProduct.downloadUrl ? (
                               <>
-                                <Download className="w-4 h-4 mr-2" />
+                                <Download className="mr-2 h-4 w-4" />
                                 {selectedProduct.buttonLabel || "Download Now"}
                               </>
                             ) : selectedProduct.url ? (
                               <>
-                                <ExternalLink className="w-4 h-4 mr-2" />
+                                <ExternalLink className="mr-2 h-4 w-4" />
                                 {selectedProduct.buttonLabel || "Visit Link"}
                               </>
                             ) : (
                               <>
-                                <ExternalLink className="w-4 h-4 mr-2" />
+                                <ExternalLink className="mr-2 h-4 w-4" />
                                 Access Product
                               </>
                             )}
                           </Button>
                           {selectedProduct.price > 0 && (
-                            <Button 
+                            <Button
                               variant="outline"
                               size="lg"
                               onClick={() => {
-                                alert(`To purchase "${selectedProduct.title}", please contact ${selectedProduct.creatorName || "the creator"} directly.`);
+                                alert(
+                                  `To purchase "${selectedProduct.title}", please contact ${selectedProduct.creatorName || "the creator"} directly.`
+                                );
                               }}
                             >
-                              <ShoppingCart className="w-4 h-4 mr-2" />
+                              <ShoppingCart className="mr-2 h-4 w-4" />
                               Purchase
                             </Button>
                           )}
                         </>
                       ) : (
                         <>
-                          <p className="text-sm text-muted-foreground mb-2">
+                          <p className="mb-2 text-sm text-muted-foreground">
                             ⚠️ Debug: No URL found for this product
                           </p>
-                          <Button 
+                          <Button
                             size="lg"
                             className="flex-1"
                             onClick={() => {
-                              const message = selectedProduct.price === 0 
-                                ? `I'm interested in the free resource "${selectedProduct.title}".`
-                                : `I'm interested in purchasing "${selectedProduct.title}" for $${selectedProduct.price}.`;
-                              alert(`${message}\n\nPlease contact ${selectedProduct.creatorName || "the creator"} for more information.`);
+                              const message =
+                                selectedProduct.price === 0
+                                  ? `I'm interested in the free resource "${selectedProduct.title}".`
+                                  : `I'm interested in purchasing "${selectedProduct.title}" for $${selectedProduct.price}.`;
+                              alert(
+                                `${message}\n\nPlease contact ${selectedProduct.creatorName || "the creator"} for more information.`
+                              );
                               setProductModalOpen(false);
                             }}
                           >
@@ -396,37 +396,44 @@ export const MarketplaceGrid: FC<MarketplaceGridProps> = ({
   );
 };
 
-const ContentCard: FC<{ item: ContentItem; index: number; onClick: () => void }> = ({ item, index, onClick }) => {
+const ContentCard: FC<{ item: ContentItem; index: number; onClick: () => void }> = ({
+  item,
+  index,
+  onClick,
+}) => {
   // Determine icon and color based on content type
-  const IconComponent = item.contentType === "course" 
-    ? BookOpen 
-    : item.contentType === "sample-pack"
-    ? Package
-    : item.contentType === "plugin"
-    ? Plug
-    : item.contentType === "ableton-rack"
-    ? Plug
-    : Package;
-    
-  const badgeColor = item.contentType === "course" 
-    ? "bg-chart-1/10 text-chart-1 dark:bg-chart-1/20 dark:text-chart-1" 
-    : item.contentType === "sample-pack"
-    ? "bg-chart-5/10 text-chart-5 dark:bg-chart-5/20 dark:text-chart-5"
-    : item.contentType === "plugin"
-    ? "bg-purple-500/10 text-purple-500 dark:bg-purple-500/20 dark:text-purple-400"
-    : item.contentType === "ableton-rack"
-    ? "bg-chart-2/10 text-chart-2 dark:bg-chart-2/20 dark:text-chart-2"
-    : "bg-chart-3/10 text-chart-3 dark:bg-chart-3/20 dark:text-chart-3";
+  const IconComponent =
+    item.contentType === "course"
+      ? BookOpen
+      : item.contentType === "sample-pack"
+        ? Package
+        : item.contentType === "plugin"
+          ? Plug
+          : item.contentType === "ableton-rack"
+            ? Plug
+            : Package;
 
-  const badgeLabel = item.contentType === "course"
-    ? "Course"
-    : item.contentType === "sample-pack"
-    ? "Sample Pack"
-    : item.contentType === "plugin"
-    ? "Plugin"
-    : item.contentType === "ableton-rack"
-    ? "Ableton Rack"
-    : "Product";
+  const badgeColor =
+    item.contentType === "course"
+      ? "bg-chart-1/10 text-chart-1 dark:bg-chart-1/20 dark:text-chart-1"
+      : item.contentType === "sample-pack"
+        ? "bg-chart-5/10 text-chart-5 dark:bg-chart-5/20 dark:text-chart-5"
+        : item.contentType === "plugin"
+          ? "bg-purple-500/10 text-purple-500 dark:bg-purple-500/20 dark:text-purple-400"
+          : item.contentType === "ableton-rack"
+            ? "bg-chart-2/10 text-chart-2 dark:bg-chart-2/20 dark:text-chart-2"
+            : "bg-chart-3/10 text-chart-3 dark:bg-chart-3/20 dark:text-chart-3";
+
+  const badgeLabel =
+    item.contentType === "course"
+      ? "Course"
+      : item.contentType === "sample-pack"
+        ? "Sample Pack"
+        : item.contentType === "plugin"
+          ? "Plugin"
+          : item.contentType === "ableton-rack"
+            ? "Ableton Rack"
+            : "Product";
 
   return (
     <motion.div
@@ -435,72 +442,72 @@ const ContentCard: FC<{ item: ContentItem; index: number; onClick: () => void }>
       transition={{ duration: 0.5, delay: index * 0.05 }}
     >
       <Card
-        className="group overflow-hidden border-border bg-card hover:shadow-2xl hover:shadow-black/10 transition-all duration-300 cursor-pointer hover:-translate-y-1"
+        className="group cursor-pointer overflow-hidden border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/10"
         onClick={onClick}
       >
         {/* Thumbnail */}
-        <div className="relative h-52 bg-gradient-to-br from-muted to-muted/80 overflow-hidden">
-          {(item.thumbnail || item.imageUrl) ? (
+        <div className="relative h-52 overflow-hidden bg-gradient-to-br from-muted to-muted/80">
+          {item.thumbnail || item.imageUrl ? (
             <Image
               src={item.thumbnail || item.imageUrl || ""}
               alt={item.title}
               fill
-              className="object-cover group-hover:scale-105 transition-transform duration-300"
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <IconComponent className="w-16 h-16 text-muted-foreground/30" />
+            <div className="flex h-full w-full items-center justify-center">
+              <IconComponent className="h-16 w-16 text-muted-foreground/30" />
             </div>
           )}
 
           {/* Overlays */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
 
           {/* Type Badge */}
-          <Badge className={`absolute top-3 left-3 ${badgeColor} font-medium shadow-lg`}>
-            <IconComponent className="w-3 h-3 mr-1" />
+          <Badge className={`absolute left-3 top-3 ${badgeColor} font-medium shadow-lg`}>
+            <IconComponent className="mr-1 h-3 w-3" />
             {badgeLabel}
           </Badge>
 
           {/* Price Badge */}
-          <Badge className="absolute top-3 right-3 bg-card dark:bg-card text-foreground font-bold shadow-lg border border-border">
+          <Badge className="absolute right-3 top-3 border border-border bg-card font-bold text-foreground shadow-lg dark:bg-card">
             {item.price === 0 ? "FREE" : `$${item.price.toFixed(2)}`}
           </Badge>
 
           {/* Rating (if available) */}
           {item.rating && (
-            <Badge className="absolute bottom-3 right-3 bg-chart-5/90 text-primary-foreground font-semibold">
-              <Star className="w-3 h-3 mr-1 fill-primary-foreground" />
+            <Badge className="absolute bottom-3 right-3 bg-chart-5/90 font-semibold text-primary-foreground">
+              <Star className="mr-1 h-3 w-3 fill-primary-foreground" />
               {item.rating.toFixed(1)}
             </Badge>
           )}
         </div>
 
         {/* Content */}
-        <CardContent className="p-5 space-y-3">
+        <CardContent className="space-y-3 p-5">
           {/* Title */}
-          <h3 className="font-semibold text-lg line-clamp-2 text-foreground group-hover:text-chart-1 transition-colors">
+          <h3 className="line-clamp-2 text-lg font-semibold text-foreground transition-colors group-hover:text-chart-1">
             {item.title}
           </h3>
 
           {/* Description */}
           {item.description && (
-            <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+            <p className="line-clamp-2 text-sm leading-relaxed text-muted-foreground">
               {stripHtml(item.description)}
             </p>
           )}
 
           {/* Footer: Creator + Stats */}
-          <div className="flex items-center justify-between pt-2 border-t border-border">
+          <div className="flex items-center justify-between border-t border-border pt-2">
             {/* Creator */}
             <div className="flex items-center gap-2">
-              <Avatar className="w-7 h-7 border border-border">
+              <Avatar className="h-7 w-7 border border-border">
                 <AvatarImage src={item.creatorAvatar} />
-                <AvatarFallback className="text-xs bg-gradient-to-r from-chart-1 to-chart-2 text-primary-foreground">
+                <AvatarFallback className="bg-gradient-to-r from-chart-1 to-chart-2 text-xs text-primary-foreground">
                   {item.creatorName?.charAt(0) || "C"}
                 </AvatarFallback>
               </Avatar>
-              <span className="text-sm text-muted-foreground truncate max-w-[100px]">
+              <span className="max-w-[100px] truncate text-sm text-muted-foreground">
                 {item.creatorName || "Creator"}
               </span>
             </div>
@@ -509,13 +516,13 @@ const ContentCard: FC<{ item: ContentItem; index: number; onClick: () => void }>
             <div className="flex items-center gap-1 text-sm text-muted-foreground">
               {item.contentType === "course" && item.enrollmentCount !== undefined && (
                 <>
-                  <Users className="w-4 h-4" />
+                  <Users className="h-4 w-4" />
                   <span>{item.enrollmentCount}</span>
                 </>
               )}
               {item.contentType === "product" && item.downloadCount !== undefined && (
                 <>
-                  <Download className="w-4 h-4" />
+                  <Download className="h-4 w-4" />
                   <span>{item.downloadCount}</span>
                 </>
               )}
@@ -523,13 +530,13 @@ const ContentCard: FC<{ item: ContentItem; index: number; onClick: () => void }>
                 <>
                   {item.sampleCount !== undefined && (
                     <>
-                      <Package className="w-4 h-4" />
+                      <Package className="h-4 w-4" />
                       <span>{item.sampleCount} samples</span>
                     </>
                   )}
                   {item.downloadCount !== undefined && item.sampleCount === undefined && (
                     <>
-                      <Download className="w-4 h-4" />
+                      <Download className="h-4 w-4" />
                       <span>{item.downloadCount}</span>
                     </>
                   )}
@@ -542,4 +549,3 @@ const ContentCard: FC<{ item: ContentItem; index: number; onClick: () => void }>
     </motion.div>
   );
 };
-

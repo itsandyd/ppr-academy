@@ -16,9 +16,14 @@ const abletonRackValidator = v.object({
   downloadUrl: v.optional(v.string()),
   storeId: v.string(),
   userId: v.string(),
-  
+
   // Ableton-specific metadata
-  productType: v.union(v.literal("effectChain"), v.literal("effectChain"), v.literal("abletonRack"), v.literal("abletonPreset")),
+  productType: v.union(
+    v.literal("effectChain"),
+    v.literal("effectChain"),
+    v.literal("abletonRack"),
+    v.literal("abletonPreset")
+  ),
   abletonVersion: v.string(),
   minAbletonVersion: v.optional(v.string()),
   rackType: v.union(
@@ -35,14 +40,16 @@ const abletonRackValidator = v.object({
   musicalKey: v.optional(v.string()),
   requiresMaxForLive: v.optional(v.boolean()),
   thirdPartyPlugins: v.optional(v.array(v.string())),
-  
+
   // Preview assets
   demoAudioUrl: v.optional(v.string()),
   chainImageUrl: v.optional(v.string()),
   macroScreenshotUrls: v.optional(v.array(v.string())),
-  
+
   // Metadata
-  complexity: v.optional(v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced"))),
+  complexity: v.optional(
+    v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced"))
+  ),
   tags: v.optional(v.array(v.string())),
   fileFormat: v.union(v.literal("adg"), v.literal("adv"), v.literal("alp")),
   fileSize: v.optional(v.number()),
@@ -59,7 +66,7 @@ export const createAbletonRack = mutation({
     downloadUrl: v.optional(v.string()),
     storeId: v.string(),
     userId: v.string(),
-    
+
     // Ableton-specific fields
     abletonVersion: v.string(),
     minAbletonVersion: v.optional(v.string()),
@@ -80,7 +87,9 @@ export const createAbletonRack = mutation({
     demoAudioUrl: v.optional(v.string()),
     chainImageUrl: v.optional(v.string()),
     macroScreenshotUrls: v.optional(v.array(v.string())),
-    complexity: v.optional(v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced"))),
+    complexity: v.optional(
+      v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced"))
+    ),
     tags: v.optional(v.array(v.string())),
     fileFormat: v.union(v.literal("adg"), v.literal("adv"), v.literal("alp")),
     fileSize: v.optional(v.number()),
@@ -108,16 +117,18 @@ export const updateAbletonRack = mutation({
     imageUrl: v.optional(v.string()),
     downloadUrl: v.optional(v.string()),
     isPublished: v.optional(v.boolean()),
-    
+
     // Ableton-specific fields
     abletonVersion: v.optional(v.string()),
     minAbletonVersion: v.optional(v.string()),
-    rackType: v.optional(v.union(
-      v.literal("audioEffect"),
-      v.literal("instrument"),
-      v.literal("midiEffect"),
-      v.literal("drumRack")
-    )),
+    rackType: v.optional(
+      v.union(
+        v.literal("audioEffect"),
+        v.literal("instrument"),
+        v.literal("midiEffect"),
+        v.literal("drumRack")
+      )
+    ),
     effectType: v.optional(v.array(v.string())),
     macroCount: v.optional(v.number()),
     cpuLoad: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
@@ -129,7 +140,9 @@ export const updateAbletonRack = mutation({
     demoAudioUrl: v.optional(v.string()),
     chainImageUrl: v.optional(v.string()),
     macroScreenshotUrls: v.optional(v.array(v.string())),
-    complexity: v.optional(v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced"))),
+    complexity: v.optional(
+      v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced"))
+    ),
     tags: v.optional(v.array(v.string())),
     fileFormat: v.optional(v.union(v.literal("adg"), v.literal("adv"), v.literal("alp"))),
     fileSize: v.optional(v.number()),
@@ -152,9 +165,9 @@ export const getAbletonRacksByStore = query({
       .query("digitalProducts")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .collect();
-    
-    return products.filter(p => 
-      p.productType === "abletonRack" || p.productType === "abletonPreset"
+
+    return products.filter(
+      (p) => p.productType === "abletonRack" || p.productType === "abletonPreset"
     );
   },
 });
@@ -162,24 +175,28 @@ export const getAbletonRacksByStore = query({
 // Get published Ableton Racks for marketplace
 export const getPublishedAbletonRacks = query({
   args: {
-    rackType: v.optional(v.union(
-      v.literal("audioEffect"),
-      v.literal("instrument"),
-      v.literal("midiEffect"),
-      v.literal("drumRack")
-    )),
+    rackType: v.optional(
+      v.union(
+        v.literal("audioEffect"),
+        v.literal("instrument"),
+        v.literal("midiEffect"),
+        v.literal("drumRack")
+      )
+    ),
     abletonVersion: v.optional(v.string()),
     genre: v.optional(v.string()),
     effectType: v.optional(v.string()),
     cpuLoad: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
-    complexity: v.optional(v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced"))),
+    complexity: v.optional(
+      v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced"))
+    ),
     searchQuery: v.optional(v.string()),
   },
   returns: v.array(v.any()),
   handler: async (ctx, args) => {
     let racks = await ctx.db
       .query("digitalProducts")
-      .filter((q) => 
+      .filter((q) =>
         q.and(
           q.or(
             q.eq(q.field("productType"), "abletonRack"),
@@ -192,47 +209,48 @@ export const getPublishedAbletonRacks = query({
 
     // Apply filters
     if (args.rackType) {
-      racks = racks.filter(r => r.rackType === args.rackType);
+      racks = racks.filter((r) => r.rackType === args.rackType);
     }
-    
+
     if (args.abletonVersion) {
-      racks = racks.filter(r => 
-        r.abletonVersion === args.abletonVersion || 
-        r.minAbletonVersion === args.abletonVersion
+      racks = racks.filter(
+        (r) =>
+          r.abletonVersion === args.abletonVersion || r.minAbletonVersion === args.abletonVersion
       );
     }
-    
+
     if (args.genre) {
-      racks = racks.filter(r => r.genre?.includes(args.genre!));
+      racks = racks.filter((r) => r.genre?.includes(args.genre!));
     }
-    
+
     if (args.effectType) {
-      racks = racks.filter(r => r.effectType?.includes(args.effectType!));
+      racks = racks.filter((r) => r.effectType?.includes(args.effectType!));
     }
-    
+
     if (args.cpuLoad) {
-      racks = racks.filter(r => r.cpuLoad === args.cpuLoad);
+      racks = racks.filter((r) => r.cpuLoad === args.cpuLoad);
     }
-    
+
     if (args.complexity) {
-      racks = racks.filter(r => r.complexity === args.complexity);
+      racks = racks.filter((r) => r.complexity === args.complexity);
     }
-    
+
     if (args.searchQuery) {
       const query = args.searchQuery.toLowerCase();
-      racks = racks.filter(r =>
-        r.title.toLowerCase().includes(query) ||
-        r.description?.toLowerCase().includes(query) ||
-        r.tags?.some((tag: string) => tag.toLowerCase().includes(query))
+      racks = racks.filter(
+        (r) =>
+          r.title.toLowerCase().includes(query) ||
+          r.description?.toLowerCase().includes(query) ||
+          r.tags?.some((tag: string) => tag.toLowerCase().includes(query))
       );
     }
 
     // Helper function to convert storage ID to URL
     const getImageUrl = async (imageUrl: string | undefined): Promise<string | undefined> => {
       if (!imageUrl) return undefined;
-      if (imageUrl.startsWith('http')) return imageUrl; // Already a URL
+      if (imageUrl.startsWith("http")) return imageUrl; // Already a URL
       try {
-        return await ctx.storage.getUrl(imageUrl as any) || imageUrl;
+        return (await ctx.storage.getUrl(imageUrl as any)) || imageUrl;
       } catch {
         return imageUrl;
       }
@@ -245,8 +263,8 @@ export const getPublishedAbletonRacks = query({
         let creatorAvatar: string | undefined = undefined;
 
         const stores = await ctx.db.query("stores").collect();
-        const store = stores.find(s => s._id === rack.storeId);
-        
+        const store = stores.find((s) => s._id === rack.storeId);
+
         if (store) {
           const user = await ctx.db
             .query("users")
@@ -266,13 +284,13 @@ export const getPublishedAbletonRacks = query({
         const demoAudioUrl = await getImageUrl(rack.demoAudioUrl);
         const chainImageUrl = await getImageUrl(rack.chainImageUrl);
         const convertedCreatorAvatar = await getImageUrl(creatorAvatar);
-        
+
         let macroScreenshotUrls = rack.macroScreenshotUrls;
         if (macroScreenshotUrls && macroScreenshotUrls.length > 0) {
           macroScreenshotUrls = await Promise.all(
             macroScreenshotUrls.map(async (url: string) => {
-              if (url && !url.startsWith('http')) {
-                return await ctx.storage.getUrl(url as any) || url;
+              if (url && !url.startsWith("http")) {
+                return (await ctx.storage.getUrl(url as any)) || url;
               }
               return url;
             })
@@ -298,24 +316,24 @@ export const getPublishedAbletonRacks = query({
 
 // Get single Ableton Rack by ID (public or owner)
 export const getAbletonRackById = query({
-  args: { 
+  args: {
     rackId: v.id("digitalProducts"),
     userId: v.optional(v.string()),
   },
   returns: v.union(v.any(), v.null()),
   handler: async (ctx, args) => {
     const rack = await ctx.db.get(args.rackId);
-    
+
     if (!rack) return null;
-    
+
     // Check if it's an Ableton rack
     if (rack.productType !== "abletonRack" && rack.productType !== "abletonPreset") {
       return null;
     }
-    
+
     // Allow owner to view unpublished racks
     const isOwner = args.userId && rack.userId === args.userId;
-    
+
     if (!rack.isPublished && !isOwner) {
       return null;
     }
@@ -325,8 +343,8 @@ export const getAbletonRackById = query({
     let creatorAvatar: string | undefined = undefined;
 
     const stores = await ctx.db.query("stores").collect();
-    const store = stores.find(s => s._id === rack.storeId);
-    
+    const store = stores.find((s) => s._id === rack.storeId);
+
     if (store) {
       const user = await ctx.db
         .query("users")
@@ -350,7 +368,7 @@ export const getAbletonRackById = query({
 
 // Delete Ableton Rack
 export const deleteAbletonRack = mutation({
-  args: { 
+  args: {
     rackId: v.id("digitalProducts"),
     userId: v.string(),
   },
@@ -360,16 +378,16 @@ export const deleteAbletonRack = mutation({
   }),
   handler: async (ctx, args) => {
     const rack = await ctx.db.get(args.rackId);
-    
+
     if (!rack) {
       return { success: false, message: "Rack not found" };
     }
-    
+
     // Verify ownership
     if (rack.userId !== args.userId) {
       return { success: false, message: "Unauthorized" };
     }
-    
+
     await ctx.db.delete(args.rackId);
     return { success: true, message: "Rack deleted successfully" };
   },
@@ -390,30 +408,28 @@ export const getAbletonRackStats = query({
       .query("digitalProducts")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .collect();
-    
-    const abletonRacks = racks.filter(r => 
-      r.productType === "abletonRack" || r.productType === "abletonPreset"
+
+    const abletonRacks = racks.filter(
+      (r) => r.productType === "abletonRack" || r.productType === "abletonPreset"
     );
-    
-    const publishedRacks = abletonRacks.filter(r => r.isPublished);
-    
+
+    const publishedRacks = abletonRacks.filter((r) => r.isPublished);
+
     // Get purchases
     const purchases = await ctx.db.query("purchases").collect();
-    const rackPurchases = purchases.filter(p => 
-      abletonRacks.some(r => r._id === p.productId)
-    );
-    
+    const rackPurchases = purchases.filter((p) => abletonRacks.some((r) => r._id === p.productId));
+
     // Calculate stats
     const totalDownloads = rackPurchases.length;
     const totalRevenue = rackPurchases.reduce((sum, p) => sum + (p.amount || 0), 0);
-    
+
     // Group by rack type
     const racksByType = abletonRacks.reduce((acc: any, rack) => {
       const type = rack.rackType || "other";
       acc[type] = (acc[type] || 0) + 1;
       return acc;
     }, {});
-    
+
     return {
       totalRacks: abletonRacks.length,
       publishedRacks: publishedRacks.length,
@@ -440,22 +456,27 @@ export const getAbletonRackBySlug = query({
       userId: v.string(),
       isPublished: v.optional(v.boolean()),
       // Ableton-specific fields
-      productType: v.optional(v.union(
-        v.literal("digital"),
-        v.literal("urlMedia"),
-        v.literal("coaching"),
-        v.literal("effectChain"), v.literal("abletonRack"),
-        v.literal("abletonPreset"),
-        v.literal("playlistCuration")
-      )),
+      productType: v.optional(
+        v.union(
+          v.literal("digital"),
+          v.literal("urlMedia"),
+          v.literal("coaching"),
+          v.literal("effectChain"),
+          v.literal("abletonRack"),
+          v.literal("abletonPreset"),
+          v.literal("playlistCuration")
+        )
+      ),
       abletonVersion: v.optional(v.string()),
       minAbletonVersion: v.optional(v.string()),
-      rackType: v.optional(v.union(
-        v.literal("audioEffect"),
-        v.literal("instrument"),
-        v.literal("midiEffect"),
-        v.literal("drumRack")
-      )),
+      rackType: v.optional(
+        v.union(
+          v.literal("audioEffect"),
+          v.literal("instrument"),
+          v.literal("midiEffect"),
+          v.literal("drumRack")
+        )
+      ),
       effectType: v.optional(v.array(v.string())),
       macroCount: v.optional(v.number()),
       cpuLoad: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
@@ -467,7 +488,9 @@ export const getAbletonRackBySlug = query({
       demoAudioUrl: v.optional(v.string()),
       chainImageUrl: v.optional(v.string()),
       macroScreenshotUrls: v.optional(v.array(v.string())),
-      complexity: v.optional(v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced"))),
+      complexity: v.optional(
+        v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced"))
+      ),
       tags: v.optional(v.array(v.string())),
       fileFormat: v.optional(v.union(v.literal("adg"), v.literal("adv"), v.literal("alp"))),
       fileSize: v.optional(v.number()),
@@ -482,34 +505,49 @@ export const getAbletonRackBySlug = query({
     v.null()
   ),
   handler: async (ctx, args) => {
-    // Find rack by matching slug (title converted to slug format)
     const racks = await ctx.db
       .query("digitalProducts")
-      .filter((q) => 
+      .filter((q) =>
         q.or(
           q.eq(q.field("productType"), "abletonRack"),
           q.eq(q.field("productType"), "abletonPreset")
         )
       )
       .collect();
-    
-    // Match slug (convert title to slug and compare)
-    const rack = racks.find(r => {
-      const titleSlug = r.title.toLowerCase().replace(/\s+/g, "-");
-      return titleSlug === args.slug;
-    });
-    
+
+    let rack = racks.find((r) => (r as any).slug === args.slug);
+
+    if (!rack) {
+      rack = racks.find((r) => {
+        const titleSlug = r.title.toLowerCase().replace(/\s+/g, "-");
+        return titleSlug === args.slug;
+      });
+    }
+
+    if (!rack) {
+      try {
+        const rackById = await ctx.db.get(args.slug as Id<"digitalProducts">);
+        if (
+          rackById &&
+          ((rackById as any).productType === "abletonRack" ||
+            (rackById as any).productType === "abletonPreset")
+        ) {
+          rack = rackById as (typeof racks)[0];
+        }
+      } catch {}
+    }
+
     if (!rack) {
       return null;
     }
-    
+
     // Get creator info
     let creatorName = "Creator";
     let creatorAvatar: string | undefined = undefined;
-    
+
     const stores = await ctx.db.query("stores").collect();
-    const store = stores.find(s => s._id === rack.storeId);
-    
+    const store = stores.find((s) => s._id === rack.storeId);
+
     if (store) {
       const user = await ctx.db
         .query("users")
@@ -520,7 +558,7 @@ export const getAbletonRackBySlug = query({
         creatorAvatar = user.imageUrl;
       }
     }
-    
+
     return {
       ...rack,
       creatorName,
@@ -528,4 +566,3 @@ export const getAbletonRackBySlug = query({
     };
   },
 });
-

@@ -8,28 +8,27 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import { 
-  Music, 
-  BookOpen, 
-  Package, 
-  Users, 
-  CheckCircle, 
+  Music,
+  BookOpen,
+  Package,
+  Users,
+  CheckCircle,
   Zap,
   Play,
   Search,
   Store,
   Upload,
-  DollarSign,
   BarChart3,
   MessageCircle,
   ArrowRight,
-  Menu,
+  Headphones,
+  ListMusic,
+  Video,
+  Mic2,
+  FileText,
+  Music2,
+  Sliders,
+  DollarSign,
 } from "lucide-react";
 import Link from "next/link";
 import { SignUpButton, useAuth } from "@clerk/nextjs";
@@ -37,14 +36,14 @@ import { Footer } from "./_components/footer";
 import { HomepageStructuredData } from "./_components/HomepageStructuredData";
 import { motion } from "framer-motion";
 import { MarketplaceGrid } from "./_components/marketplace-grid";
+import { MarketplaceNavbar } from "@/components/marketplace-navbar";
 
 // Force dynamic rendering to avoid build-time Clerk issues
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export default function SectionedMarketplace() {
   const { isSignedIn } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Fetch data
   const courses = useQuery(api.courses.getAllPublishedCourses) || [];
@@ -54,24 +53,24 @@ export default function SectionedMarketplace() {
   const featuredCreators = useQuery(api.marketplace?.getAllCreators, { limit: 6 }) || [];
 
   // Transform data to include contentType
-  const coursesWithType = useMemo(() => 
-    courses.map((c: any) => ({ ...c, contentType: 'course' as const })),
+  const coursesWithType = useMemo(
+    () => courses.map((c: any) => ({ ...c, contentType: "course" as const })),
     [courses]
   );
 
-  const productsWithType = useMemo(() => 
-    products.map((p: any) => ({ ...p, contentType: 'product' as const })),
+  const productsWithType = useMemo(
+    () => products.map((p: any) => ({ ...p, contentType: "product" as const })),
     [products]
   );
 
-  const samplePacksWithType = useMemo(() => 
-    samplePacks.map((sp: any) => ({ ...sp, contentType: 'sample-pack' as const })),
+  const samplePacksWithType = useMemo(
+    () => samplePacks.map((sp: any) => ({ ...sp, contentType: "sample-pack" as const })),
     [samplePacks]
   );
 
   // Combine all content
-  const allContent = useMemo(() => 
-    [...coursesWithType, ...productsWithType, ...samplePacksWithType],
+  const allContent = useMemo(
+    () => [...coursesWithType, ...productsWithType, ...samplePacksWithType],
     [coursesWithType, productsWithType, samplePacksWithType]
   );
 
@@ -79,10 +78,11 @@ export default function SectionedMarketplace() {
   const filteredContent = useMemo(() => {
     if (!searchTerm) return allContent;
     const searchLower = searchTerm.toLowerCase();
-    return allContent.filter((item: any) =>
-      item.title?.toLowerCase().includes(searchLower) ||
-      item.description?.toLowerCase().includes(searchLower) ||
-      item.creatorName?.toLowerCase().includes(searchLower)
+    return allContent.filter(
+      (item: any) =>
+        item.title?.toLowerCase().includes(searchLower) ||
+        item.description?.toLowerCase().includes(searchLower) ||
+        item.creatorName?.toLowerCase().includes(searchLower)
     );
   }, [allContent, searchTerm]);
 
@@ -105,7 +105,8 @@ export default function SectionedMarketplace() {
     {
       icon: BookOpen,
       title: "Learn",
-      description: "Enroll in expert-led courses and access premium content to level up your skills.",
+      description:
+        "Enroll in expert-led courses and access premium content to level up your skills.",
     },
     {
       icon: Play,
@@ -166,297 +167,294 @@ export default function SectionedMarketplace() {
   ];
 
   return (
-    <div className="min-h-screen bg-background text-foreground overflow-hidden">
+    <div className="min-h-screen overflow-hidden bg-background text-foreground">
       {/* Structured Data for SEO */}
       <HomepageStructuredData />
-      
-      {/* Navigation Bar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            {/* Logo */}
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-chart-1 to-chart-2 rounded-lg flex items-center justify-center">
-                <Music className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <span className="font-bold text-lg">PPR Academy</span>
-            </Link>
 
-            {/* Navigation Links */}
-            <div className="hidden md:flex items-center gap-6">
-              <Link href="/marketplace" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-                Marketplace
-              </Link>
-              <Link href="/marketplace/samples" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-                Samples
-              </Link>
-              <Link href="/marketplace/creators" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-                Creators
-              </Link>
-            </div>
+      <MarketplaceNavbar />
 
-            {/* Desktop Auth Buttons */}
-            <div className="hidden md:flex items-center gap-3">
-              {isSignedIn ? (
-                <>
-                  <Link href="/library">
-                    <Button variant="ghost" size="sm">
-                      <BookOpen className="w-4 h-4 mr-2" />
-                      Library
-                    </Button>
-                  </Link>
-                  <Link href="/home">
-                    <Button size="sm" className="bg-gradient-to-r from-chart-1 to-chart-2">
-                      Dashboard
-                    </Button>
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <Link href="/sign-in">
-                    <Button variant="ghost" size="sm">
-                      Sign In
-                    </Button>
-                  </Link>
-                  <SignUpButton mode="modal">
-                    <Button size="sm" className="bg-gradient-to-r from-chart-1 to-chart-2">
-                      Get Started
-                    </Button>
-                  </SignUpButton>
-                </>
-              )}
-            </div>
+      {/* Fixed background elements - Enhanced with dramatic orbs */}
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+        {/* Primary large orb - top right */}
+        <motion.div
+          className="absolute -right-20 -top-20 h-[600px] w-[600px] rounded-full bg-gradient-to-br from-chart-1/30 to-chart-2/20 blur-[100px] filter"
+          animate={{
+            scale: [1, 1.1, 1],
+            x: [0, 30, 0],
+            y: [0, -20, 0],
+          }}
+          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+        />
 
-            {/* Mobile Menu */}
-            <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-              <SheetTrigger asChild className="md:hidden">
-                <Button variant="ghost" size="icon">
-                  <Menu className="w-5 h-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="bg-white dark:bg-black">
-                <SheetHeader>
-                  <SheetTitle className="flex items-center gap-2">
-                    <Music className="w-5 h-5 text-chart-1" />
-                    Menu
-                  </SheetTitle>
-                </SheetHeader>
-                <div className="flex flex-col gap-4 mt-8">
-                  {/* Navigation Links */}
-                  <Link href="/marketplace" onClick={() => setMobileMenuOpen(false)}>
-                    <Button variant="ghost" className="w-full justify-start">
-                      <Search className="w-4 h-4 mr-3" />
-                      Marketplace
-                    </Button>
-                  </Link>
-                  <Link href="/marketplace/samples" onClick={() => setMobileMenuOpen(false)}>
-                    <Button variant="ghost" className="w-full justify-start">
-                      <Music className="w-4 h-4 mr-3" />
-                      Samples
-                    </Button>
-                  </Link>
-                  <Link href="/marketplace/creators" onClick={() => setMobileMenuOpen(false)}>
-                    <Button variant="ghost" className="w-full justify-start">
-                      <Users className="w-4 h-4 mr-3" />
-                      Creators
-                    </Button>
-                  </Link>
-                  
-                  <div className="border-t border-border my-4"></div>
-                  
-                  {/* Auth Actions */}
-                  {isSignedIn ? (
-                    <>
-                      <Link href="/library" onClick={() => setMobileMenuOpen(false)}>
-                        <Button variant="ghost" className="w-full justify-start">
-                          <BookOpen className="w-4 h-4 mr-3" />
-                          My Library
-                        </Button>
-                      </Link>
-                      <Link href="/home" onClick={() => setMobileMenuOpen(false)}>
-                        <Button className="w-full bg-gradient-to-r from-chart-1 to-chart-2">
-                          <Store className="w-4 h-4 mr-2" />
-                          Dashboard
-                        </Button>
-                      </Link>
-                    </>
-                  ) : (
-                    <>
-                      <Link href="/sign-in" onClick={() => setMobileMenuOpen(false)}>
-                        <Button variant="outline" className="w-full">
-                          Sign In
-                        </Button>
-                      </Link>
-                      <SignUpButton mode="modal">
-                        <Button className="w-full bg-gradient-to-r from-chart-1 to-chart-2">
-                          Get Started Free
-                        </Button>
-                      </SignUpButton>
-                    </>
-                  )}
-                </div>
-              </SheetContent>
-            </Sheet>
-          </div>
-        </div>
-      </nav>
+        {/* Secondary orb - bottom left */}
+        <motion.div
+          className="absolute -bottom-32 -left-32 h-[500px] w-[500px] rounded-full bg-gradient-to-tr from-chart-4/25 to-chart-3/15 blur-[80px] filter"
+          animate={{
+            scale: [1, 1.15, 1],
+            x: [0, -20, 0],
+            y: [0, 30, 0],
+          }}
+          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+        />
 
-      {/* Fixed background elements */}
-      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-        {/* Animated gradient orbs */}
-        <div className="absolute top-1/4 right-1/4 w-96 h-96 rounded-full filter blur-3xl animate-float bg-chart-1/10"></div>
-        <div className="absolute bottom-1/3 left-1/3 w-96 h-96 rounded-full filter blur-3xl animate-float-slow bg-chart-4/10" style={{ animationDelay: '2s' }}></div>
-        <div className="absolute top-2/3 right-1/3 w-64 h-64 rounded-full filter blur-3xl animate-float-slow bg-chart-3/10" style={{ animationDelay: '4s' }}></div>
-        
+        {/* Accent orb - center */}
+        <motion.div
+          className="absolute left-1/2 top-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-chart-2/10 blur-[120px] filter"
+          animate={{
+            scale: [1, 1.2, 1],
+            opacity: [0.3, 0.5, 0.3],
+          }}
+          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+        />
+
+        {/* Small floating orbs */}
+        <motion.div
+          className="absolute right-1/4 top-1/3 h-32 w-32 rounded-full bg-chart-1/20 blur-2xl filter"
+          animate={{ y: [0, -40, 0], x: [0, 20, 0] }}
+          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div
+          className="absolute bottom-1/4 left-1/4 h-24 w-24 rounded-full bg-chart-3/20 blur-2xl filter"
+          animate={{ y: [0, 30, 0], x: [0, -15, 0] }}
+          transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 3 }}
+        />
+
         {/* Grid pattern overlay */}
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(148,163,184,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.03)_1px,transparent_1px)] dark:bg-[linear-gradient(rgba(148,163,184,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.05)_1px,transparent_1px)] bg-[size:50px_50px]"></div>
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(148,163,184,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.03)_1px,transparent_1px)] bg-[size:50px_50px] dark:bg-[linear-gradient(rgba(148,163,184,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.05)_1px,transparent_1px)]"></div>
+
+        {/* Noise texture for depth */}
+        <div className="noise-overlay absolute inset-0"></div>
       </div>
 
       {/* Hero Section */}
-      <section className="relative pt-32 pb-24 px-4 sm:px-6 lg:px-8 z-10">
-        <div className="max-w-7xl mx-auto relative">
+      <section className="relative z-10 overflow-hidden px-4 pb-24 pt-32 sm:px-6 lg:px-8">
+        <div className="relative mx-auto max-w-7xl">
           <div className="lg:grid lg:grid-cols-12 lg:gap-8">
-            <div className="sm:text-center md:max-w-2xl md:mx-auto lg:col-span-6 lg:text-left">
-              <motion.div 
-                className="inline-flex items-center px-3 py-1.5 rounded-full bg-chart-1/10 text-chart-1 text-sm font-medium mb-6 backdrop-blur-sm border border-chart-1/20"
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
+            <div className="sm:text-center md:mx-auto md:max-w-2xl lg:col-span-6 lg:text-left">
+              <motion.div
+                className="glass border-gradient animate-border-glow mb-8 inline-flex items-center rounded-full px-4 py-2 text-sm font-medium text-chart-1"
+                initial={{ opacity: 0, y: -20, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.6, type: "spring", stiffness: 100 }}
               >
-                <Music className="h-4 w-4 mr-2" />
+                <motion.div
+                  animate={{ rotate: [0, 360] }}
+                  transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                >
+                  <Music className="mr-2 h-4 w-4" />
+                </motion.div>
                 Where Music Creators & Students Connect
               </motion.div>
-              
-              <motion.h1 
-                initial={{ opacity: 0, y: 20 }}
+
+              <motion.h1
+                initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.1 }}
-                className="tracking-tight font-display"
+                transition={{ duration: 0.8, delay: 0.1, type: "spring", stiffness: 80 }}
+                className="font-display tracking-tight"
               >
-                <span className="block text-5xl font-bold sm:text-6xl drop-shadow-sm">
-                  <span className="relative mt-1 block">
-                    <span className="text-transparent relative bg-clip-text bg-gradient-to-r from-chart-1 to-chart-4">
-                      Build and learn in one place
-                    </span>
-                  </span>
+                <span className="block text-5xl font-extrabold sm:text-6xl lg:text-7xl">
+                  <motion.span
+                    className="mb-2 block text-foreground"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.6, delay: 0.2 }}
+                  >
+                    Build and learn
+                  </motion.span>
+                  <motion.span
+                    className="gradient-text-animated relative block"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.6, delay: 0.4 }}
+                  >
+                    in one place
+                    <motion.span
+                      className="absolute -bottom-2 left-0 h-1 rounded-full bg-gradient-to-r from-chart-1 via-chart-2 to-chart-4"
+                      initial={{ width: 0 }}
+                      animate={{ width: "100%" }}
+                      transition={{ duration: 1, delay: 0.8, ease: "easeOut" }}
+                    />
+                  </motion.span>
                 </span>
               </motion.h1>
-              
-              <motion.p 
-                className="mt-6 text-xl text-muted-foreground leading-relaxed"
+
+              <motion.p
+                className="mt-8 max-w-lg text-xl leading-relaxed text-muted-foreground"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.3 }}
+                transition={{ duration: 0.6, delay: 0.5 }}
               >
-                PausePlayRepeat Academy connects music producers who want to grow with creators who teach, share, and sell what they've learned.
+                PausePlayRepeat connects music producers who want to grow with creators who teach,
+                share, and sell what they've learned.
               </motion.p>
-              
-              <div className="mt-10 sm:max-w-lg sm:mx-auto sm:text-center lg:text-left lg:mx-0">
-                <motion.div 
-                  className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+
+              <div className="mt-10 sm:mx-auto sm:max-w-lg sm:text-center lg:mx-0 lg:text-left">
+                <motion.div
+                  className="grid grid-cols-1 gap-4 sm:grid-cols-2"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.4 }}
                 >
                   {isSignedIn ? (
                     <>
-                      <Link href="/library">
-                        <Button className="w-full py-6 text-lg shadow-md shadow-chart-1/20 hover:shadow-lg hover:scale-105 hover:-translate-y-1 transition-all duration-300 bg-gradient-to-r from-chart-1 to-chart-1/80 text-primary-foreground border-2 border-chart-1/40">
-                          <BookOpen className="mr-2 h-5 w-5" />
-                          My Library
-                        </Button>
+                      <Link href="/dashboard?mode=learn">
+                        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                          <Button className="group relative h-12 w-full rounded-xl bg-gradient-to-r from-chart-1 to-chart-2 px-6 text-sm font-semibold text-primary-foreground shadow-lg shadow-chart-1/25 transition-shadow hover:shadow-xl hover:shadow-chart-1/30">
+                            <BookOpen className="mr-2 h-4 w-4" />
+                            My Learning
+                          </Button>
+                        </motion.div>
                       </Link>
-                      <Link href="/home">
-                        <Button variant="outline" className="w-full py-6 text-lg hover:scale-105 hover:-translate-y-1 transition-all duration-300 border-2 border-chart-1/40 bg-background/80 hover:bg-background/90 hover:shadow-lg">
-                          <Store className="mr-2 h-5 w-5" />
-                          Creator Dashboard
-                        </Button>
+                      <Link href="/dashboard?mode=create">
+                        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                          <Button
+                            variant="outline"
+                            className="group h-12 w-full rounded-xl border-2 border-border bg-background/80 px-6 text-sm font-semibold backdrop-blur-sm transition-all hover:border-chart-1/50 hover:bg-background"
+                          >
+                            <Store className="mr-2 h-4 w-4" />
+                            Creator Dashboard
+                          </Button>
+                        </motion.div>
                       </Link>
                     </>
                   ) : (
                     <>
-                        <Link href="/marketplace">
-                          <Button className="w-full py-6 text-base shadow-md shadow-chart-1/20 hover:shadow-lg hover:scale-105 hover:-translate-y-1 transition-all duration-300 bg-gradient-to-r from-chart-1 to-chart-1/80 text-primary-foreground border-2 border-chart-1/40">
-                          Explore Courses and Tools
+                      <Link href="/marketplace">
+                        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                          <Button className="group relative h-12 w-full justify-center gap-2 rounded-xl bg-gradient-to-r from-chart-1 to-chart-2 px-5 text-sm font-semibold text-primary-foreground shadow-lg shadow-chart-1/25 transition-shadow hover:shadow-xl hover:shadow-chart-1/30">
+                            <span>Explore Marketplace</span>
+                            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                           </Button>
-                        </Link>
-                        <Link href="/sign-up?intent=creator">
-                          <Button variant="outline" className="w-full py-6 text-base hover:scale-105 hover:-translate-y-1 transition-all duration-300 border-2 border-chart-1/40 bg-background/80 hover:bg-background/90 hover:shadow-lg">
-                          Start Free as a Creator
+                        </motion.div>
+                      </Link>
+                      <Link href="/sign-up?intent=creator">
+                        <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                          <Button
+                            variant="outline"
+                            className="group h-12 w-full justify-center gap-2 rounded-xl border-2 border-border bg-background/80 px-5 text-sm font-semibold backdrop-blur-sm transition-all hover:border-chart-1/50 hover:bg-background"
+                          >
+                            <span>Start as Creator</span>
+                            <Zap className="h-4 w-4 transition-colors group-hover:text-chart-1" />
                           </Button>
-                        </Link>
+                        </motion.div>
+                      </Link>
                     </>
                   )}
                 </motion.div>
-                
-                <motion.div 
-                  className="mt-8 flex items-center justify-center sm:justify-start"
+
+                <motion.div
+                  className="mt-6 flex items-center gap-4"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.5, delay: 0.6 }}
                 >
-                  <div className="flex -space-x-2">
-                    {[...Array(4)].map((_, i) => (
-                      <div 
-                        key={i} 
-                        className={`w-10 h-10 rounded-full flex items-center justify-center border-2 border-background text-xs text-primary-foreground font-medium shadow-md ${
-                          i % 2 === 0 
-                          ? 'bg-gradient-to-br from-chart-1 to-chart-2' 
-                          : 'bg-gradient-to-br from-chart-3 to-chart-4'
-                        }`}
-                      >
-                        {String.fromCharCode(65 + i)}
-                      </div>
-                    ))}
+                  <div className="flex items-center gap-2 rounded-full bg-green-500/10 px-3 py-1.5">
+                    <div className="relative">
+                      <div className="h-2 w-2 rounded-full bg-green-500" />
+                      <div className="absolute inset-0 h-2 w-2 animate-ping rounded-full bg-green-500 opacity-75" />
+                    </div>
+                    <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                      Live community
+                    </span>
                   </div>
-                  <div className="ml-4">
-                    <span className="text-sm font-medium">Join our growing community</span>
-                    <p className="text-xs text-muted-foreground">{stats.totalCreators}+ creators • {stats.totalStudents || '2,000'}+ students</p>
-                  </div>
+                  <span className="text-sm text-muted-foreground">
+                    {stats.totalCreators}+ creators • {stats.totalStudents || "2,000"}+ students
+                  </span>
                 </motion.div>
               </div>
             </div>
-            
+
             {/* Right Column - Visual */}
-            <motion.div 
-              className="mt-12 relative sm:max-w-lg sm:mx-auto lg:mt-0 lg:max-w-none lg:mx-0 lg:col-span-6 lg:flex lg:items-center"
+            <motion.div
+              className="relative mt-12 sm:mx-auto sm:max-w-lg lg:col-span-6 lg:mx-0 lg:mt-0 lg:flex lg:max-w-none lg:items-center"
               initial={{ opacity: 0, x: 50 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.7, delay: 0.3 }}
+              transition={{ duration: 0.8, delay: 0.3 }}
             >
-              <div className="relative mx-auto w-full rounded-2xl shadow-2xl lg:max-w-xl overflow-hidden backdrop-blur-md border border-border bg-gradient-to-br from-chart-1/10 to-chart-4/10">
-                <div className="aspect-video bg-gradient-to-br from-chart-1/20 to-chart-4/20 flex items-center justify-center p-12 relative overflow-hidden">
-                  {/* Overlay Text */}
-                  <div className="relative z-10 text-center space-y-4">
-                    <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-chart-1 to-chart-2 rounded-2xl shadow-xl mb-4">
-                      <Music className="w-10 h-10 text-primary-foreground" />
-                    </div>
-                    <h3 className="text-2xl font-bold text-foreground">
-                      WHERE MUSIC CREATORS &
-                      <span className="block">STUDENTS CONNECT</span>
-                    </h3>
-                    <div className="flex items-center justify-center gap-6 pt-4">
-                      <div className="text-center">
-                        <div className="text-3xl font-bold bg-gradient-to-r from-chart-1 to-chart-2 bg-clip-text text-transparent">{stats.totalCourses}+</div>
-                        <div className="text-xs text-muted-foreground">Courses</div>
-                      </div>
-                      <div className="w-px h-12 bg-border"></div>
-                      <div className="text-center">
-                        <div className="text-3xl font-bold bg-gradient-to-r from-chart-3 to-chart-4 bg-clip-text text-transparent">{stats.totalProducts}+</div>
-                        <div className="text-xs text-muted-foreground">Products</div>
-                      </div>
-                      <div className="w-px h-12 bg-border"></div>
-                      <div className="text-center">
-                        <div className="text-3xl font-bold bg-gradient-to-r from-chart-4 to-chart-5 bg-clip-text text-transparent">{stats.totalCreators}+</div>
-                        <div className="text-xs text-muted-foreground">Creators</div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Background Pattern */}
-                  <div className="absolute inset-0 opacity-5">
-                    <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiMwMDAiIGZpbGwtb3BhY2l0eT0iMSI+PHBhdGggZD0iTTM2IDM0di00aC0ydjRoLTR2Mmg0djRoMnYtNGg0di0yaC00em0wLTMwVjBoLTJ2NGgtNHYyaDR2NGgyVjZoNFY0aC00ek02IDM0di00SDR2NEgwdjJoNHY0aDJ2LTRoNHYtMkg2ek02IDRWMEg0djRIMHYyaDR2NGgyVjZoNFY0SDZ6Ii8+PC9nPjwvZz48L3N2Zz4=')]"></div>
-                  </div>
+              <div className="relative mx-auto w-full lg:max-w-xl">
+                <div className="absolute -inset-8 rounded-3xl bg-gradient-to-r from-chart-1/30 via-chart-2/20 to-chart-4/30 blur-3xl" />
+
+                <div className="relative grid grid-cols-3 gap-3">
+                  {[
+                    {
+                      icon: Video,
+                      label: "Courses",
+                      gradient: "from-chart-1 to-chart-2",
+                      href: "/marketplace/courses",
+                    },
+                    {
+                      icon: Music,
+                      label: "Sample Packs",
+                      gradient: "from-chart-2 to-chart-3",
+                      href: "/marketplace/samples",
+                    },
+                    {
+                      icon: Sliders,
+                      label: "Presets",
+                      gradient: "from-chart-3 to-chart-4",
+                      href: "/marketplace/ableton-racks",
+                    },
+                    {
+                      icon: Zap,
+                      label: "Effect Chains",
+                      gradient: "from-chart-4 to-chart-5",
+                      href: "/marketplace/ableton-racks",
+                    },
+                    {
+                      icon: Music2,
+                      label: "Beat Leases",
+                      gradient: "from-chart-5 to-chart-1",
+                      href: "/marketplace/beats",
+                    },
+                    {
+                      icon: FileText,
+                      label: "PDFs & Guides",
+                      gradient: "from-chart-1 to-chart-3",
+                      href: "/marketplace/guides",
+                    },
+                    {
+                      icon: Mic2,
+                      label: "Coaching",
+                      gradient: "from-chart-2 to-chart-4",
+                      href: "/marketplace/coaching",
+                    },
+                    {
+                      icon: Headphones,
+                      label: "Mix & Master",
+                      gradient: "from-chart-3 to-chart-5",
+                      href: "/marketplace/coaching",
+                    },
+                    {
+                      icon: ListMusic,
+                      label: "Playlisting",
+                      gradient: "from-chart-4 to-chart-1",
+                      href: "/marketplace",
+                    },
+                  ].map((item, i) => (
+                    <Link key={item.label} href={item.href}>
+                      <motion.div
+                        className="cursor-pointer overflow-hidden rounded-xl border border-border/50 bg-card/80 p-4 backdrop-blur-sm transition-colors hover:border-chart-1/50"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3 + i * 0.05 }}
+                        whileHover={{ scale: 1.05, y: -2 }}
+                      >
+                        <motion.div
+                          className={`mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br ${item.gradient}`}
+                          animate={{ y: [0, -3, 0] }}
+                          transition={{
+                            duration: 2 + (i % 3) * 0.5,
+                            repeat: Infinity,
+                            ease: "easeInOut",
+                            delay: i * 0.2,
+                          }}
+                        >
+                          <item.icon className="h-5 w-5 text-primary-foreground" />
+                        </motion.div>
+                        <p className="text-sm font-medium">{item.label}</p>
+                      </motion.div>
+                    </Link>
+                  ))}
                 </div>
               </div>
             </motion.div>
@@ -466,21 +464,25 @@ export default function SectionedMarketplace() {
 
       {/* Search Section */}
       {isSearching && (
-        <section className="relative py-12 z-10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-foreground mb-2">
-                  Search Results for "{searchTerm}"
-                </h2>
-                <p className="text-muted-foreground">
+        <section className="relative z-10 py-12">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div className="mb-8 text-center">
+              <h2 className="mb-2 text-2xl font-bold text-foreground">
+                Search Results for "{searchTerm}"
+              </h2>
+              <p className="text-muted-foreground">
                 Found {filteredContent.length} {filteredContent.length === 1 ? "result" : "results"}
               </p>
             </div>
             <MarketplaceGrid content={filteredContent.slice(0, 12)} />
             {filteredContent.length === 0 && (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground mb-4">No results found. Try different keywords.</p>
-                <Button onClick={() => setSearchTerm("")} variant="outline">Clear Search</Button>
+              <div className="py-12 text-center">
+                <p className="mb-4 text-muted-foreground">
+                  No results found. Try different keywords.
+                </p>
+                <Button onClick={() => setSearchTerm("")} variant="outline">
+                  Clear Search
+                </Button>
               </div>
             )}
           </div>
@@ -489,216 +491,268 @@ export default function SectionedMarketplace() {
 
       {/* Creator Spotlight Section */}
       {!isSearching && featuredCreators.length > 0 && (
-        <section className="relative py-24 z-10">
+        <section className="relative z-10 overflow-hidden py-24">
           <div className="absolute inset-0 bg-gradient-to-br from-chart-1/5 via-transparent to-chart-4/5"></div>
-        
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <motion.div 
-              className="text-center mb-16"
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
-          >
-              <h2 className="text-3xl leading-8 font-bold tracking-tight sm:text-4xl bg-clip-text text-transparent bg-gradient-to-r from-chart-1 to-chart-4 mb-4">
+
+          {/* Decorative floating orbs */}
+          <motion.div
+            className="absolute right-10 top-20 h-64 w-64 rounded-full bg-chart-2/10 blur-3xl"
+            animate={{ y: [0, -30, 0], opacity: [0.3, 0.5, 0.3] }}
+            transition={{ duration: 8, repeat: Infinity }}
+          />
+          <motion.div
+            className="absolute bottom-20 left-10 h-48 w-48 rounded-full bg-chart-4/10 blur-3xl"
+            animate={{ y: [0, 20, 0], opacity: [0.4, 0.6, 0.4] }}
+            transition={{ duration: 6, repeat: Infinity, delay: 2 }}
+          />
+
+          <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <motion.div
+              className="mb-16 text-center"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              viewport={{ once: true }}
+            >
+              <motion.span
+                className="mb-4 inline-block text-sm font-semibold uppercase tracking-wider text-chart-1"
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                viewport={{ once: true }}
+              >
+                Featured Creators
+              </motion.span>
+              <h2 className="gradient-text-animated mb-4 text-3xl font-bold leading-8 tracking-tight sm:text-4xl lg:text-5xl">
                 Discover real producers teaching what they know
               </h2>
-              <p className="max-w-2xl text-lg text-muted-foreground mx-auto">
-                Browse packs, presets, and lessons from independent producers building their brands on PausePlayRepeat.
-            </p>
-          </motion.div>
+              <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
+                Browse packs, presets, and lessons from independent producers building their brands
+                on PausePlayRepeat.
+              </p>
+            </motion.div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
               {featuredCreators.slice(0, 6).map((creator: any, index: number) => (
-              <motion.div 
+                <motion.div
                   key={creator._id}
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
-                        viewport={{ once: true }}
-                      >
+                  initial={{ opacity: 0, y: 30, scale: 0.95 }}
+                  whileInView={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.5, delay: index * 0.1, type: "spring", stiffness: 100 }}
+                  viewport={{ once: true }}
+                  whileHover={{ y: -8 }}
+                >
                   <Link href={`/${creator.slug}`}>
-                    <Card className="group overflow-hidden border-border bg-card hover:shadow-2xl hover:shadow-black/10 dark:hover:shadow-white/5 transition-all duration-300 cursor-pointer hover:-translate-y-1">
+                    <Card className="card-hover-glow group relative cursor-pointer overflow-hidden border-border/50 bg-card/80 backdrop-blur-sm">
+                      {/* Hover glow effect */}
+                      <div className="absolute -inset-px rounded-xl bg-gradient-to-r from-chart-1/0 via-chart-2/0 to-chart-4/0 opacity-0 blur transition-opacity duration-500 group-hover:from-chart-1/20 group-hover:via-chart-2/20 group-hover:to-chart-4/20 group-hover:opacity-100" />
+
                       {/* Banner */}
-                      <div className="relative h-32 overflow-hidden">
+                      <div className="relative h-36 overflow-hidden">
                         {creator.bannerImage ? (
-                          <div className="relative w-full h-full">
+                          <div className="relative h-full w-full">
                             <img
                               src={creator.bannerImage}
                               alt={`${creator.name} banner`}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              className="h-full w-full object-cover transition-all duration-500 group-hover:scale-110 group-hover:brightness-110"
                             />
                           </div>
                         ) : (
-                          <div className="absolute inset-0 bg-gradient-to-br from-chart-1/20 via-chart-2/20 to-chart-3/20 dark:from-chart-1/30 dark:via-chart-2/30 dark:to-chart-3/30" />
+                          <div className="animate-gradient absolute inset-0 bg-gradient-to-br from-chart-1/30 via-chart-2/20 to-chart-3/30" />
                         )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-card via-card/50 to-transparent" />
-                          </div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-card via-card/60 to-transparent" />
 
-                      <CardContent className="pb-6 px-6 -mt-10 relative z-10 space-y-3">
-                        {/* Avatar */}
+                        {/* Shimmer on hover */}
+                        <div className="absolute inset-0 translate-x-[-200%] bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform duration-1000 group-hover:translate-x-[200%]" />
+                      </div>
+
+                      <CardContent className="relative z-10 -mt-12 space-y-4 px-6 pb-6">
+                        {/* Avatar with glow */}
                         <div className="flex justify-center">
-                          <Avatar className="w-20 h-20 border-4 border-card shadow-xl ring-2 ring-border">
-                            <AvatarImage src={creator.avatar} />
-                            <AvatarFallback className="text-xl bg-gradient-to-br from-chart-1 to-chart-2 text-primary-foreground">
-                              {creator.name.charAt(0)}
-                            </AvatarFallback>
-                          </Avatar>
+                          <div className="relative">
+                            <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-chart-1 to-chart-2 opacity-0 blur-sm transition-opacity duration-300 group-hover:opacity-70" />
+                            <Avatar className="relative h-24 w-24 border-4 border-card shadow-2xl ring-2 ring-chart-1/20 transition-transform duration-300 group-hover:scale-105">
+                              <AvatarImage src={creator.avatar} />
+                              <AvatarFallback className="bg-gradient-to-br from-chart-1 to-chart-2 text-2xl font-bold text-primary-foreground">
+                                {creator.name.charAt(0)}
+                              </AvatarFallback>
+                            </Avatar>
+                          </div>
                         </div>
-                        
+
                         {/* Name & Bio */}
                         <div className="text-center">
-                          <h3 className="font-bold text-lg group-hover:text-chart-1 transition-colors mb-1">
+                          <h3 className="group-hover:gradient-text mb-1 text-xl font-bold transition-colors duration-300">
                             {creator.name}
-                  </h3>
+                          </h3>
                           {creator.bio && (
-                            <p className="text-sm text-muted-foreground line-clamp-2">
+                            <p className="line-clamp-2 text-sm text-muted-foreground">
                               {creator.bio}
                             </p>
                           )}
-                </div>
-                
-                        {/* Stats */}
-                        <div className="flex items-center justify-center gap-4 pt-3 border-t border-border text-sm text-muted-foreground">
-                          <div className="flex items-center gap-1">
-                            <BookOpen className="w-4 h-4" />
-                            <span>{creator.totalCourses}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Package className="w-4 h-4" />
-                            <span>{creator.totalProducts}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Users className="w-4 h-4" />
-                            <span>{creator.totalStudents}</span>
                         </div>
+
+                        {/* Stats with icons */}
+                        <div className="flex items-center justify-center gap-6 border-t border-border/50 pt-4 text-sm">
+                          <motion.div
+                            className="flex items-center gap-1.5 text-muted-foreground transition-colors group-hover:text-chart-1"
+                            whileHover={{ scale: 1.1 }}
+                          >
+                            <BookOpen className="h-4 w-4" />
+                            <span className="font-medium">{creator.totalCourses}</span>
+                          </motion.div>
+                          <motion.div
+                            className="flex items-center gap-1.5 text-muted-foreground transition-colors group-hover:text-chart-2"
+                            whileHover={{ scale: 1.1 }}
+                          >
+                            <Package className="h-4 w-4" />
+                            <span className="font-medium">{creator.totalProducts}</span>
+                          </motion.div>
+                          <motion.div
+                            className="flex items-center gap-1.5 text-muted-foreground transition-colors group-hover:text-chart-3"
+                            whileHover={{ scale: 1.1 }}
+                          >
+                            <Users className="h-4 w-4" />
+                            <span className="font-medium">{creator.totalStudents}</span>
+                          </motion.div>
                         </div>
                       </CardContent>
                     </Card>
                   </Link>
-                      </motion.div>
-                    ))}
-                  </div>
+                </motion.div>
+              ))}
+            </div>
 
-          <motion.div 
+            <motion.div
               className="mt-12 text-center"
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.4 }}
-            viewport={{ once: true }}
-          >
+              viewport={{ once: true }}
+            >
               <Link href="/marketplace/creators">
                 <Button variant="outline" size="lg" className="group">
                   View All Creators
-                  <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Button>
               </Link>
-          </motion.div>
-        </div>
-      </section>
+            </motion.div>
+          </div>
+        </section>
       )}
 
       {/* Feature Section (Framed for Both) */}
-      <section id="how-it-works" className="relative py-24 z-10">
-        <div className="absolute inset-0 backdrop-blur-sm bg-card/30"></div>
-        
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-          <motion.div 
+      <section id="how-it-works" className="relative z-10 overflow-hidden py-24">
+        <div className="glass absolute inset-0"></div>
+
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <motion.div
             className="text-center"
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
             viewport={{ once: true }}
           >
-            <h2 className="text-base text-chart-1 font-semibold tracking-wide uppercase">What You Can Do</h2>
-            <p className="mt-2 text-3xl leading-8 font-bold tracking-tight sm:text-4xl bg-clip-text text-transparent bg-gradient-to-r from-chart-1 to-chart-4">
+            <motion.span
+              className="mb-4 inline-block text-sm font-semibold uppercase tracking-wider text-chart-1"
+              initial={{ opacity: 0, scale: 0.9 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2 }}
+              viewport={{ once: true }}
+            >
+              What You Can Do
+            </motion.span>
+            <h2 className="gradient-text-animated text-3xl font-bold leading-8 tracking-tight sm:text-4xl lg:text-5xl">
               Learn, create, and grow together
-            </p>
-            <p className="mt-4 max-w-2xl text-xl text-muted-foreground mx-auto">
+            </h2>
+            <p className="mx-auto mt-6 max-w-2xl text-xl text-muted-foreground">
               Whether you're here to learn or to teach, this is your home base
             </p>
           </motion.div>
 
-          <div className="mt-16 grid md:grid-cols-3 gap-8">
-            {/* A. Learn from real producers */}
-              <motion.div 
-              className="bg-card/50 backdrop-blur-sm p-8 rounded-xl shadow-md border border-border hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
-              initial={{ opacity: 0, y: 20 }}
+          <div className="mt-20 grid gap-8 md:grid-cols-3">
+            {[
+              {
+                icon: BookOpen,
+                title: "Learn from real producers",
+                desc: "Watch courses, download tools, and apply what you learn instantly in your DAW.",
+                gradient: "from-chart-1 to-chart-2",
+                delay: 0,
+              },
+              {
+                icon: Upload,
+                title: "Create and share your own",
+                desc: "Turn your knowledge into income with a page that sells for you.",
+                gradient: "from-chart-3 to-chart-4",
+                delay: 0.1,
+              },
+              {
+                icon: Users,
+                title: "Grow together",
+                desc: "Join a community of artists who learn, teach, and push each other forward.",
+                gradient: "from-chart-4 to-chart-5",
+                delay: 0.2,
+              },
+            ].map((feature, index) => (
+              <motion.div
+                key={feature.title}
+                className="group relative rounded-2xl border border-border/50 bg-card/50 p-8 backdrop-blur-sm transition-all duration-500"
+                initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
+                transition={{ duration: 0.5, delay: feature.delay }}
                 viewport={{ once: true }}
-            >
-              <div className="w-16 h-16 bg-gradient-to-br from-chart-1 to-chart-2 rounded-xl flex items-center justify-center mb-6 shadow-lg">
-                <BookOpen className="w-8 h-8 text-primary-foreground" />
-                  </div>
-              <h3 className="text-2xl font-bold text-foreground mb-4">Learn from real producers</h3>
-              <p className="text-muted-foreground leading-relaxed">
-                Watch courses, download tools, and apply what you learn instantly in your DAW.
-              </p>
+                whileHover={{ y: -8, scale: 1.02 }}
+              >
+                {/* Glow on hover */}
+                <div
+                  className={`absolute -inset-px rounded-2xl bg-gradient-to-r ${feature.gradient} opacity-0 blur-xl transition-opacity duration-500 group-hover:opacity-20`}
+                />
+
+                <div className="relative">
+                  <motion.div
+                    className={`mb-8 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br ${feature.gradient} shadow-lg shadow-chart-1/20`}
+                    whileHover={{ rotate: [0, -5, 5, 0], scale: 1.1 }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <feature.icon className="h-10 w-10 text-primary-foreground" />
+                  </motion.div>
+                  <h3 className="group-hover:gradient-text mb-4 text-2xl font-bold text-foreground transition-colors duration-300">
+                    {feature.title}
+                  </h3>
+                  <p className="leading-relaxed text-muted-foreground">{feature.desc}</p>
+                </div>
               </motion.div>
-
-            {/* B. Create and share your own */}
-          <motion.div 
-              className="bg-card/50 backdrop-blur-sm p-8 rounded-xl shadow-md border border-border hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-            viewport={{ once: true }}
-          >
-              <div className="w-16 h-16 bg-gradient-to-br from-chart-3 to-chart-4 rounded-xl flex items-center justify-center mb-6 shadow-lg">
-                <Upload className="w-8 h-8 text-primary-foreground" />
-            </div>
-              <h3 className="text-2xl font-bold text-foreground mb-4">Create and share your own</h3>
-              <p className="text-muted-foreground leading-relaxed">
-                Turn your knowledge into income with a page that sells for you.
-            </p>
-          </motion.div>
-
-            {/* C. Grow together */}
-          <motion.div
-              className="bg-card/50 backdrop-blur-sm p-8 rounded-xl shadow-md border border-border hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-            viewport={{ once: true }}
-          >
-              <div className="w-16 h-16 bg-gradient-to-br from-chart-4 to-chart-5 rounded-xl flex items-center justify-center mb-6 shadow-lg">
-                <Users className="w-8 h-8 text-primary-foreground" />
-              </div>
-              <h3 className="text-2xl font-bold text-foreground mb-4">Grow together</h3>
-              <p className="text-muted-foreground leading-relaxed">
-                Join a community of artists who learn, teach, and push each other forward.
-              </p>
-          </motion.div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* What You Can Find Section (Explore the Academy Library) */}
       {!isSearching && allContent.length > 0 && (
-        <section className="relative py-24 z-10">
+        <section className="relative z-10 py-24">
           <div className="absolute inset-0 bg-card/50 backdrop-blur-sm"></div>
-          
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
-            <motion.div 
-              className="text-center mb-12"
+
+          <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <motion.div
+              className="mb-12 text-center"
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
               viewport={{ once: true }}
             >
-              <h2 className="text-3xl font-bold text-foreground mb-4 bg-clip-text text-transparent bg-gradient-to-r from-chart-1 to-chart-4">
-                Explore the Academy Library
+              <h2 className="mb-4 bg-gradient-to-r from-chart-1 to-chart-4 bg-clip-text text-3xl font-bold text-foreground text-transparent">
+                Explore the Library
               </h2>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Courses, sound packs, and presets from producers around the world — new drops every week.
+              <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
+                Courses, sound packs, and presets from producers around the world — new drops every
+                week.
               </p>
             </motion.div>
-            
+
             <MarketplaceGrid content={allContent.slice(0, 6)} />
-            
+
             {allContent.length > 6 && (
-              <motion.div 
+              <motion.div
                 className="mt-12 text-center"
                 initial={{ opacity: 0 }}
                 whileInView={{ opacity: 1 }}
@@ -708,7 +762,7 @@ export default function SectionedMarketplace() {
                 <Link href="/marketplace">
                   <Button variant="outline" size="lg" className="group">
                     Browse All Products
-                    <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </Button>
                 </Link>
               </motion.div>
@@ -718,128 +772,188 @@ export default function SectionedMarketplace() {
       )}
 
       {/* Final Gradient CTA Section */}
-      <section className="relative py-32 z-10">
-        <div className="absolute inset-0 backdrop-blur-sm bg-gradient-to-br from-chart-1 via-chart-2 to-chart-4"></div>
-        
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute top-0 right-0 w-96 h-96 rounded-full filter blur-3xl bg-primary-foreground"></div>
-          <div className="absolute bottom-0 left-0 w-96 h-96 rounded-full filter blur-3xl bg-primary-foreground"></div>
-        </div>
-        
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <motion.div 
-            className="text-center space-y-10"
+      <section className="relative z-10 overflow-hidden py-32">
+        <div className="animate-gradient absolute inset-0 bg-gradient-to-br from-chart-1 via-chart-2 to-chart-4"></div>
+
+        <motion.div
+          className="absolute -right-32 -top-32 h-[500px] w-[500px] rounded-full bg-white/10 blur-3xl"
+          animate={{ scale: [1, 1.2, 1], opacity: [0.2, 0.3, 0.2] }}
+          transition={{ duration: 8, repeat: Infinity }}
+        />
+        <motion.div
+          className="absolute -bottom-32 -left-32 h-[400px] w-[400px] rounded-full bg-white/10 blur-3xl"
+          animate={{ scale: [1.2, 1, 1.2], opacity: [0.3, 0.2, 0.3] }}
+          transition={{ duration: 6, repeat: Infinity, delay: 2 }}
+        />
+        <motion.div
+          className="absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/5 blur-3xl"
+          animate={{ scale: [1, 1.3, 1] }}
+          transition={{ duration: 10, repeat: Infinity }}
+        />
+
+        <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <motion.div
+            className="space-y-12 text-center"
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
             viewport={{ once: true }}
           >
-            <div className="space-y-4">
-              <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-primary-foreground leading-tight">
+            <div className="space-y-6">
+              <motion.h2
+                className="text-4xl font-extrabold leading-tight text-white drop-shadow-lg md:text-5xl lg:text-6xl xl:text-7xl"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                viewport={{ once: true }}
+              >
                 Whether you're learning or creating,
-                <span className="block">this is your home base</span>
-              </h2>
-              <p className="text-xl text-primary-foreground/80 max-w-2xl mx-auto leading-relaxed">
-                Join PausePlayRepeat Academy today and start building your skills or sharing your knowledge with the world. Start for free.
-              </p>
+                <motion.span
+                  className="mt-2 block"
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                  viewport={{ once: true }}
+                >
+                  this is your home base
+                </motion.span>
+              </motion.h2>
+              <motion.p
+                className="mx-auto max-w-2xl text-xl leading-relaxed text-white/80"
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                transition={{ delay: 0.6 }}
+                viewport={{ once: true }}
+              >
+                Join PausePlayRepeat today and start building your skills or sharing your knowledge
+                with the world. Start for free.
+              </motion.p>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <motion.div
+              className="flex flex-col items-center justify-center gap-6 sm:flex-row"
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.8 }}
+              viewport={{ once: true }}
+            >
               {!isSignedIn ? (
                 <>
                   <SignUpButton mode="modal">
-                    <Button 
-                      size="lg" 
-                      className="w-full sm:w-auto rounded-xl bg-background text-chart-1 hover:bg-background/90 font-bold px-12 py-6 text-xl shadow-2xl transition-all duration-300 hover:scale-105"
-                    >
-                      Start Learning Free
-                      <ArrowRight className="ml-2 w-5 h-5" />
-                    </Button>
+                    <motion.div whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.98 }}>
+                      <Button
+                        size="lg"
+                        className="group relative w-full overflow-hidden rounded-2xl bg-white px-14 py-8 text-xl font-bold text-gray-900 shadow-2xl shadow-black/30 transition-all duration-300 hover:bg-gray-50 sm:w-auto"
+                      >
+                        <span className="relative z-10">Start Learning Free</span>
+                        <ArrowRight className="relative z-10 ml-2 h-6 w-6 transition-transform group-hover:translate-x-1" />
+                      </Button>
+                    </motion.div>
                   </SignUpButton>
                   <Link href="/sign-up?intent=creator">
-                    <Button 
-                      variant="outline"
-                      size="lg" 
-                      className="w-full sm:w-auto rounded-xl hover:scale-105 hover:-translate-y-1 transition-all duration-300 border-2 border-chart-1/40 bg-background/80 hover:bg-background/90 hover:shadow-lg px-12 py-6 text-xl font-semibold"
-                    >
-                      Become a Creator
-                    </Button>
+                    <motion.div whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.98 }}>
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        className="group w-full rounded-2xl border-2 border-white/30 bg-white/10 px-14 py-8 text-xl font-semibold text-white backdrop-blur-sm transition-all duration-300 hover:border-white/60 hover:bg-white/20 sm:w-auto"
+                      >
+                        Become a Creator
+                        <Zap className="ml-2 h-5 w-5 transition-transform group-hover:scale-110" />
+                      </Button>
+                    </motion.div>
                   </Link>
                 </>
               ) : (
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                  <Link href="/library">
-                    <Button 
-                      size="lg" 
-                      className="w-full sm:w-auto rounded-xl shadow-md shadow-chart-1/20 hover:shadow-lg hover:scale-105 hover:-translate-y-1 transition-all duration-300 bg-gradient-to-r from-chart-1 to-chart-1/80 text-primary-foreground border-2 border-chart-1/40 px-12 py-6 text-xl font-bold"
-                    >
-                      <BookOpen className="mr-2 w-5 h-5" />
-                      Student Library
-                    </Button>
+                <div className="flex flex-col items-center justify-center gap-6 sm:flex-row">
+                  <Link href="/dashboard?mode=learn">
+                    <motion.div whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.98 }}>
+                      <Button
+                        size="lg"
+                        className="group relative w-full overflow-hidden rounded-2xl bg-white px-14 py-8 text-xl font-bold text-gray-900 shadow-2xl shadow-black/30 transition-all duration-300 hover:bg-gray-50 sm:w-auto"
+                      >
+                        <BookOpen className="relative z-10 mr-2 h-6 w-6" />
+                        <span className="relative z-10">My Learning</span>
+                      </Button>
+                    </motion.div>
                   </Link>
-                  <Link href="/home">
-                    <Button 
-                      variant="outline"
-                      size="lg" 
-                      className="w-full sm:w-auto rounded-xl hover:scale-105 hover:-translate-y-1 transition-all duration-300 border-2 border-chart-1/40 bg-background/80 hover:bg-background/90 hover:shadow-lg px-12 py-6 text-xl font-semibold"
-                    >
-                      <Store className="mr-2 w-5 h-5" />
-                      Creator Studio
-                    </Button>
+                  <Link href="/dashboard?mode=create">
+                    <motion.div whileHover={{ scale: 1.05, y: -4 }} whileTap={{ scale: 0.98 }}>
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        className="group w-full rounded-2xl border-2 border-white/30 bg-white/10 px-14 py-8 text-xl font-semibold text-white backdrop-blur-sm transition-all duration-300 hover:border-white/60 hover:bg-white/20 sm:w-auto"
+                      >
+                        <Store className="mr-2 h-5 w-5" />
+                        Creator Studio
+                      </Button>
+                    </motion.div>
                   </Link>
                 </div>
               )}
-            </div>
+            </motion.div>
 
             {/* Trust Indicators */}
-            <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-4 text-primary-foreground/60 text-sm pt-6">
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="w-4 h-4" />
-                <span>Free to browse</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="w-4 h-4" />
-                <span>90% creator payout</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="w-4 h-4" />
-                <span>Money-back guarantee</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="w-4 h-4" />
-                <span>Start instantly</span>
-              </div>
-            </div>
+            <motion.div
+              className="flex flex-wrap items-center justify-center gap-x-10 gap-y-4 pt-8 text-sm text-white/70"
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              transition={{ delay: 1 }}
+              viewport={{ once: true }}
+            >
+              {[
+                "Free to browse",
+                "90% creator payout",
+                "Money-back guarantee",
+                "Start instantly",
+              ].map((item, i) => (
+                <motion.div
+                  key={item}
+                  className="flex items-center space-x-2"
+                  initial={{ opacity: 0, y: 10 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 1 + i * 0.1 }}
+                  viewport={{ once: true }}
+                >
+                  <CheckCircle className="h-5 w-5 text-white/80" />
+                  <span className="font-medium">{item}</span>
+                </motion.div>
+              ))}
+            </motion.div>
 
             {/* Platform Stats */}
-            <div className="border-t border-primary-foreground/20 pt-8 mt-10">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
-                <div>
-                  <div className="text-2xl font-bold text-primary-foreground">Expert</div>
-                  <div className="text-sm text-primary-foreground/60">Quality Creators</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-primary-foreground">90%</div>
-                  <div className="text-sm text-primary-foreground/60">Revenue Share</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-primary-foreground">Direct</div>
-                  <div className="text-sm text-primary-foreground/60">Support</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-primary-foreground">Instant</div>
-                  <div className="text-sm text-primary-foreground/60">Access</div>
-                </div>
+            <motion.div
+              className="mt-12 border-t border-white/20 pt-10"
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              transition={{ delay: 1.2 }}
+              viewport={{ once: true }}
+            >
+              <div className="grid grid-cols-2 gap-8 text-center md:grid-cols-4">
+                {[
+                  { value: "Expert", label: "Quality Creators" },
+                  { value: "90%", label: "Revenue Share" },
+                  { value: "Direct", label: "Support" },
+                  { value: "Instant", label: "Access" },
+                ].map((stat, i) => (
+                  <motion.div
+                    key={stat.label}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 1.3 + i * 0.1 }}
+                    viewport={{ once: true }}
+                  >
+                    <div className="text-3xl font-bold text-white drop-shadow-lg">{stat.value}</div>
+                    <div className="mt-1 text-sm text-white/60">{stat.label}</div>
+                  </motion.div>
+                ))}
               </div>
-            </div>
+            </motion.div>
           </motion.div>
         </div>
       </section>
-
 
       {/* Footer */}
       <Footer />
     </div>
   );
 }
-

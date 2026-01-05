@@ -48,8 +48,12 @@ interface CoachingBookingPageProps {
   }>;
 }
 
+function isConvexId(str: string): boolean {
+  return /^[a-z0-9]{32}$/.test(str);
+}
+
 export default function CoachingBookingPage({ params }: CoachingBookingPageProps) {
-  const { slug, productId } = use(params);
+  const { slug: storeSlug, productId: productSlugOrId } = use(params);
   const { user, isLoaded: userLoaded } = useUser();
   const router = useRouter();
 
@@ -59,20 +63,27 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
   const [notes, setNotes] = useState("");
   const [isBooking, setIsBooking] = useState(false);
 
-  const product = useQuery(api.coachingProducts.getCoachingProductForBooking, {
-    productId: productId as Id<"digitalProducts">,
-  });
+  const store = useQuery(api.stores.getStoreBySlug, { slug: storeSlug });
 
-  const store = useQuery(
-    api.stores.getStoreById,
-    product?.storeId ? { storeId: product.storeId } : "skip"
+  const productBySlug = useQuery(
+    api.coachingProducts.getCoachingProductBySlug,
+    store?._id && !isConvexId(productSlugOrId)
+      ? { storeId: store._id, slug: productSlugOrId }
+      : "skip"
   );
+
+  const productById = useQuery(
+    api.coachingProducts.getCoachingProductForBooking,
+    isConvexId(productSlugOrId) ? { productId: productSlugOrId as Id<"digitalProducts"> } : "skip"
+  );
+
+  const product = productBySlug || productById;
 
   const availableSlots = useQuery(
     api.coachingProducts.getAvailableSlots,
-    selectedDate
+    selectedDate && product?._id
       ? {
-          productId: productId as Id<"digitalProducts">,
+          productId: product._id,
           date: selectedDate.getTime(),
         }
       : "skip"
@@ -125,7 +136,7 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            productId,
+            productId: product._id,
             productTitle: product.title,
             price: product.price,
             duration: product.duration,
@@ -134,7 +145,7 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
             customerEmail: user.primaryEmailAddress?.emailAddress,
             customerName: user.fullName,
             userId: user.id,
-            storeSlug: slug,
+            storeSlug: storeSlug,
             notes,
           }),
         });
@@ -148,7 +159,7 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
         }
       } else {
         const result = await bookSession({
-          productId: productId as Id<"digitalProducts">,
+          productId: product._id,
           studentId: user.id,
           scheduledDate: selectedDate.getTime(),
           startTime: selectedSlot,
@@ -190,7 +201,7 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-6xl px-4 py-8">
         <Link
-          href={`/${slug}`}
+          href={`/${storeSlug}`}
           className="mb-6 inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
         >
           <ChevronLeft className="mr-1 h-4 w-4" />
@@ -366,48 +377,59 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
 
           <div className="space-y-6">
             <Card className="sticky top-6">
-              <CardHeader>
+              <CardHeader className="pb-4">
                 <CardTitle>Booking Summary</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <Avatar>
+                <div className="flex items-center gap-4 rounded-lg bg-muted/50 p-3">
+                  <Avatar className="h-12 w-12 ring-2 ring-background">
                     <AvatarImage src={store.logoUrl} />
-                    <AvatarFallback>{store.name.charAt(0)}</AvatarFallback>
+                    <AvatarFallback className="bg-gradient-to-br from-purple-500 to-pink-500 text-lg text-white">
+                      {store.name.charAt(0).toUpperCase()}
+                    </AvatarFallback>
                   </Avatar>
-                  <div>
-                    <p className="font-medium">{store.name}</p>
-                    <p className="text-sm text-muted-foreground">{product.sessionType}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold">{store.name}</p>
+                    <p className="text-sm text-muted-foreground">Coaching Session</p>
                   </div>
                 </div>
 
-                <div className="space-y-2 border-t pt-4">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Session</span>
-                    <span>{product.title}</span>
+                <div className="space-y-3 border-t pt-4">
+                  <div className="flex justify-between gap-4">
+                    <span className="text-sm text-muted-foreground">Session</span>
+                    <span className="flex-1 truncate text-right text-sm font-medium">
+                      {product.title}
+                    </span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Duration</span>
-                    <span>{product.duration || 60} minutes</span>
+                  <div className="flex justify-between gap-4">
+                    <span className="text-sm text-muted-foreground">Duration</span>
+                    <span className="text-sm font-medium">{product.duration || 60} minutes</span>
                   </div>
                   {selectedDate && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Date</span>
-                      <span>{format(selectedDate, "MMM d, yyyy")}</span>
+                    <div className="flex justify-between gap-4">
+                      <span className="text-sm text-muted-foreground">Date</span>
+                      <span className="text-sm font-medium">
+                        {format(selectedDate, "EEEE, MMM d, yyyy")}
+                      </span>
                     </div>
                   )}
                   {selectedSlot && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Time</span>
-                      <span>{selectedSlot}</span>
+                    <div className="flex justify-between gap-4">
+                      <span className="text-sm text-muted-foreground">Time</span>
+                      <span className="text-sm font-medium">{selectedSlot}</span>
                     </div>
+                  )}
+                  {!selectedDate && !selectedSlot && (
+                    <p className="text-sm italic text-muted-foreground">
+                      Select a date and time above
+                    </p>
                   )}
                 </div>
 
                 <div className="border-t pt-4">
                   <div className="flex items-center justify-between">
-                    <span className="font-medium">Total</span>
-                    <span className="text-2xl font-bold">
+                    <span className="text-sm font-medium text-muted-foreground">Total</span>
+                    <span className="text-2xl font-bold text-purple-600 dark:text-purple-400">
                       {product.price === 0 ? "Free" : `$${product.price}`}
                     </span>
                   </div>

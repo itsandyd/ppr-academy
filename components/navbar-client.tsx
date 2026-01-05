@@ -12,11 +12,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { 
-  Menu, 
-  X, 
-  BookOpen, 
-  Home, 
+import {
+  Menu,
+  X,
+  BookOpen,
+  Home,
   LayoutDashboard,
   Shield,
   GraduationCap,
@@ -25,7 +25,7 @@ import {
   ChevronDown,
   Search,
   Users,
-  Briefcase
+  Briefcase,
 } from "lucide-react";
 import { ModeToggle } from "@/components/mode-toggle";
 import { DashboardPreferenceSwitcher } from "@/components/dashboard/dashboard-preference-switcher";
@@ -55,18 +55,31 @@ interface DropdownSection {
 // Constants & Configuration
 // ============================================================================
 
-const BASE_NAV_LINKS: NavLink[] = [
-  { href: "/", label: "Home", icon: Home },
-];
+const BASE_NAV_LINKS: NavLink[] = [{ href: "/", label: "Home", icon: Home }];
 
 const BROWSE_SECTION: DropdownSection = {
   label: "Browse",
   icon: Search,
   items: [
-    { href: "/marketplace", label: "Marketplace", icon: Briefcase, description: "Browse all content" },
-    { href: "/marketplace/creators", label: "Creators", icon: Users, description: "Discover talented creators" },
+    {
+      href: "/marketplace",
+      label: "Marketplace",
+      icon: Briefcase,
+      description: "Browse all content",
+    },
+    {
+      href: "/marketplace/creators",
+      label: "Creators",
+      icon: Users,
+      description: "Discover talented creators",
+    },
     { href: "/courses", label: "Courses", icon: BookOpen, description: "Explore all courses" },
-    { href: "/coaching", label: "Find Coaches", icon: Users, description: "Book 1-on-1 coaching sessions" },
+    {
+      href: "/coaching",
+      label: "Find Coaches",
+      icon: Users,
+      description: "Book 1-on-1 coaching sessions",
+    },
   ],
 };
 
@@ -74,19 +87,27 @@ const CREATE_SECTION: DropdownSection = {
   label: "Create",
   icon: PlusCircle,
   items: [
-    { href: "/create-course", label: "Create Course", icon: BookOpen, description: "Build your own course" },
-    { href: "/become-a-coach", label: "Become a Coach", icon: UserCheck, description: "Apply to teach others" },
+    {
+      href: "/create-course",
+      label: "Create Course",
+      icon: BookOpen,
+      description: "Build your own course",
+    },
+    {
+      href: "/become-a-coach",
+      label: "Become a Coach",
+      icon: UserCheck,
+      description: "Apply to teach others",
+    },
   ],
 };
 
 const AUTHENTICATED_LINKS: NavLink[] = [
-  { href: "/library", label: "My Library", icon: BookOpen },
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/dashboard?mode=learn", label: "My Learning", icon: BookOpen },
+  { href: "/dashboard?mode=create", label: "Creator Studio", icon: LayoutDashboard },
 ];
 
-const ADMIN_LINKS: NavLink[] = [
-  { href: "/admin", label: "Admin", icon: Shield },
-];
+const ADMIN_LINKS: NavLink[] = [{ href: "/admin", label: "Admin", icon: Shield }];
 
 const STYLES = {
   nav: "fixed top-0 left-0 right-0 z-50 bg-background border-b border-border shadow-sm",
@@ -106,7 +127,8 @@ const STYLES = {
   linkInactive: "text-muted-foreground hover:text-foreground hover:bg-muted",
   mobileLinkBase: "block px-3 py-2 rounded-lg text-base font-medium flex items-center gap-3",
   menuToggle: "p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted",
-  dropdownTrigger: "px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 text-muted-foreground hover:text-foreground hover:bg-muted",
+  dropdownTrigger:
+    "px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 text-muted-foreground hover:text-foreground hover:bg-muted",
   dropdownContent: "w-64",
   dropdownItem: "flex items-start gap-3 p-3 cursor-pointer transition-colors hover:bg-muted",
   dropdownIcon: "w-4 h-4 mt-0.5 text-muted-foreground",
@@ -125,7 +147,7 @@ const isActiveLink = (pathname: string, href: string): boolean => {
 };
 
 const isActiveSectionItem = (pathname: string, section: DropdownSection): boolean => {
-  return section.items.some(item => isActiveLink(pathname, item.href));
+  return section.items.some((item) => isActiveLink(pathname, item.href));
 };
 
 const buildNavStructure = (isSignedIn: boolean, isAdmin: boolean) => {
@@ -156,34 +178,32 @@ const buildNavStructure = (isSignedIn: boolean, isAdmin: boolean) => {
 const Logo = () => (
   <Link href="/" className={STYLES.logo}>
     <div className={STYLES.logoIcon}>
-      <GraduationCap className="w-6 h-6 text-primary-foreground" />
+      <GraduationCap className="h-6 w-6 text-primary-foreground" />
     </div>
-    <span className={STYLES.logoText}>
-      PPR Academy
-    </span>
+    <span className={STYLES.logoText}>PPR Academy</span>
   </Link>
 );
 
-const DropdownSection = ({ 
-  section, 
-  isActive 
-}: { 
-  section: DropdownSection; 
+const DropdownSection = ({
+  section,
+  isActive,
+}: {
+  section: DropdownSection;
   isActive: boolean;
 }) => {
   const Icon = section.icon;
-  
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button 
+        <button
           className={`${STYLES.dropdownTrigger} ${
             isActive ? STYLES.linkActive : STYLES.linkInactive
           }`}
         >
-          <Icon className="w-4 h-4" />
+          <Icon className="h-4 w-4" />
           {section.label}
-          <ChevronDown className="w-4 h-4" />
+          <ChevronDown className="h-4 w-4" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className={STYLES.dropdownContent} align="start">
@@ -208,37 +228,34 @@ const DropdownSection = ({
   );
 };
 
-const NavLinkItem = ({ 
-  link, 
-  isActive, 
-  isMobile = false 
-}: { 
-  link: NavLink; 
-  isActive: boolean; 
+const NavLinkItem = ({
+  link,
+  isActive,
+  isMobile = false,
+}: {
+  link: NavLink;
+  isActive: boolean;
   isMobile?: boolean;
 }) => {
   const Icon = link.icon;
   const baseStyle = isMobile ? STYLES.mobileLinkBase : STYLES.linkBase;
   const activeStyle = isActive ? STYLES.linkActive : STYLES.linkInactive;
-  
+
   return (
-    <Link
-      href={link.href}
-      className={`${baseStyle} ${activeStyle}`}
-    >
-      <Icon className={isMobile ? "w-5 h-5" : "w-4 h-4"} />
+    <Link href={link.href} className={`${baseStyle} ${activeStyle}`}>
+      <Icon className={isMobile ? "h-5 w-5" : "h-4 w-4"} />
       {link.label}
     </Link>
   );
 };
 
-const DesktopNavigation = ({ 
+const DesktopNavigation = ({
   sections,
-  navLinks, 
-  pathname 
-}: { 
+  navLinks,
+  pathname,
+}: {
   sections: DropdownSection[];
-  navLinks: NavLink[]; 
+  navLinks: NavLink[];
   pathname: string;
 }) => (
   <div className={STYLES.desktopNav}>
@@ -250,15 +267,13 @@ const DesktopNavigation = ({
         isActive={isActiveSectionItem(pathname, section)}
       />
     ))}
-    
+
     {/* Regular Links */}
-    {navLinks.filter(link => link.href !== "/").map((link) => (
-      <NavLinkItem
-        key={link.href}
-        link={link}
-        isActive={isActiveLink(pathname, link.href)}
-      />
-    ))}
+    {navLinks
+      .filter((link) => link.href !== "/")
+      .map((link) => (
+        <NavLinkItem key={link.href} link={link} isActive={isActiveLink(pathname, link.href)} />
+      ))}
   </div>
 );
 
@@ -270,20 +285,18 @@ const AuthButtons = ({ isSignedIn, hasClerk }: { isSignedIn: boolean; hasClerk: 
         <Button variant="outline" size="sm">
           Sign In
         </Button>
-        <Button size="sm">
-          Get Started
-        </Button>
+        <Button size="sm">Get Started</Button>
       </div>
     ) : isSignedIn ? (
       <>
         {/* Dashboard Switcher for hybrid users */}
         <DashboardPreferenceSwitcher />
-        <UserButton 
+        <UserButton
           afterSignOutUrl="/"
           appearance={{
             elements: {
-              avatarBox: "w-10 h-10"
-            }
+              avatarBox: "w-10 h-10",
+            },
           }}
         />
       </>
@@ -295,85 +308,70 @@ const AuthButtons = ({ isSignedIn, hasClerk }: { isSignedIn: boolean; hasClerk: 
           </Button>
         </SignInButton>
         <SignUpButton mode="modal">
-          <Button size="sm">
-            Get Started
-          </Button>
+          <Button size="sm">Get Started</Button>
         </SignUpButton>
       </>
     )}
   </div>
 );
 
-const MobileMenuToggle = ({ 
-  isMenuOpen, 
-  setIsMenuOpen 
-}: { 
-  isMenuOpen: boolean; 
+const MobileMenuToggle = ({
+  isMenuOpen,
+  setIsMenuOpen,
+}: {
+  isMenuOpen: boolean;
   setIsMenuOpen: (open: boolean) => void;
 }) => (
   <div className={STYLES.mobileButton}>
-    <button
-      onClick={() => setIsMenuOpen(!isMenuOpen)}
-      className={STYLES.menuToggle}
-    >
-      {isMenuOpen ? (
-        <X className="w-6 h-6" />
-      ) : (
-        <Menu className="w-6 h-6" />
-      )}
+    <button onClick={() => setIsMenuOpen(!isMenuOpen)} className={STYLES.menuToggle}>
+      {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
     </button>
   </div>
 );
 
-const MobileNavigation = ({ 
+const MobileNavigation = ({
   sections,
-  navLinks, 
-  pathname, 
-  onLinkClick 
-}: { 
+  navLinks,
+  pathname,
+  onLinkClick,
+}: {
   sections: DropdownSection[];
-  navLinks: NavLink[]; 
-  pathname: string; 
+  navLinks: NavLink[];
+  pathname: string;
   onLinkClick: () => void;
 }) => (
   <div className={STYLES.mobileContent}>
     {/* Mobile Dropdown Sections */}
     {sections.map((section) => (
       <div key={section.label} className="space-y-1">
-        <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+        <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {section.label}
         </div>
         {section.items.map((item) => (
           <div key={item.href} onClick={onLinkClick}>
-            <NavLinkItem
-              link={item}
-              isActive={isActiveLink(pathname, item.href)}
-              isMobile
-            />
+            <NavLinkItem link={item} isActive={isActiveLink(pathname, item.href)} isMobile />
           </div>
         ))}
       </div>
     ))}
-    
+
     {/* Regular Mobile Links */}
-    {navLinks.filter(link => link.href !== "/").map((link) => (
-      <div key={link.href} onClick={onLinkClick}>
-        <NavLinkItem
-          link={link}
-          isActive={isActiveLink(pathname, link.href)}
-          isMobile
-        />
-      </div>
-    ))}
+    {navLinks
+      .filter((link) => link.href !== "/")
+      .map((link) => (
+        <div key={link.href} onClick={onLinkClick}>
+          <NavLinkItem link={link} isActive={isActiveLink(pathname, link.href)} isMobile />
+        </div>
+      ))}
   </div>
 );
 
-const MobileAuthSection = ({ 
-  isSignedIn, 
+const MobileAuthSection = ({
+  isSignedIn,
   user,
-  hasClerk
-}: { 
-  isSignedIn: boolean; 
+  hasClerk,
+}: {
+  isSignedIn: boolean;
   user: any;
   hasClerk: boolean;
 }) => (
@@ -388,9 +386,7 @@ const MobileAuthSection = ({
         <Button variant="outline" className="w-full">
           Sign In
         </Button>
-        <Button className="w-full">
-          Get Started
-        </Button>
+        <Button className="w-full">Get Started</Button>
       </div>
     ) : isSignedIn ? (
       <div className="flex items-center justify-between px-3 py-2">
@@ -404,12 +400,12 @@ const MobileAuthSection = ({
             </p>
           </div>
         </div>
-        <UserButton 
+        <UserButton
           afterSignOutUrl="/"
           appearance={{
             elements: {
-              avatarBox: "w-8 h-8"
-            }
+              avatarBox: "w-8 h-8",
+            },
           }}
         />
       </div>
@@ -421,9 +417,7 @@ const MobileAuthSection = ({
           </Button>
         </SignInButton>
         <SignUpButton mode="modal">
-          <Button className="w-full">
-            Get Started
-          </Button>
+          <Button className="w-full">Get Started</Button>
         </SignUpButton>
       </div>
     )}
@@ -434,20 +428,18 @@ const MobileAuthSection = ({
 // Main Component
 // ============================================================================
 
-
-
 export default function NavbarClient({ isAdmin }: NavbarClientProps) {
   // State
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  
+
   // Hooks
   const pathname = usePathname();
-  
+
   // Safe Clerk hook usage
   let user = null;
   let isSignedIn = false;
   const hasClerk = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-  
+
   if (hasClerk) {
     try {
       const clerkData = useUser();
@@ -459,7 +451,7 @@ export default function NavbarClient({ isAdmin }: NavbarClientProps) {
       isSignedIn = false;
     }
   }
-  
+
   // Derived values (with safe defaults)
   const userIsSignedIn = isSignedIn ?? false;
   const { sections, links: navLinks } = buildNavStructure(userIsSignedIn, isAdmin);
@@ -473,39 +465,28 @@ export default function NavbarClient({ isAdmin }: NavbarClientProps) {
           <Logo />
 
           {/* Desktop Navigation */}
-          <DesktopNavigation 
-            sections={sections}
-            navLinks={navLinks} 
-            pathname={pathname} 
-          />
+          <DesktopNavigation sections={sections} navLinks={navLinks} pathname={pathname} />
 
           {/* Desktop Auth */}
           <AuthButtons isSignedIn={userIsSignedIn} hasClerk={hasClerk} />
 
           {/* Mobile Menu Toggle */}
-          <MobileMenuToggle 
-            isMenuOpen={isMenuOpen} 
-            setIsMenuOpen={setIsMenuOpen} 
-          />
+          <MobileMenuToggle isMenuOpen={isMenuOpen} setIsMenuOpen={setIsMenuOpen} />
         </div>
       </div>
 
       {/* Mobile Menu */}
       {isMenuOpen && (
         <div className={STYLES.mobileMenu}>
-          <MobileNavigation 
+          <MobileNavigation
             sections={sections}
-            navLinks={navLinks} 
-            pathname={pathname} 
+            navLinks={navLinks}
+            pathname={pathname}
             onLinkClick={closeMobileMenu}
           />
-          <MobileAuthSection 
-            isSignedIn={userIsSignedIn} 
-            user={user}
-            hasClerk={hasClerk}
-          />
+          <MobileAuthSection isSignedIn={userIsSignedIn} user={user} hasClerk={hasClerk} />
         </div>
       )}
     </nav>
   );
-} 
+}

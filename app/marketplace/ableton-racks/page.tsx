@@ -42,14 +42,24 @@ const RACK_TYPES = ["All Types", "Audio Effect", "Instrument", "MIDI Effect", "D
 const CPU_LOADS = ["All", "Low", "Medium", "High"];
 const COMPLEXITY_LEVELS = ["All Levels", "Beginner", "Intermediate", "Advanced"];
 const GENRES = [
-  "All Genres", "Hip Hop", "Trap", "House", "Techno", "Drum & Bass",
-  "Dubstep", "Lo-Fi", "Ambient", "Indie", "Rock", "Jazz"
+  "All Genres",
+  "Hip Hop",
+  "Trap",
+  "House",
+  "Techno",
+  "Drum & Bass",
+  "Dubstep",
+  "Lo-Fi",
+  "Ambient",
+  "Indie",
+  "Rock",
+  "Jazz",
 ];
 
 export default function AbletonRacksMarketplacePage() {
   // View state
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  
+
   // Filter state
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedVersion, setSelectedVersion] = useState<string | undefined>();
@@ -57,7 +67,7 @@ export default function AbletonRacksMarketplacePage() {
   const [selectedGenre, setSelectedGenre] = useState<string | undefined>();
   const [selectedCpuLoad, setSelectedCpuLoad] = useState<string | undefined>();
   const [selectedComplexity, setSelectedComplexity] = useState<string | undefined>();
-  
+
   // Audio player state
   const [playingRack, setPlayingRack] = useState<any | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -66,42 +76,41 @@ export default function AbletonRacksMarketplacePage() {
   // Convert UI selections to query params
   const rackTypeMap: Record<string, any> = {
     "Audio Effect": "audioEffect",
-    "Instrument": "instrument",
+    Instrument: "instrument",
     "MIDI Effect": "midiEffect",
     "Drum Rack": "drumRack",
   };
 
   const cpuLoadMap: Record<string, any> = {
-    "Low": "low",
-    "Medium": "medium",
-    "High": "high",
+    Low: "low",
+    Medium: "medium",
+    High: "high",
   };
 
   const complexityMap: Record<string, any> = {
-    "Beginner": "beginner",
-    "Intermediate": "intermediate",
-    "Advanced": "advanced",
+    Beginner: "beginner",
+    Intermediate: "intermediate",
+    Advanced: "advanced",
   };
 
   // Query racks with filters
-  const racks = useQuery(api.abletonRacks.getPublishedAbletonRacks, {
-    rackType: selectedRackType && selectedRackType !== "All Types" 
-      ? rackTypeMap[selectedRackType] 
-      : undefined,
-    abletonVersion: selectedVersion && selectedVersion !== "All Versions" 
-      ? selectedVersion 
-      : undefined,
-    genre: selectedGenre && selectedGenre !== "All Genres" 
-      ? selectedGenre 
-      : undefined,
-    cpuLoad: selectedCpuLoad && selectedCpuLoad !== "All" 
-      ? cpuLoadMap[selectedCpuLoad] 
-      : undefined,
-    complexity: selectedComplexity && selectedComplexity !== "All Levels" 
-      ? complexityMap[selectedComplexity] 
-      : undefined,
-    searchQuery: searchTerm || undefined,
-  }) || [];
+  const racks =
+    useQuery(api.abletonRacks.getPublishedAbletonRacks, {
+      rackType:
+        selectedRackType && selectedRackType !== "All Types"
+          ? rackTypeMap[selectedRackType]
+          : undefined,
+      abletonVersion:
+        selectedVersion && selectedVersion !== "All Versions" ? selectedVersion : undefined,
+      genre: selectedGenre && selectedGenre !== "All Genres" ? selectedGenre : undefined,
+      cpuLoad:
+        selectedCpuLoad && selectedCpuLoad !== "All" ? cpuLoadMap[selectedCpuLoad] : undefined,
+      complexity:
+        selectedComplexity && selectedComplexity !== "All Levels"
+          ? complexityMap[selectedComplexity]
+          : undefined,
+      searchQuery: searchTerm || undefined,
+    }) || [];
 
   // Audio player
   const handlePlayPause = (rack: any) => {
@@ -140,9 +149,7 @@ export default function AbletonRacksMarketplacePage() {
   }, []);
 
   const handleRackClick = (rack: any) => {
-    // Navigate to the rack detail page
-    const slug = rack.title.toLowerCase().replace(/\s+/g, "-");
-    window.location.href = `/marketplace/ableton-racks/${slug}`;
+    window.location.href = `/marketplace/ableton-racks/${rack.slug || rack._id}`;
   };
 
   const activeFiltersCount = [
@@ -161,27 +168,27 @@ export default function AbletonRacksMarketplacePage() {
 
       {/* Header */}
       <section className="border-b border-border bg-gradient-to-br from-chart-1/10 via-chart-2/10 to-chart-3/10 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="text-center space-y-4 mb-8">
+        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+          <div className="mb-8 space-y-4 text-center">
             <motion.div
-              className="inline-flex items-center gap-2 bg-chart-1/20 px-4 py-2 rounded-full mb-4"
+              className="mb-4 inline-flex items-center gap-2 rounded-full bg-chart-1/20 px-4 py-2"
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
             >
-              <Waves className="w-5 h-5 text-chart-1" />
+              <Waves className="h-5 w-5 text-chart-1" />
               <span className="text-sm font-semibold text-chart-1">Ableton Live Racks</span>
             </motion.div>
-            
-            <motion.h1 
-              className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-chart-1 via-chart-2 to-chart-3 bg-clip-text text-transparent"
+
+            <motion.h1
+              className="bg-gradient-to-r from-chart-1 via-chart-2 to-chart-3 bg-clip-text text-5xl font-bold text-transparent md:text-6xl"
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
             >
               Audio Effect Racks
             </motion.h1>
-            
-            <motion.p 
-              className="text-xl text-muted-foreground max-w-2xl mx-auto"
+
+            <motion.p
+              className="mx-auto max-w-2xl text-xl text-muted-foreground"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.1 }}
@@ -191,28 +198,28 @@ export default function AbletonRacksMarketplacePage() {
           </div>
 
           {/* Search */}
-          <div className="relative max-w-2xl mx-auto">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <div className="relative mx-auto max-w-2xl">
+            <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="text"
               placeholder="Search racks, effects, creators..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-12 pr-4 h-14 text-base bg-background/80 backdrop-blur-sm border-2 border-border focus:border-chart-1 transition-all"
+              className="h-14 border-2 border-border bg-background/80 pl-12 pr-4 text-base backdrop-blur-sm transition-all focus:border-chart-1"
             />
           </div>
         </div>
       </section>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
           {/* Filters Sidebar */}
           <aside className="lg:col-span-1">
-            <Card className="bg-card border-border sticky top-4">
-              <CardContent className="p-6 space-y-6">
+            <Card className="sticky top-4 border-border bg-card">
+              <CardContent className="space-y-6 p-6">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-semibold flex items-center gap-2">
-                    <Filter className="w-5 h-5" />
+                  <h3 className="flex items-center gap-2 font-semibold">
+                    <Filter className="h-5 w-5" />
                     Filters
                   </h3>
                   {activeFiltersCount > 0 && (
@@ -296,8 +303,8 @@ export default function AbletonRacksMarketplacePage() {
 
                 {/* CPU Load Filter */}
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium flex items-center gap-2">
-                    <Cpu className="w-4 h-4" />
+                  <Label className="flex items-center gap-2 text-sm font-medium">
+                    <Cpu className="h-4 w-4" />
                     CPU Load
                   </Label>
                   <Select
@@ -319,8 +326,8 @@ export default function AbletonRacksMarketplacePage() {
 
                 {/* Complexity Filter */}
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium flex items-center gap-2">
-                    <Signal className="w-4 h-4" />
+                  <Label className="flex items-center gap-2 text-sm font-medium">
+                    <Signal className="h-4 w-4" />
                     Complexity
                   </Label>
                   <Select
@@ -344,25 +351,25 @@ export default function AbletonRacksMarketplacePage() {
           </aside>
 
           {/* Main Content */}
-          <div className="lg:col-span-3 space-y-6">
+          <div className="space-y-6 lg:col-span-3">
             {/* Toolbar */}
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-bold">Available Racks</h2>
                 <p className="text-sm text-muted-foreground">
-                  {racks.length} rack{racks.length !== 1 ? 's' : ''} found
+                  {racks.length} rack{racks.length !== 1 ? "s" : ""} found
                 </p>
               </div>
 
               {/* View Toggle */}
-              <div className="flex border border-border rounded-lg">
+              <div className="flex rounded-lg border border-border">
                 <Button
                   variant={viewMode === "grid" ? "default" : "ghost"}
                   size="sm"
                   onClick={() => setViewMode("grid")}
                   className="rounded-r-none"
                 >
-                  <Grid3x3 className="w-4 h-4" />
+                  <Grid3x3 className="h-4 w-4" />
                 </Button>
                 <Button
                   variant={viewMode === "list" ? "default" : "ghost"}
@@ -370,14 +377,14 @@ export default function AbletonRacksMarketplacePage() {
                   onClick={() => setViewMode("list")}
                   className="rounded-l-none"
                 >
-                  <ListIcon className="w-4 h-4" />
+                  <ListIcon className="h-4 w-4" />
                 </Button>
               </div>
             </div>
 
             {/* Racks Grid */}
             {viewMode === "grid" ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 {racks.map((rack: any, index: number) => (
                   <RackCard
                     key={rack._id}
@@ -406,11 +413,9 @@ export default function AbletonRacksMarketplacePage() {
 
             {racks.length === 0 && (
               <Card className="p-12 text-center">
-                <Waves className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-xl font-semibold mb-2">No racks found</h3>
-                <p className="text-muted-foreground">
-                  Try adjusting your filters or search terms
-                </p>
+                <Waves className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
+                <h3 className="mb-2 text-xl font-semibold">No racks found</h3>
+                <p className="text-muted-foreground">Try adjusting your filters or search terms</p>
               </Card>
             )}
           </div>
@@ -428,8 +433,8 @@ function RackCard({ rack, index, isPlaying, onPlayPause, onViewDetails }: any) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay: index * 0.05 }}
     >
-      <Card 
-        className="group hover:shadow-xl transition-all duration-300 border-border bg-card overflow-hidden cursor-pointer"
+      <Card
+        className="group cursor-pointer overflow-hidden border-border bg-card transition-all duration-300 hover:shadow-xl"
         onClick={onViewDetails}
       >
         {/* Cover Image */}
@@ -439,47 +444,39 @@ function RackCard({ rack, index, isPlaying, onPlayPause, onViewDetails }: any) {
               src={rack.imageUrl}
               alt={rack.title}
               fill
-              className="object-cover group-hover:scale-105 transition-transform duration-300"
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-          
+
           {/* Play Button Overlay */}
           {rack.demoAudioUrl && (
-            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100">
               <Button
                 size="icon"
-                className="w-16 h-16 rounded-full bg-white/90 hover:bg-white text-black shadow-lg"
+                className="h-16 w-16 rounded-full bg-white/90 text-black shadow-lg hover:bg-white"
                 onClick={(e) => {
                   e.stopPropagation();
                   onPlayPause(rack);
                 }}
               >
-                {isPlaying ? (
-                  <Pause className="w-8 h-8" />
-                ) : (
-                  <Play className="w-8 h-8" />
-                )}
+                {isPlaying ? <Pause className="h-8 w-8" /> : <Play className="h-8 w-8" />}
               </Button>
             </div>
           )}
-          
+
           {/* Badges */}
-          <div className="absolute top-3 left-3 flex gap-2">
-            <Badge className="bg-chart-1 text-white">
-              {rack.abletonVersion}
-            </Badge>
-            {rack.requiresMaxForLive && (
-              <Badge variant="secondary">Max for Live</Badge>
-            )}
+          <div className="absolute left-3 top-3 flex gap-2">
+            <Badge className="bg-chart-1 text-white">{rack.abletonVersion}</Badge>
+            {rack.requiresMaxForLive && <Badge variant="secondary">Max for Live</Badge>}
           </div>
         </div>
 
-        <CardContent className="p-5 space-y-4">
+        <CardContent className="space-y-4 p-5">
           {/* Title & Type */}
           <div>
-            <h3 className="font-bold text-lg line-clamp-1 group-hover:text-chart-1 transition-colors">
+            <h3 className="line-clamp-1 text-lg font-bold transition-colors group-hover:text-chart-1">
               {rack.title}
             </h3>
             <p className="text-sm text-muted-foreground">
@@ -490,8 +487,8 @@ function RackCard({ rack, index, isPlaying, onPlayPause, onViewDetails }: any) {
           {/* Metadata */}
           <div className="flex flex-wrap gap-2">
             {rack.cpuLoad && (
-              <Badge variant="outline" className="text-xs gap-1">
-                <Cpu className="w-3 h-3" />
+              <Badge variant="outline" className="gap-1 text-xs">
+                <Cpu className="h-3 w-3" />
                 {rack.cpuLoad} CPU
               </Badge>
             )}
@@ -519,11 +516,11 @@ function RackCard({ rack, index, isPlaying, onPlayPause, onViewDetails }: any) {
           )}
 
           {/* Creator & Price */}
-          <div className="flex items-center justify-between pt-3 border-t border-border">
+          <div className="flex items-center justify-between border-t border-border pt-3">
             <div className="flex items-center gap-2">
-              <Avatar className="w-8 h-8">
+              <Avatar className="h-8 w-8">
                 <AvatarImage src={rack.creatorAvatar} />
-                <AvatarFallback className="text-xs bg-gradient-to-r from-chart-1 to-chart-2 text-white">
+                <AvatarFallback className="bg-gradient-to-r from-chart-1 to-chart-2 text-xs text-white">
                   {rack.creatorName?.charAt(0) || "?"}
                 </AvatarFallback>
               </Avatar>
@@ -545,8 +542,8 @@ function RackListItem({ rack, index, isPlaying, onPlayPause, onViewDetails }: an
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.2, delay: index * 0.03 }}
     >
-      <Card 
-        className="hover:bg-muted/30 transition-colors border-border cursor-pointer"
+      <Card
+        className="cursor-pointer border-border transition-colors hover:bg-muted/30"
         onClick={onViewDetails}
       >
         <CardContent className="p-4">
@@ -560,12 +557,12 @@ function RackListItem({ rack, index, isPlaying, onPlayPause, onViewDetails }: an
                   onPlayPause(rack);
                 }}
               >
-                {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
               </Button>
             )}
-            <Waves className="w-8 h-8 text-chart-1" />
-            <div className="flex-1 min-w-0">
-              <div className="font-semibold truncate">{rack.title}</div>
+            <Waves className="h-8 w-8 text-chart-1" />
+            <div className="min-w-0 flex-1">
+              <div className="truncate font-semibold">{rack.title}</div>
               <div className="text-sm text-muted-foreground">
                 {rack.rackType && getRackTypeLabel(rack.rackType)} • {rack.creatorName}
               </div>
@@ -573,7 +570,7 @@ function RackListItem({ rack, index, isPlaying, onPlayPause, onViewDetails }: an
             <Badge variant="secondary">{rack.abletonVersion}</Badge>
             {rack.cpuLoad && (
               <Badge variant="outline" className="gap-1">
-                <Cpu className="w-3 h-3" />
+                <Cpu className="h-3 w-3" />
                 {rack.cpuLoad}
               </Badge>
             )}
@@ -604,4 +601,3 @@ function Label({ children, className = "", ...props }: any) {
     </label>
   );
 }
-

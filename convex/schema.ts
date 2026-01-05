@@ -477,6 +477,7 @@ export default defineSchema({
 
   digitalProducts: defineTable({
     title: v.string(),
+    slug: v.optional(v.string()),
     description: v.optional(v.string()),
     price: v.number(),
     imageUrl: v.optional(v.string()),
@@ -684,7 +685,9 @@ export default defineSchema({
   })
     .index("by_storeId", ["storeId"])
     .index("by_userId", ["userId"])
-    .index("by_productCategory", ["productCategory"]),
+    .index("by_productCategory", ["productCategory"])
+    .index("by_storeId_and_slug", ["storeId", "slug"])
+    .index("by_slug", ["slug"]),
 
   // Reviews for products
   productReviews: defineTable({

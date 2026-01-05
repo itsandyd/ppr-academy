@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query, internalQuery, internalMutation } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
+import { generateSlug } from "./lib/utils";
 
 // ==================== QUERIES ====================
 
@@ -228,8 +229,24 @@ export const createCoachingProduct = mutation({
   }),
   handler: async (ctx, args) => {
     try {
+      const store = await ctx.db
+        .query("stores")
+        .filter((q) => q.eq(q.field("_id"), args.storeId))
+        .first();
+
+      const storeName = store?.name || "coach";
+      const baseSlug = generateSlug(`${args.title}-${storeName}`);
+
+      const existing = await ctx.db
+        .query("digitalProducts")
+        .withIndex("by_storeId_and_slug", (q) => q.eq("storeId", args.storeId).eq("slug", baseSlug))
+        .first();
+
+      const slug = existing ? `${baseSlug}-${Date.now()}` : baseSlug;
+
       const productId = await ctx.db.insert("digitalProducts", {
         title: args.title,
+        slug,
         description: args.description,
         price: args.price,
         imageUrl: args.imageUrl,
@@ -238,7 +255,6 @@ export const createCoachingProduct = mutation({
         isPublished: false,
         orderBumpEnabled: false,
         affiliateEnabled: false,
-        // Coaching-specific fields
         productType: "coaching",
         duration: args.duration,
         sessionType: args.sessionType,
@@ -277,7 +293,38 @@ export const updateCoachingProduct = mutation({
   }),
   handler: async (ctx, args) => {
     try {
-      const { productId, ...updates } = args;
+      const { productId, title, ...otherUpdates } = args;
+
+      const product = await ctx.db.get(productId);
+      if (!product) {
+        return { success: false, error: "Product not found" };
+      }
+
+      const updates: Record<string, any> = { ...otherUpdates };
+
+      if (title && title !== product.title) {
+        const store = await ctx.db
+          .query("stores")
+          .filter((q) => q.eq(q.field("_id"), product.storeId))
+          .first();
+
+        const storeName = store?.name || "coach";
+        const baseSlug = generateSlug(`${title}-${storeName}`);
+
+        const existing = await ctx.db
+          .query("digitalProducts")
+          .withIndex("by_storeId_and_slug", (q) =>
+            q.eq("storeId", product.storeId).eq("slug", baseSlug)
+          )
+          .first();
+
+        if (!existing || existing._id === productId) {
+          updates.slug = baseSlug;
+        } else {
+          updates.slug = `${baseSlug}-${Date.now()}`;
+        }
+        updates.title = title;
+      }
 
       await ctx.db.patch(productId, updates);
 
@@ -771,6 +818,7 @@ export const getCoachingProductForBooking = query({
     v.object({
       _id: v.id("digitalProducts"),
       title: v.string(),
+      slug: v.optional(v.string()),
       description: v.optional(v.string()),
       price: v.number(),
       imageUrl: v.optional(v.string()),
@@ -793,6 +841,110 @@ export const getCoachingProductForBooking = query({
     return {
       _id: product._id,
       title: product.title,
+      slug: (product as any).slug,
+      description: product.description,
+      price: product.price,
+      imageUrl: product.imageUrl,
+      storeId: product.storeId,
+      userId: product.userId,
+      duration: (product as any).duration,
+      sessionType: (product as any).sessionType,
+      deliverables: (product as any).deliverables,
+      availability: (product as any).availability,
+      discordRequired: (product as any).discordConfig?.requireDiscord ?? true,
+      pricingModel: (product as any).pricingModel,
+    };
+  },
+});
+
+// Get coaching product by slug (for SEO-friendly URLs)
+export const getCoachingProductBySlug = query({
+  args: {
+    storeId: v.string(),
+    slug: v.string(),
+  },
+  returns: v.union(
+    v.object({
+      _id: v.id("digitalProducts"),
+      title: v.string(),
+      slug: v.optional(v.string()),
+      description: v.optional(v.string()),
+      price: v.number(),
+      imageUrl: v.optional(v.string()),
+      storeId: v.string(),
+      userId: v.string(),
+      duration: v.optional(v.number()),
+      sessionType: v.optional(v.string()),
+      deliverables: v.optional(v.string()),
+      availability: v.optional(v.any()),
+      discordRequired: v.optional(v.boolean()),
+      pricingModel: v.optional(v.string()),
+    }),
+    v.null()
+  ),
+  handler: async (ctx, args) => {
+    const product = await ctx.db
+      .query("digitalProducts")
+      .withIndex("by_storeId_and_slug", (q) => q.eq("storeId", args.storeId).eq("slug", args.slug))
+      .unique();
+
+    if (!product || !product.isPublished) return null;
+    if ((product as any).productType !== "coaching") return null;
+
+    return {
+      _id: product._id,
+      title: product.title,
+      slug: (product as any).slug,
+      description: product.description,
+      price: product.price,
+      imageUrl: product.imageUrl,
+      storeId: product.storeId,
+      userId: product.userId,
+      duration: (product as any).duration,
+      sessionType: (product as any).sessionType,
+      deliverables: (product as any).deliverables,
+      availability: (product as any).availability,
+      discordRequired: (product as any).discordConfig?.requireDiscord ?? true,
+      pricingModel: (product as any).pricingModel,
+    };
+  },
+});
+
+// Get coaching product by global slug (for marketplace URLs without storeId)
+export const getCoachingProductByGlobalSlug = query({
+  args: { slug: v.string() },
+  returns: v.union(
+    v.object({
+      _id: v.id("digitalProducts"),
+      title: v.string(),
+      slug: v.optional(v.string()),
+      description: v.optional(v.string()),
+      price: v.number(),
+      imageUrl: v.optional(v.string()),
+      storeId: v.string(),
+      userId: v.string(),
+      duration: v.optional(v.number()),
+      sessionType: v.optional(v.string()),
+      deliverables: v.optional(v.string()),
+      availability: v.optional(v.any()),
+      discordRequired: v.optional(v.boolean()),
+      pricingModel: v.optional(v.string()),
+    }),
+    v.null()
+  ),
+  handler: async (ctx, args) => {
+    const product = await ctx.db
+      .query("digitalProducts")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .first();
+
+    if (!product || !product.isPublished) return null;
+    if ((product as any).productType !== "coaching") return null;
+
+    return {
+      _id: product._id,
+      title: product.title,
+      slug: (product as any).slug,
       description: product.description,
       price: product.price,
       imageUrl: product.imageUrl,
@@ -869,5 +1021,54 @@ export const getSessionForCleanup = internalQuery({
       discordRoleId: session.discordRoleId,
       productId: session.productId,
     };
+  },
+});
+
+// Backfill slugs for existing coaching products that don't have them
+export const backfillCoachingSlugs = mutation({
+  args: {},
+  returns: v.object({
+    updated: v.number(),
+    skipped: v.number(),
+  }),
+  handler: async (ctx) => {
+    const products = await ctx.db.query("digitalProducts").collect();
+
+    const coachingProducts = products.filter(
+      (p) => (p as any).productType === "coaching" && !(p as any).slug
+    );
+
+    let updated = 0;
+    let skipped = 0;
+
+    for (const product of coachingProducts) {
+      const store = await ctx.db
+        .query("stores")
+        .filter((q) => q.eq(q.field("_id"), product.storeId))
+        .first();
+
+      const storeName = store?.name || "coach";
+      const baseSlug = generateSlug(`${product.title}-${storeName}`);
+
+      const existing = await ctx.db
+        .query("digitalProducts")
+        .withIndex("by_slug", (q) => q.eq("slug", baseSlug))
+        .first();
+
+      if (existing && existing._id !== product._id) {
+        const slug = `${baseSlug}-${Date.now()}`;
+        await ctx.db.patch(product._id, { slug } as any);
+        updated++;
+      } else {
+        await ctx.db.patch(product._id, { slug: baseSlug } as any);
+        updated++;
+      }
+    }
+
+    skipped = products.filter(
+      (p) => (p as any).productType === "coaching" && (p as any).slug
+    ).length;
+
+    return { updated, skipped };
   },
 });

@@ -1,376 +1,15 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Doc, Id } from "./_generated/dataModel";
+import { generateSlug } from "./lib/utils";
 
 // Get products by store (all products - for dashboard)
 export const getProductsByStore = query({
   args: { storeId: v.string() },
-  returns: v.array(v.object({
-    _id: v.id("digitalProducts"),
-    _creationTime: v.number(),
-    title: v.string(),
-    description: v.optional(v.string()),
-    price: v.number(),
-    imageUrl: v.optional(v.string()),
-    downloadUrl: v.optional(v.string()),
-    storeId: v.string(),
-    userId: v.string(),
-    isPublished: v.optional(v.boolean()),
-    buttonLabel: v.optional(v.string()),
-    style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))),
-    // URL/Media specific fields
-    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"), v.literal("coaching"), v.literal("effectChain"), v.literal("abletonRack"), v.literal("abletonPreset"), v.literal("playlistCuration"))),
-    productCategory: v.optional(v.string()), // Product category (sample-pack, preset-pack, etc.)
-    url: v.optional(v.string()),
-    displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
-    mediaType: v.optional(v.union(v.literal("youtube"), v.literal("spotify"), v.literal("website"), v.literal("social"))),
-    // Coaching specific fields
-    duration: v.optional(v.number()),
-    sessionType: v.optional(v.string()),
-    customFields: v.optional(v.any()),
-    availability: v.optional(v.any()),
-    thumbnailStyle: v.optional(v.string()),
-    discordRoleId: v.optional(v.string()),
-    // Order bump & affiliate fields
-    orderBumpEnabled: v.optional(v.boolean()),
-    orderBumpProductName: v.optional(v.string()),
-    orderBumpDescription: v.optional(v.string()),
-    orderBumpPrice: v.optional(v.number()),
-    orderBumpImageUrl: v.optional(v.string()),
-    affiliateEnabled: v.optional(v.boolean()),
-    affiliateCommissionRate: v.optional(v.number()),
-    affiliateMinPayout: v.optional(v.number()),
-    affiliateCookieDuration: v.optional(v.number()),
-    confirmationEmailSubject: v.optional(v.string()),
-    confirmationEmailBody: v.optional(v.string()),
-    // Ableton Rack specific fields
-    abletonVersion: v.optional(v.string()),
-    minAbletonVersion: v.optional(v.string()),
-    rackType: v.optional(v.union(v.literal("audioEffect"), v.literal("instrument"), v.literal("midiEffect"), v.literal("drumRack"))),
-    effectType: v.optional(v.array(v.string())),
-    macroCount: v.optional(v.number()),
-    cpuLoad: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
-    genre: v.optional(v.array(v.string())),
-    bpm: v.optional(v.number()),
-    musicalKey: v.optional(v.string()),
-    requiresMaxForLive: v.optional(v.boolean()),
-    thirdPartyPlugins: v.optional(v.array(v.string())),
-    demoAudioUrl: v.optional(v.string()),
-    chainImageUrl: v.optional(v.string()),
-    macroScreenshotUrls: v.optional(v.array(v.string())),
-    complexity: v.optional(v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced"))),
-    tags: v.optional(v.array(v.string())),
-    fileFormat: v.optional(v.union(v.literal("adg"), v.literal("adv"), v.literal("alp"))),
-    fileSize: v.optional(v.number()),
-    installationNotes: v.optional(v.string()),
-    // Follow gate fields (for free products with download gates)
-    followGateEnabled: v.optional(v.boolean()),
-    followGateRequirements: v.optional(v.object({
-      requireEmail: v.optional(v.boolean()),
-      requireInstagram: v.optional(v.boolean()),
-      requireTiktok: v.optional(v.boolean()),
-      requireYoutube: v.optional(v.boolean()),
-      requireSpotify: v.optional(v.boolean()),
-      minFollowsRequired: v.optional(v.number()),
-    })),
-    followGateSocialLinks: v.optional(v.object({
-      instagram: v.optional(v.string()),
-      tiktok: v.optional(v.string()),
-      youtube: v.optional(v.string()),
-      spotify: v.optional(v.string()),
-    })),
-    followGateMessage: v.optional(v.string()),
-    // Pack files (for sample/midi/preset packs)
-    packFiles: v.optional(v.string()), // JSON stringified array of file metadata
-    // Effect Chain / DAW fields
-    dawType: v.optional(v.union(
-      v.literal("ableton"),
-      v.literal("fl-studio"),
-      v.literal("logic"),
-      v.literal("bitwig"),
-      v.literal("studio-one"),
-      v.literal("reason"),
-      v.literal("cubase"),
-      v.literal("multi-daw")
-    )),
-    dawVersion: v.optional(v.string()),
-  })),
-  handler: async (ctx, args) => {
-    const products = await ctx.db
-      .query("digitalProducts")
-      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
-    
-    // Filter out courses (they belong in the courses table, not digitalProducts)
-    const nonCourseProducts = products.filter(
-      (product) => product.productCategory !== "course"
-    );
-    
-    // Convert storage IDs to URLs for image fields
-    const productsWithUrls = await Promise.all(
-      nonCourseProducts.map(async (product) => {
-        let imageUrl = product.imageUrl;
-        let downloadUrl = product.downloadUrl;
-        let demoAudioUrl = product.demoAudioUrl;
-        let chainImageUrl = product.chainImageUrl;
-        
-        // Convert storage IDs to URLs if they're storage IDs (not external URLs)
-        if (imageUrl && !imageUrl.startsWith('http')) {
-          imageUrl = await ctx.storage.getUrl(imageUrl as any) || imageUrl;
-        }
-        if (downloadUrl && !downloadUrl.startsWith('http')) {
-          downloadUrl = await ctx.storage.getUrl(downloadUrl as any) || downloadUrl;
-        }
-        if (demoAudioUrl && !demoAudioUrl.startsWith('http')) {
-          demoAudioUrl = await ctx.storage.getUrl(demoAudioUrl as any) || demoAudioUrl;
-        }
-        if (chainImageUrl && !chainImageUrl.startsWith('http')) {
-          chainImageUrl = await ctx.storage.getUrl(chainImageUrl as any) || chainImageUrl;
-        }
-        
-        return {
-          ...product,
-          imageUrl,
-          downloadUrl,
-          demoAudioUrl,
-          chainImageUrl,
-        };
-      })
-    );
-    
-    return productsWithUrls;
-  },
-});
-
-// Get published products by store (for public storefront)
-export const getPublishedProductsByStore = query({
-  args: { storeId: v.string() },
-  returns: v.array(v.object({
-    _id: v.id("digitalProducts"),
-    _creationTime: v.number(),
-    title: v.string(),
-    description: v.optional(v.string()),
-    price: v.number(),
-    imageUrl: v.optional(v.string()),
-    downloadUrl: v.optional(v.string()),
-    storeId: v.string(),
-    userId: v.string(),
-    isPublished: v.optional(v.boolean()),
-    buttonLabel: v.optional(v.string()),
-    style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))),
-    // URL/Media specific fields
-    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"), v.literal("coaching"), v.literal("effectChain"), v.literal("abletonRack"), v.literal("abletonPreset"), v.literal("playlistCuration"))),
-    productCategory: v.optional(v.string()), // Product category (sample-pack, preset-pack, etc.)
-    url: v.optional(v.string()),
-    displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
-    mediaType: v.optional(v.union(v.literal("youtube"), v.literal("spotify"), v.literal("website"), v.literal("social"))),
-    // Coaching specific fields
-    duration: v.optional(v.number()),
-    sessionType: v.optional(v.string()),
-    customFields: v.optional(v.any()),
-    availability: v.optional(v.any()),
-    thumbnailStyle: v.optional(v.string()),
-    discordRoleId: v.optional(v.string()),
-    // Order bump & affiliate fields
-    orderBumpEnabled: v.optional(v.boolean()),
-    orderBumpProductName: v.optional(v.string()),
-    orderBumpDescription: v.optional(v.string()),
-    orderBumpPrice: v.optional(v.number()),
-    orderBumpImageUrl: v.optional(v.string()),
-    affiliateEnabled: v.optional(v.boolean()),
-    affiliateCommissionRate: v.optional(v.number()),
-    affiliateMinPayout: v.optional(v.number()),
-    affiliateCookieDuration: v.optional(v.number()),
-    confirmationEmailSubject: v.optional(v.string()),
-    confirmationEmailBody: v.optional(v.string()),
-    // Ableton Rack specific fields
-    abletonVersion: v.optional(v.string()),
-    minAbletonVersion: v.optional(v.string()),
-    rackType: v.optional(v.union(v.literal("audioEffect"), v.literal("instrument"), v.literal("midiEffect"), v.literal("drumRack"))),
-    effectType: v.optional(v.array(v.string())),
-    macroCount: v.optional(v.number()),
-    cpuLoad: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
-    genre: v.optional(v.array(v.string())),
-    bpm: v.optional(v.number()),
-    musicalKey: v.optional(v.string()),
-    requiresMaxForLive: v.optional(v.boolean()),
-    thirdPartyPlugins: v.optional(v.array(v.string())),
-    demoAudioUrl: v.optional(v.string()),
-    chainImageUrl: v.optional(v.string()),
-    macroScreenshotUrls: v.optional(v.array(v.string())),
-    complexity: v.optional(v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced"))),
-    tags: v.optional(v.array(v.string())),
-    fileFormat: v.optional(v.union(v.literal("adg"), v.literal("adv"), v.literal("alp"))),
-    fileSize: v.optional(v.number()),
-    installationNotes: v.optional(v.string()),
-    // Follow gate fields (for free products with download gates)
-    followGateEnabled: v.optional(v.boolean()),
-    followGateRequirements: v.optional(v.object({
-      requireEmail: v.optional(v.boolean()),
-      requireInstagram: v.optional(v.boolean()),
-      requireTiktok: v.optional(v.boolean()),
-      requireYoutube: v.optional(v.boolean()),
-      requireSpotify: v.optional(v.boolean()),
-      minFollowsRequired: v.optional(v.number()),
-    })),
-    followGateSocialLinks: v.optional(v.object({
-      instagram: v.optional(v.string()),
-      tiktok: v.optional(v.string()),
-      youtube: v.optional(v.string()),
-      spotify: v.optional(v.string()),
-    })),
-    followGateMessage: v.optional(v.string()),
-    // Pack files (for sample/midi/preset packs)
-    packFiles: v.optional(v.string()), // JSON stringified array of file metadata
-    // Effect Chain / DAW fields
-    dawType: v.optional(v.union(
-      v.literal("ableton"),
-      v.literal("fl-studio"),
-      v.literal("logic"),
-      v.literal("bitwig"),
-      v.literal("studio-one"),
-      v.literal("reason"),
-      v.literal("cubase"),
-      v.literal("multi-daw")
-    )),
-    dawVersion: v.optional(v.string()),
-  })),
-  handler: async (ctx, args) => {
-    const products = await ctx.db
-      .query("digitalProducts")
-      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
-    
-    // Filter for published products only, and exclude courses (they belong in courses table)
-    const publishedProducts = products.filter(
-      (product) => product.isPublished === true && product.productCategory !== "course"
-    );
-    
-    // Convert storage IDs to URLs for image fields
-    const productsWithUrls = await Promise.all(
-      publishedProducts.map(async (product) => {
-        let imageUrl = product.imageUrl;
-        let downloadUrl = product.downloadUrl;
-        let demoAudioUrl = product.demoAudioUrl;
-        let chainImageUrl = product.chainImageUrl;
-        
-        // Convert storage IDs to URLs if they're storage IDs (not external URLs)
-        if (imageUrl && !imageUrl.startsWith('http')) {
-          imageUrl = await ctx.storage.getUrl(imageUrl as any) || imageUrl;
-        }
-        if (downloadUrl && !downloadUrl.startsWith('http')) {
-          downloadUrl = await ctx.storage.getUrl(downloadUrl as any) || downloadUrl;
-        }
-        if (demoAudioUrl && !demoAudioUrl.startsWith('http')) {
-          demoAudioUrl = await ctx.storage.getUrl(demoAudioUrl as any) || demoAudioUrl;
-        }
-        if (chainImageUrl && !chainImageUrl.startsWith('http')) {
-          chainImageUrl = await ctx.storage.getUrl(chainImageUrl as any) || chainImageUrl;
-        }
-        
-        return {
-          ...product,
-          imageUrl,
-          downloadUrl,
-          demoAudioUrl,
-          chainImageUrl,
-        };
-      })
-    );
-    
-    return productsWithUrls;
-  },
-});
-
-// Get products by user
-export const getProductsByUser = query({
-  args: { userId: v.string() },
-  returns: v.array(v.object({
-    _id: v.id("digitalProducts"),
-    _creationTime: v.number(),
-    title: v.string(),
-    description: v.optional(v.string()),
-    price: v.number(),
-    imageUrl: v.optional(v.string()),
-    downloadUrl: v.optional(v.string()),
-    storeId: v.string(),
-    userId: v.string(),
-    isPublished: v.optional(v.boolean()),
-    buttonLabel: v.optional(v.string()),
-    style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))),
-    // URL/Media specific fields
-    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"), v.literal("coaching"), v.literal("effectChain"), v.literal("abletonRack"), v.literal("abletonPreset"), v.literal("playlistCuration"))),
-    url: v.optional(v.string()),
-    displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
-    mediaType: v.optional(v.union(v.literal("youtube"), v.literal("spotify"), v.literal("website"), v.literal("social"))),
-    // Coaching specific fields
-    duration: v.optional(v.number()),
-    sessionType: v.optional(v.string()),
-    customFields: v.optional(v.any()),
-    availability: v.optional(v.any()),
-    thumbnailStyle: v.optional(v.string()),
-    discordRoleId: v.optional(v.string()),
-    // Order bump & affiliate fields
-    orderBumpEnabled: v.optional(v.boolean()),
-    orderBumpProductName: v.optional(v.string()),
-    orderBumpDescription: v.optional(v.string()),
-    orderBumpPrice: v.optional(v.number()),
-    orderBumpImageUrl: v.optional(v.string()),
-    affiliateEnabled: v.optional(v.boolean()),
-    affiliateCommissionRate: v.optional(v.number()),
-    affiliateMinPayout: v.optional(v.number()),
-    affiliateCookieDuration: v.optional(v.number()),
-    confirmationEmailSubject: v.optional(v.string()),
-    confirmationEmailBody: v.optional(v.string()),
-    // Ableton Rack specific fields
-    abletonVersion: v.optional(v.string()),
-    minAbletonVersion: v.optional(v.string()),
-    rackType: v.optional(v.union(v.literal("audioEffect"), v.literal("instrument"), v.literal("midiEffect"), v.literal("drumRack"))),
-    effectType: v.optional(v.array(v.string())),
-    macroCount: v.optional(v.number()),
-    cpuLoad: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
-    genre: v.optional(v.array(v.string())),
-    bpm: v.optional(v.number()),
-    musicalKey: v.optional(v.string()),
-    requiresMaxForLive: v.optional(v.boolean()),
-    thirdPartyPlugins: v.optional(v.array(v.string())),
-    demoAudioUrl: v.optional(v.string()),
-    chainImageUrl: v.optional(v.string()),
-    macroScreenshotUrls: v.optional(v.array(v.string())),
-    complexity: v.optional(v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced"))),
-    tags: v.optional(v.array(v.string())),
-    fileFormat: v.optional(v.union(v.literal("adg"), v.literal("adv"), v.literal("alp"))),
-    fileSize: v.optional(v.number()),
-    installationNotes: v.optional(v.string()),
-    // Effect Chain / DAW fields
-    dawType: v.optional(v.union(
-      v.literal("ableton"),
-      v.literal("fl-studio"),
-      v.literal("logic"),
-      v.literal("bitwig"),
-      v.literal("studio-one"),
-      v.literal("reason"),
-      v.literal("cubase"),
-      v.literal("multi-daw")
-    )),
-    dawVersion: v.optional(v.string()),
-  })),
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("digitalProducts")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .collect();
-  },
-});
-
-// Get product by ID
-export const getProductById = query({
-  args: { productId: v.id("digitalProducts") },
-  returns: v.union(
+  returns: v.array(
     v.object({
       _id: v.id("digitalProducts"),
       _creationTime: v.number(),
-      productCategory: v.optional(v.string()), // Product category (sample-pack, preset-pack, etc.)
       title: v.string(),
       description: v.optional(v.string()),
       price: v.number(),
@@ -380,12 +19,38 @@ export const getProductById = query({
       userId: v.string(),
       isPublished: v.optional(v.boolean()),
       buttonLabel: v.optional(v.string()),
-      style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))),
-    // URL/Media specific fields
-    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"), v.literal("coaching"), v.literal("effectChain"), v.literal("abletonRack"), v.literal("abletonPreset"), v.literal("playlistCuration"))),
-    url: v.optional(v.string()),
-    displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
-    mediaType: v.optional(v.union(v.literal("youtube"), v.literal("spotify"), v.literal("website"), v.literal("social"))),
+      style: v.optional(
+        v.union(
+          v.literal("button"),
+          v.literal("callout"),
+          v.literal("preview"),
+          v.literal("card"),
+          v.literal("minimal")
+        )
+      ),
+      // URL/Media specific fields
+      productType: v.optional(
+        v.union(
+          v.literal("digital"),
+          v.literal("urlMedia"),
+          v.literal("coaching"),
+          v.literal("effectChain"),
+          v.literal("abletonRack"),
+          v.literal("abletonPreset"),
+          v.literal("playlistCuration")
+        )
+      ),
+      productCategory: v.optional(v.string()), // Product category (sample-pack, preset-pack, etc.)
+      url: v.optional(v.string()),
+      displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
+      mediaType: v.optional(
+        v.union(
+          v.literal("youtube"),
+          v.literal("spotify"),
+          v.literal("website"),
+          v.literal("social")
+        )
+      ),
       // Coaching specific fields
       duration: v.optional(v.number()),
       sessionType: v.optional(v.string()),
@@ -408,7 +73,14 @@ export const getProductById = query({
       // Ableton Rack specific fields
       abletonVersion: v.optional(v.string()),
       minAbletonVersion: v.optional(v.string()),
-      rackType: v.optional(v.union(v.literal("audioEffect"), v.literal("instrument"), v.literal("midiEffect"), v.literal("drumRack"))),
+      rackType: v.optional(
+        v.union(
+          v.literal("audioEffect"),
+          v.literal("instrument"),
+          v.literal("midiEffect"),
+          v.literal("drumRack")
+        )
+      ),
       effectType: v.optional(v.array(v.string())),
       macroCount: v.optional(v.number()),
       cpuLoad: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
@@ -420,83 +92,576 @@ export const getProductById = query({
       demoAudioUrl: v.optional(v.string()),
       chainImageUrl: v.optional(v.string()),
       macroScreenshotUrls: v.optional(v.array(v.string())),
-      complexity: v.optional(v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced"))),
+      complexity: v.optional(
+        v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced"))
+      ),
       tags: v.optional(v.array(v.string())),
       fileFormat: v.optional(v.union(v.literal("adg"), v.literal("adv"), v.literal("alp"))),
       fileSize: v.optional(v.number()),
       installationNotes: v.optional(v.string()),
       // Follow gate fields (for free products with download gates)
       followGateEnabled: v.optional(v.boolean()),
-      followGateRequirements: v.optional(v.object({
-        requireEmail: v.optional(v.boolean()),
-        requireInstagram: v.optional(v.boolean()),
-        requireTiktok: v.optional(v.boolean()),
-        requireYoutube: v.optional(v.boolean()),
-        requireSpotify: v.optional(v.boolean()),
-        minFollowsRequired: v.optional(v.number()),
-      })),
-      followGateSocialLinks: v.optional(v.object({
-        instagram: v.optional(v.string()),
-        tiktok: v.optional(v.string()),
-        youtube: v.optional(v.string()),
-        spotify: v.optional(v.string()),
-      })),
+      followGateRequirements: v.optional(
+        v.object({
+          requireEmail: v.optional(v.boolean()),
+          requireInstagram: v.optional(v.boolean()),
+          requireTiktok: v.optional(v.boolean()),
+          requireYoutube: v.optional(v.boolean()),
+          requireSpotify: v.optional(v.boolean()),
+          minFollowsRequired: v.optional(v.number()),
+        })
+      ),
+      followGateSocialLinks: v.optional(
+        v.object({
+          instagram: v.optional(v.string()),
+          tiktok: v.optional(v.string()),
+          youtube: v.optional(v.string()),
+          spotify: v.optional(v.string()),
+        })
+      ),
       followGateMessage: v.optional(v.string()),
       // Pack files (for sample/midi/preset packs)
       packFiles: v.optional(v.string()), // JSON stringified array of file metadata
       // Effect Chain / DAW fields
-      dawType: v.optional(v.union(
-        v.literal("ableton"),
-        v.literal("fl-studio"),
-        v.literal("logic"),
-        v.literal("bitwig"),
-        v.literal("studio-one"),
-        v.literal("reason"),
-        v.literal("cubase"),
-        v.literal("multi-daw")
-      )),
+      dawType: v.optional(
+        v.union(
+          v.literal("ableton"),
+          v.literal("fl-studio"),
+          v.literal("logic"),
+          v.literal("bitwig"),
+          v.literal("studio-one"),
+          v.literal("reason"),
+          v.literal("cubase"),
+          v.literal("multi-daw")
+        )
+      ),
+      dawVersion: v.optional(v.string()),
+      slug: v.optional(v.string()),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const products = await ctx.db
+      .query("digitalProducts")
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+      .collect();
+
+    // Filter out courses (they belong in the courses table, not digitalProducts)
+    const nonCourseProducts = products.filter((product) => product.productCategory !== "course");
+
+    // Convert storage IDs to URLs for image fields
+    const productsWithUrls = await Promise.all(
+      nonCourseProducts.map(async (product) => {
+        let imageUrl = product.imageUrl;
+        let downloadUrl = product.downloadUrl;
+        let demoAudioUrl = product.demoAudioUrl;
+        let chainImageUrl = product.chainImageUrl;
+
+        // Convert storage IDs to URLs if they're storage IDs (not external URLs)
+        if (imageUrl && !imageUrl.startsWith("http")) {
+          imageUrl = (await ctx.storage.getUrl(imageUrl as any)) || imageUrl;
+        }
+        if (downloadUrl && !downloadUrl.startsWith("http")) {
+          downloadUrl = (await ctx.storage.getUrl(downloadUrl as any)) || downloadUrl;
+        }
+        if (demoAudioUrl && !demoAudioUrl.startsWith("http")) {
+          demoAudioUrl = (await ctx.storage.getUrl(demoAudioUrl as any)) || demoAudioUrl;
+        }
+        if (chainImageUrl && !chainImageUrl.startsWith("http")) {
+          chainImageUrl = (await ctx.storage.getUrl(chainImageUrl as any)) || chainImageUrl;
+        }
+
+        return {
+          ...product,
+          imageUrl,
+          downloadUrl,
+          demoAudioUrl,
+          chainImageUrl,
+        };
+      })
+    );
+
+    return productsWithUrls;
+  },
+});
+
+// Get published products by store (for public storefront)
+export const getPublishedProductsByStore = query({
+  args: { storeId: v.string() },
+  returns: v.array(
+    v.object({
+      _id: v.id("digitalProducts"),
+      _creationTime: v.number(),
+      slug: v.optional(v.string()),
+      title: v.string(),
+      description: v.optional(v.string()),
+      price: v.number(),
+      imageUrl: v.optional(v.string()),
+      downloadUrl: v.optional(v.string()),
+      storeId: v.string(),
+      userId: v.string(),
+      isPublished: v.optional(v.boolean()),
+      buttonLabel: v.optional(v.string()),
+      style: v.optional(
+        v.union(
+          v.literal("button"),
+          v.literal("callout"),
+          v.literal("preview"),
+          v.literal("card"),
+          v.literal("minimal")
+        )
+      ),
+      // URL/Media specific fields
+      productType: v.optional(
+        v.union(
+          v.literal("digital"),
+          v.literal("urlMedia"),
+          v.literal("coaching"),
+          v.literal("effectChain"),
+          v.literal("abletonRack"),
+          v.literal("abletonPreset"),
+          v.literal("playlistCuration")
+        )
+      ),
+      productCategory: v.optional(v.string()), // Product category (sample-pack, preset-pack, etc.)
+      url: v.optional(v.string()),
+      displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
+      mediaType: v.optional(
+        v.union(
+          v.literal("youtube"),
+          v.literal("spotify"),
+          v.literal("website"),
+          v.literal("social")
+        )
+      ),
+      // Coaching specific fields
+      duration: v.optional(v.number()),
+      sessionType: v.optional(v.string()),
+      customFields: v.optional(v.any()),
+      availability: v.optional(v.any()),
+      thumbnailStyle: v.optional(v.string()),
+      discordRoleId: v.optional(v.string()),
+      // Order bump & affiliate fields
+      orderBumpEnabled: v.optional(v.boolean()),
+      orderBumpProductName: v.optional(v.string()),
+      orderBumpDescription: v.optional(v.string()),
+      orderBumpPrice: v.optional(v.number()),
+      orderBumpImageUrl: v.optional(v.string()),
+      affiliateEnabled: v.optional(v.boolean()),
+      affiliateCommissionRate: v.optional(v.number()),
+      affiliateMinPayout: v.optional(v.number()),
+      affiliateCookieDuration: v.optional(v.number()),
+      confirmationEmailSubject: v.optional(v.string()),
+      confirmationEmailBody: v.optional(v.string()),
+      // Ableton Rack specific fields
+      abletonVersion: v.optional(v.string()),
+      minAbletonVersion: v.optional(v.string()),
+      rackType: v.optional(
+        v.union(
+          v.literal("audioEffect"),
+          v.literal("instrument"),
+          v.literal("midiEffect"),
+          v.literal("drumRack")
+        )
+      ),
+      effectType: v.optional(v.array(v.string())),
+      macroCount: v.optional(v.number()),
+      cpuLoad: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
+      genre: v.optional(v.array(v.string())),
+      bpm: v.optional(v.number()),
+      musicalKey: v.optional(v.string()),
+      requiresMaxForLive: v.optional(v.boolean()),
+      thirdPartyPlugins: v.optional(v.array(v.string())),
+      demoAudioUrl: v.optional(v.string()),
+      chainImageUrl: v.optional(v.string()),
+      macroScreenshotUrls: v.optional(v.array(v.string())),
+      complexity: v.optional(
+        v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced"))
+      ),
+      tags: v.optional(v.array(v.string())),
+      fileFormat: v.optional(v.union(v.literal("adg"), v.literal("adv"), v.literal("alp"))),
+      fileSize: v.optional(v.number()),
+      installationNotes: v.optional(v.string()),
+      // Follow gate fields (for free products with download gates)
+      followGateEnabled: v.optional(v.boolean()),
+      followGateRequirements: v.optional(
+        v.object({
+          requireEmail: v.optional(v.boolean()),
+          requireInstagram: v.optional(v.boolean()),
+          requireTiktok: v.optional(v.boolean()),
+          requireYoutube: v.optional(v.boolean()),
+          requireSpotify: v.optional(v.boolean()),
+          minFollowsRequired: v.optional(v.number()),
+        })
+      ),
+      followGateSocialLinks: v.optional(
+        v.object({
+          instagram: v.optional(v.string()),
+          tiktok: v.optional(v.string()),
+          youtube: v.optional(v.string()),
+          spotify: v.optional(v.string()),
+        })
+      ),
+      followGateMessage: v.optional(v.string()),
+      // Pack files (for sample/midi/preset packs)
+      packFiles: v.optional(v.string()), // JSON stringified array of file metadata
+      // Effect Chain / DAW fields
+      dawType: v.optional(
+        v.union(
+          v.literal("ableton"),
+          v.literal("fl-studio"),
+          v.literal("logic"),
+          v.literal("bitwig"),
+          v.literal("studio-one"),
+          v.literal("reason"),
+          v.literal("cubase"),
+          v.literal("multi-daw")
+        )
+      ),
+      dawVersion: v.optional(v.string()),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const products = await ctx.db
+      .query("digitalProducts")
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+      .collect();
+
+    // Filter for published products only, and exclude courses (they belong in courses table)
+    const publishedProducts = products.filter(
+      (product) => product.isPublished === true && product.productCategory !== "course"
+    );
+
+    // Convert storage IDs to URLs for image fields
+    const productsWithUrls = await Promise.all(
+      publishedProducts.map(async (product) => {
+        let imageUrl = product.imageUrl;
+        let downloadUrl = product.downloadUrl;
+        let demoAudioUrl = product.demoAudioUrl;
+        let chainImageUrl = product.chainImageUrl;
+
+        // Convert storage IDs to URLs if they're storage IDs (not external URLs)
+        if (imageUrl && !imageUrl.startsWith("http")) {
+          imageUrl = (await ctx.storage.getUrl(imageUrl as any)) || imageUrl;
+        }
+        if (downloadUrl && !downloadUrl.startsWith("http")) {
+          downloadUrl = (await ctx.storage.getUrl(downloadUrl as any)) || downloadUrl;
+        }
+        if (demoAudioUrl && !demoAudioUrl.startsWith("http")) {
+          demoAudioUrl = (await ctx.storage.getUrl(demoAudioUrl as any)) || demoAudioUrl;
+        }
+        if (chainImageUrl && !chainImageUrl.startsWith("http")) {
+          chainImageUrl = (await ctx.storage.getUrl(chainImageUrl as any)) || chainImageUrl;
+        }
+
+        return {
+          ...product,
+          imageUrl,
+          downloadUrl,
+          demoAudioUrl,
+          chainImageUrl,
+        };
+      })
+    );
+
+    return productsWithUrls;
+  },
+});
+
+// Get products by user
+export const getProductsByUser = query({
+  args: { userId: v.string() },
+  returns: v.array(
+    v.object({
+      _id: v.id("digitalProducts"),
+      _creationTime: v.number(),
+      title: v.string(),
+      description: v.optional(v.string()),
+      price: v.number(),
+      imageUrl: v.optional(v.string()),
+      downloadUrl: v.optional(v.string()),
+      storeId: v.string(),
+      userId: v.string(),
+      isPublished: v.optional(v.boolean()),
+      buttonLabel: v.optional(v.string()),
+      style: v.optional(
+        v.union(
+          v.literal("button"),
+          v.literal("callout"),
+          v.literal("preview"),
+          v.literal("card"),
+          v.literal("minimal")
+        )
+      ),
+      // URL/Media specific fields
+      productType: v.optional(
+        v.union(
+          v.literal("digital"),
+          v.literal("urlMedia"),
+          v.literal("coaching"),
+          v.literal("effectChain"),
+          v.literal("abletonRack"),
+          v.literal("abletonPreset"),
+          v.literal("playlistCuration")
+        )
+      ),
+      url: v.optional(v.string()),
+      displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
+      mediaType: v.optional(
+        v.union(
+          v.literal("youtube"),
+          v.literal("spotify"),
+          v.literal("website"),
+          v.literal("social")
+        )
+      ),
+      // Coaching specific fields
+      duration: v.optional(v.number()),
+      sessionType: v.optional(v.string()),
+      customFields: v.optional(v.any()),
+      availability: v.optional(v.any()),
+      thumbnailStyle: v.optional(v.string()),
+      discordRoleId: v.optional(v.string()),
+      // Order bump & affiliate fields
+      orderBumpEnabled: v.optional(v.boolean()),
+      orderBumpProductName: v.optional(v.string()),
+      orderBumpDescription: v.optional(v.string()),
+      orderBumpPrice: v.optional(v.number()),
+      orderBumpImageUrl: v.optional(v.string()),
+      affiliateEnabled: v.optional(v.boolean()),
+      affiliateCommissionRate: v.optional(v.number()),
+      affiliateMinPayout: v.optional(v.number()),
+      affiliateCookieDuration: v.optional(v.number()),
+      confirmationEmailSubject: v.optional(v.string()),
+      confirmationEmailBody: v.optional(v.string()),
+      // Ableton Rack specific fields
+      abletonVersion: v.optional(v.string()),
+      minAbletonVersion: v.optional(v.string()),
+      rackType: v.optional(
+        v.union(
+          v.literal("audioEffect"),
+          v.literal("instrument"),
+          v.literal("midiEffect"),
+          v.literal("drumRack")
+        )
+      ),
+      effectType: v.optional(v.array(v.string())),
+      macroCount: v.optional(v.number()),
+      cpuLoad: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
+      genre: v.optional(v.array(v.string())),
+      bpm: v.optional(v.number()),
+      musicalKey: v.optional(v.string()),
+      requiresMaxForLive: v.optional(v.boolean()),
+      thirdPartyPlugins: v.optional(v.array(v.string())),
+      demoAudioUrl: v.optional(v.string()),
+      chainImageUrl: v.optional(v.string()),
+      macroScreenshotUrls: v.optional(v.array(v.string())),
+      complexity: v.optional(
+        v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced"))
+      ),
+      tags: v.optional(v.array(v.string())),
+      fileFormat: v.optional(v.union(v.literal("adg"), v.literal("adv"), v.literal("alp"))),
+      fileSize: v.optional(v.number()),
+      installationNotes: v.optional(v.string()),
+      // Effect Chain / DAW fields
+      dawType: v.optional(
+        v.union(
+          v.literal("ableton"),
+          v.literal("fl-studio"),
+          v.literal("logic"),
+          v.literal("bitwig"),
+          v.literal("studio-one"),
+          v.literal("reason"),
+          v.literal("cubase"),
+          v.literal("multi-daw")
+        )
+      ),
+      dawVersion: v.optional(v.string()),
+      slug: v.optional(v.string()),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const products = await ctx.db
+      .query("digitalProducts")
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+      .collect();
+  },
+});
+
+// Get product by ID
+export const getProductById = query({
+  args: { productId: v.id("digitalProducts") },
+  returns: v.union(
+    v.object({
+      _id: v.id("digitalProducts"),
+      _creationTime: v.number(),
+      productCategory: v.optional(v.string()),
+      slug: v.optional(v.string()),
+      title: v.string(),
+      description: v.optional(v.string()),
+      price: v.number(),
+      imageUrl: v.optional(v.string()),
+      downloadUrl: v.optional(v.string()),
+      storeId: v.string(),
+      userId: v.string(),
+      isPublished: v.optional(v.boolean()),
+      buttonLabel: v.optional(v.string()),
+      style: v.optional(
+        v.union(
+          v.literal("button"),
+          v.literal("callout"),
+          v.literal("preview"),
+          v.literal("card"),
+          v.literal("minimal")
+        )
+      ),
+      // URL/Media specific fields
+      productType: v.optional(
+        v.union(
+          v.literal("digital"),
+          v.literal("urlMedia"),
+          v.literal("coaching"),
+          v.literal("effectChain"),
+          v.literal("abletonRack"),
+          v.literal("abletonPreset"),
+          v.literal("playlistCuration")
+        )
+      ),
+      url: v.optional(v.string()),
+      displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
+      mediaType: v.optional(
+        v.union(
+          v.literal("youtube"),
+          v.literal("spotify"),
+          v.literal("website"),
+          v.literal("social")
+        )
+      ),
+      // Coaching specific fields
+      duration: v.optional(v.number()),
+      sessionType: v.optional(v.string()),
+      customFields: v.optional(v.any()),
+      availability: v.optional(v.any()),
+      thumbnailStyle: v.optional(v.string()),
+      discordRoleId: v.optional(v.string()),
+      // Order bump & affiliate fields
+      orderBumpEnabled: v.optional(v.boolean()),
+      orderBumpProductName: v.optional(v.string()),
+      orderBumpDescription: v.optional(v.string()),
+      orderBumpPrice: v.optional(v.number()),
+      orderBumpImageUrl: v.optional(v.string()),
+      affiliateEnabled: v.optional(v.boolean()),
+      affiliateCommissionRate: v.optional(v.number()),
+      affiliateMinPayout: v.optional(v.number()),
+      affiliateCookieDuration: v.optional(v.number()),
+      confirmationEmailSubject: v.optional(v.string()),
+      confirmationEmailBody: v.optional(v.string()),
+      // Ableton Rack specific fields
+      abletonVersion: v.optional(v.string()),
+      minAbletonVersion: v.optional(v.string()),
+      rackType: v.optional(
+        v.union(
+          v.literal("audioEffect"),
+          v.literal("instrument"),
+          v.literal("midiEffect"),
+          v.literal("drumRack")
+        )
+      ),
+      effectType: v.optional(v.array(v.string())),
+      macroCount: v.optional(v.number()),
+      cpuLoad: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
+      genre: v.optional(v.array(v.string())),
+      bpm: v.optional(v.number()),
+      musicalKey: v.optional(v.string()),
+      requiresMaxForLive: v.optional(v.boolean()),
+      thirdPartyPlugins: v.optional(v.array(v.string())),
+      demoAudioUrl: v.optional(v.string()),
+      chainImageUrl: v.optional(v.string()),
+      macroScreenshotUrls: v.optional(v.array(v.string())),
+      complexity: v.optional(
+        v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced"))
+      ),
+      tags: v.optional(v.array(v.string())),
+      fileFormat: v.optional(v.union(v.literal("adg"), v.literal("adv"), v.literal("alp"))),
+      fileSize: v.optional(v.number()),
+      installationNotes: v.optional(v.string()),
+      // Follow gate fields (for free products with download gates)
+      followGateEnabled: v.optional(v.boolean()),
+      followGateRequirements: v.optional(
+        v.object({
+          requireEmail: v.optional(v.boolean()),
+          requireInstagram: v.optional(v.boolean()),
+          requireTiktok: v.optional(v.boolean()),
+          requireYoutube: v.optional(v.boolean()),
+          requireSpotify: v.optional(v.boolean()),
+          minFollowsRequired: v.optional(v.number()),
+        })
+      ),
+      followGateSocialLinks: v.optional(
+        v.object({
+          instagram: v.optional(v.string()),
+          tiktok: v.optional(v.string()),
+          youtube: v.optional(v.string()),
+          spotify: v.optional(v.string()),
+        })
+      ),
+      followGateMessage: v.optional(v.string()),
+      // Pack files (for sample/midi/preset packs)
+      packFiles: v.optional(v.string()), // JSON stringified array of file metadata
+      // Effect Chain / DAW fields
+      dawType: v.optional(
+        v.union(
+          v.literal("ableton"),
+          v.literal("fl-studio"),
+          v.literal("logic"),
+          v.literal("bitwig"),
+          v.literal("studio-one"),
+          v.literal("reason"),
+          v.literal("cubase"),
+          v.literal("multi-daw")
+        )
+      ),
       dawVersion: v.optional(v.string()),
     }),
     v.null()
   ),
   handler: async (ctx, args) => {
     const product = await ctx.db.get(args.productId);
-    
+
     if (!product) {
       return null;
     }
-    
+
     // Convert storage IDs to URLs for image fields
     let imageUrl = product.imageUrl;
     let downloadUrl = product.downloadUrl;
     let demoAudioUrl = product.demoAudioUrl;
     let chainImageUrl = product.chainImageUrl;
     let macroScreenshotUrls = product.macroScreenshotUrls;
-    
+
     // Convert storage IDs to URLs if they're storage IDs (not external URLs)
-    if (imageUrl && !imageUrl.startsWith('http')) {
-      imageUrl = await ctx.storage.getUrl(imageUrl as any) || imageUrl;
+    if (imageUrl && !imageUrl.startsWith("http")) {
+      imageUrl = (await ctx.storage.getUrl(imageUrl as any)) || imageUrl;
     }
-    if (downloadUrl && !downloadUrl.startsWith('http')) {
-      downloadUrl = await ctx.storage.getUrl(downloadUrl as any) || downloadUrl;
+    if (downloadUrl && !downloadUrl.startsWith("http")) {
+      downloadUrl = (await ctx.storage.getUrl(downloadUrl as any)) || downloadUrl;
     }
-    if (demoAudioUrl && !demoAudioUrl.startsWith('http')) {
-      demoAudioUrl = await ctx.storage.getUrl(demoAudioUrl as any) || demoAudioUrl;
+    if (demoAudioUrl && !demoAudioUrl.startsWith("http")) {
+      demoAudioUrl = (await ctx.storage.getUrl(demoAudioUrl as any)) || demoAudioUrl;
     }
-    if (chainImageUrl && !chainImageUrl.startsWith('http')) {
-      chainImageUrl = await ctx.storage.getUrl(chainImageUrl as any) || chainImageUrl;
+    if (chainImageUrl && !chainImageUrl.startsWith("http")) {
+      chainImageUrl = (await ctx.storage.getUrl(chainImageUrl as any)) || chainImageUrl;
     }
     if (macroScreenshotUrls && macroScreenshotUrls.length > 0) {
       macroScreenshotUrls = await Promise.all(
         macroScreenshotUrls.map(async (url) => {
-          if (url && !url.startsWith('http')) {
-            return await ctx.storage.getUrl(url as any) || url;
+          if (url && !url.startsWith("http")) {
+            return (await ctx.storage.getUrl(url as any)) || url;
           }
           return url;
         })
       );
     }
-    
+
     return {
       ...product,
       imageUrl,
@@ -519,17 +684,45 @@ export const createProduct = mutation({
     storeId: v.string(),
     userId: v.string(),
     buttonLabel: v.optional(v.string()),
-    style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))),
+    style: v.optional(
+      v.union(
+        v.literal("button"),
+        v.literal("callout"),
+        v.literal("preview"),
+        v.literal("card"),
+        v.literal("minimal")
+      )
+    ),
     // URL/Media specific fields
     productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"))),
     url: v.optional(v.string()),
     displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
-    mediaType: v.optional(v.union(v.literal("youtube"), v.literal("spotify"), v.literal("website"), v.literal("social"))),
+    mediaType: v.optional(
+      v.union(v.literal("youtube"), v.literal("spotify"), v.literal("website"), v.literal("social"))
+    ),
   },
   returns: v.id("digitalProducts"),
   handler: async (ctx, args) => {
+    // Get store name for slug generation
+    const store = await ctx.db
+      .query("stores")
+      .filter((q) => q.eq(q.field("_id"), args.storeId))
+      .first();
+
+    const storeName = store?.name || "creator";
+    const baseSlug = generateSlug(`${args.title}-${storeName}`);
+
+    // Check for existing slug and make unique if needed
+    const existing = await ctx.db
+      .query("digitalProducts")
+      .withIndex("by_storeId_and_slug", (q) => q.eq("storeId", args.storeId).eq("slug", baseSlug))
+      .first();
+
+    const slug = existing ? `${baseSlug}-${Date.now()}` : baseSlug;
+
     return await ctx.db.insert("digitalProducts", {
       ...args,
+      slug,
       isPublished: false,
       orderBumpEnabled: false,
       affiliateEnabled: false,
@@ -548,12 +741,32 @@ export const updateProduct = mutation({
     downloadUrl: v.optional(v.string()),
     isPublished: v.optional(v.boolean()),
     buttonLabel: v.optional(v.string()),
-    style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))),
+    style: v.optional(
+      v.union(
+        v.literal("button"),
+        v.literal("callout"),
+        v.literal("preview"),
+        v.literal("card"),
+        v.literal("minimal")
+      )
+    ),
     // URL/Media specific fields
-    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"), v.literal("coaching"), v.literal("effectChain"), v.literal("abletonRack"), v.literal("abletonPreset"), v.literal("playlistCuration"))),
+    productType: v.optional(
+      v.union(
+        v.literal("digital"),
+        v.literal("urlMedia"),
+        v.literal("coaching"),
+        v.literal("effectChain"),
+        v.literal("abletonRack"),
+        v.literal("abletonPreset"),
+        v.literal("playlistCuration")
+      )
+    ),
     url: v.optional(v.string()),
     displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
-    mediaType: v.optional(v.union(v.literal("youtube"), v.literal("spotify"), v.literal("website"), v.literal("social"))),
+    mediaType: v.optional(
+      v.union(v.literal("youtube"), v.literal("spotify"), v.literal("website"), v.literal("social"))
+    ),
     orderBumpEnabled: v.optional(v.boolean()),
     orderBumpProductName: v.optional(v.string()),
     orderBumpDescription: v.optional(v.string()),
@@ -567,34 +780,40 @@ export const updateProduct = mutation({
     confirmationEmailBody: v.optional(v.string()),
     // Follow gate fields (for free products with download gates)
     followGateEnabled: v.optional(v.boolean()),
-    followGateRequirements: v.optional(v.object({
-      requireEmail: v.optional(v.boolean()),
-      requireInstagram: v.optional(v.boolean()),
-      requireTiktok: v.optional(v.boolean()),
-      requireYoutube: v.optional(v.boolean()),
-      requireSpotify: v.optional(v.boolean()),
-      minFollowsRequired: v.optional(v.number()),
-    })),
-    followGateSocialLinks: v.optional(v.object({
-      instagram: v.optional(v.string()),
-      tiktok: v.optional(v.string()),
-      youtube: v.optional(v.string()),
-      spotify: v.optional(v.string()),
-    })),
+    followGateRequirements: v.optional(
+      v.object({
+        requireEmail: v.optional(v.boolean()),
+        requireInstagram: v.optional(v.boolean()),
+        requireTiktok: v.optional(v.boolean()),
+        requireYoutube: v.optional(v.boolean()),
+        requireSpotify: v.optional(v.boolean()),
+        minFollowsRequired: v.optional(v.number()),
+      })
+    ),
+    followGateSocialLinks: v.optional(
+      v.object({
+        instagram: v.optional(v.string()),
+        tiktok: v.optional(v.string()),
+        youtube: v.optional(v.string()),
+        spotify: v.optional(v.string()),
+      })
+    ),
     followGateMessage: v.optional(v.string()),
     // Pack files (for sample/midi/preset packs)
     packFiles: v.optional(v.string()), // JSON stringified array of file metadata
     // Effect Chain / DAW fields
-    dawType: v.optional(v.union(
-      v.literal("ableton"),
-      v.literal("fl-studio"),
-      v.literal("logic"),
-      v.literal("bitwig"),
-      v.literal("studio-one"),
-      v.literal("reason"),
-      v.literal("cubase"),
-      v.literal("multi-daw")
-    )),
+    dawType: v.optional(
+      v.union(
+        v.literal("ableton"),
+        v.literal("fl-studio"),
+        v.literal("logic"),
+        v.literal("bitwig"),
+        v.literal("studio-one"),
+        v.literal("reason"),
+        v.literal("cubase"),
+        v.literal("multi-daw")
+      )
+    ),
     dawVersion: v.optional(v.string()),
     // Coaching specific fields
     duration: v.optional(v.number()),
@@ -602,12 +821,14 @@ export const updateProduct = mutation({
     // Ableton Rack specific fields (legacy)
     abletonVersion: v.optional(v.string()),
     minAbletonVersion: v.optional(v.string()),
-    rackType: v.optional(v.union(
-      v.literal("audioEffect"),
-      v.literal("instrument"),
-      v.literal("midiEffect"),
-      v.literal("drumRack")
-    )),
+    rackType: v.optional(
+      v.union(
+        v.literal("audioEffect"),
+        v.literal("instrument"),
+        v.literal("midiEffect"),
+        v.literal("drumRack")
+      )
+    ),
     effectType: v.optional(v.array(v.string())),
     macroCount: v.optional(v.number()),
     cpuLoad: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
@@ -619,7 +840,9 @@ export const updateProduct = mutation({
     demoAudioUrl: v.optional(v.string()),
     chainImageUrl: v.optional(v.string()),
     macroScreenshotUrls: v.optional(v.array(v.string())),
-    complexity: v.optional(v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced"))),
+    complexity: v.optional(
+      v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced"))
+    ),
     tags: v.optional(v.array(v.string())),
     fileFormat: v.optional(v.union(v.literal("adg"), v.literal("adv"), v.literal("alp"))),
     fileSize: v.optional(v.number()),
@@ -638,13 +861,38 @@ export const updateProduct = mutation({
       userId: v.string(),
       isPublished: v.optional(v.boolean()),
       buttonLabel: v.optional(v.string()),
-      style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))),
-    // URL/Media specific fields
-    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"), v.literal("coaching"), v.literal("effectChain"), v.literal("abletonRack"), v.literal("abletonPreset"), v.literal("playlistCuration"))),
-    productCategory: v.optional(v.string()), // Product category (sample-pack, preset-pack, etc.)
-    url: v.optional(v.string()),
-    displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
-    mediaType: v.optional(v.union(v.literal("youtube"), v.literal("spotify"), v.literal("website"), v.literal("social"))),
+      style: v.optional(
+        v.union(
+          v.literal("button"),
+          v.literal("callout"),
+          v.literal("preview"),
+          v.literal("card"),
+          v.literal("minimal")
+        )
+      ),
+      // URL/Media specific fields
+      productType: v.optional(
+        v.union(
+          v.literal("digital"),
+          v.literal("urlMedia"),
+          v.literal("coaching"),
+          v.literal("effectChain"),
+          v.literal("abletonRack"),
+          v.literal("abletonPreset"),
+          v.literal("playlistCuration")
+        )
+      ),
+      productCategory: v.optional(v.string()), // Product category (sample-pack, preset-pack, etc.)
+      url: v.optional(v.string()),
+      displayStyle: v.optional(v.union(v.literal("embed"), v.literal("card"), v.literal("button"))),
+      mediaType: v.optional(
+        v.union(
+          v.literal("youtube"),
+          v.literal("spotify"),
+          v.literal("website"),
+          v.literal("social")
+        )
+      ),
       // Coaching specific fields
       duration: v.optional(v.number()),
       sessionType: v.optional(v.string()),
@@ -666,39 +914,52 @@ export const updateProduct = mutation({
       confirmationEmailBody: v.optional(v.string()),
       // Follow gate fields (for free products with download gates)
       followGateEnabled: v.optional(v.boolean()),
-      followGateRequirements: v.optional(v.object({
-        requireEmail: v.optional(v.boolean()),
-        requireInstagram: v.optional(v.boolean()),
-        requireTiktok: v.optional(v.boolean()),
-        requireYoutube: v.optional(v.boolean()),
-        requireSpotify: v.optional(v.boolean()),
-        minFollowsRequired: v.optional(v.number()),
-      })),
-      followGateSocialLinks: v.optional(v.object({
-        instagram: v.optional(v.string()),
-        tiktok: v.optional(v.string()),
-        youtube: v.optional(v.string()),
-        spotify: v.optional(v.string()),
-      })),
+      followGateRequirements: v.optional(
+        v.object({
+          requireEmail: v.optional(v.boolean()),
+          requireInstagram: v.optional(v.boolean()),
+          requireTiktok: v.optional(v.boolean()),
+          requireYoutube: v.optional(v.boolean()),
+          requireSpotify: v.optional(v.boolean()),
+          minFollowsRequired: v.optional(v.number()),
+        })
+      ),
+      followGateSocialLinks: v.optional(
+        v.object({
+          instagram: v.optional(v.string()),
+          tiktok: v.optional(v.string()),
+          youtube: v.optional(v.string()),
+          spotify: v.optional(v.string()),
+        })
+      ),
       followGateMessage: v.optional(v.string()),
       // Pack files (for sample/midi/preset packs)
       packFiles: v.optional(v.string()), // JSON stringified array of file metadata
       // Effect Chain / DAW fields
-      dawType: v.optional(v.union(
-        v.literal("ableton"),
-        v.literal("fl-studio"),
-        v.literal("logic"),
-        v.literal("bitwig"),
-        v.literal("studio-one"),
-        v.literal("reason"),
-        v.literal("cubase"),
-        v.literal("multi-daw")
-      )),
+      dawType: v.optional(
+        v.union(
+          v.literal("ableton"),
+          v.literal("fl-studio"),
+          v.literal("logic"),
+          v.literal("bitwig"),
+          v.literal("studio-one"),
+          v.literal("reason"),
+          v.literal("cubase"),
+          v.literal("multi-daw")
+        )
+      ),
       dawVersion: v.optional(v.string()),
       // Ableton Rack specific fields (legacy)
       abletonVersion: v.optional(v.string()),
       minAbletonVersion: v.optional(v.string()),
-      rackType: v.optional(v.union(v.literal("audioEffect"), v.literal("instrument"), v.literal("midiEffect"), v.literal("drumRack"))),
+      rackType: v.optional(
+        v.union(
+          v.literal("audioEffect"),
+          v.literal("instrument"),
+          v.literal("midiEffect"),
+          v.literal("drumRack")
+        )
+      ),
       effectType: v.optional(v.array(v.string())),
       macroCount: v.optional(v.number()),
       cpuLoad: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
@@ -710,7 +971,9 @@ export const updateProduct = mutation({
       demoAudioUrl: v.optional(v.string()),
       chainImageUrl: v.optional(v.string()),
       macroScreenshotUrls: v.optional(v.array(v.string())),
-      complexity: v.optional(v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced"))),
+      complexity: v.optional(
+        v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced"))
+      ),
       tags: v.optional(v.array(v.string())),
       fileFormat: v.optional(v.union(v.literal("adg"), v.literal("adv"), v.literal("alp"))),
       fileSize: v.optional(v.number()),
@@ -719,13 +982,45 @@ export const updateProduct = mutation({
     v.null()
   ),
   handler: async (ctx, args) => {
-    const { id, ...updates } = args;
+    const { id, title, ...otherUpdates } = args;
+
+    const product = await ctx.db.get(id);
+    if (!product) {
+      return null;
+    }
+
+    const updates: Record<string, any> = { ...otherUpdates };
+
+    if (title && title !== product.title) {
+      const store = await ctx.db
+        .query("stores")
+        .filter((q) => q.eq(q.field("_id"), product.storeId))
+        .first();
+
+      const storeName = store?.name || "creator";
+      const baseSlug = generateSlug(`${title}-${storeName}`);
+
+      const existing = await ctx.db
+        .query("digitalProducts")
+        .withIndex("by_storeId_and_slug", (q) =>
+          q.eq("storeId", product.storeId).eq("slug", baseSlug)
+        )
+        .first();
+
+      if (!existing || existing._id === id) {
+        updates.slug = baseSlug;
+      } else {
+        updates.slug = `${baseSlug}-${Date.now()}`;
+      }
+      updates.title = title;
+    }
+
     await ctx.db.patch(id, updates);
     return await ctx.db.get(id);
   },
 });
 
-// Update email confirmation settings for a product 
+// Update email confirmation settings for a product
 export const updateEmailConfirmation = mutation({
   args: {
     productId: v.id("digitalProducts"),
@@ -773,7 +1068,12 @@ export const createUrlMediaProduct = mutation({
     description: v.optional(v.string()),
     url: v.string(),
     displayStyle: v.union(v.literal("embed"), v.literal("card"), v.literal("button")),
-    mediaType: v.union(v.literal("youtube"), v.literal("spotify"), v.literal("website"), v.literal("social")),
+    mediaType: v.union(
+      v.literal("youtube"),
+      v.literal("spotify"),
+      v.literal("website"),
+      v.literal("social")
+    ),
     storeId: v.string(),
     userId: v.string(),
     buttonLabel: v.optional(v.string()),
@@ -791,50 +1091,79 @@ export const createUrlMediaProduct = mutation({
   },
 });
 
-// Get all published products across all stores (for marketplace homepage) 
+// Get all published products across all stores (for marketplace homepage)
 export const getAllPublishedProducts = query({
   args: {},
-  returns: v.array(v.object({
-    _id: v.id("digitalProducts"),
-    _creationTime: v.number(),
-    title: v.string(),
-    description: v.optional(v.string()),
-    price: v.number(),
-    imageUrl: v.optional(v.string()),
-    downloadUrl: v.optional(v.string()),
-    url: v.optional(v.string()), // Added URL field for redirects
-    productCategory: v.optional(v.string()), // Product category (sample-pack, preset-pack, etc.)
-    productType: v.optional(v.union(v.literal("digital"), v.literal("urlMedia"), v.literal("coaching"), v.literal("effectChain"), v.literal("abletonRack"), v.literal("abletonPreset"), v.literal("playlistCuration"))), // Product type
-    buttonLabel: v.optional(v.string()), // Added button label
-    style: v.optional(v.union(v.literal("button"), v.literal("callout"), v.literal("preview"), v.literal("card"), v.literal("minimal"))), // Added style
-    category: v.optional(v.string()),
-    storeId: v.string(), // Store as string to match schema
-    published: v.boolean(),
-    downloadCount: v.optional(v.number()),
-    creatorName: v.optional(v.string()),
-    creatorAvatar: v.optional(v.string()),
-    contentType: v.optional(v.string()),
-    // Ableton Rack specific fields (optional for display)
-    abletonVersion: v.optional(v.string()),
-    minAbletonVersion: v.optional(v.string()),
-    rackType: v.optional(v.union(v.literal("audioEffect"), v.literal("instrument"), v.literal("midiEffect"), v.literal("drumRack"))),
-    effectType: v.optional(v.array(v.string())),
-    macroCount: v.optional(v.number()),
-    cpuLoad: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
-    genre: v.optional(v.array(v.string())),
-    bpm: v.optional(v.number()),
-    musicalKey: v.optional(v.string()),
-    requiresMaxForLive: v.optional(v.boolean()),
-    thirdPartyPlugins: v.optional(v.array(v.string())),
-    demoAudioUrl: v.optional(v.string()),
-    chainImageUrl: v.optional(v.string()),
-    macroScreenshotUrls: v.optional(v.array(v.string())),
-    complexity: v.optional(v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced"))),
-    tags: v.optional(v.array(v.string())),
-    fileFormat: v.optional(v.union(v.literal("adg"), v.literal("adv"), v.literal("alp"))),
-    fileSize: v.optional(v.number()),
-    installationNotes: v.optional(v.string()),
-  })),
+  returns: v.array(
+    v.object({
+      _id: v.id("digitalProducts"),
+      _creationTime: v.number(),
+      title: v.string(),
+      description: v.optional(v.string()),
+      price: v.number(),
+      imageUrl: v.optional(v.string()),
+      downloadUrl: v.optional(v.string()),
+      url: v.optional(v.string()), // Added URL field for redirects
+      productCategory: v.optional(v.string()), // Product category (sample-pack, preset-pack, etc.)
+      productType: v.optional(
+        v.union(
+          v.literal("digital"),
+          v.literal("urlMedia"),
+          v.literal("coaching"),
+          v.literal("effectChain"),
+          v.literal("abletonRack"),
+          v.literal("abletonPreset"),
+          v.literal("playlistCuration")
+        )
+      ), // Product type
+      buttonLabel: v.optional(v.string()), // Added button label
+      style: v.optional(
+        v.union(
+          v.literal("button"),
+          v.literal("callout"),
+          v.literal("preview"),
+          v.literal("card"),
+          v.literal("minimal")
+        )
+      ), // Added style
+      category: v.optional(v.string()),
+      storeId: v.string(), // Store as string to match schema
+      published: v.boolean(),
+      downloadCount: v.optional(v.number()),
+      creatorName: v.optional(v.string()),
+      creatorAvatar: v.optional(v.string()),
+      contentType: v.optional(v.string()),
+      // Ableton Rack specific fields (optional for display)
+      abletonVersion: v.optional(v.string()),
+      minAbletonVersion: v.optional(v.string()),
+      rackType: v.optional(
+        v.union(
+          v.literal("audioEffect"),
+          v.literal("instrument"),
+          v.literal("midiEffect"),
+          v.literal("drumRack")
+        )
+      ),
+      effectType: v.optional(v.array(v.string())),
+      macroCount: v.optional(v.number()),
+      cpuLoad: v.optional(v.union(v.literal("low"), v.literal("medium"), v.literal("high"))),
+      genre: v.optional(v.array(v.string())),
+      bpm: v.optional(v.number()),
+      musicalKey: v.optional(v.string()),
+      requiresMaxForLive: v.optional(v.boolean()),
+      thirdPartyPlugins: v.optional(v.array(v.string())),
+      demoAudioUrl: v.optional(v.string()),
+      chainImageUrl: v.optional(v.string()),
+      macroScreenshotUrls: v.optional(v.array(v.string())),
+      complexity: v.optional(
+        v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced"))
+      ),
+      tags: v.optional(v.array(v.string())),
+      fileFormat: v.optional(v.union(v.literal("adg"), v.literal("adv"), v.literal("alp"))),
+      fileSize: v.optional(v.number()),
+      installationNotes: v.optional(v.string()),
+    })
+  ),
   handler: async (ctx) => {
     // Get all published products
     const products = await ctx.db
@@ -850,15 +1179,15 @@ export const getAllPublishedProducts = query({
           .query("purchases")
           .filter((q) => q.eq(q.field("productId"), product._id))
           .collect();
-        
+
         // Get creator info
         let creatorName = "Creator";
         let creatorAvatar: string | undefined = undefined;
 
         // Get store info - storeId is a string in the schema
         const stores = await ctx.db.query("stores").collect();
-        const store = stores.find(s => s._id === product.storeId);
-        
+        const store = stores.find((s) => s._id === product.storeId);
+
         if (store) {
           const user = await ctx.db
             .query("users")
@@ -875,13 +1204,14 @@ export const getAllPublishedProducts = query({
         return {
           _id: product._id,
           _creationTime: product._creationTime,
+          slug: (product as any).slug,
           title: product.title,
           description: product.description,
           price: product.price,
           imageUrl: product.imageUrl,
           downloadUrl: product.downloadUrl,
           url: product.url,
-          productCategory: product.productCategory, // ← Pack category
+          productCategory: product.productCategory,
           productType: product.productType,
           buttonLabel: product.buttonLabel,
           style: product.style,
@@ -892,7 +1222,6 @@ export const getAllPublishedProducts = query({
           creatorName,
           creatorAvatar,
           contentType: "product",
-          // Ableton Rack specific fields
           abletonVersion: product.abletonVersion,
           minAbletonVersion: product.minAbletonVersion,
           rackType: product.rackType,
@@ -918,12 +1247,272 @@ export const getAllPublishedProducts = query({
 
     return productsWithDetails;
   },
-}); 
+});
 // Get all digital products (admin only)
 export const getAllProducts = query({
   args: {},
   returns: v.array(v.any()),
   handler: async (ctx) => {
     return await ctx.db.query("digitalProducts").collect();
+  },
+});
+
+// Get product by global slug (for marketplace URLs without storeId)
+export const getProductByGlobalSlug = query({
+  args: { slug: v.string() },
+  returns: v.union(
+    v.object({
+      _id: v.id("digitalProducts"),
+      _creationTime: v.number(),
+      slug: v.optional(v.string()),
+      title: v.string(),
+      description: v.optional(v.string()),
+      price: v.number(),
+      imageUrl: v.optional(v.string()),
+      downloadUrl: v.optional(v.string()),
+      storeId: v.string(),
+      userId: v.string(),
+      isPublished: v.optional(v.boolean()),
+      productType: v.optional(v.string()),
+      productCategory: v.optional(v.string()),
+      buttonLabel: v.optional(v.string()),
+      style: v.optional(v.string()),
+      url: v.optional(v.string()),
+      displayStyle: v.optional(v.string()),
+      mediaType: v.optional(v.string()),
+      duration: v.optional(v.number()),
+      sessionType: v.optional(v.string()),
+      customFields: v.optional(v.any()),
+      availability: v.optional(v.any()),
+      thumbnailStyle: v.optional(v.string()),
+      discordRoleId: v.optional(v.string()),
+      orderBumpEnabled: v.optional(v.boolean()),
+      orderBumpProductName: v.optional(v.string()),
+      orderBumpDescription: v.optional(v.string()),
+      orderBumpPrice: v.optional(v.number()),
+      orderBumpImageUrl: v.optional(v.string()),
+      affiliateEnabled: v.optional(v.boolean()),
+      affiliateCommissionRate: v.optional(v.number()),
+      affiliateMinPayout: v.optional(v.number()),
+      affiliateCookieDuration: v.optional(v.number()),
+      confirmationEmailSubject: v.optional(v.string()),
+      confirmationEmailBody: v.optional(v.string()),
+      abletonVersion: v.optional(v.string()),
+      minAbletonVersion: v.optional(v.string()),
+      rackType: v.optional(v.string()),
+      effectType: v.optional(v.array(v.string())),
+      macroCount: v.optional(v.number()),
+      cpuLoad: v.optional(v.string()),
+      genre: v.optional(v.any()),
+      bpm: v.optional(v.number()),
+      musicalKey: v.optional(v.string()),
+      requiresMaxForLive: v.optional(v.boolean()),
+      thirdPartyPlugins: v.optional(v.array(v.string())),
+      demoAudioUrl: v.optional(v.string()),
+      chainImageUrl: v.optional(v.string()),
+      macroScreenshotUrls: v.optional(v.array(v.string())),
+      complexity: v.optional(v.string()),
+      tags: v.optional(v.array(v.string())),
+      fileFormat: v.optional(v.string()),
+      fileSize: v.optional(v.number()),
+      installationNotes: v.optional(v.string()),
+      followGateEnabled: v.optional(v.boolean()),
+      followGateRequirements: v.optional(v.any()),
+      followGateSocialLinks: v.optional(v.any()),
+      followGateMessage: v.optional(v.string()),
+      packFiles: v.optional(v.string()),
+      dawType: v.optional(v.string()),
+      dawVersion: v.optional(v.string()),
+      category: v.optional(v.string()),
+    }),
+    v.null()
+  ),
+  handler: async (ctx, args) => {
+    const product = await ctx.db
+      .query("digitalProducts")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .first();
+
+    if (!product || !product.isPublished) return null;
+
+    let imageUrl = product.imageUrl;
+    let downloadUrl = product.downloadUrl;
+    let demoAudioUrl = product.demoAudioUrl;
+    let chainImageUrl = product.chainImageUrl;
+
+    if (imageUrl && !imageUrl.startsWith("http")) {
+      imageUrl = (await ctx.storage.getUrl(imageUrl as any)) || imageUrl;
+    }
+    if (downloadUrl && !downloadUrl.startsWith("http")) {
+      downloadUrl = (await ctx.storage.getUrl(downloadUrl as any)) || downloadUrl;
+    }
+    if (demoAudioUrl && !demoAudioUrl.startsWith("http")) {
+      demoAudioUrl = (await ctx.storage.getUrl(demoAudioUrl as any)) || demoAudioUrl;
+    }
+    if (chainImageUrl && !chainImageUrl.startsWith("http")) {
+      chainImageUrl = (await ctx.storage.getUrl(chainImageUrl as any)) || chainImageUrl;
+    }
+
+    return {
+      ...product,
+      imageUrl,
+      downloadUrl,
+      demoAudioUrl,
+      chainImageUrl,
+    } as any;
+  },
+});
+
+// Get product by slug within a specific store
+export const getProductBySlug = query({
+  args: {
+    storeId: v.string(),
+    slug: v.string(),
+  },
+  returns: v.union(
+    v.object({
+      _id: v.id("digitalProducts"),
+      _creationTime: v.number(),
+      slug: v.optional(v.string()),
+      title: v.string(),
+      description: v.optional(v.string()),
+      price: v.number(),
+      imageUrl: v.optional(v.string()),
+      downloadUrl: v.optional(v.string()),
+      storeId: v.string(),
+      userId: v.string(),
+      isPublished: v.optional(v.boolean()),
+      productType: v.optional(v.string()),
+      productCategory: v.optional(v.string()),
+      buttonLabel: v.optional(v.string()),
+      style: v.optional(v.string()),
+      url: v.optional(v.string()),
+      displayStyle: v.optional(v.string()),
+      mediaType: v.optional(v.string()),
+      duration: v.optional(v.number()),
+      sessionType: v.optional(v.string()),
+      customFields: v.optional(v.any()),
+      availability: v.optional(v.any()),
+      thumbnailStyle: v.optional(v.string()),
+      discordRoleId: v.optional(v.string()),
+      orderBumpEnabled: v.optional(v.boolean()),
+      orderBumpProductName: v.optional(v.string()),
+      orderBumpDescription: v.optional(v.string()),
+      orderBumpPrice: v.optional(v.number()),
+      orderBumpImageUrl: v.optional(v.string()),
+      affiliateEnabled: v.optional(v.boolean()),
+      affiliateCommissionRate: v.optional(v.number()),
+      affiliateMinPayout: v.optional(v.number()),
+      affiliateCookieDuration: v.optional(v.number()),
+      confirmationEmailSubject: v.optional(v.string()),
+      confirmationEmailBody: v.optional(v.string()),
+      abletonVersion: v.optional(v.string()),
+      minAbletonVersion: v.optional(v.string()),
+      rackType: v.optional(v.string()),
+      effectType: v.optional(v.array(v.string())),
+      macroCount: v.optional(v.number()),
+      cpuLoad: v.optional(v.string()),
+      genre: v.optional(v.any()),
+      bpm: v.optional(v.number()),
+      musicalKey: v.optional(v.string()),
+      requiresMaxForLive: v.optional(v.boolean()),
+      thirdPartyPlugins: v.optional(v.array(v.string())),
+      demoAudioUrl: v.optional(v.string()),
+      chainImageUrl: v.optional(v.string()),
+      macroScreenshotUrls: v.optional(v.array(v.string())),
+      complexity: v.optional(v.string()),
+      tags: v.optional(v.array(v.string())),
+      fileFormat: v.optional(v.string()),
+      fileSize: v.optional(v.number()),
+      installationNotes: v.optional(v.string()),
+      followGateEnabled: v.optional(v.boolean()),
+      followGateRequirements: v.optional(v.any()),
+      followGateSocialLinks: v.optional(v.any()),
+      followGateMessage: v.optional(v.string()),
+      packFiles: v.optional(v.string()),
+      dawType: v.optional(v.string()),
+      dawVersion: v.optional(v.string()),
+      category: v.optional(v.string()),
+    }),
+    v.null()
+  ),
+  handler: async (ctx, args) => {
+    const product = await ctx.db
+      .query("digitalProducts")
+      .withIndex("by_storeId_and_slug", (q) => q.eq("storeId", args.storeId).eq("slug", args.slug))
+      .unique();
+
+    if (!product || !product.isPublished) return null;
+
+    let imageUrl = product.imageUrl;
+    let downloadUrl = product.downloadUrl;
+    let demoAudioUrl = product.demoAudioUrl;
+    let chainImageUrl = product.chainImageUrl;
+
+    if (imageUrl && !imageUrl.startsWith("http")) {
+      imageUrl = (await ctx.storage.getUrl(imageUrl as any)) || imageUrl;
+    }
+    if (downloadUrl && !downloadUrl.startsWith("http")) {
+      downloadUrl = (await ctx.storage.getUrl(downloadUrl as any)) || downloadUrl;
+    }
+    if (demoAudioUrl && !demoAudioUrl.startsWith("http")) {
+      demoAudioUrl = (await ctx.storage.getUrl(demoAudioUrl as any)) || demoAudioUrl;
+    }
+    if (chainImageUrl && !chainImageUrl.startsWith("http")) {
+      chainImageUrl = (await ctx.storage.getUrl(chainImageUrl as any)) || chainImageUrl;
+    }
+
+    return {
+      ...product,
+      imageUrl,
+      downloadUrl,
+      demoAudioUrl,
+      chainImageUrl,
+    } as any;
+  },
+});
+
+// Backfill slugs for all existing digital products that don't have them
+export const backfillProductSlugs = mutation({
+  args: {},
+  returns: v.object({
+    updated: v.number(),
+    skipped: v.number(),
+  }),
+  handler: async (ctx) => {
+    const products = await ctx.db.query("digitalProducts").collect();
+
+    const productsWithoutSlug = products.filter((p) => !(p as any).slug);
+
+    let updated = 0;
+    let skipped = 0;
+
+    for (const product of productsWithoutSlug) {
+      const store = await ctx.db
+        .query("stores")
+        .filter((q) => q.eq(q.field("_id"), product.storeId))
+        .first();
+
+      const storeName = store?.name || "creator";
+      const baseSlug = generateSlug(`${product.title}-${storeName}`);
+
+      const existing = await ctx.db
+        .query("digitalProducts")
+        .withIndex("by_slug", (q) => q.eq("slug", baseSlug))
+        .first();
+
+      if (existing && existing._id !== product._id) {
+        const slug = `${baseSlug}-${Date.now()}`;
+        await ctx.db.patch(product._id, { slug } as any);
+        updated++;
+      } else {
+        await ctx.db.patch(product._id, { slug: baseSlug } as any);
+        updated++;
+      }
+    }
+
+    skipped = products.filter((p) => (p as any).slug).length;
+
+    return { updated, skipped };
   },
 });
