@@ -50,12 +50,20 @@ import { ModeToggle as ThemeToggle } from "@/components/mode-toggle";
 
 type DashboardMode = "learn" | "create";
 
+interface SidebarLink {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  color: string;
+  highlight?: boolean;
+}
+
 interface DashboardSidebarProps {
   mode: DashboardMode;
   onModeChange?: (mode: DashboardMode) => void;
 }
 
-const learnLinks = [
+const learnLinks: SidebarLink[] = [
   { href: "/dashboard?mode=learn", label: "Dashboard", icon: Home, color: "text-purple-500" },
   {
     href: "/dashboard/courses?mode=learn",
@@ -95,7 +103,7 @@ const learnLinks = [
   },
 ];
 
-const createLinks = [
+const createLinks: SidebarLink[] = [
   { href: "/dashboard?mode=create", label: "Dashboard", icon: Home, color: "text-purple-500" },
   {
     href: "/dashboard/products?mode=create",

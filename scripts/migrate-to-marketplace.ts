@@ -4,8 +4,11 @@
  */
 
 import { ConvexHttpClient } from "convex/browser";
-import { api } from "@/convex/_generated/api";
+import { api as typedApi } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const api = typedApi as any;
 
 interface MigrationConfig {
   dryRun: boolean;

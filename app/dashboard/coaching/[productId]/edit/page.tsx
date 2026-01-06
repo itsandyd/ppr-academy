@@ -145,10 +145,10 @@ export default function EditCoachingPage({ params }: EditCoachingPageProps) {
   };
 
   const schedule = data.weekSchedule;
-  const currentDaySchedule = schedule.schedule.find((d) => d.day === selectedDay) || {
+  const currentDaySchedule = schedule.schedule.find((d: DaySchedule) => d.day === selectedDay) || {
     day: selectedDay,
     enabled: false,
-    timeSlots: [],
+    timeSlots: [] as TimeSlot[],
   };
 
   const updateSchedule = (newSchedule: WeekSchedule) => {
@@ -158,7 +158,7 @@ export default function EditCoachingPage({ params }: EditCoachingPageProps) {
   const toggleDay = (day: DayOfWeek, enabled: boolean) => {
     const newSchedule = {
       ...schedule,
-      schedule: schedule.schedule.map((d) => (d.day === day ? { ...d, enabled } : d)),
+      schedule: schedule.schedule.map((d: DaySchedule) => (d.day === day ? { ...d, enabled } : d)),
     };
     updateSchedule(newSchedule);
   };
@@ -166,7 +166,7 @@ export default function EditCoachingPage({ params }: EditCoachingPageProps) {
   const addTimeSlot = (day: DayOfWeek) => {
     const newSchedule = {
       ...schedule,
-      schedule: schedule.schedule.map((d) =>
+      schedule: schedule.schedule.map((d: DaySchedule) =>
         d.day === day
           ? {
               ...d,
@@ -181,8 +181,10 @@ export default function EditCoachingPage({ params }: EditCoachingPageProps) {
   const removeTimeSlot = (day: DayOfWeek, index: number) => {
     const newSchedule = {
       ...schedule,
-      schedule: schedule.schedule.map((d) =>
-        d.day === day ? { ...d, timeSlots: d.timeSlots.filter((_, i) => i !== index) } : d
+      schedule: schedule.schedule.map((d: DaySchedule) =>
+        d.day === day
+          ? { ...d, timeSlots: d.timeSlots.filter((_: TimeSlot, i: number) => i !== index) }
+          : d
       ),
     };
     updateSchedule(newSchedule);
@@ -191,11 +193,11 @@ export default function EditCoachingPage({ params }: EditCoachingPageProps) {
   const updateTimeSlot = (day: DayOfWeek, index: number, field: "start" | "end", value: string) => {
     const newSchedule = {
       ...schedule,
-      schedule: schedule.schedule.map((d) =>
+      schedule: schedule.schedule.map((d: DaySchedule) =>
         d.day === day
           ? {
               ...d,
-              timeSlots: d.timeSlots.map((slot, i) =>
+              timeSlots: d.timeSlots.map((slot: TimeSlot, i: number) =>
                 i === index ? { ...slot, [field]: value } : slot
               ),
             }
@@ -317,7 +319,9 @@ export default function EditCoachingPage({ params }: EditCoachingPageProps) {
               <CardContent>
                 <div className="mb-6 grid grid-cols-7 gap-2">
                   {DAYS.map((day) => {
-                    const daySchedule = schedule.schedule.find((d) => d.day === day.id);
+                    const daySchedule = schedule.schedule.find(
+                      (d: DaySchedule) => d.day === day.id
+                    );
                     const isEnabled = daySchedule?.enabled;
                     const isSelected = selectedDay === day.id;
 
@@ -362,7 +366,7 @@ export default function EditCoachingPage({ params }: EditCoachingPageProps) {
 
                   {currentDaySchedule.enabled && (
                     <CardContent className="space-y-4">
-                      {currentDaySchedule.timeSlots.map((slot, index) => (
+                      {currentDaySchedule.timeSlots.map((slot: TimeSlot, index: number) => (
                         <div key={index} className="flex items-center gap-3">
                           <div className="grid flex-1 grid-cols-2 gap-3">
                             <div>

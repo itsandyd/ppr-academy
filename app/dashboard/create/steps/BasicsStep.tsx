@@ -1,14 +1,16 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Upload, Image as ImageIcon, Sparkles } from 'lucide-react';
-import { ProductCategory, getProductInfo } from '../types';
+import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Upload, Image as ImageIcon, Sparkles } from "lucide-react";
+import { ProductCategory, getProductInfo } from "../types";
+import { ProductAIAssistant } from "@/components/ai/ProductAIAssistant";
+import { useRouter } from "next/navigation";
 
 interface BasicsStepProps {
   productCategory: ProductCategory;
@@ -35,18 +37,19 @@ export function BasicsStep({
   onTagsChange,
   onNext,
 }: BasicsStepProps) {
-  const [tagInput, setTagInput] = useState('');
+  const router = useRouter();
+  const [tagInput, setTagInput] = useState("");
   const productInfo = getProductInfo(productCategory);
 
   const handleAddTag = () => {
     if (tagInput.trim() && !tags.includes(tagInput.trim())) {
       onTagsChange([...tags, tagInput.trim()]);
-      setTagInput('');
+      setTagInput("");
     }
   };
 
   const handleRemoveTag = (tagToRemove: string) => {
-    onTagsChange(tags.filter(t => t !== tagToRemove));
+    onTagsChange(tags.filter((t) => t !== tagToRemove));
   };
 
   const canProceed = title.trim().length > 0 && description.trim().length > 0;
@@ -72,14 +75,9 @@ export function BasicsStep({
           placeholder="e.g., Ultimate Trap Drum Kit"
           value={title}
           onChange={(e) => onTitleChange(e.target.value)}
-          className={cn(
-            'text-lg',
-            title.trim().length === 0 && 'border-destructive'
-          )}
+          className={cn("text-lg", title.trim().length === 0 && "border-destructive")}
         />
-        <p className="text-xs text-muted-foreground">
-          Make it catchy and descriptive
-        </p>
+        <p className="text-xs text-muted-foreground">Make it catchy and descriptive</p>
       </div>
 
       {/* Description */}
@@ -93,50 +91,52 @@ export function BasicsStep({
           value={description}
           onChange={(e) => onDescriptionChange(e.target.value)}
           rows={6}
-          className={cn(
-            description.trim().length === 0 && 'border-destructive'
-          )}
+          className={cn(description.trim().length === 0 && "border-destructive")}
         />
-        <p className="text-xs text-muted-foreground">
-          {description.length}/1000 characters
-        </p>
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-muted-foreground">{description.length}/1000 characters</p>
+          <ProductAIAssistant
+            title={title}
+            description={description}
+            category={productCategory}
+            onDescriptionUpdate={onDescriptionChange}
+            onTagsUpdate={onTagsChange}
+            onTitleUpdate={onTitleChange}
+          />
+        </div>
       </div>
 
       {/* Thumbnail */}
       <div className="space-y-2">
-        <Label htmlFor="thumbnail">
-          Thumbnail Image
-        </Label>
+        <Label htmlFor="thumbnail">Thumbnail Image</Label>
         {imageUrl ? (
           <div className="relative">
-            <img 
-              src={imageUrl} 
-              alt="Thumbnail preview" 
-              className="w-full h-48 object-cover rounded-lg"
+            <img
+              src={imageUrl}
+              alt="Thumbnail preview"
+              className="h-48 w-full rounded-lg object-cover"
             />
             <Button
               variant="secondary"
               size="sm"
-              className="absolute top-2 right-2"
-              onClick={() => onImageChange('')}
+              className="absolute right-2 top-2"
+              onClick={() => onImageChange("")}
             >
               Change Image
             </Button>
           </div>
         ) : (
-          <Card className="border-dashed border-2 hover:border-primary/50 transition-colors cursor-pointer">
-            <div 
+          <Card className="cursor-pointer border-2 border-dashed transition-colors hover:border-primary/50">
+            <div
               className="p-12 text-center"
               onClick={() => {
                 // TODO: Open image picker/uploader
-                console.log('Open image picker');
+                console.log("Open image picker");
               }}
             >
-              <ImageIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="font-medium mb-2">Upload Thumbnail</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Click to upload or drag and drop
-              </p>
+              <ImageIcon className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+              <h3 className="mb-2 font-medium">Upload Thumbnail</h3>
+              <p className="mb-4 text-sm text-muted-foreground">Click to upload or drag and drop</p>
               <Badge variant="secondary">Recommended: 1200x630px</Badge>
             </div>
           </Card>
@@ -145,9 +145,7 @@ export function BasicsStep({
 
       {/* Tags */}
       <div className="space-y-2">
-        <Label htmlFor="tags">
-          Tags (Optional)
-        </Label>
+        <Label htmlFor="tags">Tags (Optional)</Label>
         <div className="flex gap-2">
           <Input
             id="tags"
@@ -155,7 +153,7 @@ export function BasicsStep({
             value={tagInput}
             onChange={(e) => setTagInput(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') {
+              if (e.key === "Enter") {
                 e.preventDefault();
                 handleAddTag();
               }
@@ -166,10 +164,10 @@ export function BasicsStep({
           </Button>
         </div>
         {tags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-2">
+          <div className="mt-2 flex flex-wrap gap-2">
             {tags.map((tag) => (
-              <Badge 
-                key={tag} 
+              <Badge
+                key={tag}
                 variant="secondary"
                 className="cursor-pointer hover:bg-destructive/10"
                 onClick={() => handleRemoveTag(tag)}
@@ -179,17 +177,12 @@ export function BasicsStep({
             ))}
           </div>
         )}
-        <p className="text-xs text-muted-foreground">
-          Tags help students find your product
-        </p>
+        <p className="text-xs text-muted-foreground">Tags help students find your product</p>
       </div>
 
       {/* Navigation */}
-      <div className="flex items-center justify-between pt-6 border-t">
-        <Button
-          variant="outline"
-          onClick={() => router.push('/dashboard/create')}
-        >
+      <div className="flex items-center justify-between border-t pt-6">
+        <Button variant="outline" onClick={() => router.push("/dashboard/create")}>
           Cancel
         </Button>
         <Button
@@ -198,7 +191,7 @@ export function BasicsStep({
           className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
         >
           Continue
-          <Sparkles className="w-4 h-4 ml-2" />
+          <Sparkles className="ml-2 h-4 w-4" />
         </Button>
       </div>
     </div>
@@ -206,7 +199,5 @@ export function BasicsStep({
 }
 
 function cn(...classes: any[]) {
-  return classes.filter(Boolean).join(' ');
+  return classes.filter(Boolean).join(" ");
 }
-
-

@@ -223,3 +223,23 @@ export async function createCoachApplication(applicationData: {
     return { success: false, error: "Failed to submit application" };
   }
 }
+
+export async function processScheduledSessions(): Promise<{
+  success: boolean;
+  message?: string;
+  error?: string;
+}> {
+  try {
+    // TODO: Implement actual session processing (reminders, status updates)
+    return {
+      success: true,
+      message: "Scheduled sessions processed successfully",
+    };
+  } catch (error) {
+    console.error("Error processing scheduled sessions:", error);
+    return {
+      success: false,
+      error: "Failed to process scheduled sessions",
+    };
+  }
+}

@@ -172,6 +172,8 @@ import type * as paymentPlans from "../paymentPlans.js";
 import type * as playlists from "../playlists.js";
 import type * as pluginVideoGeneration from "../pluginVideoGeneration.js";
 import type * as plugins from "../plugins.js";
+import type * as productAI from "../productAI.js";
+import type * as purchases from "../purchases.js";
 import type * as qa from "../qa.js";
 import type * as qaSchema from "../qaSchema.js";
 import type * as quizzes from "../quizzes.js";
@@ -381,6 +383,8 @@ declare const fullApi: ApiFromModules<{
   playlists: typeof playlists;
   pluginVideoGeneration: typeof pluginVideoGeneration;
   plugins: typeof plugins;
+  productAI: typeof productAI;
+  purchases: typeof purchases;
   qa: typeof qa;
   qaSchema: typeof qaSchema;
   quizzes: typeof quizzes;

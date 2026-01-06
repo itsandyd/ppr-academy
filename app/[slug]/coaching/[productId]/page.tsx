@@ -329,7 +329,9 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
                     <div className="flex items-center justify-center py-8">
                       <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                     </div>
-                  ) : availableSlots.filter((s) => s.available).length === 0 ? (
+                  ) : availableSlots.filter(
+                      (s: { start: string; end: string; available: boolean }) => s.available
+                    ).length === 0 ? (
                     <div className="py-8 text-center text-muted-foreground">
                       <AlertCircle className="mx-auto mb-2 h-8 w-8" />
                       <p>No available slots on this date</p>
@@ -337,8 +339,11 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
                   ) : (
                     <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                       {availableSlots
-                        .filter((slot) => slot.available)
-                        .map((slot) => (
+                        .filter(
+                          (slot: { start: string; end: string; available: boolean }) =>
+                            slot.available
+                        )
+                        .map((slot: { start: string; end: string; available: boolean }) => (
                           <button
                             key={slot.start}
                             onClick={() => setSelectedSlot(slot.start)}

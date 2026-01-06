@@ -7,13 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MetricCardEnhanced } from "@/components/ui/metric-card-enhanced";
-import { PostSetupGuidance } from "@/components/dashboard/post-setup-guidance";
-import { OnboardingHints, creatorOnboardingHints } from "@/components/onboarding/onboarding-hints";
-import { AchievementCard, creatorAchievements } from "@/components/gamification/achievement-system";
-import { DiscordStatsWidget } from "@/components/discord/discord-stats-widget";
-import { discordConfig } from "@/lib/discord-config";
-import { NoProductsEmptyState } from "@/components/ui/empty-state-enhanced";
+import { Progress } from "@/components/ui/progress";
 import { StoreSetupWizardEnhanced } from "@/components/dashboard/store-setup-wizard-enhanced";
 import {
   Music,
@@ -30,6 +24,18 @@ import {
   Star,
   Eye,
   AlertTriangle,
+  Users,
+  ShoppingCart,
+  ArrowUpRight,
+  ArrowDownRight,
+  Sparkles,
+  Calendar,
+  Clock,
+  ChevronRight,
+  Zap,
+  Target,
+  Mail,
+  Share2,
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Link from "next/link";
@@ -41,20 +47,22 @@ export function CreateModeContent() {
   const { user } = useUser();
   const router = useRouter();
 
-  // Get Convex user
   const convexUser = useQuery(api.users.getUserFromClerk, user?.id ? { clerkId: user.id } : "skip");
-
-  // Get user's stores
   const stores = useQuery(api.stores.getStoresByUser, user?.id ? { userId: user.id } : "skip");
   const storeId = stores?.[0]?._id;
 
-  // Fetch created courses (using clerkId)
+  const storeStats = useQuery(api.storeStats.getStoreStats, storeId ? { storeId } : "skip");
+
+  const creatorAnalytics = useQuery(
+    api.analytics.getCreatorAnalytics,
+    convexUser?.clerkId ? { userId: convexUser.clerkId, timeRange: "30d" } : "skip"
+  );
+
   const userCourses = useQuery(
     api.courses.getCoursesByUser,
     convexUser?.clerkId ? { userId: convexUser.clerkId } : "skip"
   );
 
-  // Fetch digital products (using storeId)
   const digitalProducts = useQuery(
     api.digitalProducts.getProductsByStore,
     storeId ? { storeId } : "skip"
@@ -62,13 +70,17 @@ export function CreateModeContent() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const copyrightClaims = useQuery(
-    (api as any).copyright.getStoreCopyrightClaims,
+    (api as any).copyright?.getStoreCopyrightClaims,
     storeId ? { storeId } : "skip"
   ) as Array<{ status: string }> | undefined;
 
+  const recentPurchases = useQuery(
+    api.purchases.getStorePurchases,
+    storeId ? { storeId, limit: 5 } : "skip"
+  );
+
   const pendingClaimsCount = copyrightClaims?.filter((c) => c.status === "pending").length || 0;
 
-  // Combine products for unified display
   const products = useMemo(() => {
     const coursesToUse = userCourses || [];
     const digitalProductsToUse = digitalProducts || [];
@@ -78,44 +90,21 @@ export function CreateModeContent() {
       type: "course" as const,
       price: course.price || 0,
       downloadCount: 0,
-      category: course.category || "Music Production",
+      category: course.category || "Course",
     }));
 
     const digitalProductItems = digitalProductsToUse.map((product: any) => ({
       ...product,
       type: "digital" as const,
       downloadCount: (product as any).downloadCount || 0,
-      category: (product as any).category || "Sample Pack",
+      category: (product as any).category || (product as any).productCategory || "Digital Product",
     }));
 
     return [...courseProducts, ...digitalProductItems];
   }, [userCourses, digitalProducts]);
 
-  // Calculate metrics
-  const metrics = useMemo(() => {
-    const totalReleases = products.length;
-    const totalDownloads = products.reduce(
-      (sum: number, p: any) => sum + (p.downloadCount || 0),
-      0
-    );
-    const totalRevenue = products.reduce(
-      (sum: number, p: any) => sum + (p.price || 0) * (p.downloadCount || 0),
-      0
-    );
-    const avgRating = 4.5;
-
-    return {
-      totalReleases,
-      totalDownloads,
-      totalRevenue,
-      avgRating,
-    };
-  }, [products]);
-
-  // Quick actions for music creators
-  const quickActions = useMemo(() => {
-    const baseStoreId = storeId || "setup";
-    return [
+  const quickActions = useMemo(
+    () => [
       {
         title: "Upload Sample Pack",
         description: "Share your beats and loops",
@@ -144,22 +133,9 @@ export function CreateModeContent() {
         color: "from-orange-500 to-red-500",
         href: `/dashboard/create/coaching?category=coaching`,
       },
-      {
-        title: "View Analytics",
-        description: "Track your performance",
-        icon: BarChart3,
-        color: "from-indigo-500 to-purple-500",
-        href: `/store/${baseStoreId}/analytics`,
-      },
-      {
-        title: "Lead Magnet Ideas",
-        description: "Generate visual ideas",
-        icon: Star,
-        color: "from-amber-500 to-yellow-500",
-        href: `/dashboard/lead-magnet-ideas`,
-      },
-    ];
-  }, [storeId]);
+    ],
+    []
+  );
 
   const isLoading = !user || convexUser === undefined || stores === undefined;
 
@@ -167,7 +143,6 @@ export function CreateModeContent() {
     return <LoadingState />;
   }
 
-  // Show store setup wizard if user has no stores
   if (user?.id && stores !== undefined && stores.length === 0) {
     return (
       <div className="space-y-6">
@@ -178,8 +153,7 @@ export function CreateModeContent() {
           </p>
         </div>
         <StoreSetupWizardEnhanced
-          onStoreCreated={(storeId) => {
-            // Refresh the page to show the new store
+          onStoreCreated={() => {
             window.location.reload();
           }}
         />
@@ -187,26 +161,64 @@ export function CreateModeContent() {
     );
   }
 
-  const allProducts = products;
-  const publishedCount = allProducts.filter((p: any) => p.isPublished).length;
+  const stats = storeStats || {
+    totalProducts: 0,
+    totalCourses: 0,
+    totalEnrollments: 0,
+    totalDownloads: 0,
+    totalRevenue: 0,
+    averageRating: 0,
+    followerCount: 0,
+    freeProducts: 0,
+    paidProducts: 0,
+  };
+
+  const analytics = creatorAnalytics?.overview || {
+    totalRevenue: 0,
+    totalSales: 0,
+    totalViews: 0,
+    conversionRate: 0,
+    totalProducts: 0,
+    publishedProducts: 0,
+    totalStudents: 0,
+    avgRating: 0,
+  };
+
+  const publishedCount = products.filter((p: any) => p.isPublished).length;
+  const totalProducts = stats.totalProducts + stats.totalCourses;
+  const hasContent = totalProducts > 0;
 
   return (
     <div className="space-y-8">
-      {/* Welcome Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-r from-purple-500 to-pink-500">
             <Music className="h-6 w-6 text-white" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-foreground">
-              Welcome back,{" "}
-              {user.firstName || user.primaryEmailAddress?.emailAddress?.split("@")[0]}! 🎵
+              Welcome back, {user?.firstName || "Creator"}! 🎵
             </h1>
             <p className="text-muted-foreground">
-              Ready to create some amazing music content today?
+              {hasContent
+                ? `You have ${totalProducts} product${totalProducts !== 1 ? "s" : ""} (${publishedCount} live)`
+                : "Ready to create something amazing?"}
             </p>
           </div>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link href={`/${stores?.[0]?.slug}`}>
+              <Eye className="mr-2 h-4 w-4" />
+              View Store
+            </Link>
+          </Button>
+          <Button size="sm" asChild>
+            <Link href="/dashboard/create">
+              <Plus className="mr-2 h-4 w-4" />
+              Create New
+            </Link>
+          </Button>
         </div>
       </div>
 
@@ -219,15 +231,14 @@ export function CreateModeContent() {
           <AlertTitle>Copyright Claim{pendingClaimsCount > 1 ? "s" : ""} Pending</AlertTitle>
           <AlertDescription className="flex items-center justify-between">
             <span>
-              You have {pendingClaimsCount} pending copyright claim
-              {pendingClaimsCount > 1 ? "s" : ""} that require{pendingClaimsCount === 1 ? "s" : ""}{" "}
-              your attention.
+              You have {pendingClaimsCount} pending claim{pendingClaimsCount > 1 ? "s" : ""}{" "}
+              requiring attention.
             </span>
             <Button
               variant="outline"
               size="sm"
               asChild
-              className="ml-4 border-red-300 hover:bg-red-100 dark:border-red-700 dark:hover:bg-red-900/40"
+              className="ml-4 border-red-300 hover:bg-red-100"
             >
               <Link href="/dashboard/copyright">Review Claims</Link>
             </Button>
@@ -235,283 +246,344 @@ export function CreateModeContent() {
         </Alert>
       )}
 
-      {/* Post-Setup Guidance (for new stores) */}
-      {products.length === 0 && storeId && <PostSetupGuidance storeId={storeId} />}
-
-      {/* Custom Domain Promotion (if not set up) */}
-      {stores?.[0] && !(stores[0] as any).customDomain && (
-        <Card className="border-chart-1/20 bg-gradient-to-r from-chart-1/10 via-chart-2/10 to-chart-3/10">
-          <CardContent className="p-6">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1">
-                <div className="mb-2 flex items-center gap-2">
-                  <Badge className="bg-chart-1 text-primary-foreground">Pro Feature</Badge>
-                </div>
-                <h3 className="mb-2 text-lg font-bold">Use Your Own Domain</h3>
-                <p className="mb-4 text-muted-foreground">
-                  Point your domain (like beatsbymike.com) to your storefront and build your brand.
-                </p>
-                <div className="flex gap-3">
-                  <Link href={`/store/${storeId}/settings/domain`}>
-                    <Button className="bg-gradient-to-r from-chart-1 to-chart-2 hover:from-chart-1/90 hover:to-chart-2/90">
-                      Connect Your Domain
-                    </Button>
-                  </Link>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppr-academy.com";
-                      const domain = appUrl.replace("https://", "").replace("http://", "");
-                      navigator.clipboard.writeText(`${appUrl}/${stores?.[0]?.slug}`);
-                      toast.success(`Copied: ${domain}/${stores?.[0]?.slug}`);
-                    }}
-                  >
-                    Copy Shareable Link
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Onboarding Hints */}
-      <OnboardingHints
-        hints={creatorOnboardingHints}
-        storageKey="creator-dashboard-hints"
-        autoRotate={true}
-        rotateInterval={15000}
-      />
-
-      {/* Quick Actions */}
-      <div>
-        <h2 className="mb-4 text-lg font-semibold">Quick Actions</h2>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {quickActions.map((action) => (
-            <Card
-              key={action.title}
-              className="group cursor-pointer border-border transition-all duration-200 hover:shadow-md"
-            >
-              <Link href={action.href}>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`h-10 w-10 rounded-lg bg-gradient-to-r ${action.color} flex flex-shrink-0 items-center justify-center`}
-                    >
-                      <action.icon className="h-5 w-5 text-white" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-sm font-medium text-foreground transition-colors group-hover:text-purple-600">
-                        {action.title}
-                      </h3>
-                      <p className="text-xs text-muted-foreground">{action.description}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Link>
-            </Card>
-          ))}
-        </div>
-      </div>
-
-      {/* Metrics Overview - Enhanced */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <MetricCardEnhanced
-          title="Total Releases"
-          value={metrics.totalReleases}
-          subtitle={`${publishedCount} live`}
-          icon={Music}
-          variant="purple"
-          trend={{
-            value: 12,
-            label: "vs last month",
-            direction: "up",
-          }}
-          sparklineData={[2, 3, 3, 5, 6, 8, 10]}
-        />
-
-        <MetricCardEnhanced
-          title="Total Downloads"
-          value={metrics.totalDownloads}
-          subtitle="All time"
-          icon={Download}
-          variant="blue"
-          trend={{
-            value: 8,
-            label: "vs last month",
-            direction: "up",
-          }}
-          sparklineData={[10, 15, 12, 20, 25, 30, 35]}
-        />
-
-        <MetricCardEnhanced
-          title="Revenue"
-          value={`$${metrics.totalRevenue}`}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Total Revenue"
+          value={`$${(stats.totalRevenue || analytics.totalRevenue || 0).toLocaleString()}`}
           subtitle="Lifetime earnings"
           icon={DollarSign}
-          variant="green"
-          trend={{
-            value: 15,
-            label: "vs last month",
-            direction: "up",
-          }}
-          sparklineData={[100, 150, 120, 200, 250, 300, 350]}
+          trend={analytics.totalRevenue > 0 ? { value: 0, direction: "neutral" } : undefined}
+          color="green"
         />
-
-        <MetricCardEnhanced
-          title="Avg Rating"
-          value={metrics.avgRating}
-          subtitle="0 reviews"
-          icon={Star}
-          variant="orange"
-          trend={{
-            value: 0,
-            label: "No change",
-            direction: "neutral",
-          }}
+        <StatCard
+          title="Total Sales"
+          value={stats.totalDownloads + stats.totalEnrollments || analytics.totalSales || 0}
+          subtitle={`${stats.totalDownloads} downloads, ${stats.totalEnrollments} enrollments`}
+          icon={ShoppingCart}
+          color="blue"
+        />
+        <StatCard
+          title="Students"
+          value={stats.followerCount || analytics.totalStudents || 0}
+          subtitle="Unique customers"
+          icon={Users}
+          color="purple"
+        />
+        <StatCard
+          title="Content"
+          value={totalProducts}
+          subtitle={`${publishedCount} published`}
+          icon={Package}
+          color="orange"
         />
       </div>
 
-      {/* Content Breakdown */}
-      <div>
-        <h2 className="mb-4 text-lg font-semibold">Content Breakdown</h2>
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <Card className="text-center">
-            <CardContent className="p-6">
-              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-900/20">
-                <Music className="h-6 w-6 text-purple-600" />
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
+          <Card>
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Zap className="h-5 w-5 text-yellow-500" />
+                Quick Actions
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {quickActions.map((action) => (
+                  <Link key={action.title} href={action.href}>
+                    <Card className="group cursor-pointer border-border transition-all duration-200 hover:border-primary/50 hover:shadow-md">
+                      <CardContent className="p-4">
+                        <div
+                          className={`mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-r ${action.color}`}
+                        >
+                          <action.icon className="h-5 w-5 text-white" />
+                        </div>
+                        <h3 className="text-sm font-medium text-foreground group-hover:text-primary">
+                          {action.title}
+                        </h3>
+                        <p className="text-xs text-muted-foreground">{action.description}</p>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))}
               </div>
-              <p className="text-2xl font-bold text-foreground">
-                {digitalProducts?.filter((p: any) => p.productCategory === "sample-pack").length ||
-                  0}
-              </p>
-              <p className="text-sm text-muted-foreground">Sample Packs</p>
             </CardContent>
           </Card>
 
-          <Card className="text-center">
-            <CardContent className="p-6">
-              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/20">
-                <Package className="h-6 w-6 text-blue-600" />
-              </div>
-              <p className="text-2xl font-bold text-foreground">
-                {digitalProducts?.filter((p: any) => p.productCategory === "preset-pack").length ||
-                  0}
-              </p>
-              <p className="text-sm text-muted-foreground">Presets</p>
-            </CardContent>
-          </Card>
-
-          <Card className="text-center">
-            <CardContent className="p-6">
-              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/20">
-                <Play className="h-6 w-6 text-green-600" />
-              </div>
-              <p className="text-2xl font-bold text-foreground">{userCourses?.length || 0}</p>
-              <p className="text-sm text-muted-foreground">Courses</p>
-            </CardContent>
-          </Card>
-
-          <Card className="text-center">
-            <CardContent className="p-6">
-              <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/20">
-                <Headphones className="h-6 w-6 text-orange-600" />
-              </div>
-              <p className="text-2xl font-bold text-foreground">
-                {digitalProducts?.filter((p: any) => p.productCategory === "coaching").length || 0}
-              </p>
-              <p className="text-sm text-muted-foreground">Coaching</p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Achievements Section */}
-      <div>
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Your Achievements</h2>
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/achievements">View All</Link>
-          </Button>
-        </div>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {creatorAchievements.slice(0, 3).map((achievement) => (
-            <AchievementCard
-              key={achievement.id}
-              achievement={{
-                ...achievement,
-                unlocked: achievement.id === "first-product",
-              }}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* Discord Community */}
-      <div>
-        <h2 className="mb-4 text-lg font-semibold">Community</h2>
-        <DiscordStatsWidget inviteUrl={discordConfig.inviteUrl} />
-      </div>
-
-      {/* Recent Products */}
-      {products.length > 0 && (
-        <div>
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Recent Releases</h2>
-            <Button variant="outline" size="sm" asChild>
-              <Link href={`/store/${storeId || "setup"}/products`}>View All</Link>
-            </Button>
-          </div>
-          <div className="space-y-4">
-            {products.slice(0, 3).map((product: any) => (
-              <Card key={product._id}>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-r from-purple-500 to-pink-500">
-                      {product.type === "course" ? (
-                        <Play className="h-6 w-6 text-white" />
-                      ) : (
-                        <Music className="h-6 w-6 text-white" />
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="truncate font-medium text-foreground">{product.title}</h3>
-                      <div className="mt-1 flex items-center gap-2">
-                        <Badge variant="secondary" className="text-xs">
-                          {product.type === "course" ? "Course" : "Digital Product"}
-                        </Badge>
-                        <span className="text-sm text-muted-foreground">${product.price || 0}</span>
+          {hasContent && (
+            <Card>
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Package className="h-5 w-5 text-purple-500" />
+                    Recent Products
+                  </CardTitle>
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link href="/dashboard/products?mode=create">
+                      View All <ChevronRight className="ml-1 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {products.slice(0, 5).map((product: any) => (
+                    <div
+                      key={product._id}
+                      className="flex items-center gap-4 rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                    >
+                      <div
+                        className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg ${
+                          product.type === "course"
+                            ? "bg-green-100 dark:bg-green-900/20"
+                            : "bg-purple-100 dark:bg-purple-900/20"
+                        }`}
+                      >
+                        {product.type === "course" ? (
+                          <Play className="h-5 w-5 text-green-600" />
+                        ) : (
+                          <Music className="h-5 w-5 text-purple-600" />
+                        )}
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">
-                        {product.downloadCount || 0} downloads
-                      </span>
-                      <Button variant="ghost" size="sm">
-                        <Eye className="h-4 w-4" />
+                      <div className="min-w-0 flex-1">
+                        <h4 className="truncate font-medium">{product.title}</h4>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Badge variant="secondary" className="text-xs">
+                            {product.type === "course" ? "Course" : product.category}
+                          </Badge>
+                          <span>${product.price || 0}</span>
+                          {product.isPublished ? (
+                            <Badge variant="outline" className="text-xs text-green-600">
+                              Live
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-xs text-yellow-600">
+                              Draft
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <Button variant="ghost" size="sm" asChild>
+                        <Link
+                          href={
+                            product.type === "course"
+                              ? `/dashboard/courses/${product.slug}?mode=create`
+                              : `/dashboard/products/${product._id}?mode=create`
+                          }
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Link>
                       </Button>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-      {/* Empty State */}
-      {products.length === 0 && <NoProductsEmptyState storeId={storeId} />}
+          {!hasContent && (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/20 dark:to-pink-900/20">
+                  <Sparkles className="h-8 w-8 text-purple-600" />
+                </div>
+                <h3 className="mb-2 text-lg font-semibold">Create Your First Product</h3>
+                <p className="mb-4 max-w-sm text-muted-foreground">
+                  Start selling sample packs, presets, courses, or coaching sessions.
+                </p>
+                <Button asChild>
+                  <Link href="/dashboard/create">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create Product
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        <div className="space-y-6">
+          <Card>
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Target className="h-5 w-5 text-blue-500" />
+                Store Performance
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Conversion Rate</span>
+                  <span className="font-medium">{analytics.conversionRate?.toFixed(1) || 0}%</span>
+                </div>
+                <Progress value={Math.min(analytics.conversionRate || 0, 100)} className="h-2" />
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Avg Rating</span>
+                  <span className="flex items-center gap-1 font-medium">
+                    <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                    {(stats.averageRating || analytics.avgRating || 0).toFixed(1)}
+                  </span>
+                </div>
+                <Progress
+                  value={(stats.averageRating || analytics.avgRating || 0) * 20}
+                  className="h-2"
+                />
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Views</span>
+                  <span className="font-medium">{analytics.totalViews?.toLocaleString() || 0}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Clock className="h-5 w-5 text-orange-500" />
+                Recent Activity
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {recentPurchases && recentPurchases.length > 0 ? (
+                <div className="space-y-3">
+                  {recentPurchases.slice(0, 4).map((purchase: any) => (
+                    <div key={purchase._id} className="flex items-start gap-3">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/20">
+                        <ShoppingCart className="h-4 w-4 text-green-600" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">
+                          New {purchase.productType || "purchase"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          ${purchase.amount || 0} •{" "}
+                          {new Date(purchase._creationTime).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="py-6 text-center text-muted-foreground">
+                  <ShoppingCart className="mx-auto mb-2 h-8 w-8 opacity-50" />
+                  <p className="text-sm">No recent sales yet</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <BarChart3 className="h-5 w-5 text-indigo-500" />
+                Quick Links
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Button variant="outline" className="w-full justify-start" asChild>
+                <Link href="/dashboard/analytics?mode=create">
+                  <BarChart3 className="mr-2 h-4 w-4" />
+                  View Analytics
+                </Link>
+              </Button>
+              <Button variant="outline" className="w-full justify-start" asChild>
+                <Link href="/dashboard/emails?mode=create">
+                  <Mail className="mr-2 h-4 w-4" />
+                  Email Campaigns
+                </Link>
+              </Button>
+              <Button variant="outline" className="w-full justify-start" asChild>
+                <Link href="/dashboard/social?mode=create">
+                  <Share2 className="mr-2 h-4 w-4" />
+                  Social Posts
+                </Link>
+              </Button>
+              <Button variant="outline" className="w-full justify-start" asChild>
+                <Link href={`/${stores?.[0]?.slug}/settings`}>
+                  <Package className="mr-2 h-4 w-4" />
+                  Store Settings
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
+  );
+}
+
+interface StatCardProps {
+  title: string;
+  value: string | number;
+  subtitle: string;
+  icon: React.ElementType;
+  trend?: { value: number; direction: "up" | "down" | "neutral" };
+  color: "green" | "blue" | "purple" | "orange";
+}
+
+function StatCard({ title, value, subtitle, icon: Icon, trend, color }: StatCardProps) {
+  const colorClasses = {
+    green: "bg-green-100 text-green-600 dark:bg-green-900/20 dark:text-green-400",
+    blue: "bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400",
+    purple: "bg-purple-100 text-purple-600 dark:bg-purple-900/20 dark:text-purple-400",
+    orange: "bg-orange-100 text-orange-600 dark:bg-orange-900/20 dark:text-orange-400",
+  };
+
+  return (
+    <Card>
+      <CardContent className="p-6">
+        <div className="flex items-start justify-between">
+          <div
+            className={`flex h-10 w-10 items-center justify-center rounded-lg ${colorClasses[color]}`}
+          >
+            <Icon className="h-5 w-5" />
+          </div>
+          {trend && trend.direction !== "neutral" && (
+            <div
+              className={`flex items-center text-xs ${trend.direction === "up" ? "text-green-600" : "text-red-600"}`}
+            >
+              {trend.direction === "up" ? (
+                <ArrowUpRight className="h-3 w-3" />
+              ) : (
+                <ArrowDownRight className="h-3 w-3" />
+              )}
+              {trend.value}%
+            </div>
+          )}
+        </div>
+        <div className="mt-4">
+          <p className="text-2xl font-bold">{value}</p>
+          <p className="text-sm text-muted-foreground">{title}</p>
+          <p className="text-xs text-muted-foreground">{subtitle}</p>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
 function LoadingState() {
   return (
     <div className="space-y-8">
-      <Skeleton className="h-32 w-full" />
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-        {[1, 2, 3, 4, 5].map((i) => (
-          <Skeleton key={i} className="h-32" />
+      <div className="flex items-center gap-4">
+        <Skeleton className="h-12 w-12 rounded-full" />
+        <div>
+          <Skeleton className="mb-2 h-8 w-64" />
+          <Skeleton className="h-4 w-48" />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {[1, 2, 3, 4].map((i) => (
+          <Card key={i}>
+            <CardContent className="p-6">
+              <Skeleton className="mb-4 h-10 w-10 rounded-lg" />
+              <Skeleton className="mb-2 h-8 w-24" />
+              <Skeleton className="h-4 w-32" />
+            </CardContent>
+          </Card>
         ))}
       </div>
       <div className="flex items-center justify-center py-12">
