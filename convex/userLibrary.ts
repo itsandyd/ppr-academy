@@ -24,7 +24,7 @@ export const getUserEnrolledCourses = query({
   ),
   handler: async (ctx, args) => {
     // IMPROVED: Check both enrollments AND purchases for comprehensive access
-    
+
     // Method 1: Get from enrollments table
     const enrollments = await ctx.db
       .query("enrollments")
@@ -35,36 +35,33 @@ export const getUserEnrolledCourses = query({
     const coursePurchases = await ctx.db
       .query("purchases")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .filter((q) => 
-        q.and(
-          q.eq(q.field("productType"), "course"),
-          q.eq(q.field("status"), "completed")
-        )
+      .filter((q) =>
+        q.and(q.eq(q.field("productType"), "course"), q.eq(q.field("status"), "completed"))
       )
       .collect();
 
     // Combine both sources (purchases are authoritative)
     const allCourseIds = new Set([
-      ...enrollments.map(e => e.courseId),
-      ...coursePurchases.map(p => p.courseId).filter(Boolean)
+      ...enrollments.map((e) => e.courseId),
+      ...coursePurchases.map((p) => p.courseId).filter(Boolean),
     ]);
 
     // Get course details for all accessible courses
     const coursesWithProgress = await Promise.all(
       Array.from(allCourseIds).map(async (courseId) => {
-        const course = await ctx.db.get(courseId as any) as any;
+        const course = (await ctx.db.get(courseId as any)) as any;
         if (!course) return null;
 
         // Get enrollment data (for progress)
-        const enrollment = enrollments.find(e => e.courseId === courseId);
-        
+        const enrollment = enrollments.find((e) => e.courseId === courseId);
+
         // Get purchase data (for access verification)
-        const purchase = coursePurchases.find(p => p.courseId === courseId);
+        const purchase = coursePurchases.find((p) => p.courseId === courseId);
 
         // Calculate progress from userProgress table
         const userProgress = await ctx.db
           .query("userProgress")
-          .withIndex("by_user_course", (q) => 
+          .withIndex("by_user_course", (q) =>
             q.eq("userId", args.userId).eq("courseId", courseId as any)
           )
           .collect();
@@ -74,9 +71,11 @@ export const getUserEnrolledCourses = query({
           .withIndex("by_courseId", (q) => q.eq("courseId", courseId as any))
           .collect();
 
-        const completedChapters = userProgress.filter(p => p.isCompleted).length;
-        const calculatedProgress = totalChapters.length > 0 ? 
-          Math.round((completedChapters / totalChapters.length) * 100) : 0;
+        const completedChapters = userProgress.filter((p) => p.isCompleted).length;
+        const calculatedProgress =
+          totalChapters.length > 0
+            ? Math.round((completedChapters / totalChapters.length) * 100)
+            : 0;
 
         return {
           _id: course._id,
@@ -120,9 +119,7 @@ export const getUserLibraryStats = query({
       .collect();
 
     // Count completed courses (progress >= 100)
-    const completedCourses = enrollments.filter(
-      (e) => (e.progress || 0) >= 100
-    ).length;
+    const completedCourses = enrollments.filter((e) => (e.progress || 0) >= 100).length;
 
     // Get user progress records to calculate hours
     const progressRecords = await ctx.db
@@ -131,21 +128,14 @@ export const getUserLibraryStats = query({
       .collect();
 
     // Calculate total time spent (sum of timeSpent in minutes, convert to hours)
-    const totalMinutes = progressRecords.reduce(
-      (acc, p) => acc + (p.timeSpent || 0),
-      0
-    );
+    const totalMinutes = progressRecords.reduce((acc, p) => acc + (p.timeSpent || 0), 0);
     const totalHours = Math.round(totalMinutes / 60);
 
     // Calculate streak (simplified - just count days with activity in last 30 days)
     const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
-    const recentActivity = progressRecords.filter(
-      (p) => (p.lastAccessedAt || 0) > thirtyDaysAgo
-    );
+    const recentActivity = progressRecords.filter((p) => (p.lastAccessedAt || 0) > thirtyDaysAgo);
     const uniqueDays = new Set(
-      recentActivity.map((p) =>
-        new Date(p.lastAccessedAt || 0).toDateString()
-      )
+      recentActivity.map((p) => new Date(p.lastAccessedAt || 0).toDateString())
     ).size;
 
     return {
@@ -197,7 +187,7 @@ export const getUserRecentActivity = query({
     // Add completed lessons
     for (const progress of recentProgress) {
       if (progress.isCompleted) {
-        const course = await ctx.db.get(progress.courseId as any) as any;
+        const course = (await ctx.db.get(progress.courseId as any)) as any;
         if (course && course.title) {
           const timeAgo = getTimeAgo(progress.completedAt || progress._creationTime);
           activities.push({
@@ -214,7 +204,7 @@ export const getUserRecentActivity = query({
 
     // Add started courses
     for (const enrollment of recentEnrollments) {
-      const course = await ctx.db.get(enrollment.courseId as any) as any;
+      const course = (await ctx.db.get(enrollment.courseId as any)) as any;
       if (course && course.title) {
         const timeAgo = getTimeAgo(enrollment._creationTime);
         activities.push({
@@ -234,7 +224,6 @@ export const getUserRecentActivity = query({
   },
 });
 
-// Helper function to format time ago
 function getTimeAgo(timestamp: number): string {
   const now = Date.now();
   const diff = now - timestamp;
@@ -247,3 +236,119 @@ function getTimeAgo(timestamp: number): string {
   if (days < 30) return `${days} ${days === 1 ? "day" : "days"} ago`;
   return `${Math.floor(days / 30)} ${Math.floor(days / 30) === 1 ? "month" : "months"} ago`;
 }
+
+export const getContinueWatching = query({
+  args: { userId: v.string() },
+  returns: v.union(
+    v.object({
+      course: v.object({
+        _id: v.id("courses"),
+        title: v.string(),
+        slug: v.optional(v.string()),
+        imageUrl: v.optional(v.string()),
+      }),
+      nextChapter: v.object({
+        _id: v.string(),
+        title: v.string(),
+        moduleTitle: v.optional(v.string()),
+        lessonTitle: v.optional(v.string()),
+        position: v.number(),
+      }),
+      progress: v.number(),
+      totalChapters: v.number(),
+      completedChapters: v.number(),
+      lastAccessedAt: v.number(),
+      timeAgo: v.string(),
+    }),
+    v.null()
+  ),
+  handler: async (ctx, args) => {
+    const allProgress = await ctx.db
+      .query("userProgress")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    if (allProgress.length === 0) return null;
+
+    const courseProgress = new Map<string, { lastAccessed: number; completed: Set<string> }>();
+
+    for (const p of allProgress) {
+      if (!p.courseId) continue;
+      const courseId = p.courseId.toString();
+
+      if (!courseProgress.has(courseId)) {
+        courseProgress.set(courseId, { lastAccessed: 0, completed: new Set() });
+      }
+
+      const cp = courseProgress.get(courseId)!;
+      if (p.lastAccessedAt && p.lastAccessedAt > cp.lastAccessed) {
+        cp.lastAccessed = p.lastAccessedAt;
+      }
+      if (p.isCompleted && p.chapterId) {
+        cp.completed.add(p.chapterId);
+      }
+    }
+
+    const sortedCourses = Array.from(courseProgress.entries()).sort(
+      (a, b) => b[1].lastAccessed - a[1].lastAccessed
+    );
+
+    for (const [courseIdStr, data] of sortedCourses) {
+      const course = await ctx.db.get(courseIdStr as any);
+      if (!course || !course.isPublished) continue;
+
+      const chapters = await ctx.db
+        .query("courseChapters")
+        .withIndex("by_courseId", (q) => q.eq("courseId", courseIdStr as any))
+        .collect();
+
+      if (chapters.length === 0) continue;
+
+      const sortedChapters = chapters.sort((a, b) => (a.position || 0) - (b.position || 0));
+      const nextChapter = sortedChapters.find((ch) => !data.completed.has(ch._id));
+
+      if (!nextChapter) continue;
+
+      let moduleTitle: string | undefined;
+      let lessonTitle: string | undefined;
+
+      if (nextChapter.lessonId) {
+        const lesson = await ctx.db.get(nextChapter.lessonId as any);
+        if (lesson) {
+          lessonTitle = (lesson as any).title;
+          if ((lesson as any).moduleId) {
+            const module = await ctx.db.get((lesson as any).moduleId);
+            if (module) moduleTitle = (module as any).title;
+          }
+        }
+      }
+
+      const completedCount = data.completed.size;
+      const totalCount = sortedChapters.length;
+      const progressPercent = Math.round((completedCount / totalCount) * 100);
+
+      return {
+        course: {
+          _id: course._id,
+          title: course.title || "Untitled Course",
+          slug: course.slug,
+          imageUrl: course.imageUrl,
+        },
+        nextChapter: {
+          _id: nextChapter._id,
+          title: nextChapter.title || "Untitled Chapter",
+          moduleTitle,
+          lessonTitle,
+          position: nextChapter.position || 0,
+        },
+        progress: progressPercent,
+        totalChapters: totalCount,
+        completedChapters: completedCount,
+        lastAccessedAt: data.lastAccessed,
+        timeAgo: getTimeAgo(data.lastAccessed),
+      };
+    }
+
+    return null;
+  },
+});
