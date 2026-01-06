@@ -2,11 +2,22 @@
 
 import { useState } from "react";
 import { useQuery } from "convex/react";
+import { useUser } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Package, Check, Zap, TrendingUp, Star, CreditCard, ArrowLeft } from "lucide-react";
+import {
+  Package,
+  Check,
+  Zap,
+  TrendingUp,
+  Star,
+  CreditCard,
+  ArrowLeft,
+  Loader2,
+  Download,
+} from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -14,23 +25,54 @@ import { toast } from "sonner";
 
 export default function PurchaseCreditsPage() {
   const router = useRouter();
-  const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
+  const { user } = useUser();
+  const [purchasingPackage, setPurchasingPackage] = useState<string | null>(null);
 
-  // Queries
   const packages = useQuery(api.credits.getCreditPackages) || [];
   const userCredits = useQuery(api.credits.getUserCredits);
 
-  const handlePurchase = async (packageId: string) => {
-    setSelectedPackage(packageId);
+  const handlePurchase = async (pkg: {
+    id: string;
+    credits: number;
+    price: number;
+    bonus: number;
+  }) => {
+    if (!user) {
+      toast.error("Please sign in to purchase credits");
+      return;
+    }
 
-    // TODO: Integrate with Stripe
-    toast.info("Stripe integration coming soon! This will create a checkout session.");
+    setPurchasingPackage(pkg.id);
 
-    // Placeholder for Stripe flow:
-    // 1. Create Stripe checkout session
-    // 2. Redirect to Stripe
-    // 3. On success, Stripe webhook calls purchaseCredits mutation
-    // 4. User gets credits added to balance
+    try {
+      const response = await fetch("/api/credits/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          packageId: pkg.id,
+          packageName: `${pkg.credits} Credits${pkg.bonus > 0 ? ` + ${pkg.bonus} Bonus` : ""}`,
+          credits: pkg.credits,
+          bonusCredits: pkg.bonus,
+          priceUsd: pkg.price,
+          customerEmail: user.primaryEmailAddress?.emailAddress,
+          userId: user.id,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to create checkout session");
+      }
+
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      }
+    } catch (error) {
+      console.error("Checkout error:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to start checkout");
+      setPurchasingPackage(null);
+    }
   };
 
   return (
@@ -156,7 +198,6 @@ export default function PurchaseCreditsPage() {
                     </div>
                   </div>
 
-                  {/* CTA */}
                   <Button
                     className={`w-full py-6 text-base ${
                       pkg.popular
@@ -164,11 +205,15 @@ export default function PurchaseCreditsPage() {
                         : ""
                     }`}
                     size="lg"
-                    onClick={() => handlePurchase(pkg.id)}
-                    disabled={selectedPackage === pkg.id}
+                    onClick={() => handlePurchase(pkg)}
+                    disabled={purchasingPackage === pkg.id}
                   >
-                    <CreditCard className="mr-2 h-5 w-5" />
-                    Buy {pkg.credits} Credits
+                    {purchasingPackage === pkg.id ? (
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    ) : (
+                      <CreditCard className="mr-2 h-5 w-5" />
+                    )}
+                    {purchasingPackage === pkg.id ? "Processing..." : `Buy ${pkg.credits} Credits`}
                   </Button>
                 </CardContent>
               </Card>
@@ -215,6 +260,3 @@ export default function PurchaseCreditsPage() {
     </div>
   );
 }
-
-// Import Download icon
-import { Download } from "lucide-react";

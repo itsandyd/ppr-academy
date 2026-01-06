@@ -1,7 +1,7 @@
 "use client";
 
 import { use } from "react";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { useUser } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -43,6 +43,7 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
   const router = useRouter();
   const [isDownloading, setIsDownloading] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [isTogglingWishlist, setIsTogglingWishlist] = useState(false);
 
   const productBySlug = useQuery(
     api.digitalProducts.getProductByGlobalSlug,
@@ -58,10 +59,21 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
 
   const product = productBySlug ?? productById;
 
-  // Get creator/store info
   const store = useQuery(
     api.stores.getStoreById,
     product?.storeId ? { storeId: product.storeId } : "skip"
+  );
+
+  const isInWishlist = useQuery(
+    api.wishlists.isInWishlist,
+    product?._id ? { productId: product._id } : "skip"
+  );
+  const addToWishlist = useMutation(api.wishlists.addToWishlist);
+  const removeFromWishlist = useMutation(api.wishlists.removeFromWishlist);
+
+  const relatedProducts = useQuery(
+    api.digitalProducts.getRelatedProducts,
+    product?._id ? { productId: product._id, limit: 4 } : "skip"
   );
 
   if (product === null) {
@@ -153,6 +165,33 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
       console.error("Checkout error:", error);
       toast.error(error instanceof Error ? error.message : "Failed to start checkout");
       setIsCheckingOut(false);
+    }
+  };
+
+  const handleWishlistToggle = async () => {
+    if (!isSignedIn) {
+      toast.error("Please sign in to save items");
+      return;
+    }
+
+    if (!product?._id) return;
+
+    setIsTogglingWishlist(true);
+    try {
+      if (isInWishlist) {
+        await removeFromWishlist({ productId: product._id });
+        toast.success("Removed from wishlist");
+      } else {
+        await addToWishlist({
+          productId: product._id,
+          productType: product.category,
+        });
+        toast.success("Added to wishlist!");
+      }
+    } catch (error) {
+      toast.error("Failed to update wishlist");
+    } finally {
+      setIsTogglingWishlist(false);
     }
   };
 
@@ -319,10 +358,17 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
                   <Button
                     variant="outline"
                     size="lg"
-                    onClick={() => toast.success("Added to wishlist!")}
+                    onClick={handleWishlistToggle}
+                    disabled={isTogglingWishlist}
                   >
-                    <Heart className="mr-2 h-4 w-4" />
-                    Save
+                    {isTogglingWishlist ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Heart
+                        className={`mr-2 h-4 w-4 ${isInWishlist ? "fill-red-500 text-red-500" : ""}`}
+                      />
+                    )}
+                    {isInWishlist ? "Saved" : "Save"}
                   </Button>
                 </div>
               </div>
@@ -366,21 +412,57 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
           </Card>
         </motion.div>
 
-        {/* More from Creator */}
-        <motion.div
-          className="mt-12"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-        >
-          <div className="mb-6 flex items-center justify-between">
-            <h2 className="text-2xl font-bold">More from {store.name}</h2>
-            <Link href={`/${store.slug}`}>
-              <Button variant="outline">View All Products</Button>
-            </Link>
-          </div>
-          {/* TODO: Add related products grid */}
-        </motion.div>
+        {relatedProducts && relatedProducts.length > 0 && (
+          <motion.div
+            className="mt-12"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+          >
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="text-2xl font-bold">More from {store.name}</h2>
+              <Link href={`/${store.slug}`}>
+                <Button variant="outline">View All Products</Button>
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {relatedProducts.map((relatedProduct) => (
+                <Link
+                  key={relatedProduct._id}
+                  href={`/marketplace/products/${relatedProduct.slug || relatedProduct._id}`}
+                >
+                  <Card className="group overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+                    <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-muted to-muted/50">
+                      {relatedProduct.imageUrl ? (
+                        <Image
+                          src={relatedProduct.imageUrl}
+                          alt={relatedProduct.title}
+                          fill
+                          className="object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="flex h-full items-center justify-center">
+                          <Package className="h-12 w-12 text-muted-foreground/50" />
+                        </div>
+                      )}
+                    </div>
+                    <CardContent className="p-4">
+                      <h3 className="line-clamp-1 font-semibold">{relatedProduct.title}</h3>
+                      <div className="mt-2 flex items-center justify-between">
+                        <Badge variant="secondary" className="text-xs">
+                          {relatedProduct.category}
+                        </Badge>
+                        <span className="font-bold text-chart-1">
+                          ${relatedProduct.price.toFixed(2)}
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </motion.div>
+        )}
       </section>
     </div>
   );

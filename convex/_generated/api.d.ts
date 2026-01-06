@@ -152,6 +152,7 @@ import type * as masterAI_tools_executor from "../masterAI/tools/executor.js";
 import type * as masterAI_tools_mutations from "../masterAI/tools/mutations.js";
 import type * as masterAI_types from "../masterAI/types.js";
 import type * as masterAI_webResearch from "../masterAI/webResearch.js";
+import type * as memberships from "../memberships.js";
 import type * as migrations_backfillCourseCustomers from "../migrations/backfillCourseCustomers.js";
 import type * as migrations_backfillCustomers from "../migrations/backfillCustomers.js";
 import type * as migrations_importPlugins from "../migrations/importPlugins.js";
@@ -208,6 +209,7 @@ import type * as users from "../users.js";
 import type * as vercelDomainManager from "../vercelDomainManager.js";
 import type * as webhooks_instagram from "../webhooks/instagram.js";
 import type * as webhooks_stripe from "../webhooks/stripe.js";
+import type * as wishlists from "../wishlists.js";
 import type * as workflowActions from "../workflowActions.js";
 import type * as workflowHelpers from "../workflowHelpers.js";
 
@@ -359,6 +361,7 @@ declare const fullApi: ApiFromModules<{
   "masterAI/tools/mutations": typeof masterAI_tools_mutations;
   "masterAI/types": typeof masterAI_types;
   "masterAI/webResearch": typeof masterAI_webResearch;
+  memberships: typeof memberships;
   "migrations/backfillCourseCustomers": typeof migrations_backfillCourseCustomers;
   "migrations/backfillCustomers": typeof migrations_backfillCustomers;
   "migrations/importPlugins": typeof migrations_importPlugins;
@@ -415,6 +418,7 @@ declare const fullApi: ApiFromModules<{
   vercelDomainManager: typeof vercelDomainManager;
   "webhooks/instagram": typeof webhooks_instagram;
   "webhooks/stripe": typeof webhooks_stripe;
+  wishlists: typeof wishlists;
   workflowActions: typeof workflowActions;
   workflowHelpers: typeof workflowHelpers;
 }>;

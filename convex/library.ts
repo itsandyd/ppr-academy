@@ -975,3 +975,192 @@ export const createDigitalProductPurchase = mutation({
     return purchaseId;
   },
 });
+
+export const createBundlePurchase = mutation({
+  args: {
+    userId: v.string(),
+    bundleId: v.id("bundles"),
+    amount: v.number(),
+    currency: v.optional(v.string()),
+    paymentMethod: v.optional(v.string()),
+    transactionId: v.optional(v.string()),
+  },
+  returns: v.id("purchases"),
+  handler: async (ctx, args) => {
+    const bundle = await ctx.db.get(args.bundleId);
+    if (!bundle) {
+      throw new Error("Bundle not found");
+    }
+
+    const existingPurchase = await ctx.db
+      .query("purchases")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .filter((q) =>
+        q.and(q.eq(q.field("bundleId"), args.bundleId), q.eq(q.field("status"), "completed"))
+      )
+      .first();
+
+    if (existingPurchase) {
+      throw new Error("You already have access to this bundle");
+    }
+
+    const store = await ctx.db.get(bundle.storeId);
+
+    const purchaseId = await ctx.db.insert("purchases", {
+      userId: args.userId,
+      bundleId: args.bundleId,
+      storeId: bundle.storeId as any,
+      adminUserId: bundle.creatorId,
+      amount: args.amount,
+      currency: args.currency || "USD",
+      status: "completed",
+      paymentMethod: args.paymentMethod,
+      transactionId: args.transactionId,
+      productType: "bundle",
+      accessGranted: true,
+      downloadCount: 0,
+      lastAccessedAt: Date.now(),
+    });
+
+    for (const courseId of bundle.courseIds) {
+      const existingCoursePurchase = await ctx.db
+        .query("purchases")
+        .withIndex("by_user_course", (q) => q.eq("userId", args.userId).eq("courseId", courseId))
+        .filter((q) => q.eq(q.field("status"), "completed"))
+        .first();
+
+      if (!existingCoursePurchase) {
+        const course = await ctx.db.get(courseId);
+        if (course) {
+          await ctx.db.insert("purchases", {
+            userId: args.userId,
+            courseId: courseId,
+            storeId: course.storeId || course.userId,
+            adminUserId: course.userId,
+            amount: 0,
+            currency: args.currency || "USD",
+            status: "completed",
+            paymentMethod: "bundle",
+            transactionId: args.transactionId,
+            productType: "course",
+            accessGranted: true,
+            downloadCount: 0,
+            lastAccessedAt: Date.now(),
+            bundleId: args.bundleId,
+          });
+
+          const existingEnrollment = await ctx.db
+            .query("enrollments")
+            .withIndex("by_user_course", (q) =>
+              q.eq("userId", args.userId).eq("courseId", courseId)
+            )
+            .unique();
+
+          if (!existingEnrollment) {
+            await ctx.db.insert("enrollments", {
+              userId: args.userId,
+              courseId: courseId,
+              progress: 0,
+            });
+          }
+        }
+      }
+    }
+
+    for (const productId of bundle.productIds) {
+      const existingProductPurchase = await ctx.db
+        .query("purchases")
+        .withIndex("by_user_product", (q) => q.eq("userId", args.userId).eq("productId", productId))
+        .filter((q) => q.eq(q.field("status"), "completed"))
+        .first();
+
+      if (!existingProductPurchase) {
+        const product = await ctx.db.get(productId);
+        if (product) {
+          await ctx.db.insert("purchases", {
+            userId: args.userId,
+            productId: productId,
+            storeId: product.storeId,
+            adminUserId: product.userId,
+            amount: 0,
+            currency: args.currency || "USD",
+            status: "completed",
+            paymentMethod: "bundle",
+            transactionId: args.transactionId,
+            productType: "digitalProduct",
+            accessGranted: true,
+            downloadCount: 0,
+            lastAccessedAt: Date.now(),
+            bundleId: args.bundleId,
+          });
+        }
+      }
+    }
+
+    await ctx.db.patch(args.bundleId, {
+      totalPurchases: bundle.totalPurchases + 1,
+      totalRevenue: bundle.totalRevenue + args.amount,
+      updatedAt: Date.now(),
+    });
+
+    try {
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", args.userId))
+        .unique();
+
+      if (user && store) {
+        const existingCustomer = await ctx.db
+          .query("customers")
+          .withIndex("by_email_and_store", (q) =>
+            q.eq("email", user.email || "").eq("storeId", bundle.storeId as any)
+          )
+          .unique();
+
+        if (existingCustomer) {
+          await ctx.db.patch(existingCustomer._id, {
+            lastActivity: Date.now(),
+            status: "active",
+            type: "paying",
+            totalSpent: (existingCustomer.totalSpent || 0) + args.amount,
+          });
+        } else {
+          await ctx.db.insert("customers", {
+            name:
+              `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email || "Unknown",
+            email: user.email || args.userId,
+            storeId: bundle.storeId as any,
+            adminUserId: bundle.creatorId,
+            type: "paying",
+            status: "active",
+            totalSpent: args.amount,
+            lastActivity: Date.now(),
+            source: bundle.name || "Bundle Purchase",
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Failed to create/update customer record:", error);
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.userId))
+      .unique();
+
+    if (user?.email) {
+      await ctx.scheduler.runAfter(0, internal.emailWorkflows.triggerProductPurchaseWorkflows, {
+        storeId: bundle.storeId as any,
+        customerEmail: user.email,
+        customerName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
+        productId: args.bundleId,
+        productName: bundle.name,
+        productType: "bundle",
+        orderId: purchaseId,
+        amount: args.amount,
+      });
+    }
+
+    return purchaseId;
+  },
+});

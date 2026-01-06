@@ -5,11 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { 
-  GraduationCap, 
-  Clock, 
-  BookOpen, 
-  Users, 
+import {
+  GraduationCap,
+  Clock,
+  BookOpen,
+  Users,
   Star,
   CheckCircle,
   ArrowRight,
@@ -17,12 +17,19 @@ import {
   Award,
   Zap,
   Target,
-  TrendingUp
+  TrendingUp,
+  Heart,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { CourseQAChat } from "@/components/course/CourseQAChat";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
+import { useUser } from "@clerk/nextjs";
+import { toast } from "sonner";
 
 interface Course {
   _id: string;
@@ -69,16 +76,48 @@ interface CourseLandingPageProps {
 
 export function CourseLandingPage({ course, store, creator }: CourseLandingPageProps) {
   const router = useRouter();
-  
+  const { isSignedIn } = useUser();
+  const [isTogglingWishlist, setIsTogglingWishlist] = useState(false);
+
+  const isInWishlist = useQuery(
+    api.wishlists.isCourseInWishlist,
+    course._id ? { courseId: course._id as Id<"courses"> } : "skip"
+  );
+  const addToWishlist = useMutation(api.wishlists.addCourseToWishlist);
+  const removeFromWishlist = useMutation(api.wishlists.removeFromWishlist);
+
+  const handleWishlistToggle = async () => {
+    if (!isSignedIn) {
+      toast.error("Please sign in to save to wishlist");
+      return;
+    }
+
+    setIsTogglingWishlist(true);
+    try {
+      if (isInWishlist) {
+        await removeFromWishlist({ courseId: course._id as Id<"courses"> });
+        toast.success("Removed from wishlist");
+      } else {
+        await addToWishlist({ courseId: course._id as Id<"courses"> });
+        toast.success("Added to wishlist");
+      }
+    } catch {
+      toast.error("Failed to update wishlist");
+    } finally {
+      setIsTogglingWishlist(false);
+    }
+  };
+
   // Calculate course stats
   const totalModules = course.modules?.length || 0;
-  const totalLessons = course.modules?.reduce((total, module) => total + module.lessons.length, 0) || 0;
+  const totalLessons =
+    course.modules?.reduce((total, module) => total + module.lessons.length, 0) || 0;
   const estimatedHours = Math.round(totalLessons * 0.75); // Rough estimate
 
   const creatorName = creator?.name || "Course Creator";
   const creatorInitials = creatorName
     .split(" ")
-    .map(name => name.charAt(0))
+    .map((name) => name.charAt(0))
     .join("")
     .toUpperCase()
     .slice(0, 2);
@@ -88,104 +127,132 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
   };
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
+    <div className="min-h-screen overflow-x-hidden bg-background">
       {/* Hero Section */}
-      <div className="bg-gradient-to-r from-chart-1 to-chart-4 text-primary-foreground overflow-hidden">
-        <div className="max-w-6xl mx-auto px-3 sm:px-4 lg:px-6 py-8 sm:py-12 lg:py-16">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 items-center">
+      <div className="overflow-hidden bg-gradient-to-r from-chart-1 to-chart-4 text-primary-foreground">
+        <div className="mx-auto max-w-6xl px-3 py-8 sm:px-4 sm:py-12 lg:px-6 lg:py-16">
+          <div className="grid grid-cols-1 items-center gap-6 sm:gap-8 lg:grid-cols-2 lg:gap-12">
             {/* Left: Course Info */}
-            <div className="space-y-4 sm:space-y-6 lg:space-y-8 min-w-0">
+            <div className="min-w-0 space-y-4 sm:space-y-6 lg:space-y-8">
               {/* Course Category & Level */}
-              <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                <Badge className="bg-white/20 text-white border-white/30 hover:bg-white/20 text-xs sm:text-sm shrink-0">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <Badge className="shrink-0 border-white/30 bg-white/20 text-xs text-white hover:bg-white/20 sm:text-sm">
                   {course.category || "Course"}
                 </Badge>
-                <Badge variant="outline" className="border-white/30 text-white hover:bg-white/10 text-xs sm:text-sm shrink-0">
+                <Badge
+                  variant="outline"
+                  className="shrink-0 border-white/30 text-xs text-white hover:bg-white/10 sm:text-sm"
+                >
                   {course.skillLevel || "All Levels"}
                 </Badge>
               </div>
 
               {/* Course Title */}
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold text-white leading-tight break-words">
+              <h1 className="break-words text-2xl font-bold leading-tight text-white sm:text-3xl lg:text-4xl xl:text-5xl">
                 {course.title}
               </h1>
 
               {/* Course Description */}
-              <p className="text-sm sm:text-base lg:text-lg xl:text-xl text-white/90 leading-relaxed break-words">
-                {course.description || "Master essential skills with this comprehensive course designed for creators like you."}
+              <p className="break-words text-sm leading-relaxed text-white/90 sm:text-base lg:text-lg xl:text-xl">
+                {course.description ||
+                  "Master essential skills with this comprehensive course designed for creators like you."}
               </p>
 
               {/* Course Stats */}
-              <div className="flex items-center gap-4 sm:gap-6 lg:gap-8 flex-wrap">
+              <div className="flex flex-wrap items-center gap-4 sm:gap-6 lg:gap-8">
                 <div className="flex items-center gap-2">
-                  <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-white/80 flex-shrink-0" />
-                  <span className="font-medium text-white text-sm sm:text-base">{totalModules} Modules</span>
+                  <BookOpen className="h-4 w-4 flex-shrink-0 text-white/80 sm:h-5 sm:w-5" />
+                  <span className="text-sm font-medium text-white sm:text-base">
+                    {totalModules} Modules
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Play className="w-4 h-4 sm:w-5 sm:h-5 text-white/80 flex-shrink-0" />
-                  <span className="font-medium text-white text-sm sm:text-base">{totalLessons} Lessons</span>
+                  <Play className="h-4 w-4 flex-shrink-0 text-white/80 sm:h-5 sm:w-5" />
+                  <span className="text-sm font-medium text-white sm:text-base">
+                    {totalLessons} Lessons
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-white/80 flex-shrink-0" />
-                  <span className="font-medium text-white text-sm sm:text-base">~{estimatedHours} Hours</span>
+                  <Clock className="h-4 w-4 flex-shrink-0 text-white/80 sm:h-5 sm:w-5" />
+                  <span className="text-sm font-medium text-white sm:text-base">
+                    ~{estimatedHours} Hours
+                  </span>
                 </div>
               </div>
 
               {/* CTA */}
-              <div className="flex flex-col gap-4 w-full">
-              <Button 
-                size="lg"
-                onClick={handleEnrollClick}
-                className="bg-background text-foreground hover:bg-background/90 hover:shadow-xl font-semibold text-sm sm:text-base lg:text-lg px-4 sm:px-6 lg:px-8 py-3 sm:py-4 h-auto w-full max-w-xs mx-auto sm:mx-0 sm:max-w-none sm:w-auto"
-              >
-                  <span className="truncate">
-                    {course.price && course.price > 0 ? (
-                      <>Enroll Now - ${course.price}</>
+              <div className="flex w-full flex-col gap-4">
+                <div className="mx-auto flex w-full max-w-xs items-center gap-3 sm:mx-0 sm:w-auto sm:max-w-none">
+                  <Button
+                    size="lg"
+                    onClick={handleEnrollClick}
+                    className="h-auto flex-1 bg-background px-4 py-3 text-sm font-semibold text-foreground hover:bg-background/90 hover:shadow-xl sm:px-6 sm:py-4 sm:text-base lg:px-8 lg:text-lg"
+                  >
+                    <span className="truncate">
+                      {course.price && course.price > 0 ? (
+                        <>Enroll Now - ${course.price}</>
+                      ) : (
+                        <>Enroll for Free</>
+                      )}
+                    </span>
+                    <ArrowRight className="ml-2 h-4 w-4 flex-shrink-0 sm:h-5 sm:w-5" />
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    onClick={handleWishlistToggle}
+                    disabled={isTogglingWishlist}
+                    className="h-auto border-white/30 px-3 py-3 text-white hover:bg-white/10 sm:px-4 sm:py-4"
+                    title={isInWishlist ? "Remove from wishlist" : "Add to wishlist"}
+                  >
+                    {isTogglingWishlist ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
                     ) : (
-                      <>Enroll for Free</>
+                      <Heart
+                        className={`h-5 w-5 ${isInWishlist ? "fill-pink-500 text-pink-500" : ""}`}
+                      />
                     )}
-                  </span>
-                  <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2 flex-shrink-0" />
-                </Button>
-                
-                <div className="text-white/80 text-center sm:text-left">
-                  <div className="flex items-center justify-center sm:justify-start gap-1 mb-1">
-                    <Star className="w-3 h-3 sm:w-4 sm:h-4 fill-current flex-shrink-0" />
-                    <Star className="w-3 h-3 sm:w-4 sm:h-4 fill-current flex-shrink-0" />
-                    <Star className="w-3 h-3 sm:w-4 sm:h-4 fill-current flex-shrink-0" />
-                    <Star className="w-3 h-3 sm:w-4 sm:h-4 fill-current flex-shrink-0" />
-                    <Star className="w-3 h-3 sm:w-4 sm:h-4 fill-current flex-shrink-0" />
+                  </Button>
+                </div>
+
+                <div className="text-center text-white/80 sm:text-left">
+                  <div className="mb-1 flex items-center justify-center gap-1 sm:justify-start">
+                    <Star className="h-3 w-3 flex-shrink-0 fill-current sm:h-4 sm:w-4" />
+                    <Star className="h-3 w-3 flex-shrink-0 fill-current sm:h-4 sm:w-4" />
+                    <Star className="h-3 w-3 flex-shrink-0 fill-current sm:h-4 sm:w-4" />
+                    <Star className="h-3 w-3 flex-shrink-0 fill-current sm:h-4 sm:w-4" />
+                    <Star className="h-3 w-3 flex-shrink-0 fill-current sm:h-4 sm:w-4" />
                   </div>
-                  <p className="text-xs sm:text-sm text-white">Join thousands of students</p>
+                  <p className="text-xs text-white sm:text-sm">Join thousands of students</p>
                 </div>
               </div>
             </div>
 
             {/* Right: Course Image */}
-            <div className="relative mt-6 sm:mt-8 lg:mt-0 min-w-0">
-              <div className="w-full h-48 sm:h-64 lg:h-80 xl:h-96 bg-white/10 rounded-xl sm:rounded-2xl overflow-hidden backdrop-blur-sm border border-white/20">
+            <div className="relative mt-6 min-w-0 sm:mt-8 lg:mt-0">
+              <div className="h-48 w-full overflow-hidden rounded-xl border border-white/20 bg-white/10 backdrop-blur-sm sm:h-64 sm:rounded-2xl lg:h-80 xl:h-96">
                 {course.imageUrl ? (
-                  <Image 
-                    src={course.imageUrl} 
+                  <Image
+                    src={course.imageUrl}
                     alt={course.title}
                     width={1200}
                     height={630}
-                    className="w-full h-full object-cover"
+                    className="h-full w-full object-cover"
                     priority
                     sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 1200px"
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <GraduationCap className="w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 xl:w-24 xl:h-24 text-white/60" />
+                  <div className="flex h-full w-full items-center justify-center">
+                    <GraduationCap className="h-12 w-12 text-white/60 sm:h-16 sm:w-16 lg:h-20 lg:w-20 xl:h-24 xl:w-24" />
                   </div>
                 )}
               </div>
-              
+
               {/* Floating Stats - Hidden on mobile to prevent overflow */}
-              <div className="hidden lg:block absolute -bottom-4 -right-4 xl:-bottom-6 xl:-right-6 bg-card rounded-xl p-3 xl:p-4 shadow-2xl border border-border">
+              <div className="absolute -bottom-4 -right-4 hidden rounded-xl border border-border bg-card p-3 shadow-2xl lg:block xl:-bottom-6 xl:-right-6 xl:p-4">
                 <div className="text-center">
-                  <div className="text-xl xl:text-2xl font-bold text-primary">{totalLessons}</div>
-                  <div className="text-xs xl:text-sm text-muted-foreground">Lessons</div>
+                  <div className="text-xl font-bold text-primary xl:text-2xl">{totalLessons}</div>
+                  <div className="text-xs text-muted-foreground xl:text-sm">Lessons</div>
                 </div>
               </div>
             </div>
@@ -194,38 +261,43 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
       </div>
 
       {/* What You'll Learn Section */}
-      <div className="py-12 sm:py-16 bg-muted/30 overflow-hidden">
-        <div className="max-w-6xl mx-auto px-3 sm:px-4 lg:px-6">
-          <div className="text-center mb-8 sm:mb-12">
-            <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-foreground mb-4 break-words">What You'll Learn</h2>
-            <p className="text-sm sm:text-base lg:text-lg xl:text-xl text-muted-foreground max-w-3xl mx-auto break-words">
-              This comprehensive course covers everything you need to know, with hands-on examples and real-world applications.
+      <div className="overflow-hidden bg-muted/30 py-12 sm:py-16">
+        <div className="mx-auto max-w-6xl px-3 sm:px-4 lg:px-6">
+          <div className="mb-8 text-center sm:mb-12">
+            <h2 className="mb-4 break-words text-xl font-bold text-foreground sm:text-2xl lg:text-3xl xl:text-4xl">
+              What You'll Learn
+            </h2>
+            <p className="mx-auto max-w-3xl break-words text-sm text-muted-foreground sm:text-base lg:text-lg xl:text-xl">
+              This comprehensive course covers everything you need to know, with hands-on examples
+              and real-world applications.
             </p>
           </div>
 
           {/* Course Modules - Masonry Grid */}
-          <div className="columns-1 md:columns-2 lg:columns-3 gap-6">
+          <div className="columns-1 gap-6 md:columns-2 lg:columns-3">
             {course.modules?.map((module, idx) => (
-              <div key={module.orderIndex} className="break-inside-avoid mb-6">
-                <Card className="border-border bg-card hover:shadow-md transition-all">
+              <div key={module.orderIndex} className="mb-6 break-inside-avoid">
+                <Card className="border-border bg-card transition-all hover:shadow-md">
                   <CardContent className="p-5">
                     {/* Module Header */}
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-8 h-8 bg-chart-1 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <span className="text-primary-foreground font-bold text-sm">{idx + 1}</span>
+                    <div className="mb-4 flex items-center gap-3">
+                      <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-chart-1">
+                        <span className="text-sm font-bold text-primary-foreground">{idx + 1}</span>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-foreground leading-tight">{module.title}</h3>
-                        <p className="text-xs text-muted-foreground">{module.lessons.length} lessons</p>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-bold leading-tight text-foreground">{module.title}</h3>
+                        <p className="text-xs text-muted-foreground">
+                          {module.lessons.length} lessons
+                        </p>
                       </div>
                     </div>
-                    
+
                     {/* Lessons List */}
                     <div className="space-y-2.5">
                       {module.lessons.map((lesson) => (
                         <div key={lesson.orderIndex} className="flex items-start gap-2.5 text-sm">
-                          <CheckCircle className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                          <span className="text-foreground/90 leading-snug">{lesson.title}</span>
+                          <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
+                          <span className="leading-snug text-foreground/90">{lesson.title}</span>
                         </div>
                       ))}
                     </div>
@@ -238,40 +310,47 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
       </div>
 
       {/* Benefits Section */}
-      <div className="py-12 sm:py-16 bg-background overflow-hidden">
-        <div className="max-w-6xl mx-auto px-3 sm:px-4 lg:px-6">
-          <div className="text-center mb-8 sm:mb-12">
-            <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-foreground mb-4 break-words">Why Choose This Course?</h2>
+      <div className="overflow-hidden bg-background py-12 sm:py-16">
+        <div className="mx-auto max-w-6xl px-3 sm:px-4 lg:px-6">
+          <div className="mb-8 text-center sm:mb-12">
+            <h2 className="mb-4 break-words text-xl font-bold text-foreground sm:text-2xl lg:text-3xl xl:text-4xl">
+              Why Choose This Course?
+            </h2>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-            <Card className="text-center p-6 sm:p-8 border-border bg-card hover:shadow-lg transition-shadow">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-chart-1/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Target className="w-6 h-6 sm:w-8 sm:h-8 text-chart-1" />
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-8 lg:grid-cols-3">
+            <Card className="border-border bg-card p-6 text-center transition-shadow hover:shadow-lg sm:p-8">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-chart-1/10 sm:h-16 sm:w-16">
+                <Target className="h-6 w-6 text-chart-1 sm:h-8 sm:w-8" />
               </div>
-              <h3 className="text-lg sm:text-xl font-bold text-foreground mb-3">Practical Learning</h3>
-              <p className="text-muted-foreground text-sm sm:text-base">
-                Learn by doing with hands-on exercises and real-world examples that you can apply immediately.
+              <h3 className="mb-3 text-lg font-bold text-foreground sm:text-xl">
+                Practical Learning
+              </h3>
+              <p className="text-sm text-muted-foreground sm:text-base">
+                Learn by doing with hands-on exercises and real-world examples that you can apply
+                immediately.
               </p>
             </Card>
 
-            <Card className="text-center p-6 sm:p-8 border-border bg-card hover:shadow-lg transition-shadow">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-chart-2/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Zap className="w-6 h-6 sm:w-8 sm:h-8 text-chart-2" />
+            <Card className="border-border bg-card p-6 text-center transition-shadow hover:shadow-lg sm:p-8">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-chart-2/10 sm:h-16 sm:w-16">
+                <Zap className="h-6 w-6 text-chart-2 sm:h-8 sm:w-8" />
               </div>
-              <h3 className="text-lg sm:text-xl font-bold text-foreground mb-3">Instant Access</h3>
-              <p className="text-muted-foreground text-sm sm:text-base">
-                Start learning immediately after enrollment. All content is available right away with lifetime access.
+              <h3 className="mb-3 text-lg font-bold text-foreground sm:text-xl">Instant Access</h3>
+              <p className="text-sm text-muted-foreground sm:text-base">
+                Start learning immediately after enrollment. All content is available right away
+                with lifetime access.
               </p>
             </Card>
 
-            <Card className="text-center p-6 sm:p-8 border-border bg-card sm:col-span-2 lg:col-span-1">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-chart-3/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 text-chart-3" />
+            <Card className="border-border bg-card p-6 text-center sm:col-span-2 sm:p-8 lg:col-span-1">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-chart-3/10 sm:h-16 sm:w-16">
+                <TrendingUp className="h-6 w-6 text-chart-3 sm:h-8 sm:w-8" />
               </div>
-              <h3 className="text-lg sm:text-xl font-bold text-foreground mb-3">Level Up Skills</h3>
-              <p className="text-muted-foreground text-sm sm:text-base">
-                Transform your abilities with expert techniques and insider knowledge from industry professionals.
+              <h3 className="mb-3 text-lg font-bold text-foreground sm:text-xl">Level Up Skills</h3>
+              <p className="text-sm text-muted-foreground sm:text-base">
+                Transform your abilities with expert techniques and insider knowledge from industry
+                professionals.
               </p>
             </Card>
           </div>
@@ -279,48 +358,60 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
       </div>
 
       {/* Instructor Section */}
-      <div className="py-12 sm:py-16 bg-slate-50 dark:bg-slate-900 overflow-hidden">
-        <div className="max-w-4xl mx-auto px-3 sm:px-4 lg:px-6">
-          <div className="text-center mb-8 sm:mb-12">
-            <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-slate-900 dark:text-white mb-4 break-words">Meet Your Instructor</h2>
+      <div className="overflow-hidden bg-slate-50 py-12 dark:bg-slate-900 sm:py-16">
+        <div className="mx-auto max-w-4xl px-3 sm:px-4 lg:px-6">
+          <div className="mb-8 text-center sm:mb-12">
+            <h2 className="mb-4 break-words text-xl font-bold text-slate-900 dark:text-white sm:text-2xl lg:text-3xl xl:text-4xl">
+              Meet Your Instructor
+            </h2>
           </div>
 
-          <Card className="p-4 sm:p-6 lg:p-8 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 min-w-0">
-            <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
-              <Avatar className="w-14 h-14 sm:w-16 sm:h-16 lg:w-20 lg:h-20 mx-auto sm:mx-0 flex-shrink-0">
+          <Card className="min-w-0 border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800 sm:p-6 lg:p-8">
+            <div className="flex flex-col items-start gap-4 sm:flex-row sm:gap-6">
+              <Avatar className="mx-auto h-14 w-14 flex-shrink-0 sm:mx-0 sm:h-16 sm:w-16 lg:h-20 lg:w-20">
                 <AvatarImage src={creator?.imageUrl} alt={creatorName} />
-                <AvatarFallback className="text-base sm:text-lg lg:text-xl font-bold bg-primary/10 text-primary">
+                <AvatarFallback className="bg-primary/10 text-base font-bold text-primary sm:text-lg lg:text-xl">
                   {creatorInitials}
                 </AvatarFallback>
               </Avatar>
-              
-              <div className="flex-1 text-center sm:text-left min-w-0">
-                <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-900 dark:text-white mb-2 break-words">{creatorName}</h3>
-                <p className="text-primary font-medium mb-4 text-xs sm:text-sm lg:text-base break-words">Course Creator • {store.name}</p>
-                
+
+              <div className="min-w-0 flex-1 text-center sm:text-left">
+                <h3 className="mb-2 break-words text-lg font-bold text-slate-900 dark:text-white sm:text-xl lg:text-2xl">
+                  {creatorName}
+                </h3>
+                <p className="mb-4 break-words text-xs font-medium text-primary sm:text-sm lg:text-base">
+                  Course Creator • {store.name}
+                </p>
+
                 {creator?.bio ? (
-                  <p className="text-slate-600 dark:text-slate-300 leading-relaxed mb-4 sm:mb-6 text-xs sm:text-sm lg:text-base break-words">
+                  <p className="mb-4 break-words text-xs leading-relaxed text-slate-600 dark:text-slate-300 sm:mb-6 sm:text-sm lg:text-base">
                     {creator.bio}
                   </p>
                 ) : (
-                  <p className="text-slate-600 dark:text-slate-300 leading-relaxed mb-4 sm:mb-6 text-xs sm:text-sm lg:text-base break-words">
-                    Passionate educator and industry expert dedicated to helping students master their craft through practical, 
-                    hands-on learning experiences.
+                  <p className="mb-4 break-words text-xs leading-relaxed text-slate-600 dark:text-slate-300 sm:mb-6 sm:text-sm lg:text-base">
+                    Passionate educator and industry expert dedicated to helping students master
+                    their craft through practical, hands-on learning experiences.
                   </p>
                 )}
 
-                <div className="flex flex-col gap-3 sm:gap-2 lg:gap-0 lg:flex-row items-center justify-center sm:justify-start lg:gap-4 xl:gap-6">
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <Users className="w-3 h-3 sm:w-4 sm:h-4 text-primary flex-shrink-0" />
-                    <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">1000+ Students</span>
+                <div className="flex flex-col items-center justify-center gap-3 sm:justify-start sm:gap-2 lg:flex-row lg:gap-0 lg:gap-4 xl:gap-6">
+                  <div className="flex flex-shrink-0 items-center gap-2">
+                    <Users className="h-3 w-3 flex-shrink-0 text-primary sm:h-4 sm:w-4" />
+                    <span className="whitespace-nowrap text-xs font-medium text-slate-700 dark:text-slate-300 sm:text-sm">
+                      1000+ Students
+                    </span>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <Award className="w-3 h-3 sm:w-4 sm:h-4 text-primary flex-shrink-0" />
-                    <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">Expert Instructor</span>
+                  <div className="flex flex-shrink-0 items-center gap-2">
+                    <Award className="h-3 w-3 flex-shrink-0 text-primary sm:h-4 sm:w-4" />
+                    <span className="whitespace-nowrap text-xs font-medium text-slate-700 dark:text-slate-300 sm:text-sm">
+                      Expert Instructor
+                    </span>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <Star className="w-3 h-3 sm:w-4 sm:h-4 text-primary fill-current flex-shrink-0" />
-                    <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">4.9 Rating</span>
+                  <div className="flex flex-shrink-0 items-center gap-2">
+                    <Star className="h-3 w-3 flex-shrink-0 fill-current text-primary sm:h-4 sm:w-4" />
+                    <span className="whitespace-nowrap text-xs font-medium text-slate-700 dark:text-slate-300 sm:text-sm">
+                      4.9 Rating
+                    </span>
                   </div>
                 </div>
               </div>
@@ -330,18 +421,21 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
       </div>
 
       {/* CTA Section */}
-      <div className="py-12 sm:py-16 bg-gradient-to-r from-chart-1 to-chart-4 text-primary-foreground overflow-hidden">
-        <div className="max-w-4xl mx-auto px-3 sm:px-4 lg:px-6 text-center">
-          <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-primary-foreground mb-4 break-words">Ready to Start Learning?</h2>
-          <p className="text-sm sm:text-base lg:text-lg xl:text-xl text-primary-foreground/90 mb-6 sm:mb-8 max-w-2xl mx-auto break-words">
-            Join thousands of students who have transformed their skills with this comprehensive course.
+      <div className="overflow-hidden bg-gradient-to-r from-chart-1 to-chart-4 py-12 text-primary-foreground sm:py-16">
+        <div className="mx-auto max-w-4xl px-3 text-center sm:px-4 lg:px-6">
+          <h2 className="mb-4 break-words text-xl font-bold text-primary-foreground sm:text-2xl lg:text-3xl xl:text-4xl">
+            Ready to Start Learning?
+          </h2>
+          <p className="mx-auto mb-6 max-w-2xl break-words text-sm text-primary-foreground/90 sm:mb-8 sm:text-base lg:text-lg xl:text-xl">
+            Join thousands of students who have transformed their skills with this comprehensive
+            course.
           </p>
 
           <div className="flex flex-col items-center justify-center gap-4 sm:gap-6">
-            <Button 
+            <Button
               size="lg"
               onClick={handleEnrollClick}
-              className="bg-white text-gray-900 hover:bg-white/90 hover:shadow-2xl font-bold text-base sm:text-lg lg:text-xl px-6 sm:px-8 lg:px-12 py-3 sm:py-4 lg:py-6 h-auto w-full max-w-xs sm:max-w-sm"
+              className="h-auto w-full max-w-xs bg-white px-6 py-3 text-base font-bold text-gray-900 hover:bg-white/90 hover:shadow-2xl sm:max-w-sm sm:px-8 sm:py-4 sm:text-lg lg:px-12 lg:py-6 lg:text-xl"
             >
               <span className="truncate">
                 {course.price && course.price > 0 ? (
@@ -350,36 +444,36 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
                   <>Start Learning for Free</>
                 )}
               </span>
-              <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6 ml-2 flex-shrink-0" />
+              <ArrowRight className="ml-2 h-4 w-4 flex-shrink-0 sm:h-5 sm:w-5 lg:h-6 lg:w-6" />
             </Button>
-            
-            <div className="text-center space-y-2">
+
+            <div className="space-y-2 text-center">
               <div className="flex items-center justify-center gap-2">
-                <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                <CheckCircle className="h-4 w-4 flex-shrink-0" />
                 <span className="text-sm text-white">30-day money-back guarantee</span>
               </div>
               <div className="flex items-center justify-center gap-2">
-                <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                <CheckCircle className="h-4 w-4 flex-shrink-0" />
                 <span className="text-sm text-white">Lifetime access included</span>
               </div>
             </div>
           </div>
 
           {/* Social Proof */}
-          <div className="mt-8 sm:mt-12 pt-6 sm:pt-8 border-t border-white/20">
-            <p className="text-white/80 mb-4 text-sm sm:text-base">Trusted by creators worldwide</p>
+          <div className="mt-8 border-t border-white/20 pt-6 sm:mt-12 sm:pt-8">
+            <p className="mb-4 text-sm text-white/80 sm:text-base">Trusted by creators worldwide</p>
             <div className="flex items-center justify-center gap-6 sm:gap-8">
               <div className="text-center">
-                <div className="text-xl sm:text-2xl font-bold text-white">1,000+</div>
-                <div className="text-xs sm:text-sm text-white/80">Students</div>
+                <div className="text-xl font-bold text-white sm:text-2xl">1,000+</div>
+                <div className="text-xs text-white/80 sm:text-sm">Students</div>
               </div>
               <div className="text-center">
-                <div className="text-xl sm:text-2xl font-bold text-white">4.9</div>
-                <div className="text-xs sm:text-sm text-white/80">Rating</div>
+                <div className="text-xl font-bold text-white sm:text-2xl">4.9</div>
+                <div className="text-xs text-white/80 sm:text-sm">Rating</div>
               </div>
               <div className="text-center">
-                <div className="text-xl sm:text-2xl font-bold text-white">98%</div>
-                <div className="text-xs sm:text-sm text-white/80">Completion</div>
+                <div className="text-xl font-bold text-white sm:text-2xl">98%</div>
+                <div className="text-xs text-white/80 sm:text-sm">Completion</div>
               </div>
             </div>
           </div>
@@ -387,23 +481,30 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
       </div>
 
       {/* Footer */}
-      <div className="py-6 sm:py-8 bg-slate-100 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="border-t border-slate-200 bg-slate-100 py-6 dark:border-slate-700 dark:bg-slate-900 sm:py-8">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
             <div className="flex items-center gap-4">
-              <Avatar className="w-10 h-10 flex-shrink-0">
+              <Avatar className="h-10 w-10 flex-shrink-0">
                 <AvatarImage src={creator?.imageUrl} alt={creatorName} />
                 <AvatarFallback className="bg-primary/10 text-primary">
                   {creatorInitials}
                 </AvatarFallback>
               </Avatar>
               <div className="text-center sm:text-left">
-                <p className="font-medium text-slate-900 dark:text-white text-sm sm:text-base">{store.name}</p>
-                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">by {creatorName}</p>
+                <p className="text-sm font-medium text-slate-900 dark:text-white sm:text-base">
+                  {store.name}
+                </p>
+                <p className="text-xs text-slate-600 dark:text-slate-400 sm:text-sm">
+                  by {creatorName}
+                </p>
               </div>
             </div>
-            
-            <Link href={`/${store.slug}`} className="text-xs sm:text-sm text-primary hover:text-primary/80 font-medium">
+
+            <Link
+              href={`/${store.slug}`}
+              className="text-xs font-medium text-primary hover:text-primary/80 sm:text-sm"
+            >
               View All Products →
             </Link>
           </div>
@@ -411,11 +512,7 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
       </div>
 
       {/* Q&A Chat Component */}
-      <CourseQAChat 
-        courseId={course._id}
-        courseTitle={course.title}
-        userId={course.userId}
-      />
+      <CourseQAChat courseId={course._id} courseTitle={course.title} userId={course.userId} />
     </div>
   );
 }

@@ -142,6 +142,42 @@ export async function POST(request: NextRequest) {
 
             console.log("✅ Creator plan subscription created successfully");
           }
+          // Handle membership subscriptions
+          else if (productType === "membership" && userId) {
+            const { tierId, creatorId } = session.metadata || {};
+
+            console.log("⭐ Creating membership subscription:", {
+              userId,
+              tierId,
+              creatorId,
+              stripeSubscriptionId: session.subscription,
+              billingCycle,
+            });
+
+            const { fetchMutation: fetchMutationMembership } = await import("convex/nextjs");
+            const { api: apiMembership } = await import("@/convex/_generated/api");
+
+            const subscription = await stripe.subscriptions.retrieve(
+              session.subscription as string
+            );
+
+            try {
+              await fetchMutationMembership(
+                apiMembership.memberships.createMembershipSubscription,
+                {
+                  userId,
+                  tierId: tierId as any,
+                  stripeSubscriptionId: subscription.id,
+                  billingCycle: (billingCycle as "monthly" | "yearly") || "monthly",
+                  trialEnd: subscription.trial_end ? subscription.trial_end * 1000 : undefined,
+                }
+              );
+
+              console.log("✅ Membership subscription created successfully");
+            } catch (error) {
+              console.error("❌ Failed to create membership subscription:", error);
+            }
+          }
           // Handle content subscription (existing)
           else if (planId && userId) {
             console.log("🔄 Creating content subscription in Convex:", {
@@ -243,6 +279,43 @@ export async function POST(request: NextRequest) {
           }
         }
 
+        if (session.metadata?.productType === "bundle") {
+          const { userId, bundleId, amount, currency } = session.metadata;
+
+          if (userId && bundleId && amount) {
+            console.log("📦 Processing bundle purchase:", {
+              userId,
+              bundleId,
+              amount: parseInt(amount) / 100,
+              currency: currency || "USD",
+              sessionId: session.id,
+              paymentIntentId: session.payment_intent,
+            });
+
+            const { fetchMutation: fetchMutationBundle } = await import("convex/nextjs");
+            const { api: apiBundle } = await import("@/convex/_generated/api");
+
+            try {
+              const purchaseId = await fetchMutationBundle(apiBundle.library.createBundlePurchase, {
+                userId,
+                bundleId: bundleId as any,
+                amount: parseInt(amount),
+                currency: currency || "USD",
+                paymentMethod: "stripe",
+                transactionId: session.payment_intent as string,
+              });
+
+              console.log("✅ Bundle purchase created:", {
+                purchaseId,
+                userId,
+                bundleId,
+              });
+            } catch (error) {
+              console.error("❌ Failed to create bundle purchase:", error);
+            }
+          }
+        }
+
         // Handle credit package purchases
         if (session.metadata?.productType === "credit_package") {
           const { userId, packageId, credits, bonusCredits, packageName } = session.metadata;
@@ -259,14 +332,13 @@ export async function POST(request: NextRequest) {
 
           if (userId && totalCredits > 0) {
             const { fetchMutation: fetchMutationCredits } = await import("convex/nextjs");
-            const { api: apiCredits } = await import("@/convex/_generated/api");
+            const { internal: internalCredits } = await import("@/convex/_generated/api");
 
             try {
-              // Add purchased credits
-              await fetchMutationCredits(apiCredits.credits.addCredits, {
+              await fetchMutationCredits(internalCredits.credits.addCredits, {
                 userId,
                 amount: creditsAmount,
-                type: "purchase",
+                type: "purchase" as const,
                 description: `Purchased ${packageName || "Credit Package"}`,
                 metadata: {
                   stripePaymentId: session.payment_intent as string,
@@ -275,12 +347,11 @@ export async function POST(request: NextRequest) {
                 },
               });
 
-              // Add bonus credits if any
               if (bonusAmount > 0) {
-                await fetchMutationCredits(apiCredits.credits.addCredits, {
+                await fetchMutationCredits(internalCredits.credits.addCredits, {
                   userId,
                   amount: bonusAmount,
-                  type: "bonus",
+                  type: "bonus" as const,
                   description: `Bonus credits from ${packageName || "Credit Package"}`,
                   metadata: {
                     stripePaymentId: session.payment_intent as string,
@@ -297,7 +368,6 @@ export async function POST(request: NextRequest) {
               });
             } catch (error) {
               console.error("❌ Failed to add credits:", error);
-              // Don't throw - we still want to acknowledge the webhook
             }
           }
         }

@@ -26,7 +26,10 @@ import {
   Search,
   Users,
   Briefcase,
+  Heart,
 } from "lucide-react";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { ModeToggle } from "@/components/mode-toggle";
 import { DashboardPreferenceSwitcher } from "@/components/dashboard/dashboard-preference-switcher";
 
@@ -277,7 +280,15 @@ const DesktopNavigation = ({
   </div>
 );
 
-const AuthButtons = ({ isSignedIn, hasClerk }: { isSignedIn: boolean; hasClerk: boolean }) => (
+const AuthButtons = ({
+  isSignedIn,
+  hasClerk,
+  wishlistCount,
+}: {
+  isSignedIn: boolean;
+  hasClerk: boolean;
+  wishlistCount: number;
+}) => (
   <div className={STYLES.desktopAuth}>
     <ModeToggle />
     {!hasClerk ? (
@@ -289,7 +300,17 @@ const AuthButtons = ({ isSignedIn, hasClerk }: { isSignedIn: boolean; hasClerk: 
       </div>
     ) : isSignedIn ? (
       <>
-        {/* Dashboard Switcher for hybrid users */}
+        <Link
+          href="/library/wishlist"
+          className="relative rounded-lg p-2 transition-colors hover:bg-muted"
+        >
+          <Heart className="h-5 w-5 text-muted-foreground transition-colors hover:text-pink-500" />
+          {wishlistCount > 0 && (
+            <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-pink-500 text-[10px] font-medium text-white">
+              {wishlistCount > 99 ? "99+" : wishlistCount}
+            </span>
+          )}
+        </Link>
         <DashboardPreferenceSwitcher />
         <UserButton
           afterSignOutUrl="/"
@@ -446,14 +467,14 @@ export default function NavbarClient({ isAdmin }: NavbarClientProps) {
       user = clerkData.user;
       isSignedIn = clerkData.isSignedIn || false;
     } catch (error) {
-      // Clerk not available during build - use defaults
       user = null;
       isSignedIn = false;
     }
   }
 
-  // Derived values (with safe defaults)
   const userIsSignedIn = isSignedIn ?? false;
+
+  const wishlistCount = useQuery(api.wishlists.getWishlistCount, userIsSignedIn ? {} : "skip") ?? 0;
   const { sections, links: navLinks } = buildNavStructure(userIsSignedIn, isAdmin);
   const closeMobileMenu = () => setIsMenuOpen(false);
 
@@ -468,7 +489,11 @@ export default function NavbarClient({ isAdmin }: NavbarClientProps) {
           <DesktopNavigation sections={sections} navLinks={navLinks} pathname={pathname} />
 
           {/* Desktop Auth */}
-          <AuthButtons isSignedIn={userIsSignedIn} hasClerk={hasClerk} />
+          <AuthButtons
+            isSignedIn={userIsSignedIn}
+            hasClerk={hasClerk}
+            wishlistCount={wishlistCount}
+          />
 
           {/* Mobile Menu Toggle */}
           <MobileMenuToggle isMenuOpen={isMenuOpen} setIsMenuOpen={setIsMenuOpen} />

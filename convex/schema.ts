@@ -1956,6 +1956,22 @@ export default defineSchema({
     .index("by_type", ["type"])
     .index("by_user_type", ["userId", "type"]),
 
+  wishlists: defineTable({
+    userId: v.string(),
+    productId: v.optional(v.id("digitalProducts")),
+    courseId: v.optional(v.id("courses")),
+    itemType: v.union(v.literal("product"), v.literal("course")),
+    productType: v.optional(v.string()),
+    priceAtAdd: v.optional(v.number()),
+    notifyOnPriceDrop: v.optional(v.boolean()),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_productId", ["productId"])
+    .index("by_courseId", ["courseId"])
+    .index("by_userId_and_productId", ["userId", "productId"])
+    .index("by_userId_and_courseId", ["userId", "courseId"])
+    .index("by_itemType", ["itemType"]),
+
   // Audio Samples
   audioSamples: defineTable({
     userId: v.string(), // Creator

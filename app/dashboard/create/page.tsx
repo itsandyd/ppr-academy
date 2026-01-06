@@ -58,6 +58,12 @@ export default function ProductTypeSelectorPage() {
       return;
     }
 
+    // Memberships go to membership creator
+    if (categoryId === "membership") {
+      router.push(`/dashboard/create/membership`);
+      return;
+    }
+
     // Effect chains go to chain creator
     if (categoryId === "effect-chain") {
       router.push(`/dashboard/create/chain?category=${categoryId}`);
@@ -87,7 +93,6 @@ export default function ProductTypeSelectorPage() {
     router.push(`/dashboard/create/${flow}?category=${categoryId}`);
   };
 
-  // Group products by category for better organization
   const groupedProducts = PRODUCT_CATEGORIES.reduce(
     (acc, product) => {
       const cat = product.category;
@@ -95,7 +100,7 @@ export default function ProductTypeSelectorPage() {
       acc[cat].push(product);
       return acc;
     },
-    {} as Record<string, typeof PRODUCT_CATEGORIES>
+    {} as Record<string, Array<(typeof PRODUCT_CATEGORIES)[number]>>
   );
 
   return (

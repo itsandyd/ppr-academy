@@ -1550,3 +1550,53 @@ export const backfillProductSlugs = mutation({
     return { updated, skipped };
   },
 });
+
+export const getRelatedProducts = query({
+  args: {
+    productId: v.id("digitalProducts"),
+    storeId: v.optional(v.string()),
+    category: v.optional(v.string()),
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(
+    v.object({
+      _id: v.id("digitalProducts"),
+      title: v.string(),
+      slug: v.optional(v.string()),
+      price: v.number(),
+      imageUrl: v.optional(v.string()),
+      category: v.string(),
+      storeId: v.string(),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const limit = args.limit || 4;
+    const product = await ctx.db.get(args.productId);
+    if (!product) return [];
+
+    const storeId = args.storeId || product.storeId;
+    const category = args.category || product.category;
+
+    const relatedProducts = await ctx.db
+      .query("digitalProducts")
+      .withIndex("by_storeId", (q) => q.eq("storeId", storeId))
+      .filter((q) =>
+        q.and(q.neq(q.field("_id"), args.productId), q.eq(q.field("isPublished"), true))
+      )
+      .take(limit + 5);
+
+    const sameCategory = relatedProducts.filter((p) => p.category === category);
+    const otherProducts = relatedProducts.filter((p) => p.category !== category);
+    const combined = [...sameCategory, ...otherProducts].slice(0, limit);
+
+    return combined.map((p) => ({
+      _id: p._id,
+      title: p.title,
+      slug: p.slug,
+      price: p.price,
+      imageUrl: p.imageUrl,
+      category: p.category,
+      storeId: p.storeId,
+    }));
+  },
+});

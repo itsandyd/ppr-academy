@@ -3,14 +3,14 @@
  * Consolidates all product types into a clean, maintainable system
  */
 
-export type ProductType = 
+export type ProductType =
   | "digital"
   | "playlistCuration"
-  | "effectChain"  // Renamed from abletonRack
+  | "effectChain" // Renamed from abletonRack
   | "coaching"
   | "urlMedia";
 
-export type DAWType = 
+export type DAWType =
   | "ableton"
   | "fl-studio"
   | "logic"
@@ -21,20 +21,20 @@ export type DAWType =
   | "multi-daw";
 
 export type PDFType =
-  | "cheat-sheet"  // 1-5 pages, quick reference
-  | "guide"        // 10-50 pages, educational
-  | "ebook"        // 50+ pages, comprehensive
-  | "workbook"     // Interactive exercises
-  | "template"     // Fillable templates
+  | "cheat-sheet" // 1-5 pages, quick reference
+  | "guide" // 10-50 pages, educational
+  | "ebook" // 50+ pages, comprehensive
+  | "workbook" // Interactive exercises
+  | "template" // Fillable templates
   | "other";
 
-export type ProductCategory = 
+export type ProductCategory =
   // Music Production
   | "sample-pack"
   | "preset-pack"
   | "midi-pack"
   | "bundle"
-  | "effect-chain"  // Renamed from ableton-rack
+  | "effect-chain" // Renamed from ableton-rack
   | "beat-lease"
   | "project-files"
   | "mixing-template"
@@ -49,8 +49,10 @@ export type ProductCategory =
   | "workshop"
   | "masterclass"
   // Digital Content
-  | "pdf"  // Consolidated: PDF guides, cheat sheets, ebooks, workbooks
+  | "pdf" // Consolidated: PDF guides, cheat sheets, ebooks, workbooks
   | "blog-post"
+  // Membership
+  | "membership"
   // Community
   | "community"
   // Support
@@ -76,7 +78,14 @@ export interface FollowGateConfig {
   customMessage?: string;
 }
 
-export type CreationFlow = "digital" | "course" | "service" | "bundle" | "chain" | "coaching";
+export type CreationFlow =
+  | "digital"
+  | "course"
+  | "service"
+  | "bundle"
+  | "chain"
+  | "coaching"
+  | "membership";
 
 // Map product categories to their creation flow
 export const CATEGORY_TO_FLOW: Record<ProductCategory, CreationFlow> = {
@@ -87,28 +96,31 @@ export const CATEGORY_TO_FLOW: Record<ProductCategory, CreationFlow> = {
   "beat-lease": "digital",
   "project-files": "digital",
   "mixing-template": "digital",
-  "pdf": "digital",  // Consolidated PDF category
+  pdf: "digital", // Consolidated PDF category
   "blog-post": "digital",
-  "community": "digital",
+  community: "digital",
   "tip-jar": "digital",
-  "donation": "digital", // Legacy - use tip-jar instead
-  "effect-chain": "chain",  // New dedicated flow
-  "masterclass": "digital",
-  
+  donation: "digital", // Legacy - use tip-jar instead
+  "effect-chain": "chain", // New dedicated flow
+  masterclass: "digital",
+
   // Course (unique lesson builder)
-  "course": "course",
-  
+  course: "course",
+
   // Coaching (live sessions with scheduling)
-  "coaching": "coaching",
-  "workshop": "coaching",
-  
+  coaching: "coaching",
+  workshop: "coaching",
+
   // Services (async work - separate creator)
   "mixing-service": "service",
   "mastering-service": "service",
   "playlist-curation": "service",
-  
+
   // Bundle (unique product selector)
-  "bundle": "bundle",
+  bundle: "bundle",
+
+  // Membership (subscription tiers)
+  membership: "membership",
 };
 
 // Product info for type selector
@@ -178,7 +190,7 @@ export const PRODUCT_CATEGORIES = [
     icon: "📦",
     flow: "bundle" as CreationFlow,
   },
-  
+
   // Education
   {
     id: "course",
@@ -212,7 +224,7 @@ export const PRODUCT_CATEGORIES = [
     icon: "📄",
     flow: "digital" as CreationFlow,
   },
-  
+
   // Services
   {
     id: "coaching",
@@ -246,7 +258,7 @@ export const PRODUCT_CATEGORIES = [
     icon: "🎼",
     flow: "service" as CreationFlow,
   },
-  
+
   // Digital Content
   {
     id: "cheat-sheet",
@@ -272,7 +284,17 @@ export const PRODUCT_CATEGORIES = [
     icon: "📝",
     flow: "digital" as CreationFlow,
   },
-  
+
+  // Membership
+  {
+    id: "membership",
+    label: "Membership",
+    description: "Subscription tiers with recurring billing",
+    category: "Membership",
+    icon: "⭐",
+    flow: "membership" as CreationFlow,
+  },
+
   // Community
   {
     id: "community",
@@ -282,7 +304,7 @@ export const PRODUCT_CATEGORIES = [
     icon: "👥",
     flow: "digital" as CreationFlow,
   },
-  
+
   // Support
   {
     id: "tip-jar",
@@ -302,7 +324,7 @@ export function getFlowForCategory(category: ProductCategory): CreationFlow {
 
 // Helper to get product info
 export function getProductInfo(categoryId: ProductCategory) {
-  return PRODUCT_CATEGORIES.find(p => p.id === categoryId);
+  return PRODUCT_CATEGORIES.find((p) => p.id === categoryId);
 }
 
 // Step configuration interface
@@ -313,7 +335,7 @@ export interface StepConfig {
   icon: any;
   color: string;
   component: React.ComponentType<any>;
-  conditional?: 'paid' | 'free' | boolean;
+  conditional?: "paid" | "free" | boolean;
   estimatedTime?: string;
 }
 
@@ -322,26 +344,26 @@ export interface BaseProductFormData {
   // Identity
   productCategory: ProductCategory;
   productType: ProductType;
-  
+
   // Core fields
   title: string;
   description: string;
   imageUrl: string;
   tags: string[];
-  
+
   // Pricing
   pricingModel: PricingModel;
   price: number;
-  
+
   // DAW-specific (for effect chains)
   dawType?: DAWType;
   dawVersion?: string;
-  
+
   // PDF-specific (for pdf category)
   pdfType?: PDFType;
   pageCount?: number;
-  fileSize?: number;  // in bytes
-  
+  fileSize?: number; // in bytes
+
   // Meta
   storeId: string;
   userId: string;
@@ -355,56 +377,55 @@ export const DAW_TYPES = [
     label: "Ableton Live",
     extensions: [".adg", ".adv", ".alp"],
     icon: "🔊",
-    description: "Effect Racks, Instrument Racks, Audio Effects"
+    description: "Effect Racks, Instrument Racks, Audio Effects",
   },
   {
     id: "fl-studio" as DAWType,
     label: "FL Studio",
     extensions: [".fnp", ".flp", ".fst"],
     icon: "🎚️",
-    description: "Patcher presets, Mixer presets"
+    description: "Patcher presets, Mixer presets",
   },
   {
     id: "logic" as DAWType,
     label: "Logic Pro",
     extensions: [".cst", ".logicx"],
     icon: "🎹",
-    description: "Channel Strip Settings, Smart Controls"
+    description: "Channel Strip Settings, Smart Controls",
   },
   {
     id: "bitwig" as DAWType,
     label: "Bitwig Studio",
     extensions: [".bwpreset"],
     icon: "⚡",
-    description: "Device Chains, FX Chains"
+    description: "Device Chains, FX Chains",
   },
   {
     id: "studio-one" as DAWType,
     label: "Studio One",
     extensions: [".fxchain", ".multipreset"],
     icon: "🎼",
-    description: "FX Chains, Multi-Instruments"
+    description: "FX Chains, Multi-Instruments",
   },
   {
     id: "reason" as DAWType,
     label: "Reason",
     extensions: [".cmb", ".rcmb"],
     icon: "🔌",
-    description: "Combinator patches, Rack Extensions"
+    description: "Combinator patches, Rack Extensions",
   },
   {
     id: "cubase" as DAWType,
     label: "Cubase",
     extensions: [".vstpreset", ".trackpreset"],
     icon: "🎛️",
-    description: "Track Presets, VST Presets"
+    description: "Track Presets, VST Presets",
   },
   {
     id: "multi-daw" as DAWType,
     label: "Multi-DAW",
     extensions: [".wav", ".mp3", ".pdf"],
     icon: "🔗",
-    description: "Works in any DAW (frozen audio or instructions)"
+    description: "Works in any DAW (frozen audio or instructions)",
   },
 ] as const;
-

@@ -2,13 +2,13 @@
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Home, 
-  BookOpen, 
-  Download, 
-  Video, 
-  Package, 
-  TrendingUp, 
+import {
+  Home,
+  BookOpen,
+  Download,
+  Video,
+  Package,
+  TrendingUp,
   Clock,
   User,
   Music,
@@ -19,7 +19,7 @@ import {
   Library as LibraryIcon,
   CreditCard,
   Upload,
-  Eye
+  Eye,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useUser, UserButton, SignedIn, SignedOut, SignInButton } from "@clerk/nextjs";
@@ -58,13 +58,10 @@ interface NavSection {
 export function LibrarySidebar() {
   const pathname = usePathname();
   const { user } = useUser();
-  
+
   // Get Convex user for stats
-  const convexUser = useQuery(
-    api.users.getUserFromClerk,
-    user?.id ? { clerkId: user.id } : "skip"
-  );
-  
+  const convexUser = useQuery(api.users.getUserFromClerk, user?.id ? { clerkId: user.id } : "skip");
+
   // Get library stats
   const userStats = useQuery(
     api.userLibrary.getUserLibraryStats,
@@ -75,132 +72,134 @@ export function LibrarySidebar() {
     {
       label: "Library",
       items: [
-        { 
-          icon: Home, 
-          href: "/library", 
+        {
+          icon: Home,
+          href: "/library",
           label: "Overview",
-          gradient: "from-blue-500 to-cyan-500"
+          gradient: "from-blue-500 to-cyan-500",
         },
-        { 
-          icon: BookOpen, 
-          href: "/library/courses", 
+        {
+          icon: BookOpen,
+          href: "/library/courses",
           label: "My Courses",
-          gradient: "from-purple-500 to-pink-500"
+          gradient: "from-purple-500 to-pink-500",
         },
-        { 
-          icon: Music, 
-          href: "/library/samples", 
+        {
+          icon: Music,
+          href: "/library/samples",
           label: "My Samples",
-          gradient: "from-indigo-500 to-purple-500"
+          gradient: "from-indigo-500 to-purple-500",
         },
-        { 
-          icon: Package, 
-          href: "/library/bundles", 
+        {
+          icon: Package,
+          href: "/library/bundles",
           label: "Bundles",
-          gradient: "from-orange-500 to-red-500"
+          gradient: "from-orange-500 to-red-500",
         },
-        { 
-          icon: CreditCard, 
-          href: "/library/subscriptions", 
+        {
+          icon: CreditCard,
+          href: "/library/subscriptions",
           label: "Subscriptions",
-          gradient: "from-yellow-500 to-orange-500"
+          gradient: "from-yellow-500 to-orange-500",
         },
-      ]
+        {
+          icon: Heart,
+          href: "/library/wishlist",
+          label: "Wishlist",
+          gradient: "from-pink-500 to-red-500",
+        },
+      ],
     },
     {
       label: "Share & Showcase",
       items: [
-        { 
-          icon: Upload, 
-          href: "/library/share", 
+        {
+          icon: Upload,
+          href: "/library/share",
           label: "Share Your Track",
           gradient: "from-purple-500 to-pink-500",
-          isNew: true
+          isNew: true,
         },
-        { 
-          icon: Music, 
-          href: "/library/showcase", 
+        {
+          icon: Music,
+          href: "/library/showcase",
           label: "My Showcase",
           gradient: "from-blue-500 to-indigo-500",
-          isNew: true
+          isNew: true,
         },
-      ]
+      ],
     },
     {
       label: "Content & Progress",
       items: [
-        { 
-          icon: Download, 
-          href: "/library/downloads", 
+        {
+          icon: Download,
+          href: "/library/downloads",
           label: "Downloads",
-          gradient: "from-green-500 to-emerald-500"
+          gradient: "from-green-500 to-emerald-500",
         },
-        { 
-          icon: Video, 
-          href: "/library/coaching", 
+        {
+          icon: Video,
+          href: "/library/coaching",
           label: "Coaching",
-          gradient: "from-indigo-500 to-purple-500"
+          gradient: "from-indigo-500 to-purple-500",
         },
-        { 
-          icon: TrendingUp, 
-          href: "/library/progress", 
+        {
+          icon: TrendingUp,
+          href: "/library/progress",
           label: "Progress",
-          gradient: "from-emerald-500 to-teal-500"
+          gradient: "from-emerald-500 to-teal-500",
         },
-        { 
-          icon: Clock, 
-          href: "/library/recent", 
+        {
+          icon: Clock,
+          href: "/library/recent",
           label: "Recent Activity",
-          gradient: "from-blue-500 to-indigo-500"
+          gradient: "from-blue-500 to-indigo-500",
         },
-      ]
-    }
+      ],
+    },
   ];
 
   const isActiveLink = (href: string) => {
     if (href === "/library") return pathname === "/library";
-    return pathname === href || pathname.startsWith(href + '/');
+    return pathname === href || pathname.startsWith(href + "/");
   };
 
   return (
     <Sidebar className="border-r border-border/50 bg-white dark:bg-black">
-      <SidebarHeader className="border-b border-border/50 bg-white dark:bg-black backdrop-blur-sm">
-        <motion.div 
+      <SidebarHeader className="border-b border-border/50 bg-white backdrop-blur-sm dark:bg-black">
+        <motion.div
           className="px-4 py-4"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
           {/* Brand Header - Simplified and cleaner */}
-          <div className="flex items-center space-x-3 mb-3">
-            <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center shadow-sm">
-              <LibraryIcon className="w-4 h-4 text-primary-foreground" />
+          <div className="mb-3 flex items-center space-x-3">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary shadow-sm">
+              <LibraryIcon className="h-4 w-4 text-primary-foreground" />
             </div>
-            <div className="flex-1 min-w-0">
-              <h2 className="text-base font-bold text-foreground leading-tight">
-                My Library
-              </h2>
-              <p className="text-xs text-muted-foreground/80 leading-tight">
-                Your Learning Hub
-              </p>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-base font-bold leading-tight text-foreground">My Library</h2>
+              <p className="text-xs leading-tight text-muted-foreground/80">Your Learning Hub</p>
             </div>
           </div>
-          
+
           {/* Stats Info - More compact */}
           {userStats && (
-            <motion.div 
-              className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-900 border border-border/20 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors duration-200"
+            <motion.div
+              className="flex items-center space-x-2 rounded-lg border border-border/20 bg-gray-100 px-3 py-2 transition-colors duration-200 hover:bg-gray-200 dark:bg-gray-900 dark:hover:bg-gray-800"
               whileHover={{ scale: 1.01 }}
               transition={{ type: "spring", stiffness: 400, damping: 25 }}
             >
-              <div className="w-5 h-5 bg-gradient-to-br from-blue-500 to-purple-600 rounded-md flex items-center justify-center">
-                <Award className="w-2.5 h-2.5 text-white" />
+              <div className="flex h-5 w-5 items-center justify-center rounded-md bg-gradient-to-br from-blue-500 to-purple-600">
+                <Award className="h-2.5 w-2.5 text-white" />
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-foreground truncate leading-tight">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-medium leading-tight text-foreground">
                   {userStats.coursesEnrolled} Courses Enrolled
                 </p>
-                <p className="text-xs text-muted-foreground/70 truncate leading-tight">
+                <p className="truncate text-xs leading-tight text-muted-foreground/70">
                   {userStats.coursesCompleted} Completed
                 </p>
               </div>
@@ -209,7 +208,7 @@ export function LibrarySidebar() {
         </motion.div>
       </SidebarHeader>
 
-      <SidebarContent className="px-2 py-4 space-y-2 bg-white dark:bg-black">
+      <SidebarContent className="space-y-2 bg-white px-2 py-4 dark:bg-black">
         {navigationSections.map((section, sectionIndex) => (
           <motion.div
             key={section.label}
@@ -218,7 +217,7 @@ export function LibrarySidebar() {
             transition={{ duration: 0.3, delay: sectionIndex * 0.1 }}
           >
             <SidebarGroup>
-              <SidebarGroupLabel className="text-xs font-medium text-muted-foreground/70 uppercase tracking-wide mb-1 px-2">
+              <SidebarGroupLabel className="mb-1 px-2 text-xs font-medium uppercase tracking-wide text-muted-foreground/70">
                 {section.label}
               </SidebarGroupLabel>
               <SidebarGroupContent>
@@ -226,55 +225,59 @@ export function LibrarySidebar() {
                   {section.items.map((item, itemIndex) => {
                     const isActive = isActiveLink(item.href);
                     const Icon = item.icon;
-                    
+
                     return (
                       <SidebarMenuItem key={item.href}>
-                        <SidebarMenuButton 
-                          asChild 
+                        <SidebarMenuButton
+                          asChild
                           isActive={isActive}
                           size="lg"
-                          className={`
-                            group relative w-full transition-all duration-200 hover:scale-[1.02]
-                            ${isActive 
-                              ? 'bg-primary/10 text-primary border border-primary/20 shadow-sm' 
-                              : 'hover:bg-gray-100 dark:hover:bg-gray-900 hover:text-foreground'
-                            }
-                          `}
+                          className={`group relative w-full transition-all duration-200 hover:scale-[1.02] ${
+                            isActive
+                              ? "border border-primary/20 bg-primary/10 text-primary shadow-sm"
+                              : "hover:bg-gray-100 hover:text-foreground dark:hover:bg-gray-900"
+                          } `}
                         >
-                          <Link href={item.href} className="flex items-center relative overflow-hidden">
+                          <Link
+                            href={item.href}
+                            className="relative flex items-center overflow-hidden"
+                          >
                             {/* Background Gradient for Active State */}
                             {isActive && item.gradient && (
                               <motion.div
-                                className={`absolute inset-0 bg-gradient-to-r ${item.gradient} opacity-5 rounded-lg`}
+                                className={`absolute inset-0 bg-gradient-to-r ${item.gradient} rounded-lg opacity-5`}
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 0.05 }}
                                 transition={{ duration: 0.2 }}
                               />
                             )}
-                            
+
                             {/* Icon with Gradient Background */}
-                            <div className={`
-                              w-8 h-8 rounded-lg flex items-center justify-center mr-3 transition-all duration-200
-                              ${isActive && item.gradient
-                                ? `bg-gradient-to-br ${item.gradient} text-white shadow-sm`
-                                : 'bg-gray-100 dark:bg-gray-900 text-muted-foreground group-hover:bg-gray-200 dark:group-hover:bg-gray-800 group-hover:text-foreground'
-                              }
-                            `}>
-                              <Icon className="w-4 h-4" />
+                            <div
+                              className={`mr-3 flex h-8 w-8 items-center justify-center rounded-lg transition-all duration-200 ${
+                                isActive && item.gradient
+                                  ? `bg-gradient-to-br ${item.gradient} text-white shadow-sm`
+                                  : "bg-gray-100 text-muted-foreground group-hover:bg-gray-200 group-hover:text-foreground dark:bg-gray-900 dark:group-hover:bg-gray-800"
+                              } `}
+                            >
+                              <Icon className="h-4 w-4" />
                             </div>
-                            
+
                             {/* Label */}
-                            <span className="font-medium flex-1">{item.label}</span>
-                            
+                            <span className="flex-1 font-medium">{item.label}</span>
+
                             {/* Badges */}
                             <div className="flex items-center space-x-1">
                               {item.isNew && (
-                                <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs px-1.5 py-0.5 font-medium">
+                                <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 px-1.5 py-0.5 text-xs font-medium text-white">
                                   New
                                 </Badge>
                               )}
                               {item.badge && (
-                                <Badge variant="secondary" className="text-xs px-1.5 py-0.5 font-medium">
+                                <Badge
+                                  variant="secondary"
+                                  className="px-1.5 py-0.5 text-xs font-medium"
+                                >
                                   {item.badge}
                                 </Badge>
                               )}
@@ -291,36 +294,36 @@ export function LibrarySidebar() {
         ))}
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-border/50 bg-white dark:bg-black backdrop-blur-sm">
-        <div className="px-3 py-4 space-y-4">
+      <SidebarFooter className="border-t border-border/50 bg-white backdrop-blur-sm dark:bg-black">
+        <div className="space-y-4 px-3 py-4">
           {/* Quick Actions */}
-          <motion.div 
+          <motion.div
             className="space-y-2"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.2 }}
           >
-            <p className="text-xs font-medium text-muted-foreground/70 uppercase tracking-wide px-1 mb-1">
+            <p className="mb-1 px-1 text-xs font-medium uppercase tracking-wide text-muted-foreground/70">
               Quick Actions
             </p>
             <div className="grid grid-cols-2 gap-2">
               <Link href="/">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full h-8 text-xs bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-blue-500/20 hover:from-blue-500/20 hover:to-purple-500/20 transition-all duration-200"
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-full border-blue-500/20 bg-gradient-to-r from-blue-500/10 to-purple-500/10 text-xs transition-all duration-200 hover:from-blue-500/20 hover:to-purple-500/20"
                 >
-                  <BookOpen className="w-3 h-3 mr-1" />
+                  <BookOpen className="mr-1 h-3 w-3" />
                   Browse
                 </Button>
               </Link>
               <Link href="/library/progress">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="w-full h-8 text-xs bg-gradient-to-r from-green-500/10 to-emerald-500/10 border-green-500/20 hover:from-green-500/20 hover:to-emerald-500/20 transition-all duration-200"
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-full border-green-500/20 bg-gradient-to-r from-green-500/10 to-emerald-500/10 text-xs transition-all duration-200 hover:from-green-500/20 hover:to-emerald-500/20"
                 >
-                  <TrendingUp className="w-3 h-3 mr-1" />
+                  <TrendingUp className="mr-1 h-3 w-3" />
                   Progress
                 </Button>
               </Link>
@@ -328,26 +331,27 @@ export function LibrarySidebar() {
           </motion.div>
 
           {/* User Account Section */}
-          <motion.div 
-            className="flex items-center gap-3 p-2 rounded-lg bg-gray-100 dark:bg-gray-900 border border-border/30"
+          <motion.div
+            className="flex items-center gap-3 rounded-lg border border-border/30 bg-gray-100 p-2 dark:bg-gray-900"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.3 }}
           >
             <SignedIn>
-              <UserButton 
+              <UserButton
                 appearance={{
                   elements: {
                     avatarBox: "w-8 h-8",
                     userButtonPopoverCard: "shadow-lg border-border bg-white dark:bg-black",
-                    userButtonPopoverActionButton: "text-foreground hover:bg-gray-100 dark:hover:bg-gray-900",
-                  }
+                    userButtonPopoverActionButton:
+                      "text-foreground hover:bg-gray-100 dark:hover:bg-gray-900",
+                  },
                 }}
                 showName={false}
                 afterSignOutUrl="/"
               />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-foreground">
                   {user?.firstName || user?.username || "Student"}
                 </p>
                 <p className="text-xs text-muted-foreground">Library Access</p>
@@ -356,7 +360,7 @@ export function LibrarySidebar() {
             <SignedOut>
               <SignInButton mode="modal">
                 <Button variant="outline" size="sm" className="w-full">
-                  <User className="w-4 h-4 mr-2" />
+                  <User className="mr-2 h-4 w-4" />
                   Sign In
                 </Button>
               </SignInButton>

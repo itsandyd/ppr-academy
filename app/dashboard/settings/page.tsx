@@ -1,17 +1,75 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
-import { User, Bell, Shield, CreditCard, Palette } from "lucide-react";
+import { useQuery, useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { User, Bell, Shield, CreditCard, Palette, Save, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
 
 export default function SettingsPage() {
   const { user } = useUser();
+  const profile = useQuery(api.users.getMyProfile);
+  const updateProfile = useMutation(api.users.updateMyProfile);
+
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [marketingEmails, setMarketingEmails] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const [formData, setFormData] = useState({
+    name: "",
+    bio: "",
+    instagram: "",
+    tiktok: "",
+    twitter: "",
+    youtube: "",
+    website: "",
+  });
+
+  useEffect(() => {
+    if (profile) {
+      setFormData({
+        name: profile.name || "",
+        bio: profile.bio || "",
+        instagram: profile.instagram || "",
+        tiktok: profile.tiktok || "",
+        twitter: profile.twitter || "",
+        youtube: profile.youtube || "",
+        website: profile.website || "",
+      });
+    }
+  }, [profile]);
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveProfile = async () => {
+    setIsSaving(true);
+    try {
+      await updateProfile({
+        name: formData.name || undefined,
+        bio: formData.bio || undefined,
+        instagram: formData.instagram || undefined,
+        tiktok: formData.tiktok || undefined,
+        twitter: formData.twitter || undefined,
+        youtube: formData.youtube || undefined,
+        website: formData.website || undefined,
+      });
+      toast.success("Profile updated successfully!");
+    } catch (error) {
+      toast.error("Failed to update profile");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <div className="container mx-auto max-w-4xl space-y-6 p-4 md:p-6">
@@ -46,7 +104,7 @@ export default function SettingsPage() {
               <CardTitle>Profile Information</CardTitle>
               <CardDescription>Update your account details</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
               <div className="flex items-center gap-4">
                 <div className="flex h-16 w-16 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
                   {user?.imageUrl ? (
@@ -60,11 +118,97 @@ export default function SettingsPage() {
                   )}
                 </div>
                 <div>
-                  <p className="font-medium">{user?.fullName || "User"}</p>
+                  <p className="font-medium">{user?.fullName || formData.name || "User"}</p>
                   <p className="text-sm text-zinc-500">{user?.primaryEmailAddress?.emailAddress}</p>
                 </div>
               </div>
-              <p className="text-sm text-zinc-500">Profile editing coming soon</p>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Display Name</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => handleInputChange("name", e.target.value)}
+                    placeholder="Your display name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="website">Website</Label>
+                  <Input
+                    id="website"
+                    value={formData.website}
+                    onChange={(e) => handleInputChange("website", e.target.value)}
+                    placeholder="https://yoursite.com"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="bio">Bio</Label>
+                <Textarea
+                  id="bio"
+                  value={formData.bio}
+                  onChange={(e) => handleInputChange("bio", e.target.value)}
+                  placeholder="Tell us about yourself..."
+                  rows={3}
+                />
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                  Social Links
+                </h3>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="instagram">Instagram</Label>
+                    <Input
+                      id="instagram"
+                      value={formData.instagram}
+                      onChange={(e) => handleInputChange("instagram", e.target.value)}
+                      placeholder="@username"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="twitter">Twitter / X</Label>
+                    <Input
+                      id="twitter"
+                      value={formData.twitter}
+                      onChange={(e) => handleInputChange("twitter", e.target.value)}
+                      placeholder="@username"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="tiktok">TikTok</Label>
+                    <Input
+                      id="tiktok"
+                      value={formData.tiktok}
+                      onChange={(e) => handleInputChange("tiktok", e.target.value)}
+                      placeholder="@username"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="youtube">YouTube</Label>
+                    <Input
+                      id="youtube"
+                      value={formData.youtube}
+                      onChange={(e) => handleInputChange("youtube", e.target.value)}
+                      placeholder="Channel URL or @handle"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-4">
+                <Button onClick={handleSaveProfile} disabled={isSaving}>
+                  {isSaving ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="mr-2 h-4 w-4" />
+                  )}
+                  Save Changes
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

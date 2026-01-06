@@ -12,30 +12,20 @@ export async function POST(request: NextRequest) {
   try {
     // ✅ SECURITY: Require authentication
     const user = await requireAuth();
-    
+
     // ✅ SECURITY: Rate limiting
     const identifier = getRateLimitIdentifier(request, user.id);
     const rateCheck = await checkRateLimit(identifier, rateLimiters.strict);
     if (rateCheck instanceof NextResponse) {
       return rateCheck;
     }
-    
-    const { 
-      packageId,
-      packageName,
-      credits,
-      bonusCredits,
-      priceUsd,
-      customerEmail,
-      userId,
-    } = await request.json();
+
+    const { packageId, packageName, credits, bonusCredits, priceUsd, customerEmail, userId } =
+      await request.json();
 
     // ✅ SECURITY: Verify user matches
     if (userId !== user.id) {
-      return NextResponse.json(
-        { error: "User mismatch" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "User mismatch" }, { status: 403 });
     }
 
     if (!packageId || !customerEmail || !userId || priceUsd === undefined) {
@@ -76,8 +66,8 @@ export async function POST(request: NextRequest) {
         },
       ],
       mode: "payment",
-      success_url: `${baseUrl}/store/{CHECKOUT_SESSION_ID}/credits/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${baseUrl}/store/{CHECKOUT_SESSION_ID}/credits/buy`,
+      success_url: `${baseUrl}/dashboard?mode=learn&purchase=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${baseUrl}/credits/purchase`,
       customer_email: customerEmail,
       metadata: {
         productType: "credit_package",
@@ -99,23 +89,21 @@ export async function POST(request: NextRequest) {
       customer: customerEmail,
     });
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       checkoutUrl: session.url,
-      sessionId: session.id 
+      sessionId: session.id,
     });
-
   } catch (error) {
     console.error("❌ Credit checkout session creation failed:", error);
-    
+
     return NextResponse.json(
-      { 
+      {
         success: false,
         error: "Failed to create checkout session",
-        details: error instanceof Error ? error.message : "Unknown error"
-      }, 
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
       { status: 500 }
     );
   }
 }
-

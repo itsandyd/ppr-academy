@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalMutation } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 
 // ============================================================================
@@ -86,9 +86,7 @@ export const getCreditPackages = query({
     return CREDIT_PACKAGES.map((pkg) => {
       const totalCredits = pkg.credits + pkg.bonus;
       const pricePerCredit = pkg.price / totalCredits;
-      const savingsPercent = Math.round(
-        ((basePrice - pricePerCredit) / basePrice) * 100
-      );
+      const savingsPercent = Math.round(((basePrice - pricePerCredit) / basePrice) * 100);
 
       return {
         id: pkg.id,
@@ -398,9 +396,7 @@ export const earnCredits = mutation({
     amount: v.number(),
     description: v.string(),
     relatedResourceId: v.optional(v.string()),
-    relatedResourceType: v.optional(
-      v.union(v.literal("sample"), v.literal("pack"))
-    ),
+    relatedResourceType: v.optional(v.union(v.literal("sample"), v.literal("pack"))),
   },
   returns: v.object({
     success: v.boolean(),
@@ -444,6 +440,93 @@ export const earnCredits = mutation({
     return {
       success: true,
       newBalance,
+    };
+  },
+});
+
+// ============================================================================
+// INTERNAL MUTATIONS (for webhook use)
+// ============================================================================
+
+/**
+ * Add credits to a user account (internal - for webhook use)
+ * This does not require authentication since it's called from Stripe webhook
+ */
+export const addCredits = internalMutation({
+  args: {
+    userId: v.string(),
+    amount: v.number(),
+    type: v.union(
+      v.literal("purchase"),
+      v.literal("bonus"),
+      v.literal("earn"),
+      v.literal("refund")
+    ),
+    description: v.string(),
+    metadata: v.optional(
+      v.object({
+        stripePaymentId: v.optional(v.string()),
+        dollarAmount: v.optional(v.number()),
+        packageName: v.optional(v.string()),
+      })
+    ),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    newBalance: v.number(),
+    transactionId: v.id("creditTransactions"),
+  }),
+  handler: async (ctx, args) => {
+    // Get or create user credits
+    let userCredits = await ctx.db
+      .query("userCredits")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .first();
+
+    if (!userCredits) {
+      const creditsId = await ctx.db.insert("userCredits", {
+        userId: args.userId,
+        balance: 0,
+        lifetimeEarned: 0,
+        lifetimeSpent: 0,
+        lastUpdated: Date.now(),
+      });
+      userCredits = await ctx.db.get(creditsId);
+      if (!userCredits) throw new Error("Failed to create credits");
+    }
+
+    // Update balance
+    const newBalance = userCredits.balance + args.amount;
+    const updates: {
+      balance: number;
+      lifetimeEarned?: number;
+      lastUpdated: number;
+    } = {
+      balance: newBalance,
+      lastUpdated: Date.now(),
+    };
+
+    // Update lifetime earned for purchases and bonuses
+    if (args.type === "purchase" || args.type === "bonus" || args.type === "earn") {
+      updates.lifetimeEarned = userCredits.lifetimeEarned + args.amount;
+    }
+
+    await ctx.db.patch(userCredits._id, updates);
+
+    // Record transaction
+    const transactionId = await ctx.db.insert("creditTransactions", {
+      userId: args.userId,
+      type: args.type,
+      amount: args.amount,
+      balance: newBalance,
+      description: args.description,
+      metadata: args.metadata,
+    });
+
+    return {
+      success: true,
+      newBalance,
+      transactionId,
     };
   },
 });
