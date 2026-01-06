@@ -853,3 +853,125 @@ export const createCourseEnrollment = mutation({
     return purchaseId;
   },
 });
+
+export const createDigitalProductPurchase = mutation({
+  args: {
+    userId: v.string(),
+    productId: v.id("digitalProducts"),
+    amount: v.number(),
+    currency: v.optional(v.string()),
+    paymentMethod: v.optional(v.string()),
+    transactionId: v.optional(v.string()),
+  },
+  returns: v.id("purchases"),
+  handler: async (ctx, args) => {
+    const product = await ctx.db.get(args.productId);
+    if (!product) {
+      throw new Error("Product not found");
+    }
+
+    const existingPurchase = await ctx.db
+      .query("purchases")
+      .withIndex("by_user_product", (q) =>
+        q.eq("userId", args.userId).eq("productId", args.productId)
+      )
+      .filter((q) => q.eq(q.field("status"), "completed"))
+      .first();
+
+    if (existingPurchase) {
+      throw new Error("You already have access to this product");
+    }
+
+    const purchaseId = await ctx.db.insert("purchases", {
+      userId: args.userId,
+      productId: args.productId,
+      storeId: product.storeId,
+      adminUserId: product.userId,
+      amount: args.amount,
+      currency: args.currency || "USD",
+      status: "completed",
+      paymentMethod: args.paymentMethod,
+      transactionId: args.transactionId,
+      productType: "digitalProduct",
+      accessGranted: true,
+      downloadCount: 0,
+      lastAccessedAt: Date.now(),
+    });
+
+    try {
+      const storeId = product.storeId;
+
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", args.userId))
+        .unique();
+
+      if (user && storeId) {
+        const existingCustomer = await ctx.db
+          .query("customers")
+          .withIndex("by_email_and_store", (q) =>
+            q.eq("email", user.email || "").eq("storeId", storeId)
+          )
+          .unique();
+
+        const customerType = args.amount > 0 ? "paying" : "lead";
+
+        if (existingCustomer) {
+          const updates: Record<string, unknown> = {
+            lastActivity: Date.now(),
+            status: "active",
+          };
+
+          if (args.amount > 0) {
+            updates.type = "paying";
+            updates.totalSpent = (existingCustomer.totalSpent || 0) + args.amount;
+          }
+
+          await ctx.db.patch(existingCustomer._id, updates);
+        } else {
+          await ctx.db.insert("customers", {
+            name:
+              `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email || "Unknown",
+            email: user.email || args.userId,
+            storeId: storeId,
+            adminUserId: product.userId,
+            type: customerType,
+            status: "active",
+            totalSpent: args.amount,
+            lastActivity: Date.now(),
+            source: product.title || "Digital Product Purchase",
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Failed to create/update customer record:", error);
+    }
+
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.userId))
+      .unique();
+
+    if (user?.email) {
+      await ctx.scheduler.runAfter(0, internal.emailWorkflows.triggerProductPurchaseWorkflows, {
+        storeId: product.storeId,
+        customerEmail: user.email,
+        customerName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
+        productId: args.productId,
+        productName: product.title,
+        productType: "digitalProduct",
+        orderId: purchaseId,
+        amount: args.amount,
+      });
+
+      await ctx.scheduler.runAfter(0, internal.emailContactSync.syncContactFromEnrollment, {
+        storeId: product.storeId,
+        email: user.email,
+        userId: args.userId,
+        productId: args.productId,
+      });
+    }
+
+    return purchaseId;
+  },
+});

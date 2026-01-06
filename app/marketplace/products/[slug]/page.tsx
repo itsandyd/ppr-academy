@@ -2,6 +2,7 @@
 
 import { use } from "react";
 import { useQuery } from "convex/react";
+import { useUser } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Download,
   ExternalLink,
+  Loader2,
   Package,
   ShoppingCart,
   Star,
@@ -20,7 +22,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { notFound } from "next/navigation";
+import { notFound, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -37,7 +39,10 @@ function isConvexId(str: string): boolean {
 
 export default function ProductDetailPage({ params }: ProductPageProps) {
   const { slug } = use(params);
+  const { user, isSignedIn } = useUser();
+  const router = useRouter();
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   const productBySlug = useQuery(
     api.digitalProducts.getProductByGlobalSlug,
@@ -104,6 +109,50 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
     } else {
       navigator.clipboard.writeText(window.location.href);
       toast.success("Link copied to clipboard!");
+    }
+  };
+
+  const handleCheckout = async () => {
+    if (!isSignedIn || !user) {
+      toast.error("Please sign in to purchase this product");
+      router.push("/sign-in");
+      return;
+    }
+
+    setIsCheckingOut(true);
+
+    try {
+      const response = await fetch("/api/products/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId: product._id,
+          productSlug: (product as any).slug || slug,
+          customerEmail: user.emailAddresses[0]?.emailAddress,
+          customerName: user.fullName || user.firstName || "Customer",
+          productPrice: product.price,
+          productTitle: product.title,
+          productImageUrl: product.imageUrl,
+          userId: user.id,
+          storeId: product.storeId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to create checkout session");
+      }
+
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      } else {
+        throw new Error("No checkout URL returned");
+      }
+    } catch (error) {
+      console.error("Checkout error:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to start checkout");
+      setIsCheckingOut(false);
     }
   };
 
@@ -245,10 +294,20 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
                   <Button
                     size="lg"
                     className="w-full bg-gradient-to-r from-chart-1 to-chart-1/80 py-6 text-lg text-primary-foreground hover:from-chart-1/90 hover:to-chart-1/70"
-                    onClick={() => toast.info("Payment integration coming soon!")}
+                    onClick={handleCheckout}
+                    disabled={isCheckingOut}
                   >
-                    <ShoppingCart className="mr-2 h-5 w-5" />
-                    Buy Now - ${product.price}
+                    {isCheckingOut ? (
+                      <>
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingCart className="mr-2 h-5 w-5" />
+                        Buy Now - ${product.price}
+                      </>
+                    )}
                   </Button>
                 )}
 
