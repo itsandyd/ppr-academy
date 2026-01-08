@@ -138,3 +138,91 @@ export const getQuickStoreStats = query({
   },
 });
 
+/**
+ * Get student roster for a store - all students who have purchased from this store
+ */
+export const getStoreStudents = query({
+  args: {
+    storeId: v.string(),
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(
+    v.object({
+      clerkId: v.string(),
+      name: v.optional(v.string()),
+      email: v.optional(v.string()),
+      imageUrl: v.optional(v.string()),
+      totalPurchases: v.number(),
+      totalSpent: v.number(),
+      coursesEnrolled: v.number(),
+      productsOwned: v.number(),
+      firstPurchaseDate: v.number(),
+      lastPurchaseDate: v.number(),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const limit = args.limit ?? 100;
+
+    // Get all purchases for this store
+    const allPurchases = await ctx.db
+      .query("purchases")
+      .withIndex("by_store_status", (q) => q.eq("storeId", args.storeId))
+      .filter((q) => q.eq(q.field("status"), "completed"))
+      .collect();
+
+    // Group purchases by user
+    const userPurchasesMap = new Map<string, typeof allPurchases>();
+
+    for (const purchase of allPurchases) {
+      const existing = userPurchasesMap.get(purchase.userId) || [];
+      existing.push(purchase);
+      userPurchasesMap.set(purchase.userId, existing);
+    }
+
+    // Build student list with aggregated data
+    const students: Array<{
+      clerkId: string;
+      name: string | undefined;
+      email: string | undefined;
+      imageUrl: string | undefined;
+      totalPurchases: number;
+      totalSpent: number;
+      coursesEnrolled: number;
+      productsOwned: number;
+      firstPurchaseDate: number;
+      lastPurchaseDate: number;
+    }> = [];
+
+    for (const [userId, purchases] of userPurchasesMap) {
+      // Get user details
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", userId))
+        .first();
+
+      const totalSpent = purchases.reduce((sum, p) => sum + p.amount, 0);
+      const coursesEnrolled = purchases.filter(p => p.productType === "course").length;
+      const productsOwned = purchases.filter(p => p.productType !== "course").length;
+      const purchaseDates = purchases.map(p => p._creationTime);
+
+      students.push({
+        clerkId: userId,
+        name: user?.name || undefined,
+        email: user?.email || undefined,
+        imageUrl: user?.imageUrl || undefined,
+        totalPurchases: purchases.length,
+        totalSpent,
+        coursesEnrolled,
+        productsOwned,
+        firstPurchaseDate: Math.min(...purchaseDates),
+        lastPurchaseDate: Math.max(...purchaseDates),
+      });
+    }
+
+    // Sort by total spent (highest first) and limit
+    return students
+      .sort((a, b) => b.totalSpent - a.totalSpent)
+      .slice(0, limit);
+  },
+});
+

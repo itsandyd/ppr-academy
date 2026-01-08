@@ -131,19 +131,40 @@ export const getUserLibraryStats = query({
     const totalMinutes = progressRecords.reduce((acc, p) => acc + (p.timeSpent || 0), 0);
     const totalHours = Math.round(totalMinutes / 60);
 
-    // Calculate streak (simplified - just count days with activity in last 30 days)
-    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
-    const recentActivity = progressRecords.filter((p) => (p.lastAccessedAt || 0) > thirtyDaysAgo);
-    const uniqueDays = new Set(
-      recentActivity.map((p) => new Date(p.lastAccessedAt || 0).toDateString())
-    ).size;
+    // Get real streak from learningStreaks table
+    const streakData = await ctx.db
+      .query("learningStreaks")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .unique();
+
+    // Check if streak is still active (last activity was yesterday or today)
+    let currentStreak = 0;
+    if (streakData) {
+      const lastActivity = new Date(streakData.lastActivityDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      lastActivity.setHours(0, 0, 0, 0);
+      const daysDiff = Math.floor((today.getTime() - lastActivity.getTime()) / (1000 * 60 * 60 * 24));
+
+      // Streak is active if last activity was today or yesterday
+      if (daysDiff <= 1) {
+        currentStreak = streakData.currentStreak;
+      }
+      // Otherwise streak has broken, show 0
+    }
+
+    // Get actual certificates count
+    const certificates = await ctx.db
+      .query("certificates")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
 
     return {
       coursesEnrolled: enrollments.length,
       coursesCompleted: completedCourses,
       totalHoursLearned: totalHours,
-      currentStreak: uniqueDays,
-      certificatesEarned: completedCourses, // For now, 1 certificate per completed course
+      currentStreak,
+      certificatesEarned: certificates.length,
     };
   },
 });

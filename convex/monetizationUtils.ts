@@ -483,6 +483,136 @@ export const updatePayoutSchedule = mutation({
   },
 });
 
+// ===== PENDING EARNINGS =====
+
+export const getCreatorPendingEarnings = query({
+  args: { creatorId: v.string() },
+  handler: async (ctx, args) => {
+    // Get all completed purchases for this creator that haven't been paid out
+    const purchases = await ctx.db
+      .query("purchases")
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("status"), "completed"),
+          q.eq(q.field("isPaidOut"), false)
+        )
+      )
+      .collect();
+
+    // Filter to this creator's purchases
+    const creatorPurchases = [];
+    for (const purchase of purchases) {
+      // Get the product/course to find the creator
+      let creatorMatches = false;
+
+      if (purchase.productId) {
+        const product = await ctx.db.get(purchase.productId);
+        if (product && (product as any).userId === args.creatorId) {
+          creatorMatches = true;
+        }
+      } else if (purchase.courseId) {
+        const course = await ctx.db.get(purchase.courseId);
+        if (course && course.userId === args.creatorId) {
+          creatorMatches = true;
+        }
+      }
+
+      if (creatorMatches) {
+        creatorPurchases.push(purchase);
+      }
+    }
+
+    // Calculate totals
+    const platformFeePercent = 10; // 10% platform fee
+    const stripeFeePercent = 2.9;
+    const stripeFeeFixed = 30; // $0.30 in cents
+
+    let grossRevenue = 0;
+    let platformFees = 0;
+    let processingFees = 0;
+    let refunds = 0;
+
+    for (const purchase of creatorPurchases) {
+      const amount = purchase.amount;
+      grossRevenue += amount;
+      platformFees += Math.round(amount * platformFeePercent / 100);
+      processingFees += Math.round(amount * stripeFeePercent / 100) + stripeFeeFixed;
+    }
+
+    const netEarnings = grossRevenue - platformFees - processingFees - refunds;
+
+    return {
+      grossRevenue,
+      platformFees,
+      processingFees,
+      refunds,
+      netEarnings,
+      totalSales: creatorPurchases.length,
+      purchaseIds: creatorPurchases.map((p) => p._id),
+    };
+  },
+});
+
+export const markPurchasesAsPaidOut = mutation({
+  args: {
+    purchaseIds: v.array(v.id("purchases")),
+    payoutId: v.id("creatorPayouts"),
+  },
+  handler: async (ctx, args) => {
+    for (const purchaseId of args.purchaseIds) {
+      await ctx.db.patch(purchaseId, {
+        isPaidOut: true,
+        payoutId: args.payoutId,
+        paidOutAt: Date.now(),
+      });
+    }
+    return { success: true };
+  },
+});
+
+// Process a payout (called by API route with Stripe)
+export const processPayoutRequest = mutation({
+  args: {
+    creatorId: v.string(),
+    storeId: v.id("stores"),
+    amount: v.number(),
+    currency: v.string(),
+    stripeConnectAccountId: v.string(),
+    purchaseIds: v.array(v.id("purchases")),
+    grossRevenue: v.number(),
+    platformFee: v.number(),
+    processingFee: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const periodStart = now - 30 * 24 * 60 * 60 * 1000; // Last 30 days
+    const periodEnd = now;
+
+    // Create payout record
+    const payoutId = await ctx.db.insert("creatorPayouts", {
+      creatorId: args.creatorId,
+      storeId: args.storeId,
+      amount: args.amount,
+      currency: args.currency,
+      periodStart,
+      periodEnd,
+      status: "processing",
+      payoutMethod: "stripe_connect",
+      stripeConnectAccountId: args.stripeConnectAccountId,
+      totalSales: args.purchaseIds.length,
+      grossRevenue: args.grossRevenue,
+      platformFee: args.platformFee,
+      paymentProcessingFee: args.processingFee,
+      refunds: 0,
+      netPayout: args.amount,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    return { success: true, payoutId };
+  },
+});
+
 // ===== REFERRALS =====
 
 export const createReferralCode = mutation({

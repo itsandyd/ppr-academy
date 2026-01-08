@@ -301,7 +301,7 @@ const AuthButtons = ({
     ) : isSignedIn ? (
       <>
         <Link
-          href="/library/wishlist"
+          href="/dashboard?tab=favorites"
           className="relative rounded-lg p-2 transition-colors hover:bg-muted"
         >
           <Heart className="h-5 w-5 text-muted-foreground transition-colors hover:text-pink-500" />

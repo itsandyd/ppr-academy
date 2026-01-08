@@ -445,3 +445,71 @@ export const getUserByClerkId = internalQuery({
     };
   },
 });
+
+// ==================== LEARNER PREFERENCES ====================
+
+// Save learner preferences (onboarding)
+export const saveLearnerPreferences = mutation({
+  args: {
+    userId: v.string(),
+    skillLevel: v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced")),
+    interests: v.array(v.string()),
+    goal: v.union(v.literal("hobby"), v.literal("career"), v.literal("skills"), v.literal("certification")),
+    weeklyHours: v.optional(v.number()),
+  },
+  returns: v.id("learnerPreferences"),
+  handler: async (ctx, args) => {
+    // Check if preferences already exist
+    const existing = await ctx.db
+      .query("learnerPreferences")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .unique();
+
+    if (existing) {
+      // Update existing preferences
+      await ctx.db.patch(existing._id, {
+        skillLevel: args.skillLevel,
+        interests: args.interests,
+        goal: args.goal,
+        weeklyHours: args.weeklyHours,
+        onboardingCompletedAt: Date.now(),
+      });
+      return existing._id;
+    }
+
+    // Create new preferences
+    return await ctx.db.insert("learnerPreferences", {
+      userId: args.userId,
+      skillLevel: args.skillLevel,
+      interests: args.interests,
+      goal: args.goal,
+      weeklyHours: args.weeklyHours,
+      onboardingCompletedAt: Date.now(),
+    });
+  },
+});
+
+// Get learner preferences
+export const getLearnerPreferences = query({
+  args: { userId: v.string() },
+  returns: v.union(
+    v.object({
+      _id: v.id("learnerPreferences"),
+      userId: v.string(),
+      skillLevel: v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced")),
+      interests: v.array(v.string()),
+      goal: v.union(v.literal("hobby"), v.literal("career"), v.literal("skills"), v.literal("certification")),
+      weeklyHours: v.optional(v.number()),
+      onboardingCompletedAt: v.optional(v.number()),
+    }),
+    v.null()
+  ),
+  handler: async (ctx, args) => {
+    const preferences = await ctx.db
+      .query("learnerPreferences")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .unique();
+
+    return preferences;
+  },
+});

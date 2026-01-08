@@ -478,29 +478,17 @@ export async function POST(request: NextRequest) {
           const { customerEmail, customerName, courseTitle, productType } = metadata;
 
           if (customerEmail) {
-            // TODO: Integrate with Resend to send actual email
-            // For now, log the failure notification
-            console.log("📧 Payment failure notification (to be sent):", {
-              to: customerEmail,
-              subject: "Payment Issue - Action Required",
-              details: {
-                customerName: customerName || "Customer",
-                productType: productType || "purchase",
-                productName: courseTitle || "your purchase",
-                failureReason: failedPayment.last_payment_error?.message || "Payment declined",
-                paymentIntentId: failedPayment.id,
-                amount: failedPayment.amount / 100,
-                currency: failedPayment.currency,
-              },
+            // Import and send the actual email
+            const { sendPaymentFailureEmail } = await import("@/lib/email");
+            await sendPaymentFailureEmail({
+              customerEmail,
+              customerName: customerName || "Customer",
+              productName: courseTitle || "your purchase",
+              amount: failedPayment.amount / 100,
+              currency: failedPayment.currency || "usd",
+              failureReason: failedPayment.last_payment_error?.message || "Payment declined",
             });
-
-            // Email template should include:
-            // - Clear subject: "Payment Issue - Action Required"
-            // - Friendly explanation of what happened
-            // - Specific failure reason (if card declined, expired, etc.)
-            // - Link to retry payment
-            // - Support contact information
-            // - Amount and what they were trying to purchase
+            console.log("📧 Payment failure email sent to:", customerEmail);
           }
         } catch (error) {
           console.error("❌ Failed to send payment failure notification:", error);

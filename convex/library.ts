@@ -447,14 +447,115 @@ export const updateProgress = mutation({
       lastAccessedAt: Date.now(),
     };
 
+    let progressId: Id<"userProgress">;
+
     if (existingProgress) {
       await ctx.db.patch(existingProgress._id, progressData);
-      return existingProgress._id;
+      progressId = existingProgress._id;
     } else {
-      return await ctx.db.insert("userProgress", progressData);
+      progressId = await ctx.db.insert("userProgress", progressData);
     }
+
+    // Update learning streak and award XP when completing a chapter
+    if (args.isCompleted && !existingProgress?.isCompleted) {
+      await updateLearningStreakInternal(ctx, args.userId);
+      await awardChapterCompletionXP(ctx, args.userId);
+    }
+
+    return progressId;
   },
 });
+
+// Award XP for completing a chapter
+async function awardChapterCompletionXP(ctx: any, userId: string) {
+  const XP_PER_CHAPTER = 10;
+
+  const xpRecord = await ctx.db
+    .query("userXP")
+    .withIndex("by_userId", (q: any) => q.eq("userId", userId))
+    .unique();
+
+  const newXP = (xpRecord?.totalXP || 0) + XP_PER_CHAPTER;
+
+  if (xpRecord) {
+    await ctx.db.patch(xpRecord._id, {
+      totalXP: newXP,
+      lastXPGain: Date.now(),
+    });
+  } else {
+    await ctx.db.insert("userXP", {
+      userId,
+      totalXP: newXP,
+      lastXPGain: Date.now(),
+    });
+  }
+}
+
+// Internal function to update learning streak (avoids circular dependency)
+async function updateLearningStreakInternal(ctx: any, userId: string) {
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+  // Get existing streak
+  const existing = await ctx.db
+    .query("learningStreaks")
+    .withIndex("by_user", (q: any) => q.eq("userId", userId))
+    .unique();
+
+  if (!existing) {
+    // Create new streak
+    await ctx.db.insert("learningStreaks", {
+      userId,
+      currentStreak: 1,
+      longestStreak: 1,
+      lastActivityDate: today,
+      totalDaysActive: 1,
+      totalHoursLearned: 0,
+      streakMilestones: [],
+      updatedAt: Date.now(),
+    });
+    return;
+  }
+
+  // Check if today is already counted
+  if (existing.lastActivityDate === today) {
+    return;
+  }
+
+  // Check if streak continues or breaks
+  const lastDate = new Date(existing.lastActivityDate);
+  const todayDate = new Date(today);
+  const daysDiff = Math.floor((todayDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+
+  let newCurrentStreak: number;
+  if (daysDiff === 1) {
+    // Streak continues
+    newCurrentStreak = existing.currentStreak + 1;
+  } else {
+    // Streak breaks, start new
+    newCurrentStreak = 1;
+  }
+
+  const newLongestStreak = Math.max(existing.longestStreak, newCurrentStreak);
+  const newTotalDaysActive = existing.totalDaysActive + 1;
+
+  // Update streak milestones
+  const streakMilestones = [...existing.streakMilestones];
+  const milestones = [7, 30, 100, 365];
+  for (const milestone of milestones) {
+    if (newCurrentStreak >= milestone && !streakMilestones.includes(milestone)) {
+      streakMilestones.push(milestone);
+    }
+  }
+
+  await ctx.db.patch(existing._id, {
+    currentStreak: newCurrentStreak,
+    longestStreak: newLongestStreak,
+    lastActivityDate: today,
+    totalDaysActive: newTotalDaysActive,
+    streakMilestones,
+    updatedAt: Date.now(),
+  });
+}
 
 // Track library session
 export const trackLibrarySession = mutation({

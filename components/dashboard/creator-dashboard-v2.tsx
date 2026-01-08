@@ -38,11 +38,13 @@ import {
 } from "lucide-react";
 
 // New unified system hooks and components
-import { 
-  useProducts, 
+import {
+  useProducts,
   useProductActions,
   useProductMetrics,
 } from "@/hooks/use-products";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { ProductsGrid } from "@/components/products/products-grid";
 import { Product, ProductType } from "@/lib/services/product-service";
 import { features } from "@/lib/features";
@@ -61,15 +63,33 @@ interface CreatorDashboardV2Props {
   };
 }
 
-export function CreatorDashboardV2({ 
-  legacyDashboardStats 
+export function CreatorDashboardV2({
+  legacyDashboardStats
 }: CreatorDashboardV2Props) {
   const { user } = useUser();
   const { toast } = useToast();
-  
+
   // Product management hooks
   const { data: products = [], isLoading: isLoadingProducts } = useProducts();
   const productActions = useProductActions();
+
+  // Get user's store for real analytics
+  const store = useQuery(
+    api.stores.getUserStore,
+    user?.id ? { userId: user.id } : "skip"
+  );
+
+  // Get real store stats
+  const storeStats = useQuery(
+    api.storeStats.getStoreStats,
+    store?._id ? { storeId: store._id } : "skip"
+  );
+
+  // Get real purchase stats
+  const purchaseStats = useQuery(
+    api.purchases.getStorePurchaseStats,
+    store?._id ? { storeId: store._id, timeRange: "all" as const } : "skip"
+  );
   
   // State
   const [activeTab, setActiveTab] = useState("products");
@@ -98,16 +118,17 @@ export function CreatorDashboardV2({
     price: "",
   });
 
-  // Calculate dashboard metrics from unified products
+  // Calculate dashboard metrics from real data
   const dashboardMetrics = {
-    totalProducts: products.length,
+    totalProducts: storeStats?.totalProducts ?? products.length,
     publishedProducts: products.filter(p => p.isPublished).length,
     draftProducts: products.filter(p => !p.isPublished).length,
-    totalRevenue: products.reduce((sum, product) => sum + (product.price * 0), 0), // TODO: Add actual sales data
-    totalStudents: 0, // TODO: Calculate from purchases/enrollments
-    courseCount: products.filter(p => p.type === 'course').length,
+    totalRevenue: purchaseStats?.totalRevenue ?? 0,
+    totalStudents: storeStats?.followerCount ?? 0,
+    totalEnrollments: storeStats?.totalEnrollments ?? 0,
+    courseCount: storeStats?.totalCourses ?? products.filter(p => p.type === 'course').length,
     coachingCount: products.filter(p => p.type === 'coaching').length,
-    digitalProductCount: products.filter(p => 
+    digitalProductCount: storeStats?.totalDownloads ?? products.filter(p =>
       ['digital_product', 'preset_pack', 'sample_pack', 'template'].includes(p.type)
     ).length,
   };
@@ -361,10 +382,10 @@ export function CreatorDashboardV2({
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {legacyDashboardStats?.totalStudents || dashboardMetrics.totalStudents}
+              {dashboardMetrics.totalStudents}
             </div>
             <p className="text-xs text-muted-foreground">
-              Active learners
+              {dashboardMetrics.totalEnrollments} course enrollments
             </p>
           </CardContent>
         </Card>
@@ -374,10 +395,10 @@ export function CreatorDashboardV2({
             <CardTitle className="text-sm font-medium">
               Total Revenue
             </CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <DollarSign className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${dashboardMetrics.totalRevenue.toFixed(2)}</div>
+            <div className="text-2xl font-bold text-green-600">${dashboardMetrics.totalRevenue.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">
               Lifetime earnings
             </p>

@@ -52,6 +52,16 @@ export default defineSchema({
     .index("by_clerkId", ["clerkId"])
     .index("by_discordId", ["discordId"]),
 
+  // Learner Preferences (for onboarding and personalization)
+  learnerPreferences: defineTable({
+    userId: v.string(), // Clerk ID
+    skillLevel: v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced")),
+    interests: v.array(v.string()), // e.g., ["mixing", "mastering", "sound_design"]
+    goal: v.union(v.literal("hobby"), v.literal("career"), v.literal("skills"), v.literal("certification")),
+    weeklyHours: v.optional(v.number()),
+    onboardingCompletedAt: v.optional(v.number()),
+  }).index("by_userId", ["userId"]),
+
   // Sync Metadata (for tracking sync operations)
   syncMetadata: defineTable({
     type: v.string(), // e.g., "clerk_sync"

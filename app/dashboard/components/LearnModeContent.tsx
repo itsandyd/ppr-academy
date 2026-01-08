@@ -17,21 +17,23 @@ import {
   BookOpen,
   Award,
   Clock,
-  TrendingUp,
   Download,
   Music,
   Package,
   Loader2,
   Play,
-  Star,
   Target,
-  Calendar,
   ChevronRight,
-  Flame,
   Zap,
+  Flame,
+  Heart,
+  Trash2,
+  TrendingDown,
+  Star,
 } from "lucide-react";
 import { useEffect } from "react";
 import Link from "next/link";
+import { LearnerOnboarding } from "@/components/onboarding/LearnerOnboarding";
 
 export function LearnModeContent() {
   const { user, isLoaded: isUserLoaded } = useUser();
@@ -88,6 +90,16 @@ export function LearnModeContent() {
     convexUser?.clerkId ? { userId: convexUser.clerkId } : "skip"
   );
 
+  // Fetch user's wishlist/favorites
+  const userWishlist = useQuery(api.wishlists.getUserWishlist, {});
+  const removeFromWishlist = useMutation(api.wishlists.removeFromWishlist);
+
+  // Fetch user's XP and level
+  const userXP = useQuery(
+    api.achievements.getUserXP,
+    convexUser?.clerkId ? { userId: convexUser.clerkId } : "skip"
+  );
+
   // Extract purchased packs
   const purchasedPacks =
     userPurchases?.filter(
@@ -120,14 +132,34 @@ export function LearnModeContent() {
     }
   });
 
-  // User display data
+  // Level titles based on level number
+  const getLevelTitle = (level: number): string => {
+    const levelTitles = [
+      "Beginner",          // 1
+      "Novice",            // 2
+      "Apprentice",        // 3
+      "Student",           // 4
+      "Practitioner",      // 5
+      "Adept",             // 6
+      "Skilled",           // 7
+      "Expert",            // 8
+      "Master",            // 9
+      "Grandmaster",       // 10+
+    ];
+    const index = Math.min(level - 1, levelTitles.length - 1);
+    return levelTitles[Math.max(0, index)];
+  };
+
+  // User display data with real XP
+  const currentLevel = userXP?.level ?? 1;
   const userData = {
     name: user?.firstName || "Student",
     email: user?.primaryEmailAddress?.emailAddress || "",
     avatar: user?.imageUrl,
-    level: "Music Producer Level 3",
-    xp: (userStats?.coursesCompleted || 0) * 100 + (userStats?.totalHoursLearned || 0) * 10,
-    nextLevelXp: 3000,
+    level: `${getLevelTitle(currentLevel)} (Level ${currentLevel})`,
+    xp: userXP?.totalXP ?? 0,
+    nextLevelXp: (userXP?.totalXP ?? 0) + (userXP?.xpToNextLevel ?? 100),
+    xpToNextLevel: userXP?.xpToNextLevel ?? 100,
   };
 
   const stats = userStats || {
@@ -144,7 +176,11 @@ export function LearnModeContent() {
     target: 5,
   };
 
-  const levelProgress = (userData.xp / userData.nextLevelXp) * 100;
+  // Calculate XP progress within current level
+  // Each level requires (level * 100) XP
+  const xpInCurrentLevel = userData.xp % (currentLevel * 100);
+  const xpNeededForLevel = currentLevel * 100;
+  const levelProgress = Math.min((xpInCurrentLevel / xpNeededForLevel) * 100, 100);
 
   const isLoadingUser = !isUserLoaded || (user && convexUser === undefined);
   const isCreatingUser = Boolean(isUserLoaded && user && convexUser === null);
@@ -163,6 +199,9 @@ export function LearnModeContent() {
   if (hasNoCourses) {
     return (
       <div className="space-y-6 md:space-y-8">
+        {/* Learner Onboarding Modal */}
+        <LearnerOnboarding />
+
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-chart-1 to-chart-4 p-6 text-primary-foreground md:p-8">
           <div className="relative z-10">
             <h1 className="mb-2 text-3xl font-bold">Welcome to Your Library! 👋</h1>
@@ -178,6 +217,9 @@ export function LearnModeContent() {
 
   return (
     <div className="space-y-6 md:space-y-8">
+      {/* Learner Onboarding Modal (shows once) */}
+      <LearnerOnboarding />
+
       {/* Continue Watching - THE PRIMARY CTA */}
       {continueWatching && (
         <Card className="group relative overflow-hidden border-2 border-chart-1/20 bg-gradient-to-br from-chart-1/5 via-background to-chart-2/5 transition-all hover:border-chart-1/40 hover:shadow-xl">
@@ -265,11 +307,11 @@ export function LearnModeContent() {
       {/* Quick Stats Row */}
       <div className="flex flex-wrap items-center gap-4 rounded-xl bg-muted/50 p-4">
         <div className="flex items-center gap-2">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-chart-1/10">
-            <Flame className="h-5 w-5 text-chart-1" />
+          <div className={`flex h-10 w-10 items-center justify-center rounded-full ${stats.currentStreak > 0 ? 'bg-orange-500/10' : 'bg-muted'}`}>
+            <Flame className={`h-5 w-5 ${stats.currentStreak > 0 ? 'text-orange-500' : 'text-muted-foreground'}`} />
           </div>
           <div>
-            <p className="text-2xl font-bold">{stats.currentStreak}</p>
+            <p className={`text-2xl font-bold ${stats.currentStreak > 0 ? 'text-orange-500' : ''}`}>{stats.currentStreak}</p>
             <p className="text-xs text-muted-foreground">day streak</p>
           </div>
         </div>
@@ -293,6 +335,16 @@ export function LearnModeContent() {
             <p className="text-xs text-muted-foreground">learned</p>
           </div>
         </div>
+        <div className="h-8 w-px bg-border" />
+        <div className="flex items-center gap-2">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-yellow-500/10">
+            <Star className="h-5 w-5 text-yellow-500" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">Lv.{currentLevel}</p>
+            <p className="text-xs text-muted-foreground">{userData.xp} XP</p>
+          </div>
+        </div>
         <div className="ml-auto">
           <Link href="/marketplace?contentType=courses">
             <Button variant="ghost" size="sm" className="gap-1">
@@ -308,14 +360,21 @@ export function LearnModeContent() {
         <div className="space-y-6 md:space-y-8 lg:col-span-3">
           {/* Content Tabs */}
           <Tabs defaultValue="continue" className="w-full">
-            <TabsList className="grid w-full max-w-3xl grid-cols-5">
+            <TabsList className="grid w-full max-w-3xl grid-cols-4">
               <TabsTrigger value="continue">Continue</TabsTrigger>
+              <TabsTrigger value="favorites">
+                <Heart className="mr-2 h-4 w-4" />
+                Favorites
+                {userWishlist && userWishlist.length > 0 && (
+                  <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+                    {userWishlist.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
               <TabsTrigger value="downloads">
                 <Download className="mr-2 h-4 w-4" />
                 Downloads
               </TabsTrigger>
-              <TabsTrigger value="recommended">Recommended</TabsTrigger>
-              <TabsTrigger value="favorites">Favorites</TabsTrigger>
               <TabsTrigger value="certificates">
                 <Award className="mr-2 h-4 w-4" />
                 Certificates
@@ -366,6 +425,131 @@ export function LearnModeContent() {
                   <Button onClick={() => (window.location.href = "/")}>
                     <BookOpen className="mr-2 h-4 w-4" />
                     Browse Courses
+                  </Button>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="favorites" className="space-y-6">
+              {userWishlist === undefined ? (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {[1, 2, 3, 4].map((i) => (
+                    <Card key={i}>
+                      <CardContent className="p-6">
+                        <Skeleton className="h-24 w-full" />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : userWishlist && userWishlist.length > 0 ? (
+                <div className="space-y-6 pt-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold">Your Favorites</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {userWishlist.length} item{userWishlist.length !== 1 ? "s" : ""} saved
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    {userWishlist.map((item: typeof userWishlist[number]) => (
+                      <Card key={item._id} className="group transition-all hover:shadow-lg">
+                        <CardContent className="p-0">
+                          <div className="flex gap-4 p-4">
+                            {/* Thumbnail */}
+                            <div className="relative h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg">
+                              {item.coverImageUrl ? (
+                                <img
+                                  src={item.coverImageUrl}
+                                  alt={item.title}
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-chart-1 to-chart-2">
+                                  {item.itemType === "course" ? (
+                                    <BookOpen className="h-8 w-8 text-primary-foreground" />
+                                  ) : (
+                                    <Package className="h-8 w-8 text-primary-foreground" />
+                                  )}
+                                </div>
+                              )}
+                              {item.priceDropped && (
+                                <div className="absolute right-1 top-1">
+                                  <Badge className="bg-green-500 px-1.5 py-0.5 text-[10px]">
+                                    <TrendingDown className="mr-0.5 h-3 w-3" />
+                                    Sale
+                                  </Badge>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Content */}
+                            <div className="min-w-0 flex-1">
+                              <div className="mb-1 flex items-start justify-between gap-2">
+                                <Link
+                                  href={
+                                    item.itemType === "course"
+                                      ? `/courses/${item.slug}`
+                                      : `/marketplace/product/${item.slug}`
+                                  }
+                                  className="line-clamp-2 font-semibold hover:text-chart-1"
+                                >
+                                  {item.title}
+                                </Link>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 flex-shrink-0 text-muted-foreground hover:text-destructive"
+                                  onClick={() => {
+                                    if (item.itemType === "course" && item.courseId) {
+                                      removeFromWishlist({ courseId: item.courseId });
+                                    } else if (item.productId) {
+                                      removeFromWishlist({ productId: item.productId });
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+
+                              <Badge variant="outline" className="mb-2 text-xs">
+                                {item.category}
+                              </Badge>
+
+                              <div className="flex items-center gap-2">
+                                {item.priceDropped && item.priceAtAdd !== undefined ? (
+                                  <>
+                                    <span className="font-bold text-green-600">
+                                      ${item.currentPrice.toFixed(2)}
+                                    </span>
+                                    <span className="text-sm text-muted-foreground line-through">
+                                      ${item.priceAtAdd.toFixed(2)}
+                                    </span>
+                                    <Badge variant="secondary" className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                      Save ${item.priceDropAmount?.toFixed(2)}
+                                    </Badge>
+                                  </>
+                                ) : (
+                                  <span className="font-bold">${item.currentPrice.toFixed(2)}</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="py-12 text-center">
+                  <Heart className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+                  <h3 className="mb-2 text-lg font-medium">No Favorites Yet</h3>
+                  <p className="mb-4 text-muted-foreground">
+                    Save courses and products you're interested in to find them later.
+                  </p>
+                  <Button onClick={() => (window.location.href = "/marketplace")}>
+                    <BookOpen className="mr-2 h-4 w-4" />
+                    Browse Marketplace
                   </Button>
                 </div>
               )}
@@ -502,23 +686,6 @@ export function LearnModeContent() {
               </div>
             </TabsContent>
 
-            <TabsContent value="recommended" className="space-y-6">
-              <div className="py-12 text-center">
-                <BookOpen className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-                <h3 className="mb-2 text-lg font-medium">Personalized Recommendations</h3>
-                <p className="text-muted-foreground">
-                  Based on your learning progress, we'll recommend courses tailored for you.
-                </p>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="favorites" className="space-y-6">
-              <div className="py-12 text-center">
-                <Star className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-                <h3 className="mb-2 text-lg font-medium">Your Favorites</h3>
-                <p className="text-muted-foreground">Courses you've bookmarked will appear here.</p>
-              </div>
-            </TabsContent>
 
             <TabsContent value="certificates" className="space-y-6">
               {userCertificates === undefined ? (
@@ -650,10 +817,6 @@ export function LearnModeContent() {
               <CardTitle className="text-lg">Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button variant="outline" className="w-full justify-start">
-                <Calendar className="mr-2 h-4 w-4" />
-                Schedule Study Time
-              </Button>
               <Button
                 variant="outline"
                 className="w-full justify-start"

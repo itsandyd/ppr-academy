@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -125,6 +125,11 @@ export default async function LessonDetailPage({
           }
         }
       });
+
+      // Redirect enrolled users to the library page for proper progress tracking
+      if (enrollment) {
+        redirect(`/library/courses/${courseSlug}`);
+      }
     }
   }
 

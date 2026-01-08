@@ -154,6 +154,12 @@ const createLinks: SidebarLink[] = [
     icon: BarChart3,
     color: "text-orange-500",
   },
+  {
+    href: "/dashboard/students?mode=create",
+    label: "Students",
+    icon: Users,
+    color: "text-emerald-500",
+  },
 ];
 
 export function DashboardSidebar({ mode, onModeChange }: DashboardSidebarProps) {

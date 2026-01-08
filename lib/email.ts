@@ -224,6 +224,109 @@ export async function sendWelcomeEmail(data: WelcomeEmailData) {
   }
 }
 
+// Payment Failure Email
+export interface PaymentFailureEmailData {
+  customerEmail: string;
+  customerName: string;
+  productName: string;
+  amount: number;
+  currency: string;
+  failureReason: string;
+  retryUrl?: string;
+}
+
+const getPaymentFailureEmailTemplate = (data: PaymentFailureEmailData) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment Issue - Action Required</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+    <h1 style="color: white; margin: 0; font-size: 28px;">Payment Issue</h1>
+  </div>
+
+  <div style="background: #fef2f2; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #fecaca;">
+    <h2 style="color: #1e293b; margin-top: 0;">Hi ${data.customerName},</h2>
+
+    <p style="font-size: 16px; margin-bottom: 25px;">
+      We were unable to process your payment for <strong>${data.productName}</strong>.
+    </p>
+
+    <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #ef4444; margin: 25px 0;">
+      <h3 style="margin-top: 0; color: #1e293b;">Payment Details:</h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Amount:</td>
+          <td style="padding: 8px 0; color: #1f2937;">$${data.amount.toFixed(2)} ${data.currency.toUpperCase()}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Reason:</td>
+          <td style="padding: 8px 0; color: #dc2626;">${data.failureReason}</td>
+        </tr>
+      </table>
+    </div>
+
+    <div style="background: white; padding: 20px; border-radius: 8px; margin: 25px 0;">
+      <h3 style="margin-top: 0; color: #1e293b;">What you can do:</h3>
+      <ul style="margin-bottom: 0; padding-left: 20px;">
+        <li style="margin-bottom: 8px;">Check that your card details are correct</li>
+        <li style="margin-bottom: 8px;">Ensure sufficient funds are available</li>
+        <li style="margin-bottom: 8px;">Try a different payment method</li>
+        <li style="margin-bottom: 8px;">Contact your bank if the issue persists</li>
+      </ul>
+    </div>
+
+    ${data.retryUrl ? `
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${data.retryUrl}"
+         style="background: #6366f1; color: white; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
+        Try Again
+      </a>
+    </div>
+    ` : ''}
+
+    <hr style="border: none; border-top: 1px solid #fecaca; margin: 30px 0;">
+
+    <p style="font-size: 14px; color: #64748b; margin-bottom: 10px;">
+      Need help? Reply to this email and we'll assist you.
+    </p>
+
+    <p style="font-size: 12px; color: #94a3b8; margin-top: 30px;">
+      PPR Academy Team
+    </p>
+  </div>
+</body>
+</html>
+`;
+
+export async function sendPaymentFailureEmail(data: PaymentFailureEmailData) {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('⚠️ RESEND_API_KEY not configured. Email simulation mode.');
+    console.log('📧 Would send payment failure email to:', data.customerEmail);
+    return { success: true, simulation: true };
+  }
+
+  try {
+    const resend = getResendClient();
+    const result = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.customerEmail,
+      replyTo: DEFAULT_REPLY_TO,
+      subject: `Payment Issue - Action Required for ${data.productName}`,
+      html: getPaymentFailureEmailTemplate(data),
+    });
+
+    console.log('✅ Payment failure email sent successfully:', result.data?.id);
+    return { success: true, messageId: result.data?.id };
+  } catch (error) {
+    console.error('❌ Failed to send payment failure email:', error);
+    throw new Error(`Payment failure email failed: ${error}`);
+  }
+}
+
 // Utility to verify email configuration
 export async function verifyEmailConfig() {
   if (!process.env.RESEND_API_KEY) {
