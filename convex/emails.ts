@@ -5,6 +5,108 @@ import { v } from "convex/values";
 import { Resend } from "resend";
 import { internal } from "./_generated/api";
 import crypto from "crypto";
+import { Id } from "./_generated/dataModel";
+
+// ============================================================================
+// API KEY ENCRYPTION/DECRYPTION (AES-256-GCM)
+// ============================================================================
+
+const ENCRYPTION_PREFIX = "enc:v1:";
+const ENCRYPTION_ALGORITHM = "aes-256-gcm";
+const IV_LENGTH = 12; // 12 bytes for GCM
+const AUTH_TAG_LENGTH = 16; // 16 bytes for GCM
+
+/**
+ * Derive a 256-bit key from the encryption secret using PBKDF2
+ */
+function deriveKeySync(secret: string): Buffer {
+  const salt = Buffer.from("ppr-academy-api-key-encryption-v1");
+  return crypto.pbkdf2Sync(secret, salt, 100000, 32, "sha256");
+}
+
+/**
+ * Encrypt an API key using AES-256-GCM
+ * Returns format: "enc:v1:<base64(iv)>:<base64(ciphertext)>:<base64(authTag)>"
+ */
+export function encryptApiKey(plaintext: string): string {
+  const secret = process.env.API_KEY_ENCRYPTION_SECRET;
+
+  if (!secret) {
+    console.warn("API_KEY_ENCRYPTION_SECRET not set - storing API key unencrypted");
+    return plaintext;
+  }
+
+  try {
+    const key = deriveKeySync(secret);
+    const iv = crypto.randomBytes(IV_LENGTH);
+
+    const cipher = crypto.createCipheriv(ENCRYPTION_ALGORITHM, key, iv, {
+      authTagLength: AUTH_TAG_LENGTH,
+    });
+
+    let ciphertext = cipher.update(plaintext, "utf8", "base64");
+    ciphertext += cipher.final("base64");
+    const authTag = cipher.getAuthTag();
+
+    const ivBase64 = iv.toString("base64");
+    const authTagBase64 = authTag.toString("base64");
+
+    return `${ENCRYPTION_PREFIX}${ivBase64}:${ciphertext}:${authTagBase64}`;
+  } catch (error) {
+    console.error("Encryption failed:", error);
+    throw new Error("Failed to encrypt API key");
+  }
+}
+
+/**
+ * Decrypt an encrypted API key using AES-256-GCM
+ * Expects format: "enc:v1:<base64(iv)>:<base64(ciphertext)>:<base64(authTag)>"
+ */
+export function decryptApiKey(encryptedValue: string): string {
+  // If not encrypted, return as-is (backward compatibility)
+  if (!encryptedValue.startsWith(ENCRYPTION_PREFIX)) {
+    return encryptedValue;
+  }
+
+  const secret = process.env.API_KEY_ENCRYPTION_SECRET;
+
+  if (!secret) {
+    throw new Error("API_KEY_ENCRYPTION_SECRET not set - cannot decrypt API key");
+  }
+
+  try {
+    const withoutPrefix = encryptedValue.slice(ENCRYPTION_PREFIX.length);
+    const [ivBase64, ciphertext, authTagBase64] = withoutPrefix.split(":");
+
+    if (!ivBase64 || !ciphertext || !authTagBase64) {
+      throw new Error("Invalid encrypted format");
+    }
+
+    const key = deriveKeySync(secret);
+    const iv = Buffer.from(ivBase64, "base64");
+    const authTag = Buffer.from(authTagBase64, "base64");
+
+    const decipher = crypto.createDecipheriv(ENCRYPTION_ALGORITHM, key, iv, {
+      authTagLength: AUTH_TAG_LENGTH,
+    });
+    decipher.setAuthTag(authTag);
+
+    let decrypted = decipher.update(ciphertext, "base64", "utf8");
+    decrypted += decipher.final("utf8");
+
+    return decrypted;
+  } catch (error) {
+    console.error("Decryption failed:", error);
+    throw new Error("Failed to decrypt API key");
+  }
+}
+
+/**
+ * Check if a value is encrypted
+ */
+export function isEncrypted(value: string): boolean {
+  return value.startsWith(ENCRYPTION_PREFIX);
+}
 
 let resendClient: Resend | null = null;
 function getResendClient(apiKey?: string) {
@@ -634,5 +736,155 @@ export const incrementContactEmailsSent = internalMutation({
         updatedAt: Date.now(),
       });
     }
+  },
+});
+
+// ============================================================================
+// SECURE RESEND CONNECTION ACTIONS (with API key encryption)
+// ============================================================================
+
+/**
+ * Connect admin Resend account with encrypted API key storage
+ * This is the recommended way to connect admin Resend accounts
+ */
+export const connectAdminResendSecure = action({
+  args: {
+    resendApiKey: v.string(),
+    fromEmail: v.string(),
+    fromName: v.string(),
+    replyToEmail: v.optional(v.string()),
+    userId: v.string(),
+  },
+  returns: v.id("resendConnections"),
+  handler: async (ctx, args): Promise<Id<"resendConnections">> => {
+    // Encrypt the API key before storing
+    const encryptedApiKey = encryptApiKey(args.resendApiKey);
+
+    // Store the connection with encrypted key
+    const connectionId = await ctx.runMutation(
+      internal.emailQueries.saveAdminResendConnection,
+      {
+        encryptedApiKey,
+        fromEmail: args.fromEmail,
+        fromName: args.fromName,
+        replyToEmail: args.replyToEmail,
+        userId: args.userId,
+      }
+    );
+
+    return connectionId;
+  },
+});
+
+/**
+ * Connect store Resend account with encrypted API key storage
+ * This is the recommended way to connect store Resend accounts
+ */
+export const connectStoreResendSecure = action({
+  args: {
+    storeId: v.id("stores"),
+    resendApiKey: v.string(),
+    fromEmail: v.string(),
+    fromName: v.string(),
+    replyToEmail: v.optional(v.string()),
+    userId: v.string(),
+  },
+  returns: v.id("resendConnections"),
+  handler: async (ctx, args): Promise<Id<"resendConnections">> => {
+    // Encrypt the API key before storing
+    const encryptedApiKey = encryptApiKey(args.resendApiKey);
+
+    // Store the connection with encrypted key
+    const connectionId = await ctx.runMutation(
+      internal.emailQueries.saveStoreResendConnection,
+      {
+        storeId: args.storeId,
+        encryptedApiKey,
+        fromEmail: args.fromEmail,
+        fromName: args.fromName,
+        replyToEmail: args.replyToEmail,
+        userId: args.userId,
+      }
+    );
+
+    return connectionId;
+  },
+});
+
+/**
+ * Get decrypted API key for a connection (internal use only)
+ * Used when sending emails that require a custom API key
+ */
+export const getDecryptedApiKey = internalAction({
+  args: {
+    connectionId: v.id("resendConnections"),
+  },
+  handler: async (ctx, args) => {
+    const connection = await ctx.runQuery(internal.emailQueries.getConnectionById, {
+      connectionId: args.connectionId,
+    });
+
+    if (!connection) {
+      throw new Error("Connection not found");
+    }
+
+    // Decrypt the API key (handles both encrypted and unencrypted values)
+    return decryptApiKey(connection.resendApiKey);
+  },
+});
+
+/**
+ * Migrate existing unencrypted API keys to encrypted format
+ * Run this once to encrypt all existing API keys
+ */
+export const migrateApiKeysToEncrypted = internalAction({
+  args: {},
+  handler: async (ctx) => {
+    const adminConnection = await ctx.runQuery(internal.emailQueries.getAdminConnectionInternal, {});
+
+    let migratedCount = 0;
+    const errors: string[] = [];
+
+    // Check admin connection
+    if (adminConnection && !isEncrypted(adminConnection.resendApiKey)) {
+      try {
+        const encryptedKey = encryptApiKey(adminConnection.resendApiKey);
+        await ctx.runMutation(internal.emails.updateConnectionApiKey, {
+          connectionId: adminConnection._id,
+          encryptedApiKey: encryptedKey,
+        });
+        migratedCount++;
+        console.log("Migrated admin connection API key");
+      } catch (error) {
+        errors.push(`Failed to migrate admin connection: ${error}`);
+      }
+    }
+
+    // Note: Store connections would need to be queried and migrated similarly
+    // For now, we just handle the admin connection
+
+    return {
+      migratedCount,
+      errors,
+      message: errors.length > 0
+        ? `Migrated ${migratedCount} connections with ${errors.length} errors`
+        : `Successfully migrated ${migratedCount} connections`,
+    };
+  },
+});
+
+/**
+ * Update connection API key (internal mutation for migration)
+ */
+export const updateConnectionApiKey = internalMutation({
+  args: {
+    connectionId: v.id("resendConnections"),
+    encryptedApiKey: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.connectionId, {
+      resendApiKey: args.encryptedApiKey,
+      updatedAt: Date.now(),
+    });
   },
 });

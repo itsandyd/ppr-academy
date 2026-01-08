@@ -1,19 +1,33 @@
 import { SignUp } from "@clerk/nextjs";
+import { ReferralCapture } from "./referral-capture";
 
 // Force dynamic rendering for this page
 export const dynamic = 'force-dynamic';
 
 interface SignUpPageProps {
-  searchParams: Promise<{ intent?: string; redirect_url?: string }>;
+  searchParams: Promise<{ intent?: string; redirect_url?: string; ref?: string }>;
 }
 
 export default async function SignUpPage({ searchParams }: SignUpPageProps) {
   const params = await searchParams;
   const isCreator = params.intent === 'creator';
+  const referralCode = params.ref;
   
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4">
+      {/* Capture referral code in localStorage */}
+      {referralCode && <ReferralCapture code={referralCode} />}
+
       <div className="w-full max-w-md">
+        {/* Referral Banner */}
+        {referralCode && (
+          <div className="mb-4 p-4 bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-200 dark:border-purple-800 rounded-lg text-center">
+            <p className="text-sm font-medium text-purple-700 dark:text-purple-300">
+              🎁 You were referred by a friend! You'll receive <strong>500 credits</strong> after signing up.
+            </p>
+          </div>
+        )}
+
         {/* Header */}
         <div className="text-center mb-8">
           <div className="mb-4">

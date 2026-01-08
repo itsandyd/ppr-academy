@@ -7,6 +7,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Node, Edge } from "reactflow";
+import { useFeatureAccess } from "@/hooks/use-feature-access";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -156,7 +157,19 @@ export default function WorkflowBuilderPage() {
   const [isEnrolling, setIsEnrolling] = useState(false);
   const [isActive, setIsActive] = useState(false);
 
-  const storeId = user?.id ?? "";
+  // Get user's store
+  const store = useQuery(
+    // @ts-ignore - Convex type instantiation is excessively deep
+    api.stores.getUserStore,
+    user?.id ? { userId: user.id } : "skip"
+  ) as { _id: Id<"stores">; plan?: string } | null | undefined;
+  const storeId = store?._id;
+
+  // Check if user has access to automations feature
+  const { hasAccess, isLoading: featureLoading, UpgradePromptComponent } = useFeatureAccess(
+    storeId,
+    "automations"
+  );
 
   const emailTemplates = useQuery(
     api.emailWorkflows.listEmailTemplates,
@@ -371,6 +384,51 @@ export default function WorkflowBuilderPage() {
       setIsEnrolling(false);
     }
   };
+
+  // Show loading state while checking feature access
+  if (featureLoading || store === undefined) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show upgrade prompt if user doesn't have access to automations
+  if (!hasAccess) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center p-8">
+        <div className="max-w-md text-center space-y-6">
+          <div className="mx-auto w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+            <AlertTriangle className="h-8 w-8 text-amber-600 dark:text-amber-400" />
+          </div>
+          <h1 className="text-2xl font-bold">Email Automations</h1>
+          <p className="text-muted-foreground">
+            Email automation workflows are a Creator Pro feature. Upgrade your plan to create automated email sequences that nurture your leads and customers.
+          </p>
+          <div className="space-y-3">
+            <Button
+              className="w-full"
+              onClick={() => router.push("/dashboard/settings?tab=billing")}
+            >
+              Upgrade to Creator Pro
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => router.push("/dashboard/emails")}
+            >
+              Back to Emails
+            </Button>
+          </div>
+        </div>
+        <UpgradePromptComponent />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen flex-col">

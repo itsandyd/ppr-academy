@@ -34,10 +34,15 @@ import {
 import { useEffect } from "react";
 import Link from "next/link";
 import { LearnerOnboarding } from "@/components/onboarding/LearnerOnboarding";
+import { ReferralCard } from "@/components/referrals/ReferralCard";
+import { useApplyReferral } from "@/hooks/use-apply-referral";
 
 export function LearnModeContent() {
   const { user, isLoaded: isUserLoaded } = useUser();
   const createUser = useMutation(api.users.createOrUpdateUserFromClerk);
+
+  // Apply referral code if user came from a referral link
+  useApplyReferral();
 
   // Get Convex user
   const convexUser = useQuery(api.users.getUserFromClerk, user?.id ? { clerkId: user.id } : "skip");
@@ -840,6 +845,9 @@ export function LearnModeContent() {
               </Button>
             </CardContent>
           </Card>
+
+          {/* Referral Program */}
+          <ReferralCard />
         </div>
       </div>
     </div>

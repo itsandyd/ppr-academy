@@ -60,6 +60,7 @@ import type * as courseNotificationQueries from "../courseNotificationQueries.js
 import type * as courseNotifications from "../courseNotifications.js";
 import type * as courses from "../courses.js";
 import type * as creatorPlans from "../creatorPlans.js";
+import type * as creditPackageStripe from "../creditPackageStripe.js";
 import type * as credits from "../credits.js";
 import type * as crons from "../crons.js";
 import type * as customDomains from "../customDomains.js";
@@ -193,6 +194,8 @@ import type * as scriptIllustrationSearch from "../scriptIllustrationSearch.js";
 import type * as scriptIllustrations from "../scriptIllustrations.js";
 import type * as seedCreditPackages from "../seedCreditPackages.js";
 import type * as sendTimeOptimization from "../sendTimeOptimization.js";
+import type * as socialDM from "../socialDM.js";
+import type * as socialDMWebhooks from "../socialDMWebhooks.js";
 import type * as socialMedia from "../socialMedia.js";
 import type * as socialMediaActions from "../socialMediaActions.js";
 import type * as socialMediaPosts from "../socialMediaPosts.js";
@@ -209,7 +212,9 @@ import type * as universalProductsExamples from "../universalProductsExamples.js
 import type * as userLibrary from "../userLibrary.js";
 import type * as users from "../users.js";
 import type * as vercelDomainManager from "../vercelDomainManager.js";
+import type * as webhooks_facebook from "../webhooks/facebook.js";
 import type * as webhooks_instagram from "../webhooks/instagram.js";
+import type * as webhooks_twitter from "../webhooks/twitter.js";
 import type * as wishlists from "../wishlists.js";
 import type * as workflowActions from "../workflowActions.js";
 import type * as workflowHelpers from "../workflowHelpers.js";
@@ -270,6 +275,7 @@ declare const fullApi: ApiFromModules<{
   courseNotifications: typeof courseNotifications;
   courses: typeof courses;
   creatorPlans: typeof creatorPlans;
+  creditPackageStripe: typeof creditPackageStripe;
   credits: typeof credits;
   crons: typeof crons;
   customDomains: typeof customDomains;
@@ -403,6 +409,8 @@ declare const fullApi: ApiFromModules<{
   scriptIllustrations: typeof scriptIllustrations;
   seedCreditPackages: typeof seedCreditPackages;
   sendTimeOptimization: typeof sendTimeOptimization;
+  socialDM: typeof socialDM;
+  socialDMWebhooks: typeof socialDMWebhooks;
   socialMedia: typeof socialMedia;
   socialMediaActions: typeof socialMediaActions;
   socialMediaPosts: typeof socialMediaPosts;
@@ -419,7 +427,9 @@ declare const fullApi: ApiFromModules<{
   userLibrary: typeof userLibrary;
   users: typeof users;
   vercelDomainManager: typeof vercelDomainManager;
+  "webhooks/facebook": typeof webhooks_facebook;
   "webhooks/instagram": typeof webhooks_instagram;
+  "webhooks/twitter": typeof webhooks_twitter;
   wishlists: typeof wishlists;
   workflowActions: typeof workflowActions;
   workflowHelpers: typeof workflowHelpers;

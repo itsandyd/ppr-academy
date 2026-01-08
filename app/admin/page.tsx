@@ -41,18 +41,25 @@ export default function AdminDashboard() {
   }, []);
 
   // Check if user is admin
-  const adminCheck = useQuery(api.users.checkIsAdmin, user?.id ? { clerkId: user.id } : "skip");
+  const adminCheck = useQuery(
+    // @ts-ignore - Convex type instantiation is excessively deep
+    api.users.checkIsAdmin,
+    user?.id ? { clerkId: user.id } : "skip"
+  ) as { isAdmin: boolean } | undefined;
 
   // Fetch platform-wide statistics (only if admin)
   const overview = useQuery(
+    // @ts-ignore - Convex type instantiation is excessively deep
     api.adminAnalytics.getPlatformOverview,
     user?.id && adminCheck?.isAdmin ? { clerkId: user.id } : "skip"
   );
   const reportStats = useQuery(
+    // @ts-ignore - Convex type instantiation is excessively deep
     api.reports.getReportStats,
     user?.id && adminCheck?.isAdmin ? { clerkId: user.id } : "skip"
   );
   const recentActivity = useQuery(
+    // @ts-ignore - Convex type instantiation is excessively deep
     api.adminAnalytics.getRecentActivity,
     user?.id && adminCheck?.isAdmin ? { clerkId: user.id } : "skip"
   );
@@ -118,6 +125,10 @@ export default function AdminDashboard() {
     activeUsers: overview?.activeUsers || 0,
     totalProducts: overview?.totalProducts || 0,
     pendingReports: reportStats?.pending || 0,
+    totalPurchases: overview?.totalPurchases || 0,
+    revenueThisMonth: overview?.revenueThisMonth || 0,
+    newUsersThisMonth: overview?.newUsersThisMonth || 0,
+    totalStores: overview?.totalStores || 0,
   };
 
   const formatTimeAgo = (timestamp: number) => {
@@ -133,7 +144,7 @@ export default function AdminDashboard() {
       title: "Total Users",
       value: stats.totalUsers.toLocaleString(),
       icon: Users,
-      change: "+12%",
+      change: `+${stats.newUsersThisMonth} this month`,
       trend: "up" as const,
       gradient: "from-blue-500 to-cyan-500",
       bgGradient: "from-blue-500/10 to-cyan-500/5",
@@ -142,7 +153,7 @@ export default function AdminDashboard() {
       title: "Active Courses",
       value: stats.totalCourses.toLocaleString(),
       icon: BookOpen,
-      change: "+8%",
+      change: `${overview?.publishedCourses || 0} published`,
       trend: "up" as const,
       gradient: "from-violet-500 to-purple-500",
       bgGradient: "from-violet-500/10 to-purple-500/5",
@@ -151,7 +162,7 @@ export default function AdminDashboard() {
       title: "Platform Revenue",
       value: `$${stats.totalRevenue.toLocaleString()}`,
       icon: DollarSign,
-      change: "+23%",
+      change: `$${stats.revenueThisMonth.toLocaleString()} this month`,
       trend: "up" as const,
       gradient: "from-emerald-500 to-green-500",
       bgGradient: "from-emerald-500/10 to-green-500/5",
@@ -160,16 +171,16 @@ export default function AdminDashboard() {
       title: "Active Users",
       value: stats.activeUsers.toLocaleString(),
       icon: Activity,
-      change: "+5%",
+      change: "Last 30 days",
       trend: "up" as const,
       gradient: "from-amber-500 to-orange-500",
       bgGradient: "from-amber-500/10 to-orange-500/5",
     },
     {
-      title: "Digital Products",
-      value: stats.totalProducts.toLocaleString(),
+      title: "Total Purchases",
+      value: stats.totalPurchases.toLocaleString(),
       icon: Package,
-      change: "+15%",
+      change: `${stats.totalStores} stores`,
       trend: "up" as const,
       gradient: "from-pink-500 to-rose-500",
       bgGradient: "from-pink-500/10 to-rose-500/5",
@@ -178,8 +189,8 @@ export default function AdminDashboard() {
       title: "Pending Reports",
       value: stats.pendingReports.toLocaleString(),
       icon: AlertCircle,
-      change: "-2",
-      trend: "down" as const,
+      change: stats.pendingReports > 0 ? "Needs attention" : "All clear",
+      trend: stats.pendingReports > 0 ? "down" as const : "up" as const,
       gradient: "from-red-500 to-orange-500",
       bgGradient: "from-red-500/10 to-orange-500/5",
     },
@@ -193,6 +204,8 @@ export default function AdminDashboard() {
         return <BookOpen className="h-4 w-4" />;
       case "purchase":
         return <DollarSign className="h-4 w-4" />;
+      case "user_signup":
+        return <Users className="h-4 w-4" />;
       default:
         return <Activity className="h-4 w-4" />;
     }
@@ -206,6 +219,8 @@ export default function AdminDashboard() {
         return "text-blue-500 bg-blue-500/10";
       case "purchase":
         return "text-violet-500 bg-violet-500/10";
+      case "user_signup":
+        return "text-amber-500 bg-amber-500/10";
       default:
         return "text-muted-foreground bg-muted";
     }

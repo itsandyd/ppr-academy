@@ -2,11 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { requireAuth } from "@/lib/auth-helpers";
 import { checkRateLimit, getRateLimitIdentifier, rateLimiters } from "@/lib/rate-limit";
+import { ConvexHttpClient } from "convex/browser";
+import { api } from "@/convex/_generated/api";
 
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-08-27.basil",
 });
+
+// Initialize Convex client
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,7 +25,7 @@ export async function POST(request: NextRequest) {
       return rateCheck;
     }
 
-    const { packageId, packageName, credits, bonusCredits, priceUsd, customerEmail, userId } =
+    const { packageId, packageName, credits, bonusCredits, priceUsd, customerEmail, userId, stripePriceId } =
       await request.json();
 
     // ✅ SECURITY: Verify user matches
@@ -34,12 +39,74 @@ export async function POST(request: NextRequest) {
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
-    // Create a one-time price for this credit package
+    // Check if package has a valid stored Stripe price ID
+    let priceId = stripePriceId;
+
+    // Validate the price ID looks real (not a placeholder like "price_starter")
+    const isValidPriceId = priceId && priceId.startsWith("price_") && priceId.length > 20;
+
+    if (!isValidPriceId) {
+      // Try to get from Convex action
+      try {
+        const storedPriceId = await convex.action(api.creditPackageStripe.getPackageStripePriceId, {
+          packageId,
+        });
+        if (storedPriceId) {
+          priceId = storedPriceId;
+        }
+      } catch (error) {
+        console.log("Could not fetch stored price ID, will create on-the-fly");
+      }
+    }
+
+    // If we have a valid stored price ID, use it directly
+    if (priceId && priceId.startsWith("price_") && priceId.length > 20) {
+      console.log(`✅ Using stored Stripe price ID: ${priceId}`);
+
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ["card"],
+        line_items: [
+          {
+            price: priceId,
+            quantity: 1,
+          },
+        ],
+        mode: "payment",
+        success_url: `${baseUrl}/dashboard?mode=learn&purchase=success&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${baseUrl}/credits/purchase`,
+        customer_email: customerEmail,
+        metadata: {
+          productType: "credit_package",
+          packageId,
+          packageName,
+          credits: credits.toString(),
+          bonusCredits: bonusCredits?.toString() || "0",
+          userId,
+          priceUsd: priceUsd.toString(),
+        },
+      });
+
+      console.log("✅ Credit checkout session created with stored price:", {
+        sessionId: session.id,
+        packageName,
+        priceId,
+      });
+
+      return NextResponse.json({
+        success: true,
+        checkoutUrl: session.url,
+        sessionId: session.id,
+      });
+    }
+
+    // Fallback: Create Stripe product/price on the fly
+    console.log(`⚠️ No valid stored price ID, creating on-the-fly for ${packageName}`);
+
     const priceInCents = Math.round(priceUsd * 100);
 
     // Create Stripe product on the fly
     const product = await stripe.products.create({
-      name: packageName,
+      name: `PPR Academy - ${packageName}`,
       description: `${credits}${bonusCredits ? ` + ${bonusCredits} bonus` : ""} credits for PPR Academy`,
       metadata: {
         type: "credit_package",
@@ -80,7 +147,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    console.log("✅ Credit checkout session created:", {
+    console.log("✅ Credit checkout session created (on-the-fly):", {
       sessionId: session.id,
       packageName,
       credits,

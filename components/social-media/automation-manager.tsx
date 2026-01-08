@@ -964,7 +964,8 @@ export function AutomationManager({ storeId, userId, onSwitchToAccounts }: Autom
                   <Label>Target Platforms</Label>
                   <div className="grid grid-cols-2 gap-3">
                     {["instagram", "twitter", "facebook", "linkedin", "tiktok"].map((platform) => {
-                      const isComingSoon = platform !== "instagram" && platform !== "facebook";
+                      // Instagram, Facebook, and Twitter are now available
+                      const isComingSoon = platform === "linkedin" || platform === "tiktok";
                       return (
                         <div
                           key={platform}

@@ -93,11 +93,12 @@ function LayoutContent({ children }: CourseCreateLayoutProps) {
     storeId && !isUserIdInsteadOfStoreId ? { storeId: storeId as any } : "skip"
   );
 
-  // Check feature access for courses (skip for now to avoid loading issues)
-  const hasAccess = true; // TODO: Re-enable feature access check
+  // Feature access for courses - keeping free for now to attract creators
+  // Monetization is via % of sales, not subscriptions
+  const hasAccess = true;
   const isCheckingAccess = false;
-  const showUpgradePrompt = false;
-  const UpgradePromptComponent = null;
+  const showUpgradePrompt = () => {};
+  const UpgradePromptComponent = () => null;
 
   const navigateToStep = (step: string) => {
     router.push(`/dashboard/create/course?step=${step}`);

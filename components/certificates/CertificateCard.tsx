@@ -3,7 +3,14 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Award, Download, Share2, CheckCircle2, Calendar, ExternalLink } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { Award, Download, Share2, CheckCircle2, Calendar, ExternalLink, Twitter, Linkedin, Facebook, Link2, Copy } from "lucide-react";
 import { format } from "date-fns";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -25,18 +32,50 @@ interface CertificateCardProps {
 }
 
 export function CertificateCard({ certificate, onDownload }: CertificateCardProps) {
-  const handleShare = () => {
-    const verifyUrl = `${window.location.origin}/verify/${certificate.certificateId}`;
-    
+  const verifyUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/verify/${certificate.certificateId}`
+    : `/verify/${certificate.certificateId}`;
+
+  const shareText = `I just completed "${certificate.courseTitle}" on PPR Academy! 🎓🎵 #MusicProduction #Learning`;
+  const linkedInShareText = `I'm excited to share that I've completed "${certificate.courseTitle}" on PPR Academy!\n\nThis course helped me level up my music production skills. Check out my verified certificate:`;
+
+  const handleShareLinkedIn = () => {
+    // LinkedIn share with pre-filled text
+    const url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(verifyUrl)}`;
+    window.open(url, '_blank', 'width=600,height=600');
+    toast.success("Opening LinkedIn...");
+  };
+
+  const handleShareTwitter = () => {
+    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(verifyUrl)}`;
+    window.open(url, '_blank', 'width=550,height=420');
+    toast.success("Opening Twitter...");
+  };
+
+  const handleShareFacebook = () => {
+    const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(verifyUrl)}&quote=${encodeURIComponent(shareText)}`;
+    window.open(url, '_blank', 'width=550,height=420');
+    toast.success("Opening Facebook...");
+  };
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(verifyUrl);
+    toast.success("Certificate link copied to clipboard!");
+  };
+
+  const handleNativeShare = async () => {
     if (navigator.share) {
-      navigator.share({
-        title: `Certificate - ${certificate.courseTitle}`,
-        text: `I completed ${certificate.courseTitle} on PPR Academy!`,
-        url: verifyUrl,
-      });
+      try {
+        await navigator.share({
+          title: `Certificate - ${certificate.courseTitle}`,
+          text: `I completed ${certificate.courseTitle} on PPR Academy!`,
+          url: verifyUrl,
+        });
+      } catch (error) {
+        // User cancelled share
+      }
     } else {
-      navigator.clipboard.writeText(verifyUrl);
-      toast.success("Verification link copied to clipboard!");
+      handleCopyLink();
     }
   };
 
@@ -114,15 +153,37 @@ export function CertificateCard({ certificate, onDownload }: CertificateCardProp
             </Button>
           )}
           
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-1"
-            onClick={handleShare}
-          >
-            <Share2 className="w-4 h-4 mr-2" />
-            Share
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="flex-1">
+                <Share2 className="w-4 h-4 mr-2" />
+                Share
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="center" className="w-48">
+              <DropdownMenuItem onClick={handleShareLinkedIn} className="cursor-pointer">
+                <Linkedin className="w-4 h-4 mr-2 text-[#0077B5]" />
+                Share on LinkedIn
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleShareTwitter} className="cursor-pointer">
+                <Twitter className="w-4 h-4 mr-2 text-[#1DA1F2]" />
+                Share on Twitter
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleShareFacebook} className="cursor-pointer">
+                <Facebook className="w-4 h-4 mr-2 text-[#1877F2]" />
+                Share on Facebook
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleCopyLink} className="cursor-pointer">
+                <Copy className="w-4 h-4 mr-2" />
+                Copy Link
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleNativeShare} className="cursor-pointer">
+                <Share2 className="w-4 h-4 mr-2" />
+                More Options...
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <Button
             size="sm"

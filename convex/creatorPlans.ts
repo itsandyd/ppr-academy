@@ -173,7 +173,7 @@ export const getStorePlan = query({
     const store = await ctx.db.get(args.storeId);
     if (!store) return null;
 
-    const plan = store.plan || "early_access"; // Default to early_access instead of free
+    const plan = store.plan || "free"; // Default to free plan
     const limits = PLAN_LIMITS[plan];
     const pricing = PLAN_PRICING[plan];
 
@@ -228,7 +228,7 @@ export const checkFeatureAccess = query({
       }
     }
 
-    const plan = store.plan || "early_access"; // Default to early_access (grandfathered)
+    const plan = store.plan || "free"; // Default to free plan
     const limits = PLAN_LIMITS[plan];
 
     // Check specific features
@@ -400,10 +400,10 @@ export const initializeStorePlan = mutation({
     // Only initialize if no plan is set
     if (!store.plan) {
       await ctx.db.patch(args.storeId, {
-        plan: "early_access", // Default to early access (grandfathered)
+        plan: "free", // Default to free plan
         planStartedAt: Date.now(),
-        isPublic: false, // Private by default
-        isPublishedProfile: false,
+        isPublic: true, // Public by default
+        isPublishedProfile: true,
         subscriptionStatus: "active",
       });
     }
@@ -517,7 +517,7 @@ export const getPlanUsageStats = query({
       throw new Error("Store not found");
     }
 
-    const plan = store.plan || "early_access"; // Default to early_access
+    const plan = store.plan || "free"; // Default to free plan
     const limits = PLAN_LIMITS[plan];
 
     // Get current usage

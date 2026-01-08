@@ -328,7 +328,8 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
                   const platformAccounts =
                     accounts?.filter((a: any) => a.platform === platform && a.isConnected) || [];
                   const hasAccounts = platformAccounts.length > 0;
-                  const isComingSoon = platform !== "instagram" && platform !== "facebook";
+                  // Instagram, Facebook, and Twitter are now available
+                  const isComingSoon = platform === "linkedin" || platform === "tiktok";
 
                   return (
                     <Card key={platform} className="relative overflow-hidden">
@@ -369,8 +370,6 @@ export function SocialScheduler({ storeId, userId }: SocialSchedulerProps) {
                         {isComingSoon ? (
                           <div className="space-y-3">
                             <p className="text-sm text-muted-foreground">
-                              {platform === "twitter" &&
-                                "Twitter/X integration is currently in development."}
                               {platform === "linkedin" &&
                                 "LinkedIn integration is currently in development."}
                               {platform === "tiktok" &&

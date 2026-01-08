@@ -1,5 +1,6 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
+import { Id } from "./_generated/dataModel";
 
 /**
  * Get comprehensive statistics for a store
@@ -223,6 +224,329 @@ export const getStoreStudents = query({
     return students
       .sort((a, b) => b.totalSpent - a.totalSpent)
       .slice(0, limit);
+  },
+});
+
+/**
+ * Get students with their course progress for a store
+ */
+export const getStudentsWithProgress = query({
+  args: {
+    storeId: v.string(),
+    limit: v.optional(v.number()),
+  },
+  // Note: returns validator removed to avoid TypeScript deep recursion issue
+  handler: async (ctx, args) => {
+    const limit = args.limit ?? 100;
+
+    // Get all courses for this store
+    const storeCourses = await ctx.db
+      .query("courses")
+      .filter((q) => q.eq(q.field("storeId"), args.storeId))
+      .collect();
+
+    const courseIds = storeCourses.map((c) => c._id);
+
+    // Get all purchases for this store
+    const allPurchases = await ctx.db
+      .query("purchases")
+      .withIndex("by_store_status", (q) => q.eq("storeId", args.storeId))
+      .filter((q) => q.eq(q.field("status"), "completed"))
+      .collect();
+
+    // Get all chapters for the store's courses
+    const allChapters = await ctx.db.query("courseChapters").collect();
+    const courseChaptersMap = new Map<string, number>();
+
+    for (const course of storeCourses) {
+      const chapterCount = allChapters.filter(
+        (ch) => ch.courseId === course._id
+      ).length;
+      courseChaptersMap.set(course._id, chapterCount);
+    }
+
+    // Get all user progress for the store's courses
+    const allUserProgress = await ctx.db.query("userProgress").collect();
+
+    // Group purchases by user
+    const userPurchasesMap = new Map<string, typeof allPurchases>();
+    for (const purchase of allPurchases) {
+      const existing = userPurchasesMap.get(purchase.userId) || [];
+      existing.push(purchase);
+      userPurchasesMap.set(purchase.userId, existing);
+    }
+
+    // Build student list with progress data
+    const students: Array<{
+      clerkId: string;
+      name: string | undefined;
+      email: string | undefined;
+      imageUrl: string | undefined;
+      totalPurchases: number;
+      totalSpent: number;
+      coursesEnrolled: number;
+      productsOwned: number;
+      firstPurchaseDate: number;
+      lastPurchaseDate: number;
+      overallProgress: number;
+      coursesCompleted: number;
+      chaptersCompleted: number;
+      totalChapters: number;
+      lastActivityAt: number | undefined;
+      courseProgress: Array<{
+        courseId: string;
+        courseTitle: string;
+        progress: number;
+        chaptersCompleted: number;
+        totalChapters: number;
+        lastAccessedAt: number | undefined;
+        enrolledAt: number;
+      }>;
+    }> = [];
+
+    for (const [userId, purchases] of userPurchasesMap) {
+      // Get user details
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", userId))
+        .first();
+
+      const totalSpent = purchases.reduce((sum, p) => sum + p.amount, 0);
+      const coursePurchases = purchases.filter((p) => p.productType === "course");
+      const coursesEnrolled = coursePurchases.length;
+      const productsOwned = purchases.filter((p) => p.productType !== "course").length;
+      const purchaseDates = purchases.map((p) => p._creationTime);
+
+      // Calculate progress for each enrolled course
+      const courseProgress: Array<{
+        courseId: string;
+        courseTitle: string;
+        progress: number;
+        chaptersCompleted: number;
+        totalChapters: number;
+        lastAccessedAt: number | undefined;
+        enrolledAt: number;
+      }> = [];
+
+      let totalChaptersCompleted = 0;
+      let totalChaptersAll = 0;
+      let lastActivityAt: number | undefined;
+      let coursesCompleted = 0;
+
+      for (const purchase of coursePurchases) {
+        if (!purchase.courseId) continue;
+
+        const course = storeCourses.find((c) => c._id === purchase.courseId);
+        if (!course) continue;
+
+        const totalChapters = courseChaptersMap.get(course._id) || 0;
+        totalChaptersAll += totalChapters;
+
+        // Get user's progress for this course
+        const userCourseProgress = allUserProgress.filter(
+          (p) => p.userId === userId && p.courseId === course._id
+        );
+
+        const completedChapters = userCourseProgress.filter((p) => p.isCompleted).length;
+        totalChaptersCompleted += completedChapters;
+
+        const progressPercent =
+          totalChapters > 0 ? Math.round((completedChapters / totalChapters) * 100) : 0;
+
+        if (progressPercent === 100) {
+          coursesCompleted++;
+        }
+
+        // Get last accessed time for this course
+        const courseLastAccessed = userCourseProgress
+          .map((p) => p.lastAccessedAt || 0)
+          .sort((a, b) => b - a)[0];
+
+        if (courseLastAccessed && (!lastActivityAt || courseLastAccessed > lastActivityAt)) {
+          lastActivityAt = courseLastAccessed;
+        }
+
+        courseProgress.push({
+          courseId: course._id,
+          courseTitle: course.title,
+          progress: progressPercent,
+          chaptersCompleted: completedChapters,
+          totalChapters,
+          lastAccessedAt: courseLastAccessed || undefined,
+          enrolledAt: purchase._creationTime,
+        });
+      }
+
+      const overallProgress =
+        totalChaptersAll > 0
+          ? Math.round((totalChaptersCompleted / totalChaptersAll) * 100)
+          : 0;
+
+      students.push({
+        clerkId: userId,
+        name: user?.name || undefined,
+        email: user?.email || undefined,
+        imageUrl: user?.imageUrl || undefined,
+        totalPurchases: purchases.length,
+        totalSpent,
+        coursesEnrolled,
+        productsOwned,
+        firstPurchaseDate: Math.min(...purchaseDates),
+        lastPurchaseDate: Math.max(...purchaseDates),
+        overallProgress,
+        coursesCompleted,
+        chaptersCompleted: totalChaptersCompleted,
+        totalChapters: totalChaptersAll,
+        lastActivityAt,
+        courseProgress: courseProgress.sort((a, b) => b.enrolledAt - a.enrolledAt),
+      });
+    }
+
+    // Sort by last activity (most recent first)
+    return students
+      .sort((a, b) => (b.lastActivityAt || 0) - (a.lastActivityAt || 0))
+      .slice(0, limit);
+  },
+});
+
+/**
+ * Get detailed progress for a specific student in a store
+ */
+export const getStudentDetailedProgress = query({
+  args: {
+    storeId: v.string(),
+    studentId: v.string(),
+  },
+  // Note: returns validator removed to avoid TypeScript deep recursion issue
+  handler: async (ctx, args) => {
+    // Get user details
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.studentId))
+      .first();
+
+    // Get all courses for this store
+    const storeCourses = await ctx.db
+      .query("courses")
+      .filter((q) => q.eq(q.field("storeId"), args.storeId))
+      .collect();
+
+    // Get student's purchases for this store's courses
+    const purchases = await ctx.db
+      .query("purchases")
+      .withIndex("by_store_status", (q) => q.eq("storeId", args.storeId))
+      .filter((q) =>
+        q.and(q.eq(q.field("userId"), args.studentId), q.eq(q.field("status"), "completed"))
+      )
+      .collect();
+
+    const coursePurchases = purchases.filter((p) => p.productType === "course" && p.courseId);
+
+    if (coursePurchases.length === 0) {
+      return null;
+    }
+
+    // Get all chapters
+    const allChapters = await ctx.db.query("courseChapters").collect();
+
+    // Get user's progress
+    const userProgress = await ctx.db
+      .query("userProgress")
+      .withIndex("by_userId", (q) => q.eq("userId", args.studentId))
+      .collect();
+
+    const courses: Array<{
+      courseId: string;
+      courseTitle: string;
+      courseSlug: string | undefined;
+      courseImageUrl: string | undefined;
+      enrolledAt: number;
+      progress: number;
+      chaptersCompleted: number;
+      totalChapters: number;
+      timeSpent: number;
+      lastAccessedAt: number | undefined;
+    }> = [];
+
+    let totalTimeSpent = 0;
+    let totalChaptersCompleted = 0;
+    let totalCoursesCompleted = 0;
+
+    for (const purchase of coursePurchases) {
+      const course = storeCourses.find((c) => c._id === purchase.courseId);
+      if (!course) continue;
+
+      // Get chapters for this course
+      const courseChapters = allChapters.filter((ch) => ch.courseId === course._id);
+
+      let courseTimeSpent = 0;
+      let courseChaptersCompleted = 0;
+      let courseLastAccessed: number | undefined;
+
+      for (const chapter of courseChapters) {
+        const progress = userProgress.find((p) => p.chapterId === chapter._id);
+        const isCompleted = progress?.isCompleted || false;
+        const timeSpent = progress?.timeSpent || 0;
+
+        if (isCompleted) {
+          courseChaptersCompleted++;
+          totalChaptersCompleted++;
+        }
+
+        courseTimeSpent += timeSpent;
+        totalTimeSpent += timeSpent;
+
+        if (progress?.lastAccessedAt) {
+          if (!courseLastAccessed || progress.lastAccessedAt > courseLastAccessed) {
+            courseLastAccessed = progress.lastAccessedAt;
+          }
+        }
+      }
+
+      const courseProgress =
+        courseChapters.length > 0
+          ? Math.round((courseChaptersCompleted / courseChapters.length) * 100)
+          : 0;
+
+      if (courseProgress === 100) {
+        totalCoursesCompleted++;
+      }
+
+      courses.push({
+        courseId: course._id,
+        courseTitle: course.title,
+        courseSlug: course.slug,
+        courseImageUrl: course.imageUrl,
+        enrolledAt: purchase._creationTime,
+        progress: courseProgress,
+        chaptersCompleted: courseChaptersCompleted,
+        totalChapters: courseChapters.length,
+        timeSpent: courseTimeSpent,
+        lastAccessedAt: courseLastAccessed,
+      });
+    }
+
+    const averageProgress =
+      courses.length > 0
+        ? Math.round(courses.reduce((sum, c) => sum + c.progress, 0) / courses.length)
+        : 0;
+
+    return {
+      student: {
+        clerkId: args.studentId,
+        name: user?.name,
+        email: user?.email,
+        imageUrl: user?.imageUrl,
+      },
+      courses: courses.sort((a, b) => b.enrolledAt - a.enrolledAt),
+      stats: {
+        totalCoursesEnrolled: courses.length,
+        totalCoursesCompleted,
+        totalChaptersCompleted,
+        totalTimeSpent,
+        averageProgress,
+      },
+    };
   },
 });
 

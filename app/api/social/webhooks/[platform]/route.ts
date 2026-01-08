@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { ConvexHttpClient } from "convex/browser";
-import { api } from "@/convex/_generated/api";
+import { api, internal } from "@/convex/_generated/api";
 
 // Initialize Convex client
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+
+// Type helper for internal API access
+const getInternalClient = () => {
+  // For server-side internal calls, we use the same client
+  // The internal functions are called via actions that have access to internal
+  return convex;
+};
 
 /**
  * Webhook handler for social media platform events
@@ -244,25 +251,23 @@ async function handleFacebookWebhook(payload: any) {
       if (entry.messaging) {
         for (const message of entry.messaging) {
           console.log('💬 Message event:', message);
-          
+
           if (message.message) {
             try {
-              const webhookId = await convex.mutation(api.automation.createSocialWebhook, {
-                platform: payload.object === 'instagram' ? 'instagram' : 'facebook',
-                eventType: `${payload.object}.message`,
-                payload: {
-                  ...message,
-                  entry: entry,
-                },
-                socialAccountId: undefined,
-              });
+              // Route to appropriate platform webhook processor
+              if (payload.object === 'instagram') {
+                // Instagram messages are handled by the instagram webhook processor
+                await convex.action(api.socialDMWebhooks.processInstagramWebhook, {
+                  payload: payload,
+                });
+              } else {
+                // Facebook Messenger messages
+                await convex.action(api.socialDMWebhooks.processFacebookWebhook, {
+                  payload: payload,
+                });
+              }
 
-              // Process for automation triggers
-              await convex.action(api.automation.processSocialWebhookForAutomation, {
-                webhookId,
-              });
-              
-              console.log('✅ Automation processing triggered for message');
+              console.log('✅ DM automation processing triggered');
             } catch (error) {
               console.error('❌ Error processing message for automation:', error);
             }
@@ -275,6 +280,19 @@ async function handleFacebookWebhook(payload: any) {
 
 async function handleTwitterWebhook(payload: any) {
   console.log('Twitter webhook received:', JSON.stringify(payload, null, 2));
+
+  // Handle Direct Messages - route to Convex for automation processing
+  if (payload.direct_message_events && payload.direct_message_events.length > 0) {
+    try {
+      // Process via public action wrapper
+      await convex.action(api.socialDMWebhooks.processTwitterWebhook, {
+        payload,
+      });
+      console.log('✅ Twitter DM webhook processed');
+    } catch (error) {
+      console.error('❌ Error processing Twitter DM:', error);
+    }
+  }
 
   // Handle different Twitter events
   if (payload.tweet_create_events) {

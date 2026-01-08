@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
         break;
 
       case "payment_intent.succeeded":
-        // Handle successful course purchases
+        // Log successful payment (enrollment is handled in checkout.session.completed)
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
         console.log("💰 Payment succeeded:", {
           id: paymentIntent.id,
@@ -92,10 +92,7 @@ export async function POST(request: NextRequest) {
           currency: paymentIntent.currency,
           metadata: paymentIntent.metadata,
         });
-
-        // TODO: Create course enrollment in Convex
-        // This will happen when we implement course purchase flow
-
+        // Note: Course enrollment is created in checkout.session.completed handler
         break;
 
       case "checkout.session.completed":

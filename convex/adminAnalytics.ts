@@ -33,36 +33,53 @@ export const getPlatformOverview = query({
     publishedCourses: v.number(),
     totalEnrollments: v.number(),
     totalStores: v.number(),
+    totalPurchases: v.number(),
+    revenueThisMonth: v.number(),
+    newUsersThisMonth: v.number(),
   }),
   handler: async (ctx, args) => {
     // Verify admin access
     await verifyAdmin(ctx, args.clerkId);
-    
+
     // Fetch all data
     const users = await ctx.db.query("users").collect();
     const courses = await ctx.db.query("courses").collect();
     const digitalProducts = await ctx.db.query("digitalProducts").collect();
     const enrollments = await ctx.db.query("enrollments").collect();
     const stores = await ctx.db.query("stores").collect();
-    
-    // Calculate active users (users with activity in last 30 days)
+    const purchases = await ctx.db.query("purchases").collect();
+
+    // Calculate total revenue from completed purchases
+    const completedPurchases = purchases.filter(p => p.status === "completed");
+    const totalRevenue = completedPurchases.reduce((sum, p) => sum + (p.amount || 0), 0);
+
+    // Calculate revenue this month
     const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const recentPurchases = completedPurchases.filter(p => p._creationTime > thirtyDaysAgo);
+    const revenueThisMonth = recentPurchases.reduce((sum, p) => sum + (p.amount || 0), 0);
+
+    // Calculate active users (users with activity in last 30 days)
     const recentEnrollments = enrollments.filter(e => e._creationTime > thirtyDaysAgo);
-    const activeUserIds = new Set(recentEnrollments.map(e => e.userId));
-    
-    // Calculate total revenue from course analytics
-    const courseAnalytics = await ctx.db.query("courseAnalytics").collect();
-    const totalRevenue = courseAnalytics.reduce((sum, ca) => sum + (ca.revenue || 0), 0);
-    
+    const activeUserIds = new Set([
+      ...recentEnrollments.map(e => e.userId),
+      ...recentPurchases.map(p => p.userId),
+    ]);
+
+    // New users this month
+    const newUsersThisMonth = users.filter(u => u._creationTime > thirtyDaysAgo).length;
+
     return {
       totalUsers: users.length,
       totalCourses: courses.length,
       totalProducts: digitalProducts.length,
-      totalRevenue,
+      totalRevenue: totalRevenue / 100, // Convert from cents to dollars
       activeUsers: activeUserIds.size,
       publishedCourses: courses.filter(c => c.isPublished).length,
       totalEnrollments: enrollments.length,
       totalStores: stores.length,
+      totalPurchases: completedPurchases.length,
+      revenueThisMonth: revenueThisMonth / 100,
+      newUsersThisMonth,
     };
   },
 });
@@ -75,30 +92,40 @@ export const getRevenueOverTime = query({
   returns: v.array(v.object({
     date: v.string(),
     revenue: v.number(),
+    purchases: v.number(),
   })),
   handler: async (ctx, args) => {
     // Verify admin access
     await verifyAdmin(ctx, args.clerkId);
-    // Get all course analytics
-    const courseAnalytics = await ctx.db.query("courseAnalytics").collect();
-    
-    // For now, create mock daily revenue data
-    // In production, you'd track actual transaction timestamps
+
+    // Get all completed purchases
+    const purchases = await ctx.db.query("purchases").collect();
+    const completedPurchases = purchases.filter(p => p.status === "completed");
+
+    // Group purchases by date
     const days = 30;
     const revenueData = [];
-    const totalRevenue = courseAnalytics.reduce((sum, ca) => sum + (ca.revenue || 0), 0);
-    
+
     for (let i = days - 1; i >= 0; i--) {
       const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
-      const dateStr = date.toISOString().split('T')[0];
-      // Distribute revenue with some variance
-      const dailyRevenue = (totalRevenue / days) * (0.7 + Math.random() * 0.6);
+      const dateStr = date.toISOString().split("T")[0];
+      const dayStart = new Date(dateStr).getTime();
+      const dayEnd = dayStart + 24 * 60 * 60 * 1000;
+
+      // Filter purchases for this day
+      const dayPurchases = completedPurchases.filter(
+        p => p._creationTime >= dayStart && p._creationTime < dayEnd
+      );
+
+      const dailyRevenue = dayPurchases.reduce((sum, p) => sum + (p.amount || 0), 0);
+
       revenueData.push({
         date: dateStr,
-        revenue: Math.round(dailyRevenue * 100) / 100,
+        revenue: dailyRevenue / 100, // Convert cents to dollars
+        purchases: dayPurchases.length,
       });
     }
-    
+
     return revenueData;
   },
 });
@@ -306,30 +333,71 @@ export const getRecentActivity = query({
     description: v.string(),
     timestamp: v.number(),
     userId: v.optional(v.string()),
+    amount: v.optional(v.number()),
   })),
   handler: async (ctx, args) => {
     // Verify admin access
     await verifyAdmin(ctx, args.clerkId);
-    const activities = [];
-    
+    const activities: Array<{
+      type: string;
+      description: string;
+      timestamp: number;
+      userId?: string;
+      amount?: number;
+    }> = [];
+
+    // Get recent purchases (most important activity)
+    const purchases = await ctx.db
+      .query("purchases")
+      .order("desc")
+      .take(30);
+
+    for (const purchase of purchases) {
+      if (purchase.status !== "completed") continue;
+
+      let productName = "Unknown Product";
+      if (purchase.courseId) {
+        try {
+          const course = await ctx.db.get(purchase.courseId);
+          if (course) productName = course.title;
+        } catch {
+          // Ignore errors
+        }
+      } else if (purchase.productId) {
+        try {
+          const product = await ctx.db.get(purchase.productId);
+          if (product) productName = product.title;
+        } catch {
+          // Ignore errors
+        }
+      }
+
+      activities.push({
+        type: "purchase",
+        description: `Purchase: "${productName}" for $${((purchase.amount || 0) / 100).toFixed(2)}`,
+        timestamp: purchase._creationTime,
+        userId: purchase.userId,
+        amount: purchase.amount,
+      });
+    }
+
     // Get recent enrollments
     const enrollments = await ctx.db
       .query("enrollments")
       .order("desc")
       .take(20);
-    
+
     for (const enrollment of enrollments) {
-      // courseId is stored as string ID
       let courseTitle = "Unknown Course";
       try {
         const course = await ctx.db.get(enrollment.courseId as any);
-        if (course && 'title' in course) {
+        if (course && "title" in course) {
           courseTitle = course.title as string;
         }
-      } catch (e) {
-        // If it fails, courseId might be invalid
+      } catch {
+        // Ignore errors
       }
-      
+
       activities.push({
         type: "enrollment",
         description: `New enrollment in "${courseTitle}"`,
@@ -337,13 +405,22 @@ export const getRecentActivity = query({
         userId: enrollment.userId,
       });
     }
-    
-    // Get recent courses
-    const courses = await ctx.db
-      .query("courses")
-      .order("desc")
-      .take(20);
-    
+
+    // Get recent user signups
+    const users = await ctx.db.query("users").order("desc").take(15);
+
+    for (const user of users) {
+      activities.push({
+        type: "user_signup",
+        description: `New user: ${user.name || user.firstName || user.email || "Anonymous"}`,
+        timestamp: user._creationTime,
+        userId: user.clerkId,
+      });
+    }
+
+    // Get recent published courses
+    const courses = await ctx.db.query("courses").order("desc").take(15);
+
     for (const course of courses) {
       if (course.isPublished) {
         activities.push({
@@ -354,11 +431,9 @@ export const getRecentActivity = query({
         });
       }
     }
-    
+
     // Sort by timestamp and take top 50
-    return activities
-      .sort((a, b) => b.timestamp - a.timestamp)
-      .slice(0, 50);
+    return activities.sort((a, b) => b.timestamp - a.timestamp).slice(0, 50);
   },
 });
 

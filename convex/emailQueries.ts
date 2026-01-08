@@ -1108,7 +1108,52 @@ export const getEmailLogs = query({
 });
 
 /**
+ * Connect admin Resend account (INTERNAL - expects encrypted API key)
+ */
+export const saveAdminResendConnection = internalMutation({
+  args: {
+    encryptedApiKey: v.string(),
+    fromEmail: v.string(),
+    fromName: v.string(),
+    replyToEmail: v.optional(v.string()),
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Check if admin connection exists
+    const existing = await ctx.db
+      .query("resendConnections")
+      .withIndex("by_type", (q) => q.eq("type", "admin"))
+      .first();
+
+    const data = {
+      type: "admin" as const,
+      userId: args.userId,
+      resendApiKey: args.encryptedApiKey, // Already encrypted
+      fromEmail: args.fromEmail,
+      fromName: args.fromName,
+      replyToEmail: args.replyToEmail,
+      isActive: true,
+      isVerified: false,
+      enableAutomations: true,
+      enableCampaigns: true,
+      updatedAt: Date.now(),
+    };
+
+    if (existing) {
+      await ctx.db.patch(existing._id, data);
+      return existing._id;
+    }
+
+    return await ctx.db.insert("resendConnections", {
+      ...data,
+      createdAt: Date.now(),
+    });
+  },
+});
+
+/**
  * Connect admin Resend account
+ * @deprecated Use the action version via emails.connectAdminResendSecure for encrypted storage
  */
 export const connectAdminResend = mutation({
   args: {
@@ -1125,10 +1170,58 @@ export const connectAdminResend = mutation({
       .withIndex("by_type", (q) => q.eq("type", "admin"))
       .first();
 
+    // Note: API key is stored unencrypted here for backward compatibility
+    // Use emails.connectAdminResendSecure action for encrypted storage
     const data = {
       type: "admin" as const,
       userId: args.userId,
-      resendApiKey: args.resendApiKey, // TODO: Encrypt
+      resendApiKey: args.resendApiKey,
+      fromEmail: args.fromEmail,
+      fromName: args.fromName,
+      replyToEmail: args.replyToEmail,
+      isActive: true,
+      isVerified: false,
+      enableAutomations: true,
+      enableCampaigns: true,
+      updatedAt: Date.now(),
+    };
+
+    if (existing) {
+      await ctx.db.patch(existing._id, data);
+      return existing._id;
+    }
+
+    return await ctx.db.insert("resendConnections", {
+      ...data,
+      createdAt: Date.now(),
+    });
+  },
+});
+
+/**
+ * Connect store Resend configuration (INTERNAL - expects encrypted API key)
+ */
+export const saveStoreResendConnection = internalMutation({
+  args: {
+    storeId: v.id("stores"),
+    encryptedApiKey: v.string(),
+    fromEmail: v.string(),
+    fromName: v.string(),
+    replyToEmail: v.optional(v.string()),
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Check if store connection exists
+    const existing = await ctx.db
+      .query("resendConnections")
+      .withIndex("by_store", (q) => q.eq("storeId", args.storeId))
+      .first();
+
+    const data = {
+      type: "store" as const,
+      storeId: args.storeId,
+      userId: args.userId,
+      resendApiKey: args.encryptedApiKey, // Already encrypted
       fromEmail: args.fromEmail,
       fromName: args.fromName,
       replyToEmail: args.replyToEmail,
@@ -1153,6 +1246,7 @@ export const connectAdminResend = mutation({
 
 /**
  * Connect store Resend configuration
+ * @deprecated Use the action version via emails.connectStoreResendSecure for encrypted storage
  */
 export const connectStoreResend = mutation({
   args: {
@@ -1170,11 +1264,13 @@ export const connectStoreResend = mutation({
       .withIndex("by_store", (q) => q.eq("storeId", args.storeId))
       .first();
 
+    // Note: API key is stored unencrypted here for backward compatibility
+    // Use emails.connectStoreResendSecure action for encrypted storage
     const data = {
       type: "store" as const,
       storeId: args.storeId,
       userId: args.userId,
-      resendApiKey: args.resendApiKey, // TODO: Encrypt
+      resendApiKey: args.resendApiKey,
       fromEmail: args.fromEmail,
       fromName: args.fromName,
       replyToEmail: args.replyToEmail,

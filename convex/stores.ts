@@ -195,9 +195,9 @@ export const createStore = mutation({
       name: args.name,
       slug,
       userId: args.userId,
-      plan: "early_access", // Default to early access (grandfathered unlimited)
+      plan: "free", // Default to free plan - users can upgrade for more features
       planStartedAt: Date.now(),
-      isPublic: true, // Public by default (Early Access plan)
+      isPublic: true, // Public by default
       isPublishedProfile: true, // Published by default
       subscriptionStatus: "active",
     });
