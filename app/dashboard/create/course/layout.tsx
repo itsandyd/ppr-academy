@@ -5,7 +5,7 @@ import { useSearchParams, useRouter, useParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { PhonePreview } from "@/app/(dashboard)/store/components/PhonePreview";
+import { PhonePreview } from "@/components/previews/PhonePreview";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";

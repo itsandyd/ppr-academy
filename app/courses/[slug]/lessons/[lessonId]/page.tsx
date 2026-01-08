@@ -126,9 +126,9 @@ export default async function LessonDetailPage({
         }
       });
 
-      // Redirect enrolled users to the library page for proper progress tracking
+      // Redirect enrolled users to the dashboard course player for proper progress tracking
       if (enrollment) {
-        redirect(`/library/courses/${courseSlug}`);
+        redirect(`/dashboard/courses/${courseSlug}`);
       }
     }
   }

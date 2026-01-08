@@ -168,7 +168,7 @@ export default function CoachingBookingPage({ params }: CoachingBookingPageProps
 
         if (result.success) {
           toast.success("Session booked successfully!");
-          router.push("/library/coaching");
+          router.push("/dashboard/coaching");
         } else if (result.requiresDiscordAuth) {
           toast.error("Please connect Discord first");
         } else {

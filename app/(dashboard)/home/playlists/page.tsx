@@ -725,7 +725,7 @@ export default function PlaylistsPage() {
                 <Music className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
                 <p className="mb-4 text-muted-foreground">You haven't shared any tracks yet</p>
                 <Button asChild>
-                  <a href="/library/share">
+                  <a href="/dashboard">
                     <Plus className="mr-2 h-4 w-4" />
                     Share Your First Track
                   </a>
