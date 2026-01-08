@@ -348,6 +348,7 @@ export default defineSchema({
       )
     ),
     trialEndsAt: v.optional(v.number()),
+    earlyAccessExpiresAt: v.optional(v.number()), // When early access grandfathering ends
     // Copyright Strike System
     copyrightStrikes: v.optional(v.number()), // 0-3 strikes
     lastStrikeAt: v.optional(v.number()), // Timestamp of last strike

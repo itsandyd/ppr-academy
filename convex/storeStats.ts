@@ -3,6 +3,148 @@ import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 
 /**
+ * Get social proof data for a course
+ */
+export const getCourseSocialProof = query({
+  args: { courseId: v.id("courses") },
+  returns: v.object({
+    totalEnrollments: v.number(),
+    enrollmentsThisWeek: v.number(),
+    enrollmentsThisMonth: v.number(),
+    recentEnrollments: v.array(v.object({
+      firstName: v.optional(v.string()),
+      enrolledAt: v.number(),
+    })),
+    averageRating: v.number(),
+    totalReviews: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const oneWeekAgo = now - 7 * 24 * 60 * 60 * 1000;
+    const oneMonthAgo = now - 30 * 24 * 60 * 60 * 1000;
+
+    // Get all purchases for this course
+    const coursePurchases = await ctx.db
+      .query("purchases")
+      .filter((q) => q.eq(q.field("courseId"), args.courseId))
+      .collect();
+
+    const completedPurchases = coursePurchases.filter(p => p.status === "completed");
+    const weeklyPurchases = completedPurchases.filter(p => p._creationTime >= oneWeekAgo);
+    const monthlyPurchases = completedPurchases.filter(p => p._creationTime >= oneMonthAgo);
+
+    // Get recent enrollments with user names (last 5)
+    const recentPurchases = completedPurchases
+      .sort((a, b) => b._creationTime - a._creationTime)
+      .slice(0, 5);
+
+    const recentEnrollments = await Promise.all(
+      recentPurchases.map(async (purchase) => {
+        const user = await ctx.db
+          .query("users")
+          .withIndex("by_clerkId", (q) => q.eq("clerkId", purchase.userId))
+          .first();
+
+        return {
+          firstName: user?.firstName || undefined,
+          enrolledAt: purchase._creationTime,
+        };
+      })
+    );
+
+    // Get reviews for this course
+    const reviews = await ctx.db
+      .query("courseReviews")
+      .filter((q) => q.eq(q.field("courseId"), args.courseId))
+      .collect();
+
+    const avgRating = reviews.length > 0
+      ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+      : 4.8;
+
+    return {
+      totalEnrollments: completedPurchases.length,
+      enrollmentsThisWeek: weeklyPurchases.length,
+      enrollmentsThisMonth: monthlyPurchases.length,
+      recentEnrollments,
+      averageRating: Math.round(avgRating * 10) / 10,
+      totalReviews: reviews.length,
+    };
+  },
+});
+
+/**
+ * Get social proof data for a digital product
+ */
+export const getProductSocialProof = query({
+  args: { productId: v.id("digitalProducts") },
+  returns: v.object({
+    totalPurchases: v.number(),
+    purchasesThisWeek: v.number(),
+    purchasesThisMonth: v.number(),
+    recentPurchases: v.array(v.object({
+      firstName: v.optional(v.string()),
+      purchasedAt: v.number(),
+    })),
+    averageRating: v.number(),
+    totalReviews: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const oneWeekAgo = now - 7 * 24 * 60 * 60 * 1000;
+    const oneMonthAgo = now - 30 * 24 * 60 * 60 * 1000;
+
+    // Get all purchases for this product
+    const productPurchases = await ctx.db
+      .query("purchases")
+      .filter((q) => q.eq(q.field("productId"), args.productId))
+      .collect();
+
+    const completedPurchases = productPurchases.filter(p => p.status === "completed");
+    const weeklyPurchases = completedPurchases.filter(p => p._creationTime >= oneWeekAgo);
+    const monthlyPurchases = completedPurchases.filter(p => p._creationTime >= oneMonthAgo);
+
+    // Get recent purchases with user names (last 5)
+    const recentPurchasesList = completedPurchases
+      .sort((a, b) => b._creationTime - a._creationTime)
+      .slice(0, 5);
+
+    const recentPurchases = await Promise.all(
+      recentPurchasesList.map(async (purchase) => {
+        const user = await ctx.db
+          .query("users")
+          .withIndex("by_clerkId", (q) => q.eq("clerkId", purchase.userId))
+          .first();
+
+        return {
+          firstName: user?.firstName || undefined,
+          purchasedAt: purchase._creationTime,
+        };
+      })
+    );
+
+    // Get reviews for this product
+    const reviews = await ctx.db
+      .query("productReviews")
+      .filter((q) => q.eq(q.field("productId"), args.productId))
+      .collect();
+
+    const avgRating = reviews.length > 0
+      ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+      : 4.8;
+
+    return {
+      totalPurchases: completedPurchases.length,
+      purchasesThisWeek: weeklyPurchases.length,
+      purchasesThisMonth: monthlyPurchases.length,
+      recentPurchases,
+      averageRating: Math.round(avgRating * 10) / 10,
+      totalReviews: reviews.length,
+    };
+  },
+});
+
+/**
  * Get comprehensive statistics for a store
  */
 export const getStoreStats = query({

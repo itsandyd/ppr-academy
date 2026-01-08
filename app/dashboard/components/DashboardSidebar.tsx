@@ -28,6 +28,7 @@ import {
   DollarSign,
   Mail,
   Video,
+  Handshake,
 } from "lucide-react";
 import {
   Sidebar,
@@ -159,6 +160,12 @@ const createLinks: SidebarLink[] = [
     label: "Students",
     icon: Users,
     color: "text-emerald-500",
+  },
+  {
+    href: "/dashboard/affiliates?mode=create",
+    label: "Affiliates",
+    icon: Handshake,
+    color: "text-rose-500",
   },
 ];
 

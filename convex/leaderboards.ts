@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { query } from "./_generated/server";
 
 /**
- * Get top creators by revenue
+ * Get top creators by revenue (using real purchase data)
  */
 export const getTopCreators = query({
   args: {
@@ -21,27 +21,91 @@ export const getTopCreators = query({
   })),
   handler: async (ctx, args) => {
     const limit = args.limit || 10;
-    // TODO: Implement real revenue aggregation
-    // For now, return mock data structure
-    
-    // Get all users with clerkId
-    const users = await ctx.db.query("users").collect();
-    const usersWithClerkId = users.filter(user => user.clerkId);
-    
-    // Mock leaderboard data - only include users with clerkId
-    const leaderboard = usersWithClerkId.slice(0, limit).map((user, index) => ({
-      userId: user.clerkId!, // Now guaranteed to exist
-      rank: index + 1,
-      totalRevenue: Math.floor(Math.random() * 10000),
-      productCount: Math.floor(Math.random() * 20),
-      studentCount: Math.floor(Math.random() * 100),
-      name: user.firstName || user.email || "Creator",
-      avatar: user.imageUrl,
-      badge: index === 0 ? "Top Seller" : index < 3 ? "Rising Star" : undefined
-    }));
+    const period = args.period || "all-time";
 
-    return leaderboard.sort((a, b) => b.totalRevenue - a.totalRevenue)
-      .map((entry, index) => ({ ...entry, rank: index + 1 }));
+    // Calculate period start time
+    const now = Date.now();
+    let periodStart = 0;
+    if (period === "weekly") {
+      periodStart = now - 7 * 24 * 60 * 60 * 1000;
+    } else if (period === "monthly") {
+      periodStart = now - 30 * 24 * 60 * 60 * 1000;
+    }
+
+    // Get all stores
+    const stores = await ctx.db.query("stores").collect();
+
+    // Get all purchases (filtered by period if needed)
+    const allPurchases = await ctx.db.query("purchases").collect();
+    const filteredPurchases = period === "all-time"
+      ? allPurchases
+      : allPurchases.filter(p => p._creationTime >= periodStart);
+
+    // Get all products and courses to map to stores
+    const products = await ctx.db.query("digitalProducts").collect();
+    const courses = await ctx.db.query("courses").collect();
+
+    // Aggregate revenue by store
+    const storeRevenue: Record<string, { revenue: number; students: Set<string>; productCount: number }> = {};
+
+    for (const store of stores) {
+      const storeProducts = products.filter(p => p.storeId === store._id);
+      const storeCourses = courses.filter(c => c.storeId === store._id);
+      const storeProductIds = storeProducts.map(p => p._id);
+      const storeCourseIds = storeCourses.map(c => c._id);
+
+      const storePurchases = filteredPurchases.filter(p =>
+        (p.productId && storeProductIds.includes(p.productId)) ||
+        (p.courseId && storeCourseIds.includes(p.courseId))
+      );
+
+      const revenue = storePurchases.reduce((sum, purchase) => {
+        if (purchase.productId) {
+          const product = storeProducts.find(p => p._id === purchase.productId);
+          return sum + (product?.price || 0);
+        }
+        if (purchase.courseId) {
+          const course = storeCourses.find(c => c._id === purchase.courseId);
+          return sum + (course?.price || 0);
+        }
+        return sum;
+      }, 0);
+
+      if (store.userId) {
+        storeRevenue[store.userId] = {
+          revenue,
+          students: new Set(storePurchases.map(p => p.userId)),
+          productCount: storeProducts.length + storeCourses.length
+        };
+      }
+    }
+
+    // Get user details and build leaderboard
+    const users = await ctx.db.query("users").collect();
+    const leaderboard = Object.entries(storeRevenue)
+      .filter(([_, data]) => data.revenue > 0 || data.productCount > 0)
+      .map(([userId, data]) => {
+        const user = users.find(u => u.clerkId === userId);
+        return {
+          userId,
+          rank: 0,
+          totalRevenue: data.revenue,
+          productCount: data.productCount,
+          studentCount: data.students.size,
+          name: user?.firstName || user?.email || "Creator",
+          avatar: user?.imageUrl,
+          badge: undefined as string | undefined
+        };
+      })
+      .sort((a, b) => b.totalRevenue - a.totalRevenue)
+      .slice(0, limit)
+      .map((entry, index) => ({
+        ...entry,
+        rank: index + 1,
+        badge: index === 0 ? "Top Seller" : index < 3 ? "Rising Star" : undefined
+      }));
+
+    return leaderboard;
   },
 });
 
@@ -94,7 +158,7 @@ export const getTopStudents = query({
 });
 
 /**
- * Get most active users by login streak
+ * Get most active users by learning streak (using real streak data)
  */
 export const getMostActive = query({
   args: {
@@ -110,28 +174,46 @@ export const getMostActive = query({
   })),
   handler: async (ctx, args) => {
     const limit = args.limit || 10;
-    
-    // TODO: Implement real streak tracking
-    // For now, return mock data
-    const users = await ctx.db.query("users").collect();
-    const usersWithClerkId = users.filter(user => user.clerkId);
-    
-    const leaderboard = usersWithClerkId.slice(0, limit).map((user, index) => ({
-      userId: user.clerkId!, // Now guaranteed to exist
-      rank: index + 1,
-      streak: Math.floor(Math.random() * 45) + 1,
-      name: user.firstName || user.email || "User",
-      avatar: user.imageUrl,
-      badge: index === 0 ? "🔥" : undefined
-    }));
 
-    return leaderboard.sort((a, b) => b.streak - a.streak)
-      .map((entry, index) => ({ ...entry, rank: index + 1 }));
+    // Get all learning streaks, sorted by current streak
+    const streaks = await ctx.db
+      .query("learningStreaks")
+      .withIndex("by_current_streak")
+      .order("desc")
+      .take(limit * 2); // Get extra in case some users don't exist
+
+    // Get user details for each streak
+    const users = await ctx.db.query("users").collect();
+
+    const leaderboard = streaks
+      .filter(streak => streak.currentStreak > 0)
+      .map(streak => {
+        const user = users.find(u => u.clerkId === streak.userId);
+        if (!user) return null;
+
+        return {
+          userId: streak.userId,
+          rank: 0,
+          streak: streak.currentStreak,
+          name: user.firstName || user.email || "User",
+          avatar: user.imageUrl,
+          badge: undefined as string | undefined
+        };
+      })
+      .filter((entry): entry is NonNullable<typeof entry> => entry !== null)
+      .slice(0, limit)
+      .map((entry, index) => ({
+        ...entry,
+        rank: index + 1,
+        badge: index === 0 ? "🔥" : entry.streak >= 30 ? "⭐" : entry.streak >= 7 ? "✨" : undefined
+      }));
+
+    return leaderboard;
   },
 });
 
 /**
- * Get user's leaderboard position
+ * Get user's leaderboard position (using real data)
  */
 export const getUserPosition = query({
   args: {
@@ -143,12 +225,85 @@ export const getUserPosition = query({
     percentile: v.number()
   }),
   handler: async (ctx, args) => {
-    // TODO: Implement actual ranking logic
-    // For now, return mock position
-    return {
-      rank: 45,
-      percentile: 82 // Top 18%
-    };
+    if (args.leaderboardType === "students") {
+      // Get all XP records sorted by totalXP
+      const allXP = await ctx.db.query("userXP").collect();
+      const sorted = allXP.sort((a, b) => b.totalXP - a.totalXP);
+      const userIndex = sorted.findIndex(xp => xp.userId === args.userId);
+
+      if (userIndex === -1 || sorted.length === 0) {
+        return { rank: 0, percentile: 0 };
+      }
+
+      const rank = userIndex + 1;
+      const percentile = Math.round(((sorted.length - rank) / sorted.length) * 100);
+      return { rank, percentile };
+    }
+
+    if (args.leaderboardType === "active") {
+      // Get all streaks sorted by currentStreak
+      const allStreaks = await ctx.db.query("learningStreaks").collect();
+      const sorted = allStreaks.sort((a, b) => b.currentStreak - a.currentStreak);
+      const userIndex = sorted.findIndex(s => s.userId === args.userId);
+
+      if (userIndex === -1 || sorted.length === 0) {
+        return { rank: 0, percentile: 0 };
+      }
+
+      const rank = userIndex + 1;
+      const percentile = Math.round(((sorted.length - rank) / sorted.length) * 100);
+      return { rank, percentile };
+    }
+
+    // For creators, calculate based on store revenue
+    const stores = await ctx.db.query("stores").collect();
+    const userStore = stores.find(s => s.userId === args.userId);
+
+    if (!userStore) {
+      return { rank: 0, percentile: 0 };
+    }
+
+    // Get all purchases and calculate revenue per store
+    const purchases = await ctx.db.query("purchases").collect();
+    const products = await ctx.db.query("digitalProducts").collect();
+    const courses = await ctx.db.query("courses").collect();
+
+    const storeRevenues = stores.map(store => {
+      const storeProducts = products.filter(p => p.storeId === store._id);
+      const storeCourses = courses.filter(c => c.storeId === store._id);
+      const storeProductIds = storeProducts.map(p => p._id);
+      const storeCourseIds = storeCourses.map(c => c._id);
+
+      const storePurchases = purchases.filter(p =>
+        (p.productId && storeProductIds.includes(p.productId)) ||
+        (p.courseId && storeCourseIds.includes(p.courseId))
+      );
+
+      const revenue = storePurchases.reduce((sum, purchase) => {
+        if (purchase.productId) {
+          const product = storeProducts.find(p => p._id === purchase.productId);
+          return sum + (product?.price || 0);
+        }
+        if (purchase.courseId) {
+          const course = storeCourses.find(c => c._id === purchase.courseId);
+          return sum + (course?.price || 0);
+        }
+        return sum;
+      }, 0);
+
+      return { storeId: store._id, userId: store.userId, revenue };
+    });
+
+    const sorted = storeRevenues.sort((a, b) => b.revenue - a.revenue);
+    const userIndex = sorted.findIndex(s => s.userId === args.userId);
+
+    if (userIndex === -1 || sorted.length === 0) {
+      return { rank: 0, percentile: 0 };
+    }
+
+    const rank = userIndex + 1;
+    const percentile = Math.round(((sorted.length - rank) / sorted.length) * 100);
+    return { rank, percentile };
   },
 });
 

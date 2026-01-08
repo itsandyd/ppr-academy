@@ -25,6 +25,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { CourseQAChat } from "@/components/course/CourseQAChat";
+import { SocialProofWidget } from "@/components/social-proof/SocialProofWidget";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -215,16 +216,12 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
                   </Button>
                 </div>
 
-                <div className="text-center text-white/80 sm:text-left">
-                  <div className="mb-1 flex items-center justify-center gap-1 sm:justify-start">
-                    <Star className="h-3 w-3 flex-shrink-0 fill-current sm:h-4 sm:w-4" />
-                    <Star className="h-3 w-3 flex-shrink-0 fill-current sm:h-4 sm:w-4" />
-                    <Star className="h-3 w-3 flex-shrink-0 fill-current sm:h-4 sm:w-4" />
-                    <Star className="h-3 w-3 flex-shrink-0 fill-current sm:h-4 sm:w-4" />
-                    <Star className="h-3 w-3 flex-shrink-0 fill-current sm:h-4 sm:w-4" />
-                  </div>
-                  <p className="text-xs text-white sm:text-sm">Join thousands of students</p>
-                </div>
+                <SocialProofWidget
+                  type="course"
+                  id={course._id}
+                  variant="badge"
+                  className="justify-center sm:justify-start [&_span]:text-white [&_div]:bg-white/20 [&_div]:text-white"
+                />
               </div>
             </div>
 
@@ -462,20 +459,12 @@ export function CourseLandingPage({ course, store, creator }: CourseLandingPageP
           {/* Social Proof */}
           <div className="mt-8 border-t border-white/20 pt-6 sm:mt-12 sm:pt-8">
             <p className="mb-4 text-sm text-white/80 sm:text-base">Trusted by creators worldwide</p>
-            <div className="flex items-center justify-center gap-6 sm:gap-8">
-              <div className="text-center">
-                <div className="text-xl font-bold text-white sm:text-2xl">1,000+</div>
-                <div className="text-xs text-white/80 sm:text-sm">Students</div>
-              </div>
-              <div className="text-center">
-                <div className="text-xl font-bold text-white sm:text-2xl">4.9</div>
-                <div className="text-xs text-white/80 sm:text-sm">Rating</div>
-              </div>
-              <div className="text-center">
-                <div className="text-xl font-bold text-white sm:text-2xl">98%</div>
-                <div className="text-xs text-white/80 sm:text-sm">Completion</div>
-              </div>
-            </div>
+            <SocialProofWidget
+              type="course"
+              id={course._id}
+              variant="inline"
+              className="justify-center text-white [&_svg]:text-white [&_span]:text-white"
+            />
           </div>
         </div>
       </div>

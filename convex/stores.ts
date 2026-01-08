@@ -51,6 +51,7 @@ const storeValidator = v.object({
     v.literal("incomplete")
   )),
   trialEndsAt: v.optional(v.number()),
+  earlyAccessExpiresAt: v.optional(v.number()), // When early access grandfathering ends
 });
 
 // Get all stores for a user

@@ -177,7 +177,7 @@ export const updateAchievementProgress = mutation({
 
     // Auto-unlock if progress reached target
     if (args.current >= args.target) {
-      // Get XP reward for this achievement (hardcoded for now)
+      // Get XP reward for this achievement
       const xpRewards: Record<string, number> = {
         "first-product": 50,
         "first-sale": 100,
@@ -198,11 +198,53 @@ export const updateAchievementProgress = mutation({
       };
 
       const xpReward = xpRewards[args.achievementId] || 50;
-      // await ctx.runMutation(api.achievements.unlockAchievement, {
-      //   userId: args.userId,
-      //   achievementId: args.achievementId,
-      //   xpReward
-      // });
+
+      // Check if not already unlocked
+      const achievementRecord = await ctx.db
+        .query("userAchievements")
+        .withIndex("by_userId_and_achievementId", (q) =>
+          q.eq("userId", args.userId).eq("achievementId", args.achievementId)
+        )
+        .unique();
+
+      if (!achievementRecord?.unlocked) {
+        // Unlock the achievement
+        if (achievementRecord) {
+          await ctx.db.patch(achievementRecord._id, {
+            unlocked: true,
+            unlockedAt: Date.now(),
+            progress: undefined
+          });
+        } else {
+          await ctx.db.insert("userAchievements", {
+            userId: args.userId,
+            achievementId: args.achievementId,
+            unlocked: true,
+            unlockedAt: Date.now()
+          });
+        }
+
+        // Award XP
+        const xpRecord = await ctx.db
+          .query("userXP")
+          .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+          .unique();
+
+        const newXP = (xpRecord?.totalXP || 0) + xpReward;
+
+        if (xpRecord) {
+          await ctx.db.patch(xpRecord._id, {
+            totalXP: newXP,
+            lastXPGain: Date.now()
+          });
+        } else {
+          await ctx.db.insert("userXP", {
+            userId: args.userId,
+            totalXP: newXP,
+            lastXPGain: Date.now()
+          });
+        }
+      }
     }
 
     return null;
@@ -210,7 +252,7 @@ export const updateAchievementProgress = mutation({
 });
 
 /**
- * Check and award achievement automatically
+ * Check and award achievement automatically (internal mutation for use in other mutations)
  */
 export const checkAndAwardAchievement = internalMutation({
   args: {
@@ -241,16 +283,58 @@ export const checkAndAwardAchievement = internalMutation({
       "community-contributor": 150
     };
 
-    // await ctx.runMutation(api.achievements.unlockAchievement, {
-    //   userId: args.userId,
-    //   achievementId: args.achievementId,
-    //   xpReward: xpRewards[args.achievementId] || 50
-    // });
+    const xpReward = xpRewards[args.achievementId] || 50;
+
+    // Check if not already unlocked
+    const existing = await ctx.db
+      .query("userAchievements")
+      .withIndex("by_userId_and_achievementId", (q) =>
+        q.eq("userId", args.userId).eq("achievementId", args.achievementId)
+      )
+      .unique();
+
+    if (existing?.unlocked) {
+      return null; // Already unlocked
+    }
+
+    // Unlock the achievement
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        unlocked: true,
+        unlockedAt: Date.now(),
+        progress: undefined
+      });
+    } else {
+      await ctx.db.insert("userAchievements", {
+        userId: args.userId,
+        achievementId: args.achievementId,
+        unlocked: true,
+        unlockedAt: Date.now()
+      });
+    }
+
+    // Award XP
+    const xpRecord = await ctx.db
+      .query("userXP")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .unique();
+
+    const newXP = (xpRecord?.totalXP || 0) + xpReward;
+
+    if (xpRecord) {
+      await ctx.db.patch(xpRecord._id, {
+        totalXP: newXP,
+        lastXPGain: Date.now()
+      });
+    } else {
+      await ctx.db.insert("userXP", {
+        userId: args.userId,
+        totalXP: newXP,
+        lastXPGain: Date.now()
+      });
+    }
 
     return null;
   },
 });
-
-// Helper to import in mutations
-import { api } from "./_generated/api";
 

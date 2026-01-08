@@ -155,6 +155,7 @@ export const getStorePlan = query({
   returns: v.union(
     v.object({
       plan: v.union(v.literal("free"), v.literal("creator"), v.literal("creator_pro"), v.literal("early_access")),
+      effectivePlan: v.union(v.literal("free"), v.literal("creator"), v.literal("creator_pro"), v.literal("early_access")),
       limits: v.any(),
       pricing: v.any(),
       isActive: v.boolean(),
@@ -166,6 +167,9 @@ export const getStorePlan = query({
         v.literal("incomplete")
       )),
       trialEndsAt: v.optional(v.number()),
+      earlyAccessExpiresAt: v.optional(v.number()),
+      earlyAccessExpired: v.boolean(),
+      daysUntilExpiration: v.optional(v.number()),
     }),
     v.null()
   ),
@@ -173,17 +177,37 @@ export const getStorePlan = query({
     const store = await ctx.db.get(args.storeId);
     if (!store) return null;
 
-    const plan = store.plan || "free"; // Default to free plan
-    const limits = PLAN_LIMITS[plan];
-    const pricing = PLAN_PRICING[plan];
+    const storedPlan = store.plan || "free"; // Default to free plan
+    const now = Date.now();
+
+    // Check if early access has expired
+    const earlyAccessExpired = storedPlan === "early_access" &&
+      store.earlyAccessExpiresAt &&
+      store.earlyAccessExpiresAt < now;
+
+    // Effective plan is free if early access expired
+    const effectivePlan = earlyAccessExpired ? "free" : storedPlan;
+
+    const limits = PLAN_LIMITS[effectivePlan];
+    const pricing = PLAN_PRICING[effectivePlan];
+
+    // Calculate days until expiration for early access users
+    let daysUntilExpiration: number | undefined;
+    if (storedPlan === "early_access" && store.earlyAccessExpiresAt && !earlyAccessExpired) {
+      daysUntilExpiration = Math.ceil((store.earlyAccessExpiresAt - now) / (1000 * 60 * 60 * 24));
+    }
 
     return {
-      plan,
+      plan: storedPlan, // Original stored plan
+      effectivePlan, // Plan after considering expiration
       limits,
       pricing,
-      isActive: store.subscriptionStatus === "active" || store.subscriptionStatus === "trialing" || plan === "free" || plan === "early_access",
+      isActive: store.subscriptionStatus === "active" || store.subscriptionStatus === "trialing" || effectivePlan === "free" || (effectivePlan === "early_access" && !earlyAccessExpired),
       subscriptionStatus: store.subscriptionStatus,
       trialEndsAt: store.trialEndsAt,
+      earlyAccessExpiresAt: store.earlyAccessExpiresAt,
+      earlyAccessExpired: earlyAccessExpired || false,
+      daysUntilExpiration,
     };
   },
 });
@@ -203,6 +227,7 @@ export const checkFeatureAccess = query({
     limit: v.optional(v.number()),
     requiresPlan: v.optional(v.union(v.literal("creator"), v.literal("creator_pro"))),
     isAdmin: v.optional(v.boolean()), // Add admin flag to response
+    earlyAccessExpired: v.optional(v.boolean()),
   }),
   handler: async (ctx, args) => {
     const store = await ctx.db.get(args.storeId);
@@ -216,7 +241,7 @@ export const checkFeatureAccess = query({
         .query("users")
         .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
         .unique();
-      
+
       if (user?.admin === true) {
         // Admin has access to everything
         return {
@@ -228,7 +253,16 @@ export const checkFeatureAccess = query({
       }
     }
 
-    const plan = store.plan || "free"; // Default to free plan
+    const storedPlan = store.plan || "free"; // Default to free plan
+    const now = Date.now();
+
+    // Check if early access has expired
+    const earlyAccessExpired = storedPlan === "early_access" &&
+      store.earlyAccessExpiresAt &&
+      store.earlyAccessExpiresAt < now;
+
+    // Use effective plan for feature access
+    const plan = earlyAccessExpired ? "free" : storedPlan;
     const limits = PLAN_LIMITS[plan];
 
     // Check specific features
@@ -561,6 +595,253 @@ export const getPlanUsageStats = query({
           limit: limits.maxEmailSends,
         },
       },
+    };
+  },
+});
+
+// ============== EARLY ACCESS SUNSET MANAGEMENT ==============
+
+/**
+ * Get all early access stores (admin only)
+ */
+export const getEarlyAccessStores = query({
+  args: {
+    clerkId: v.string(),
+  },
+  returns: v.array(v.object({
+    storeId: v.id("stores"),
+    storeName: v.string(),
+    storeSlug: v.string(),
+    userId: v.string(),
+    userName: v.optional(v.string()),
+    userEmail: v.optional(v.string()),
+    planStartedAt: v.optional(v.number()),
+    earlyAccessExpiresAt: v.optional(v.number()),
+    isExpired: v.boolean(),
+    daysUntilExpiration: v.optional(v.number()),
+    productCount: v.number(),
+    courseCount: v.number(),
+    totalRevenue: v.number(),
+  })),
+  handler: async (ctx, args) => {
+    // Check admin
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .unique();
+
+    if (!user?.admin) {
+      return [];
+    }
+
+    const now = Date.now();
+
+    // Get all early access stores
+    const allStores = await ctx.db.query("stores").collect();
+    const earlyAccessStores = allStores.filter(s => s.plan === "early_access");
+
+    // Get stats for each store
+    const results = await Promise.all(
+      earlyAccessStores.map(async (store) => {
+        const storeUser = await ctx.db
+          .query("users")
+          .withIndex("by_clerkId", (q) => q.eq("clerkId", store.userId))
+          .first();
+
+        const products = await ctx.db
+          .query("digitalProducts")
+          .withIndex("by_storeId", (q) => q.eq("storeId", store._id))
+          .collect();
+
+        const courses = await ctx.db
+          .query("courses")
+          .filter((q) => q.eq(q.field("storeId"), store._id))
+          .collect();
+
+        // Calculate revenue
+        const allPurchases = await ctx.db.query("purchases").collect();
+        const productIds = products.map(p => p._id);
+        const courseIds = courses.map(c => c._id);
+        const storePurchases = allPurchases.filter(p =>
+          (p.productId && productIds.includes(p.productId)) ||
+          (p.courseId && courseIds.includes(p.courseId))
+        );
+        const totalRevenue = storePurchases.reduce((sum, p) => sum + p.amount, 0);
+
+        const isExpired = store.earlyAccessExpiresAt
+          ? store.earlyAccessExpiresAt < now
+          : false;
+
+        const daysUntilExpiration = store.earlyAccessExpiresAt && !isExpired
+          ? Math.ceil((store.earlyAccessExpiresAt - now) / (1000 * 60 * 60 * 24))
+          : undefined;
+
+        return {
+          storeId: store._id,
+          storeName: store.name,
+          storeSlug: store.slug,
+          userId: store.userId,
+          userName: storeUser?.name || storeUser?.firstName,
+          userEmail: storeUser?.email,
+          planStartedAt: store.planStartedAt,
+          earlyAccessExpiresAt: store.earlyAccessExpiresAt,
+          isExpired,
+          daysUntilExpiration,
+          productCount: products.length,
+          courseCount: courses.length,
+          totalRevenue,
+        };
+      })
+    );
+
+    return results.sort((a, b) => b.totalRevenue - a.totalRevenue);
+  },
+});
+
+/**
+ * Set early access expiration for a specific store (admin only)
+ */
+export const setEarlyAccessExpiration = mutation({
+  args: {
+    clerkId: v.string(),
+    storeId: v.id("stores"),
+    expiresAt: v.number(),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    // Check admin
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .unique();
+
+    if (!user?.admin) {
+      return { success: false, message: "Admin access required" };
+    }
+
+    const store = await ctx.db.get(args.storeId);
+    if (!store) {
+      return { success: false, message: "Store not found" };
+    }
+
+    if (store.plan !== "early_access") {
+      return { success: false, message: "Store is not on early access plan" };
+    }
+
+    await ctx.db.patch(args.storeId, {
+      earlyAccessExpiresAt: args.expiresAt,
+    });
+
+    const expirationDate = new Date(args.expiresAt).toLocaleDateString();
+    return {
+      success: true,
+      message: `Early access expiration set to ${expirationDate}`,
+    };
+  },
+});
+
+/**
+ * Set early access expiration for ALL early access stores (admin only)
+ * This is for the mass sunset operation
+ */
+export const sunsetAllEarlyAccess = mutation({
+  args: {
+    clerkId: v.string(),
+    daysUntilExpiration: v.number(), // e.g., 90 days from now
+  },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+    affectedStores: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    // Check admin
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .unique();
+
+    if (!user?.admin) {
+      return { success: false, message: "Admin access required", affectedStores: 0 };
+    }
+
+    const expiresAt = Date.now() + (args.daysUntilExpiration * 24 * 60 * 60 * 1000);
+
+    // Get all early access stores without expiration set
+    const allStores = await ctx.db.query("stores").collect();
+    const earlyAccessStores = allStores.filter(
+      s => s.plan === "early_access" && !s.earlyAccessExpiresAt
+    );
+
+    // Set expiration for each
+    await Promise.all(
+      earlyAccessStores.map(store =>
+        ctx.db.patch(store._id, { earlyAccessExpiresAt: expiresAt })
+      )
+    );
+
+    const expirationDate = new Date(expiresAt).toLocaleDateString();
+    return {
+      success: true,
+      message: `Set expiration to ${expirationDate} for ${earlyAccessStores.length} stores`,
+      affectedStores: earlyAccessStores.length,
+    };
+  },
+});
+
+/**
+ * Extend early access for a specific store (admin only)
+ * For special cases where we want to reward loyal users
+ */
+export const extendEarlyAccess = mutation({
+  args: {
+    clerkId: v.string(),
+    storeId: v.id("stores"),
+    additionalDays: v.number(),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+    newExpirationDate: v.optional(v.number()),
+  }),
+  handler: async (ctx, args) => {
+    // Check admin
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .unique();
+
+    if (!user?.admin) {
+      return { success: false, message: "Admin access required" };
+    }
+
+    const store = await ctx.db.get(args.storeId);
+    if (!store) {
+      return { success: false, message: "Store not found" };
+    }
+
+    if (store.plan !== "early_access") {
+      return { success: false, message: "Store is not on early access plan" };
+    }
+
+    // Calculate new expiration
+    const now = Date.now();
+    const currentExpiration = store.earlyAccessExpiresAt || now;
+    const baseDate = currentExpiration > now ? currentExpiration : now;
+    const newExpiration = baseDate + (args.additionalDays * 24 * 60 * 60 * 1000);
+
+    await ctx.db.patch(args.storeId, {
+      earlyAccessExpiresAt: newExpiration,
+    });
+
+    const expirationDate = new Date(newExpiration).toLocaleDateString();
+    return {
+      success: true,
+      message: `Extended early access to ${expirationDate}`,
+      newExpirationDate: newExpiration,
     };
   },
 });

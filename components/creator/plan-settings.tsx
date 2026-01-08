@@ -163,21 +163,43 @@ export function PlanSettings({ storeId }: PlanSettingsProps) {
                 </p>
               )}
               {planData.plan === "early_access" && (
-                <p className="text-sm text-purple-500 font-medium mt-1 flex items-center gap-1">
-                  <Sparkles className="h-4 w-4" /> Grandfathered - Unlimited Forever!
-                </p>
+                planData.earlyAccessExpired ? (
+                  <div className="mt-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+                    <p className="text-sm text-red-600 font-medium flex items-center gap-1">
+                      <Lock className="h-4 w-4" /> Early access has expired
+                    </p>
+                    <p className="text-xs text-red-500 mt-1">
+                      Your account has reverted to the Free plan. Upgrade to continue using Pro features.
+                    </p>
+                  </div>
+                ) : planData.daysUntilExpiration !== undefined ? (
+                  <div className="mt-2 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                    <p className="text-sm text-amber-600 font-medium flex items-center gap-1">
+                      <Calendar className="h-4 w-4" /> {planData.daysUntilExpiration} days remaining
+                    </p>
+                    <p className="text-xs text-amber-500 mt-1">
+                      Your Early Access benefits expire on {new Date(planData.earlyAccessExpiresAt!).toLocaleDateString()}.
+                      Upgrade now to lock in Pro features forever!
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-sm text-purple-500 font-medium mt-1 flex items-center gap-1">
+                    <Sparkles className="h-4 w-4" /> Grandfathered - Unlimited Access
+                  </p>
+                )
               )}
             </div>
-            {planData.plan !== "creator_pro" && planData.plan !== "early_access" && (
-              <Button 
-                size="lg" 
-                className="gap-2"
-                onClick={() => handleUpgrade(planData.plan === "free" ? "creator" : "creator_pro")}
+            {(planData.plan !== "creator_pro" && planData.plan !== "early_access") ||
+             (planData.plan === "early_access" && (planData.earlyAccessExpired || planData.daysUntilExpiration !== undefined)) ? (
+              <Button
+                size="lg"
+                className={`gap-2 ${planData.plan === "early_access" && planData.daysUntilExpiration && planData.daysUntilExpiration <= 30 ? 'bg-amber-500 hover:bg-amber-600' : ''}`}
+                onClick={() => handleUpgrade(planData.effectivePlan === "free" || planData.earlyAccessExpired ? "creator" : "creator_pro")}
                 disabled={isUpgrading}
               >
-                {isUpgrading ? "Processing..." : "Upgrade"} <ArrowRight className="h-4 w-4" />
+                {isUpgrading ? "Processing..." : planData.earlyAccessExpired ? "Upgrade Now" : planData.daysUntilExpiration !== undefined ? "Lock In Pro" : "Upgrade"} <ArrowRight className="h-4 w-4" />
               </Button>
-            )}
+            ) : null}
           </div>
         </CardContent>
       </Card>

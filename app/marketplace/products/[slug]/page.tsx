@@ -26,6 +26,7 @@ import { notFound, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useState } from "react";
 import { toast } from "sonner";
+import { SocialProofWidget } from "@/components/social-proof/SocialProofWidget";
 
 interface ProductPageProps {
   params: Promise<{
@@ -277,6 +278,13 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
                   <Badge className="bg-chart-1/10 text-chart-1">No credit card required</Badge>
                 )}
               </div>
+
+              {/* Social Proof */}
+              <SocialProofWidget
+                type="product"
+                id={product._id}
+                variant="full"
+              />
 
               {/* Benefits */}
               <Card className="border-chart-1/20 bg-gradient-to-br from-chart-1/5 to-chart-4/5 p-6">
