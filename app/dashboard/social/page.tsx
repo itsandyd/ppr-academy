@@ -9,7 +9,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { AlertCircle, Instagram, Wrench } from 'lucide-react';
+import { AlertCircle, Instagram } from 'lucide-react';
+import { SocialMediaTabs } from '@/components/social-media/social-media-tabs';
 
 export const dynamic = 'force-dynamic';
 
@@ -138,36 +139,6 @@ export default function DashboardSocialPage() {
   }
 
   // Show social media management UI
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-2">Social Media</h1>
-        <p className="text-muted-foreground">
-          Schedule posts and automate Instagram DMs to grow your audience
-        </p>
-      </div>
-
-      <Card>
-        <CardContent className="p-8">
-          <div className="text-center space-y-6">
-            <div className="w-20 h-20 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto">
-              <Wrench className="w-10 h-10 text-white" />
-            </div>
-            <div>
-              <h3 className="text-2xl font-bold mb-2">Social Media Features Coming Soon</h3>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
-                We're rebuilding the social media automation features. Check back soon for Instagram DM automation, post scheduling, and more.
-              </p>
-            </div>
-            <Button asChild>
-              <Link href="/dashboard?mode=create">
-                Return to Dashboard
-              </Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
+  return <SocialMediaTabs storeId={storeId} userId={user.id} />;
 }
 

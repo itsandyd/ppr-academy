@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useUser } from "@clerk/nextjs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -47,6 +48,8 @@ import {
   RefreshCw,
   Pencil,
   Power,
+  Megaphone,
+  Loader2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -71,7 +74,7 @@ export default function EmailCampaignsPage() {
   const { user, isLoaded } = useUser();
   const { toast } = useToast();
 
-  const [activeTab, setActiveTab] = useState("sequences");
+  const [activeTab, setActiveTab] = useState("broadcast");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isCreateContactOpen, setIsCreateContactOpen] = useState(false);
   const [isCreateTagOpen, setIsCreateTagOpen] = useState(false);
@@ -114,6 +117,14 @@ export default function EmailCampaignsPage() {
   const [isEnrolling, setIsEnrolling] = useState(false);
   const [renameWorkflowId, setRenameWorkflowId] = useState<string | null>(null);
   const [renameWorkflowName, setRenameWorkflowName] = useState("");
+
+  // Broadcast email state
+  const [broadcastSubject, setBroadcastSubject] = useState("");
+  const [broadcastContent, setBroadcastContent] = useState("");
+  const [selectedBroadcastContacts, setSelectedBroadcastContacts] = useState<Set<string>>(new Set());
+  const [isSendingBroadcast, setIsSendingBroadcast] = useState(false);
+  const [broadcastSearchQuery, setBroadcastSearchQuery] = useState("");
+  const sendBroadcastEmail = useAction(api.emails.sendBroadcastEmail);
 
   if (isLoaded && mode !== "create") {
     router.push("/dashboard?mode=create");
@@ -382,6 +393,81 @@ export default function EmailCampaignsPage() {
     );
   });
 
+  // Filtered contacts for broadcast
+  const filteredBroadcastContacts = contacts?.filter((c: any) => {
+    if (c.status !== "subscribed") return false;
+    if (!broadcastSearchQuery) return true;
+    const query = broadcastSearchQuery.toLowerCase();
+    return (
+      c.email?.toLowerCase().includes(query) ||
+      c.firstName?.toLowerCase().includes(query) ||
+      c.lastName?.toLowerCase().includes(query)
+    );
+  });
+
+  const toggleBroadcastContactSelection = (contactId: string) => {
+    setSelectedBroadcastContacts((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(contactId)) {
+        newSet.delete(contactId);
+      } else {
+        newSet.add(contactId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleAllBroadcastContacts = () => {
+    if (!filteredBroadcastContacts) return;
+    if (selectedBroadcastContacts.size === filteredBroadcastContacts.length) {
+      setSelectedBroadcastContacts(new Set());
+    } else {
+      setSelectedBroadcastContacts(new Set(filteredBroadcastContacts.map((c: any) => c._id)));
+    }
+  };
+
+  const handleSendBroadcast = async () => {
+    if (!broadcastSubject.trim()) {
+      toast({ title: "Subject line required", variant: "destructive" });
+      return;
+    }
+    if (!broadcastContent.trim()) {
+      toast({ title: "Email content required", variant: "destructive" });
+      return;
+    }
+    if (selectedBroadcastContacts.size === 0) {
+      toast({ title: "Select at least one recipient", variant: "destructive" });
+      return;
+    }
+
+    setIsSendingBroadcast(true);
+    try {
+      const result = await sendBroadcastEmail({
+        storeId,
+        subject: broadcastSubject,
+        htmlContent: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">${broadcastContent.replace(/\n/g, "<br>")}<br><br><p style="color: #6b7280; font-size: 12px; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb;"><a href="{{unsubscribeLink}}" style="color: #6b7280;">Unsubscribe</a></p></div>`,
+        contactIds: Array.from(selectedBroadcastContacts) as any[],
+      });
+
+      if (result.success) {
+        toast({ title: "Broadcast sent!", description: result.message });
+        setBroadcastSubject("");
+        setBroadcastContent("");
+        setSelectedBroadcastContacts(new Set());
+      } else {
+        toast({ title: "Failed to send", description: result.message, variant: "destructive" });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Failed to send broadcast",
+        description: error.message || "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingBroadcast(false);
+    }
+  };
+
   return (
     <div className="mx-auto max-w-6xl space-y-4 p-4 md:space-y-6 md:p-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -397,13 +483,21 @@ export default function EmailCampaignsPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 bg-transparent p-0 md:grid md:grid-cols-4 md:gap-0 md:bg-muted md:p-1">
+        <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 bg-transparent p-0 md:grid md:grid-cols-5 md:gap-0 md:bg-muted md:p-1">
+          <TabsTrigger
+            value="broadcast"
+            className="gap-1.5 rounded-md border border-transparent bg-muted px-3 py-1.5 text-sm data-[state=active]:border-border data-[state=active]:bg-background md:gap-2 md:border-0 md:bg-transparent md:px-4 md:py-2 md:data-[state=active]:border-0"
+          >
+            <Megaphone className="h-3.5 w-3.5 md:h-4 md:w-4" />
+            <span className="hidden xs:inline">Broadcast</span>
+            <span className="xs:hidden">Send</span>
+          </TabsTrigger>
           <TabsTrigger
             value="sequences"
             className="gap-1.5 rounded-md border border-transparent bg-muted px-3 py-1.5 text-sm data-[state=active]:border-border data-[state=active]:bg-background md:gap-2 md:border-0 md:bg-transparent md:px-4 md:py-2 md:data-[state=active]:border-0"
           >
             <Send className="h-3.5 w-3.5 md:h-4 md:w-4" />
-            <span className="xs:inline hidden">Sequences</span>
+            <span className="hidden xs:inline">Sequences</span>
             <span className="xs:hidden">Seq</span>
           </TabsTrigger>
           <TabsTrigger
@@ -429,6 +523,163 @@ export default function EmailCampaignsPage() {
             <span className="xs:hidden">Auto</span>
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="broadcast" className="mt-4 space-y-4 md:mt-6">
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* Compose Email */}
+            <div className="space-y-4">
+              <Card>
+                <CardContent className="space-y-4 p-4 md:p-6">
+                  <div>
+                    <h2 className="flex items-center gap-2 text-lg font-semibold">
+                      <Megaphone className="h-5 w-5 text-cyan-600" />
+                      Compose Email
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      Send a one-time email to your subscribers
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="broadcast-subject">Subject Line</Label>
+                    <Input
+                      id="broadcast-subject"
+                      placeholder="Hey {{firstName}}, check this out..."
+                      value={broadcastSubject}
+                      onChange={(e) => setBroadcastSubject(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Use {"{{firstName}}"} or {"{{name}}"} for personalization
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="broadcast-content">Email Content</Label>
+                    <Textarea
+                      id="broadcast-content"
+                      placeholder="Write your message here...
+
+Use {{firstName}} to personalize your email.
+
+The unsubscribe link will be added automatically."
+                      value={broadcastContent}
+                      onChange={(e) => setBroadcastContent(e.target.value)}
+                      className="min-h-[200px]"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between rounded-lg border border-border bg-muted/50 p-3">
+                    <div className="text-sm">
+                      <span className="font-medium">{selectedBroadcastContacts.size}</span>{" "}
+                      recipient{selectedBroadcastContacts.size !== 1 ? "s" : ""} selected
+                    </div>
+                    <Button
+                      onClick={handleSendBroadcast}
+                      disabled={
+                        isSendingBroadcast ||
+                        selectedBroadcastContacts.size === 0 ||
+                        !broadcastSubject.trim() ||
+                        !broadcastContent.trim()
+                      }
+                      className="gap-2"
+                    >
+                      {isSendingBroadcast ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="h-4 w-4" />
+                          Send Broadcast
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Select Recipients */}
+            <div className="space-y-4">
+              <Card className="h-fit">
+                <CardContent className="space-y-4 p-4 md:p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-semibold">Select Recipients</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {filteredBroadcastContacts?.length || 0} subscribed contacts
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={toggleAllBroadcastContacts}
+                      disabled={!filteredBroadcastContacts?.length}
+                    >
+                      {selectedBroadcastContacts.size === filteredBroadcastContacts?.length
+                        ? "Deselect All"
+                        : "Select All"}
+                    </Button>
+                  </div>
+
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      placeholder="Search contacts..."
+                      className="pl-10"
+                      value={broadcastSearchQuery}
+                      onChange={(e) => setBroadcastSearchQuery(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="max-h-[400px] space-y-1 overflow-y-auto">
+                    {!filteredBroadcastContacts || filteredBroadcastContacts.length === 0 ? (
+                      <div className="py-8 text-center text-sm text-muted-foreground">
+                        No subscribed contacts found
+                      </div>
+                    ) : (
+                      filteredBroadcastContacts.slice(0, 100).map((contact: any) => (
+                        <div
+                          key={contact._id}
+                          className={cn(
+                            "flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors",
+                            selectedBroadcastContacts.has(contact._id)
+                              ? "border-primary bg-primary/5"
+                              : "border-transparent hover:bg-muted/50"
+                          )}
+                          onClick={() => toggleBroadcastContactSelection(contact._id)}
+                        >
+                          <Checkbox
+                            checked={selectedBroadcastContacts.has(contact._id)}
+                            onCheckedChange={() => toggleBroadcastContactSelection(contact._id)}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-sm font-medium">
+                              {contact.firstName || contact.lastName
+                                ? `${contact.firstName || ""} ${contact.lastName || ""}`.trim()
+                                : contact.email}
+                            </div>
+                            {(contact.firstName || contact.lastName) && (
+                              <div className="truncate text-xs text-muted-foreground">
+                                {contact.email}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                    {filteredBroadcastContacts && filteredBroadcastContacts.length > 100 && (
+                      <div className="py-2 text-center text-xs text-muted-foreground">
+                        Showing 100 of {filteredBroadcastContacts.length} contacts
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </TabsContent>
 
         <TabsContent value="sequences" className="mt-4 space-y-4 md:mt-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">

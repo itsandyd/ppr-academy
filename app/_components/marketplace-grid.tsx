@@ -40,6 +40,17 @@ const stripHtml = (html: string): string => {
     .trim();
 };
 
+// Helper function to validate URL
+const isValidUrl = (url: string | undefined | null): boolean => {
+  if (!url || typeof url !== "string" || url.trim() === "") return false;
+  try {
+    new URL(url);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 interface ContentItem {
   _id: string;
   title: string;
@@ -176,10 +187,10 @@ export const MarketplaceGrid: FC<MarketplaceGridProps> = ({
 
               <div className="space-y-6">
                 {/* Product Image */}
-                {(selectedProduct.imageUrl || selectedProduct.thumbnail) && (
+                {(isValidUrl(selectedProduct.imageUrl) || isValidUrl(selectedProduct.thumbnail)) && (
                   <div className="relative h-64 overflow-hidden rounded-lg">
                     <Image
-                      src={selectedProduct.imageUrl || selectedProduct.thumbnail || ""}
+                      src={(isValidUrl(selectedProduct.imageUrl) ? selectedProduct.imageUrl : selectedProduct.thumbnail) as string}
                       alt={selectedProduct.title}
                       fill
                       className="object-cover"
@@ -447,9 +458,9 @@ const ContentCard: FC<{ item: ContentItem; index: number; onClick: () => void }>
       >
         {/* Thumbnail */}
         <div className="relative h-52 overflow-hidden bg-gradient-to-br from-muted to-muted/80">
-          {item.thumbnail || item.imageUrl ? (
+          {isValidUrl(item.thumbnail) || isValidUrl(item.imageUrl) ? (
             <Image
-              src={item.thumbnail || item.imageUrl || ""}
+              src={(isValidUrl(item.thumbnail) ? item.thumbnail : item.imageUrl) as string}
               alt={item.title}
               fill
               className="object-cover transition-transform duration-300 group-hover:scale-105"

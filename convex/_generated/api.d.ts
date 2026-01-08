@@ -210,7 +210,6 @@ import type * as userLibrary from "../userLibrary.js";
 import type * as users from "../users.js";
 import type * as vercelDomainManager from "../vercelDomainManager.js";
 import type * as webhooks_instagram from "../webhooks/instagram.js";
-import type * as webhooks_stripe from "../webhooks/stripe.js";
 import type * as wishlists from "../wishlists.js";
 import type * as workflowActions from "../workflowActions.js";
 import type * as workflowHelpers from "../workflowHelpers.js";
@@ -421,7 +420,6 @@ declare const fullApi: ApiFromModules<{
   users: typeof users;
   vercelDomainManager: typeof vercelDomainManager;
   "webhooks/instagram": typeof webhooks_instagram;
-  "webhooks/stripe": typeof webhooks_stripe;
   wishlists: typeof wishlists;
   workflowActions: typeof workflowActions;
   workflowHelpers: typeof workflowHelpers;

@@ -449,3 +449,190 @@ export const testStoreEmailConfig = action({
     }
   },
 });
+
+/**
+ * Send a broadcast email to selected contacts (one-time send, not a campaign)
+ */
+export const sendBroadcastEmail = action({
+  args: {
+    storeId: v.string(),
+    subject: v.string(),
+    htmlContent: v.string(),
+    contactIds: v.array(v.id("emailContacts")),
+    fromName: v.optional(v.string()),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    sent: v.number(),
+    failed: v.number(),
+    skipped: v.number(),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    if (!args.subject.trim()) {
+      return {
+        success: false,
+        sent: 0,
+        failed: 0,
+        skipped: 0,
+        message: "Subject line is required",
+      };
+    }
+
+    if (!args.htmlContent.trim()) {
+      return {
+        success: false,
+        sent: 0,
+        failed: 0,
+        skipped: 0,
+        message: "Email content is required",
+      };
+    }
+
+    if (args.contactIds.length === 0) {
+      return {
+        success: false,
+        sent: 0,
+        failed: 0,
+        skipped: 0,
+        message: "No recipients selected",
+      };
+    }
+
+    const resend = getResendClient();
+    if (!resend) {
+      return {
+        success: false,
+        sent: 0,
+        failed: 0,
+        skipped: 0,
+        message: "Email service not configured",
+      };
+    }
+
+    const fromEmail = process.env.FROM_EMAIL || "noreply@ppracademy.com";
+    const fromName = args.fromName || process.env.FROM_NAME || "PPR Academy";
+    const replyToEmail = process.env.REPLY_TO_EMAIL || fromEmail;
+
+    let sent = 0;
+    let failed = 0;
+    let skipped = 0;
+
+    // Get all contacts
+    const contacts: Array<{
+      _id: any;
+      email: string;
+      firstName?: string;
+      lastName?: string;
+      status: string;
+    }> = await ctx.runMutation(internal.emails.getContactsByIds, {
+      contactIds: args.contactIds,
+    });
+
+    // Check suppression for all emails
+    const emails = contacts.map((c) => c.email);
+    const suppressionResults: Array<{ email: string; suppressed: boolean; reason?: string }> =
+      await ctx.runQuery(internal.emailUnsubscribe.checkSuppressionBatch, { emails });
+    const suppressionMap = new Map(suppressionResults.map((r) => [r.email.toLowerCase(), r]));
+
+    for (const contact of contacts) {
+      try {
+        // Skip unsubscribed contacts
+        if (contact.status !== "subscribed") {
+          skipped++;
+          continue;
+        }
+
+        // Check suppression
+        const suppression = suppressionMap.get(contact.email.toLowerCase());
+        if (suppression?.suppressed) {
+          skipped++;
+          continue;
+        }
+
+        const recipientName =
+          contact.firstName || contact.lastName
+            ? `${contact.firstName || ""} ${contact.lastName || ""}`.trim()
+            : "there";
+
+        const unsubscribeUrl = generateUnsubscribeUrl(contact.email);
+        const listUnsubscribeHeaders = getListUnsubscribeHeaders(contact.email);
+
+        const personalizedHtml = personalizeContent(args.htmlContent, {
+          name: recipientName,
+          email: contact.email,
+          unsubscribeUrl,
+        });
+
+        const personalizedSubject = personalizeContent(args.subject, {
+          name: recipientName,
+          email: contact.email,
+        });
+
+        await resend.emails.send({
+          from: `${fromName} <${fromEmail}>`,
+          to: contact.email,
+          subject: personalizedSubject,
+          html: personalizedHtml,
+          replyTo: replyToEmail,
+          headers: listUnsubscribeHeaders,
+        });
+
+        // Update contact's email sent count
+        await ctx.runMutation(internal.emails.incrementContactEmailsSent, {
+          contactId: contact._id,
+        });
+
+        sent++;
+      } catch (error) {
+        console.error(`Failed to send broadcast to ${contact.email}:`, error);
+        failed++;
+      }
+    }
+
+    return {
+      success: sent > 0,
+      sent,
+      failed,
+      skipped,
+      message:
+        sent > 0
+          ? `Successfully sent ${sent} email${sent !== 1 ? "s" : ""}${failed > 0 ? `, ${failed} failed` : ""}${skipped > 0 ? `, ${skipped} skipped` : ""}`
+          : "Failed to send emails",
+    };
+  },
+});
+
+/**
+ * Get contacts by IDs (internal query for broadcast)
+ */
+export const getContactsByIds = internalMutation({
+  args: {
+    contactIds: v.array(v.id("emailContacts")),
+  },
+  handler: async (ctx, args) => {
+    const contacts = [];
+    for (const id of args.contactIds) {
+      const contact = await ctx.db.get(id);
+      if (contact) {
+        contacts.push(contact);
+      }
+    }
+    return contacts;
+  },
+});
+
+export const incrementContactEmailsSent = internalMutation({
+  args: {
+    contactId: v.id("emailContacts"),
+  },
+  handler: async (ctx, args) => {
+    const contact = await ctx.db.get(args.contactId);
+    if (contact) {
+      await ctx.db.patch(args.contactId, {
+        emailsSent: (contact.emailsSent || 0) + 1,
+        updatedAt: Date.now(),
+      });
+    }
+  },
+});
