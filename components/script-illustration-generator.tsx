@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
@@ -47,7 +47,7 @@ export function ScriptIllustrationGenerator({
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"generate" | "search">("generate");
 
-  const generateIllustrations = useMutation(api.scriptIllustrations.generateScriptIllustrations);
+  const generateIllustrations = useAction(api.scriptIllustrations.generateScriptIllustrations);
   const jobStatus = useQuery(
     api.scriptIllustrationSearch.getJobStatus,
     currentJobId ? { jobId: currentJobId } : "skip"
@@ -386,7 +386,7 @@ function IllustrationSearch({ userId }: { userId: string }) {
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
-  const searchIllustrations = useMutation(api.scriptIllustrationSearch.searchIllustrations);
+  const searchIllustrations = useAction(api.scriptIllustrationSearch.searchIllustrations);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) {

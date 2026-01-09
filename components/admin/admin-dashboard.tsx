@@ -486,7 +486,7 @@ export default function AdminDashboard({
     if (result.success) {
       toast({
         title: "Course Image Updated",
-        description: `Successfully updated image for "${result.course?.title}".`,
+        description: `Successfully updated image for "${(result as { success: true; course?: { title?: string } }).course?.title}".`,
       });
       setCourseForImageUpdate(null);
       setFoundImages([]);
@@ -562,7 +562,7 @@ export default function AdminDashboard({
       if (result.success) {
         toast({
           title: "Success",
-          description: result.message || "Non-playable audio URLs cleared successfully!",
+          description: (result as { success: true; message?: string }).message || "Non-playable audio URLs cleared successfully!",
         });
       } else {
         toast({
@@ -649,7 +649,7 @@ export default function AdminDashboard({
       if (result.success) {
         toast({
           title: "Legacy Audio Cleaned",
-          description: result.message,
+          description: (result as { success: true; message?: string }).message,
         });
       } else {
         toast({

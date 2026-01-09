@@ -1595,7 +1595,7 @@ export const getRelatedProducts = query({
       slug: p.slug,
       price: p.price,
       imageUrl: p.imageUrl,
-      category: p.category,
+      category: p.category || "uncategorized",
       storeId: p.storeId,
     }));
   },

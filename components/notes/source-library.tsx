@@ -240,10 +240,10 @@ export function SourceLibrary({ userId, storeId, folderId, onGenerateNotes }: So
                   <div
                     className={cn(
                       "rounded-md bg-gray-100 p-2 dark:bg-gray-800",
-                      sourceTypeConfig[source.sourceType].color
+                      sourceTypeConfig[source.sourceType as SourceType]?.color
                     )}
                   >
-                    {sourceTypeConfig[source.sourceType].icon}
+                    {sourceTypeConfig[source.sourceType as SourceType]?.icon}
                   </div>
 
                   {/* Content */}
@@ -257,7 +257,7 @@ export function SourceLibrary({ userId, storeId, folderId, onGenerateNotes }: So
 
                     <div className="mt-1 flex items-center gap-2">
                       <Badge variant="secondary" className="text-xs">
-                        {sourceTypeConfig[source.sourceType].label}
+                        {sourceTypeConfig[source.sourceType as SourceType]?.label}
                       </Badge>
                       <span className="text-xs text-gray-500">
                         {formatDistanceToNow(source.createdAt, { addSuffix: true })}

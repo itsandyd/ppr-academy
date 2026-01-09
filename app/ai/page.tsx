@@ -278,7 +278,6 @@ export default function AIAssistantPage() {
   const abortControllerRef = useRef<AbortController | null>(null);
   const activeConversationRef = useRef<string | null>(null);
 
-  // @ts-expect-error Convex useAction type instantiation too deep
   const askMasterAI = useAction((api as any).masterAI.index.askMasterAI);
   const askAgenticAI = useAction((api as any).masterAI.index.askAgenticAI);
   const executeConfirmedActions = useAction((api as any).masterAI.index.executeConfirmedActions);

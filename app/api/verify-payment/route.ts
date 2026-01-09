@@ -48,8 +48,8 @@ export async function POST(request: NextRequest) {
     if (productType === "course" && courseId) {
       try {
         // Fetch course details from Convex
-        const course = await fetchQuery(api.courses.getCourseById, {
-          courseId: courseId as any,
+        const course = await fetchQuery(api.courses.getCourseBySlug, {
+          slug: courseId,
         });
 
         if (!course) {

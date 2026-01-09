@@ -5,14 +5,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { getUserFromClerk } from "@/lib/data";
-// Prisma removed - using Convex instead
+import { fetchQuery } from "convex/nextjs";
+import { api } from "@/convex/_generated/api";
 import Link from "next/link";
 import ContentRenderer from "@/components/content-renderer";
 
 // Force dynamic rendering for this page
 export const dynamic = 'force-dynamic';
-import { 
-  Clock, 
+import {
+  Clock,
   PlayCircle,
   CheckCircle,
   ArrowLeft,
@@ -37,56 +38,64 @@ import {
   GraduationCap
 } from "lucide-react";
 
-export default async function ChapterDetailPage({ 
-  params 
-}: { 
-  params: Promise<{ slug: string; lessonId: string; chapterId: string }> 
+export default async function ChapterDetailPage({
+  params
+}: {
+  params: Promise<{ slug: string; lessonId: string; chapterId: string }>
 }) {
   const { userId: clerkId } = await auth();
   const { slug: courseSlug, lessonId, chapterId } = await params;
 
-  // Get the course and find the specific chapter
-  const course = await prisma.course.findFirst({
-    where: { slug: courseSlug },
-    include: {
-      instructor: true,
-      enrollments: true,
-      category: true,
-      modules: {
-        orderBy: { position: 'asc' },
-        include: {
-          lessons: {
-            orderBy: { position: 'asc' },
-            include: {
-              chapters: {
-                orderBy: { position: 'asc' },
-                select: {
-                  id: true,
-                  title: true,
-                  description: true,
-                  videoUrl: true,
-                  audioUrl: true,
-                  position: true,
-                  isPublished: true,
-                  isFree: true,
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  });
+  // Get the course by slug from Convex
+  const courseData = await fetchQuery(api.courses.getCourseBySlug, { slug: courseSlug });
 
-  if (!course) {
+  if (!courseData) {
     notFound();
   }
+
+  // Get course chapters
+  const chapters = await fetchQuery(api.courses.getCourseChapters, { courseId: courseData._id });
+
+  // Get all modules for this course
+  const courseModules = courseData.modules || [];
+
+  // Build a more complete course structure
+  const course = {
+    ...courseData,
+    id: courseData._id,
+    title: courseData.title,
+    modules: courseModules.map((mod: any, modIdx: number) => ({
+      id: `module-${modIdx}`,
+      title: mod.title,
+      description: mod.description,
+      position: mod.orderIndex,
+      lessons: (mod.lessons || []).map((les: any, lesIdx: number) => ({
+        id: `${courseData._id}-lesson-${modIdx}-${lesIdx}`,
+        title: les.title,
+        description: les.description,
+        position: les.orderIndex,
+        chapters: chapters
+          .filter((ch: any) => ch.lessonId === `${courseData._id}-lesson-${modIdx}-${lesIdx}` ||
+                              (ch.position >= lesIdx * 10 && ch.position < (lesIdx + 1) * 10))
+          .map((ch: any) => ({
+            id: ch._id,
+            title: ch.title,
+            description: ch.description,
+            videoUrl: ch.videoUrl,
+            audioUrl: ch.audioUrl,
+            position: ch.position,
+            isPublished: ch.isPublished ?? true,
+            isFree: ch.isFree ?? false,
+          }))
+      }))
+    }))
+  };
 
   // Find the specific lesson and chapter
   let lesson = null;
   let chapter = null;
   let moduleWithLesson = null;
-  
+
   for (const module of course.modules) {
     const foundLesson = module.lessons.find((l: any) => l.id === lessonId);
     if (foundLesson) {
@@ -97,25 +106,76 @@ export default async function ChapterDetailPage({
     }
   }
 
+  // If not found by ID, try to find by index pattern or directly from chapters array
+  if (!lesson || !chapter) {
+    // Try to find chapter directly in chapters array
+    const foundChapter = chapters.find((ch: any) => ch._id === chapterId);
+    if (foundChapter) {
+      chapter = {
+        id: foundChapter._id,
+        title: foundChapter.title,
+        description: foundChapter.description,
+        videoUrl: foundChapter.videoUrl,
+        audioUrl: foundChapter.audioUrl,
+        position: foundChapter.position,
+        isPublished: foundChapter.isPublished ?? true,
+        isFree: foundChapter.isFree ?? false,
+      };
+
+      // Find a lesson to associate with
+      for (const module of course.modules) {
+        for (const les of module.lessons) {
+          if (les.id.includes(lessonId) || lessonId.includes(les.id) || les.chapters.length > 0) {
+            lesson = les;
+            moduleWithLesson = module;
+            break;
+          }
+        }
+        if (lesson) break;
+      }
+
+      // If still no lesson, create a default one
+      if (!lesson && course.modules.length > 0 && course.modules[0].lessons.length > 0) {
+        lesson = course.modules[0].lessons[0];
+        moduleWithLesson = course.modules[0];
+      }
+    }
+  }
+
   if (!lesson || !moduleWithLesson || !chapter) {
     notFound();
+  }
+
+  // Ensure lesson has chapters array
+  if (!lesson.chapters || lesson.chapters.length === 0) {
+    lesson.chapters = chapters.map((ch: any) => ({
+      id: ch._id,
+      title: ch.title,
+      description: ch.description,
+      videoUrl: ch.videoUrl,
+      audioUrl: ch.audioUrl,
+      position: ch.position,
+      isPublished: ch.isPublished ?? true,
+      isFree: ch.isFree ?? false,
+    }));
   }
 
   // Get current user and enrollment
   let user = null;
   let enrollment = null;
-  
+
   if (clerkId) {
     user = await getUserFromClerk(clerkId);
     if (user) {
-      enrollment = await prisma.enrollment.findUnique({
-        where: {
-          userId_courseId: {
-            userId: user.id,
-            courseId: course.id
-          }
-        }
+      // Check enrollment via Convex
+      const accessCheck = await fetchQuery(api.library.verifyCourseAccess, {
+        userId: clerkId,
+        slug: courseSlug
       });
+
+      if (accessCheck?.hasAccess) {
+        enrollment = { userId: user.id, courseId: course.id };
+      }
     }
   }
 

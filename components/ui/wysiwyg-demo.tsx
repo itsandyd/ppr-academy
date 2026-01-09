@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { WysiwygEditor } from "./wysiwyg-editor";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./card";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 export function WysiwygDemo() {
   const [content, setContent] = useState(`
@@ -60,7 +61,7 @@ export function WysiwygDemo() {
         </CardHeader>
         <CardContent>
           <div className="prose prose-base lg:prose-lg max-w-none">
-            <div dangerouslySetInnerHTML={{ __html: content }} />
+            <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }} />
           </div>
         </CardContent>
       </Card>

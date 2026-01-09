@@ -9,7 +9,8 @@ export const size = {
 export const contentType = "image/png";
 
 // Image generation
-export default async function Image({ params }: { params: { slug: string } }) {
+export default async function Image({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
   return new ImageResponse(
     (
       <div
@@ -47,7 +48,7 @@ export default async function Image({ params }: { params: { slug: string } }) {
               textTransform: "capitalize",
             }}
           >
-            {params.slug.replace(/-/g, " ")}
+            {slug.replace(/-/g, " ")}
           </div>
           <div
             style={{

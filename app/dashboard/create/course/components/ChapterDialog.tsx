@@ -15,6 +15,7 @@ import { useUser } from "@clerk/nextjs";
 import { toast } from "sonner";
 import { cleanTextForSpeech, previewCleanedText } from "@/lib/text-utils";
 import { useCourseCreation } from "../context";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 interface Chapter {
   title: string;
@@ -758,10 +759,10 @@ export function ChapterDialog({
               </div>
               {chapterData.content && (
                 <div className="text-purple-600 dark:text-purple-400 bg-card p-2 sm:p-3 rounded border border-border max-h-24 sm:max-h-32 overflow-y-auto prose prose-sm">
-                  <div dangerouslySetInnerHTML={{ 
-                    __html: chapterData.content.length > 200 
-                      ? chapterData.content.slice(0, 200) + "..." 
-                      : chapterData.content 
+                  <div dangerouslySetInnerHTML={{
+                    __html: sanitizeHtml(chapterData.content.length > 200
+                      ? chapterData.content.slice(0, 200) + "..."
+                      : chapterData.content)
                   }} />
                 </div>
               )}

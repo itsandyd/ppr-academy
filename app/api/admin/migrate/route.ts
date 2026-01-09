@@ -94,13 +94,8 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const { userId } = await auth();
-    if (!userId || !ADMIN_USER_IDS.includes(userId)) {
-      return NextResponse.json(
-        { error: 'Admin access required' },
-        { status: 403 }
-      );
-    }
+    // ✅ SECURITY: Require admin authentication
+    await requireAdmin();
 
     // Return migration status and configuration
     return NextResponse.json({

@@ -45,9 +45,11 @@ export default function ClerkSyncPage() {
     user?.id && adminCheck?.isAdmin ? { clerkId: user.id } : "skip"
   );
 
-  // Sync actions
-  const syncUsers = useAction(api.clerkSync.syncClerkUsers);
-  const quickSync = useAction(api.clerkSync.quickSyncClerkUsers);
+  // Sync actions - cast to any to bypass generated type limitations
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const clerkSyncApi = api.clerkSync as any;
+  const syncUsers = useAction(clerkSyncApi.syncClerkUsers);
+  const quickSync = useAction(clerkSyncApi.quickSyncClerkUsers);
 
   // Redirect non-admin users
   useEffect(() => {

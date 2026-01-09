@@ -1961,3 +1961,60 @@ export const updateEmailStatusFromSync = internalMutation({
     }
   },
 });
+
+// ============================================================================
+// MUTATIONS MOVED FROM emails.ts (Node.js runtime doesn't support mutations)
+// ============================================================================
+
+/**
+ * Get contacts by IDs (internal query for broadcast)
+ */
+export const getContactsByIds = internalMutation({
+  args: {
+    contactIds: v.array(v.id("emailContacts")),
+  },
+  handler: async (ctx, args) => {
+    const contacts = [];
+    for (const id of args.contactIds) {
+      const contact = await ctx.db.get(id);
+      if (contact) {
+        contacts.push(contact);
+      }
+    }
+    return contacts;
+  },
+});
+
+/**
+ * Increment emails sent count for a contact
+ */
+export const incrementContactEmailsSent = internalMutation({
+  args: {
+    contactId: v.id("emailContacts"),
+  },
+  handler: async (ctx, args) => {
+    const contact = await ctx.db.get(args.contactId);
+    if (contact) {
+      await ctx.db.patch(args.contactId, {
+        emailsSent: (contact.emailsSent || 0) + 1,
+        updatedAt: Date.now(),
+      });
+    }
+  },
+});
+
+/**
+ * Update connection API key (internal mutation for migration)
+ */
+export const updateConnectionApiKey = internalMutation({
+  args: {
+    connectionId: v.id("resendConnections"),
+    encryptedApiKey: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.connectionId, {
+      resendApiKey: args.encryptedApiKey,
+      updatedAt: Date.now(),
+    });
+  },
+});

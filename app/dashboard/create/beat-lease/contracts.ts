@@ -149,7 +149,7 @@ ${leaseType === 'exclusive'
 ${leaseType === 'exclusive' && terms.publishingShare ? `
 7. REVENUE SHARING (Exclusive Only)
 • Publishing: ${terms.publishingShare}% Licensee / ${100 - terms.publishingShare}% Producer
-• Master Recording: ${terms.masterShare}% Licensee / ${100 - terms.masterShare}% Producer
+• Master Recording: ${terms.masterShare ?? 50}% Licensee / ${100 - (terms.masterShare ?? 50)}% Producer
 ` : ''}
 
 8. RESTRICTIONS

@@ -833,7 +833,7 @@ export const getSegmentsByTag = query({
       tagName: tag.name,
       displayName: displayNameMap[tag.name] || tag.name,
       description: tag.description,
-      color: tag.color,
+      color: tag.color || "#6B7280",
       contactCount: tag.contactCount,
     }));
   },

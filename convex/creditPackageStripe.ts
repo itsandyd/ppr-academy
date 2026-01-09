@@ -1,7 +1,7 @@
 "use node";
 
 import { v } from "convex/values";
-import { action, internalMutation, internalQuery } from "./_generated/server";
+import { action } from "./_generated/server";
 import { internal } from "./_generated/api";
 import Stripe from "stripe";
 import { Id } from "./_generated/dataModel";
@@ -33,11 +33,22 @@ export const syncCreditPackagesToStripe = action({
       error: v.optional(v.string()),
     })),
   }),
-  handler: async (ctx) => {
+  handler: async (ctx): Promise<{
+    success: boolean;
+    message: string;
+    results: Array<{ packageName: string; stripeProductId?: string; stripePriceId?: string; error?: string }>;
+  }> => {
     const stripe = getStripe();
 
-    // Get all credit packages from database
-    const packages = await ctx.runQuery(internal.creditPackageStripe.getAllCreditPackages, {});
+    const packages: Array<{
+      _id: Id<"creditPackages">;
+      name: string;
+      description?: string;
+      credits: number;
+      bonusCredits?: number;
+      priceUsd: number;
+      stripePriceId?: string;
+    }> = await ctx.runQuery(internal.creditPackageQueries.getAllCreditPackages, {});
 
     if (!packages || packages.length === 0) {
       return {
@@ -56,9 +67,7 @@ export const syncCreditPackagesToStripe = action({
 
     for (const pkg of packages) {
       try {
-        // Check if this package already has valid Stripe IDs
         if (pkg.stripePriceId && pkg.stripePriceId.startsWith("price_") && pkg.stripePriceId.length > 20) {
-          // Verify the price exists in Stripe
           try {
             const existingPrice = await stripe.prices.retrieve(pkg.stripePriceId);
             if (existingPrice && existingPrice.active) {
@@ -71,12 +80,10 @@ export const syncCreditPackagesToStripe = action({
               continue;
             }
           } catch {
-            // Price doesn't exist, create new one
             console.log(`⚠️ ${pkg.name} has invalid Stripe price, creating new one`);
           }
         }
 
-        // Create Stripe product
         const product = await stripe.products.create({
           name: `PPR Academy - ${pkg.name}`,
           description: pkg.description || `${pkg.credits} credits${pkg.bonusCredits ? ` + ${pkg.bonusCredits} bonus` : ""} for PPR Academy`,
@@ -90,7 +97,6 @@ export const syncCreditPackagesToStripe = action({
 
         console.log(`✅ Created Stripe product for ${pkg.name}: ${product.id}`);
 
-        // Create Stripe price
         const priceInCents = Math.round(pkg.priceUsd * 100);
         const price = await stripe.prices.create({
           product: product.id,
@@ -105,8 +111,7 @@ export const syncCreditPackagesToStripe = action({
 
         console.log(`✅ Created Stripe price for ${pkg.name}: ${price.id}`);
 
-        // Update database with Stripe IDs
-        await ctx.runMutation(internal.creditPackageStripe.updatePackageStripeIds, {
+        await ctx.runMutation(internal.creditPackageQueries.updatePackageStripeIds, {
           packageId: pkg._id,
           stripeProductId: product.id,
           stripePriceId: price.id,
@@ -117,11 +122,12 @@ export const syncCreditPackagesToStripe = action({
           stripeProductId: product.id,
           stripePriceId: price.id,
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
         console.error(`❌ Failed to sync ${pkg.name}:`, error);
         results.push({
           packageName: pkg.name,
-          error: error.message || "Unknown error",
+          error: errorMessage,
         });
       }
     }
@@ -146,8 +152,8 @@ export const getPackageStripePriceId = action({
     packageId: v.string(),
   },
   returns: v.union(v.string(), v.null()),
-  handler: async (ctx, args) => {
-    const pkg = await ctx.runQuery(internal.creditPackageStripe.getCreditPackageById, {
+  handler: async (ctx, args): Promise<string | null> => {
+    const pkg: { stripePriceId?: string } | null = await ctx.runQuery(internal.creditPackageQueries.getCreditPackageById, {
       packageId: args.packageId as Id<"creditPackages">,
     });
 
@@ -155,7 +161,6 @@ export const getPackageStripePriceId = action({
       return null;
     }
 
-    // Validate that the price ID looks real (not a placeholder)
     if (pkg.stripePriceId && pkg.stripePriceId.startsWith("price_") && pkg.stripePriceId.length > 20) {
       return pkg.stripePriceId;
     }
@@ -180,11 +185,23 @@ export const createCreditCheckoutSession = action({
     sessionId: v.optional(v.string()),
     error: v.optional(v.string()),
   }),
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{
+    success: boolean;
+    checkoutUrl?: string;
+    sessionId?: string;
+    error?: string;
+  }> => {
     const stripe = getStripe();
 
-    // Get package details
-    const pkg = await ctx.runQuery(internal.creditPackageStripe.getCreditPackageById, {
+    const pkg: {
+      _id: Id<"creditPackages">;
+      name: string;
+      description?: string;
+      credits: number;
+      bonusCredits?: number;
+      priceUsd: number;
+      stripePriceId?: string;
+    } | null = await ctx.runQuery(internal.creditPackageQueries.getCreditPackageById, {
       packageId: args.packageId as Id<"creditPackages">,
     });
 
@@ -195,9 +212,8 @@ export const createCreditCheckoutSession = action({
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
     try {
-      let priceId = pkg.stripePriceId;
+      let priceId: string | undefined = pkg.stripePriceId;
 
-      // If no valid price ID, create on-the-fly (fallback)
       if (!priceId || !priceId.startsWith("price_") || priceId.length < 20) {
         console.log(`⚠️ Creating on-the-fly price for ${pkg.name} (no stored price ID)`);
 
@@ -218,15 +234,13 @@ export const createCreditCheckoutSession = action({
 
         priceId = price.id;
 
-        // Save for future use
-        await ctx.runMutation(internal.creditPackageStripe.updatePackageStripeIds, {
+        await ctx.runMutation(internal.creditPackageQueries.updatePackageStripeIds, {
           packageId: pkg._id,
           stripeProductId: product.id,
           stripePriceId: price.id,
         });
       }
 
-      // Create checkout session
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ["card"],
         line_items: [
@@ -255,55 +269,14 @@ export const createCreditCheckoutSession = action({
         checkoutUrl: session.url || undefined,
         sessionId: session.id,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to create checkout session";
       console.error("❌ Credit checkout error:", error);
       return {
         success: false,
-        error: error.message || "Failed to create checkout session",
+        error: errorMessage,
       };
     }
   },
 });
 
-// ============================================================================
-// INTERNAL QUERIES & MUTATIONS
-// ============================================================================
-
-/**
- * Get all credit packages (internal)
- */
-export const getAllCreditPackages = internalQuery({
-  args: {},
-  handler: async (ctx) => {
-    return await ctx.db.query("creditPackages").collect();
-  },
-});
-
-/**
- * Get a credit package by ID (internal)
- */
-export const getCreditPackageById = internalQuery({
-  args: {
-    packageId: v.id("creditPackages"),
-  },
-  handler: async (ctx, args) => {
-    return await ctx.db.get(args.packageId);
-  },
-});
-
-/**
- * Update Stripe IDs for a credit package (internal)
- */
-export const updatePackageStripeIds = internalMutation({
-  args: {
-    packageId: v.id("creditPackages"),
-    stripeProductId: v.string(),
-    stripePriceId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    await ctx.db.patch(args.packageId, {
-      stripePriceId: args.stripePriceId,
-    });
-    console.log(`✅ Updated ${args.packageId} with Stripe price: ${args.stripePriceId}`);
-  },
-});

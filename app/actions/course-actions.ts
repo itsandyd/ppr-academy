@@ -113,7 +113,8 @@ async function checkAuth() {
   const user = await getUserFromClerk(clerkId);
   if (!user) throw new Error("User not found");
 
-  return user;
+  // Return user with clerkId explicitly typed
+  return { ...user, clerkId };
 }
 
 export async function createCourse(courseData: CourseData) {
@@ -170,7 +171,7 @@ export async function updateCourse(courseId: string, courseData: Partial<CourseD
     if (courseData.isPublished !== undefined) updateData.isPublished = courseData.isPublished;
 
     await convex.mutation(api.courses.updateCourse, {
-      courseId: courseId as Id<"courses">,
+      id: courseId as Id<"courses">,
       ...updateData,
     });
 
@@ -194,6 +195,7 @@ export async function deleteCourse(courseId: string) {
 
     await convex.mutation(api.courses.deleteCourse, {
       courseId: courseId as Id<"courses">,
+      userId: clerkId,
     });
 
     revalidatePath("/courses");
@@ -213,7 +215,7 @@ export async function publishCourse(courseId: string) {
 
     await convex.mutation(api.courses.togglePublished, {
       courseId: courseId as Id<"courses">,
-      isPublished: true,
+      userId: clerkId,
     });
 
     revalidatePath("/courses");
@@ -292,9 +294,22 @@ export async function updateChapterContent(chapterId: string, content: string) {
     const user = await checkAuth();
     if (!user.admin) return { success: false, error: "Admin access required" };
 
-    await convex.mutation(api.courses.createOrUpdateChapter, {
+    // Get chapter to find its courseId
+    const chapter = await convex.query(api.courses.getChapterById, {
       chapterId: chapterId as Id<"courseChapters">,
-      description: content,
+      userId: user.clerkId,
+    });
+
+    if (!chapter) return { success: false, error: "Chapter not found" };
+
+    await convex.mutation(api.courses.createOrUpdateChapter, {
+      courseId: chapter.courseId as Id<"courses">,
+      chapterId: chapterId as Id<"courseChapters">,
+      chapterData: {
+        title: chapter.title,
+        content: content,
+        position: chapter.position,
+      },
     });
 
     revalidatePath(`/courses/*`);
@@ -312,13 +327,24 @@ export async function updateChapter(chapterId: string, updateData: ChapterUpdate
   try {
     const user = await checkAuth();
 
-    await convex.mutation(api.courses.createOrUpdateChapter, {
+    // Get chapter to find its courseId and current data
+    const chapter = await convex.query(api.courses.getChapterById, {
       chapterId: chapterId as Id<"courseChapters">,
-      title: updateData.title,
-      description: updateData.description,
-      videoUrl: updateData.videoUrl,
-      isPublished: updateData.isPublished,
-      isFree: updateData.isFree,
+      userId: user.clerkId,
+    });
+
+    if (!chapter) return { success: false, error: "Chapter not found" };
+
+    await convex.mutation(api.courses.createOrUpdateChapter, {
+      courseId: chapter.courseId as Id<"courses">,
+      lessonId: chapter.lessonId as Id<"courseLessons"> | undefined,
+      chapterId: chapterId as Id<"courseChapters">,
+      chapterData: {
+        title: updateData.title || chapter.title,
+        content: updateData.description || chapter.description || "",
+        videoUrl: updateData.videoUrl,
+        position: chapter.position,
+      },
     });
 
     revalidatePath(`/courses/*`);
@@ -355,7 +381,7 @@ export async function populateCourseSlugs() {
       const uniqueSlug = generateUniqueSlug(baseSlug, [...existingSlugs]);
 
       await convex.mutation(api.courses.updateCourse, {
-        courseId: course._id,
+        id: course._id,
         slug: uniqueSlug,
       });
 
@@ -391,21 +417,22 @@ export async function createChapter(courseId: string, chapterData: CreateChapter
   try {
     const user = await checkAuth();
 
-    const chapterId = await convex.mutation(api.courses.createOrUpdateChapter, {
+    const result = await convex.mutation(api.courses.createOrUpdateChapter, {
       courseId: courseId as Id<"courses">,
-      title: chapterData.title,
-      description: chapterData.description || "",
-      videoUrl: chapterData.videoUrl || undefined,
-      position: chapterData.position,
-      isPublished: chapterData.isPublished || false,
-      isFree: chapterData.isFree || false,
       lessonId: chapterData.lessonId as Id<"courseLessons"> | undefined,
+      chapterId: null,
+      chapterData: {
+        title: chapterData.title,
+        content: chapterData.description || "",
+        videoUrl: chapterData.videoUrl,
+        position: chapterData.position,
+      },
     });
 
     revalidatePath(`/courses/*`);
     revalidatePath("/dashboard");
 
-    return { success: true, chapterId };
+    return { success: true, chapterId: result.chapterId };
   } catch (error) {
     console.error("Error creating chapter:", error);
     return { success: false, error: "Failed to create chapter. Please try again." };
@@ -694,6 +721,7 @@ export async function debugModuleStructure(courseId: string) {
 
     const course = await convex.query(api.courses.getCourseForEdit, {
       courseId: courseId as Id<"courses">,
+      userId: user.clerkId,
     });
 
     return {
@@ -814,10 +842,25 @@ export async function generateChapterAudio(chapterId: string, audioData: Generat
         if (uploadResponse.data) {
           const audioUrl = uploadResponse.data.url;
 
-          await convex.mutation(api.courses.createOrUpdateChapter, {
+          // Get chapter to find its courseId and current data
+          const chapter = await convex.query(api.courses.getChapterById, {
             chapterId: chapterId as Id<"courseChapters">,
-            audioUrl: audioUrl,
+            userId: user.clerkId,
           });
+
+          if (chapter) {
+            await convex.mutation(api.courses.createOrUpdateChapter, {
+              courseId: chapter.courseId as Id<"courses">,
+              lessonId: chapter.lessonId as Id<"courseLessons"> | undefined,
+              chapterId: chapterId as Id<"courseChapters">,
+              chapterData: {
+                title: chapter.title,
+                content: chapter.description || "",
+                position: chapter.position,
+                generatedAudioData: audioUrl,
+              },
+            });
+          }
 
           revalidatePath(`/courses/*`);
           revalidatePath("/dashboard");

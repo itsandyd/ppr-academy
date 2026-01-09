@@ -3,10 +3,10 @@ import { api } from "@/convex/_generated/api";
 
 export async function GET(
   request: Request,
-  { params }: { params: { courseId: string } }
+  { params }: { params: Promise<{ courseId: string }> }
 ) {
   try {
-    const courseId = params.courseId;
+    const { courseId } = await params;
     if (!courseId) {
       return new Response("Course ID is required", { status: 400 });
     }

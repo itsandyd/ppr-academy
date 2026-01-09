@@ -434,7 +434,7 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
               </Link>
             </div>
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              {relatedProducts.map((relatedProduct) => (
+              {relatedProducts.map((relatedProduct: any) => (
                 <Link
                   key={relatedProduct._id}
                   href={`/marketplace/products/${relatedProduct.slug || relatedProduct._id}`}

@@ -219,7 +219,7 @@ export function AdminCreatorsView({ clerkId }: AdminCreatorsViewProps) {
         </Card>
       ) : (
         <Accordion type="single" collapsible className="space-y-3">
-          {filteredCreators.map((creator, index) => (
+          {filteredCreators.map((creator: any, index: number) => (
             <AccordionItem
               key={creator.userId}
               value={creator.userId}
@@ -317,7 +317,7 @@ export function AdminCreatorsView({ clerkId }: AdminCreatorsViewProps) {
                       Stores ({creator.stores.length})
                     </h4>
                     <div className="grid gap-2">
-                      {creator.stores.map((store) => (
+                      {creator.stores.map((store: any) => (
                         <div
                           key={store._id}
                           className="flex items-center justify-between rounded-xl border border-border/50 bg-muted/30 p-4 transition-colors hover:border-border"
@@ -365,7 +365,7 @@ export function AdminCreatorsView({ clerkId }: AdminCreatorsViewProps) {
                       Courses ({creator.courses.length})
                     </h4>
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                      {creator.courses.map((course) => (
+                      {creator.courses.map((course: any) => (
                         <div
                           key={course._id}
                           className="group rounded-xl border border-border/50 bg-muted/30 p-4 transition-colors hover:border-border"
@@ -413,7 +413,7 @@ export function AdminCreatorsView({ clerkId }: AdminCreatorsViewProps) {
                       Digital Products ({creator.digitalProducts.length})
                     </h4>
                     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                      {creator.digitalProducts.map((product) => (
+                      {creator.digitalProducts.map((product: any) => (
                         <div
                           key={product._id}
                           className="group rounded-xl border border-border/50 bg-muted/30 p-4 transition-colors hover:border-border"

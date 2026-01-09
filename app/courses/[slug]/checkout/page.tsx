@@ -109,11 +109,11 @@ export default function CourseCheckoutPage() {
   }
 
   return (
-    <CourseCheckout 
-      course={course}
-      store={store}
+    <CourseCheckout
+      course={course as any}
+      store={store as any}
       creator={creator}
-      user={user} // Pass user data to auto-populate form
+      user={user as any}
     />
   );
 }

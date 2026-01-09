@@ -126,7 +126,7 @@ export const askMasterAI = action({
             conversationId: args.conversationId as Id<"aiConversations"> | undefined,
           }
         );
-        console.log(`   ✅ Goal: "${conversationGoal.originalIntent}"`);
+        console.log(`   ✅ Goal: "${conversationGoal?.originalIntent}"`);
       } catch (err) {
         console.warn("Failed to extract conversation goal:", err);
       }
@@ -518,6 +518,7 @@ ${currentCriticOutput.issues.map((i) => `- Fix ${i.type}: ${i.description}`).joi
  * Quick AI query with default settings
  * For simpler use cases that don't need the full pipeline configuration
  */
+// @ts-expect-error - Circular type reference in masterAI module
 export const quickAsk = action({
   args: {
     question: v.string(),

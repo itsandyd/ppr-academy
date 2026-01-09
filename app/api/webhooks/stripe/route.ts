@@ -10,7 +10,8 @@ const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
 export async function POST(request: NextRequest) {
   const body = await request.text();
-  const signature = headers().get("stripe-signature")!;
+  const headersList = await headers();
+  const signature = headersList.get("stripe-signature")!
 
   let event: Stripe.Event;
 
@@ -373,7 +374,7 @@ export async function POST(request: NextRequest) {
 
       case "customer.subscription.updated":
         // Handle subscription status changes
-        const updatedSubscription = event.data.object as Stripe.Subscription;
+        const updatedSubscription = event.data.object as any;
         console.log("🔄 Subscription updated:", {
           id: updatedSubscription.id,
           status: updatedSubscription.status,
@@ -436,7 +437,7 @@ export async function POST(request: NextRequest) {
 
       case "invoice.payment_succeeded":
         // Handle successful subscription renewal
-        const invoice = event.data.object as Stripe.Invoice;
+        const invoice = event.data.object as any;
         if (invoice.subscription) {
           console.log("💰 Subscription payment succeeded:", {
             subscriptionId: invoice.subscription,
@@ -449,7 +450,7 @@ export async function POST(request: NextRequest) {
 
       case "invoice.payment_failed":
         // Handle failed subscription payment
-        const failedInvoice = event.data.object as Stripe.Invoice;
+        const failedInvoice = event.data.object as any;
         if (failedInvoice.subscription) {
           console.log("❌ Subscription payment failed:", {
             subscriptionId: failedInvoice.subscription,
@@ -504,14 +505,14 @@ export async function POST(request: NextRequest) {
         });
         break;
 
-      case "transfer.paid":
-        // When transfer is completed
-        const paidTransfer = event.data.object as Stripe.Transfer;
-        console.log("✅ Transfer completed:", paidTransfer.id);
-        break;
-
       default:
-        console.log("ℹ️ Unhandled event type:", event.type);
+        if ((event.type as string) === "transfer.paid") {
+          // When transfer is completed
+          const paidTransfer = event.data.object as Stripe.Transfer;
+          console.log("✅ Transfer completed:", paidTransfer.id);
+        } else {
+          console.log("ℹ️ Unhandled event type:", event.type);
+        }
     }
 
     return NextResponse.json({ received: true });

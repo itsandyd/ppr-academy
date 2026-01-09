@@ -334,7 +334,7 @@ export function CreatorDashboardV2({
       {/* Welcome Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-dark mb-2">
-          Welcome back, {user.firstName || user.email}!
+          Welcome back, {user.firstName || user.primaryEmailAddress?.emailAddress || 'Creator'}!
         </h1>
         <p className="text-slate-600">
           {features.useNewMarketplace 

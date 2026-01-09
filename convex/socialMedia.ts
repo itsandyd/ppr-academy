@@ -3,6 +3,28 @@ import { query, mutation, action, internalQuery, internalMutation } from "./_gen
 import { Id } from "./_generated/dataModel";
 
 /**
+ * Get media URLs from storage IDs
+ */
+export const getMediaUrls = query({
+  args: {
+    storageIds: v.array(v.id("_storage")),
+  },
+  returns: v.array(v.union(v.string(), v.null())),
+  handler: async (ctx, args) => {
+    const urls = await Promise.all(
+      args.storageIds.map(async (storageId) => {
+        try {
+          return await ctx.storage.getUrl(storageId);
+        } catch {
+          return null;
+        }
+      })
+    );
+    return urls;
+  },
+});
+
+/**
  * Get social media accounts for a store
  */
 export const getSocialAccounts = query({
@@ -410,6 +432,91 @@ export const deleteScheduledPost = mutation({
 });
 
 /**
+ * Create a scheduled post
+ */
+export const createScheduledPost = mutation({
+  args: {
+    storeId: v.string(),
+    userId: v.string(),
+    socialAccountId: v.id("socialAccounts"),
+    content: v.string(),
+    postType: v.optional(v.string()),
+    mediaStorageIds: v.optional(v.array(v.id("_storage"))),
+    scheduledFor: v.optional(v.number()),
+    hashtags: v.optional(v.array(v.string())),
+    location: v.optional(v.string()),
+  },
+  returns: v.id("scheduledPosts"),
+  handler: async (ctx, args) => {
+    const postId = await ctx.db.insert("scheduledPosts", {
+      storeId: args.storeId,
+      userId: args.userId,
+      socialAccountId: args.socialAccountId,
+      content: args.content,
+      postType: args.postType || "post",
+      mediaStorageIds: args.mediaStorageIds || [],
+      scheduledFor: args.scheduledFor || Date.now(),
+      hashtags: args.hashtags || [],
+      location: args.location,
+      status: args.scheduledFor ? "scheduled" : "draft",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+    return postId;
+  },
+});
+
+/**
+ * Update a scheduled post
+ */
+export const updateScheduledPost = mutation({
+  args: {
+    postId: v.id("scheduledPosts"),
+    userId: v.string(),
+    content: v.optional(v.string()),
+    postType: v.optional(v.string()),
+    mediaStorageIds: v.optional(v.array(v.id("_storage"))),
+    scheduledFor: v.optional(v.number()),
+    hashtags: v.optional(v.array(v.string())),
+    location: v.optional(v.string()),
+    status: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const post = await ctx.db.get(args.postId);
+    if (!post) {
+      throw new Error("Post not found");
+    }
+    if (post.userId !== args.userId) {
+      throw new Error("Not authorized to update this post");
+    }
+
+    const updates: Record<string, any> = { updatedAt: Date.now() };
+    if (args.content !== undefined) updates.content = args.content;
+    if (args.postType !== undefined) updates.postType = args.postType;
+    if (args.mediaStorageIds !== undefined) updates.mediaStorageIds = args.mediaStorageIds;
+    if (args.scheduledFor !== undefined) updates.scheduledFor = args.scheduledFor;
+    if (args.hashtags !== undefined) updates.hashtags = args.hashtags;
+    if (args.location !== undefined) updates.location = args.location;
+    if (args.status !== undefined) updates.status = args.status;
+
+    await ctx.db.patch(args.postId, updates);
+    return null;
+  },
+});
+
+/**
+ * Generate upload URL for media files
+ */
+export const generateMediaUploadUrl = mutation({
+  args: {},
+  returns: v.string(),
+  handler: async (ctx) => {
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+/**
  * Disconnect/remove a social account
  */
 export const disconnectSocialAccount = mutation({
@@ -454,12 +561,38 @@ export const updateAccountLabel = mutation({
     if (account.userId !== args.userId) {
       throw new Error("Not authorized to update this account");
     }
-    
+
     // Update the label
     await ctx.db.patch(args.accountId, {
       accountLabel: args.label,
     });
-    
+
+    return null;
+  },
+});
+
+/**
+ * Delete social account permanently
+ */
+export const deleteSocialAccount = mutation({
+  args: {
+    accountId: v.id("socialAccounts"),
+    userId: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    // Verify the account exists and belongs to this user
+    const account = await ctx.db.get(args.accountId);
+    if (!account) {
+      throw new Error("Account not found");
+    }
+    if (account.userId !== args.userId) {
+      throw new Error("Not authorized to delete this account");
+    }
+
+    // Delete the account
+    await ctx.db.delete(args.accountId);
+
     return null;
   },
 });

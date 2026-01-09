@@ -27,6 +27,30 @@ import {
 } from "lucide-react";
 import { QuizPlayer } from "./QuizPlayer";
 
+interface Quiz {
+  _id: Id<"quizzes">;
+  title: string;
+  description?: string;
+  courseId: Id<"courses">;
+  chapterId?: string;
+  instructorId: string;
+  quizType: "practice" | "assessment" | "final_exam";
+  timeLimit?: number;
+  maxAttempts?: number;
+  passingScore: number;
+  requiredToPass: boolean;
+  totalPoints: number;
+  showCorrectAnswers: boolean;
+  showScoreImmediately: boolean;
+  shuffleQuestions: boolean;
+  shuffleAnswers: boolean;
+  isPublished: boolean;
+  availableFrom?: number;
+  availableUntil?: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
 interface CourseQuizzesProps {
   courseId: Id<"courses">;
   chapterId?: string;
@@ -51,9 +75,8 @@ export function CourseQuizzes({ courseId, chapterId, compact = false }: CourseQu
     return null;
   }
 
-  // Filter by chapter if provided
   const filteredQuizzes = chapterId
-    ? quizzes.filter((q) => q.chapterId === chapterId)
+    ? quizzes.filter((q: Quiz) => q.chapterId === chapterId)
     : quizzes;
 
   if (filteredQuizzes.length === 0) {
@@ -72,7 +95,7 @@ export function CourseQuizzes({ courseId, chapterId, compact = false }: CourseQu
   if (compact) {
     return (
       <div className="space-y-2">
-        {filteredQuizzes.map((quiz) => {
+        {filteredQuizzes.map((quiz: Quiz) => {
           const result = resultsMap.get(quiz._id);
           const isPassed = result?.hasPassed;
 
@@ -151,7 +174,7 @@ export function CourseQuizzes({ courseId, chapterId, compact = false }: CourseQu
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {filteredQuizzes.map((quiz) => {
+        {filteredQuizzes.map((quiz: Quiz) => {
           const result = resultsMap.get(quiz._id);
           const isPassed = result?.hasPassed;
 

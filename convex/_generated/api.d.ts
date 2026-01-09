@@ -60,6 +60,7 @@ import type * as courseNotificationQueries from "../courseNotificationQueries.js
 import type * as courseNotifications from "../courseNotifications.js";
 import type * as courses from "../courses.js";
 import type * as creatorPlans from "../creatorPlans.js";
+import type * as creditPackageQueries from "../creditPackageQueries.js";
 import type * as creditPackageStripe from "../creditPackageStripe.js";
 import type * as credits from "../credits.js";
 import type * as crons from "../crons.js";
@@ -195,6 +196,7 @@ import type * as scriptIllustrations from "../scriptIllustrations.js";
 import type * as seedCreditPackages from "../seedCreditPackages.js";
 import type * as sendTimeOptimization from "../sendTimeOptimization.js";
 import type * as socialDM from "../socialDM.js";
+import type * as socialDMQueries from "../socialDMQueries.js";
 import type * as socialDMWebhooks from "../socialDMWebhooks.js";
 import type * as socialMedia from "../socialMedia.js";
 import type * as socialMediaActions from "../socialMediaActions.js";
@@ -275,6 +277,7 @@ declare const fullApi: ApiFromModules<{
   courseNotifications: typeof courseNotifications;
   courses: typeof courses;
   creatorPlans: typeof creatorPlans;
+  creditPackageQueries: typeof creditPackageQueries;
   creditPackageStripe: typeof creditPackageStripe;
   credits: typeof credits;
   crons: typeof crons;
@@ -410,6 +413,7 @@ declare const fullApi: ApiFromModules<{
   seedCreditPackages: typeof seedCreditPackages;
   sendTimeOptimization: typeof sendTimeOptimization;
   socialDM: typeof socialDM;
+  socialDMQueries: typeof socialDMQueries;
   socialDMWebhooks: typeof socialDMWebhooks;
   socialMedia: typeof socialMedia;
   socialMediaActions: typeof socialMediaActions;

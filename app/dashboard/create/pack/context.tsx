@@ -301,8 +301,8 @@ export function PackCreationProvider({ children }: { children: React.ReactNode }
         if (result) {
           setState(prev => ({ ...prev, packId: result }));
           const currentStep = searchParams.get("step") || "basics";
-          const packType = searchParams.get("type") || data.packType || "sample-pack";
-          router.replace(`/dashboard/create/pack?type=${packType}&packId=${result}&step=${currentStep}`);
+          const currentPackType = searchParams.get("type") || state.data.packType || "sample-pack";
+          router.replace(`/dashboard/create/pack?type=${currentPackType}&packId=${result}&step=${currentStep}`);
         }
       }
 

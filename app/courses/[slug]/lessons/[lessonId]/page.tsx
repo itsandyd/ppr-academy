@@ -5,14 +5,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { getUserFromClerk } from "@/lib/data";
-// Prisma removed - using Convex instead
+import { fetchQuery } from "convex/nextjs";
+import { api } from "@/convex/_generated/api";
 import Link from "next/link";
 import ContentRenderer from "@/components/content-renderer";
 
 // Force dynamic rendering for this page
 export const dynamic = 'force-dynamic';
-import { 
-  Clock, 
+import {
+  Clock,
   PlayCircle,
   CheckCircle,
   ArrowLeft,
@@ -48,55 +49,62 @@ interface Chapter {
   isFree: boolean;
 }
 
-export default async function LessonDetailPage({ 
-  params 
-}: { 
-  params: Promise<{ slug: string; lessonId: string }> 
+export default async function LessonDetailPage({
+  params
+}: {
+  params: Promise<{ slug: string; lessonId: string }>
 }) {
   const { userId: clerkId } = await auth();
   const { slug: courseSlug, lessonId } = await params;
 
-  // Get the course and find the specific lesson
-  const course = await prisma.course.findFirst({
-    where: { slug: courseSlug },
-    include: {
-      instructor: true,
-      enrollments: true,
-      category: true,
-      modules: {
-        orderBy: { position: 'asc' },
-        include: {
-          lessons: {
-            orderBy: { position: 'asc' },
-            include: {
-              chapters: {
-                orderBy: { position: 'asc' },
-                select: {
-                  id: true,
-                  title: true,
-                  description: true,
-                  videoUrl: true,
-                  audioUrl: true,
-                  position: true,
-                  isPublished: true,
-                  isFree: true,
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  });
+  // Get the course by slug from Convex
+  const courseData = await fetchQuery(api.courses.getCourseBySlug, { slug: courseSlug });
 
-  if (!course) {
+  if (!courseData) {
     notFound();
   }
+
+  // Get course modules with lessons and chapters
+  const modules = await fetchQuery(api.courses.getCourseChapters, { courseId: courseData._id });
+
+  // Get all modules for this course
+  const courseModules = courseData.modules || [];
+
+  // Build a more complete course structure
+  const course = {
+    ...courseData,
+    id: courseData._id,
+    modules: courseModules.map((mod: any, modIdx: number) => ({
+      id: `module-${modIdx}`,
+      title: mod.title,
+      description: mod.description,
+      position: mod.orderIndex,
+      lessons: (mod.lessons || []).map((les: any, lesIdx: number) => ({
+        id: `${courseData._id}-lesson-${modIdx}-${lesIdx}`,
+        title: les.title,
+        description: les.description,
+        position: les.orderIndex,
+        chapters: modules
+          .filter((ch: any) => ch.lessonId === `${courseData._id}-lesson-${modIdx}-${lesIdx}` ||
+                              (ch.position >= lesIdx * 10 && ch.position < (lesIdx + 1) * 10))
+          .map((ch: any) => ({
+            id: ch._id,
+            title: ch.title,
+            description: ch.description,
+            videoUrl: ch.videoUrl,
+            audioUrl: ch.audioUrl,
+            position: ch.position,
+            isPublished: ch.isPublished ?? true,
+            isFree: ch.isFree ?? false,
+          }))
+      }))
+    }))
+  };
 
   // Find the specific lesson
   let lesson = null;
   let moduleWithLesson = null;
-  
+
   for (const module of course.modules) {
     const foundLesson = module.lessons.find((l: any) => l.id === lessonId);
     if (foundLesson) {
@@ -106,28 +114,56 @@ export default async function LessonDetailPage({
     }
   }
 
+  // If not found by ID, try to find by index pattern
+  if (!lesson) {
+    // The lessonId might be a Convex ID from courseLessons table
+    // Try to find by matching with existing lessons
+    for (const module of course.modules) {
+      for (const les of module.lessons) {
+        if (les.id.includes(lessonId) || lessonId.includes(les.id)) {
+          lesson = les;
+          moduleWithLesson = module;
+          break;
+        }
+      }
+      if (lesson) break;
+    }
+  }
+
   if (!lesson || !moduleWithLesson) {
     notFound();
+  }
+
+  // Ensure lesson has chapters array
+  if (!lesson.chapters) {
+    lesson.chapters = modules.map((ch: any) => ({
+      id: ch._id,
+      title: ch.title,
+      description: ch.description,
+      videoUrl: ch.videoUrl,
+      audioUrl: ch.audioUrl,
+      position: ch.position,
+      isPublished: ch.isPublished ?? true,
+      isFree: ch.isFree ?? false,
+    }));
   }
 
   // Get current user and enrollment
   let user = null;
   let enrollment = null;
-  
+
   if (clerkId) {
     user = await getUserFromClerk(clerkId);
     if (user) {
-      enrollment = await prisma.enrollment.findUnique({
-        where: {
-          userId_courseId: {
-            userId: user.id,
-            courseId: course.id
-          }
-        }
+      // Check enrollment via Convex
+      const accessCheck = await fetchQuery(api.library.verifyCourseAccess, {
+        userId: clerkId,
+        slug: courseSlug
       });
 
-      // Redirect enrolled users to the dashboard course player for proper progress tracking
-      if (enrollment) {
+      if (accessCheck?.hasAccess) {
+        enrollment = { userId: user.id, courseId: course.id };
+        // Redirect enrolled users to the dashboard course player for proper progress tracking
         redirect(`/dashboard/courses/${courseSlug}`);
       }
     }
@@ -744,12 +780,12 @@ export default async function LessonDetailPage({
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
-                  {course.instructor ? (
+                  {course.instructorId ? (
                     <div className="space-y-4">
                       <div className="flex items-center gap-4">
                         <div className="relative">
                           <div className="w-16 h-16 bg-gradient-to-br from-primary via-purple-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white font-bold text-lg shadow-lg">
-                            {course.instructor.firstName?.[0]}{course.instructor.lastName?.[0]}
+                            P
                           </div>
                           <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
                             <CheckCircle className="w-3 h-3 text-white" />
@@ -757,7 +793,7 @@ export default async function LessonDetailPage({
                         </div>
                         <div>
                           <p className="font-bold text-slate-900 text-base">
-                            {course.instructor.firstName} {course.instructor.lastName}
+                            Course Instructor
                           </p>
                           <p className="text-sm text-primary font-medium">Expert Producer</p>
                           <div className="flex items-center gap-1 mt-1">
@@ -766,13 +802,13 @@ export default async function LessonDetailPage({
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="bg-white/80 backdrop-blur-sm rounded-xl p-4 border border-white/50">
                         <p className="text-sm text-slate-700 leading-relaxed line-clamp-3">
                           {course.description || "Expert instructor with years of experience in music production and education."}
                         </p>
                       </div>
-                      
+
                       <div className="space-y-2">
                         <Button asChild variant="outline" size="sm" className="w-full border-primary/30 text-primary hover:bg-primary hover:text-white">
                           <Link href={`/courses/${courseSlug}`}>

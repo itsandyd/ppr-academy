@@ -84,7 +84,6 @@ export async function POST(req: Request) {
       },
       product_data: {
         name: `${plan.name} - Subscription`,
-        description: plan.description,
       },
     });
 

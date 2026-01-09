@@ -48,7 +48,7 @@ export default function CoachApplicationForm({ user }: CoachApplicationFormProps
     setIsSubmitting(true);
     
     const result = await submitCoachApplication({
-      userId: user.id,
+      userId: user.id as string,
       ...formData,
     });
 

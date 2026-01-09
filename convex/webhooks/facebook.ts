@@ -77,7 +77,7 @@ export const processWebhook = internalAction({
 
             // Get the Facebook account token
             const account = await ctx.runQuery(
-              internal.socialDM.getAccountByPlatformUserId,
+              internal.socialDMQueries.getAccountByPlatformUserId,
               { platform: "facebook", platformUserId: pageId }
             );
 

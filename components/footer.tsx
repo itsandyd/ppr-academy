@@ -16,7 +16,12 @@ export default function Footer() {
     });
   };
 
-  const footerLinks = {
+  const footerLinks: {
+    product: Array<{ name: string; href?: string; isComingSoon: boolean }>;
+    company: Array<{ name: string; href?: string; isComingSoon: boolean }>;
+    resources: Array<{ name: string; href?: string; isComingSoon: boolean }>;
+    legal: Array<{ name: string; href?: string; isComingSoon: boolean }>;
+  } = {
     product: [
       { name: "Browse Courses", href: "/library", isComingSoon: false },
       { name: "Find Coaches", isComingSoon: true },
@@ -92,11 +97,11 @@ export default function Footer() {
                     <button onClick={() => showComingSoon(link.name)} className="text-sm hover:text-white transition-colors">
                       {link.name}
                     </button>
-                  ) : (
-                    <Link href={link.href!} className="text-sm hover:text-white transition-colors">
+                  ) : link.href ? (
+                    <Link href={link.href} className="text-sm hover:text-white transition-colors">
                       {link.name}
                     </Link>
-                  )}
+                  ) : null}
                 </li>
               ))}
             </ul>
@@ -111,11 +116,11 @@ export default function Footer() {
                     <button onClick={() => showComingSoon(link.name)} className="text-sm hover:text-white transition-colors">
                       {link.name}
                     </button>
-                  ) : (
-                    <Link href={link.href!} className="text-sm hover:text-white transition-colors">
+                  ) : link.href ? (
+                    <Link href={link.href} className="text-sm hover:text-white transition-colors">
                       {link.name}
                     </Link>
-                  )}
+                  ) : null}
                 </li>
               ))}
             </ul>
@@ -130,11 +135,11 @@ export default function Footer() {
                     <button onClick={() => showComingSoon(link.name)} className="text-sm hover:text-white transition-colors">
                       {link.name}
                     </button>
-                  ) : (
-                    <Link href={link.href!} className="text-sm hover:text-white transition-colors">
+                  ) : link.href ? (
+                    <Link href={link.href} className="text-sm hover:text-white transition-colors">
                       {link.name}
                     </Link>
-                  )}
+                  ) : null}
                 </li>
               ))}
             </ul>
@@ -149,11 +154,11 @@ export default function Footer() {
                     <button onClick={() => showComingSoon(link.name)} className="text-sm hover:text-white transition-colors">
                       {link.name}
                     </button>
-                  ) : (
-                    <Link href={link.href!} className="text-sm hover:text-white transition-colors">
+                  ) : link.href ? (
+                    <Link href={link.href} className="text-sm hover:text-white transition-colors">
                       {link.name}
                     </Link>
-                  )}
+                  ) : null}
                 </li>
               ))}
             </ul>

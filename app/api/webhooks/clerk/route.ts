@@ -74,6 +74,10 @@ export async function POST(req: Request) {
   if (eventType === 'user.deleted') {
     const { id } = evt.data;
 
+    if (!id) {
+      return new Response('No user ID found', { status: 400 });
+    }
+
     try {
       await convex.mutation(api.users.deleteUser, {
         clerkId: id,

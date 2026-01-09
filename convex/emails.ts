@@ -1,6 +1,6 @@
 "use node";
 
-import { action, internalAction, internalMutation } from "./_generated/server";
+import { action, internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { Resend } from "resend";
 import { internal } from "./_generated/api";
@@ -627,7 +627,7 @@ export const sendBroadcastEmail = action({
       firstName?: string;
       lastName?: string;
       status: string;
-    }> = await ctx.runMutation(internal.emails.getContactsByIds, {
+    }> = await ctx.runMutation(internal.emailQueries.getContactsByIds, {
       contactIds: args.contactIds,
     });
 
@@ -681,7 +681,7 @@ export const sendBroadcastEmail = action({
         });
 
         // Update contact's email sent count
-        await ctx.runMutation(internal.emails.incrementContactEmailsSent, {
+        await ctx.runMutation(internal.emailQueries.incrementContactEmailsSent, {
           contactId: contact._id,
         });
 
@@ -705,39 +705,7 @@ export const sendBroadcastEmail = action({
   },
 });
 
-/**
- * Get contacts by IDs (internal query for broadcast)
- */
-export const getContactsByIds = internalMutation({
-  args: {
-    contactIds: v.array(v.id("emailContacts")),
-  },
-  handler: async (ctx, args) => {
-    const contacts = [];
-    for (const id of args.contactIds) {
-      const contact = await ctx.db.get(id);
-      if (contact) {
-        contacts.push(contact);
-      }
-    }
-    return contacts;
-  },
-});
-
-export const incrementContactEmailsSent = internalMutation({
-  args: {
-    contactId: v.id("emailContacts"),
-  },
-  handler: async (ctx, args) => {
-    const contact = await ctx.db.get(args.contactId);
-    if (contact) {
-      await ctx.db.patch(args.contactId, {
-        emailsSent: (contact.emailsSent || 0) + 1,
-        updatedAt: Date.now(),
-      });
-    }
-  },
-});
+// getContactsByIds, incrementContactEmailsSent moved to emailQueries.ts
 
 // ============================================================================
 // SECURE RESEND CONNECTION ACTIONS (with API key encryption)
@@ -819,7 +787,8 @@ export const getDecryptedApiKey = internalAction({
   args: {
     connectionId: v.id("resendConnections"),
   },
-  handler: async (ctx, args) => {
+  returns: v.string(),
+  handler: async (ctx, args): Promise<string> => {
     const connection = await ctx.runQuery(internal.emailQueries.getConnectionById, {
       connectionId: args.connectionId,
     });
@@ -828,7 +797,6 @@ export const getDecryptedApiKey = internalAction({
       throw new Error("Connection not found");
     }
 
-    // Decrypt the API key (handles both encrypted and unencrypted values)
     return decryptApiKey(connection.resendApiKey);
   },
 });
@@ -849,7 +817,7 @@ export const migrateApiKeysToEncrypted = internalAction({
     if (adminConnection && !isEncrypted(adminConnection.resendApiKey)) {
       try {
         const encryptedKey = encryptApiKey(adminConnection.resendApiKey);
-        await ctx.runMutation(internal.emails.updateConnectionApiKey, {
+        await ctx.runMutation(internal.emailQueries.updateConnectionApiKey, {
           connectionId: adminConnection._id,
           encryptedApiKey: encryptedKey,
         });
@@ -873,18 +841,4 @@ export const migrateApiKeysToEncrypted = internalAction({
   },
 });
 
-/**
- * Update connection API key (internal mutation for migration)
- */
-export const updateConnectionApiKey = internalMutation({
-  args: {
-    connectionId: v.id("resendConnections"),
-    encryptedApiKey: v.string(),
-  },
-  handler: async (ctx, args) => {
-    await ctx.db.patch(args.connectionId, {
-      resendApiKey: args.encryptedApiKey,
-      updatedAt: Date.now(),
-    });
-  },
-});
+// updateConnectionApiKey moved to emailQueries.ts

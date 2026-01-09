@@ -147,8 +147,8 @@ Generate the script now:`;
       const script: string = completion.choices[0].message.content || "";
 
       // Extract structured elements
-      const hookMatch = script.match(/HOOK[:\s]+(.*?)(?:\n\n|MAIN|BODY)/is);
-      const ctaMatch = script.match(/(?:CTA|CALL TO ACTION|OUTRO)[:\s]+(.*?)(?:\n\n|$)/is);
+      const hookMatch = script.match(/HOOK[:\s]+([\s\S]*?)(?:\n\n|MAIN|BODY)/i);
+      const ctaMatch = script.match(/(?:CTA|CALL TO ACTION|OUTRO)[:\s]+([\s\S]*?)(?:\n\n|$)/i);
       
       return {
         success: true,

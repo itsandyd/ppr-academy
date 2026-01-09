@@ -124,11 +124,11 @@ function LayoutContent({ children }: PDFCreateLayoutProps) {
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-3">
           <span className="text-3xl">
-            {state.data.pdfType === "sample-pdf"
-              ? "🎵"
-              : state.data.pdfType === "preset-pdf"
-                ? "🎛️"
-                : "🎹"}
+            {state.data.pdfType === "cheat-sheet"
+              ? "📋"
+              : state.data.pdfType === "guide"
+                ? "📖"
+                : "📄"}
           </span>
           <div>
             <div className="flex items-center gap-2">

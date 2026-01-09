@@ -239,10 +239,10 @@ export default function DigitalProductCreator() {
     }
   };
 
-  const canPublish = 
-    formData.title && 
-    formData.description && 
-    (formData.pricingModel === 'free_with_gate' || (formData.pricingModel === 'paid' && formData.price && formData.price > 0));
+  const canPublish = Boolean(
+    formData.title &&
+    formData.description &&
+    (formData.pricingModel === 'free_with_gate' || (formData.pricingModel === 'paid' && formData.price && formData.price > 0)));
 
   // Render current step
   const renderStep = () => {

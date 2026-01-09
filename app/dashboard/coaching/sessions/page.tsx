@@ -162,9 +162,9 @@ export default function CoachSessionsPage() {
 
   const now = Date.now();
   const upcomingSessions =
-    sessions?.filter((s) => s.status === "SCHEDULED" && s.scheduledDate > now) || [];
+    sessions?.filter((s: any) => s.status === "SCHEDULED" && s.scheduledDate > now) || [];
   const pastSessions =
-    sessions?.filter((s) => s.status !== "SCHEDULED" || s.scheduledDate <= now) || [];
+    sessions?.filter((s: any) => s.status !== "SCHEDULED" || s.scheduledDate <= now) || [];
 
   if (!user) {
     return (
@@ -193,7 +193,7 @@ export default function CoachSessionsPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {coachingProducts.map((product) => (
+              {coachingProducts.map((product: any) => (
                 <div
                   key={product._id}
                   className="flex items-center justify-between rounded-lg border p-3"
@@ -287,7 +287,7 @@ export default function CoachSessionsPage() {
               </CardContent>
             </Card>
           ) : (
-            upcomingSessions.map((session) => (
+            upcomingSessions.map((session: any) => (
               <SessionCard
                 key={session._id}
                 session={session}
@@ -312,7 +312,7 @@ export default function CoachSessionsPage() {
               </CardContent>
             </Card>
           ) : (
-            pastSessions.map((session) => (
+            pastSessions.map((session: any) => (
               <SessionCard
                 key={session._id}
                 session={session}

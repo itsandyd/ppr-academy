@@ -213,7 +213,7 @@ export default function AnalyticsPage() {
         <CardContent>
           {recentPurchases && recentPurchases.length > 0 ? (
             <div className="space-y-4">
-              {recentPurchases.map((purchase) => (
+              {recentPurchases.map((purchase: any) => (
                 <div
                   key={purchase._id}
                   className="flex items-center justify-between border-b border-zinc-100 pb-4 last:border-0 last:pb-0 dark:border-zinc-800"

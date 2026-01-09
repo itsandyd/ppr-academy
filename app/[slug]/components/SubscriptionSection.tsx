@@ -32,12 +32,10 @@ export function SubscriptionSection({ storeId, storeName }: SubscriptionSectionP
   >({});
 
   const plans = useQuery(api.subscriptions.getSubscriptionPlans, { storeId });
-  const activeSubscription = user
-    ? useQuery(api.subscriptions.getActiveSubscription, {
-        userId: user.id,
-        storeId,
-      })
-    : null;
+  const activeSubscription = useQuery(
+    api.subscriptions.getActiveSubscription,
+    user ? { userId: user.id, storeId } : "skip"
+  );
 
   if (!plans || plans.length === 0) {
     return null; // Don't show section if no plans

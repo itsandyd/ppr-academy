@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -18,9 +18,10 @@ const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
 export default function SubscribeCheckoutPage({
   params,
 }: {
-  params: { planId: string };
+  params: Promise<{ planId: string }>;
 }) {
-  const planId = params.planId as Id<"subscriptionPlans">;
+  const { planId } = use(params);
+  const planIdTyped = planId as Id<"subscriptionPlans">;
   const { user } = useUser();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -28,13 +29,11 @@ export default function SubscribeCheckoutPage({
   
   const [loading, setLoading] = useState(false);
 
-  const plan = useQuery(api.subscriptions.getSubscriptionPlanDetails, { planId });
-  const activeSubscription = user
-    ? useQuery(api.subscriptions.getActiveSubscription, {
-        userId: user.id,
-        storeId: plan?.storeId as Id<"stores">,
-      })
-    : null;
+  const plan = useQuery(api.subscriptions.getSubscriptionPlanDetails, { planId: planIdTyped });
+  const activeSubscription = useQuery(
+    api.subscriptions.getActiveSubscription,
+    user && plan?.storeId ? { userId: user.id, storeId: plan.storeId as Id<"stores"> } : "skip"
+  );
 
   useEffect(() => {
     if (!user) {

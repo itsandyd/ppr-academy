@@ -12,15 +12,14 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import { format } from "date-fns";
 import { notFound } from "next/navigation";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 interface BlogPostPageProps {
-  params: {
-    slug: string;
-  };
+  slug: string;
 }
 
-export default function BlogPostPageClient({ params }: BlogPostPageProps) {
-  const post = useQuery(api.blog.getPostBySlug, { slug: params.slug });
+export default function BlogPostPageClient({ slug }: BlogPostPageProps) {
+  const post = useQuery(api.blog.getPostBySlug, { slug });
   const incrementViews = useMutation(api.blog.incrementViews);
 
   // Increment views when post loads
@@ -160,7 +159,7 @@ export default function BlogPostPageClient({ params }: BlogPostPageProps) {
               {/* Blog Content */}
               <div
                 className="prose prose-lg max-w-none dark:prose-invert prose-headings:font-bold prose-h1:mb-4 prose-h1:text-4xl prose-h2:mb-4 prose-h2:mt-8 prose-h2:text-3xl prose-h3:mb-3 prose-h3:mt-6 prose-h3:text-2xl prose-p:mb-4 prose-p:leading-relaxed prose-a:text-purple-500 prose-a:no-underline hover:prose-a:underline prose-blockquote:border-l-4 prose-blockquote:border-purple-500 prose-blockquote:pl-4 prose-blockquote:italic prose-code:rounded prose-code:bg-muted prose-code:px-2 prose-code:py-1 prose-pre:border prose-pre:border-border prose-pre:bg-muted prose-ol:my-4 prose-ul:my-4 prose-li:my-2 prose-img:rounded-lg prose-img:shadow-md"
-                dangerouslySetInnerHTML={{ __html: post.content }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.content) }}
               />
 
               {/* Tags */}

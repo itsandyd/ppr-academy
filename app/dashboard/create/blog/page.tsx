@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Save, Sparkles, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Sparkles, Loader2, X } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { TiptapEditor } from "@/components/editor/tiptap-editor";
@@ -497,7 +497,7 @@ export default function BlogEditorPage() {
             type="button"
             variant="outline"
             size="lg"
-            onClick={() => router.push(`/store/${storeId}/blog`)}
+            onClick={() => router.push(`/dashboard?mode=create`)}
           >
             Cancel
           </Button>

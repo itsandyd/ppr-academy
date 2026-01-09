@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-// Prisma removed - using Convex instead
-
-// PrismaClient removed - using Convex instead
+import { fetchQuery } from "convex/nextjs";
+import { api } from "@/convex/_generated/api";
 
 export async function GET(
   request: NextRequest,
@@ -10,35 +9,10 @@ export async function GET(
   try {
     const { userId } = await params;
 
-    const courses = await prisma.course.findMany({
-      where: { 
-        userId,
-        isPublished: true // Only return published courses for public storefront
-      },
-      include: {
-        modules: {
-          include: {
-            lessons: {
-              include: {
-                chapters: {
-                  orderBy: { position: 'asc' }
-                }
-              },
-              orderBy: { position: 'asc' }
-            }
-          },
-          orderBy: { position: 'asc' }
-        },
-        instructor: true,
-        category: true,
-        _count: {
-          select: {
-            enrollments: true
-          }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
+    const allCourses = await fetchQuery(api.courses.getCoursesByUser, { userId });
+
+    // Only return published courses for public storefront
+    const courses = allCourses?.filter((course: any) => course.isPublished === true) || [];
 
     return NextResponse.json({ courses });
 

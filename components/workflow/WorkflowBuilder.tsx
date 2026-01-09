@@ -202,80 +202,63 @@ export default function WorkflowBuilder({
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      let result;
-      
+      const mappedNodes = nodes.map(node => ({
+        id: node.id,
+        type: node.type as "email" | "action" | "trigger" | "delay" | "condition",
+        position: node.position,
+        data: node.data
+      }));
+
+      const mappedEdges = edges.map(edge => ({
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        sourceHandle: edge.sourceHandle || undefined,
+        targetHandle: edge.targetHandle || undefined
+      }));
+
+      const triggerNode = nodes.find(n => n.type === 'trigger');
+      const trigger = {
+        type: (triggerNode?.data?.triggerType as "lead_signup" | "product_purchase" | "time_delay" | "date_time" | "customer_action") || "lead_signup",
+        config: {},
+      };
+
       if (workflow?._id) {
         // Update existing workflow
-        result = await updateWorkflow({
+        await updateWorkflow({
           workflowId: workflow._id,
           name: workflowName,
           description: workflowDescription,
           isActive,
-          nodes: nodes.map(node => ({
-            id: node.id,
-            type: node.type as "email" | "action" | "trigger" | "delay" | "condition",
-            position: node.position,
-            data: node.data
-          })),
-          edges: edges.map(edge => ({
-            id: edge.id,
-            source: edge.source,
-            target: edge.target,
-            sourceHandle: edge.sourceHandle || undefined,
-            targetHandle: edge.targetHandle || undefined
-          })),
+          trigger,
+          nodes: mappedNodes,
+          edges: mappedEdges,
         });
       } else {
-        // Create new workflow
-        const workflowId = await createWorkflow({
+        // Create new workflow with all required fields
+        await createWorkflow({
           name: workflowName,
           description: workflowDescription,
           storeId,
           userId,
-        });
-        
-        // Then update it with the nodes and edges
-        result = await updateWorkflow({
-          workflowId,
-          name: workflowName,
-          description: workflowDescription,
-          isActive,
-          nodes: nodes.map(node => ({
-            id: node.id,
-            type: node.type as "email" | "action" | "trigger" | "delay" | "condition",
-            position: node.position,
-            data: node.data
-          })),
-          edges: edges.map(edge => ({
-            id: edge.id,
-            source: edge.source,
-            target: edge.target,
-            sourceHandle: edge.sourceHandle || undefined,
-            targetHandle: edge.targetHandle || undefined
-          })),
+          trigger,
+          nodes: mappedNodes,
+          edges: mappedEdges,
         });
       }
 
-      if (result.success) {
-        toast({
-          title: "Workflow saved",
-          description: result.message,
-        });
-        onSave?.({ 
-          ...workflow, 
-          name: workflowName, 
-          description: workflowDescription, 
-          isActive, 
-          nodes, 
-          edges 
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: result.message,
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Workflow saved",
+        description: "Your workflow has been saved successfully.",
+      });
+      onSave?.({
+        ...workflow,
+        name: workflowName,
+        description: workflowDescription,
+        isActive,
+        nodes,
+        edges
+      });
     } catch (error) {
       toast({
         title: "Error",

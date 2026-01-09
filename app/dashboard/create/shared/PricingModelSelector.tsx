@@ -29,10 +29,10 @@ export function PricingModelSelector({
 }: PricingModelSelectorProps) {
   // Some product types can't be free with gate
   // NOTE: Courses CAN be free now! Only pure services cannot.
-  const canBeFree = !["coaching", "mixing-service", "mastering-service", "tip-jar", "donation"].includes(productCategory);
-  
+  const canBeFree = !["coaching", "mixing-service", "mastering-service"].includes(productCategory);
+
   // Tip jars are special - they're always "pay what you want" (must be paid)
-  const isTipJar = productCategory === "tip-jar" || productCategory === "donation";
+  const isTipJar = productCategory === "tip-jar";
 
   // Auto-set pricing model to "paid" for tip jars on mount
   useEffect(() => {
@@ -141,9 +141,9 @@ export function PricingModelSelector({
         onPriceChange(99); // Courses default to $99
       } else if (productCategory === "coaching" || productCategory === "mixing-service" || productCategory === "mastering-service") {
         onPriceChange(50); // Services default to $50
-      } else if (productCategory === "tip-jar" || productCategory === "donation") {
+      } else if ((productCategory as string) === "tip-jar") {
         onPriceChange(5); // Tips default to $5
-      } else if (productCategory === "playlist-curation") {
+      } else if ((productCategory as string) === "playlist-curation") {
         onPriceChange(5); // Playlist submissions default to $5
       } else {
         onPriceChange(10); // Everything else defaults to $10

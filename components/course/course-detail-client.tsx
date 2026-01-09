@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { sanitizeHtml } from "@/lib/sanitize";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Play, 
@@ -345,9 +346,9 @@ export function CourseDetailClient({
     if (isHTML) {
       // Render HTML content from rich text editor
       return (
-        <div 
+        <div
           className="course-content text-sm"
-          dangerouslySetInnerHTML={{ __html: content }}
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
         />
       );
     } else {

@@ -66,6 +66,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 // =============================================================================
 // TYPES
@@ -318,7 +319,7 @@ export default function AdminCourseBuilderPage() {
   const [activeTab, setActiveTab] = useState<"create" | "existing">("create");
   
   // Existing course expansion state
-  const [selectedExistingCourseId, setSelectedExistingCourseId] = useState<string>("");
+  const [selectedExistingCourseId, setSelectedExistingCourseId] = useState<Id<"courses"> | "">("");
   // Note: existingCourseStructure is now derived from courseStructureQuery (reactive!)
   const [isExpandingExisting, setIsExpandingExisting] = useState(false);
   const [expandExistingSteps, setExpandExistingSteps] = useState<GenerationStep[]>([]);
@@ -350,7 +351,7 @@ export default function AdminCourseBuilderPage() {
   // Use reactive query for course structure - auto-updates when chapters change!
   const courseStructureQuery = useQuery(
     api.aiCourseBuilderQueries.getCourseStructure,
-    selectedExistingCourseId ? { courseId: selectedExistingCourseId as Id<"courses"> } : "skip"
+    selectedExistingCourseId ? { courseId: selectedExistingCourseId } : "skip"
   );
   
   // State for chapter preview and regeneration
@@ -693,7 +694,7 @@ export default function AdminCourseBuilderPage() {
         
         // Update outline display if available
         if (queueItemStatus.outline) {
-          setCurrentOutlineId(queueItemStatus.outlineId);
+          setCurrentOutlineId(queueItemStatus.outlineId ?? null);
           const converted = convertOutlineForDisplay({ outline: queueItemStatus.outline.outline });
           if (converted) {
             setGeneratedOutline(converted);
@@ -751,7 +752,7 @@ export default function AdminCourseBuilderPage() {
             description: "Your course is ready for review.",
             action: {
               label: "Edit Course",
-              onClick: () => window.open(`/store/${selectedStoreId}/courses/${queueItemStatus.course._id}`, "_blank"),
+              onClick: () => window.open(`/store/${selectedStoreId}/courses/${queueItemStatus.course!._id}`, "_blank"),
             },
           });
         } else if (queueItemStatus.courseId && activeTab === "existing") {
@@ -2301,9 +2302,9 @@ export default function AdminCourseBuilderPage() {
                   {/* Course Selection - structure auto-loads when selected! */}
                   <div className="space-y-2">
                     <Label className="text-sm">Course</Label>
-                    <Select 
-                      value={selectedExistingCourseId} 
-                      onValueChange={setSelectedExistingCourseId}
+                    <Select
+                      value={selectedExistingCourseId}
+                      onValueChange={(v) => setSelectedExistingCourseId(v as Id<"courses">)}
                       disabled={isExpandingExisting || !selectedStoreId}
                     >
                       <SelectTrigger className="bg-background">
@@ -2845,10 +2846,10 @@ export default function AdminCourseBuilderPage() {
                                           <div className="ml-5 p-3 rounded bg-muted/50 border text-xs">
                                             <div 
                                               className="prose prose-sm dark:prose-invert max-w-none prose-headings:text-foreground prose-headings:font-semibold prose-h1:text-base prose-h1:mt-4 prose-h1:mb-2 prose-h2:text-sm prose-h2:mt-3 prose-h2:mb-1.5 prose-h3:text-xs prose-h3:mt-2 prose-h3:mb-1 prose-p:text-muted-foreground prose-p:text-xs prose-p:leading-relaxed prose-p:mb-2 prose-strong:text-foreground prose-ul:my-2 prose-ul:text-xs prose-li:my-0.5 prose-code:bg-background prose-code:px-1 prose-code:rounded prose-code:text-[10px] prose-blockquote:border-l-primary prose-blockquote:text-xs prose-hr:my-4 max-h-[400px] overflow-y-auto"
-                                              dangerouslySetInnerHTML={{ 
-                                                __html: ch.description.length > 5000 
-                                                  ? ch.description.substring(0, 5000) + "<p><em>Content truncated for preview...</em></p>" 
-                                                  : ch.description 
+                                              dangerouslySetInnerHTML={{
+                                                __html: sanitizeHtml(ch.description.length > 5000
+                                                  ? ch.description.substring(0, 5000) + "<p><em>Content truncated for preview...</em></p>"
+                                                  : ch.description)
                                               }}
                                             />
                                             {ch.description.length > 5000 && (

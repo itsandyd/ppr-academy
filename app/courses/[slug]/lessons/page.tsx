@@ -7,13 +7,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { getUserFromClerk } from "@/lib/data";
-
-// DEPRECATED: This page uses Prisma but project migrated to Convex
-// Stub prisma to prevent TypeScript errors - this page needs refactoring
-const prisma: any = {
-  course: { findFirst: async () => null },
-  enrollment: { findUnique: async () => null },
-};
+import { fetchQuery } from "convex/nextjs";
+import { api } from "@/convex/_generated/api";
 
 // Force dynamic rendering for this page
 export const dynamic = "force-dynamic";
@@ -41,58 +36,69 @@ export default async function LessonsPage({ params }: { params: Promise<{ slug: 
   const { userId: clerkId } = await auth();
   const { slug: courseSlug } = await params;
 
-  // Get course with lessons and modules
-  const course = await prisma.course.findFirst({
-    where: { slug: courseSlug },
-    include: {
-      instructor: true,
-      enrollments: true,
-      modules: {
-        orderBy: { position: "asc" },
-        include: {
-          lessons: {
-            orderBy: { position: "asc" },
-            include: {
-              chapters: {
-                orderBy: { position: "asc" },
-                select: {
-                  id: true,
-                  title: true,
-                  description: true,
-                  videoUrl: true,
-                  audioUrl: true,
-                  position: true,
-                  isPublished: true,
-                  isFree: true,
-                },
-              },
-            },
-          },
-        },
-      },
-      category: true,
-    },
-  });
+  // Get course by slug from Convex
+  const courseData = await fetchQuery(api.courses.getCourseBySlug, { slug: courseSlug });
 
-  if (!course) {
+  if (!courseData) {
     notFound();
   }
 
+  // Get course chapters
+  const chapters = await fetchQuery(api.courses.getCourseChapters, { courseId: courseData._id });
+
+  // Get all modules for this course
+  const courseModules = courseData.modules || [];
+
+  // Build a more complete course structure
+  const course = {
+    ...courseData,
+    id: courseData._id,
+    title: courseData.title,
+    description: courseData.description,
+    category: courseData.category ? { name: courseData.category } : null,
+    modules: courseModules.map((mod: any, modIdx: number) => ({
+      id: `module-${modIdx}`,
+      title: mod.title,
+      description: mod.description,
+      position: mod.orderIndex,
+      lessons: (mod.lessons || []).map((les: any, lesIdx: number) => ({
+        id: `${courseData._id}-lesson-${modIdx}-${lesIdx}`,
+        title: les.title,
+        description: les.description,
+        position: les.orderIndex,
+        chapters: chapters
+          .filter((ch: any) => ch.lessonId === `${courseData._id}-lesson-${modIdx}-${lesIdx}` ||
+                              (ch.position >= lesIdx * 10 && ch.position < (lesIdx + 1) * 10))
+          .map((ch: any) => ({
+            id: ch._id,
+            title: ch.title,
+            description: ch.description,
+            videoUrl: ch.videoUrl,
+            audioUrl: ch.audioUrl,
+            position: ch.position,
+            isPublished: ch.isPublished ?? true,
+            isFree: ch.isFree ?? false,
+          }))
+      }))
+    }))
+  };
+
   // Get current user and enrollment
   let user = null;
-  let enrollment = null;
+  let enrollment: { progress: number } | null = null;
 
   if (clerkId) {
     user = await getUserFromClerk(clerkId);
     if (user) {
-      enrollment = await prisma.enrollment.findUnique({
-        where: {
-          userId_courseId: {
-            userId: user.id,
-            courseId: course.id,
-          },
-        },
+      // Check enrollment via Convex
+      const accessCheck = await fetchQuery(api.library.verifyCourseAccess, {
+        userId: clerkId,
+        slug: courseSlug
       });
+
+      if (accessCheck?.hasAccess) {
+        enrollment = { progress: accessCheck.progress || 0 };
+      }
     }
   }
 

@@ -37,10 +37,10 @@ export function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionResult, setSubmissionResult] = useState<{ submissionId: string; downloadUrl?: string } | null>(null);
   
-  // Check if leadSubmissions API is available (after npx convex dev)
-  const hasLeadSubmissionsAPI = (api as any).leadSubmissions?.submitLead;
-  const submitLead = hasLeadSubmissionsAPI ? useMutation((api as any).leadSubmissions.submitLead) : null;
-  const trackDownload = hasLeadSubmissionsAPI ? useMutation((api as any).leadSubmissions.trackDownload) : null;
+  // Always call hooks unconditionally
+  const submitLead = useMutation((api as any).leadSubmissions?.submitLead ?? ((() => {}) as any));
+  const trackDownload = useMutation((api as any).leadSubmissions?.trackDownload ?? ((() => {}) as any));
+  const hasLeadSubmissionsAPI = !!(api as any).leadSubmissions?.submitLead;
 
   const handleSubmit = async () => {
     console.log("🎯 handleSubmit called!", { formData, isSubmitting });

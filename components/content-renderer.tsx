@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from 'next/dynamic';
+import { sanitizeHtml } from '@/lib/sanitize';
 
 // Dynamically import ReactMarkdown to avoid SSR issues
 const ReactMarkdown = dynamic(() => import('react-markdown'), {
@@ -26,9 +27,9 @@ export default function ContentRenderer({ content, className = "" }: ContentRend
 
   if (isHTML) {
     return (
-      <div 
+      <div
         className={baseClasses}
-        dangerouslySetInnerHTML={{ __html: content }}
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
       />
     );
   } else {

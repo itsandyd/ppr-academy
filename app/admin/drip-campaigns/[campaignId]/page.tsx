@@ -6,6 +6,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import Link from "next/link";
+import { sanitizeEmailHtml } from "@/lib/sanitize";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -357,7 +358,7 @@ export default function CampaignEditorPage() {
                     <div className="max-h-32 overflow-hidden rounded-lg bg-slate-50 p-4 text-sm">
                       <div
                         dangerouslySetInnerHTML={{
-                          __html: step.htmlContent.substring(0, 300) + "...",
+                          __html: sanitizeEmailHtml(step.htmlContent.substring(0, 300) + "..."),
                         }}
                       />
                     </div>

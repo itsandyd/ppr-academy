@@ -114,10 +114,10 @@ export const getFeedbackStats = query({
   }),
   handler: async (ctx, args) => {
     // Use separate query paths to avoid TypeScript issues with query builder reassignment
-    const allFeedback = args.userId 
+    const allFeedback = args.userId
       ? await ctx.db
           .query("aiMessageFeedback")
-          .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+          .withIndex("by_userId", (q) => q.eq("userId", args.userId as string))
           .collect()
       : await ctx.db
           .query("aiMessageFeedback")

@@ -26,7 +26,7 @@ export const saveIntegration = internalMutation({
     // Get user's store
     const store = await ctx.db
       .query("stores")
-      .withIndex("by_userId", (q) => q.eq("userId", user.clerkId))
+      .withIndex("by_userId", (q) => q.eq("userId", user.clerkId as string))
       .first();
 
     if (!store) {

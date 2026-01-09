@@ -451,10 +451,9 @@ export const createNoteSource = action({
     sourceId: v.optional(v.id("noteSources")),
     error: v.optional(v.string()),
   }),
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{ success: boolean; sourceId?: Id<"noteSources">; error?: string }> => {
     try {
-      // Create the source record
-      const sourceId = await ctx.runMutation(internal.langchainNotes.insertNoteSource, {
+      const sourceId: Id<"noteSources"> = await ctx.runMutation(internal.langchainNotes.insertNoteSource, {
         userId: args.userId,
         storeId: args.storeId,
         sourceType: args.sourceType,
@@ -467,7 +466,6 @@ export const createNoteSource = action({
         tags: args.tags,
       });
 
-      // Trigger content extraction based on type
       if (args.sourceType === "youtube" && args.url) {
         await ctx.scheduler.runAfter(0, internal.langchainNotesActions.extractYoutubeTranscript, {
           sourceId,
@@ -479,13 +477,11 @@ export const createNoteSource = action({
           websiteUrl: args.url,
         });
       } else if (args.sourceType === "pdf" && args.url) {
-        // PDF processing via URL (from UploadThing)
         await ctx.scheduler.runAfter(0, internal.langchainNotesActions.extractPdfContent, {
           sourceId,
           pdfUrl: args.url,
         });
       } else if (args.sourceType === "text" && args.rawContent) {
-        // For text, process immediately
         const splitter = new RecursiveCharacterTextSplitter({
           chunkSize: 2000,
           chunkOverlap: 200,

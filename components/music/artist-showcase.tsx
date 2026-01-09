@@ -245,7 +245,7 @@ export function ArtistShowcase({ artistProfileId, isOwner = false }: ArtistShowc
             {artistProfile.socialLinks && (
               <div className="mb-4 flex items-center gap-3">
                 {Object.entries(artistProfile.socialLinks).map(([platform, url]) => {
-                  if (!url) return null;
+                  if (!url || typeof url !== 'string') return null;
                   const config = getPlatformConfig(platform);
                   return (
                     <a

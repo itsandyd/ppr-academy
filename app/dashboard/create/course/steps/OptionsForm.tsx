@@ -418,10 +418,7 @@ export function OptionsForm() {
         <LandingPageCopyGenerator
           courseId={state.courseId}
           userId={user.id}
-          onCopyGenerated={(copy) => {
-            // Optionally save the copy to the course data
-            updateData("options", { landingPageCopy: copy });
-          }}
+          onCopyGenerated={() => {}}
         />
       )}
 

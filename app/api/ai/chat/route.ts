@@ -308,7 +308,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Use quick ask for GET requests
-    const response = await convex.action((api as any).masterAI.index.quickAsk, {
+    // @ts-expect-error - masterAI has deep type inference issues
+    const quickAskRef = api.masterAI?.index?.quickAsk;
+    const response = await convex.action(quickAskRef, {
       question,
       userId,
     });

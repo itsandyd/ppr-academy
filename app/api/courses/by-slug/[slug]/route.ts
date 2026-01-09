@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-// Prisma removed - using Convex instead
-
-// PrismaClient removed - using Convex instead
+import { fetchQuery } from "convex/nextjs";
+import { api } from "@/convex/_generated/api";
 
 export async function GET(
   request: NextRequest,
@@ -10,26 +9,7 @@ export async function GET(
   try {
     const { slug } = await params;
 
-    const course = await prisma.course.findUnique({
-      where: { slug },
-      include: {
-        modules: {
-          include: {
-            lessons: {
-              include: {
-                chapters: {
-                  orderBy: { position: 'asc' }
-                }
-              },
-              orderBy: { position: 'asc' }
-            }
-          },
-          orderBy: { position: 'asc' }
-        },
-        instructor: true,
-        category: true
-      }
-    });
+    const course = await fetchQuery(api.courses.getCourseBySlug, { slug });
 
     if (!course) {
       return NextResponse.json({ error: "Course not found" }, { status: 404 });

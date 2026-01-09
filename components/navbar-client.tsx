@@ -457,20 +457,10 @@ export default function NavbarClient({ isAdmin }: NavbarClientProps) {
   const pathname = usePathname();
 
   // Safe Clerk hook usage
-  let user = null;
-  let isSignedIn = false;
   const hasClerk = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-
-  if (hasClerk) {
-    try {
-      const clerkData = useUser();
-      user = clerkData.user;
-      isSignedIn = clerkData.isSignedIn || false;
-    } catch (error) {
-      user = null;
-      isSignedIn = false;
-    }
-  }
+  const clerkData = useUser();
+  const user = hasClerk ? clerkData.user : null;
+  const isSignedIn = hasClerk ? (clerkData.isSignedIn || false) : false;
 
   const userIsSignedIn = isSignedIn ?? false;
 

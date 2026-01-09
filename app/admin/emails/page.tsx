@@ -230,12 +230,8 @@ export default function AdminEmailsPage() {
     }
 
     try {
-      const result = await sendCampaignAction({ campaignId: campaignId as any });
-      if (result.success) {
-        toast.success(result.message);
-      } else {
-        toast.error(result.message);
-      }
+      await sendCampaignAction({ campaignId: campaignId as any });
+      toast.success("Campaign is being sent! Check the status for progress.");
     } catch (error: any) {
       toast.error(`Failed to send campaign: ${error.message}`);
     }

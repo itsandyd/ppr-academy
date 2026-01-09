@@ -140,7 +140,12 @@ export function FollowGateModal({
   useEffect(() => {
     if (checkSubmission && checkSubmission.hasSubmitted) {
       setStep("success");
-      setFollowedPlatforms(checkSubmission.submission.followedPlatforms);
+      setFollowedPlatforms({
+        instagram: checkSubmission.submission.followedPlatforms?.instagram ?? false,
+        tiktok: checkSubmission.submission.followedPlatforms?.tiktok ?? false,
+        youtube: checkSubmission.submission.followedPlatforms?.youtube ?? false,
+        spotify: checkSubmission.submission.followedPlatforms?.spotify ?? false,
+      });
     }
   }, [checkSubmission]);
 

@@ -91,7 +91,8 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
       setSelectedTriggers([automation.trigger.type]);
     }
     if (automation.listener) {
-      setListenerType(automation.listener.listener);
+      const listener = automation.listener.listener === "SMARTAI" ? "SMART_AI" : automation.listener.listener;
+      setListenerType(listener as "MESSAGE" | "SMART_AI");
       setMessage(automation.listener.prompt || "");
       setAiPrompt(automation.listener.prompt || "");
       setCommentReply(automation.listener.commentReply || "");
@@ -103,7 +104,7 @@ export default function DashboardAutomationBuilderPage({ params }: AutomationPag
       instagramAccounts.some((acc: any) => acc._id === automation.instagramAccountId);
 
     if (accountStillExists && !selectedInstagramAccount) {
-      setSelectedInstagramAccount(automation.instagramAccountId);
+      setSelectedInstagramAccount(automation.instagramAccountId || "");
     } else if (instagramAccounts.length > 0 && !selectedInstagramAccount) {
       // Default to first account if none selected or if old account was deleted
       setSelectedInstagramAccount(instagramAccounts[0]._id);

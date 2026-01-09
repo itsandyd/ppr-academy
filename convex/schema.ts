@@ -322,6 +322,8 @@ export default defineSchema({
         instagram: v.optional(v.string()),
         linkedin: v.optional(v.string()),
         youtube: v.optional(v.string()),
+        tiktok: v.optional(v.string()),
+        spotify: v.optional(v.string()),
       })
     ),
     // Creator Plan & Visibility Settings
@@ -966,6 +968,7 @@ export default defineSchema({
     customerId: v.optional(v.id("customers")), // Keep for backward compatibility
     productId: v.optional(v.id("digitalProducts")), // Optional for course purchases
     courseId: v.optional(v.id("courses")), // For course purchases
+    bundleId: v.optional(v.id("bundles")), // For bundle purchases
     storeId: v.string(),
     adminUserId: v.string(),
     amount: v.number(),
@@ -4646,6 +4649,8 @@ export default defineSchema({
         fieldName: v.optional(v.string()),
         oldValue: v.optional(v.string()),
         newValue: v.optional(v.string()),
+        emailId: v.optional(v.string()),
+        timestamp: v.optional(v.number()),
       })
     ),
     timestamp: v.number(),

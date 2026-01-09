@@ -53,6 +53,7 @@ import {
   ChevronDown,
   ChevronUp
 } from "lucide-react";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 type PricingType = "FREE" | "PAID" | "FREEMIUM";
 
@@ -438,7 +439,7 @@ export default function AdminPluginsPage() {
                 <div className="p-3 border border-border rounded-lg bg-background max-h-[300px] overflow-y-auto">
                   <div
                     className="prose dark:prose-invert prose-sm max-w-none"
-                    dangerouslySetInnerHTML={{ __html: originalDescription }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(originalDescription) }}
                   />
                 </div>
               </div>
@@ -449,7 +450,7 @@ export default function AdminPluginsPage() {
                 <div className="p-3 border border-primary rounded-lg bg-background max-h-[300px] overflow-y-auto">
                   <div
                     className="prose dark:prose-invert prose-sm max-w-none"
-                    dangerouslySetInnerHTML={{ __html: enhancedDescription }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(enhancedDescription) }}
                   />
                 </div>
               </div>
@@ -461,9 +462,9 @@ export default function AdminPluginsPage() {
         {formData.description && !enhancedDescription && (
           <div className="mt-2 p-4 border border-border rounded-lg bg-muted/30">
             <p className="text-xs text-muted-foreground mb-2 font-semibold">Preview:</p>
-            <div 
+            <div
               className="prose dark:prose-invert prose-sm max-w-none"
-              dangerouslySetInnerHTML={{ __html: formData.description }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(formData.description) }}
             />
           </div>
         )}

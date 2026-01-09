@@ -12,6 +12,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { ReportButton } from "@/components/shared/report-button";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 interface PluginPageProps {
   params: Promise<{
@@ -96,7 +97,7 @@ export default function PluginDetailPage({ params }: PluginPageProps) {
               {plugin.description && (
                 <div
                   className="prose max-w-none text-lg leading-relaxed text-muted-foreground dark:prose-invert"
-                  dangerouslySetInnerHTML={{ __html: plugin.description }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(plugin.description) }}
                 />
               )}
             </div>

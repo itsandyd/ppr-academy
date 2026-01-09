@@ -46,9 +46,10 @@ export async function approveCourse(courseId: string) {
   await checkAdminAuth();
 
   try {
+    const { userId: clerkId } = await auth();
     await convex.mutation(api.courses.togglePublished, {
       courseId: courseId as Id<"courses">,
-      isPublished: true,
+      userId: clerkId!,
     });
 
     revalidatePath("/admin");
@@ -64,9 +65,10 @@ export async function rejectCourse(courseId: string) {
   await checkAdminAuth();
 
   try {
+    const { userId: clerkId } = await auth();
     await convex.mutation(api.courses.togglePublished, {
       courseId: courseId as Id<"courses">,
-      isPublished: false,
+      userId: clerkId!,
     });
 
     revalidatePath("/admin");
@@ -82,9 +84,10 @@ export async function toggleFeatureCourse(courseId: string, featured: boolean) {
 
   try {
     // Toggle publish status as a proxy for featured (or add featured field to Convex schema)
+    const { userId: clerkId } = await auth();
     await convex.mutation(api.courses.togglePublished, {
       courseId: courseId as Id<"courses">,
-      isPublished: featured,
+      userId: clerkId!,
     });
 
     revalidatePath("/admin");
@@ -194,7 +197,10 @@ export async function generateAICourse(courseData: {
 
     // Create the course in Convex
     const { userId: clerkId } = await auth();
-    const courseId = await convex.mutation(api.courses.createCourseWithData, {
+
+    // Build the course data structure
+    // Note: Using explicit type to avoid "Type instantiation is excessively deep" error
+    const createCourseData = {
       userId: clerkId!,
       storeId: "default",
       data: {
@@ -223,7 +229,11 @@ export async function generateAICourse(courseData: {
         })),
         checkoutHeadline: `Learn ${generatedCourse.course.title}`,
       },
-    });
+    };
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const createCourseWithDataRef = api.courses.createCourseWithData as any;
+    const courseId = await convex.mutation(createCourseWithDataRef, createCourseData);
 
     console.log(
       `[AI Course] Created course: "${generatedCourse.course.title}" with ID: ${courseId}`
@@ -308,7 +318,7 @@ export async function updateCourseImage(courseId: string, imageUrl: string) {
 
   try {
     await convex.mutation(api.courses.updateCourse, {
-      courseId: courseId as Id<"courses">,
+      id: courseId as Id<"courses">,
       imageUrl,
     });
 
@@ -518,7 +528,7 @@ export async function updateCourse(
     if (data.skillLevel) updateData.skillLevel = data.skillLevel;
 
     await convex.mutation(api.courses.updateCourse, {
-      courseId: courseId as Id<"courses">,
+      id: courseId as Id<"courses">,
       ...updateData,
     });
 
@@ -548,6 +558,7 @@ export async function deleteCourse(courseId: string) {
 
     await convex.mutation(api.courses.deleteCourse, {
       courseId: courseId as Id<"courses">,
+      userId: clerkId,
     });
 
     revalidatePath("/courses");
@@ -584,7 +595,7 @@ export async function bulkUpdateCourses(
         for (const courseId of courseIds) {
           await convex.mutation(api.courses.togglePublished, {
             courseId: courseId as Id<"courses">,
-            isPublished: true,
+            userId: clerkId,
           });
           count++;
         }
@@ -595,7 +606,7 @@ export async function bulkUpdateCourses(
         for (const courseId of courseIds) {
           await convex.mutation(api.courses.togglePublished, {
             courseId: courseId as Id<"courses">,
-            isPublished: false,
+            userId: clerkId,
           });
           count++;
         }
@@ -606,6 +617,7 @@ export async function bulkUpdateCourses(
         for (const courseId of courseIds) {
           await convex.mutation(api.courses.deleteCourse, {
             courseId: courseId as Id<"courses">,
+            userId: clerkId,
           });
           count++;
         }

@@ -83,13 +83,10 @@ export async function POST(req: NextRequest) {
         }
         
         const { storageId } = await uploadResponse.json();
-        
-        // Save the file reference and get the URL
-        const audioUrl = await convex.mutation(api.files.saveAudioFile, {
+
+        // Get the URL for the uploaded file
+        const audioUrl = await convex.mutation(api.files.getUrl, {
           storageId,
-          chapterId,
-          filename: `chapter_${chapterId}_simulated_audio.mp3`,
-          size: silentMp3Buffer.length,
         });
         
         return NextResponse.json({
@@ -178,13 +175,10 @@ export async function POST(req: NextRequest) {
       }
       
       const { storageId } = await uploadResponse.json();
-      
-      // Save the file reference and get the URL
-      const audioUrl = await convex.mutation(api.files.saveAudioFile, {
+
+      // Get the URL for the uploaded file
+      const audioUrl = await convex.mutation(api.files.getUrl, {
         storageId,
-        chapterId,
-        filename: `chapter_${chapterId}_audio.mp3`,
-        size: audioBuffer.byteLength,
       });
       
       return NextResponse.json({

@@ -3,11 +3,12 @@ import { processScheduledSessions } from '@/app/actions/coaching-actions';
 
 export async function GET(request: NextRequest) {
   try {
-    // Verify cron job authorization (optional security measure)
+    // Verify cron job authorization (required for production)
     const authHeader = request.headers.get('authorization');
     const cronSecret = process.env.CRON_SECRET;
-    
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+
+    // CRON_SECRET is required - reject if not configured or doesn't match
+    if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }

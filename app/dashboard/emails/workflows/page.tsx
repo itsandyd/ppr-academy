@@ -584,7 +584,7 @@ export default function WorkflowBuilderPage() {
                         <Select
                           value={selectedNode.data.templateId || ""}
                           onValueChange={(v) => {
-                            const template = emailTemplates?.find((t) => t._id === v);
+                            const template = emailTemplates?.find((t: any) => t._id === v);
                             updateNodeData(selectedNode.id, {
                               templateId: v,
                               templateName: template?.name,
@@ -597,7 +597,7 @@ export default function WorkflowBuilderPage() {
                           </SelectTrigger>
                           <SelectContent className="bg-white dark:bg-black">
                             {emailTemplates && emailTemplates.length > 0 ? (
-                              emailTemplates.map((template) => (
+                              emailTemplates.map((template: any) => (
                                 <SelectItem key={template._id} value={template._id}>
                                   {template.name}
                                   {template.category && (

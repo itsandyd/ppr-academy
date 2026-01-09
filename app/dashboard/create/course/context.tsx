@@ -255,9 +255,11 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
       };
       
       // Calculate step completion based on loaded data
-      const stepCompletion = {
+      const stepCompletion: StepCompletion = {
         course: validateStepWithData("course", newData),
+        pricing: validateStepWithData("pricing", newData),
         checkout: validateStepWithData("checkout", newData),
+        followGate: validateStepWithData("followGate", newData),
         options: validateStepWithData("options", newData),
       };
       

@@ -85,8 +85,8 @@ export default function ConversationSidebar({
   );
 
   // Separate starred and regular conversations
-  const starredConversations = filteredConversations?.filter((c) => c.starred) || [];
-  const regularConversations = filteredConversations?.filter((c) => !c.starred) || [];
+  const starredConversations = filteredConversations?.filter((c: any) => c.starred) || [];
+  const regularConversations = filteredConversations?.filter((c: any) => !c.starred) || [];
 
   const handleStartEdit = (id: Id<"aiConversations">, currentTitle: string) => {
     setEditingId(id);
@@ -247,7 +247,7 @@ export default function ConversationSidebar({
 
         {/* Recent conversations as mini buttons */}
         <div className="flex w-full flex-1 flex-col items-center gap-2 overflow-y-auto px-2 py-3">
-          {recentConversations.map((conversation) => {
+          {recentConversations.map((conversation: any) => {
             const isActive = currentConversationId === conversation._id;
             const initial = conversation.title.charAt(0).toUpperCase();
 
@@ -339,7 +339,7 @@ export default function ConversationSidebar({
                 <div className="px-3 py-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Starred
                 </div>
-                {starredConversations.map((conversation) => (
+                {starredConversations.map((conversation: any) => (
                   <ConversationItem key={conversation._id} conversation={conversation} />
                 ))}
               </div>
@@ -353,7 +353,7 @@ export default function ConversationSidebar({
                     Recent
                   </div>
                 )}
-                {regularConversations.map((conversation) => (
+                {regularConversations.map((conversation: any) => (
                   <ConversationItem key={conversation._id} conversation={conversation} />
                 ))}
               </div>
@@ -376,7 +376,7 @@ export default function ConversationSidebar({
         <div className="border-t bg-muted/30 p-3">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>{conversations?.length || 0} conversations</span>
-            <span>{conversations?.reduce((sum, c) => sum + c.messageCount, 0) || 0} messages</span>
+            <span>{conversations?.reduce((sum: number, c: any) => sum + c.messageCount, 0) || 0} messages</span>
           </div>
         </div>
       </div>

@@ -19,10 +19,10 @@ const getInternalClient = () => {
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { platform: string } }
+  { params }: { params: Promise<{ platform: string }> }
 ) {
   try {
-    const platform = params.platform;
+    const { platform } = await params;
     const body = await request.text();
     const signature = request.headers.get('x-hub-signature-256') || 
                      request.headers.get('x-twitter-webhooks-signature') ||
@@ -74,16 +74,17 @@ export async function POST(
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { platform: string } }
+  { params }: { params: Promise<{ platform: string }> }
 ) {
   try {
+    const { platform } = await params;
     const searchParams = request.nextUrl.searchParams;
     const mode = searchParams.get('hub.mode');
     const token = searchParams.get('hub.verify_token');
     const challenge = searchParams.get('hub.challenge');
 
     console.log('🔍 Webhook verification attempt:', {
-      platform: params.platform,
+      platform,
       mode,
       token,
       challenge,

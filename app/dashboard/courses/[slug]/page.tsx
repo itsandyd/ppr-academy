@@ -32,6 +32,7 @@ import { LessonQASection } from "@/components/qa/LessonQASection";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { Id } from "@/convex/_generated/dataModel";
+import { sanitizeHtml } from "@/lib/sanitize";
 
 export default function CoursePlayerPage() {
   const { user } = useUser();
@@ -392,7 +393,7 @@ export default function CoursePlayerPage() {
                   {currentChapter.description && (
                     <div
                       className="prose prose-base max-w-3xl dark:prose-invert lg:prose-lg prose-headings:font-bold prose-headings:text-foreground prose-h1:mb-4 prose-h1:mt-8 prose-h1:text-2xl prose-h2:mb-3 prose-h2:mt-6 prose-h2:text-xl prose-h3:mb-2 prose-h3:mt-4 prose-h3:text-lg prose-p:mb-4 prose-p:leading-relaxed prose-p:text-muted-foreground prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-blockquote:border-l-primary prose-blockquote:bg-muted/30 prose-blockquote:py-1 prose-strong:text-foreground prose-code:rounded prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:text-sm prose-ul:my-4 prose-li:my-1 prose-hr:my-8"
-                      dangerouslySetInnerHTML={{ __html: currentChapter.description }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(currentChapter.description) }}
                     />
                   )}
                 </div>

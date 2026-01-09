@@ -79,23 +79,22 @@ class LegacyCourseService implements IProductService {
   constructor(private convex: ConvexHttpClient) {}
 
   async getProducts(creatorId: string): Promise<Product[]> {
-    const courses = await this.convex.query(api.courses.getByInstructorId, {
-      instructorId: creatorId as Id<"users">
+    const courses = await this.convex.query(api.courses.getCoursesByInstructor, {
+      instructorId: creatorId
     });
 
     return courses.map(this.courseToProduct);
   }
 
   async getProduct(id: string): Promise<Product | null> {
-    const course = await this.convex.query(api.courses.getById, {
-      id: id as Id<"courses">
-    });
+    const courses = await this.convex.query(api.courses.getCourses, {});
+    const course = courses.find((c: { _id: string }) => c._id === id);
 
     return course ? this.courseToProduct(course) : null;
   }
 
   async getProductBySlug(slug: string): Promise<Product | null> {
-    const course = await this.convex.query(api.courses.getBySlug, { slug });
+    const course = await this.convex.query(api.courses.getCourseBySlug, { slug });
     return course ? this.courseToProduct(course) : null;
   }
 
@@ -104,19 +103,21 @@ class LegacyCourseService implements IProductService {
       throw new Error("Legacy service only supports courses");
     }
 
-    const courseId = await this.convex.mutation(api.courses.create, {
+    const courseId = await this.convex.mutation(api.courses.createCourse, {
+      userId: "",
       title: input.title,
       description: input.description,
       price: input.price,
       imageUrl: input.thumbnailUrl,
     });
 
-    const course = await this.convex.query(api.courses.getById, { id: courseId });
+    const courses = await this.convex.query(api.courses.getCourses, {});
+    const course = courses.find((c: { _id: string }) => c._id === courseId);
     return this.courseToProduct(course!);
   }
 
   async updateProduct(input: UpdateProductInput): Promise<Product> {
-    await this.convex.mutation(api.courses.update, {
+    await this.convex.mutation(api.courses.updateCourse, {
       id: input.id as Id<"courses">,
       title: input.title,
       description: input.description,
@@ -124,37 +125,37 @@ class LegacyCourseService implements IProductService {
       imageUrl: input.thumbnailUrl,
     });
 
-    const course = await this.convex.query(api.courses.getById, {
-      id: input.id as Id<"courses">
-    });
+    const courses = await this.convex.query(api.courses.getCourses, {});
+    const course = courses.find((c: { _id: string }) => c._id === input.id);
     return this.courseToProduct(course!);
   }
 
   async deleteProduct(id: string): Promise<void> {
-    await this.convex.mutation(api.courses.remove, {
-      id: id as Id<"courses">
+    await this.convex.mutation(api.courses.deleteCourse, {
+      courseId: id as Id<"courses">,
+      userId: ""
     });
   }
 
   async publishProduct(id: string): Promise<Product> {
-    await this.convex.mutation(api.courses.publish, {
-      id: id as Id<"courses">
+    await this.convex.mutation(api.courses.updateCourse, {
+      id: id as Id<"courses">,
+      isPublished: true
     });
 
-    const course = await this.convex.query(api.courses.getById, {
-      id: id as Id<"courses">
-    });
+    const courses = await this.convex.query(api.courses.getCourses, {});
+    const course = courses.find((c: { _id: string }) => c._id === id);
     return this.courseToProduct(course!);
   }
 
   async unpublishProduct(id: string): Promise<Product> {
-    await this.convex.mutation(api.courses.unpublish, {
-      id: id as Id<"courses">
+    await this.convex.mutation(api.courses.updateCourse, {
+      id: id as Id<"courses">,
+      isPublished: false
     });
 
-    const course = await this.convex.query(api.courses.getById, {
-      id: id as Id<"courses">
-    });
+    const courses = await this.convex.query(api.courses.getCourses, {});
+    const course = courses.find((c: { _id: string }) => c._id === id);
     return this.courseToProduct(course!);
   }
 

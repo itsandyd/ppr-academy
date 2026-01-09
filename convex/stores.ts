@@ -22,6 +22,8 @@ const storeValidator = v.object({
     instagram: v.optional(v.string()),
     linkedin: v.optional(v.string()),
     youtube: v.optional(v.string()),
+    tiktok: v.optional(v.string()),
+    spotify: v.optional(v.string()),
   })),
   emailConfig: v.optional(v.object({
     fromEmail: v.string(),
