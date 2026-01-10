@@ -280,7 +280,7 @@ export function LearnModeContent() {
 
                 <div className="flex flex-wrap items-center gap-4">
                   <Link
-                    href={`/courses/${continueWatching.course.slug}?chapter=${continueWatching.nextChapter._id}`}
+                    href={`/dashboard/courses/${continueWatching.course.slug}?chapter=${continueWatching.nextChapter._id}`}
                   >
                     <Button size="lg" className="gap-2 bg-chart-1 hover:bg-chart-1/90">
                       <Play className="h-5 w-5" />

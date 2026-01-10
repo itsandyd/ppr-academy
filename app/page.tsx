@@ -314,50 +314,24 @@ export default function SectionedMarketplace() {
 
       <MarketplaceNavbar />
 
-      {/* Fixed background elements - Enhanced with dramatic orbs */}
+      {/* Fixed background elements - Optimized with CSS animations for better performance */}
       <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
-        {/* Primary large orb - top right */}
-        <motion.div
-          className="absolute -right-20 -top-20 h-[600px] w-[600px] rounded-full bg-gradient-to-br from-chart-1/30 to-chart-2/20 blur-[100px] filter"
-          animate={{
-            scale: [1, 1.1, 1],
-            x: [0, 30, 0],
-            y: [0, -20, 0],
-          }}
-          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+        {/* Primary large orb - top right - using CSS animation */}
+        <div
+          className="absolute -right-20 -top-20 h-[600px] w-[600px] rounded-full bg-gradient-to-br from-chart-1/30 to-chart-2/20 blur-[100px] animate-float-slow will-change-transform"
+          style={{ transform: 'translateZ(0)' }}
         />
 
-        {/* Secondary orb - bottom left */}
-        <motion.div
-          className="absolute -bottom-32 -left-32 h-[500px] w-[500px] rounded-full bg-gradient-to-tr from-chart-4/25 to-chart-3/15 blur-[80px] filter"
-          animate={{
-            scale: [1, 1.15, 1],
-            x: [0, -20, 0],
-            y: [0, 30, 0],
-          }}
-          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+        {/* Secondary orb - bottom left - using CSS animation */}
+        <div
+          className="absolute -bottom-32 -left-32 h-[500px] w-[500px] rounded-full bg-gradient-to-tr from-chart-4/25 to-chart-3/15 blur-[80px] animate-float-reverse will-change-transform"
+          style={{ transform: 'translateZ(0)' }}
         />
 
-        {/* Accent orb - center */}
-        <motion.div
-          className="absolute left-1/2 top-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-chart-2/10 blur-[120px] filter"
-          animate={{
-            scale: [1, 1.2, 1],
-            opacity: [0.3, 0.5, 0.3],
-          }}
-          transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-        />
-
-        {/* Small floating orbs */}
-        <motion.div
-          className="absolute right-1/4 top-1/3 h-32 w-32 rounded-full bg-chart-1/20 blur-2xl filter"
-          animate={{ y: [0, -40, 0], x: [0, 20, 0] }}
-          transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-        />
-        <motion.div
-          className="absolute bottom-1/4 left-1/4 h-24 w-24 rounded-full bg-chart-3/20 blur-2xl filter"
-          animate={{ y: [0, 30, 0], x: [0, -15, 0] }}
-          transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 3 }}
+        {/* Accent orb - center - using CSS animation */}
+        <div
+          className="absolute left-1/2 top-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-chart-2/10 blur-[120px] animate-pulse-soft will-change-transform"
+          style={{ transform: 'translateZ(0)' }}
         />
 
         {/* Grid pattern overlay */}
@@ -373,17 +347,12 @@ export default function SectionedMarketplace() {
           <div className="lg:grid lg:grid-cols-12 lg:gap-8">
             <div className="sm:text-center md:mx-auto md:max-w-2xl lg:col-span-6 lg:text-left">
               <motion.div
-                className="glass border-gradient animate-border-glow mb-8 inline-flex items-center rounded-full px-4 py-2 text-sm font-medium text-chart-1"
-                initial={{ opacity: 0, y: -20, scale: 0.9 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ duration: 0.6, type: "spring", stiffness: 100 }}
+                className="glass border-gradient mb-8 inline-flex items-center rounded-full px-4 py-2 text-sm font-medium text-chart-1"
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
               >
-                <motion.div
-                  animate={{ rotate: [0, 360] }}
-                  transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                >
-                  <Music className="mr-2 h-4 w-4" />
-                </motion.div>
+                <Music className="mr-2 h-4 w-4" />
                 Where Music Creators & Students Connect
               </motion.div>
 
@@ -574,24 +543,16 @@ export default function SectionedMarketplace() {
                   ].map((item, i) => (
                     <Link key={item.label} href={item.href}>
                       <motion.div
-                        className="cursor-pointer overflow-hidden rounded-xl border border-border/50 bg-card/80 p-4 backdrop-blur-sm transition-colors hover:border-chart-1/50"
+                        className="cursor-pointer overflow-hidden rounded-xl border border-border/50 bg-card/80 p-4 backdrop-blur-sm transition-all duration-200 hover:border-chart-1/50 hover:scale-105 hover:-translate-y-0.5"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.3 + i * 0.05 }}
-                        whileHover={{ scale: 1.05, y: -2 }}
+                        transition={{ delay: 0.3 + i * 0.03, duration: 0.3 }}
                       >
-                        <motion.div
+                        <div
                           className={`mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br ${item.gradient}`}
-                          animate={{ y: [0, -3, 0] }}
-                          transition={{
-                            duration: 2 + (i % 3) * 0.5,
-                            repeat: Infinity,
-                            ease: "easeInOut",
-                            delay: i * 0.2,
-                          }}
                         >
                           <item.icon className="h-5 w-5 text-primary-foreground" />
-                        </motion.div>
+                        </div>
                         <p className="text-sm font-medium">{item.label}</p>
                       </motion.div>
                     </Link>
@@ -635,16 +596,14 @@ export default function SectionedMarketplace() {
         <section className="relative z-10 overflow-hidden py-24">
           <div className="absolute inset-0 bg-gradient-to-br from-chart-1/5 via-transparent to-chart-4/5"></div>
 
-          {/* Decorative floating orbs */}
-          <motion.div
-            className="absolute right-10 top-20 h-64 w-64 rounded-full bg-chart-2/10 blur-3xl"
-            animate={{ y: [0, -30, 0], opacity: [0.3, 0.5, 0.3] }}
-            transition={{ duration: 8, repeat: Infinity }}
+          {/* Decorative orbs - using CSS animations */}
+          <div
+            className="absolute right-10 top-20 h-64 w-64 rounded-full bg-chart-2/10 blur-3xl animate-float-slow will-change-transform"
+            style={{ transform: 'translateZ(0)' }}
           />
-          <motion.div
-            className="absolute bottom-20 left-10 h-48 w-48 rounded-full bg-chart-4/10 blur-3xl"
-            animate={{ y: [0, 20, 0], opacity: [0.4, 0.6, 0.4] }}
-            transition={{ duration: 6, repeat: Infinity, delay: 2 }}
+          <div
+            className="absolute bottom-20 left-10 h-48 w-48 rounded-full bg-chart-4/10 blur-3xl animate-float-reverse will-change-transform"
+            style={{ transform: 'translateZ(0)' }}
           />
 
           <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -677,17 +636,13 @@ export default function SectionedMarketplace() {
               {featuredCreators.slice(0, 6).map((creator: any, index: number) => (
                 <motion.div
                   key={creator._id}
-                  initial={{ opacity: 0, y: 30, scale: 0.95 }}
-                  whileInView={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ duration: 0.5, delay: index * 0.1, type: "spring", stiffness: 100 }}
-                  viewport={{ once: true }}
-                  whileHover={{ y: -8 }}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, delay: index * 0.05 }}
+                  viewport={{ once: true, amount: 0.2 }}
                 >
                   <Link href={`/${creator.slug}`}>
-                    <Card className="card-hover-glow group relative cursor-pointer overflow-hidden border-border/50 bg-card/80 backdrop-blur-sm">
-                      {/* Hover glow effect */}
-                      <div className="absolute -inset-px rounded-xl bg-gradient-to-r from-chart-1/0 via-chart-2/0 to-chart-4/0 opacity-0 blur transition-opacity duration-500 group-hover:from-chart-1/20 group-hover:via-chart-2/20 group-hover:to-chart-4/20 group-hover:opacity-100" />
-
+                    <Card className="group relative cursor-pointer overflow-hidden border-border/50 bg-card/80 backdrop-blur-sm transition-all duration-300 hover:-translate-y-2 hover:shadow-xl">
                       {/* Banner */}
                       <div className="relative h-36 overflow-hidden">
                         {creator.bannerImage ? (
@@ -695,35 +650,29 @@ export default function SectionedMarketplace() {
                             <img
                               src={creator.bannerImage}
                               alt={`${creator.name} banner`}
-                              className="h-full w-full object-cover transition-all duration-500 group-hover:scale-110 group-hover:brightness-110"
+                              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                             />
                           </div>
                         ) : (
-                          <div className="animate-gradient absolute inset-0 bg-gradient-to-br from-chart-1/30 via-chart-2/20 to-chart-3/30" />
+                          <div className="absolute inset-0 bg-gradient-to-br from-chart-1/30 via-chart-2/20 to-chart-3/30" />
                         )}
                         <div className="absolute inset-0 bg-gradient-to-t from-card via-card/60 to-transparent" />
-
-                        {/* Shimmer on hover */}
-                        <div className="absolute inset-0 translate-x-[-200%] bg-gradient-to-r from-transparent via-white/10 to-transparent transition-transform duration-1000 group-hover:translate-x-[200%]" />
                       </div>
 
                       <CardContent className="relative z-10 -mt-12 space-y-4 px-6 pb-6">
-                        {/* Avatar with glow */}
+                        {/* Avatar */}
                         <div className="flex justify-center">
-                          <div className="relative">
-                            <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-chart-1 to-chart-2 opacity-0 blur-sm transition-opacity duration-300 group-hover:opacity-70" />
-                            <Avatar className="relative h-24 w-24 border-4 border-card shadow-2xl ring-2 ring-chart-1/20 transition-transform duration-300 group-hover:scale-105">
-                              <AvatarImage src={creator.avatar} />
-                              <AvatarFallback className="bg-gradient-to-br from-chart-1 to-chart-2 text-2xl font-bold text-primary-foreground">
-                                {creator.name.charAt(0)}
-                              </AvatarFallback>
-                            </Avatar>
-                          </div>
+                          <Avatar className="h-24 w-24 border-4 border-card shadow-2xl ring-2 ring-chart-1/20 transition-transform duration-300 group-hover:scale-105">
+                            <AvatarImage src={creator.avatar} />
+                            <AvatarFallback className="bg-gradient-to-br from-chart-1 to-chart-2 text-2xl font-bold text-primary-foreground">
+                              {creator.name.charAt(0)}
+                            </AvatarFallback>
+                          </Avatar>
                         </div>
 
                         {/* Name & Bio */}
                         <div className="text-center">
-                          <h3 className="group-hover:gradient-text mb-1 text-xl font-bold transition-colors duration-300">
+                          <h3 className="mb-1 text-xl font-bold transition-colors duration-300">
                             {creator.name}
                           </h3>
                           {creator.bio && (
@@ -735,27 +684,18 @@ export default function SectionedMarketplace() {
 
                         {/* Stats with icons */}
                         <div className="flex items-center justify-center gap-6 border-t border-border/50 pt-4 text-sm">
-                          <motion.div
-                            className="flex items-center gap-1.5 text-muted-foreground transition-colors group-hover:text-chart-1"
-                            whileHover={{ scale: 1.1 }}
-                          >
+                          <div className="flex items-center gap-1.5 text-muted-foreground transition-colors group-hover:text-chart-1">
                             <BookOpen className="h-4 w-4" />
                             <span className="font-medium">{creator.totalCourses}</span>
-                          </motion.div>
-                          <motion.div
-                            className="flex items-center gap-1.5 text-muted-foreground transition-colors group-hover:text-chart-2"
-                            whileHover={{ scale: 1.1 }}
-                          >
+                          </div>
+                          <div className="flex items-center gap-1.5 text-muted-foreground transition-colors group-hover:text-chart-2">
                             <Package className="h-4 w-4" />
                             <span className="font-medium">{creator.totalProducts}</span>
-                          </motion.div>
-                          <motion.div
-                            className="flex items-center gap-1.5 text-muted-foreground transition-colors group-hover:text-chart-3"
-                            whileHover={{ scale: 1.1 }}
-                          >
+                          </div>
+                          <div className="flex items-center gap-1.5 text-muted-foreground transition-colors group-hover:text-chart-3">
                             <Users className="h-4 w-4" />
                             <span className="font-medium">{creator.totalStudents}</span>
-                          </motion.div>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
@@ -834,30 +774,22 @@ export default function SectionedMarketplace() {
                 gradient: "from-chart-4 to-chart-5",
                 delay: 0.2,
               },
-            ].map((feature, index) => (
+            ].map((feature) => (
               <motion.div
                 key={feature.title}
-                className="group relative rounded-2xl border border-border/50 bg-card/50 p-8 backdrop-blur-sm transition-all duration-500"
+                className="group relative rounded-2xl border border-border/50 bg-card/50 p-8 backdrop-blur-sm transition-all duration-300 hover:-translate-y-2 hover:shadow-lg"
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: feature.delay }}
-                viewport={{ once: true }}
-                whileHover={{ y: -8, scale: 1.02 }}
+                transition={{ duration: 0.4, delay: feature.delay }}
+                viewport={{ once: true, amount: 0.3 }}
               >
-                {/* Glow on hover */}
-                <div
-                  className={`absolute -inset-px rounded-2xl bg-gradient-to-r ${feature.gradient} opacity-0 blur-xl transition-opacity duration-500 group-hover:opacity-20`}
-                />
-
                 <div className="relative">
-                  <motion.div
-                    className={`mb-8 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br ${feature.gradient} shadow-lg shadow-chart-1/20`}
-                    whileHover={{ rotate: [0, -5, 5, 0], scale: 1.1 }}
-                    transition={{ duration: 0.5 }}
+                  <div
+                    className={`mb-8 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br ${feature.gradient} shadow-lg shadow-chart-1/20 transition-transform duration-300 group-hover:scale-105`}
                   >
                     <feature.icon className="h-10 w-10 text-primary-foreground" />
-                  </motion.div>
-                  <h3 className="group-hover:gradient-text mb-4 text-2xl font-bold text-foreground transition-colors duration-300">
+                  </div>
+                  <h3 className="mb-4 text-2xl font-bold text-foreground transition-colors duration-300">
                     {feature.title}
                   </h3>
                   <p className="leading-relaxed text-muted-foreground">{feature.desc}</p>
@@ -880,16 +812,15 @@ export default function SectionedMarketplace() {
                 className="mb-10 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                viewport={{ once: true }}
+                transition={{ duration: 0.4 }}
+                viewport={{ once: true, amount: 0.3 }}
               >
                 <div className="flex items-start gap-4">
-                  <motion.div
-                    className={`flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br ${section.gradient} shadow-lg`}
-                    whileHover={{ scale: 1.1, rotate: 5 }}
+                  <div
+                    className={`flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br ${section.gradient} shadow-lg transition-transform duration-200 hover:scale-105`}
                   >
                     <section.icon className="h-7 w-7 text-primary-foreground" />
-                  </motion.div>
+                  </div>
                   <div>
                     <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
                       {section.title}
@@ -917,20 +848,14 @@ export default function SectionedMarketplace() {
       <section className="relative z-10 overflow-hidden py-32">
         <div className="animate-gradient absolute inset-0 bg-gradient-to-br from-chart-1 via-chart-2 to-chart-4"></div>
 
-        <motion.div
-          className="absolute -right-32 -top-32 h-[500px] w-[500px] rounded-full bg-white/10 blur-3xl"
-          animate={{ scale: [1, 1.2, 1], opacity: [0.2, 0.3, 0.2] }}
-          transition={{ duration: 8, repeat: Infinity }}
+        {/* Background orbs - using CSS animations for performance */}
+        <div
+          className="absolute -right-32 -top-32 h-[500px] w-[500px] rounded-full bg-white/10 blur-3xl animate-pulse-soft will-change-transform"
+          style={{ transform: 'translateZ(0)' }}
         />
-        <motion.div
-          className="absolute -bottom-32 -left-32 h-[400px] w-[400px] rounded-full bg-white/10 blur-3xl"
-          animate={{ scale: [1.2, 1, 1.2], opacity: [0.3, 0.2, 0.3] }}
-          transition={{ duration: 6, repeat: Infinity, delay: 2 }}
-        />
-        <motion.div
-          className="absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/5 blur-3xl"
-          animate={{ scale: [1, 1.3, 1] }}
-          transition={{ duration: 10, repeat: Infinity }}
+        <div
+          className="absolute -bottom-32 -left-32 h-[400px] w-[400px] rounded-full bg-white/10 blur-3xl animate-float-reverse will-change-transform"
+          style={{ transform: 'translateZ(0)' }}
         />
 
         <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

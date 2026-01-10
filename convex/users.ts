@@ -509,6 +509,7 @@ export const getLearnerPreferences = query({
   returns: v.union(
     v.object({
       _id: v.id("learnerPreferences"),
+      _creationTime: v.number(),
       userId: v.string(),
       skillLevel: v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced")),
       interests: v.array(v.string()),
