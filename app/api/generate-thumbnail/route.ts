@@ -227,12 +227,12 @@ function createThumbnailPrompt(title: string, description: string, category?: st
 function createPackThumbnailPrompt(title: string, description?: string, packType?: string): string {
   const baseStyle = "Create a professional sample pack/preset pack cover art in landscape format (1536x1024). Use bold typography, vibrant colors, and modern design trends from music production marketing.";
   
-  const packTypeStyle = packType === "sample-pack" 
+  const packTypeStyle = packType === "sample-pack"
     ? "This is an audio sample pack. Include visual elements like waveforms, audio meters, drum pads, or vinyl records."
     : packType === "preset-pack"
     ? "This is a synth preset pack. Include visual elements like synthesizer interfaces, knobs, modulation, or futuristic sound design elements."
     : packType === "midi-pack"
-    ? "This is a MIDI pack with melodies and chord progressions. Include visual elements like piano keys, MIDI notes, musical staffs, or melodic patterns."
+    ? "This is a MIDI pack with melodies and chord progressions. Include visual elements like colorful MIDI note blocks in a piano roll grid, DAW timeline patterns, waveforms, or abstract geometric shapes representing melody. IMPORTANT: Do NOT include piano keys, treble clefs, bass clefs, musical staffs, or sheet music notation - these render poorly in AI images."
     : "This is a music production pack.";
   
   const titleFocus = `The pack is titled "${title}" - make the title PROMINENT and READABLE in the design with bold, eye-catching typography.`;

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { useAction } from "convex/react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { useAction, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useSocialPost, ImageData } from "../context";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,10 @@ import {
   Download,
   RefreshCw,
   Pencil,
+  Upload,
+  X,
+  RotateCcw,
+  ImagePlus,
 } from "lucide-react";
 
 export function StepGenerateImages() {
@@ -50,6 +54,12 @@ export function StepGenerateImages() {
   const generateSocialImage = useAction(api.masterAI.socialMediaGenerator.generateSocialImage);
   // @ts-ignore - Convex type inference depth issue
   const editSocialImage = useAction(api.masterAI.socialMediaGenerator.editSocialImage);
+  // @ts-ignore - Convex type inference depth issue
+  const generateFromUploadedImage = useAction(api.masterAI.socialMediaGenerator.generateFromUploadedImage);
+  // @ts-ignore - Convex type inference depth issue
+  const generateUploadUrl = useMutation(api.files.generateUploadUrl);
+  // @ts-ignore - Convex type inference depth issue
+  const getStorageUrl = useMutation(api.files.getUrl);
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -57,6 +67,12 @@ export function StepGenerateImages() {
   const [editedPreviewUrl, setEditedPreviewUrl] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editResult, setEditResult] = useState<{ storageId: string; url: string } | null>(null);
+
+  // Prompt editing state
+  const [editingPromptIndex, setEditingPromptIndex] = useState<number | null>(null);
+  // Upload state
+  const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
+  const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const updateImages = (newImages: ImageData[]) => {
     imagesRef.current = newImages;
@@ -92,6 +108,7 @@ export function StepGenerateImages() {
           aspectRatio,
           prompt: p.prompt,
           sentence: p.sentence,
+          originalPrompt: p.prompt,
         }));
         updateImages(newImages);
       }
@@ -101,6 +118,108 @@ export function StepGenerateImages() {
       setIsGeneratingLocal(false);
       setGenerating(false);
     }
+  };
+
+  // Prompt editing handlers
+  const handlePromptChange = (index: number, newPrompt: string) => {
+    const latestImages = [...imagesRef.current];
+    const original = latestImages[index].originalPrompt || latestImages[index].prompt;
+    latestImages[index] = {
+      ...latestImages[index],
+      prompt: newPrompt,
+      originalPrompt: original,
+      isPromptEdited: newPrompt !== original,
+    };
+    updateImages(latestImages);
+  };
+
+  const handleResetPrompt = (index: number) => {
+    const latestImages = [...imagesRef.current];
+    const original = latestImages[index].originalPrompt;
+    if (original) {
+      latestImages[index] = {
+        ...latestImages[index],
+        prompt: original,
+        isPromptEdited: false,
+      };
+      updateImages(latestImages);
+    }
+  };
+
+  // Image upload handlers
+  const handleUploadClick = (index: number) => {
+    fileInputRefs.current[index]?.click();
+  };
+
+  const handleFileSelect = async (index: number, event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      console.error("Invalid file type");
+      return;
+    }
+
+    // Validate file size (10MB max)
+    if (file.size > 10 * 1024 * 1024) {
+      console.error("File too large (max 10MB)");
+      return;
+    }
+
+    setUploadingIndex(index);
+
+    try {
+      // Get upload URL from Convex
+      const uploadUrl = await generateUploadUrl();
+
+      // Upload file
+      const result = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+
+      if (!result.ok) {
+        throw new Error("Upload failed");
+      }
+
+      const { storageId } = await result.json();
+
+      // Get the actual Convex storage URL that FAL can access
+      const actualUrl = await getStorageUrl({ storageId });
+
+      if (!actualUrl) {
+        throw new Error("Failed to get storage URL");
+      }
+
+      // Update the image data with the source image
+      const latestImages = [...imagesRef.current];
+      latestImages[index] = {
+        ...latestImages[index],
+        sourceStorageId: storageId,
+        sourceImageUrl: actualUrl,
+      };
+      updateImages(latestImages);
+    } catch (error) {
+      console.error("Failed to upload image:", error);
+    } finally {
+      setUploadingIndex(null);
+      // Reset the input
+      if (event.target) {
+        event.target.value = "";
+      }
+    }
+  };
+
+  const handleRemoveSourceImage = (index: number) => {
+    const latestImages = [...imagesRef.current];
+    latestImages[index] = {
+      ...latestImages[index],
+      sourceStorageId: undefined,
+      sourceImageUrl: undefined,
+    };
+    updateImages(latestImages);
   };
 
   const handleGenerateImage = async (index: number, batchMode = false) => {
@@ -114,10 +233,23 @@ export function StepGenerateImages() {
     }
 
     try {
-      const result = await generateSocialImage({
-        prompt: image.prompt,
-        aspectRatio,
-      });
+      let result;
+
+      // Check if we have a source image for image-to-image generation
+      if (image.sourceImageUrl) {
+        // Use image-to-image with the uploaded source
+        result = await generateFromUploadedImage({
+          sourceImageUrl: image.sourceImageUrl,
+          stylePrompt: image.prompt,
+          aspectRatio,
+        });
+      } else {
+        // Use text-to-image generation
+        result = await generateSocialImage({
+          prompt: image.prompt,
+          aspectRatio,
+        });
+      }
 
       if (result.success && result.storageId && result.imageUrl) {
         const latestImages = [...imagesRef.current];
@@ -158,10 +290,21 @@ export function StepGenerateImages() {
       if (!image?.prompt) return;
 
       try {
-        const result = await generateSocialImage({
-          prompt: image.prompt,
-          aspectRatio,
-        });
+        let result;
+
+        // Check if we have a source image for image-to-image generation
+        if (image.sourceImageUrl) {
+          result = await generateFromUploadedImage({
+            sourceImageUrl: image.sourceImageUrl,
+            stylePrompt: image.prompt,
+            aspectRatio,
+          });
+        } else {
+          result = await generateSocialImage({
+            prompt: image.prompt,
+            aspectRatio,
+          });
+        }
 
         if (result.success && result.storageId && result.imageUrl) {
           const latestImages = [...imagesRef.current];
@@ -411,43 +554,139 @@ export function StepGenerateImages() {
                           <Loader2 className="h-8 w-8 animate-spin text-white" />
                         </div>
                       )}
+                      {uploadingIndex === index && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                          <Loader2 className="h-8 w-8 animate-spin text-white" />
+                        </div>
+                      )}
                     </div>
                     <CardContent className="space-y-3 p-4">
+                      {/* Sentence display */}
                       <div className="rounded-md bg-muted/50 p-2">
                         <p className="text-sm font-medium text-foreground">{image.sentence}</p>
                       </div>
-                      <details className="text-xs text-muted-foreground/70">
-                        <summary className="cursor-pointer hover:text-muted-foreground">
-                          Show prompt
-                        </summary>
-                        <p className="mt-1">{image.prompt}</p>
-                      </details>
+
+                      {/* Source image preview (if uploaded) */}
+                      {image.sourceImageUrl && (
+                        <div className="flex items-center gap-2 rounded-md border border-primary/20 bg-primary/5 p-2">
+                          <img
+                            src={image.sourceImageUrl}
+                            alt="Source"
+                            className="h-10 w-10 rounded object-cover"
+                          />
+                          <div className="flex-1">
+                            <p className="text-xs font-medium text-primary">Source image uploaded</p>
+                            <p className="text-xs text-muted-foreground">Will transform with style</p>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleRemoveSourceImage(index)}
+                            className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      )}
+
+                      {/* Prompt section */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-medium text-muted-foreground">Prompt</span>
+                            {image.isPromptEdited && (
+                              <Badge variant="secondary" className="text-[10px] px-1 py-0">
+                                Edited
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setEditingPromptIndex(editingPromptIndex === index ? null : index)}
+                              className="h-6 px-2 text-xs"
+                            >
+                              <Pencil className="mr-1 h-3 w-3" />
+                              {editingPromptIndex === index ? "Close" : "Edit"}
+                            </Button>
+                            {image.isPromptEdited && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleResetPrompt(index)}
+                                className="h-6 px-2 text-xs"
+                                title="Reset to original"
+                              >
+                                <RotateCcw className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+
+                        {editingPromptIndex === index ? (
+                          <Textarea
+                            value={image.prompt}
+                            onChange={(e) => handlePromptChange(index, e.target.value)}
+                            rows={4}
+                            className="text-xs"
+                            placeholder="Edit the image prompt..."
+                          />
+                        ) : (
+                          <p className="text-xs text-muted-foreground/70 line-clamp-2">
+                            {image.prompt}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Action buttons */}
                       <div className="flex gap-2">
                         <Button
                           size="sm"
                           variant={image.url ? "outline" : "default"}
                           onClick={() => handleGenerateImage(index)}
-                          disabled={generatingIndex !== null}
+                          disabled={generatingIndex !== null || generatingAll}
                           className="flex-1 gap-1"
                         >
                           {image.url ? (
                             <>
                               <RefreshCw className="h-3 w-3" />
-                              Regenerate
+                              {image.sourceImageUrl ? "Re-transform" : "Regenerate"}
                             </>
                           ) : (
                             <>
                               <Sparkles className="h-3 w-3" />
-                              Generate
+                              {image.sourceImageUrl ? "Transform" : "Generate"}
                             </>
                           )}
                         </Button>
+
+                        {/* Upload source image button */}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleUploadClick(index)}
+                          disabled={uploadingIndex !== null}
+                          title="Upload source image"
+                        >
+                          <ImagePlus className="h-4 w-4" />
+                        </Button>
+                        <input
+                          ref={(el) => {
+                            fileInputRefs.current[index] = el;
+                          }}
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleFileSelect(index, e)}
+                          className="hidden"
+                        />
+
                         {image.url && (
                           <Button
                             size="sm"
                             variant="ghost"
                             onClick={() => handleOpenEditDialog(index)}
-                            title="Edit image"
+                            title="Edit generated image"
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>

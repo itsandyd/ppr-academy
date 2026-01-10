@@ -15,6 +15,12 @@ export interface ImageData {
   prompt: string;
   sentence?: string;
   embedding?: number[];
+  // Prompt editing fields
+  originalPrompt?: string;
+  isPromptEdited?: boolean;
+  // Source image for image-to-image generation
+  sourceImageUrl?: string;
+  sourceStorageId?: Id<"_storage">;
 }
 
 export interface SocialPostData {

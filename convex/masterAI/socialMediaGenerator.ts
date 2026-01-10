@@ -558,6 +558,13 @@ Split the script by line breaks. For each non-empty line, create an image prompt
 - Pure white or very light off-white background
 - Clean, uncluttered composition
 
+# CRITICAL: AVOID MUSICAL NOTATION AND PIANO KEYS
+- DO NOT include treble clefs, bass clefs, or any clef symbols
+- DO NOT include musical staffs, sheet music lines, or notation
+- DO NOT include musical notes on staffs (quarter notes, half notes, etc.)
+- DO NOT include piano keys or keyboard keys (AI renders the black/white pattern incorrectly)
+- Instead use: DAW interfaces, waveforms, audio meters, mixing consoles, knobs, faders, sliders, speakers, headphones, microphones, sound waves, frequency spectrums, equalizer bars, or abstract audio visualizations
+
 # OUTPUT FORMAT (JSON)
 {
   "imagePrompts": [
@@ -959,6 +966,85 @@ export const editSocialImage = action({
       };
     } catch (error) {
       console.error("❌ FAL edit API error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown FAL error",
+      };
+    }
+  },
+});
+
+export const generateFromUploadedImage = action({
+  args: {
+    sourceImageUrl: v.string(),
+    stylePrompt: v.string(),
+    aspectRatio: v.union(v.literal("16:9"), v.literal("9:16")),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    storageId: v.optional(v.id("_storage")),
+    imageUrl: v.optional(v.string()),
+    error: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    const { sourceImageUrl, stylePrompt, aspectRatio } = args;
+
+    console.log(`🎨 Generating image from uploaded source (${aspectRatio})`);
+    console.log(`   📝 Style prompt: ${stylePrompt.substring(0, 100)}...`);
+
+    const falApiKey = process.env.FAL_KEY;
+    if (!falApiKey) {
+      return {
+        success: false,
+        error: "FAL_KEY not configured in environment",
+      };
+    }
+
+    try {
+      const falClient = createFalClient();
+
+      const result = await falClient.subscribe("fal-ai/nano-banana-pro/edit", {
+        input: {
+          prompt: stylePrompt,
+          image_urls: [sourceImageUrl],
+          num_images: 1,
+          aspect_ratio: aspectRatio,
+          output_format: "png",
+          resolution: "1K",
+        },
+        logs: true,
+        onQueueUpdate: (update) => {
+          if (update.status === "IN_PROGRESS" && update.logs) {
+            update.logs.map((log) => log.message).forEach((msg) => console.log(`   📝 ${msg}`));
+          }
+        },
+      });
+
+      const imageData = result.data as {
+        images?: Array<{ url: string; width?: number; height?: number }>;
+      };
+
+      if (!imageData?.images?.[0]?.url) {
+        console.error("❌ No image URL in FAL response");
+        return {
+          success: false,
+          error: "No image URL in FAL response",
+        };
+      }
+
+      const imageUrl = imageData.images[0].url;
+      console.log(`   ✅ Image generated from source: ${imageUrl.substring(0, 60)}...`);
+
+      const storageId = await uploadImageToStorage(ctx, imageUrl);
+      const convexUrl = await ctx.storage.getUrl(storageId);
+
+      return {
+        success: true,
+        storageId,
+        imageUrl: convexUrl || imageUrl,
+      };
+    } catch (error) {
+      console.error("❌ FAL API error:", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown FAL error",
