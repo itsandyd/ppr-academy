@@ -4715,6 +4715,12 @@ export default defineSchema({
           prompt: v.string(), // The prompt used to generate this image
           sentence: v.optional(v.string()), // The sentence/concept this image illustrates
           embedding: v.optional(v.array(v.number())), // For semantic search
+          // Prompt editing fields
+          originalPrompt: v.optional(v.string()), // Original AI-generated prompt for reset
+          isPromptEdited: v.optional(v.boolean()), // Track if user modified prompt
+          // Source image for image-to-image generation
+          sourceImageUrl: v.optional(v.string()), // URL of uploaded source image
+          sourceStorageId: v.optional(v.id("_storage")), // Storage ID of uploaded source
         })
       )
     ),

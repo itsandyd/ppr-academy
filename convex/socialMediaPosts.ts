@@ -185,6 +185,12 @@ export const updateSocialMediaPostImages = mutation({
         prompt: v.string(),
         sentence: v.optional(v.string()),
         embedding: v.optional(v.array(v.number())),
+        // Prompt editing fields
+        originalPrompt: v.optional(v.string()),
+        isPromptEdited: v.optional(v.boolean()),
+        // Source image for image-to-image generation
+        sourceImageUrl: v.optional(v.string()),
+        sourceStorageId: v.optional(v.id("_storage")),
       })
     ),
   },
@@ -210,6 +216,10 @@ export const addImageToSocialMediaPost = mutation({
       prompt: v.string(),
       sentence: v.optional(v.string()),
       embedding: v.optional(v.array(v.number())),
+      originalPrompt: v.optional(v.string()),
+      isPromptEdited: v.optional(v.boolean()),
+      sourceImageUrl: v.optional(v.string()),
+      sourceStorageId: v.optional(v.id("_storage")),
     }),
   },
   returns: v.null(),
