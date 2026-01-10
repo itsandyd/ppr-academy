@@ -69,6 +69,7 @@ export const migrateToNewEmbeddingModel = action({
       // Step 2: Regenerate all embeddings with the new model
       console.log("🚀 Regenerating embeddings with text-embedding-3-small...");
       const regenerateResult = await ctx.runAction(
+        // @ts-ignore Convex type instantiation too deep
         api.embeddingActions.generateAllCourseEmbeddings,
         {
           userId: args.userId,

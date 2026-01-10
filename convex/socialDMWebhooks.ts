@@ -18,7 +18,7 @@ export const processInstagramWebhook = action({
     payload: v.any(),
   },
   returns: v.null(),
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<null> => {
     console.log("📸 Processing Instagram webhook via public action");
 
     try {
@@ -43,7 +43,7 @@ export const processTwitterWebhook = action({
     payload: v.any(),
   },
   returns: v.null(),
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<null> => {
     console.log("🐦 Processing Twitter webhook via public action");
 
     try {
@@ -68,7 +68,7 @@ export const processFacebookWebhook = action({
     payload: v.any(),
   },
   returns: v.null(),
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<null> => {
     console.log("📘 Processing Facebook webhook via public action");
 
     try {
@@ -93,7 +93,7 @@ export const getTwitterCRCResponse = action({
     crcToken: v.string(),
   },
   returns: v.string(),
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<string> => {
     return await ctx.runAction(internal.webhooks.twitter.generateCRCResponse, {
       crcToken: args.crcToken,
     });
@@ -111,7 +111,7 @@ export const verifyFacebookWebhook = action({
     challenge: v.string(),
   },
   returns: v.union(v.string(), v.null()),
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<string | null> => {
     return await ctx.runAction(internal.webhooks.facebook.verifyWebhook, {
       mode: args.mode,
       token: args.token,

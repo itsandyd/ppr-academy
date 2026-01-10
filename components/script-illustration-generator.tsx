@@ -49,12 +49,12 @@ export function ScriptIllustrationGenerator({
 
   const generateIllustrations = useAction(api.scriptIllustrations.generateScriptIllustrations);
   const jobStatus = useQuery(
-    api.scriptIllustrationSearch.getJobStatus,
+    api.scriptIllustrationQueries.getJobStatus,
     currentJobId ? { jobId: currentJobId } : "skip"
   );
-  const userJobs = useQuery(api.scriptIllustrationSearch.getUserJobs, { userId, limit: 10 });
+  const userJobs = useQuery(api.scriptIllustrationQueries.getUserJobs, { userId, limit: 10 });
   const illustrations = useQuery(
-    api.scriptIllustrationSearch.getIllustrationsByScript,
+    api.scriptIllustrationQueries.getIllustrationsByScript,
     sourceId ? { scriptId: sourceId } : "skip"
   );
 

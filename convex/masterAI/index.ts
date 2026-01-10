@@ -108,7 +108,7 @@ export const askMasterAI = action({
         });
         if (conversation?.conversationGoal) {
           conversationGoal = conversation.conversationGoal;
-          console.log(`🎯 Using existing conversation goal: "${conversationGoal.originalIntent}"`);
+          console.log(`🎯 Using existing conversation goal: "${conversationGoal?.originalIntent}"`);
         }
       } catch (err) {
         console.warn("Failed to fetch conversation goal:", err);
@@ -518,7 +518,6 @@ ${currentCriticOutput.issues.map((i) => `- Fix ${i.type}: ${i.description}`).joi
  * Quick AI query with default settings
  * For simpler use cases that don't need the full pipeline configuration
  */
-// @ts-expect-error - Circular type reference in masterAI module
 export const quickAsk = action({
   args: {
     question: v.string(),
@@ -533,7 +532,7 @@ export const quickAsk = action({
       })
     ),
   }),
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<{ answer: string; sources: Array<{ title: string; sourceType: string }> }> => {
     // Use speed preset for quick queries
     const settings: ChatSettings = {
       ...DEFAULT_CHAT_SETTINGS,
@@ -651,7 +650,8 @@ export const askAgenticAI = action({
     agentSystemPrompt: v.optional(v.string()), // Custom system prompt from agent
   },
   returns: agenticResponseValidator,
-  handler: async (ctx, args) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  handler: async (ctx, args): Promise<any> => {
     const settings: ChatSettings = args.settings || DEFAULT_CHAT_SETTINGS;
     const startTime = Date.now();
     const userRole = args.userRole || "creator";
@@ -937,7 +937,8 @@ export const executeConfirmedActions = action({
     storeId: v.optional(v.string()),
   },
   returns: actionsExecutedValidator,
-  handler: async (ctx, args) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  handler: async (ctx, args): Promise<any> => {
     console.log(`⚡ Executing ${args.actions.length} confirmed actions...`);
 
     const result = await ctx.runAction(internal.masterAI.tools.executor.executeTools, {
@@ -1005,7 +1006,8 @@ export const runPipeline = internalAction({
       })
     ),
   }),
-  handler: async (ctx, args) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  handler: async (ctx, args): Promise<any> => {
     const { question, settings, userId, conversationContext } = args;
 
     // Run stages 1-5, return data for streaming stage 6

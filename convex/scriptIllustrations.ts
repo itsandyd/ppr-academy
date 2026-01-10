@@ -188,6 +188,10 @@ export const processSentences = internalAction({
             storageId,
           });
 
+          if (!imageUrl) {
+            throw new Error("Failed to get storage URL for image");
+          }
+
           console.log(`   ☁️ Uploaded to storage: ${storageId}`);
 
           // Update illustration with image

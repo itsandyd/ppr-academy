@@ -9,7 +9,9 @@ export async function GET(
   try {
     const { userId } = await params;
 
-    const allCourses = await fetchQuery(api.courses.getCoursesByUser, { userId });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const coursesApi: any = api.courses;
+    const allCourses = await fetchQuery(coursesApi.getCoursesByUser, { userId });
 
     // Only return published courses for public storefront
     const courses = allCourses?.filter((course: any) => course.isPublished === true) || [];

@@ -25,21 +25,24 @@ export const getAllIllustrationsWithEmbeddings = internalQuery({
     let illustrations;
     
     if (args.userId) {
+      const userId = args.userId;
       illustrations = await ctx.db
         .query("scriptIllustrations")
-        .withIndex("by_userId", (qb) => qb.eq("userId", args.userId))
+        .withIndex("by_userId", (qb) => qb.eq("userId", userId))
         .filter((qf) => qf.neq(qf.field("embedding"), undefined))
         .take(limit);
     } else if (args.scriptId) {
+      const scriptId = args.scriptId;
       illustrations = await ctx.db
         .query("scriptIllustrations")
-        .withIndex("by_scriptId", (qb) => qb.eq("scriptId", args.scriptId))
+        .withIndex("by_scriptId", (qb) => qb.eq("scriptId", scriptId))
         .filter((qf) => qf.neq(qf.field("embedding"), undefined))
         .take(limit);
     } else if (args.sourceType) {
+      const sourceType = args.sourceType;
       illustrations = await ctx.db
         .query("scriptIllustrations")
-        .withIndex("by_sourceType", (qb) => qb.eq("sourceType", args.sourceType))
+        .withIndex("by_sourceType", (qb) => qb.eq("sourceType", sourceType))
         .filter((qf) => qf.neq(qf.field("embedding"), undefined))
         .take(limit);
     } else {

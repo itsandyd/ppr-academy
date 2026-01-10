@@ -40,6 +40,8 @@ export async function POST(request: NextRequest) {
     
     // Initialize Convex client with authentication
     const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const filesApi: any = api.files;
     convex.setAuth(token!);
 
     const { title, description, category, type } = await request.json();
@@ -123,7 +125,7 @@ export async function POST(request: NextRequest) {
     console.log("☁️ Uploading to Convex storage...");
     
     // First, get the upload URL from Convex
-    const uploadUrl = await convex.mutation(api.files.generateUploadUrl, {});
+    const uploadUrl = await convex.mutation(filesApi.generateUploadUrl, {});
     
     // Upload the file to Convex storage
     const uploadResult = await fetch(uploadUrl, {
@@ -139,7 +141,7 @@ export async function POST(request: NextRequest) {
     const { storageId } = await uploadResult.json();
     
     // Get the public URL for the uploaded file from Convex
-    const permanentUrl = await convex.query(api.files.getStorageUrl, { 
+    const permanentUrl = await convex.query(filesApi.getStorageUrl, { 
       storageId: storageId as Id<"_storage"> 
     });
     

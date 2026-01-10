@@ -308,8 +308,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Use quick ask for GET requests
-    // @ts-expect-error - masterAI has deep type inference issues
-    const quickAskRef = api.masterAI?.index?.quickAsk;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const masterAIModule: any = api.masterAI;
+    const quickAskRef = masterAIModule?.index?.quickAsk;
     const response = await convex.action(quickAskRef, {
       question,
       userId,

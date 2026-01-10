@@ -28,7 +28,8 @@ export const executeTool = internalAction({
     storeId: v.optional(v.string()),
   },
   returns: toolCallResultValidator,
-  handler: async (ctx, args) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  handler: async (ctx, args): Promise<any> => {
     const { toolName, parameters, userId, storeId } = args;
     
     console.log(`🔧 Executing tool: ${toolName}`, parameters);
@@ -277,7 +278,7 @@ export const executeTool = internalAction({
         }
 
         case "getCourseStats": {
-          const stats = await ctx.runQuery(internal.masterAI.tools.executor.getCourseStatsInternal, {
+          const stats = await ctx.runQuery(internal.masterAI.tools.mutations.getCourseStatsInternal, {
             courseId: parameters.courseId as Id<"courses">,
           });
           return {
@@ -291,7 +292,7 @@ export const executeTool = internalAction({
         }
 
         case "searchCoursesByTopic": {
-          const courses = await ctx.runQuery(internal.masterAI.tools.executor.searchUserCourses, {
+          const courses = await ctx.runQuery(internal.masterAI.tools.mutations.searchUserCourses, {
             userId,
             query: parameters.query,
             limit: parameters.limit || 5,
@@ -308,7 +309,7 @@ export const executeTool = internalAction({
         }
 
         case "listMyProducts": {
-          const products = await ctx.runQuery(internal.masterAI.tools.executor.getProductsForUser, {
+          const products = await ctx.runQuery(internal.masterAI.tools.mutations.getProductsForUser, {
             userId,
             productType: parameters.productType || "all",
             limit: parameters.limit || 10,

@@ -17,6 +17,8 @@ export async function POST(req: NextRequest) {
 
     // Initialize Convex client for server-side use
     const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const filesApi: any = api.files;
     const token = await getToken({ template: "convex" });
     if (token) {
       convex.setAuth(token);
@@ -69,7 +71,7 @@ export async function POST(req: NextRequest) {
         const blob = new Blob([silentMp3Buffer], { type: 'audio/mpeg' });
         
         // Generate upload URL from Convex
-        const uploadUrl = await convex.mutation(api.files.generateUploadUrl, {});
+        const uploadUrl = await convex.mutation(filesApi.generateUploadUrl, {});
         
         // Upload the file
         const uploadResponse = await fetch(uploadUrl, {
@@ -85,7 +87,7 @@ export async function POST(req: NextRequest) {
         const { storageId } = await uploadResponse.json();
 
         // Get the URL for the uploaded file
-        const audioUrl = await convex.mutation(api.files.getUrl, {
+        const audioUrl = await convex.mutation(filesApi.getUrl, {
           storageId,
         });
         
@@ -161,7 +163,7 @@ export async function POST(req: NextRequest) {
       const blob = new Blob([audioBuffer], { type: 'audio/mpeg' });
       
       // Generate upload URL from Convex
-      const uploadUrl = await convex.mutation(api.files.generateUploadUrl, {});
+      const uploadUrl = await convex.mutation(filesApi.generateUploadUrl, {});
       
       // Upload the file
       const uploadResponse = await fetch(uploadUrl, {
@@ -177,7 +179,7 @@ export async function POST(req: NextRequest) {
       const { storageId } = await uploadResponse.json();
 
       // Get the URL for the uploaded file
-      const audioUrl = await convex.mutation(api.files.getUrl, {
+      const audioUrl = await convex.mutation(filesApi.getUrl, {
         storageId,
       });
       

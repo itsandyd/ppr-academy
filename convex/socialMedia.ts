@@ -440,9 +440,10 @@ export const createScheduledPost = mutation({
     userId: v.string(),
     socialAccountId: v.id("socialAccounts"),
     content: v.string(),
-    postType: v.optional(v.string()),
+    postType: v.optional(v.union(v.literal("post"), v.literal("story"), v.literal("reel"), v.literal("tweet"), v.literal("thread"))),
     mediaStorageIds: v.optional(v.array(v.id("_storage"))),
     scheduledFor: v.optional(v.number()),
+    timezone: v.optional(v.string()),
     hashtags: v.optional(v.array(v.string())),
     location: v.optional(v.string()),
   },
@@ -456,11 +457,11 @@ export const createScheduledPost = mutation({
       postType: args.postType || "post",
       mediaStorageIds: args.mediaStorageIds || [],
       scheduledFor: args.scheduledFor || Date.now(),
+      timezone: args.timezone || "UTC",
       hashtags: args.hashtags || [],
       location: args.location,
       status: args.scheduledFor ? "scheduled" : "draft",
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
+      retryCount: 0,
     });
     return postId;
   },
@@ -474,9 +475,10 @@ export const updateScheduledPost = mutation({
     postId: v.id("scheduledPosts"),
     userId: v.string(),
     content: v.optional(v.string()),
-    postType: v.optional(v.string()),
+    postType: v.optional(v.union(v.literal("post"), v.literal("story"), v.literal("reel"), v.literal("tweet"), v.literal("thread"))),
     mediaStorageIds: v.optional(v.array(v.id("_storage"))),
     scheduledFor: v.optional(v.number()),
+    timezone: v.optional(v.string()),
     hashtags: v.optional(v.array(v.string())),
     location: v.optional(v.string()),
     status: v.optional(v.string()),
@@ -496,6 +498,7 @@ export const updateScheduledPost = mutation({
     if (args.postType !== undefined) updates.postType = args.postType;
     if (args.mediaStorageIds !== undefined) updates.mediaStorageIds = args.mediaStorageIds;
     if (args.scheduledFor !== undefined) updates.scheduledFor = args.scheduledFor;
+    if (args.timezone !== undefined) updates.timezone = args.timezone;
     if (args.hashtags !== undefined) updates.hashtags = args.hashtags;
     if (args.location !== undefined) updates.location = args.location;
     if (args.status !== undefined) updates.status = args.status;

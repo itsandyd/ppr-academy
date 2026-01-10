@@ -9,7 +9,9 @@ export async function GET(
   try {
     const { slug } = await params;
 
-    const course = await fetchQuery(api.courses.getCourseBySlug, { slug });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const coursesApi: any = api.courses;
+    const course = await fetchQuery(coursesApi.getCourseBySlug, { slug });
 
     if (!course) {
       return NextResponse.json({ error: "Course not found" }, { status: 404 });

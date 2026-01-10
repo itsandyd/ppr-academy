@@ -987,6 +987,10 @@ export default defineSchema({
     accessExpiresAt: v.optional(v.number()),
     downloadCount: v.optional(v.number()),
     lastAccessedAt: v.optional(v.number()),
+    // Payout tracking
+    isPaidOut: v.optional(v.boolean()),
+    payoutId: v.optional(v.string()),
+    paidOutAt: v.optional(v.number()),
   })
     .index("by_userId", ["userId"])
     .index("by_customerId", ["customerId"])
@@ -1035,6 +1039,7 @@ export default defineSchema({
     stripePriceIdYearly: v.optional(v.string()),
     benefits: v.array(v.string()),
     maxCourses: v.optional(v.number()), // null = unlimited
+    trialDays: v.optional(v.number()), // Free trial period in days
     isActive: v.boolean(),
   })
     .index("by_creatorId", ["creatorId"])
@@ -2242,6 +2247,10 @@ export default defineSchema({
       v.literal("tweet"),
       v.literal("thread")
     ),
+
+    // Hashtags and location (optional)
+    hashtags: v.optional(v.array(v.string())),
+    location: v.optional(v.string()),
 
     // Platform-specific options
     platformOptions: v.optional(

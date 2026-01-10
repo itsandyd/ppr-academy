@@ -28,8 +28,8 @@ export default function MusicShowcasePage() {
       await createProfile({
         userId: user.id,
         artistName: user.fullName || user.firstName || 'Unknown Artist',
-        displayName: user.fullName,
-        profileImage: user.imageUrl,
+        displayName: user.fullName ?? undefined,
+        profileImage: user.imageUrl ?? undefined,
         slug: user.username || user.id.toLowerCase(),
       });
       

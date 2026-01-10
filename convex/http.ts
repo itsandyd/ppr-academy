@@ -1,6 +1,6 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
-import { api, internal } from "./_generated/api";
+import { internal } from "./_generated/api";
 
 const http = httpRouter();
 
@@ -72,34 +72,10 @@ http.route({
  * This allows us to use Clerk auth context on the client side
  */
 
-// Stripe webhook for subscription payments
-http.route({
-  path: "/webhooks/stripe",
-  method: "POST",
-  handler: httpAction(async (ctx, request) => {
-    const signature = request.headers.get("stripe-signature");
-    const body = await request.text();
-
-    if (!signature) {
-      return new Response("No signature", { status: 400 });
-    }
-
-    try {
-      // Verify and process Stripe webhook
-      await ctx.runAction(internal.webhooks.stripe.processWebhook, {
-        body,
-        signature,
-      });
-
-      return new Response(JSON.stringify({ received: true }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
-    } catch (error) {
-      console.error("Stripe webhook error:", error);
-      return new Response("Webhook processing failed", { status: 400 });
-    }
-  }),
-});
+/**
+ * Stripe Webhook - Handled by Next.js
+ * See: /app/api/webhooks/stripe/route.ts
+ * The Next.js route handles all Stripe events and uses Convex for mutations/queries
+ */
 
 export default http;

@@ -24,7 +24,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const result = await fetchMutation(api.emailUnsubscribe.unsubscribeByEmail, {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const emailUnsubscribeApi: any = api.emailUnsubscribe;
+    const result = await fetchMutation(emailUnsubscribeApi.unsubscribeByEmail, {
       email,
       reason: "One-click unsubscribe from email link",
     });

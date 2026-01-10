@@ -2,7 +2,7 @@
 
 import { action } from "./_generated/server";
 import { v } from "convex/values";
-import { internal } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 
 // Note: Queries have been moved to scriptIllustrationQueries.ts to allow this file to use "use node";
 import OpenAI from "openai";
@@ -59,7 +59,7 @@ export const searchIllustrations = action({
         sentenceIndex: number;
         sourceType: string;
       };
-      const illustrations: IllustrationWithEmbedding[] = await ctx.runQuery(
+      const rawIllustrations = await ctx.runQuery(
         internal.scriptIllustrationQueries.getAllIllustrationsWithEmbeddings,
         {
           userId: args.userId,
@@ -68,6 +68,11 @@ export const searchIllustrations = action({
           limit: args.limit ?? 100, // Fetch more to filter by similarity
         }
       );
+      // Filter out any that might not have embedding and cast
+      const illustrations: IllustrationWithEmbedding[] = rawIllustrations
+        .filter((item): item is typeof item & { embedding: number[] } =>
+          !!item.embedding && item.embedding.length > 0
+        );
 
       console.log(`   Found ${illustrations.length} illustrations with embeddings`);
 
@@ -129,7 +134,8 @@ export const findSimilarIllustrations = action({
     ),
     error: v.optional(v.string()),
   }),
-  handler: async (ctx, args) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  handler: async (ctx, args): Promise<any> => {
     console.log(`🔍 Finding similar illustrations to ${args.illustrationId}`);
 
     try {
@@ -170,10 +176,15 @@ export const findSimilarIllustrations = action({
         sentenceIndex: number;
         sourceType: string;
       };
-      const allIllustrations: IllustrationWithEmbeddingInner[] = await ctx.runQuery(
+      const rawAllIllustrations = await ctx.runQuery(
         internal.scriptIllustrationQueries.getAllIllustrationsWithEmbeddings,
         { limit: 1000 }
       );
+      // Filter out any that might not have embedding and cast
+      const allIllustrations: IllustrationWithEmbeddingInner[] = rawAllIllustrations
+        .filter((item): item is typeof item & { embedding: number[] } =>
+          !!item.embedding && item.embedding.length > 0
+        );
 
       // Calculate similarity and filter
       const similar = allIllustrations
@@ -243,7 +254,8 @@ export const getRecommendedIllustrations = action({
 
       for (const concept of concepts) {
         const searchResults = await ctx.runAction(
-          internal.scriptIllustrationSearch.searchIllustrations,
+          // @ts-ignore - type instantiation too deep
+          api.scriptIllustrationSearch.searchIllustrations,
           {
             query: concept,
             limit: 5,

@@ -1064,13 +1064,7 @@ export const createDigitalProductPurchase = mutation({
         orderId: purchaseId,
         amount: args.amount,
       });
-
-      await ctx.scheduler.runAfter(0, internal.emailContactSync.syncContactFromEnrollment, {
-        storeId: product.storeId,
-        email: user.email,
-        userId: args.userId,
-        productId: args.productId,
-      });
+      // Note: syncContactFromEnrollment is for courses only, not applicable to product purchases
     }
 
     return purchaseId;

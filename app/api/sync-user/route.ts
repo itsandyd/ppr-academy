@@ -19,7 +19,9 @@ export async function GET() {
     }
 
     // Sync to Convex database
-    const userId = await fetchMutation(api.users.createOrUpdateUserFromClerk, {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const usersApi: any = api.users;
+    const userId = await fetchMutation(usersApi.createOrUpdateUserFromClerk, {
       clerkId,
       email: clerkUser.emailAddresses[0]?.emailAddress || null,
       firstName: clerkUser.firstName || null,

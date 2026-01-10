@@ -109,7 +109,8 @@ export const processSocialPostEmbedding = internalAction({
     embeddingId: v.optional(v.id("embeddings")),
     error: v.optional(v.string()),
   }),
-  handler: async (ctx, args) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  handler: async (ctx, args): Promise<any> => {
     try {
       // Skip GLOBAL marker posts (they're not real content)
       if (args.mediaType === "GLOBAL" || args.postId === "ALL_POSTS_AND_FUTURE") {
@@ -289,7 +290,8 @@ export const searchSocialPostContext = internalAction({
     context: v.string(),
     matchCount: v.number(),
   }),
-  handler: async (ctx, args) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  handler: async (ctx, args): Promise<any> => {
     try {
       const limit = args.limit || 3;
       const threshold = args.threshold || 0.5;

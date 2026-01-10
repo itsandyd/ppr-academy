@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 
+
 /**
  * Centralized Access Control Service
  * 
@@ -132,7 +133,8 @@ export const checkResourceAccess = query({
     // Check for subscription access
     if (accessConfig.accessType === "subscription") {
       const hasAccess: boolean = await ctx.runQuery(
-        internal.accessControl.hasSubscriptionAccess,
+        // @ts-ignore - type instantiation is excessively deep
+        (internal as any).accessControl.hasSubscriptionAccess,
         {
           userId: args.userId,
           creatorId: accessConfig.creatorId,
@@ -265,7 +267,8 @@ export const getSubscriptionAccessibleContent = query({
         // Check tier access
         if (access.requiredTierId) {
           const hasAccess: boolean = await ctx.runQuery(
-            internal.accessControl.hasSubscriptionAccess,
+            // @ts-ignore - type instantiation is excessively deep
+            (internal as any).accessControl.hasSubscriptionAccess,
             {
               userId: args.userId,
               creatorId: subscription.creatorId,

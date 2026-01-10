@@ -27,7 +27,7 @@ export class ConvexRAG {
     limit?: number;
     threshold?: number;
   }) {
-    return await this.convex.action(api.rag.searchSimilar, params);
+    return await this.convex.action(api.ragActions.searchSimilar, params);
   }
 
   // Ask a question using RAG
@@ -39,7 +39,7 @@ export class ConvexRAG {
     systemPrompt?: string;
     limit?: number;
   }) {
-    return await this.convex.action(api.rag.askQuestion, params);
+    return await this.convex.action(api.ragActions.askQuestion, params);
   }
 
   // Import course content

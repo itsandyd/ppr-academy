@@ -43,10 +43,11 @@ export async function POST(request: NextRequest) {
           const { api: apiAccount } = await import("@/convex/_generated/api");
 
           // Find user by Stripe account ID
-          const users = await fetchQueryAccount(apiAccount.users.getAllUsers);
-          const user = users?.find((u: any) => u.stripeConnectAccountId === account.id);
+          const user = await fetchQueryAccount(apiAccount.users.getUserByStripeAccountId, {
+            stripeConnectAccountId: account.id,
+          });
 
-          if (user) {
+          if (user && user.clerkId) {
             // Determine account status
             let status: "pending" | "restricted" | "enabled" = "pending";
             if (account.charges_enabled && account.payouts_enabled) {
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest) {
             }
 
             await fetchMutationAccount(apiAccount.users.updateUserByClerkId, {
-              clerkId: user.clerkId,
+              clerkId: user.clerkId as string,
               updates: {
                 stripeAccountStatus: status,
                 stripeOnboardingComplete: account.details_submitted || false,
@@ -333,7 +334,8 @@ export async function POST(request: NextRequest) {
             const { internal: internalCredits } = await import("@/convex/_generated/api");
 
             try {
-              await fetchMutationCredits(internalCredits.credits.addCredits, {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              await fetchMutationCredits(internalCredits.credits.addCredits as any, {
                 userId,
                 amount: creditsAmount,
                 type: "purchase" as const,
@@ -346,7 +348,8 @@ export async function POST(request: NextRequest) {
               });
 
               if (bonusAmount > 0) {
-                await fetchMutationCredits(internalCredits.credits.addCredits, {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                await fetchMutationCredits(internalCredits.credits.addCredits as any, {
                   userId,
                   amount: bonusAmount,
                   type: "bonus" as const,

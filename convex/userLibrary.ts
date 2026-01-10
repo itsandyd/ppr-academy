@@ -1,5 +1,6 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
+import { Id } from "./_generated/dataModel";
 
 // Get user's enrolled courses with progress (IMPROVED)
 export const getUserEnrolledCourses = query({
@@ -315,8 +316,8 @@ export const getContinueWatching = query({
     );
 
     for (const [courseIdStr, data] of sortedCourses) {
-      const course = await ctx.db.get(courseIdStr as any);
-      if (!course || !course.isPublished) continue;
+      const course = await ctx.db.get(courseIdStr as Id<"courses">);
+      if (!course || !(course as any).isPublished) continue;
 
       const chapters = await ctx.db
         .query("courseChapters")
@@ -350,10 +351,10 @@ export const getContinueWatching = query({
 
       return {
         course: {
-          _id: course._id,
-          title: course.title || "Untitled Course",
-          slug: course.slug,
-          imageUrl: course.imageUrl,
+          _id: course._id as Id<"courses">,
+          title: (course as any).title || "Untitled Course",
+          slug: (course as any).slug,
+          imageUrl: (course as any).imageUrl,
         },
         nextChapter: {
           _id: nextChapter._id,

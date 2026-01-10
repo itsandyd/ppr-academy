@@ -135,9 +135,10 @@ export const checkMembershipAccess = query({
     }
 
     if (args.courseId) {
+      const courseId = args.courseId;
       const accessRule = await ctx.db
         .query("contentAccess")
-        .withIndex("by_resourceId", (q) => q.eq("resourceId", args.courseId))
+        .withIndex("by_resourceId", (q) => q.eq("resourceId", courseId))
         .filter((q) =>
           q.and(
             q.eq(q.field("resourceType"), "course"),
@@ -153,9 +154,10 @@ export const checkMembershipAccess = query({
     }
 
     if (args.productId) {
+      const productId = args.productId;
       const accessRule = await ctx.db
         .query("contentAccess")
-        .withIndex("by_resourceId", (q) => q.eq("resourceId", args.productId))
+        .withIndex("by_resourceId", (q) => q.eq("resourceId", productId))
         .filter((q) =>
           q.and(
             q.eq(q.field("resourceType"), "product"),
@@ -246,7 +248,8 @@ export const createMembershipTier = mutation({
       stripePriceIdMonthly: "",
       stripePriceIdYearly: args.priceYearly ? "" : undefined,
       benefits: args.benefits,
-      maxCourses: args.includeAllContent ? null : args.maxCourses,
+      maxCourses: args.includeAllContent ? undefined : args.maxCourses,
+      trialDays: args.trialDays,
       isActive: false,
     });
 
@@ -289,6 +292,7 @@ export const updateMembershipTier = mutation({
     priceYearly: v.optional(v.number()),
     benefits: v.optional(v.array(v.string())),
     maxCourses: v.optional(v.number()),
+    trialDays: v.optional(v.number()),
     isActive: v.optional(v.boolean()),
     includedCourseIds: v.optional(v.array(v.string())),
     includedProductIds: v.optional(v.array(v.string())),

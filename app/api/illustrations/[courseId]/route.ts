@@ -12,7 +12,9 @@ export async function GET(
     }
 
     // Fetch illustrations where scriptId matches the courseId
-    const illustrations = await fetchQuery(api.scriptIllustrationQueries.getIllustrationsByScript, {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const scriptIllustrationApi: any = api.scriptIllustrationQueries;
+    const illustrations = await fetchQuery(scriptIllustrationApi.getIllustrationsByScript, {
       scriptId: courseId,
     });
 

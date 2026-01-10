@@ -300,6 +300,20 @@ const getAllUsersInternal = internalQuery({
   },
 });
 
+// Find user by Stripe Connect account ID (for webhooks)
+// Note: This is public but only returns limited data and is needed for Stripe webhook processing
+export const getUserByStripeAccountId = query({
+  args: {
+    stripeConnectAccountId: v.string(),
+  },
+  returns: v.union(v.any(), v.null()),
+  handler: async (ctx, args) => {
+    // Filter users by stripeConnectAccountId
+    const users = await ctx.db.query("users").collect();
+    return users.find((u) => u.stripeConnectAccountId === args.stripeConnectAccountId) || null;
+  },
+});
+
 // Get all users (admin only - with authorization and pagination)
 export const getAllUsers = query({
   args: {

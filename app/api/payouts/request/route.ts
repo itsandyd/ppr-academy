@@ -13,6 +13,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 // Initialize Convex client
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const monetizationApi: any = api.monetizationUtils;
 
 // Minimum payout amount in cents ($25)
 const MINIMUM_PAYOUT_AMOUNT = 2500;
@@ -50,7 +52,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get pending earnings from Convex
-    const pendingEarnings = await convex.query(api.monetizationUtils.getCreatorPendingEarnings, {
+    const pendingEarnings = await convex.query(monetizationApi.getCreatorPendingEarnings, {
       creatorId: user.id,
     });
 
@@ -71,7 +73,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create a payout record in Convex first (status: processing)
-    const payoutRecord = await convex.mutation(api.monetizationUtils.processPayoutRequest, {
+    const payoutRecord = await convex.mutation(monetizationApi.processPayoutRequest, {
       creatorId: user.id,
       storeId: storeId as Id<"stores">,
       amount: pendingEarnings.netEarnings,
@@ -108,12 +110,12 @@ export async function POST(request: NextRequest) {
       });
 
       // Mark payout as completed and mark purchases as paid out
-      await convex.mutation(api.monetizationUtils.completeCreatorPayout, {
+      await convex.mutation(monetizationApi.completeCreatorPayout, {
         payoutId: payoutRecord.payoutId,
         stripeTransferId: transfer.id,
       });
 
-      await convex.mutation(api.monetizationUtils.markPurchasesAsPaidOut, {
+      await convex.mutation(monetizationApi.markPurchasesAsPaidOut, {
         purchaseIds: pendingEarnings.purchaseIds as Id<"purchases">[],
         payoutId: payoutRecord.payoutId,
       });
@@ -136,7 +138,7 @@ export async function POST(request: NextRequest) {
 
     } catch (stripeError: any) {
       // If Stripe transfer fails, mark payout as failed
-      await convex.mutation(api.monetizationUtils.failCreatorPayout, {
+      await convex.mutation(monetizationApi.failCreatorPayout, {
         payoutId: payoutRecord.payoutId,
         reason: stripeError.message || "Stripe transfer failed",
       });

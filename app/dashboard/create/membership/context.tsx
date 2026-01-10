@@ -146,7 +146,7 @@ export function MembershipCreationProvider({ children }: { children: React.React
         priceMonthly: existingTier.priceMonthly?.toString() || "",
         priceYearly: existingTier.priceYearly?.toString() || "",
         benefits: existingTier.benefits || [],
-        trialDays: existingTier.trialDays || 0,
+        trialDays: (existingTier as any).trialDays || 0,
         includedContent,
         includeAllContent: existingTier.maxCourses === null,
       };

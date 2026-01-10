@@ -52,23 +52,14 @@ export const getCourseSocialProof = query({
       })
     );
 
-    // Get reviews for this course
-    const reviews = await ctx.db
-      .query("courseReviews")
-      .filter((q) => q.eq(q.field("courseId"), args.courseId))
-      .collect();
-
-    const avgRating = reviews.length > 0
-      ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
-      : 4.8;
-
+    // Note: courseReviews table doesn't exist yet, return placeholder values
     return {
       totalEnrollments: completedPurchases.length,
       enrollmentsThisWeek: weeklyPurchases.length,
       enrollmentsThisMonth: monthlyPurchases.length,
       recentEnrollments,
-      averageRating: Math.round(avgRating * 10) / 10,
-      totalReviews: reviews.length,
+      averageRating: 0, // No reviews system for courses yet
+      totalReviews: 0,
     };
   },
 });
@@ -130,7 +121,7 @@ export const getProductSocialProof = query({
       .collect();
 
     const avgRating = reviews.length > 0
-      ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+      ? reviews.reduce((sum, r) => sum + (r.rating ?? 0), 0) / reviews.length
       : 4.8;
 
     return {
