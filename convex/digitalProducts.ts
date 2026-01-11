@@ -170,12 +170,34 @@ export const getProductsByStore = query({
           chainImageUrl = (await ctx.storage.getUrl(chainImageUrl as any)) || chainImageUrl;
         }
 
+        // Convert packFiles storage IDs to URLs
+        let packFiles = product.packFiles;
+        if (packFiles) {
+          try {
+            const files = JSON.parse(packFiles);
+            const filesWithUrls = await Promise.all(
+              files.map(async (file: any) => {
+                let fileUrl = file.url || file.storageId;
+                if (fileUrl && !fileUrl.startsWith("http")) {
+                  const convertedUrl = await ctx.storage.getUrl(fileUrl as any);
+                  fileUrl = convertedUrl || fileUrl;
+                }
+                return { ...file, url: fileUrl };
+              })
+            );
+            packFiles = JSON.stringify(filesWithUrls);
+          } catch (e) {
+            // If parsing fails, keep original packFiles
+          }
+        }
+
         return {
           ...product,
           imageUrl,
           downloadUrl,
           demoAudioUrl,
           chainImageUrl,
+          packFiles,
         };
       })
     );
@@ -353,12 +375,34 @@ export const getPublishedProductsByStore = query({
           chainImageUrl = (await ctx.storage.getUrl(chainImageUrl as any)) || chainImageUrl;
         }
 
+        // Convert packFiles storage IDs to URLs
+        let packFiles = product.packFiles;
+        if (packFiles) {
+          try {
+            const files = JSON.parse(packFiles);
+            const filesWithUrls = await Promise.all(
+              files.map(async (file: any) => {
+                let fileUrl = file.url || file.storageId;
+                if (fileUrl && !fileUrl.startsWith("http")) {
+                  const convertedUrl = await ctx.storage.getUrl(fileUrl as any);
+                  fileUrl = convertedUrl || fileUrl;
+                }
+                return { ...file, url: fileUrl };
+              })
+            );
+            packFiles = JSON.stringify(filesWithUrls);
+          } catch (e) {
+            // If parsing fails, keep original packFiles
+          }
+        }
+
         return {
           ...product,
           imageUrl,
           downloadUrl,
           demoAudioUrl,
           chainImageUrl,
+          packFiles,
         };
       })
     );
@@ -506,12 +550,34 @@ export const getProductsByUser = query({
           chainImageUrl = (await ctx.storage.getUrl(chainImageUrl as any)) || chainImageUrl;
         }
 
+        // Convert packFiles storage IDs to URLs
+        let packFiles = product.packFiles;
+        if (packFiles) {
+          try {
+            const files = JSON.parse(packFiles);
+            const filesWithUrls = await Promise.all(
+              files.map(async (file: any) => {
+                let fileUrl = file.url || file.storageId;
+                if (fileUrl && !fileUrl.startsWith("http")) {
+                  const convertedUrl = await ctx.storage.getUrl(fileUrl as any);
+                  fileUrl = convertedUrl || fileUrl;
+                }
+                return { ...file, url: fileUrl };
+              })
+            );
+            packFiles = JSON.stringify(filesWithUrls);
+          } catch (e) {
+            // If parsing fails, keep original packFiles
+          }
+        }
+
         return {
           ...product,
           imageUrl,
           downloadUrl,
           demoAudioUrl,
           chainImageUrl,
+          packFiles,
         };
       })
     );
@@ -695,6 +761,29 @@ export const getProductById = query({
       );
     }
 
+    // Convert packFiles storage IDs to URLs
+    let packFiles = product.packFiles;
+    if (packFiles) {
+      try {
+        const files = JSON.parse(packFiles);
+        const filesWithUrls = await Promise.all(
+          files.map(async (file: any) => {
+            let fileUrl = file.url || file.storageId;
+            // If it's a storage ID (not already a URL), convert it
+            if (fileUrl && !fileUrl.startsWith("http")) {
+              const convertedUrl = await ctx.storage.getUrl(fileUrl as any);
+              fileUrl = convertedUrl || fileUrl;
+            }
+            return { ...file, url: fileUrl };
+          })
+        );
+        packFiles = JSON.stringify(filesWithUrls);
+      } catch (e) {
+        // If parsing fails, keep original packFiles
+        console.error("Failed to parse packFiles:", e);
+      }
+    }
+
     return {
       ...product,
       imageUrl,
@@ -702,6 +791,7 @@ export const getProductById = query({
       demoAudioUrl,
       chainImageUrl,
       macroScreenshotUrls,
+      packFiles,
     };
   },
 });

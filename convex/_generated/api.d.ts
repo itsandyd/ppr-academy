@@ -160,6 +160,7 @@ import type * as migrations_backfillCustomers from "../migrations/backfillCustom
 import type * as migrations_importPlugins from "../migrations/importPlugins.js";
 import type * as migrations_migrateAbletonRacksToEffectChains from "../migrations/migrateAbletonRacksToEffectChains.js";
 import type * as migrations_universalProductsMigration from "../migrations/universalProductsMigration.js";
+import type * as mixingTemplates from "../mixingTemplates.js";
 import type * as model_courses from "../model/courses.js";
 import type * as monetizationSchema from "../monetizationSchema.js";
 import type * as monetizationUtils from "../monetizationUtils.js";
@@ -377,6 +378,7 @@ declare const fullApi: ApiFromModules<{
   "migrations/importPlugins": typeof migrations_importPlugins;
   "migrations/migrateAbletonRacksToEffectChains": typeof migrations_migrateAbletonRacksToEffectChains;
   "migrations/universalProductsMigration": typeof migrations_universalProductsMigration;
+  mixingTemplates: typeof mixingTemplates;
   "model/courses": typeof model_courses;
   monetizationSchema: typeof monetizationSchema;
   monetizationUtils: typeof monetizationUtils;

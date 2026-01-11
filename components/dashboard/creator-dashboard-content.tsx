@@ -472,36 +472,38 @@ export function CreatorDashboardContent() {
         />
       </motion.div>
 
-      {/* Data Summary for Verification */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.25 }}
-      >
-        <Card className="mb-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/10 dark:to-purple-900/10 border-blue-200 dark:border-blue-800">
-          <CardContent className="p-4">
-            <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">📊 Live Convex Data</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
-              <div>
-                <span className="text-blue-700 dark:text-blue-300">User ID:</span>
-                <span className="ml-1 font-mono">{convexUserId ? "✅" : "❌"}</span>
+      {/* Data Summary for Verification - Only shown in development */}
+      {process.env.NODE_ENV === 'development' && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+        >
+          <Card className="mb-6 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/10 dark:to-purple-900/10 border-blue-200 dark:border-blue-800">
+            <CardContent className="p-4">
+              <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">📊 Live Convex Data (Dev Only)</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                <div>
+                  <span className="text-blue-700 dark:text-blue-300">User ID:</span>
+                  <span className="ml-1 font-mono">{convexUserId ? "✅" : "❌"}</span>
+                </div>
+                <div>
+                  <span className="text-blue-700 dark:text-blue-300">Stores:</span>
+                  <span className="ml-1 font-mono">{stores?.length || 0}</span>
+                </div>
+                <div>
+                  <span className="text-blue-700 dark:text-blue-300">My Courses:</span>
+                  <span className="ml-1 font-mono">{userCourses?.length || 0}</span>
+                </div>
+                <div>
+                  <span className="text-blue-700 dark:text-blue-300">Digital Products:</span>
+                  <span className="ml-1 font-mono">{digitalProducts?.length || 0}</span>
+                </div>
               </div>
-              <div>
-                <span className="text-blue-700 dark:text-blue-300">Stores:</span>
-                <span className="ml-1 font-mono">{stores?.length || 0}</span>
-              </div>
-              <div>
-                <span className="text-blue-700 dark:text-blue-300">My Courses:</span>
-                <span className="ml-1 font-mono">{userCourses?.length || 0}</span>
-              </div>
-              <div>
-                <span className="text-blue-700 dark:text-blue-300">Digital Products:</span>
-                <span className="ml-1 font-mono">{digitalProducts?.length || 0}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </motion.div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
 
       {/* Content Breakdown */}
       <motion.div

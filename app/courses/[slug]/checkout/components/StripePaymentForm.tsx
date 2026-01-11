@@ -125,19 +125,21 @@ export function StripePaymentForm({
           </p>
         </div>
 
-        {/* Test Card Info */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h4 className="font-medium text-blue-800 mb-2 flex items-center gap-2">
-            <CreditCard className="w-4 h-4" />
-            Test Payment
-          </h4>
-          <p className="text-sm text-blue-700 mb-2">Use this test card for development:</p>
-          <div className="font-mono text-sm text-blue-800">
-            <div>Card: 4242 4242 4242 4242</div>
-            <div>Expiry: Any future date</div>
-            <div>CVC: Any 3 digits</div>
+{/* Test Card Info - Only shown in development */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h4 className="font-medium text-blue-800 mb-2 flex items-center gap-2">
+              <CreditCard className="w-4 h-4" />
+              Test Payment (Dev Only)
+            </h4>
+            <p className="text-sm text-blue-700 mb-2">Use this test card for development:</p>
+            <div className="font-mono text-sm text-blue-800">
+              <div>Card: 4242 4242 4242 4242</div>
+              <div>Expiry: Any future date</div>
+              <div>CVC: Any 3 digits</div>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Payment Button */}
         <Button

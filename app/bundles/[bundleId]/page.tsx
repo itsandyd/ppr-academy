@@ -1,21 +1,29 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, Package, TrendingDown } from "lucide-react";
+import { Check, Package, TrendingDown, Loader2 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { toast } from "sonner";
 
 export default function BundleDetailsPage() {
   const params = useParams();
+  const router = useRouter();
+  const { user, isLoaded: isUserLoaded } = useUser();
   const bundleId = params.bundleId as Id<"bundles">;
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
 
-  const bundleDetails = useQuery(api.bundles.getBundleDetails, { bundleId });
+  // @ts-ignore TS2589
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const bundleDetails: any = useQuery(api.bundles.getBundleDetails, { bundleId });
 
   if (!bundleDetails) {
     return (
@@ -26,6 +34,49 @@ export default function BundleDetailsPage() {
   }
 
   const { courses, products, ...bundle } = bundleDetails;
+
+  const handlePurchase = async () => {
+    if (!isUserLoaded) return;
+
+    if (!user) {
+      toast.error("Please sign in to purchase");
+      router.push(`/sign-in?redirect_url=/bundles/${bundleId}`);
+      return;
+    }
+
+    setIsCheckingOut(true);
+    try {
+      const response = await fetch("/api/bundles/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bundleId: bundle._id,
+          customerEmail: user.emailAddresses[0]?.emailAddress || "",
+          customerName: user.fullName || user.firstName || "Customer",
+          bundlePrice: bundle.bundlePrice / 100, // Convert from cents
+          bundleName: bundle.name,
+          bundleImageUrl: bundle.imageUrl,
+          userId: user.id,
+          storeId: bundle.storeId,
+          courseIds: bundle.courseIds,
+          productIds: bundle.productIds,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      } else {
+        toast.error(data.error || "Failed to create checkout session");
+      }
+    } catch (error) {
+      console.error("Checkout error:", error);
+      toast.error("Failed to process checkout. Please try again.");
+    } finally {
+      setIsCheckingOut(false);
+    }
+  };
 
   return (
     <div className="container mx-auto py-16 max-w-6xl">
@@ -161,8 +212,20 @@ export default function BundleDetailsPage() {
               </div>
 
               <div className="space-y-2">
-                <Button className="w-full" size="lg">
-                  Buy Bundle Now
+                <Button
+                  className="w-full"
+                  size="lg"
+                  onClick={handlePurchase}
+                  disabled={isCheckingOut}
+                >
+                  {isCheckingOut ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    "Buy Bundle Now"
+                  )}
                 </Button>
                 <p className="text-xs text-center text-muted-foreground">
                   30-day money-back guarantee

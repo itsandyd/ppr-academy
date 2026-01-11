@@ -310,6 +310,7 @@ export const bundlesTable = defineTable({
   storeId: v.id("stores"),
   creatorId: v.string(),
   name: v.string(),
+  slug: v.optional(v.string()), // URL-friendly slug for marketplace
   description: v.string(),
   bundleType: v.union(v.literal("course_bundle"), v.literal("mixed"), v.literal("product_bundle")),
   courseIds: v.array(v.id("courses")),
@@ -331,7 +332,8 @@ export const bundlesTable = defineTable({
   updatedAt: v.number(),
 })
   .index("by_store", ["storeId", "isPublished"])
-  .index("by_creator", ["creatorId", "isActive"]);
+  .index("by_creator", ["creatorId", "isActive"])
+  .index("by_slug", ["slug"]);
 
 /**
  * TAX & MULTI-CURRENCY

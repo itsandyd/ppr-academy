@@ -70,6 +70,12 @@ export default function ProductTypeSelectorPage() {
       return;
     }
 
+    // Mixing templates go to mixing template creator
+    if (categoryId === "mixing-template") {
+      router.push(`/dashboard/create/mixing-template`);
+      return;
+    }
+
     // PDFs go to PDF creator
     if (categoryId === "pdf") {
       router.push(`/dashboard/create/pdf?type=guide`);
@@ -178,6 +184,8 @@ export default function ProductTypeSelectorPage() {
                           {product.flow === "course" && "4-step wizard"}
                           {product.flow === "service" && "4-step wizard"}
                           {product.flow === "bundle" && "3-step wizard"}
+                          {product.flow === "chain" && "4-step wizard"}
+                          {product.flow === "mixing-template" && "4-step wizard"}
                         </Badge>
                       </CardContent>
                     </Card>

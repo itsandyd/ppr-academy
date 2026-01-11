@@ -85,7 +85,8 @@ export type CreationFlow =
   | "bundle"
   | "chain"
   | "coaching"
-  | "membership";
+  | "membership"
+  | "mixing-template";
 
 // Map product categories to their creation flow
 export const CATEGORY_TO_FLOW: Record<ProductCategory, CreationFlow> = {
@@ -95,7 +96,7 @@ export const CATEGORY_TO_FLOW: Record<ProductCategory, CreationFlow> = {
   "midi-pack": "digital",
   "beat-lease": "digital",
   "project-files": "digital",
-  "mixing-template": "digital",
+  "mixing-template": "mixing-template",
   pdf: "digital", // Consolidated PDF category
   "blog-post": "digital",
   community: "digital",
@@ -177,10 +178,10 @@ export const PRODUCT_CATEGORIES = [
   {
     id: "mixing-template",
     label: "Mixing Template",
-    description: "Processing chains & templates",
+    description: "DAW mixing & mastering templates",
     category: "Music Production",
     icon: "🎚️",
-    flow: "digital" as CreationFlow,
+    flow: "mixing-template" as CreationFlow,
   },
   {
     id: "bundle",

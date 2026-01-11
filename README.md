@@ -1,34 +1,51 @@
 # PPR Academy - Music Production Learning Platform
 
-A modern full-stack Next.js application for music production education, built with App Router, Prisma, Tailwind CSS, shadcn/ui, Clerk authentication, and Planetscale.
+A modern full-stack Next.js application for music production education and creator marketplace, built with App Router, Convex, Tailwind CSS, shadcn/ui, Clerk authentication, and Stripe.
 
 ## Tech Stack
 
-- **Framework**: Next.js 15 with App Router
-- **Database**: Planetscale (MySQL) with Prisma ORM
+- **Framework**: Next.js 15 with App Router + Turbopack
+- **Database**: Convex (real-time NoSQL backend)
 - **Authentication**: Clerk
+- **Payments**: Stripe (+ Stripe Connect for creator payouts)
+- **Email**: Resend with React Email templates
+- **File Storage**: UploadThing
 - **Styling**: Tailwind CSS + shadcn/ui components
-- **Language**: TypeScript
+- **Language**: TypeScript 5.7
+- **AI**: OpenAI, LangChain, ElevenLabs (TTS), FAL.ai (image generation)
 
 ## Features
 
-- 🎵 Browse and enroll in music production courses
-- 📚 Track learning progress
-- 👨‍🏫 Create and manage courses as an instructor
-- 🎯 Featured and popular course sections
-- 📊 User dashboard with statistics
-- 🔐 Secure authentication with Clerk
-- **Course Management**: Create, edit, and manage courses with modules, lessons, and chapters
-- **Text-to-Speech**: Generate audio narration for course chapters using 11 Labs API
+### For Learners
+- Browse and enroll in music production courses
+- Track learning progress with completion tracking
+- Access purchased content in personal library
+- Download digital products (sample packs, presets, MIDI)
+
+### For Creators
+- Create and manage courses with modules, lessons, and chapters
+- Sell digital products (sample packs, presets, coaching sessions)
+- Custom storefront with optional custom domain
+- Analytics and revenue tracking
+- AI-assisted course generation
+- Text-to-speech narration using ElevenLabs
+
+### Platform Features
+- Multi-tenant architecture with custom domains
+- Credit system for purchases
+- Subscription tiers
+- Email marketing automation with workflow builder
+- Social media integration (Instagram, Discord)
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js 18+ 
+- Node.js 18+
 - npm or pnpm
-- Planetscale account
+- Convex account (free at convex.dev)
 - Clerk account
+- Stripe account
 
 ### Installation
 
@@ -43,48 +60,54 @@ cd ppr-academy
 npm install
 ```
 
-3. Set up environment variables:
+3. Set up Convex:
+```bash
+npx convex dev
+```
+This will prompt you to log in and create a new Convex project.
 
-Create a `.env.local` file in the root directory with the following variables:
+4. Set up environment variables:
+
+Create a `.env.local` file in the root directory:
 
 ```env
-# Clerk Authentication (get these from https://dashboard.clerk.com)
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_your_publishable_key_here
-CLERK_SECRET_KEY=sk_test_your_secret_key_here
+# Convex
+NEXT_PUBLIC_CONVEX_URL=https://your-deployment.convex.cloud
+CONVEX_DEPLOYMENT=dev:your-deployment
 
-# Clerk URLs (optional - Clerk will use defaults if not set)
-NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
-NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
-NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
-NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard
+# Clerk Authentication
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
+CLERK_SECRET_KEY=sk_test_...
+CLERK_WEBHOOK_SECRET=whsec_...
 
-# Clerk Webhook Secret (for syncing users to database)
-CLERK_WEBHOOK_SECRET=whsec_your_webhook_secret_here
+# Stripe Payments
+STRIPE_SECRET_KEY=sk_test_...
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
 
-# Database
-DATABASE_URL="mysql://username:password@host.planetscale.com/database-name?sslaccept=strict"
+# Email (Resend)
+RESEND_API_KEY=re_...
+
+# File Storage (UploadThing)
+UPLOADTHING_TOKEN=...
+UPLOADTHING_SECRET=...
+
+# AI Services (Optional)
+OPENAI_API_KEY=sk-proj-...
+ELEVENLABS_API_KEY=sk_...
+TAVILY_API_KEY=tvly_...
 
 # Application
-NEXT_PUBLIC_APP_URL="http://localhost:3000"
-
-# 11 Labs Text-to-Speech (Optional)
-ELEVEN_LABS_API_KEY="your_eleven_labs_api_key"
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+ADMIN_CLERK_ID=user_...
 ```
 
-4. Push the database schema:
-```bash
-npm run db:push
-```
-
-5. Generate Prisma client:
-```bash
-npm run db:generate
-```
-
-6. Run the development server:
+5. Run the development server:
 ```bash
 npm run dev
 ```
+
+This runs Next.js, Convex, and Stripe webhook listener concurrently.
 
 Open [http://localhost:3000](http://localhost:3000) to see the application.
 
@@ -92,244 +115,120 @@ Open [http://localhost:3000](http://localhost:3000) to see the application.
 
 1. Create a Clerk account at [clerk.com](https://clerk.com)
 2. Create a new application in the Clerk dashboard
-3. Copy your API keys from the Clerk dashboard
-4. Add the keys to your `.env.local` file
-5. Configure your sign-in and sign-up URLs in the Clerk dashboard (optional)
+3. Copy your API keys to `.env.local`
 
-### Setting Up Webhooks (Important!)
+### Setting Up Webhooks
 
-To sync Clerk users with your database:
+To sync Clerk users with Convex:
 
-1. Go to the Clerk Dashboard → Webhooks
-2. Click "Add Endpoint"
-3. Set the endpoint URL to: `https://your-domain.com/api/webhooks/clerk`
-   - For local development with ngrok: `https://your-ngrok-url.ngrok.io/api/webhooks/clerk`
-4. Select the following events:
-   - `user.created`
-   - `user.updated`
-   - `user.deleted`
-5. Copy the signing secret and add it to your `.env.local` as `CLERK_WEBHOOK_SECRET`
-
-## Database Schema
-
-The application uses the following main models:
-
-- **User**: Store user information (synced with Clerk)
-- **Course**: Course details including title, description, price, and instructor
-- **Enrollment**: Track user enrollments and progress
+1. Go to Clerk Dashboard → Webhooks
+2. Add endpoint: `https://your-domain.com/api/webhooks/clerk`
+3. Select events: `user.created`, `user.updated`, `user.deleted`
+4. Copy signing secret to `CLERK_WEBHOOK_SECRET`
 
 ## Project Structure
 
 ```
-├── app/                  # Next.js app directory
-│   ├── api/
-│   │   └── webhooks/    # Webhook endpoints
-│   │       └── clerk/   # Clerk webhook handler
-├── components/          
-│   ├── ui/              # shadcn/ui components
-│   └── ...              # Custom components
-├── hooks/
-│   └── useAuth.ts       # Clerk authentication hook
-├── lib/                 
-│   ├── prisma.ts        # Prisma client instance
-│   ├── data.ts          # Server-side data fetching functions
-│   ├── types.ts         # TypeScript type definitions
-│   └── utils.ts         # Utility functions
-├── prisma/
-│   └── schema.prisma    # Database schema
-├── middleware.ts        # Clerk middleware for route protection
-└── public/              # Static assets
+├── app/                    # Next.js App Router
+│   ├── (dashboard)/        # Creator dashboard (route group)
+│   ├── [slug]/             # Public storefronts
+│   ├── api/                # API routes & webhooks
+│   ├── courses/            # Course pages
+│   ├── marketplace/        # Marketplace UI
+│   └── ...
+├── components/             # React components
+│   ├── ui/                 # shadcn/ui components
+│   ├── dashboard/          # Dashboard components
+│   └── ...
+├── convex/                 # Convex backend
+│   ├── schema.ts           # Database schema
+│   ├── courses.ts          # Course functions
+│   ├── users.ts            # User functions
+│   └── ...
+├── lib/                    # Utilities
+├── hooks/                  # Custom React hooks
+├── emails/                 # React Email templates
+└── public/                 # Static assets
+```
+
+## Database Schema
+
+The application uses Convex with 60+ tables including:
+
+- **users** - User profiles synced from Clerk
+- **courses**, **courseModules**, **courseLessons**, **courseChapters** - Course structure
+- **digitalProducts** - All product types
+- **purchases** - Transaction history
+- **enrollments** - User course access
+- **stores** - Creator storefronts
+- **credits** - User credit balances
+- **emailWorkflows** - Email automation
+
+## Scripts
+
+```bash
+npm run dev          # Start dev server (Next + Convex + Stripe)
+npm run dev:next     # Next.js only
+npm run build        # Production build
+npm run start        # Start production server
+npm run lint         # ESLint
+npm run typecheck    # TypeScript checking
+npx convex dev       # Convex development
+npx convex deploy    # Deploy Convex to production
 ```
 
 ## Protected Routes
 
-The following routes are protected by Clerk authentication:
+Routes protected by Clerk authentication:
 - `/dashboard/*` - User dashboard
+- `/library/*` - User's purchased content
+- `/home/*` - Creator dashboard
 - `/courses/create/*` - Course creation
-- `/api/courses/create/*` - Course creation API
-- `/api/user/*` - User API endpoints
 - `/profile/*` - User profile
 
-## Scripts
+## Course Structure
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run start` - Start production server
-- `npm run db:push` - Push schema changes to database
-- `npm run db:generate` - Generate Prisma client
-- `npm run db:studio` - Open Prisma Studio
+Courses are organized hierarchically:
+- **Courses** contain multiple modules
+- **Modules** contain multiple lessons
+- **Lessons** contain multiple chapters
+- **Chapters** contain the actual content (text, video, audio)
+
+## Audio Generation (ElevenLabs)
+
+To enable text-to-speech for course chapters:
+
+1. Sign up at [ElevenLabs](https://elevenlabs.io/)
+2. Add `ELEVENLABS_API_KEY` to environment variables
+3. When editing chapters, select a voice and generate audio
+
+## Deployment
+
+### Vercel (Recommended)
+
+1. Push to GitHub
+2. Import project in Vercel
+3. Add environment variables
+4. Deploy
+
+### Convex Production
+
+```bash
+npx convex deploy
+```
+
+## CI/CD
+
+GitHub Actions workflow (`.github/workflows/type-check.yml`) runs:
+- TypeScript type checking
+- Convex schema validation
+- ESLint
+- Production build
 
 ## Contributing
 
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
+Pull requests are welcome. For major changes, please open an issue first.
 
 ## License
 
 [MIT](https://choosealicense.com/licenses/mit/)
-
-## Environment Variables
-
-Create a `.env.local` file in the root directory and add the following variables:
-
-```env
-# Database URL for Planetscale
-DATABASE_URL="mysql://username:password@host/database?ssl={\"rejectUnauthorized\":true}"
-
-# Clerk Authentication
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_your_key_here
-CLERK_SECRET_KEY=sk_test_your_key_here
-CLERK_WEBHOOK_SECRET=whsec_your_webhook_secret_here
-
-# Clerk URLs (optional - defaults are fine)
-NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
-NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
-NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
-NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard
-
-# App URL (for production)
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-
-# AI Course Generator (optional - for admin AI course generation)
-OPENAI_API_KEY=sk_your_openai_api_key_here
-TAVILY_API_KEY=tvly_your_tavily_api_key_here
-
-# 11 Labs Text-to-Speech (Optional)
-ELEVEN_LABS_API_KEY="your_eleven_labs_api_key"
-```
-
-### Setting up Planetscale
-
-1. Create a Planetscale account at https://planetscale.com
-2. Create a new database
-3. Go to "Connect" and select "Connect with Prisma"
-4. Copy the connection string and replace it in your `.env.local` file
-
-### Setting up AI Course Generator (Optional)
-
-The admin dashboard includes an AI course generator that can create comprehensive music production courses. To enable this feature:
-
-1. **OpenAI API Key**:
-   - Sign up at https://platform.openai.com
-   - Go to API Keys and create a new key
-   - Add it as `OPENAI_API_KEY` in your `.env.local`
-
-2. **Tavily API Key** (for web research):
-   - Sign up at https://tavily.com
-   - Get your API key from the dashboard
-   - Add it as `TAVILY_API_KEY` in your `.env.local`
-
-**Note**: These keys are optional. If not provided, the AI course generator will use fallback methods with curated content.
-
-## 🚀 Migrating to Course Slugs (Safe Migration Guide)
-
-The application now supports SEO-friendly course URLs using slugs instead of IDs. Here's how to safely migrate your existing data:
-
-### Step 1: Apply Schema Changes
-
-```bash
-# This will add the optional slug field without breaking existing data
-npx prisma db push
-```
-
-Answer **Yes** when prompted - this is now safe because the slug field is optional.
-
-### Step 2: Generate New Prisma Client
-
-```bash
-npx prisma generate
-```
-
-### Step 3: Populate Slugs for Existing Courses
-
-You can do this through Prisma Studio or directly in your database:
-
-**Option A: Using Prisma Studio (Recommended)**
-```bash
-npx prisma studio
-```
-1. Open the Course table
-2. For each course, click to edit the slug field
-3. Add a URL-friendly version of the title (e.g., "Advanced Vocal Processing" → "advanced-vocal-processing")
-
-**Option B: Using SQL (Advanced)**
-```sql
--- Example: Update course slugs based on titles
-UPDATE Course SET slug = 'advanced-vocal-processing' WHERE title LIKE '%Advanced Vocal Processing%';
-UPDATE Course SET slug = 'basic-beat-making' WHERE title LIKE '%Basic Beat Making%';
-```
-
-### Step 4: Verify Migration
-
-After adding slugs to all courses, test the new URLs:
-- Old: `/courses/cuid123`
-- New: `/courses/advanced-vocal-processing`
-
-### Step 5: Make Slug Required (Optional)
-
-Once all courses have slugs, you can make the field required:
-
-1. Update `prisma/schema.prisma`: change `slug String?` to `slug String`
-2. Run `npx prisma db push`
-
-This migration transforms URLs from `/courses/cuid123` to `/courses/advanced-vocal-processing` for better SEO and user experience.
-
-### Content Scraper Features
-
-The admin dashboard includes a powerful content scraper for research and course development:
-
-**YouTube Video Processing:**
-- Extract video transcripts with retry logic for reliability
-- Fix transcription errors using AI for better readability
-- Support for multiple languages and auto-generated captions
-- Metadata extraction (title, author, description)
-
-**Article & Blog Scraping:**
-- Extract main content while filtering out navigation and ads
-- AI-powered content cleaning and formatting
-- Metadata extraction (author, publish date, description)
-- Intelligent content selector fallbacks
-
-**AI Enhancement:**
-- Automatic text chunking for vector storage
-- OpenAI embedding generation for semantic search
-- Content optimization for educational use
-- Preserves original meaning while improving readability
-
-**Usage:**
-1. Go to Admin Dashboard → Content Scraper tab
-2. Enter a YouTube URL or article URL
-3. Choose whether to fix transcription errors (YouTube only)
-4. Click "Scrape Content" to extract and process
-5. View extracted content, metadata, and text chunks
-
-### 11 Labs Integration
-
-To enable text-to-speech functionality for course chapters:
-
-1. Sign up for an account at [11 Labs](https://elevenlabs.io/)
-2. Get your API key from the dashboard
-3. Add `ELEVEN_LABS_API_KEY` to your environment variables
-4. The system will automatically load available voices and allow you to generate audio from chapter content
-
-**Note**: Audio files are currently stored as base64 strings in the database. For production use, consider uploading to a cloud storage service like AWS S3.
-
-## Course Structure
-
-Courses are organized in a hierarchical structure:
-- **Courses** contain multiple modules
-- **Modules** contain multiple lessons  
-- **Lessons** contain multiple chapters
-- **Chapters** contain the actual content (text, video, audio)
-
-## Audio Generation
-
-When editing a chapter:
-1. Enter your chapter content in the description field
-2. Select a voice from the dropdown (loaded from 11 Labs)
-3. Click "Generate Audio" to create audio narration
-4. Use the play/pause button to preview the generated audio
-5. Students can listen to the audio when viewing the course
-
-## Deployment
-
-The application is recommended to be deployed on Vercel for optimal performance and scalability.

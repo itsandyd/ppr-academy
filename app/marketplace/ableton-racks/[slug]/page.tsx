@@ -1,7 +1,8 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import { useQuery } from "convex/react";
+import { useUser } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,10 +22,13 @@ import {
   CheckCircle,
   AlertCircle,
   Waves,
+  Loader2,
+  ShoppingCart,
 } from "lucide-react";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, useRouter } from "next/navigation";
 import Image from "next/image";
+import { toast } from "sonner";
 
 interface AbletonRackPageProps {
   params: Promise<{
@@ -34,7 +38,10 @@ interface AbletonRackPageProps {
 
 export default function AbletonRackDetailPage({ params }: AbletonRackPageProps) {
   const { slug } = use(params);
+  const { user, isLoaded: isUserLoaded } = useUser();
+  const router = useRouter();
   const rack = useQuery(api.abletonRacks.getAbletonRackBySlug, { slug });
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   // Handle loading state
   if (rack === undefined) {
@@ -53,6 +60,60 @@ export default function AbletonRackDetailPage({ params }: AbletonRackPageProps) 
   const formatPrice = (price?: number) => {
     if (!price || price === 0) return "Free";
     return `$${price.toFixed(2)}`;
+  };
+
+  const handlePurchase = async () => {
+    // Check if user is signed in
+    if (!isUserLoaded) return;
+
+    if (!user) {
+      toast.error("Please sign in to purchase");
+      router.push(`/sign-in?redirect_url=/marketplace/ableton-racks/${slug}`);
+      return;
+    }
+
+    // For free products, go directly to download
+    if (!rack.price || rack.price === 0) {
+      if (rack.downloadUrl) {
+        window.open(rack.downloadUrl, "_blank");
+      } else {
+        toast.error("Download not available");
+      }
+      return;
+    }
+
+    // For paid products, create checkout session
+    setIsCheckingOut(true);
+    try {
+      const response = await fetch("/api/products/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId: rack._id,
+          productSlug: slug,
+          customerEmail: user.emailAddresses[0]?.emailAddress || "",
+          customerName: user.fullName || user.firstName || "Customer",
+          productPrice: rack.price,
+          productTitle: rack.title,
+          productImageUrl: rack.chainImageUrl,
+          userId: user.id,
+          storeId: rack.storeId,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      } else {
+        toast.error(data.error || "Failed to create checkout session");
+      }
+    } catch (error) {
+      console.error("Checkout error:", error);
+      toast.error("Failed to process checkout. Please try again.");
+    } finally {
+      setIsCheckingOut(false);
+    }
   };
 
   return (
@@ -219,18 +280,29 @@ export default function AbletonRackDetailPage({ params }: AbletonRackPageProps) 
 
                 {/* Action Buttons */}
                 <div className="space-y-3">
-                  {rack.downloadUrl && (
-                    <Button
-                      asChild
-                      size="lg"
-                      className="w-full bg-gradient-to-r from-chart-1 to-chart-2 hover:from-chart-1/90 hover:to-chart-2/90"
-                    >
-                      <a href={rack.downloadUrl} target="_blank" rel="noopener noreferrer">
-                        {rack.price === 0 ? "Download Free" : "Buy Now"}
+                  <Button
+                    onClick={handlePurchase}
+                    disabled={isCheckingOut}
+                    size="lg"
+                    className="w-full bg-gradient-to-r from-chart-1 to-chart-2 hover:from-chart-1/90 hover:to-chart-2/90"
+                  >
+                    {isCheckingOut ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : rack.price === 0 ? (
+                      <>
+                        Download Free
                         <Download className="ml-2 h-4 w-4" />
-                      </a>
-                    </Button>
-                  )}
+                      </>
+                    ) : (
+                      <>
+                        Buy Now
+                        <ShoppingCart className="ml-2 h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
 
                   {rack.demoAudioUrl && (
                     <Button
