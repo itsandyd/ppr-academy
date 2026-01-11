@@ -741,12 +741,14 @@ export const getPurchasesForCustomer = query({
         v.literal("digitalProduct"),
         v.literal("course"),
         v.literal("coaching"),
-        v.literal("bundle")
+        v.literal("bundle"),
+        v.literal("beatLease")
       ),
       accessGranted: v.optional(v.boolean()),
       accessExpiresAt: v.optional(v.number()),
       downloadCount: v.optional(v.number()),
       lastAccessedAt: v.optional(v.number()),
+      beatLicenseId: v.optional(v.id("beatLicenses")),
     })
   ),
   handler: async (ctx, args) => {

@@ -315,6 +315,72 @@ export async function POST(request: NextRequest) {
           }
         }
 
+        // Handle beat lease purchases
+        if (session.metadata?.productType === "beatLease") {
+          const { userId, beatId, tierType, tierName, storeId, amount, currency } = session.metadata;
+
+          if (userId && beatId && tierType && storeId && amount) {
+            console.log("🎵 Processing beat lease purchase:", {
+              userId,
+              beatId,
+              tierType,
+              tierName,
+              amount: parseInt(amount) / 100,
+              currency: currency || "USD",
+              sessionId: session.id,
+              paymentIntentId: session.payment_intent,
+            });
+
+            const { fetchMutation: fetchMutationBeatLease } = await import("convex/nextjs");
+            const { api: apiBeatLease, internal: internalBeatLease } = await import("@/convex/_generated/api");
+
+            try {
+              // Create the beat license purchase
+              const result = await fetchMutationBeatLease(
+                apiBeatLease.beatLeases.createBeatLicensePurchase,
+                {
+                  beatId: beatId as any,
+                  tierType: tierType as "basic" | "premium" | "exclusive" | "unlimited",
+                  tierName: tierName || tierType,
+                  userId,
+                  storeId,
+                  amount: parseInt(amount),
+                  currency: currency || "USD",
+                  paymentMethod: "stripe",
+                  transactionId: session.payment_intent as string,
+                  buyerEmail: session.customer_details?.email || session.metadata?.customerEmail || "",
+                  buyerName: session.customer_details?.name || session.metadata?.customerName,
+                }
+              );
+
+              console.log("✅ Beat license purchase created:", {
+                purchaseId: result.purchaseId,
+                beatLicenseId: result.beatLicenseId,
+                userId,
+                beatId,
+                tierType,
+              });
+
+              // If exclusive tier, mark beat as sold (hides from marketplace)
+              if (tierType === "exclusive") {
+                try {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  await fetchMutationBeatLease(internalBeatLease.beatLeases.markBeatAsExclusivelySold as any, {
+                    beatId: beatId as any,
+                    userId,
+                    purchaseId: result.purchaseId,
+                  });
+                  console.log("✅ Beat marked as exclusively sold:", { beatId });
+                } catch (exclusiveError) {
+                  console.error("❌ Failed to mark beat as exclusively sold:", exclusiveError);
+                }
+              }
+            } catch (error) {
+              console.error("❌ Failed to create beat license purchase:", error);
+            }
+          }
+        }
+
         // Handle credit package purchases
         if (session.metadata?.productType === "credit_package") {
           const { userId, packageId, credits, bonusCredits, packageName } = session.metadata;
@@ -369,6 +435,131 @@ export async function POST(request: NextRequest) {
               });
             } catch (error) {
               console.error("❌ Failed to add credits:", error);
+            }
+          }
+        }
+
+        // Handle playlist submission payments
+        if (session.metadata?.productType === "playlist_submission") {
+          const { submitterId, creatorId, trackId, playlistId, message, amount } =
+            session.metadata;
+
+          if (submitterId && creatorId && trackId && playlistId) {
+            console.log("🎵 Processing playlist submission payment:", {
+              submitterId,
+              creatorId,
+              playlistId,
+              trackId,
+              amount: parseInt(amount || "0") / 100,
+              sessionId: session.id,
+            });
+
+            const { fetchMutation: fetchMutationSubmission } = await import("convex/nextjs");
+            const { api: apiSubmission } = await import("@/convex/_generated/api");
+
+            try {
+              // Create the track submission with paid status
+              const submissionId = await fetchMutationSubmission(
+                apiSubmission.submissions.submitTrack,
+                {
+                  submitterId,
+                  creatorId,
+                  trackId: trackId as any,
+                  playlistId: playlistId as any,
+                  message: message || undefined,
+                  submissionFee: parseInt(amount || "0") / 100,
+                  paymentId: session.payment_intent as string,
+                }
+              );
+
+              // Update payment status to paid
+              await fetchMutationSubmission(
+                apiSubmission.submissions.updatePaymentStatus,
+                {
+                  submissionId,
+                  paymentStatus: "paid",
+                  paymentId: session.payment_intent as string,
+                }
+              );
+
+              console.log("✅ Playlist submission created:", {
+                submissionId,
+                submitterId,
+                playlistId,
+              });
+            } catch (error) {
+              console.error("❌ Failed to create playlist submission:", error);
+            }
+          }
+        }
+
+        // Handle mixing service purchases
+        if (session.metadata?.productType === "mixingService") {
+          const {
+            userId,
+            creatorId,
+            productId,
+            storeId,
+            serviceType,
+            selectedTier,
+            isRush,
+            rushFee,
+            basePrice,
+            totalPrice,
+            customerNotes,
+          } = session.metadata;
+
+          if (userId && creatorId && productId && selectedTier) {
+            console.log("🎚️ Processing mixing service purchase:", {
+              userId,
+              creatorId,
+              productId,
+              serviceType,
+              totalPrice: parseInt(totalPrice || "0"),
+              sessionId: session.id,
+            });
+
+            const { fetchMutation: fetchMutationService } = await import("convex/nextjs");
+            const { api: apiService } = await import("@/convex/_generated/api");
+
+            try {
+              // Parse the selected tier from JSON string
+              const tierData = JSON.parse(selectedTier);
+
+              // Create the service order
+              const orderId = await fetchMutationService(
+                apiService.serviceOrders.createServiceOrder,
+                {
+                  customerId: userId,
+                  creatorId,
+                  productId: productId as any,
+                  storeId: storeId || "",
+                  serviceType: (serviceType as "mixing" | "mastering" | "mix-and-master" | "stem-mixing") || "mixing",
+                  selectedTier: {
+                    id: tierData.id || "basic",
+                    name: tierData.name || "Basic Mix",
+                    stemCount: tierData.stemCount || "Up to 30 stems",
+                    price: tierData.price || parseInt(basePrice || "0"),
+                    turnaroundDays: tierData.turnaroundDays || 7,
+                    revisions: tierData.revisions || 2,
+                  },
+                  basePrice: parseInt(basePrice || "0"),
+                  rushFee: isRush === "true" ? parseInt(rushFee || "0") : undefined,
+                  totalPrice: parseInt(totalPrice || "0"),
+                  isRush: isRush === "true",
+                  customerNotes: customerNotes || undefined,
+                  transactionId: session.payment_intent as string,
+                }
+              );
+
+              console.log("✅ Mixing service order created:", {
+                orderId,
+                userId,
+                creatorId,
+                productId,
+              });
+            } catch (error) {
+              console.error("❌ Failed to create mixing service order:", error);
             }
           }
         }

@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useQuery } from "convex/react";
+import { useUser } from "@clerk/nextjs";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
@@ -26,11 +27,13 @@ import {
   Zap,
   Music,
   FileAudio,
+  Crown,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { MarketplaceNavbar } from "@/components/marketplace-navbar";
+import { LicenseTierPicker } from "@/components/beats/LicenseTierPicker";
 
 interface BeatDetailClientProps {
   productId: string;
@@ -58,6 +61,26 @@ export function BeatDetailClient({
     api.users.getUserFromClerk,
     product?.userId ? { clerkId: product.userId } : "skip"
   );
+
+  const { user } = useUser();
+
+  // Fetch beat license tiers
+  const beatTiers = useQuery(
+    api.beatLeases.getBeatLicenseTiers,
+    productId ? { beatId: productId as Id<"digitalProducts"> } : "skip"
+  );
+
+  // Check if user owns any licenses for this beat
+  const userLicenses = useQuery(
+    api.beatLeases.checkUserBeatLicense,
+    user?.id && productId
+      ? { userId: user.id, beatId: productId as Id<"digitalProducts"> }
+      : "skip"
+  );
+
+  // Check if this is a beat-lease product with tiers
+  const isBeatLease = product?.productCategory === "beat-lease" && (beatTiers?.tiers?.length ?? 0) > 0;
+  const isExclusivelySold = product?.exclusiveSoldAt != null;
 
   // Audio player state
   const [isPlaying, setIsPlaying] = useState(false);
@@ -397,27 +420,61 @@ export function BeatDetailClient({
           >
             <Card className="sticky top-24">
               <CardContent className="p-6">
-                <div className="mb-6 text-center">
-                  <div className="text-4xl font-bold text-orange-500">
-                    {product.price === 0 ? "Free" : `$${(product.price / 100).toFixed(2)}`}
+                {/* Beat Lease with Tiers */}
+                {isBeatLease && !isExclusivelySold && beatTiers?.tiers && (
+                  <>
+                    <LicenseTierPicker
+                      beatId={productId}
+                      beatTitle={product.title}
+                      tiers={beatTiers.tiers}
+                      storeId={store?.userId || product.storeId}
+                      creatorStripeAccountId={store?.stripeConnectAccountId}
+                      userOwnedTiers={userLicenses?.licenses?.map((l) => l.tierType) || []}
+                      isExclusivelySold={false}
+                    />
+                    <Separator className="my-6" />
+                  </>
+                )}
+
+                {/* Exclusively Sold Message */}
+                {isExclusivelySold && (
+                  <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4">
+                    <div className="flex items-center gap-2 text-amber-700">
+                      <Crown className="h-5 w-5" />
+                      <span className="font-semibold">Exclusively Sold</span>
+                    </div>
+                    <p className="mt-2 text-sm text-amber-600">
+                      This beat has been purchased exclusively and is no longer available.
+                    </p>
                   </div>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {product.licenseType || "Standard"} License
-                  </p>
-                </div>
+                )}
 
-                <Link href={purchaseUrl}>
-                  <Button className="w-full bg-orange-500 hover:bg-orange-600" size="lg">
-                    <ShoppingCart className="mr-2 h-5 w-5" />
-                    {product.price === 0 ? "Download Free" : "License Beat"}
-                  </Button>
-                </Link>
+                {/* Standard Purchase (non beat-lease or fallback) */}
+                {!isBeatLease && !isExclusivelySold && (
+                  <>
+                    <div className="mb-6 text-center">
+                      <div className="text-4xl font-bold text-orange-500">
+                        {product.price === 0 ? "Free" : `$${(product.price / 100).toFixed(2)}`}
+                      </div>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {product.licenseType || "Standard"} License
+                      </p>
+                    </div>
 
-                <p className="mt-3 text-center text-xs text-muted-foreground">
-                  Instant download after purchase
-                </p>
+                    <Link href={purchaseUrl}>
+                      <Button className="w-full bg-orange-500 hover:bg-orange-600" size="lg">
+                        <ShoppingCart className="mr-2 h-5 w-5" />
+                        {product.price === 0 ? "Download Free" : "License Beat"}
+                      </Button>
+                    </Link>
 
-                <Separator className="my-6" />
+                    <p className="mt-3 text-center text-xs text-muted-foreground">
+                      Instant download after purchase
+                    </p>
+
+                    <Separator className="my-6" />
+                  </>
+                )}
 
                 {/* Producer Info */}
                 {(creator || store) && (
@@ -452,33 +509,37 @@ export function BeatDetailClient({
                   </div>
                 )}
 
-                <Separator className="my-6" />
+                {!isExclusivelySold && (
+                  <>
+                    <Separator className="my-6" />
 
-                {/* License Features */}
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span>Instant download</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span>Commercial use allowed</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span>High quality WAV + MP3</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span>Stems included</span>
-                  </div>
-                  {product.price === 0 && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                      <span>No payment required</span>
+                    {/* License Features */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 text-sm">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Instant download</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Commercial use allowed</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>High quality WAV + MP3</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span>Stems included</span>
+                      </div>
+                      {product.price === 0 && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                          <span>No payment required</span>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </motion.div>

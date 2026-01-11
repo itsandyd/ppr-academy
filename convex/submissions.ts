@@ -30,14 +30,43 @@ export const submitTrack = mutation({
     });
 
     // Update playlist submission count
+    let playlistName = "your playlist";
     if (args.playlistId) {
       const playlist = await ctx.db.get(args.playlistId);
       if (playlist) {
         await ctx.db.patch(args.playlistId, {
           totalSubmissions: playlist.totalSubmissions + 1,
         });
+        playlistName = playlist.name;
       }
     }
+
+    // Get track and submitter info for notification
+    const track = await ctx.db.get(args.trackId);
+    const submitter = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.submitterId))
+      .unique();
+
+    const submitterName = submitter?.firstName || submitter?.email || "An artist";
+    const trackTitle = track?.title || "a track";
+
+    // Create notification for curator
+    await ctx.db.insert("notifications", {
+      userId: args.creatorId,
+      title: "New Track Submission",
+      message: `${submitterName} submitted "${trackTitle}" to ${playlistName}`,
+      type: "info",
+      read: false,
+      link: "/dashboard/home/submissions",
+      actionLabel: "View Submissions",
+      createdAt: Date.now(),
+      emailSent: false,
+      senderType: "system",
+      senderId: args.submitterId,
+      senderName: submitterName,
+      senderAvatar: submitter?.imageUrl,
+    });
 
     return submissionId;
   },
@@ -179,6 +208,34 @@ export const acceptSubmission = mutation({
       });
     }
 
+    // Get track and curator info for notification
+    const track = await ctx.db.get(submission.trackId);
+    const curator = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", submission.creatorId))
+      .unique();
+
+    const curatorName = curator?.firstName || curator?.email || "A curator";
+    const trackTitle = track?.title || "your track";
+    const playlistName = playlist?.name || "their playlist";
+
+    // Create notification for submitter
+    await ctx.db.insert("notifications", {
+      userId: submission.submitterId,
+      title: "Track Accepted!",
+      message: `${curatorName} accepted "${trackTitle}" to ${playlistName}!`,
+      type: "success",
+      read: false,
+      link: "/dashboard/home/submissions",
+      actionLabel: "View Details",
+      createdAt: Date.now(),
+      emailSent: false,
+      senderType: "creator",
+      senderId: submission.creatorId,
+      senderName: curatorName,
+      senderAvatar: curator?.imageUrl,
+    });
+
     return null;
   },
 });
@@ -194,11 +251,48 @@ export const declineSubmission = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const submission = await ctx.db.get(args.submissionId);
+    if (!submission) throw new Error("Submission not found");
+
     await ctx.db.patch(args.submissionId, {
       status: "declined",
       decidedAt: Date.now(),
       decisionNotes: args.decisionNotes,
       feedback: args.feedback,
+    });
+
+    // Get track and curator info for notification
+    const track = await ctx.db.get(submission.trackId);
+    const curator = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", submission.creatorId))
+      .unique();
+
+    let playlist = null;
+    if (submission.playlistId) {
+      playlist = await ctx.db.get(submission.playlistId);
+    }
+
+    const curatorName = curator?.firstName || curator?.email || "A curator";
+    const trackTitle = track?.title || "your track";
+
+    // Create notification for submitter
+    await ctx.db.insert("notifications", {
+      userId: submission.submitterId,
+      title: "Submission Reviewed",
+      message: args.feedback
+        ? `${curatorName} reviewed "${trackTitle}": ${args.feedback}`
+        : `${curatorName} reviewed your submission for "${trackTitle}"`,
+      type: "info",
+      read: false,
+      link: "/dashboard/home/submissions",
+      actionLabel: "View Feedback",
+      createdAt: Date.now(),
+      emailSent: false,
+      senderType: "creator",
+      senderId: submission.creatorId,
+      senderName: curatorName,
+      senderAvatar: curator?.imageUrl,
     });
 
     return null;
@@ -230,6 +324,25 @@ export const getSubmissionStats = query({
       declined: allSubmissions.filter(s => s.status === "declined").length,
       total: allSubmissions.length,
     };
+  },
+});
+
+/**
+ * Update payment status for a submission
+ */
+export const updatePaymentStatus = mutation({
+  args: {
+    submissionId: v.id("trackSubmissions"),
+    paymentStatus: v.union(v.literal("pending"), v.literal("paid"), v.literal("refunded")),
+    paymentId: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.submissionId, {
+      paymentStatus: args.paymentStatus,
+      paymentId: args.paymentId,
+    });
+    return null;
   },
 });
 

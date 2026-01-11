@@ -14,6 +14,26 @@ export const createPlaylist = mutation({
     genres: v.optional(v.array(v.string())),
     isPublic: v.boolean(),
     acceptsSubmissions: v.boolean(),
+    customSlug: v.optional(v.string()),
+    spotifyPlaylistUrl: v.optional(v.string()),
+    applePlaylistUrl: v.optional(v.string()),
+    soundcloudPlaylistUrl: v.optional(v.string()),
+    submissionRules: v.optional(
+      v.object({
+        allowedGenres: v.optional(v.array(v.string())),
+        maxLengthSeconds: v.optional(v.number()),
+        requiresMessage: v.boolean(),
+        guidelines: v.optional(v.string()),
+      })
+    ),
+    submissionPricing: v.optional(
+      v.object({
+        isFree: v.boolean(),
+        price: v.optional(v.number()),
+        currency: v.string(),
+      })
+    ),
+    submissionSLA: v.optional(v.number()),
   },
   returns: v.id("curatorPlaylists"),
   handler: async (ctx, args) => {
@@ -25,10 +45,16 @@ export const createPlaylist = mutation({
       genres: args.genres,
       isPublic: args.isPublic,
       acceptsSubmissions: args.acceptsSubmissions,
-      submissionPricing: {
+      customSlug: args.customSlug,
+      spotifyPlaylistUrl: args.spotifyPlaylistUrl,
+      applePlaylistUrl: args.applePlaylistUrl,
+      soundcloudPlaylistUrl: args.soundcloudPlaylistUrl,
+      submissionRules: args.submissionRules,
+      submissionPricing: args.submissionPricing || {
         isFree: true,
         currency: "USD",
       },
+      submissionSLA: args.submissionSLA,
       trackCount: 0,
       totalPlays: 0,
       totalSubmissions: 0,
@@ -166,6 +192,46 @@ export const getPlaylistTracks = query({
 });
 
 /**
+ * Get a single playlist by ID or custom slug
+ */
+export const getPlaylistByIdOrSlug = query({
+  args: { identifier: v.string() },
+  returns: v.union(v.any(), v.null()),
+  handler: async (ctx, args) => {
+    // Try to find by custom slug first
+    let playlist = await ctx.db
+      .query("curatorPlaylists")
+      .withIndex("by_customSlug", (q) => q.eq("customSlug", args.identifier))
+      .unique();
+
+    // If not found, try as an ID
+    if (!playlist) {
+      try {
+        playlist = await ctx.db.get(args.identifier as Id<"curatorPlaylists">);
+      } catch {
+        // Invalid ID format, return null
+        return null;
+      }
+    }
+
+    if (!playlist) return null;
+
+    // Get creator info
+    const creator = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", playlist.creatorId))
+      .unique();
+
+    return {
+      ...playlist,
+      creatorName: creator?.firstName || creator?.email || "Creator",
+      creatorAvatar: creator?.imageUrl,
+      creatorStripeAccountId: creator?.stripeConnectAccountId,
+    };
+  },
+});
+
+/**
  * Update playlist
  */
 export const updatePlaylist = mutation({
@@ -174,13 +240,29 @@ export const updatePlaylist = mutation({
     name: v.optional(v.string()),
     description: v.optional(v.string()),
     coverUrl: v.optional(v.string()),
+    genres: v.optional(v.array(v.string())),
     isPublic: v.optional(v.boolean()),
     acceptsSubmissions: v.optional(v.boolean()),
-    submissionPricing: v.optional(v.object({
-      isFree: v.boolean(),
-      price: v.optional(v.number()),
-      currency: v.string(),
-    })),
+    customSlug: v.optional(v.string()),
+    spotifyPlaylistUrl: v.optional(v.string()),
+    applePlaylistUrl: v.optional(v.string()),
+    soundcloudPlaylistUrl: v.optional(v.string()),
+    submissionRules: v.optional(
+      v.object({
+        allowedGenres: v.optional(v.array(v.string())),
+        maxLengthSeconds: v.optional(v.number()),
+        requiresMessage: v.boolean(),
+        guidelines: v.optional(v.string()),
+      })
+    ),
+    submissionPricing: v.optional(
+      v.object({
+        isFree: v.boolean(),
+        price: v.optional(v.number()),
+        currency: v.string(),
+      })
+    ),
+    submissionSLA: v.optional(v.number()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {

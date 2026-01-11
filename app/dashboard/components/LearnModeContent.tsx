@@ -36,6 +36,7 @@ import Link from "next/link";
 import { LearnerOnboarding } from "@/components/onboarding/LearnerOnboarding";
 import { ReferralCard } from "@/components/referrals/ReferralCard";
 import { useApplyReferral } from "@/hooks/use-apply-referral";
+import { BeatLicenseCard } from "@/components/beats/BeatLicenseCard";
 
 export function LearnModeContent() {
   const { user, isLoaded: isUserLoaded } = useUser();
@@ -98,6 +99,12 @@ export function LearnModeContent() {
   // Fetch user's wishlist/favorites
   const userWishlist = useQuery(api.wishlists.getUserWishlist, {});
   const removeFromWishlist = useMutation(api.wishlists.removeFromWishlist);
+
+  // Fetch user's beat licenses
+  const userBeatLicenses = useQuery(
+    api.beatLeases.getUserBeatLicenses,
+    convexUser?.clerkId ? { userId: convexUser.clerkId } : "skip"
+  );
 
   // Fetch user's XP and level
   const userXP = useQuery(
@@ -562,6 +569,21 @@ export function LearnModeContent() {
 
             <TabsContent value="downloads" className="space-y-6">
               <div className="space-y-6 pt-2">
+                {/* Beat Licenses */}
+                {userBeatLicenses && userBeatLicenses.length > 0 && (
+                  <div>
+                    <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold">
+                      <Music className="h-5 w-5" />
+                      Beat Licenses ({userBeatLicenses.length})
+                    </h3>
+                    <div className="grid grid-cols-1 gap-4">
+                      {userBeatLicenses.map((license: any) => (
+                        <BeatLicenseCard key={license._id} license={license} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Purchased Packs */}
                 {purchasedPacks.length > 0 && (
                   <div>
@@ -675,19 +697,25 @@ export function LearnModeContent() {
                       ))}
                     </div>
                   </div>
-                ) : (
+                ) : !userBeatLicenses || userBeatLicenses.length === 0 ? (
                   <div className="py-12 text-center">
                     <Package className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
                     <h3 className="mb-2 text-lg font-medium">No Downloads Yet</h3>
                     <p className="mb-4 text-muted-foreground">
-                      Purchase sample packs from the marketplace to build your library.
+                      Purchase sample packs or license beats from the marketplace to build your library.
                     </p>
-                    <Button onClick={() => (window.location.href = "/marketplace/samples")}>
-                      <Package className="mr-2 h-4 w-4" />
-                      Browse Samples
-                    </Button>
+                    <div className="flex justify-center gap-4">
+                      <Button onClick={() => (window.location.href = "/marketplace/samples")}>
+                        <Package className="mr-2 h-4 w-4" />
+                        Browse Samples
+                      </Button>
+                      <Button variant="outline" onClick={() => (window.location.href = "/marketplace/beats")}>
+                        <Music className="mr-2 h-4 w-4" />
+                        Browse Beats
+                      </Button>
+                    </div>
                   </div>
-                )}
+                ) : null}
               </div>
             </TabsContent>
 

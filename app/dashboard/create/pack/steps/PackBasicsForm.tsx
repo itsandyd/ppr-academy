@@ -251,6 +251,89 @@ export function PackBasicsForm() {
         </CardContent>
       </Card>
 
+      {/* Preset Pack Specific Fields */}
+      {state.data.packType === "preset-pack" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Preset Pack Details</CardTitle>
+            <CardDescription>Specify which plugin and DAW your presets are for</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="targetPlugin">Target Plugin *</Label>
+                <Select
+                  value={state.data.targetPlugin || ""}
+                  onValueChange={(value) => updateData("basics", { targetPlugin: value })}
+                >
+                  <SelectTrigger className="bg-background">
+                    <SelectValue placeholder="Select plugin" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white dark:bg-black">
+                    <SelectItem value="serum">Serum</SelectItem>
+                    <SelectItem value="vital">Vital</SelectItem>
+                    <SelectItem value="massive">Massive</SelectItem>
+                    <SelectItem value="massive-x">Massive X</SelectItem>
+                    <SelectItem value="omnisphere">Omnisphere</SelectItem>
+                    <SelectItem value="sylenth1">Sylenth1</SelectItem>
+                    <SelectItem value="phase-plant">Phase Plant</SelectItem>
+                    <SelectItem value="pigments">Pigments</SelectItem>
+                    <SelectItem value="diva">Diva</SelectItem>
+                    <SelectItem value="ana-2">ANA 2</SelectItem>
+                    <SelectItem value="spire">Spire</SelectItem>
+                    <SelectItem value="ableton-wavetable">Ableton Wavetable</SelectItem>
+                    <SelectItem value="ableton-operator">Ableton Operator</SelectItem>
+                    <SelectItem value="fl-sytrus">FL Sytrus</SelectItem>
+                    <SelectItem value="fl-harmor">FL Harmor</SelectItem>
+                    <SelectItem value="logic-alchemy">Logic Alchemy</SelectItem>
+                    <SelectItem value="fabfilter">FabFilter</SelectItem>
+                    <SelectItem value="soundtoys">Soundtoys</SelectItem>
+                    <SelectItem value="valhalla">Valhalla</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="dawType">DAW Compatibility</Label>
+                <Select
+                  value={state.data.dawType || "multi-daw"}
+                  onValueChange={(value) => updateData("basics", { dawType: value })}
+                >
+                  <SelectTrigger className="bg-background">
+                    <SelectValue placeholder="Select DAW" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white dark:bg-black">
+                    <SelectItem value="multi-daw">Universal (All DAWs)</SelectItem>
+                    <SelectItem value="ableton">Ableton Live</SelectItem>
+                    <SelectItem value="fl-studio">FL Studio</SelectItem>
+                    <SelectItem value="logic">Logic Pro</SelectItem>
+                    <SelectItem value="bitwig">Bitwig Studio</SelectItem>
+                    <SelectItem value="studio-one">Studio One</SelectItem>
+                    <SelectItem value="cubase">Cubase</SelectItem>
+                    <SelectItem value="reason">Reason</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="targetPluginVersion">Plugin Version (Optional)</Label>
+              <Input
+                id="targetPluginVersion"
+                placeholder="e.g., 1.36 (for Serum version compatibility)"
+                value={state.data.targetPluginVersion || ""}
+                onChange={(e) => updateData("basics", { targetPluginVersion: e.target.value })}
+                className="bg-background"
+              />
+              <p className="text-xs text-muted-foreground">
+                Specify the minimum plugin version required to use these presets
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Tags */}
       <Card>
         <CardHeader>

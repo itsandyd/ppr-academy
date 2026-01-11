@@ -627,6 +627,42 @@ export default defineSchema({
     ),
     dawVersion: v.optional(v.string()), // e.g., "11.3" for Ableton, "21.0" for FL Studio
 
+    // Preset Pack Target Plugin (for productCategory: "preset-pack")
+    targetPlugin: v.optional(
+      v.union(
+        // Popular Synths
+        v.literal("serum"),
+        v.literal("vital"),
+        v.literal("massive"),
+        v.literal("massive-x"),
+        v.literal("omnisphere"),
+        v.literal("sylenth1"),
+        v.literal("phase-plant"),
+        v.literal("pigments"),
+        v.literal("diva"),
+        v.literal("ana-2"),
+        v.literal("spire"),
+        v.literal("zebra"),
+        v.literal("hive"),
+        // DAW Stock Plugins
+        v.literal("ableton-wavetable"),
+        v.literal("ableton-operator"),
+        v.literal("ableton-analog"),
+        v.literal("fl-sytrus"),
+        v.literal("fl-harmor"),
+        v.literal("fl-harmless"),
+        v.literal("logic-alchemy"),
+        v.literal("logic-retro-synth"),
+        // Effects
+        v.literal("fabfilter"),
+        v.literal("soundtoys"),
+        v.literal("valhalla"),
+        // Other
+        v.literal("other")
+      )
+    ),
+    targetPluginVersion: v.optional(v.string()), // e.g., "1.36" for Serum version
+
     // Follow Gate Configuration
     followGateEnabled: v.optional(v.boolean()),
     followGateRequirements: v.optional(
@@ -695,6 +731,11 @@ export default defineSchema({
         genre: v.optional(v.string()),
       })
     ),
+
+    // Beat Lease Exclusive Sale Tracking
+    exclusiveSoldAt: v.optional(v.number()),
+    exclusiveSoldTo: v.optional(v.string()), // userId who bought exclusive
+    exclusivePurchaseId: v.optional(v.id("purchases")),
   })
     .index("by_storeId", ["storeId"])
     .index("by_userId", ["userId"])
@@ -980,8 +1021,11 @@ export default defineSchema({
       v.literal("digitalProduct"),
       v.literal("course"),
       v.literal("coaching"),
-      v.literal("bundle")
+      v.literal("bundle"),
+      v.literal("beatLease")
     ),
+    // Beat License reference (for beatLease purchases)
+    beatLicenseId: v.optional(v.id("beatLicenses")),
     // Library access fields
     accessGranted: v.optional(v.boolean()),
     accessExpiresAt: v.optional(v.number()),
@@ -1006,6 +1050,46 @@ export default defineSchema({
     // Note: _creationTime is automatically added to all indexes by Convex
     .index("by_store_status", ["storeId", "status"])
     .index("by_user_status", ["userId", "status"]),
+
+  // Beat Licenses - tracks sold beat licenses with tier info
+  beatLicenses: defineTable({
+    purchaseId: v.id("purchases"),
+    beatId: v.id("digitalProducts"),
+    userId: v.string(),
+    storeId: v.id("stores"),
+    tierType: v.union(
+      v.literal("basic"),
+      v.literal("premium"),
+      v.literal("exclusive"),
+      v.literal("unlimited")
+    ),
+    tierName: v.string(),
+    price: v.number(),
+    // License terms (snapshot at purchase time)
+    distributionLimit: v.optional(v.number()),
+    streamingLimit: v.optional(v.number()),
+    commercialUse: v.boolean(),
+    musicVideoUse: v.boolean(),
+    radioBroadcasting: v.boolean(),
+    stemsIncluded: v.boolean(),
+    creditRequired: v.boolean(),
+    // Delivery
+    deliveredFiles: v.array(v.string()), // ["mp3", "wav", "stems", "trackouts"]
+    // Contract
+    contractGeneratedAt: v.optional(v.number()),
+    buyerName: v.optional(v.string()),
+    buyerEmail: v.string(),
+    // Beat info snapshot (for contract generation)
+    beatTitle: v.string(),
+    producerName: v.string(),
+    // Timestamps
+    createdAt: v.number(),
+  })
+    .index("by_purchase", ["purchaseId"])
+    .index("by_user", ["userId"])
+    .index("by_beat", ["beatId"])
+    .index("by_store", ["storeId"])
+    .index("by_user_beat", ["userId", "beatId"]),
 
   // Subscriptions (Legacy - keeping for backward compatibility)
   subscriptions: defineTable({
@@ -3456,13 +3540,19 @@ export default defineSchema({
     totalPlays: v.number(),
     totalSubmissions: v.number(),
 
+    // Streaming Platform Links
+    spotifyPlaylistUrl: v.optional(v.string()),
+    applePlaylistUrl: v.optional(v.string()),
+    soundcloudPlaylistUrl: v.optional(v.string()),
+
     // Product Integration (NEW)
     linkedProductId: v.optional(v.id("digitalProducts")), // Link to product listing
   })
     .index("by_creatorId", ["creatorId"])
     .index("by_isPublic", ["isPublic"])
     .index("by_acceptsSubmissions", ["acceptsSubmissions"])
-    .index("by_linkedProductId", ["linkedProductId"]),
+    .index("by_linkedProductId", ["linkedProductId"])
+    .index("by_customSlug", ["customSlug"]),
 
   // Curator Playlist Tracks - Join table for new submission system
   curatorPlaylistTracks: defineTable({
@@ -4797,5 +4887,128 @@ export default defineSchema({
     .index("by_storeId", ["storeId"])
     .index("by_keyword", ["keyword"])
     .index("by_userId_keyword", ["userId", "keyword"])
+    .index("by_createdAt", ["createdAt"]),
+
+  // ============================================================================
+  // SERVICE ORDERS (Mixing/Mastering Services)
+  // ============================================================================
+
+  // Service Orders - Track mixing/mastering service orders with full workflow
+  serviceOrders: defineTable({
+    // Core relationships
+    customerId: v.string(), // Clerk ID of customer
+    creatorId: v.string(), // Clerk ID of creator/mixer
+    productId: v.id("digitalProducts"), // The mixing service product
+    storeId: v.string(),
+    purchaseId: v.optional(v.id("purchases")), // Link to purchase record
+
+    // Order details
+    orderNumber: v.string(), // Human-readable order number (e.g., "MIX-2024-001")
+    serviceType: v.union(
+      v.literal("mixing"),
+      v.literal("mastering"),
+      v.literal("mix-and-master"),
+      v.literal("stem-mixing")
+    ),
+    selectedTier: v.object({
+      id: v.string(),
+      name: v.string(),
+      stemCount: v.string(),
+      price: v.number(),
+      turnaroundDays: v.number(),
+      revisions: v.number(),
+    }),
+
+    // Pricing
+    basePrice: v.number(),
+    rushFee: v.optional(v.number()),
+    totalPrice: v.number(),
+    isRush: v.optional(v.boolean()),
+
+    // Status workflow
+    status: v.union(
+      v.literal("pending_payment"), // Awaiting Stripe payment
+      v.literal("pending_upload"), // Paid, waiting for customer files
+      v.literal("files_received"), // Customer uploaded files
+      v.literal("in_progress"), // Creator working on it
+      v.literal("pending_review"), // Creator delivered, awaiting customer review
+      v.literal("revision_requested"), // Customer requested changes
+      v.literal("completed"), // Customer approved
+      v.literal("cancelled"), // Order cancelled
+      v.literal("refunded") // Refund issued
+    ),
+
+    // Customer files (uploaded by customer)
+    customerFiles: v.optional(v.array(v.object({
+      id: v.string(),
+      name: v.string(),
+      storageId: v.string(),
+      url: v.optional(v.string()),
+      size: v.number(),
+      type: v.string(),
+      uploadedAt: v.number(),
+    }))),
+    customerNotes: v.optional(v.string()),
+    referenceTrackUrl: v.optional(v.string()),
+
+    // Delivered files (uploaded by creator)
+    deliveredFiles: v.optional(v.array(v.object({
+      id: v.string(),
+      name: v.string(),
+      storageId: v.string(),
+      url: v.optional(v.string()),
+      size: v.number(),
+      type: v.string(),
+      uploadedAt: v.number(),
+      version: v.number(), // 1 = initial, 2+ = revisions
+      notes: v.optional(v.string()),
+    }))),
+
+    // Revision tracking
+    revisionsUsed: v.number(),
+    revisionsAllowed: v.number(),
+
+    // Timestamps
+    paidAt: v.optional(v.number()),
+    filesUploadedAt: v.optional(v.number()),
+    workStartedAt: v.optional(v.number()),
+    firstDeliveryAt: v.optional(v.number()),
+    completedAt: v.optional(v.number()),
+    dueDate: v.optional(v.number()), // Based on turnaround time
+
+    // Communication
+    lastMessageAt: v.optional(v.number()),
+    unreadByCustomer: v.optional(v.number()),
+    unreadByCreator: v.optional(v.number()),
+  })
+    .index("by_customerId", ["customerId"])
+    .index("by_creatorId", ["creatorId"])
+    .index("by_productId", ["productId"])
+    .index("by_status", ["status"])
+    .index("by_storeId", ["storeId"])
+    .index("by_orderNumber", ["orderNumber"])
+    .index("by_customer_status", ["customerId", "status"])
+    .index("by_creator_status", ["creatorId", "status"]),
+
+  // Service Order Messages - In-order messaging between customer and creator
+  serviceOrderMessages: defineTable({
+    orderId: v.id("serviceOrders"),
+    senderId: v.string(), // Clerk ID
+    senderType: v.union(v.literal("customer"), v.literal("creator")),
+    content: v.string(),
+    attachments: v.optional(v.array(v.object({
+      id: v.string(),
+      name: v.string(),
+      storageId: v.string(),
+      url: v.optional(v.string()),
+      size: v.number(),
+      type: v.string(),
+    }))),
+    isSystemMessage: v.optional(v.boolean()), // For automated status updates
+    readAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_orderId", ["orderId"])
+    .index("by_senderId", ["senderId"])
     .index("by_createdAt", ["createdAt"]),
 });

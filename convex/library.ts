@@ -33,7 +33,8 @@ export const getUserPurchases = query({
         v.literal("digitalProduct"),
         v.literal("course"),
         v.literal("coaching"),
-        v.literal("bundle")
+        v.literal("bundle"),
+        v.literal("beatLease")
       ),
       amount: v.number(),
       currency: v.optional(v.string()),
@@ -44,6 +45,7 @@ export const getUserPurchases = query({
       // Product details
       productId: v.optional(v.id("digitalProducts")),
       courseId: v.optional(v.id("courses")),
+      beatLicenseId: v.optional(v.id("beatLicenses")),
       productTitle: v.optional(v.string()),
       productImageUrl: v.optional(v.string()),
       productDescription: v.optional(v.string()),

@@ -162,6 +162,16 @@ export const trackFollowGateDownload = mutation({
   },
 });
 
+// Get a single submission by ID (for email delivery)
+export const getSubmissionById = query({
+  args: {
+    submissionId: v.id("followGateSubmissions"),
+  },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.submissionId);
+  },
+});
+
 // Get follow gate submissions for a product (creator view)
 export const getProductFollowGateSubmissions = query({
   args: {

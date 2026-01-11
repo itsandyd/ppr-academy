@@ -15,7 +15,8 @@ export const getStorePurchases = query({
         v.literal("digitalProduct"),
         v.literal("course"),
         v.literal("coaching"),
-        v.literal("bundle")
+        v.literal("bundle"),
+        v.literal("beatLease")
       ),
       amount: v.number(),
       currency: v.optional(v.string()),
@@ -141,7 +142,8 @@ export const getUserPurchases = query({
         v.literal("digitalProduct"),
         v.literal("course"),
         v.literal("coaching"),
-        v.literal("bundle")
+        v.literal("bundle"),
+        v.literal("beatLease")
       ),
       amount: v.number(),
       currency: v.optional(v.string()),

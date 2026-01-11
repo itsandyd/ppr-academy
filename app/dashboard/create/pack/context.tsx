@@ -54,6 +54,11 @@ export interface PackData {
   bpm?: number;
   key?: string;
   downloadUrl?: string;
+
+  // Preset Pack specific
+  targetPlugin?: string;
+  dawType?: string;
+  targetPluginVersion?: string;
 }
 
 export interface StepCompletion {
@@ -168,8 +173,12 @@ export function PackCreationProvider({ children }: { children: React.ReactNode }
         followGateMessage: existingPack.followGateMessage,
         // Load files
         files: existingPack.packFiles ? JSON.parse(existingPack.packFiles) : [],
+        // Load preset pack specific fields
+        targetPlugin: existingPack.targetPlugin,
+        dawType: existingPack.dawType,
+        targetPluginVersion: existingPack.targetPluginVersion,
       };
-      
+
       console.log("Loaded pack data:", newData);
       
       // Calculate step completion based on loaded data
@@ -248,6 +257,10 @@ export function PackCreationProvider({ children }: { children: React.ReactNode }
           musicalKey: state.data.key,
           // Save files metadata (storage IDs, names, sizes)
           packFiles: state.data.files ? JSON.stringify(state.data.files) : undefined,
+          // Save preset pack specific fields
+          targetPlugin: state.data.targetPlugin,
+          dawType: state.data.dawType,
+          targetPluginVersion: state.data.targetPluginVersion,
         };
 
         // Update pricing model and follow gate if needed
