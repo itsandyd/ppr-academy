@@ -179,20 +179,23 @@ export const getProjectFileBySlug = query({
     const convertedCreatorAvatar = await getImageUrl(creatorAvatar);
 
     // Parse packFiles if it's a JSON string
-    let packFiles = project.packFiles;
-    if (typeof packFiles === "string") {
+    let parsedPackFiles: any[] = [];
+    const packFilesRaw = (project as any).packFiles;
+    if (typeof packFilesRaw === "string") {
       try {
-        packFiles = JSON.parse(packFiles);
+        parsedPackFiles = JSON.parse(packFilesRaw);
       } catch {
-        packFiles = [];
+        parsedPackFiles = [];
       }
+    } else if (Array.isArray(packFilesRaw)) {
+      parsedPackFiles = packFilesRaw;
     }
 
     return {
       ...project,
       imageUrl,
       downloadUrl,
-      packFiles,
+      packFiles: parsedPackFiles,
       creatorName,
       creatorAvatar: convertedCreatorAvatar,
       creatorBio,

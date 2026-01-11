@@ -36,13 +36,14 @@ export const getPublishedMixingServices = query({
     // Apply filters
     if (args.serviceType) {
       services = services.filter((s) => {
+        const service = s as any;
         // Check if service has tiers with matching type
-        if (s.mixingServiceConfig?.tiers) {
-          return s.mixingServiceConfig.serviceType === args.serviceType;
+        if (service.mixingServiceConfig?.tiers) {
+          return service.mixingServiceConfig.serviceType === args.serviceType;
         }
         // Fallback to title/description matching
-        const title = s.title?.toLowerCase() || "";
-        const desc = s.description?.toLowerCase() || "";
+        const title = service.title?.toLowerCase() || "";
+        const desc = service.description?.toLowerCase() || "";
         const typeStr = args.serviceType!.replace("-", " ");
         return title.includes(typeStr) || desc.includes(typeStr);
       });
@@ -62,7 +63,7 @@ export const getPublishedMixingServices = query({
         (s) =>
           s.title?.toLowerCase().includes(query) ||
           s.description?.toLowerCase().includes(query) ||
-          s.tags?.some((tag: string) => tag.toLowerCase().includes(query))
+          (s as any).tags?.some((tag: string) => tag.toLowerCase().includes(query))
       );
     }
 
@@ -108,9 +109,10 @@ export const getPublishedMixingServices = query({
         const convertedCreatorAvatar = await getImageUrl(creatorAvatar);
 
         // Get minimum price from tiers if available
+        const serviceAny = service as any;
         let minTierPrice = service.price || 0;
-        if (service.mixingServiceConfig?.tiers) {
-          const tierPrices = service.mixingServiceConfig.tiers.map(
+        if (serviceAny.mixingServiceConfig?.tiers) {
+          const tierPrices = serviceAny.mixingServiceConfig.tiers.map(
             (t: any) => t.price || 0
           );
           minTierPrice = Math.min(...tierPrices);
@@ -124,7 +126,7 @@ export const getPublishedMixingServices = query({
           creatorBio,
           storeSlug: store?.slug,
           minPrice: minTierPrice,
-          serviceType: service.mixingServiceConfig?.serviceType || "mixing",
+          serviceType: serviceAny.mixingServiceConfig?.serviceType || "mixing",
         };
       })
     );
@@ -157,12 +159,14 @@ export const getMixingServiceBySlug = query({
     let creatorAvatar: string | undefined = undefined;
     let creatorBio: string | undefined = undefined;
     let creatorId: string | undefined = undefined;
+    let creatorStripeAccountId: string | undefined = undefined;
 
     const stores = await ctx.db.query("stores").collect();
     const store = stores.find((s) => s._id === service.storeId);
 
     if (store) {
       creatorId = store.userId;
+      creatorStripeAccountId = (store as any).stripeAccountId;
       const user = await ctx.db
         .query("users")
         .filter((q) => q.eq(q.field("clerkId"), store.userId))
@@ -193,9 +197,10 @@ export const getMixingServiceBySlug = query({
     const convertedCreatorAvatar = await getImageUrl(creatorAvatar);
 
     // Parse tiers from mixingServiceConfig or create default tiers
+    const serviceAny = service as any;
     let tiers = [];
-    if (service.mixingServiceConfig?.tiers) {
-      tiers = service.mixingServiceConfig.tiers;
+    if (serviceAny.mixingServiceConfig?.tiers) {
+      tiers = serviceAny.mixingServiceConfig.tiers;
     } else {
       // Create default tier from base price
       tiers = [
@@ -218,12 +223,13 @@ export const getMixingServiceBySlug = query({
       creatorAvatar: convertedCreatorAvatar,
       creatorBio,
       creatorId,
+      creatorStripeAccountId,
       storeSlug: store?.slug,
       tiers,
-      serviceType: service.mixingServiceConfig?.serviceType || "mixing",
-      turnaroundDays: service.mixingServiceConfig?.turnaroundDays || 7,
-      rushAvailable: service.mixingServiceConfig?.rushAvailable || false,
-      rushFee: service.mixingServiceConfig?.rushFee || 50,
+      serviceType: serviceAny.mixingServiceConfig?.serviceType || "mixing",
+      turnaroundDays: serviceAny.mixingServiceConfig?.turnaroundDays || 7,
+      rushAvailable: serviceAny.mixingServiceConfig?.rushAvailable || false,
+      rushFee: serviceAny.mixingServiceConfig?.rushFee || 50,
     };
   },
 });
@@ -312,7 +318,7 @@ export const getServiceTypes = query({
     };
 
     services.forEach((s) => {
-      const type = s.mixingServiceConfig?.serviceType || "mixing";
+      const type = (s as any).mixingServiceConfig?.serviceType || "mixing";
       if (typeCounts[type] !== undefined) {
         typeCounts[type]++;
       }
