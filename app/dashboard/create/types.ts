@@ -87,7 +87,8 @@ export type CreationFlow =
   | "coaching"
   | "membership"
   | "mixing-template"
-  | "project-files";
+  | "project-files"
+  | "playlist-curation";
 
 // Map product categories to their creation flow
 export const CATEGORY_TO_FLOW: Record<ProductCategory, CreationFlow> = {
@@ -116,7 +117,9 @@ export const CATEGORY_TO_FLOW: Record<ProductCategory, CreationFlow> = {
   // Services (async work - separate creator)
   "mixing-service": "service",
   "mastering-service": "service",
-  "playlist-curation": "service",
+
+  // Playlist Curation (dedicated flow - submission-based, not tiered)
+  "playlist-curation": "playlist-curation",
 
   // Bundle (unique product selector)
   bundle: "bundle",
@@ -255,10 +258,10 @@ export const PRODUCT_CATEGORIES = [
   {
     id: "playlist-curation",
     label: "Playlist Curation",
-    description: "Review & feature tracks",
-    category: "Services",
+    description: "Accept track submissions for your playlists",
+    category: "Curation",
     icon: "🎼",
-    flow: "service" as CreationFlow,
+    flow: "playlist-curation" as CreationFlow,
   },
 
   // Digital Content

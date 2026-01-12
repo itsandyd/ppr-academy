@@ -7,7 +7,48 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/lib/convex-api";
 import { Id } from "@/convex/_generated/dataModel";
-import { BeatLeaseData, StepCompletion, DEFAULT_LEASE_OPTIONS } from "./types";
+import { BeatLeaseData, StepCompletion, DEFAULT_LEASE_OPTIONS, LeaseOption } from "./types";
+
+// Helper to convert leaseOptions to beatLeaseConfig format for the database
+function convertToBeatlLeaseConfig(
+  leaseOptions: LeaseOption[] | undefined,
+  metadata: BeatLeaseData["metadata"]
+) {
+  if (!leaseOptions) return undefined;
+
+  const tiers = leaseOptions
+    .filter((opt) => opt.enabled && opt.type !== "free") // Filter out free tier and disabled tiers
+    .map((opt) => {
+      // Map lease type to tier type
+      const tierType = opt.type === "basic" ? "basic" : opt.type === "premium" ? "premium" : "exclusive";
+
+      return {
+        type: tierType as "basic" | "premium" | "exclusive" | "unlimited",
+        enabled: opt.enabled,
+        price: opt.price,
+        name:
+          opt.type === "basic"
+            ? "Basic Lease"
+            : opt.type === "premium"
+              ? "Premium Lease"
+              : "Exclusive Rights",
+        distributionLimit: opt.distributionLimit,
+        streamingLimit: undefined, // Not in current LeaseOption type, can add later
+        commercialUse: opt.commercialUse,
+        musicVideoUse: opt.commercialUse, // Assume same as commercial use
+        radioBroadcasting: opt.commercialUse, // Assume same as commercial use
+        stemsIncluded: opt.stemsIncluded,
+        creditRequired: true, // Default to requiring credit
+      };
+    });
+
+  return {
+    tiers,
+    bpm: metadata?.bpm,
+    key: metadata?.key,
+    genre: metadata?.genre,
+  };
+}
 
 interface BeatLeaseCreationState {
   data: BeatLeaseData;
@@ -122,12 +163,18 @@ export function BeatLeaseCreationProvider({ children }: { children: React.ReactN
 
   const saveBeat = async () => {
     if (state.isSaving || !user?.id || !storeId) return;
-    
+
     setState(prev => ({ ...prev, isSaving: true }));
-    
+
     try {
+      // Convert lease options to beatLeaseConfig format
+      const beatLeaseConfig = convertToBeatlLeaseConfig(
+        state.data.leaseOptions,
+        state.data.metadata
+      );
+
       if (state.beatId) {
-        // Update existing
+        // Update existing beat with all data including beatLeaseConfig and file URLs
         await updateBeatMutation({
           id: state.beatId,
           title: state.data.title,
@@ -137,9 +184,17 @@ export function BeatLeaseCreationProvider({ children }: { children: React.ReactN
           bpm: state.data.metadata?.bpm,
           musicalKey: state.data.metadata?.key,
           genre: state.data.metadata?.genre ? [state.data.metadata.genre] : undefined,
+          // Beat lease config with tiers
+          beatLeaseConfig,
+          // File URLs - mp3 goes to downloadUrl (main file), wav/stems/trackouts to their own fields
+          downloadUrl: state.data.files?.mp3Url,
+          demoAudioUrl: state.data.files?.mp3Url, // Use mp3 as preview audio
+          wavUrl: state.data.files?.wavUrl,
+          stemsUrl: state.data.files?.stemsUrl,
+          trackoutsUrl: state.data.files?.trackoutsUrl,
         });
       } else {
-        // Create new
+        // Create new beat with all data including beatLeaseConfig
         const result = await createBeatMutation({
           title: state.data.title || "Untitled Beat",
           description: state.data.description,
@@ -151,6 +206,10 @@ export function BeatLeaseCreationProvider({ children }: { children: React.ReactN
           price: state.data.leaseOptions?.find(opt => opt.enabled)?.price || 25,
           imageUrl: state.data.thumbnail,
           tags: state.data.tags,
+          // Beat lease config with tiers
+          beatLeaseConfig,
+          // File URLs
+          downloadUrl: state.data.files?.mp3Url,
         });
 
         if (result) {
@@ -160,10 +219,10 @@ export function BeatLeaseCreationProvider({ children }: { children: React.ReactN
         }
       }
 
-      setState(prev => ({ 
-        ...prev, 
-        isSaving: false, 
-        lastSaved: new Date() 
+      setState(prev => ({
+        ...prev,
+        isSaving: false,
+        lastSaved: new Date()
       }));
 
       toast({
@@ -200,11 +259,33 @@ export function BeatLeaseCreationProvider({ children }: { children: React.ReactN
 
     try {
       if (state.beatId) {
+        // Convert lease options to beatLeaseConfig format
+        const beatLeaseConfig = convertToBeatlLeaseConfig(
+          state.data.leaseOptions,
+          state.data.metadata
+        );
+
+        // Save all data and publish in one update
         await updateBeatMutation({
           id: state.beatId,
           isPublished: true,
+          title: state.data.title,
+          description: state.data.description,
+          imageUrl: state.data.thumbnail,
+          tags: state.data.tags,
+          bpm: state.data.metadata?.bpm,
+          musicalKey: state.data.metadata?.key,
+          genre: state.data.metadata?.genre ? [state.data.metadata.genre] : undefined,
+          // Beat lease config with tiers
+          beatLeaseConfig,
+          // File URLs
+          downloadUrl: state.data.files?.mp3Url,
+          demoAudioUrl: state.data.files?.mp3Url,
+          wavUrl: state.data.files?.wavUrl,
+          stemsUrl: state.data.files?.stemsUrl,
+          trackoutsUrl: state.data.files?.trackoutsUrl,
         });
-        
+
         toast({
           title: "Beat Lease Published!",
           description: "Your beat is now live and available for lease.",
@@ -216,6 +297,7 @@ export function BeatLeaseCreationProvider({ children }: { children: React.ReactN
 
       return { success: false, error: "Beat ID not found" };
     } catch (error) {
+      console.error("Failed to publish beat lease:", error);
       return { success: false, error: "Failed to publish beat lease." };
     }
   };

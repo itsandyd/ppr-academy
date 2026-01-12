@@ -732,6 +732,11 @@ export default defineSchema({
       })
     ),
 
+    // Beat Lease File URLs (for tier-based file delivery)
+    wavUrl: v.optional(v.string()), // High quality WAV file
+    stemsUrl: v.optional(v.string()), // Stems (zip or folder URL)
+    trackoutsUrl: v.optional(v.string()), // Trackouts (full project files)
+
     // Beat Lease Exclusive Sale Tracking
     exclusiveSoldAt: v.optional(v.number()),
     exclusiveSoldTo: v.optional(v.string()), // userId who bought exclusive

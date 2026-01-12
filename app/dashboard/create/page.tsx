@@ -38,7 +38,7 @@ export default function ProductTypeSelectorPage() {
       return;
     }
 
-    // Services (async work) - mixing, mastering, playlist curation
+    // Services (async work) - mixing, mastering
     if (categoryId === "mixing-service") {
       router.push(`/dashboard/create/service?type=mixing`);
       return;
@@ -47,8 +47,10 @@ export default function ProductTypeSelectorPage() {
       router.push(`/dashboard/create/service?type=mastering`);
       return;
     }
+
+    // Playlist curation has its own dedicated flow (submission-based, not tiered)
     if (categoryId === "playlist-curation") {
-      router.push(`/dashboard/create/service?type=curation`);
+      router.push(`/dashboard/create/playlist-curation`);
       return;
     }
 
@@ -152,7 +154,9 @@ export default function ProductTypeSelectorPage() {
                   {categoryName === "Education" &&
                     "Share your knowledge through courses and workshops"}
                   {categoryName === "Services" &&
-                    "Offer coaching, mixing, mastering, and curation services"}
+                    "Offer mixing, mastering, and other professional services"}
+                  {categoryName === "Curation" &&
+                    "Accept track submissions for your playlists"}
                   {categoryName === "Digital Content" && "Share guides, templates, and content"}
                   {categoryName === "Community" && "Build and monetize your community"}
                   {categoryName === "Support" && "Let fans support your work"}
@@ -186,6 +190,7 @@ export default function ProductTypeSelectorPage() {
                           {product.flow === "bundle" && "3-step wizard"}
                           {product.flow === "chain" && "4-step wizard"}
                           {product.flow === "mixing-template" && "4-step wizard"}
+                          {product.flow === "playlist-curation" && "3-step wizard"}
                         </Badge>
                       </CardContent>
                     </Card>
