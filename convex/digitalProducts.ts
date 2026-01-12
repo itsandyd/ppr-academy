@@ -137,6 +137,42 @@ export const getProductsByStore = query({
       ),
       dawVersion: v.optional(v.string()),
       slug: v.optional(v.string()),
+      // Beat Lease specific fields
+      wavUrl: v.optional(v.string()),
+      stemsUrl: v.optional(v.string()),
+      trackoutsUrl: v.optional(v.string()),
+      beatLeaseConfig: v.optional(
+        v.object({
+          tiers: v.optional(
+            v.array(
+              v.object({
+                type: v.union(
+                  v.literal("basic"),
+                  v.literal("premium"),
+                  v.literal("exclusive"),
+                  v.literal("unlimited")
+                ),
+                enabled: v.boolean(),
+                price: v.number(),
+                name: v.string(),
+                distributionLimit: v.optional(v.number()),
+                streamingLimit: v.optional(v.number()),
+                commercialUse: v.boolean(),
+                musicVideoUse: v.boolean(),
+                radioBroadcasting: v.boolean(),
+                stemsIncluded: v.boolean(),
+                creditRequired: v.boolean(),
+              })
+            )
+          ),
+          bpm: v.optional(v.number()),
+          key: v.optional(v.string()),
+          genre: v.optional(v.string()),
+        })
+      ),
+      exclusiveSoldAt: v.optional(v.number()),
+      exclusiveSoldTo: v.optional(v.string()),
+      exclusivePurchaseId: v.optional(v.id("purchases")),
     })
   ),
   handler: async (ctx, args) => {
@@ -340,6 +376,42 @@ export const getPublishedProductsByStore = query({
         )
       ),
       dawVersion: v.optional(v.string()),
+      // Beat Lease specific fields
+      wavUrl: v.optional(v.string()),
+      stemsUrl: v.optional(v.string()),
+      trackoutsUrl: v.optional(v.string()),
+      beatLeaseConfig: v.optional(
+        v.object({
+          tiers: v.optional(
+            v.array(
+              v.object({
+                type: v.union(
+                  v.literal("basic"),
+                  v.literal("premium"),
+                  v.literal("exclusive"),
+                  v.literal("unlimited")
+                ),
+                enabled: v.boolean(),
+                price: v.number(),
+                name: v.string(),
+                distributionLimit: v.optional(v.number()),
+                streamingLimit: v.optional(v.number()),
+                commercialUse: v.boolean(),
+                musicVideoUse: v.boolean(),
+                radioBroadcasting: v.boolean(),
+                stemsIncluded: v.boolean(),
+                creditRequired: v.boolean(),
+              })
+            )
+          ),
+          bpm: v.optional(v.number()),
+          key: v.optional(v.string()),
+          genre: v.optional(v.string()),
+        })
+      ),
+      exclusiveSoldAt: v.optional(v.number()),
+      exclusiveSoldTo: v.optional(v.string()),
+      exclusivePurchaseId: v.optional(v.id("purchases")),
     })
   ),
   handler: async (ctx, args) => {
@@ -521,6 +593,65 @@ export const getProductsByUser = query({
       ),
       dawVersion: v.optional(v.string()),
       slug: v.optional(v.string()),
+      // Beat Lease specific fields
+      productCategory: v.optional(v.string()),
+      wavUrl: v.optional(v.string()),
+      stemsUrl: v.optional(v.string()),
+      trackoutsUrl: v.optional(v.string()),
+      beatLeaseConfig: v.optional(
+        v.object({
+          tiers: v.optional(
+            v.array(
+              v.object({
+                type: v.union(
+                  v.literal("basic"),
+                  v.literal("premium"),
+                  v.literal("exclusive"),
+                  v.literal("unlimited")
+                ),
+                enabled: v.boolean(),
+                price: v.number(),
+                name: v.string(),
+                distributionLimit: v.optional(v.number()),
+                streamingLimit: v.optional(v.number()),
+                commercialUse: v.boolean(),
+                musicVideoUse: v.boolean(),
+                radioBroadcasting: v.boolean(),
+                stemsIncluded: v.boolean(),
+                creditRequired: v.boolean(),
+              })
+            )
+          ),
+          bpm: v.optional(v.number()),
+          key: v.optional(v.string()),
+          genre: v.optional(v.string()),
+        })
+      ),
+      exclusiveSoldAt: v.optional(v.number()),
+      exclusiveSoldTo: v.optional(v.string()),
+      exclusivePurchaseId: v.optional(v.id("purchases")),
+      // Follow gate fields
+      followGateEnabled: v.optional(v.boolean()),
+      followGateRequirements: v.optional(
+        v.object({
+          requireEmail: v.optional(v.boolean()),
+          requireInstagram: v.optional(v.boolean()),
+          requireTiktok: v.optional(v.boolean()),
+          requireYoutube: v.optional(v.boolean()),
+          requireSpotify: v.optional(v.boolean()),
+          minFollowsRequired: v.optional(v.number()),
+        })
+      ),
+      followGateSocialLinks: v.optional(
+        v.object({
+          instagram: v.optional(v.string()),
+          tiktok: v.optional(v.string()),
+          youtube: v.optional(v.string()),
+          spotify: v.optional(v.string()),
+        })
+      ),
+      followGateMessage: v.optional(v.string()),
+      packFiles: v.optional(v.string()),
     })
   ),
   handler: async (ctx, args) => {
@@ -720,6 +851,42 @@ export const getProductById = query({
         )
       ),
       dawVersion: v.optional(v.string()),
+      // Beat Lease specific fields
+      wavUrl: v.optional(v.string()),
+      stemsUrl: v.optional(v.string()),
+      trackoutsUrl: v.optional(v.string()),
+      beatLeaseConfig: v.optional(
+        v.object({
+          tiers: v.optional(
+            v.array(
+              v.object({
+                type: v.union(
+                  v.literal("basic"),
+                  v.literal("premium"),
+                  v.literal("exclusive"),
+                  v.literal("unlimited")
+                ),
+                enabled: v.boolean(),
+                price: v.number(),
+                name: v.string(),
+                distributionLimit: v.optional(v.number()),
+                streamingLimit: v.optional(v.number()),
+                commercialUse: v.boolean(),
+                musicVideoUse: v.boolean(),
+                radioBroadcasting: v.boolean(),
+                stemsIncluded: v.boolean(),
+                creditRequired: v.boolean(),
+              })
+            )
+          ),
+          bpm: v.optional(v.number()),
+          key: v.optional(v.string()),
+          genre: v.optional(v.string()),
+        })
+      ),
+      exclusiveSoldAt: v.optional(v.number()),
+      exclusiveSoldTo: v.optional(v.string()),
+      exclusivePurchaseId: v.optional(v.id("purchases")),
     }),
     v.null()
   ),

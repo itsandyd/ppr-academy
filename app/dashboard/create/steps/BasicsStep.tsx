@@ -82,10 +82,10 @@ export function BasicsStep({
   const placeholders = CATEGORY_PLACEHOLDERS[productCategory] || CATEGORY_PLACEHOLDERS["default"];
 
   // Convex mutation for generating upload URL
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const generateUploadUrl: any = useMutation(api.files.generateUploadUrl as any);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const getFileUrl: any = useMutation(api.files.getUrl as any);
+  // @ts-ignore - Type instantiation depth issue with Convex
+  const generateUploadUrl = useMutation(api.files.generateUploadUrl);
+  // @ts-ignore - Type instantiation depth issue with Convex
+  const getFileUrl = useMutation(api.files.getUrl);
 
   // Handle image upload
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
