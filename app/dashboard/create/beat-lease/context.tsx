@@ -109,8 +109,8 @@ export function BeatLeaseCreationProvider({ children }: { children: React.ReactN
   // @ts-ignore - Type instantiation depth issue
   const updateBeatMutation: any = useMutation(api.digitalProducts.updateProduct as any);
 
-  const [state, setState] = useState<BeatLeaseCreationState>({
-    data: {
+  const [state, setState] = useState<BeatLeaseCreationState>(() => {
+    const initialData: BeatLeaseData = {
       leaseOptions: DEFAULT_LEASE_OPTIONS,
       metadata: {
         bpm: 140,
@@ -120,39 +120,57 @@ export function BeatLeaseCreationProvider({ children }: { children: React.ReactN
         duration: 180, // 3 minutes default
       },
       producerTag: `Prod. by ${user?.firstName || 'Producer'}`,
-    },
-    stepCompletion: {
-      basics: false,
-      metadata: false,
-      files: false,
-      licensing: false,
-    },
-    isLoading: false,
-    isSaving: false,
+    };
+
+    // Calculate initial step completion based on default data
+    const initialStepCompletion: StepCompletion = {
+      basics: !!(initialData.title && initialData.description),
+      metadata: !!(initialData.metadata?.bpm && initialData.metadata?.key && initialData.metadata?.genre),
+      files: !!(initialData.files?.mp3Url || initialData.files?.wavUrl),
+      licensing: !!(initialData.leaseOptions?.some(opt => opt.enabled)),
+    };
+
+    return {
+      data: initialData,
+      stepCompletion: initialStepCompletion,
+      isLoading: false,
+      isSaving: false,
+    };
   });
 
-  const validateStep = (step: keyof StepCompletion): boolean => {
+  // Helper to validate a step against specific data (not state)
+  const validateStepWithData = (step: keyof StepCompletion, data: BeatLeaseData): boolean => {
     switch (step) {
       case "basics":
-        return !!(state.data.title && state.data.description);
+        return !!(data.title && data.description);
       case "metadata":
-        return !!(state.data.metadata?.bpm && state.data.metadata?.key && state.data.metadata?.genre);
+        return !!(data.metadata?.bpm && data.metadata?.key && data.metadata?.genre);
       case "files":
-        return !!(state.data.files?.mp3Url || state.data.files?.wavUrl);
+        return !!(data.files?.mp3Url || data.files?.wavUrl);
       case "licensing":
-        return !!(state.data.leaseOptions?.some(opt => opt.enabled));
+        return !!(data.leaseOptions?.some(opt => opt.enabled));
       default:
         return false;
     }
   };
 
+  // Public validateStep uses current state (for external checks)
+  const validateStep = (step: keyof StepCompletion): boolean => {
+    return validateStepWithData(step, state.data);
+  };
+
   const updateData = (step: string, newData: Partial<BeatLeaseData>) => {
     setState(prev => {
       const updatedData = { ...prev.data, ...newData };
-      const stepCompletion = {
-        ...prev.stepCompletion,
-        [step]: validateStep(step as keyof StepCompletion),
+
+      // Validate ALL steps against the new data to keep completion status accurate
+      const stepCompletion: StepCompletion = {
+        basics: validateStepWithData("basics", updatedData),
+        metadata: validateStepWithData("metadata", updatedData),
+        files: validateStepWithData("files", updatedData),
+        licensing: validateStepWithData("licensing", updatedData),
       };
+
       return {
         ...prev,
         data: updatedData,
