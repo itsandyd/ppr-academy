@@ -287,77 +287,89 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
               <span>Drafts</span>
             </TabsTrigger>
             
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <TabsTrigger value="courses" className="flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                  <BookOpen className="w-4 h-4" />
-                  <span className="ml-2 hidden md:inline">Courses</span>
-                </TabsTrigger>
-              </TooltipTrigger>
-              <TooltipContent className="bg-white dark:bg-zinc-900 text-foreground">
-                <p>Courses ({courses.length})</p>
-              </TooltipContent>
-            </Tooltip>
+            <TabsTrigger value="courses" className="flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex items-center">
+                    <BookOpen className="w-4 h-4" />
+                    <span className="ml-2 hidden md:inline">Courses</span>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="bg-white dark:bg-zinc-900 text-foreground">
+                  <p>Courses ({courses.length})</p>
+                </TooltipContent>
+              </Tooltip>
+            </TabsTrigger>
             
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <TabsTrigger value="packs" className="flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                  <Music className="w-4 h-4" />
-                  <span className="ml-2 hidden md:inline">Packs</span>
-                </TabsTrigger>
-              </TooltipTrigger>
-              <TooltipContent className="bg-white dark:bg-zinc-900 text-foreground">
-                <p>Sample/Preset/MIDI Packs ({packs.length})</p>
-              </TooltipContent>
-            </Tooltip>
+            <TabsTrigger value="packs" className="flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex items-center">
+                    <Music className="w-4 h-4" />
+                    <span className="ml-2 hidden md:inline">Packs</span>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="bg-white dark:bg-zinc-900 text-foreground">
+                  <p>Sample/Preset/MIDI Packs ({packs.length})</p>
+                </TooltipContent>
+              </Tooltip>
+            </TabsTrigger>
             
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <TabsTrigger value="chains" className="flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                  <Zap className="w-4 h-4" />
-                  <span className="ml-2 hidden md:inline">Chains</span>
-                </TabsTrigger>
-              </TooltipTrigger>
-              <TooltipContent className="bg-white dark:bg-zinc-900 text-foreground">
-                <p>Effect Chains ({effectChains.length})</p>
-              </TooltipContent>
-            </Tooltip>
+            <TabsTrigger value="chains" className="flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex items-center">
+                    <Zap className="w-4 h-4" />
+                    <span className="ml-2 hidden md:inline">Chains</span>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="bg-white dark:bg-zinc-900 text-foreground">
+                  <p>Effect Chains ({effectChains.length})</p>
+                </TooltipContent>
+              </Tooltip>
+            </TabsTrigger>
             
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <TabsTrigger value="pdfs" className="flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                  <FileText className="w-4 h-4" />
-                  <span className="ml-2 hidden md:inline">PDFs</span>
-                </TabsTrigger>
-              </TooltipTrigger>
-              <TooltipContent className="bg-white dark:bg-zinc-900 text-foreground">
-                <p>PDF Guides & Cheat Sheets ({pdfs.length})</p>
-              </TooltipContent>
-            </Tooltip>
+            <TabsTrigger value="pdfs" className="flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex items-center">
+                    <FileText className="w-4 h-4" />
+                    <span className="ml-2 hidden md:inline">PDFs</span>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="bg-white dark:bg-zinc-900 text-foreground">
+                  <p>PDF Guides & Cheat Sheets ({pdfs.length})</p>
+                </TooltipContent>
+              </Tooltip>
+            </TabsTrigger>
             
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <TabsTrigger value="blogs" className="flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                  <PenTool className="w-4 h-4" />
-                  <span className="ml-2 hidden md:inline">Blogs</span>
-                </TabsTrigger>
-              </TooltipTrigger>
-              <TooltipContent className="bg-white dark:bg-zinc-900 text-foreground">
-                <p>Blog Posts ({blogPosts.length})</p>
-              </TooltipContent>
-            </Tooltip>
+            <TabsTrigger value="blogs" className="flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex items-center">
+                    <PenTool className="w-4 h-4" />
+                    <span className="ml-2 hidden md:inline">Blogs</span>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="bg-white dark:bg-zinc-900 text-foreground">
+                  <p>Blog Posts ({blogPosts.length})</p>
+                </TooltipContent>
+              </Tooltip>
+            </TabsTrigger>
             
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <TabsTrigger value="beats" className="flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                  <Music2 className="w-4 h-4" />
-                  <span className="ml-2 hidden md:inline">Beats</span>
-                </TabsTrigger>
-              </TooltipTrigger>
-              <TooltipContent className="bg-white dark:bg-zinc-900 text-foreground">
-                <p>Beat Leases ({beats.length})</p>
-              </TooltipContent>
-            </Tooltip>
+            <TabsTrigger value="beats" className="flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span className="inline-flex items-center">
+                    <Music2 className="w-4 h-4" />
+                    <span className="ml-2 hidden md:inline">Beats</span>
+                  </span>
+                </TooltipTrigger>
+                <TooltipContent className="bg-white dark:bg-zinc-900 text-foreground">
+                  <p>Beat Leases ({beats.length})</p>
+                </TooltipContent>
+              </Tooltip>
+            </TabsTrigger>
           </TabsList>
 
         <TabsContent value="all" className="space-y-4 mt-6">

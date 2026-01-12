@@ -105,6 +105,7 @@ export function SocialPostProvider({ children }: { children: React.ReactNode }) 
   const { toast } = useToast();
 
   const postId = searchParams.get("postId") as Id<"socialMediaPosts"> | undefined;
+  const fromScriptId = searchParams.get("fromScript") as Id<"generatedScripts"> | undefined;
   const currentStep = searchParams.get("step") || "content";
 
   // @ts-ignore - Convex type inference depth issue
@@ -114,6 +115,18 @@ export function SocialPostProvider({ children }: { children: React.ReactNode }) 
     api.socialMediaPosts.getSocialMediaPostById,
     postId ? { postId } : "skip"
   );
+
+  // Query for pre-generated script (from Script Library)
+  const preGeneratedScript = useQuery(
+    api.generatedScripts.getScriptById,
+    fromScriptId ? { scriptId: fromScriptId } : "skip"
+  );
+
+  // Mutation to link script to post
+  const linkScriptToPostMutation = useMutation(api.generatedScripts.linkScriptToPost);
+
+  // Track if we've loaded from script
+  const [loadedFromScript, setLoadedFromScript] = useState<Id<"generatedScripts"> | null>(null);
 
   // @ts-ignore - Convex type inference depth issue
   const createPostMutation = useMutation(api.socialMediaPosts.createSocialMediaPost);
@@ -212,6 +225,53 @@ export function SocialPostProvider({ children }: { children: React.ReactNode }) 
     }
   }, [existingPost, state.postId, validateStepWithData]);
 
+  // Load from pre-generated script (from Script Library)
+  useEffect(() => {
+    if (
+      preGeneratedScript &&
+      fromScriptId &&
+      loadedFromScript !== fromScriptId &&
+      !state.postId // Don't override if already editing a post
+    ) {
+      const newData: SocialPostData = {
+        courseId: preGeneratedScript.courseId,
+        chapterId: preGeneratedScript.chapterId,
+        sourceContent: preGeneratedScript.sourceContentSnippet || "",
+        sourceType: "chapter",
+        title: preGeneratedScript.chapterTitle,
+        tiktokScript: preGeneratedScript.tiktokScript,
+        youtubeScript: preGeneratedScript.youtubeScript,
+        instagramScript: preGeneratedScript.instagramScript,
+        combinedScript: preGeneratedScript.combinedScript,
+        ctaText: preGeneratedScript.suggestedCta,
+        ctaKeyword: preGeneratedScript.suggestedKeyword,
+      };
+
+      const stepCompletion: StepCompletion = {
+        content: validateStepWithData("content", newData),
+        scripts: validateStepWithData("scripts", newData),
+        combine: validateStepWithData("combine", newData),
+        images: false,
+        audio: false,
+        review: false,
+      };
+
+      setState((prev) => ({
+        ...prev,
+        data: newData,
+        stepCompletion,
+        status: "combined",
+      }));
+
+      setLoadedFromScript(fromScriptId);
+
+      toast({
+        title: "Script Loaded",
+        description: `Loaded "${preGeneratedScript.chapterTitle}" from Script Library. Continue with images and audio.`,
+      });
+    }
+  }, [preGeneratedScript, fromScriptId, loadedFromScript, state.postId, validateStepWithData, toast]);
+
   const validateStep = useCallback(
     (step: keyof StepCompletion): boolean => {
       return validateStepWithData(step, state.data);
@@ -259,6 +319,14 @@ export function SocialPostProvider({ children }: { children: React.ReactNode }) 
         });
 
         setState((prev) => ({ ...prev, postId: currentPostId }));
+
+        // Link to pre-generated script if loaded from Script Library
+        if (loadedFromScript && currentPostId) {
+          await linkScriptToPostMutation({
+            scriptId: loadedFromScript,
+            socialMediaPostId: currentPostId,
+          });
+        }
 
         const currentSearch = new URLSearchParams(searchParams.toString());
         currentSearch.set("postId", currentPostId as string);
@@ -356,6 +424,8 @@ export function SocialPostProvider({ children }: { children: React.ReactNode }) 
     updateAudioMutation,
     updateCaptionsMutation,
     updateTitleMutation,
+    linkScriptToPostMutation,
+    loadedFromScript,
     searchParams,
     router,
     toast,

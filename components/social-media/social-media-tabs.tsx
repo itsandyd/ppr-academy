@@ -2,9 +2,10 @@
 
 import { useRouter } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { SocialScheduler } from "@/components/social-media/social-scheduler";
 import { InstagramAutomations } from "./automations/instagram-automations";
-import { Calendar, Zap, Wand2 } from "lucide-react";
+import { Calendar, Zap, Wand2, Users, FileText, Sparkles } from "lucide-react";
 
 interface SocialMediaTabsProps {
   storeId: string;
@@ -16,17 +17,37 @@ export function SocialMediaTabs({ storeId, userId }: SocialMediaTabsProps) {
 
   const handleTabChange = (value: string) => {
     if (value === "generator") {
-      router.push("/dashboard/social/create");
+      router.push("/dashboard/social/create?mode=create");
     }
   };
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="mb-2 text-3xl font-bold">Social Media</h1>
-        <p className="text-muted-foreground">
-          Schedule posts and automate Instagram DMs to grow your audience
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="mb-2 text-3xl font-bold">Social Media</h1>
+          <p className="text-muted-foreground">
+            Schedule posts and automate Instagram DMs to grow your audience
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push("/dashboard/social/profiles?mode=create")}
+          >
+            <Users className="mr-2 h-4 w-4" />
+            Account Profiles
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push("/dashboard/social/library?mode=create")}
+          >
+            <FileText className="mr-2 h-4 w-4" />
+            Script Library
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="scheduler" className="space-y-6" onValueChange={handleTabChange}>

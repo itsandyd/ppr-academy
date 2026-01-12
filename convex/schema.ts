@@ -4854,6 +4854,9 @@ export default defineSchema({
     automationId: v.optional(v.id("automations")),
     scheduledPostId: v.optional(v.id("scheduledPosts")),
     publishedAt: v.optional(v.number()),
+
+    // Link to pre-generated script from AI agent
+    generatedScriptId: v.optional(v.id("generatedScripts")),
   })
     .index("by_userId", ["userId"])
     .index("by_storeId", ["storeId"])
@@ -4862,7 +4865,8 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_userId_status", ["userId", "status"])
     .index("by_createdAt", ["createdAt"])
-    .index("by_userId_createdAt", ["userId", "createdAt"]),
+    .index("by_userId_createdAt", ["userId", "createdAt"])
+    .index("by_generatedScriptId", ["generatedScriptId"]),
 
   // CTA Templates - Reusable call-to-action templates
   ctaTemplates: defineTable({
@@ -5016,4 +5020,237 @@ export default defineSchema({
     .index("by_orderId", ["orderId"])
     .index("by_senderId", ["senderId"])
     .index("by_createdAt", ["createdAt"]),
+
+  // ============================================================================
+  // AI CONTENT PLANNING SYSTEM
+  // ============================================================================
+
+  // Social Account Profiles - Define social pages for content planning (not OAuth-linked)
+  socialAccountProfiles: defineTable({
+    storeId: v.string(),
+    userId: v.string(), // Clerk ID
+
+    // Profile info
+    name: v.string(), // e.g., "Vocal Production IG"
+    description: v.string(), // What topics/niche this account covers
+    platform: v.union(
+      v.literal("instagram"),
+      v.literal("twitter"),
+      v.literal("facebook"),
+      v.literal("tiktok"),
+      v.literal("youtube"),
+      v.literal("linkedin")
+    ),
+
+    // Optional link to authenticated account
+    socialAccountId: v.optional(v.id("socialAccounts")),
+
+    // Content niche/topics for AI matching
+    topics: v.array(v.string()), // ["compression", "mixing", "vocal processing"]
+    targetAudience: v.optional(v.string()), // "bedroom producers", "beginners"
+
+    // Posting preferences
+    preferredPostDays: v.optional(v.array(v.number())), // 0=Sunday, 1=Monday, etc.
+    postsPerWeek: v.optional(v.number()),
+
+    // Stats
+    totalScheduledScripts: v.optional(v.number()),
+    totalPublishedScripts: v.optional(v.number()),
+
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_storeId", ["storeId"])
+    .index("by_userId", ["userId"])
+    .index("by_platform", ["platform"])
+    .index("by_socialAccountId", ["socialAccountId"]),
+
+  // Generated Scripts - Pre-generated script library from AI agent
+  generatedScripts: defineTable({
+    storeId: v.string(),
+    userId: v.string(), // Clerk ID
+
+    // Source reference
+    courseId: v.id("courses"),
+    chapterId: v.id("courseChapters"),
+    moduleId: v.optional(v.string()),
+    lessonId: v.optional(v.string()),
+
+    // Source content metadata
+    courseTitle: v.string(),
+    chapterTitle: v.string(),
+    chapterPosition: v.number(), // For progression tracking (1.1, 1.2, etc.)
+    sourceContentSnippet: v.string(), // First 500 chars for preview
+
+    // Generated scripts
+    tiktokScript: v.string(),
+    youtubeScript: v.string(),
+    instagramScript: v.string(),
+    combinedScript: v.string(),
+
+    // AI-generated CTA
+    suggestedCta: v.optional(v.string()),
+    suggestedKeyword: v.optional(v.string()),
+
+    // Virality scoring (1-10)
+    viralityScore: v.number(),
+    viralityAnalysis: v.object({
+      engagementPotential: v.number(), // Viral hooks, controversy, pain points
+      educationalValue: v.number(), // Actionable tips, clear outcomes
+      trendAlignment: v.number(), // Current social media formats
+      reasoning: v.string(), // AI explanation of score
+    }),
+
+    // Account matching
+    suggestedAccountProfileId: v.optional(v.id("socialAccountProfiles")),
+    topicMatch: v.optional(v.array(v.string())), // Topics that matched
+    accountMatchScore: v.optional(v.number()), // How well it matches the account (1-100)
+
+    // Status
+    status: v.union(
+      v.literal("generated"), // Just created by agent
+      v.literal("reviewed"), // User reviewed
+      v.literal("scheduled"), // Added to calendar
+      v.literal("in_progress"), // Being edited in generator
+      v.literal("completed"), // Fully processed through generator
+      v.literal("archived") // User archived
+    ),
+
+    // Link to social media post if used
+    socialMediaPostId: v.optional(v.id("socialMediaPosts")),
+
+    // Generation metadata
+    generatedAt: v.number(),
+    generationBatchId: v.optional(v.string()), // For tracking batch runs
+
+    // Performance feedback (added after script is published)
+    actualPerformance: v.optional(
+      v.object({
+        views: v.optional(v.number()),
+        likes: v.optional(v.number()),
+        comments: v.optional(v.number()),
+        shares: v.optional(v.number()),
+        saves: v.optional(v.number()),
+        engagementRate: v.optional(v.number()),
+        performanceScore: v.optional(v.number()), // 1-10 based on actual metrics
+        capturedAt: v.number(),
+      })
+    ),
+    userFeedback: v.optional(
+      v.object({
+        rating: v.optional(v.number()), // 1-5 user rating
+        notes: v.optional(v.string()), // "Got comments about sounding AI-generated"
+        audienceReaction: v.optional(
+          v.union(v.literal("positive"), v.literal("mixed"), v.literal("negative"))
+        ),
+        whatWorked: v.optional(v.array(v.string())), // ["hook was great", "CTA converted well"]
+        whatDidntWork: v.optional(v.array(v.string())), // ["too long", "sounded robotic"]
+        submittedAt: v.number(),
+      })
+    ),
+    predictionAccuracy: v.optional(v.number()), // How close viralityScore was to performanceScore
+
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_storeId", ["storeId"])
+    .index("by_userId", ["userId"])
+    .index("by_courseId", ["courseId"])
+    .index("by_chapterId", ["chapterId"])
+    .index("by_status", ["status"])
+    .index("by_viralityScore", ["viralityScore"])
+    .index("by_suggestedAccountProfileId", ["suggestedAccountProfileId"])
+    .index("by_generatedAt", ["generatedAt"])
+    .index("by_user_status", ["userId", "status"])
+    .index("by_store_account_status", ["storeId", "suggestedAccountProfileId", "status"]),
+
+  // Script Calendar Entries - Per-account scheduling
+  scriptCalendarEntries: defineTable({
+    storeId: v.string(),
+    userId: v.string(), // Clerk ID
+
+    // References
+    accountProfileId: v.id("socialAccountProfiles"),
+    generatedScriptId: v.id("generatedScripts"),
+
+    // Scheduling
+    scheduledDate: v.number(), // Unix timestamp for the day
+    scheduledTime: v.optional(v.number()), // Optional specific time
+    timezone: v.string(),
+
+    // Order for progression tracking
+    dayOfWeek: v.optional(v.number()), // 0-6 for calendar display
+    sequenceOrder: v.number(), // 1, 2, 3... for chapter progression
+
+    // Status
+    status: v.union(
+      v.literal("planned"), // Placed on calendar
+      v.literal("in_progress"), // User is working on it
+      v.literal("ready"), // Fully generated through flow
+      v.literal("published"), // Posted
+      v.literal("skipped") // User decided not to use
+    ),
+
+    // Notes
+    userNotes: v.optional(v.string()),
+
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_storeId", ["storeId"])
+    .index("by_userId", ["userId"])
+    .index("by_accountProfileId", ["accountProfileId"])
+    .index("by_generatedScriptId", ["generatedScriptId"])
+    .index("by_scheduledDate", ["scheduledDate"])
+    .index("by_account_date", ["accountProfileId", "scheduledDate"])
+    .index("by_status", ["status"]),
+
+  // Script Generation Jobs - Background job tracking
+  scriptGenerationJobs: defineTable({
+    storeId: v.string(),
+    userId: v.string(), // Clerk ID
+
+    // Job configuration
+    jobType: v.union(
+      v.literal("full_scan"), // Process all courses
+      v.literal("course_scan"), // Process specific course
+      v.literal("incremental") // Process only new content
+    ),
+    courseId: v.optional(v.id("courses")), // For course_scan
+
+    // Progress tracking
+    status: v.union(
+      v.literal("queued"),
+      v.literal("processing"),
+      v.literal("completed"),
+      v.literal("failed"),
+      v.literal("cancelled")
+    ),
+
+    // Batch processing state
+    currentBatchId: v.optional(v.string()),
+    totalChapters: v.optional(v.number()),
+    processedChapters: v.optional(v.number()),
+    failedChapters: v.optional(v.number()),
+
+    // Results
+    scriptsGenerated: v.optional(v.number()),
+    averageViralityScore: v.optional(v.number()),
+
+    // Timing
+    startedAt: v.optional(v.number()),
+    completedAt: v.optional(v.number()),
+    estimatedCompletionAt: v.optional(v.number()),
+
+    // Error tracking
+    lastError: v.optional(v.string()),
+    errorCount: v.optional(v.number()),
+
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_storeId", ["storeId"])
+    .index("by_userId", ["userId"])
+    .index("by_status", ["status"])
+    .index("by_user_status", ["userId", "status"]),
 });
