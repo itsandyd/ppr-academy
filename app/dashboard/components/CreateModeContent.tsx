@@ -100,7 +100,10 @@ export function CreateModeContent() {
       category: (product as any).category || (product as any).productCategory || "Digital Product",
     }));
 
-    return [...courseProducts, ...digitalProductItems];
+    // Sort by creation time (newest first) to show most recent products
+    return [...courseProducts, ...digitalProductItems].sort(
+      (a, b) => (b._creationTime || 0) - (a._creationTime || 0)
+    );
   }, [userCourses, digitalProducts]);
 
   const quickActions = useMemo(
