@@ -144,7 +144,7 @@ export function StepCombineScript() {
 
   useEffect(() => {
     updateData("combine", { combinedScript });
-  }, [combinedScript]);
+  }, [combinedScript, updateData]);
 
   return (
     <div className="space-y-4 sm:space-y-8">
