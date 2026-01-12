@@ -10,14 +10,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { X, Plus, Upload, Sparkles, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { toast } from "sonner";
+import { useMutation } from "convex/react";
+import { api } from "@/lib/convex-api";
 
 export function PackBasicsForm() {
   const { state, updateData, savePack } = usePackCreation();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [tagInput, setTagInput] = useState("");
+  const [isUploadingThumbnail, setIsUploadingThumbnail] = useState(false);
+  const thumbnailInputRef = useRef<HTMLInputElement>(null);
+
+  // Convex mutation for generating upload URL
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const generateUploadUrl: any = useMutation(api.files.generateUploadUrl as any);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const getFileUrl: any = useMutation(api.files.getUrl as any);
 
   const handleNext = async () => {
     await savePack();
@@ -73,9 +83,60 @@ export function PackBasicsForm() {
     }
   };
 
-  const handleThumbnailUpload = () => {
-    // Placeholder - integrate with your upload system
-    toast.success("Upload integration coming soon!");
+  // Handle thumbnail image upload
+  const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error("Please select an image file (PNG, JPG, etc.)");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be less than 5MB");
+      return;
+    }
+
+    setIsUploadingThumbnail(true);
+    try {
+      // Generate upload URL from Convex
+      const uploadUrl = await generateUploadUrl();
+
+      // Upload file to Convex storage
+      const result = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+
+      if (!result.ok) {
+        throw new Error("Failed to upload image");
+      }
+
+      const { storageId } = await result.json();
+
+      // Get the public URL for the uploaded image
+      const publicUrl = await getFileUrl({ storageId });
+
+      if (publicUrl) {
+        updateData("basics", { thumbnail: publicUrl });
+        toast.success("Thumbnail uploaded successfully!");
+      } else {
+        throw new Error("Failed to get image URL");
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast.error("Failed to upload thumbnail. Please try again.");
+    } finally {
+      setIsUploadingThumbnail(false);
+      // Reset input
+      if (thumbnailInputRef.current) {
+        thumbnailInputRef.current.value = "";
+      }
+    }
   };
 
   const canProceed = !!(state.data.title && state.data.description && state.data.packType);
@@ -157,6 +218,14 @@ export function PackBasicsForm() {
           <CardDescription>Optional but recommended for better visibility</CardDescription>
         </CardHeader>
         <CardContent>
+          {/* Hidden file input for thumbnail upload */}
+          <input
+            ref={thumbnailInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleThumbnailUpload}
+            className="hidden"
+          />
           <div className="flex items-center gap-4">
             {state.data.thumbnail ? (
               <img
@@ -166,7 +235,11 @@ export function PackBasicsForm() {
               />
             ) : (
               <div className="w-32 h-32 rounded-lg bg-muted flex items-center justify-center">
-                <Upload className="w-8 h-8 text-muted-foreground" />
+                {isUploadingThumbnail ? (
+                  <Loader2 className="w-8 h-8 text-muted-foreground animate-spin" />
+                ) : (
+                  <Upload className="w-8 h-8 text-muted-foreground" />
+                )}
               </div>
             )}
             <div className="flex-1 space-y-2">
@@ -177,9 +250,9 @@ export function PackBasicsForm() {
                 className="bg-background"
               />
               <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={handleGenerateThumbnail}
                   disabled={isGenerating || !state.data.title}
                   className="flex-1 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 hover:from-purple-100 hover:to-pink-100 border-purple-200 dark:border-purple-800"
@@ -196,9 +269,23 @@ export function PackBasicsForm() {
                     </>
                   )}
                 </Button>
-                <Button variant="outline" size="sm" onClick={handleThumbnailUpload}>
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => thumbnailInputRef.current?.click()}
+                  disabled={isUploadingThumbnail}
+                >
+                  {isUploadingThumbnail ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Upload
+                    </>
+                  )}
                 </Button>
               </div>
             </div>

@@ -1134,6 +1134,42 @@ export const updateProduct = mutation({
       fileFormat: v.optional(v.union(v.literal("adg"), v.literal("adv"), v.literal("alp"))),
       fileSize: v.optional(v.number()),
       installationNotes: v.optional(v.string()),
+      // Beat Lease specific fields
+      wavUrl: v.optional(v.string()),
+      stemsUrl: v.optional(v.string()),
+      trackoutsUrl: v.optional(v.string()),
+      beatLeaseConfig: v.optional(
+        v.object({
+          tiers: v.optional(
+            v.array(
+              v.object({
+                type: v.union(
+                  v.literal("basic"),
+                  v.literal("premium"),
+                  v.literal("exclusive"),
+                  v.literal("unlimited")
+                ),
+                enabled: v.boolean(),
+                price: v.number(),
+                name: v.string(),
+                distributionLimit: v.optional(v.number()),
+                streamingLimit: v.optional(v.number()),
+                commercialUse: v.boolean(),
+                musicVideoUse: v.boolean(),
+                radioBroadcasting: v.boolean(),
+                stemsIncluded: v.boolean(),
+                creditRequired: v.boolean(),
+              })
+            )
+          ),
+          bpm: v.optional(v.number()),
+          key: v.optional(v.string()),
+          genre: v.optional(v.string()),
+        })
+      ),
+      exclusiveSoldAt: v.optional(v.number()),
+      exclusiveSoldTo: v.optional(v.string()),
+      exclusivePurchaseId: v.optional(v.id("purchases")),
     }),
     v.null()
   ),

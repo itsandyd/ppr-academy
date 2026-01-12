@@ -1,16 +1,51 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Upload, Image as ImageIcon, Sparkles } from "lucide-react";
+import { Upload, Image as ImageIcon, Sparkles, Loader2 } from "lucide-react";
 import { ProductCategory, getProductInfo } from "../types";
 import { ProductAIAssistant } from "@/components/ai/ProductAIAssistant";
 import { useRouter } from "next/navigation";
+import { useMutation } from "convex/react";
+import { api } from "@/lib/convex-api";
+import { toast } from "sonner";
+
+// Category-specific placeholder text for better UX
+const CATEGORY_PLACEHOLDERS: Record<string, { title: string; description: string }> = {
+  "community": {
+    title: "e.g., Producer's Inner Circle, Beat Makers Community",
+    description: "Describe your community - what members get access to, the vibe, exclusive perks, how often you engage with members..."
+  },
+  "tip-jar": {
+    title: "e.g., Support My Music, Buy Me a Coffee",
+    description: "Tell supporters what their tips help you create - new music, better equipment, more free content..."
+  },
+  "sample-pack": {
+    title: "e.g., Ultimate Trap Drum Kit, Lo-Fi Essentials",
+    description: "Describe what's included - number of samples, genres, quality, what makes this pack unique..."
+  },
+  "preset-pack": {
+    title: "e.g., Dark Serum Presets, Vital Bass Pack",
+    description: "Describe the presets - target plugin, genre, sound characteristics, what producers will create with them..."
+  },
+  "midi-pack": {
+    title: "e.g., Melodic Trap MIDI Kit, Neo-Soul Chords",
+    description: "Describe the MIDI files - genres, chord progressions, melodies, how they can be used..."
+  },
+  "effect-chain": {
+    title: "e.g., Vocal Chain Pro, Master Bus Settings",
+    description: "Describe your effect chain - what it does, target DAW, what sound it achieves..."
+  },
+  "default": {
+    title: "e.g., My Awesome Product",
+    description: "Describe what makes this product special, what's included, and who it's for..."
+  }
+};
 
 interface BasicsStepProps {
   productCategory: ProductCategory;
@@ -39,7 +74,74 @@ export function BasicsStep({
 }: BasicsStepProps) {
   const router = useRouter();
   const [tagInput, setTagInput] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const productInfo = getProductInfo(productCategory);
+
+  // Get category-specific placeholders
+  const placeholders = CATEGORY_PLACEHOLDERS[productCategory] || CATEGORY_PLACEHOLDERS["default"];
+
+  // Convex mutation for generating upload URL
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const generateUploadUrl: any = useMutation(api.files.generateUploadUrl as any);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const getFileUrl: any = useMutation(api.files.getUrl as any);
+
+  // Handle image upload
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error("Please select an image file (PNG, JPG, etc.)");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be less than 5MB");
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      // Generate upload URL from Convex
+      const uploadUrl = await generateUploadUrl();
+
+      // Upload file to Convex storage
+      const result = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+
+      if (!result.ok) {
+        throw new Error("Failed to upload image");
+      }
+
+      const { storageId } = await result.json();
+
+      // Get the public URL for the uploaded image
+      const publicUrl = await getFileUrl({ storageId });
+
+      if (publicUrl) {
+        onImageChange(publicUrl);
+        toast.success("Image uploaded successfully!");
+      } else {
+        throw new Error("Failed to get image URL");
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast.error("Failed to upload image. Please try again.");
+    } finally {
+      setIsUploading(false);
+      // Reset input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
 
   const handleAddTag = () => {
     if (tagInput.trim() && !tags.includes(tagInput.trim())) {
@@ -72,7 +174,7 @@ export function BasicsStep({
         </Label>
         <Input
           id="title"
-          placeholder="e.g., Ultimate Trap Drum Kit"
+          placeholder={placeholders.title}
           value={title}
           onChange={(e) => onTitleChange(e.target.value)}
           className={cn("text-lg", title.trim().length === 0 && "border-destructive")}
@@ -87,7 +189,7 @@ export function BasicsStep({
         </Label>
         <Textarea
           id="description"
-          placeholder="Describe what makes this product special..."
+          placeholder={placeholders.description}
           value={description}
           onChange={(e) => onDescriptionChange(e.target.value)}
           rows={6}
@@ -109,6 +211,14 @@ export function BasicsStep({
       {/* Thumbnail */}
       <div className="space-y-2">
         <Label htmlFor="thumbnail">Thumbnail Image</Label>
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleImageUpload}
+          className="hidden"
+        />
         {imageUrl ? (
           <div className="relative">
             <img
@@ -120,24 +230,44 @@ export function BasicsStep({
               variant="secondary"
               size="sm"
               className="absolute right-2 top-2"
-              onClick={() => onImageChange("")}
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
             >
-              Change Image
+              {isUploading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                "Change Image"
+              )}
             </Button>
           </div>
         ) : (
-          <Card className="cursor-pointer border-2 border-dashed transition-colors hover:border-primary/50">
+          <Card
+            className={cn(
+              "cursor-pointer border-2 border-dashed transition-colors hover:border-primary/50",
+              isUploading && "pointer-events-none opacity-50"
+            )}
+          >
             <div
               className="p-12 text-center"
-              onClick={() => {
-                // TODO: Open image picker/uploader
-                console.log("Open image picker");
-              }}
+              onClick={() => fileInputRef.current?.click()}
             >
-              <ImageIcon className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-              <h3 className="mb-2 font-medium">Upload Thumbnail</h3>
-              <p className="mb-4 text-sm text-muted-foreground">Click to upload or drag and drop</p>
-              <Badge variant="secondary">Recommended: 1200x630px</Badge>
+              {isUploading ? (
+                <>
+                  <Loader2 className="mx-auto mb-4 h-12 w-12 animate-spin text-muted-foreground" />
+                  <h3 className="mb-2 font-medium">Uploading...</h3>
+                  <p className="mb-4 text-sm text-muted-foreground">Please wait while your image uploads</p>
+                </>
+              ) : (
+                <>
+                  <ImageIcon className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+                  <h3 className="mb-2 font-medium">Upload Thumbnail</h3>
+                  <p className="mb-4 text-sm text-muted-foreground">Click to upload (PNG, JPG, max 5MB)</p>
+                  <Badge variant="secondary">Recommended: 1200x630px</Badge>
+                </>
+              )}
             </div>
           </Card>
         )}
