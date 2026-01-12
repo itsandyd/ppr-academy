@@ -153,6 +153,7 @@ import type * as masterAI_queries from "../masterAI/queries.js";
 import type * as masterAI_retriever from "../masterAI/retriever.js";
 import type * as masterAI_socialMediaGenerator from "../masterAI/socialMediaGenerator.js";
 import type * as masterAI_socialScriptAgent from "../masterAI/socialScriptAgent.js";
+import type * as masterAI_socialScriptAgentMutations from "../masterAI/socialScriptAgentMutations.js";
 import type * as masterAI_summarizer from "../masterAI/summarizer.js";
 import type * as masterAI_tools_blotato from "../masterAI/tools/blotato.js";
 import type * as masterAI_tools_executor from "../masterAI/tools/executor.js";
@@ -382,6 +383,7 @@ declare const fullApi: ApiFromModules<{
   "masterAI/retriever": typeof masterAI_retriever;
   "masterAI/socialMediaGenerator": typeof masterAI_socialMediaGenerator;
   "masterAI/socialScriptAgent": typeof masterAI_socialScriptAgent;
+  "masterAI/socialScriptAgentMutations": typeof masterAI_socialScriptAgentMutations;
   "masterAI/summarizer": typeof masterAI_summarizer;
   "masterAI/tools/blotato": typeof masterAI_tools_blotato;
   "masterAI/tools/executor": typeof masterAI_tools_executor;

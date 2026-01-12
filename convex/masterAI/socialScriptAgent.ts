@@ -1,6 +1,6 @@
 "use node";
 
-import { action, internalAction, internalMutation } from "../_generated/server";
+import { action, internalAction } from "../_generated/server";
 import { v } from "convex/values";
 import { api, internal } from "../_generated/api";
 import { Id } from "../_generated/dataModel";
@@ -110,6 +110,7 @@ If no account is a good fit (matchScore would be below 30), return null for sugg
 /**
  * Start a script generation job
  */
+// @ts-ignore - Convex type inference issue
 export const startScriptGeneration = action({
   args: {
     storeId: v.string(),
@@ -122,11 +123,12 @@ export const startScriptGeneration = action({
     courseId: v.optional(v.id("courses")),
   },
   returns: v.id("scriptGenerationJobs"),
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<Id<"scriptGenerationJobs">> => {
     console.log(`🚀 Starting script generation job: ${args.jobType}`);
 
     // Create the job
-    const jobId = await ctx.runMutation(internal.masterAI.socialScriptAgent.createJob, {
+    // @ts-ignore - Convex type inference depth issue
+    const jobId = await ctx.runMutation(internal.masterAI.socialScriptAgentMutations.createJob, {
       storeId: args.storeId,
       userId: args.userId,
       jobType: args.jobType,
@@ -134,7 +136,7 @@ export const startScriptGeneration = action({
     });
 
     // Get chapters to process
-    const chapters = await ctx.runQuery(internal.masterAI.socialScriptAgent.getChaptersToProcess, {
+    const chapters = await ctx.runQuery(internal.masterAI.socialScriptAgentMutations.getChaptersToProcess, {
       userId: args.userId,
       jobType: args.jobType,
       courseId: args.courseId,
@@ -143,7 +145,7 @@ export const startScriptGeneration = action({
     console.log(`📚 Found ${chapters.length} chapters to process`);
 
     if (chapters.length === 0) {
-      await ctx.runMutation(internal.masterAI.socialScriptAgent.completeJob, {
+      await ctx.runMutation(internal.masterAI.socialScriptAgentMutations.completeJob, {
         jobId,
         scriptsGenerated: 0,
       });
@@ -151,7 +153,7 @@ export const startScriptGeneration = action({
     }
 
     // Update job with total chapters
-    await ctx.runMutation(internal.masterAI.socialScriptAgent.updateJobProgress, {
+    await ctx.runMutation(internal.masterAI.socialScriptAgentMutations.updateJobProgress, {
       jobId,
       totalChapters: chapters.length,
       processedChapters: 0,
@@ -163,7 +165,7 @@ export const startScriptGeneration = action({
 
     await ctx.scheduler.runAfter(0, internal.masterAI.socialScriptAgent.processChapterBatch, {
       jobId,
-      chapterIds: firstBatch.map((c) => c.chapterId),
+      chapterIds: firstBatch.map((c: any) => c.chapterId),
       batchId,
       batchIndex: 0,
       totalBatches: Math.ceil(chapters.length / BATCH_SIZE),
@@ -176,12 +178,14 @@ export const startScriptGeneration = action({
 /**
  * Get job status
  */
+// @ts-ignore - Convex type inference issue
 export const getJobStatus = action({
   args: {
     jobId: v.id("scriptGenerationJobs"),
   },
+  // @ts-ignore - Convex type inference issue
   handler: async (ctx, args) => {
-    return await ctx.runQuery(api.masterAI.socialScriptAgent.getJob, {
+    return await ctx.runQuery(api.masterAI.socialScriptAgentMutations.getJobById, {
       jobId: args.jobId,
     });
   },
@@ -208,7 +212,7 @@ export const processChapterBatch = internalAction({
     console.log(`🔄 Processing batch ${batchIndex + 1}/${totalBatches} (${chapterIds.length} chapters)`);
 
     // Get job info
-    const job = await ctx.runQuery(internal.masterAI.socialScriptAgent.getJobInternal, {
+    const job = await ctx.runQuery(internal.masterAI.socialScriptAgentMutations.getJobInternal, {
       jobId,
     });
 
@@ -218,7 +222,7 @@ export const processChapterBatch = internalAction({
     }
 
     // Update job status to processing
-    await ctx.runMutation(internal.masterAI.socialScriptAgent.updateJobStatus, {
+    await ctx.runMutation(internal.masterAI.socialScriptAgentMutations.updateJobStatus, {
       jobId,
       status: "processing",
       currentBatchId: batchId,
@@ -226,7 +230,7 @@ export const processChapterBatch = internalAction({
 
     // Get account profiles for matching
     const accountProfiles = await ctx.runQuery(
-      internal.masterAI.socialScriptAgent.getAccountProfiles,
+      internal.masterAI.socialScriptAgentMutations.getAccountProfiles,
       { storeId: job.storeId }
     );
 
@@ -254,7 +258,7 @@ export const processChapterBatch = internalAction({
     const newFailed = (job.failedChapters || 0) + failed;
     const newGenerated = (job.scriptsGenerated || 0) + succeeded;
 
-    await ctx.runMutation(internal.masterAI.socialScriptAgent.updateJobProgress, {
+    await ctx.runMutation(internal.masterAI.socialScriptAgentMutations.updateJobProgress, {
       jobId,
       processedChapters: newProcessed,
       failedChapters: newFailed,
@@ -266,7 +270,7 @@ export const processChapterBatch = internalAction({
     if (nextBatchIndex < totalBatches) {
       // Get all chapters and calculate next batch
       const allChapters = await ctx.runQuery(
-        internal.masterAI.socialScriptAgent.getChaptersToProcess,
+        internal.masterAI.socialScriptAgentMutations.getChaptersToProcess,
         {
           userId: job.userId,
           jobType: job.jobType,
@@ -277,7 +281,7 @@ export const processChapterBatch = internalAction({
       const nextBatchStart = nextBatchIndex * BATCH_SIZE;
       const nextBatchChapters = allChapters
         .slice(nextBatchStart, nextBatchStart + BATCH_SIZE)
-        .map((c) => c.chapterId);
+        .map((c: any) => c.chapterId);
 
       if (nextBatchChapters.length > 0) {
         // Schedule next batch with a small delay
@@ -295,7 +299,7 @@ export const processChapterBatch = internalAction({
       }
     } else {
       // All batches complete
-      await ctx.runMutation(internal.masterAI.socialScriptAgent.completeJob, {
+      await ctx.runMutation(internal.masterAI.socialScriptAgentMutations.completeJob, {
         jobId,
         scriptsGenerated: newGenerated,
       });
@@ -320,7 +324,7 @@ async function processChapter(
 
   // Get chapter and course info
   const chapterInfo = await ctx.runQuery(
-    internal.masterAI.socialScriptAgent.getChapterInfo,
+    internal.masterAI.socialScriptAgentMutations.getChapterInfo,
     { chapterId }
   );
 
@@ -436,7 +440,13 @@ async function scoreVirality(
     maxTokens: 500,
   });
 
-  const parsed = safeParseJson(response.content);
+  const parsed = safeParseJson(response.content) as {
+    viralityScore?: number;
+    engagementPotential?: number;
+    educationalValue?: number;
+    trendAlignment?: number;
+    reasoning?: string;
+  } | null;
 
   return {
     viralityScore: parsed?.viralityScore || 5,
@@ -479,7 +489,12 @@ async function matchToAccount(
     maxTokens: 500,
   });
 
-  const parsed = safeParseJson(response.content);
+  const parsed = safeParseJson(response.content) as {
+    suggestedAccountProfileId?: string;
+    matchScore?: number;
+    topicMatches?: string[];
+    reasoning?: string;
+  } | null;
 
   if (!parsed || !parsed.suggestedAccountProfileId) {
     return null;
@@ -493,293 +508,3 @@ async function matchToAccount(
   };
 }
 
-// ============================================================================
-// INTERNAL MUTATIONS FOR JOB MANAGEMENT
-// ============================================================================
-
-export const createJob = internalMutation({
-  args: {
-    storeId: v.string(),
-    userId: v.string(),
-    jobType: v.union(
-      v.literal("full_scan"),
-      v.literal("course_scan"),
-      v.literal("incremental")
-    ),
-    courseId: v.optional(v.id("courses")),
-  },
-  handler: async (ctx, args) => {
-    const now = Date.now();
-    return await ctx.db.insert("scriptGenerationJobs", {
-      storeId: args.storeId,
-      userId: args.userId,
-      jobType: args.jobType,
-      courseId: args.courseId,
-      status: "queued",
-      totalChapters: 0,
-      processedChapters: 0,
-      failedChapters: 0,
-      scriptsGenerated: 0,
-      errorCount: 0,
-      createdAt: now,
-      updatedAt: now,
-    });
-  },
-});
-
-export const updateJobProgress = internalMutation({
-  args: {
-    jobId: v.id("scriptGenerationJobs"),
-    totalChapters: v.optional(v.number()),
-    processedChapters: v.optional(v.number()),
-    failedChapters: v.optional(v.number()),
-    scriptsGenerated: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    const { jobId, ...updates } = args;
-    const filteredUpdates: Record<string, unknown> = { updatedAt: Date.now() };
-    for (const [key, value] of Object.entries(updates)) {
-      if (value !== undefined) {
-        filteredUpdates[key] = value;
-      }
-    }
-    await ctx.db.patch(jobId, filteredUpdates);
-  },
-});
-
-export const updateJobStatus = internalMutation({
-  args: {
-    jobId: v.id("scriptGenerationJobs"),
-    status: v.union(
-      v.literal("queued"),
-      v.literal("processing"),
-      v.literal("completed"),
-      v.literal("failed"),
-      v.literal("cancelled")
-    ),
-    currentBatchId: v.optional(v.string()),
-    lastError: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    const updates: Record<string, unknown> = {
-      status: args.status,
-      updatedAt: Date.now(),
-    };
-    if (args.currentBatchId) updates.currentBatchId = args.currentBatchId;
-    if (args.lastError) {
-      updates.lastError = args.lastError;
-      const job = await ctx.db.get(args.jobId);
-      updates.errorCount = (job?.errorCount || 0) + 1;
-    }
-    if (args.status === "processing" && !updates.startedAt) {
-      const job = await ctx.db.get(args.jobId);
-      if (!job?.startedAt) updates.startedAt = Date.now();
-    }
-    await ctx.db.patch(args.jobId, updates);
-  },
-});
-
-export const completeJob = internalMutation({
-  args: {
-    jobId: v.id("scriptGenerationJobs"),
-    scriptsGenerated: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    const job = await ctx.db.get(args.jobId);
-    if (!job) return;
-
-    // Calculate average virality score
-    const scripts = await ctx.db
-      .query("generatedScripts")
-      .withIndex("by_storeId", (q) => q.eq("storeId", job.storeId))
-      .collect();
-
-    const recentScripts = scripts.filter(
-      (s) => s.generationBatchId?.startsWith("batch-")
-    );
-
-    const avgScore =
-      recentScripts.length > 0
-        ? recentScripts.reduce((sum, s) => sum + s.viralityScore, 0) /
-          recentScripts.length
-        : 0;
-
-    await ctx.db.patch(args.jobId, {
-      status: "completed",
-      completedAt: Date.now(),
-      scriptsGenerated: args.scriptsGenerated || job.scriptsGenerated,
-      averageViralityScore: Math.round(avgScore * 10) / 10,
-      updatedAt: Date.now(),
-    });
-
-    console.log(`🎉 Job completed! Generated ${args.scriptsGenerated || 0} scripts`);
-  },
-});
-
-// ============================================================================
-// INTERNAL QUERIES
-// ============================================================================
-
-import { internalQuery, query } from "../_generated/server";
-
-export const getJob = query({
-  args: {
-    jobId: v.id("scriptGenerationJobs"),
-  },
-  handler: async (ctx, args) => {
-    return await ctx.db.get(args.jobId);
-  },
-});
-
-export const getJobInternal = internalQuery({
-  args: {
-    jobId: v.id("scriptGenerationJobs"),
-  },
-  handler: async (ctx, args) => {
-    return await ctx.db.get(args.jobId);
-  },
-});
-
-export const getChaptersToProcess = internalQuery({
-  args: {
-    userId: v.string(),
-    jobType: v.union(
-      v.literal("full_scan"),
-      v.literal("course_scan"),
-      v.literal("incremental")
-    ),
-    courseId: v.optional(v.id("courses")),
-  },
-  handler: async (ctx, args) => {
-    // Get user's courses
-    let courses;
-    if (args.jobType === "course_scan" && args.courseId) {
-      const course = await ctx.db.get(args.courseId);
-      courses = course ? [course] : [];
-    } else {
-      courses = await ctx.db
-        .query("courses")
-        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-        .collect();
-    }
-
-    // Get all chapters from these courses
-    const allChapters: {
-      chapterId: Id<"courseChapters">;
-      courseId: Id<"courses">;
-    }[] = [];
-
-    for (const course of courses) {
-      const chapters = await ctx.db
-        .query("courseChapters")
-        .withIndex("by_courseId", (q) => q.eq("courseId", course._id))
-        .collect();
-
-      for (const chapter of chapters) {
-        // For incremental, check if we already have a script for this chapter
-        if (args.jobType === "incremental") {
-          const existingScript = await ctx.db
-            .query("generatedScripts")
-            .withIndex("by_chapterId", (q) => q.eq("chapterId", chapter._id))
-            .first();
-
-          if (existingScript) continue;
-        }
-
-        allChapters.push({
-          chapterId: chapter._id,
-          courseId: course._id,
-        });
-      }
-    }
-
-    return allChapters;
-  },
-});
-
-export const getAccountProfiles = internalQuery({
-  args: {
-    storeId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("socialAccountProfiles")
-      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
-  },
-});
-
-export const getChapterInfo = internalQuery({
-  args: {
-    chapterId: v.id("courseChapters"),
-  },
-  handler: async (ctx, args) => {
-    const chapter = await ctx.db.get(args.chapterId);
-    if (!chapter) return null;
-
-    const course = await ctx.db.get(chapter.courseId);
-    if (!course) return null;
-
-    // Get module/lesson position if available
-    let modulePosition = 1;
-    let moduleId: string | undefined;
-    let lessonId: string | undefined;
-
-    if (chapter.lessonId) {
-      lessonId = chapter.lessonId as string;
-      // Could fetch lesson for more position info if needed
-    }
-
-    return {
-      chapter,
-      course,
-      modulePosition,
-      moduleId,
-      lessonId,
-    };
-  },
-});
-
-// ============================================================================
-// USER-FACING QUERIES FOR JOB STATUS
-// ============================================================================
-
-export const getActiveJobs = query({
-  args: {
-    userId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const jobs = await ctx.db
-      .query("scriptGenerationJobs")
-      .withIndex("by_user_status", (q) =>
-        q.eq("userId", args.userId).eq("status", "processing")
-      )
-      .collect();
-
-    // Also get queued jobs
-    const queuedJobs = await ctx.db
-      .query("scriptGenerationJobs")
-      .withIndex("by_user_status", (q) =>
-        q.eq("userId", args.userId).eq("status", "queued")
-      )
-      .collect();
-
-    return [...jobs, ...queuedJobs];
-  },
-});
-
-export const getRecentJobs = query({
-  args: {
-    userId: v.string(),
-    limit: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    const jobs = await ctx.db
-      .query("scriptGenerationJobs")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .order("desc")
-      .take(args.limit || 10);
-
-    return jobs;
-  },
-});

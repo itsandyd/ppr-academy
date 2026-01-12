@@ -70,7 +70,7 @@ export const searchIllustrations = action({
       );
       // Filter out any that might not have embedding and cast
       const illustrations: IllustrationWithEmbedding[] = rawIllustrations
-        .filter((item): item is typeof item & { embedding: number[] } =>
+        .filter((item: any): item is typeof item & { embedding: number[] } =>
           !!item.embedding && item.embedding.length > 0
         );
 
@@ -182,7 +182,7 @@ export const findSimilarIllustrations = action({
       );
       // Filter out any that might not have embedding and cast
       const allIllustrations: IllustrationWithEmbeddingInner[] = rawAllIllustrations
-        .filter((item): item is typeof item & { embedding: number[] } =>
+        .filter((item: any): item is typeof item & { embedding: number[] } =>
           !!item.embedding && item.embedding.length > 0
         );
 

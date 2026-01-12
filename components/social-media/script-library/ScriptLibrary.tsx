@@ -67,7 +67,7 @@ export function ScriptLibrary({ storeId, userId }: ScriptLibraryProps) {
   });
 
   // Get active jobs
-  const activeJobs = useQuery(api.masterAI.socialScriptAgent.getActiveJobs, {
+  const activeJobs = useQuery(api.masterAI.socialScriptAgentMutations.getActiveJobs, {
     userId,
   });
 
@@ -113,7 +113,7 @@ export function ScriptLibrary({ storeId, userId }: ScriptLibraryProps) {
   };
 
   const handleFeedback = (scriptId: Id<"generatedScripts">) => {
-    const script = filteredScripts.find((s) => s._id === scriptId);
+    const script = filteredScripts.find((s: any) => s._id === scriptId);
     if (script) {
       setSelectedScriptForFeedback({
         id: script._id,
@@ -126,13 +126,13 @@ export function ScriptLibrary({ storeId, userId }: ScriptLibraryProps) {
 
   // Create account name lookup
   const accountNameMap = new Map<Id<"socialAccountProfiles">, string>(
-    profiles?.map((p) => [p._id, p.name] as [Id<"socialAccountProfiles">, string]) || []
+    profiles?.map((p: any) => [p._id, p.name] as [Id<"socialAccountProfiles">, string]) || []
   );
 
   // Filter for unassigned if needed
   const allScripts = scriptsData?.scripts || [];
   const filteredScripts = accountFilter === "unassigned"
-    ? allScripts.filter((s) => !s.suggestedAccountProfileId)
+    ? allScripts.filter((s: any) => !s.suggestedAccountProfileId)
     : allScripts;
 
   const hasActiveJob = activeJobs && activeJobs.length > 0;
@@ -236,7 +236,7 @@ export function ScriptLibrary({ storeId, userId }: ScriptLibraryProps) {
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredScripts.map((script) => (
+          {filteredScripts.map((script: any) => (
             <ScriptCard
               key={script._id}
               script={script}

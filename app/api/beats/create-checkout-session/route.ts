@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Find the selected tier
-    const selectedTier = tiersData.tiers.find((t) => t.type === tierType);
+    const selectedTier = tiersData.tiers.find((t: { type: string }) => t.type === tierType);
     if (!selectedTier) {
       return NextResponse.json(
         { error: `Tier ${tierType} is not available for this beat` },

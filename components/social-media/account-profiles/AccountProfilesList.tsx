@@ -97,7 +97,7 @@ export function AccountProfilesList({ storeId, userId }: AccountProfilesListProp
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {profiles.map((profile) => (
+          {profiles.map((profile: any) => (
             <AccountProfileCard
               key={profile._id}
               profile={profile}

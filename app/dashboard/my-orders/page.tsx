@@ -65,11 +65,11 @@ export default function MyOrdersPage() {
     return <LoadingState />;
   }
 
-  const activeOrders = orders.filter((o) =>
+  const activeOrders = orders.filter((o: { status: string }) =>
     ["pending_upload", "files_received", "in_progress", "pending_review", "revision_requested"].includes(o.status)
   );
-  const completedOrders = orders.filter((o) => o.status === "completed");
-  const cancelledOrders = orders.filter((o) => ["cancelled", "refunded"].includes(o.status));
+  const completedOrders = orders.filter((o: { status: string }) => o.status === "completed");
+  const cancelledOrders = orders.filter((o: { status: string }) => ["cancelled", "refunded"].includes(o.status));
 
   return (
     <div className="space-y-6">
@@ -146,7 +146,7 @@ export default function MyOrdersPage() {
             />
           ) : (
             <div className="space-y-4">
-              {activeOrders.map((order) => (
+              {activeOrders.map((order: any) => (
                 <OrderCard key={order._id} order={order} />
               ))}
             </div>
@@ -162,7 +162,7 @@ export default function MyOrdersPage() {
             />
           ) : (
             <div className="space-y-4">
-              {completedOrders.map((order) => (
+              {completedOrders.map((order: any) => (
                 <OrderCard key={order._id} order={order} />
               ))}
             </div>
@@ -178,7 +178,7 @@ export default function MyOrdersPage() {
             />
           ) : (
             <div className="space-y-4">
-              {cancelledOrders.map((order) => (
+              {cancelledOrders.map((order: any) => (
                 <OrderCard key={order._id} order={order} />
               ))}
             </div>

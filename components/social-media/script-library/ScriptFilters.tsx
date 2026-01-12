@@ -66,7 +66,7 @@ export function ScriptFilters({
           <SelectContent>
             <SelectItem value="all">All accounts</SelectItem>
             <SelectItem value="unassigned">Unassigned</SelectItem>
-            {profiles?.map((profile) => (
+            {profiles?.map((profile: any) => (
               <SelectItem key={profile._id} value={profile._id}>
                 {profile.name}
               </SelectItem>

@@ -80,7 +80,7 @@ export default function PlaylistDetailPage() {
     try {
       // For paid submissions, redirect to Stripe checkout
       if (!isFreeSubmission && submissionFee > 0) {
-        const selectedTrack = userTracks?.find((t) => t._id === selectedTrackId);
+        const selectedTrack = userTracks?.find((t: { _id: string; title?: string }) => t._id === selectedTrackId);
 
         const response = await fetch("/api/submissions/create-checkout-session", {
           method: "POST",
@@ -412,7 +412,7 @@ export default function PlaylistDetailPage() {
                       onValueChange={(v) => setSelectedTrackId(v as Id<"userTracks">)}
                       className="space-y-3"
                     >
-                      {userTracks.map((track) => (
+                      {userTracks.map((track: any) => (
                         <div
                           key={track._id}
                           className={`flex cursor-pointer items-center gap-4 rounded-lg border p-4 transition-colors ${
