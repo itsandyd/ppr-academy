@@ -785,6 +785,10 @@ export const generateImagePrompts = action({
     const lineCount = script.split("\n").filter((line) => line.trim().length > 0).length;
     console.log(`🖼️ Generating image prompts for ${lineCount} lines of script`);
 
+    // Calculate tokens needed: ~150 tokens per prompt (sentence + detailed prompt description)
+    const estimatedTokensNeeded = Math.max(4000, lineCount * 200);
+    console.log(`   📊 Estimated tokens needed: ${estimatedTokensNeeded}`);
+
     const response = await callLLM({
       model: DEFAULT_MODEL,
       messages: [
@@ -794,9 +798,14 @@ export const generateImagePrompts = action({
         },
       ],
       temperature: 0.7,
-      maxTokens: 4000,
+      maxTokens: estimatedTokensNeeded,
       responseFormat: "json",
     });
+
+    // Log finish reason to detect truncation
+    if (response.finishReason) {
+      console.log(`   📝 Finish reason: ${response.finishReason}`);
+    }
 
     const parsed = safeParseJson<{
       imagePrompts: Array<{
@@ -805,6 +814,11 @@ export const generateImagePrompts = action({
         aspectRatio: "16:9" | "9:16";
       }>;
     }>(response.content, { imagePrompts: [] });
+
+    // Debug: log if parsing resulted in empty array but we had content
+    if (parsed.imagePrompts.length === 0 && response.content.length > 100) {
+      console.log(`   ⚠️ Parse returned empty array. Response preview: ${response.content.substring(0, 500)}...`);
+    }
 
     const prompts = parsed.imagePrompts.map((p) => ({
       ...p,
