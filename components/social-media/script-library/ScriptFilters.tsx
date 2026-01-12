@@ -17,6 +17,7 @@ import { X } from "lucide-react";
 
 interface ScriptFiltersProps {
   storeId: string;
+  userId: string;
   accountFilter: string;
   onAccountFilterChange: (value: string) => void;
   statusFilter: string;
@@ -30,6 +31,7 @@ interface ScriptFiltersProps {
 
 export function ScriptFilters({
   storeId,
+  userId,
   accountFilter,
   onAccountFilterChange,
   statusFilter,
@@ -45,8 +47,10 @@ export function ScriptFilters({
     storeId,
   });
 
-  // Get user's courses (we'll need to query this)
-  // For now, we'll just show the filter without the course list
+  // Get user's courses
+  const courses = useQuery(api.courses.getCoursesByUser, {
+    userId,
+  });
 
   const hasActiveFilters =
     accountFilter !== "all" ||
@@ -90,6 +94,24 @@ export function ScriptFilters({
             <SelectItem value="in_progress">In Progress</SelectItem>
             <SelectItem value="completed">Completed</SelectItem>
             <SelectItem value="archived">Archived</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Course Filter */}
+      <div className="space-y-1.5">
+        <Label className="text-sm">Course</Label>
+        <Select value={courseFilter} onValueChange={onCourseFilterChange}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="All courses" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All courses</SelectItem>
+            {courses?.map((course: any) => (
+              <SelectItem key={course._id} value={course._id}>
+                {course.title}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>

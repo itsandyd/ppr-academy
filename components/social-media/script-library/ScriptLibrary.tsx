@@ -57,6 +57,10 @@ export function ScriptLibrary({ storeId, userId }: ScriptLibraryProps) {
       accountFilter !== "all" && accountFilter !== "unassigned"
         ? (accountFilter as Id<"socialAccountProfiles">)
         : undefined,
+    courseId:
+      courseFilter !== "all"
+        ? (courseFilter as Id<"courses">)
+        : undefined,
     minViralityScore: minViralityScore > 1 ? minViralityScore : undefined,
     limit: 50,
   });
@@ -206,6 +210,7 @@ export function ScriptLibrary({ storeId, userId }: ScriptLibraryProps) {
       {/* Filters */}
       <ScriptFilters
         storeId={storeId}
+        userId={userId}
         accountFilter={accountFilter}
         onAccountFilterChange={setAccountFilter}
         statusFilter={statusFilter}
