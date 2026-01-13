@@ -109,6 +109,7 @@ interface CourseCreationState {
 
 interface CourseCreationContextType {
   state: CourseCreationState;
+  storeId: Id<"stores"> | undefined;
   updateData: (step: string, data: Partial<CourseData>) => void;
   saveCourse: () => Promise<void>;
   validateStep: (step: keyof StepCompletion) => boolean;
@@ -495,6 +496,7 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
     <CourseCreationContext.Provider
       value={{
         state,
+        storeId,
         updateData,
         saveCourse,
         validateStep,

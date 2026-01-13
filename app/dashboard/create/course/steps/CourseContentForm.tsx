@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useCourseCreation } from "../context";
 import { CourseContentManager } from "../components/CourseContentManager";
 import { FormFieldWithHelp, courseFieldHelp } from "@/components/ui/form-field-with-help";
@@ -466,9 +466,7 @@ function CourseThumbnailCard() {
 
 export function CourseContentForm() {
   const router = useRouter();
-  const params = useParams();
-  const storeId = params.storeId as string;
-  
+
   const { state, updateData, saveCourse } = useCourseCreation();
   
   // Debug: Log current state
@@ -485,7 +483,7 @@ export function CourseContentForm() {
   
   const handleBack = () => {
     // Can navigate back if needed (though this is first step)
-    router.push(`/store/${storeId}/products`);
+    router.push(`/dashboard?mode=create`);
   };
   
   const handleNextOld = () => {

@@ -9,17 +9,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Check, Settings, Share, Award, MessageSquare, Save } from "lucide-react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useCourseCreation } from "../context";
 import { LandingPageCopyGenerator } from "../components/LandingPageCopyGenerator";
 import { useUser } from "@clerk/nextjs";
 
 export function OptionsForm() {
   const router = useRouter();
-  const params = useParams();
-  const storeId = params.storeId as string;
   const { user } = useUser();
-  
+
   const { state, updateData, saveCourse, createCourse, canPublish, validateStep } = useCourseCreation();
 
   const [formData, setFormData] = useState({
@@ -110,7 +108,7 @@ export function OptionsForm() {
         
         // Redirect after a short delay to let user see the toast
         setTimeout(() => {
-          router.push(`/store/${storeId}/products`);
+          router.push(`/dashboard?mode=create`);
         }, 3000);
       } else {
         console.error("Failed to create course:", result.error);
