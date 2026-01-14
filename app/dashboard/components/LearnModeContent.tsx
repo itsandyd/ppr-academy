@@ -37,6 +37,7 @@ import { LearnerOnboarding } from "@/components/onboarding/LearnerOnboarding";
 import { ReferralCard } from "@/components/referrals/ReferralCard";
 import { useApplyReferral } from "@/hooks/use-apply-referral";
 import { BeatLicenseCard } from "@/components/beats/BeatLicenseCard";
+import { BecomeCreatorCard } from "@/components/dashboard/BecomeCreatorCard";
 
 export function LearnModeContent() {
   const { user, isLoaded: isUserLoaded } = useUser();
@@ -47,6 +48,9 @@ export function LearnModeContent() {
 
   // Get Convex user
   const convexUser = useQuery(api.users.getUserFromClerk, user?.id ? { clerkId: user.id } : "skip");
+
+  // Check if user already has a store (to conditionally show BecomeCreatorCard)
+  const userStores = useQuery(api.stores.getStoresByUser, user?.id ? { userId: user.id } : "skip");
 
   // Auto-create user if needed
   useEffect(() => {
@@ -222,6 +226,12 @@ export function LearnModeContent() {
             </p>
           </div>
         </div>
+
+        {/* Show creator CTA prominently for new users without courses */}
+        {userStores !== undefined && userStores.length === 0 && (
+          <BecomeCreatorCard variant="banner" />
+        )}
+
         <NoCoursesEmptyState />
       </div>
     );
@@ -774,6 +784,11 @@ export function LearnModeContent() {
 
         {/* Sidebar */}
         <div className="space-y-4 md:space-y-6">
+          {/* Become a Creator CTA - show only if user doesn't have a store */}
+          {userStores !== undefined && userStores.length === 0 && (
+            <BecomeCreatorCard variant="default" />
+          )}
+
           {/* Next Milestone */}
           <Card>
             <CardHeader className="pb-4">
