@@ -456,6 +456,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
           sales: storeStats?.totalSales || 0,
         }}
         socialLinks={store.socialLinks}
+        userId={store.userId}
       />
 
       {/* Main Content with Sidebar */}

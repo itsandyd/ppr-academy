@@ -4,6 +4,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { SendMessageButton } from "@/components/messages/SendMessageButton";
 
 interface StorefrontHeroProps {
   displayName: string;
@@ -23,6 +24,7 @@ interface StorefrontHeroProps {
     tiktok?: string;
     spotify?: string;
   };
+  userId?: string; // Clerk ID for messaging
 }
 
 export function StorefrontHero({
@@ -33,6 +35,7 @@ export function StorefrontHero({
   initials,
   stats,
   socialLinks,
+  userId,
 }: StorefrontHeroProps) {
   const hasSocials = socialLinks && Object.values(socialLinks).some(Boolean);
 
@@ -173,6 +176,23 @@ export function StorefrontHero({
                 {socialLinks?.spotify && (
                   <SocialPill href={socialLinks.spotify} platform="spotify" />
                 )}
+              </motion.div>
+            )}
+
+            {/* Send Message Button */}
+            {userId && (
+              <motion.div
+                className="pt-4"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6, duration: 0.5 }}
+              >
+                <SendMessageButton
+                  recipientUserId={userId}
+                  recipientName={displayName}
+                  variant="outline"
+                  className="bg-white/5 border-white/20 text-white hover:bg-white/10 hover:border-white/30"
+                />
               </motion.div>
             )}
           </div>

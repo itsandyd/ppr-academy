@@ -7833,6 +7833,50 @@ export declare const api: {
       } | null
     >;
   };
+  directMessages: {
+    getConversationDetails: FunctionReference<
+      "query",
+      "public",
+      { conversationId: Id<"dmConversations"> },
+      any
+    >;
+    getConversations: FunctionReference<"query", "public", {}, any>;
+    getMessages: FunctionReference<
+      "query",
+      "public",
+      { conversationId: Id<"dmConversations">; limit?: number },
+      any
+    >;
+    getOrCreateConversation: FunctionReference<
+      "mutation",
+      "public",
+      { otherUserId: string },
+      any
+    >;
+    getTotalUnreadCount: FunctionReference<"query", "public", {}, any>;
+    markAsRead: FunctionReference<
+      "mutation",
+      "public",
+      { conversationId: Id<"dmConversations"> },
+      any
+    >;
+    sendMessage: FunctionReference<
+      "mutation",
+      "public",
+      {
+        attachments?: Array<{
+          id: string;
+          name: string;
+          size: number;
+          storageId: string;
+          type: string;
+        }>;
+        content: string;
+        conversationId: Id<"dmConversations">;
+      },
+      any
+    >;
+  };
   discord: {
     addUserToGuild: FunctionReference<
       "action",
@@ -18590,6 +18634,29 @@ export declare const internal: {
       "internal",
       { domain: string; status: string; storeId: Id<"stores"> },
       null
+    >;
+  };
+  directMessages: {
+    getUserByClerkId: FunctionReference<
+      "query",
+      "internal",
+      { clerkId: string },
+      any
+    >;
+  };
+  directMessagesActions: {
+    sendNewMessageEmail: FunctionReference<
+      "action",
+      "internal",
+      {
+        conversationId: Id<"dmConversations">;
+        messagePreview: string;
+        recipientId: string;
+        senderAvatar?: string;
+        senderId: string;
+        senderName: string;
+      },
+      { error?: string; success: boolean }
     >;
   };
   discord: {

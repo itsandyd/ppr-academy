@@ -5267,4 +5267,61 @@ export default defineSchema({
     .index("by_userId", ["userId"])
     .index("by_status", ["status"])
     .index("by_user_status", ["userId", "status"]),
+
+  // ============================================================================
+  // DIRECT MESSAGING SYSTEM
+  // ============================================================================
+
+  // DM Conversations - Stores metadata for 1:1 conversations
+  dmConversations: defineTable({
+    // Participants (always 2 users, sorted alphabetically for uniqueness)
+    participant1Id: v.string(), // Clerk ID (alphabetically first)
+    participant2Id: v.string(), // Clerk ID (alphabetically second)
+
+    // Conversation state
+    lastMessageAt: v.optional(v.number()),
+    lastMessagePreview: v.optional(v.string()), // First 100 chars of last message
+
+    // Unread tracking (per participant)
+    unreadByParticipant1: v.optional(v.number()), // Count for participant1
+    unreadByParticipant2: v.optional(v.number()), // Count for participant2
+
+    // Metadata
+    createdAt: v.number(),
+  })
+    .index("by_participant1", ["participant1Id"])
+    .index("by_participant2", ["participant2Id"])
+    .index("by_participants", ["participant1Id", "participant2Id"]) // Unique lookup
+    .index("by_lastMessage", ["lastMessageAt"]),
+
+  // DM Messages - Individual messages within conversations
+  dmMessages: defineTable({
+    conversationId: v.id("dmConversations"),
+    senderId: v.string(), // Clerk ID
+    content: v.string(),
+
+    // Attachments (following serviceOrderMessages pattern)
+    attachments: v.optional(
+      v.array(
+        v.object({
+          id: v.string(),
+          name: v.string(),
+          storageId: v.string(),
+          url: v.optional(v.string()),
+          size: v.number(),
+          type: v.string(), // MIME type
+        })
+      )
+    ),
+
+    // Read tracking
+    readAt: v.optional(v.number()),
+
+    // Timestamps
+    createdAt: v.number(),
+  })
+    .index("by_conversationId", ["conversationId"])
+    .index("by_senderId", ["senderId"])
+    .index("by_createdAt", ["createdAt"])
+    .index("by_conversation_created", ["conversationId", "createdAt"]),
 });

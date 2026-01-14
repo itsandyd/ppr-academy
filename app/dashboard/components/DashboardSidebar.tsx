@@ -29,6 +29,7 @@ import {
   Mail,
   Video,
   Handshake,
+  MessageCircle,
 } from "lucide-react";
 import {
   Sidebar,
@@ -91,6 +92,12 @@ const learnLinks: SidebarLink[] = [
     color: "text-teal-500",
   },
   {
+    href: "/dashboard/messages?mode=learn",
+    label: "Messages",
+    icon: MessageCircle,
+    color: "text-blue-500",
+  },
+  {
     href: "/dashboard/notes?mode=learn",
     label: "My Notes",
     icon: StickyNote,
@@ -123,6 +130,12 @@ const createLinks: SidebarLink[] = [
     label: "Coaching",
     icon: Video,
     color: "text-teal-500",
+  },
+  {
+    href: "/dashboard/messages?mode=create",
+    label: "Messages",
+    icon: MessageCircle,
+    color: "text-blue-500",
   },
   {
     href: "/dashboard/notes?mode=create",

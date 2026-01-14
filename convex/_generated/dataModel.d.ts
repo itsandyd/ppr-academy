@@ -3458,6 +3458,77 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  dmConversations: {
+    document: {
+      createdAt: number;
+      lastMessageAt?: number;
+      lastMessagePreview?: string;
+      participant1Id: string;
+      participant2Id: string;
+      unreadByParticipant1?: number;
+      unreadByParticipant2?: number;
+      _id: Id<"dmConversations">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "createdAt"
+      | "lastMessageAt"
+      | "lastMessagePreview"
+      | "participant1Id"
+      | "participant2Id"
+      | "unreadByParticipant1"
+      | "unreadByParticipant2";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_lastMessage: ["lastMessageAt", "_creationTime"];
+      by_participant1: ["participant1Id", "_creationTime"];
+      by_participant2: ["participant2Id", "_creationTime"];
+      by_participants: ["participant1Id", "participant2Id", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
+  dmMessages: {
+    document: {
+      attachments?: Array<{
+        id: string;
+        name: string;
+        size: number;
+        storageId: string;
+        type: string;
+        url?: string;
+      }>;
+      content: string;
+      conversationId: Id<"dmConversations">;
+      createdAt: number;
+      readAt?: number;
+      senderId: string;
+      _id: Id<"dmMessages">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "attachments"
+      | "content"
+      | "conversationId"
+      | "createdAt"
+      | "readAt"
+      | "senderId";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_conversationId: ["conversationId", "_creationTime"];
+      by_conversation_created: ["conversationId", "createdAt", "_creationTime"];
+      by_createdAt: ["createdAt", "_creationTime"];
+      by_senderId: ["senderId", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   dripCampaignEnrollments: {
     document: {
       campaignId: Id<"dripCampaigns">;

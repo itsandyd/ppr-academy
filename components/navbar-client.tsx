@@ -27,6 +27,7 @@ import {
   Users,
   Briefcase,
   Heart,
+  MessageCircle,
 } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -284,10 +285,12 @@ const AuthButtons = ({
   isSignedIn,
   hasClerk,
   wishlistCount,
+  dmUnreadCount,
 }: {
   isSignedIn: boolean;
   hasClerk: boolean;
   wishlistCount: number;
+  dmUnreadCount: number;
 }) => (
   <div className={STYLES.desktopAuth}>
     <ModeToggle />
@@ -300,6 +303,17 @@ const AuthButtons = ({
       </div>
     ) : isSignedIn ? (
       <>
+        <Link
+          href="/dashboard/messages"
+          className="relative rounded-lg p-2 transition-colors hover:bg-muted"
+        >
+          <MessageCircle className="h-5 w-5 text-muted-foreground transition-colors hover:text-blue-500" />
+          {dmUnreadCount > 0 && (
+            <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-[10px] font-medium text-white">
+              {dmUnreadCount > 99 ? "99+" : dmUnreadCount}
+            </span>
+          )}
+        </Link>
         <Link
           href="/dashboard?tab=favorites"
           className="relative rounded-lg p-2 transition-colors hover:bg-muted"
@@ -465,6 +479,7 @@ export default function NavbarClient({ isAdmin }: NavbarClientProps) {
   const userIsSignedIn = isSignedIn ?? false;
 
   const wishlistCount = useQuery(api.wishlists.getWishlistCount, userIsSignedIn ? {} : "skip") ?? 0;
+  const dmUnreadCount = useQuery(api.directMessages.getTotalUnreadCount, userIsSignedIn ? {} : "skip") ?? 0;
   const { sections, links: navLinks } = buildNavStructure(userIsSignedIn, isAdmin);
   const closeMobileMenu = () => setIsMenuOpen(false);
 
@@ -483,6 +498,7 @@ export default function NavbarClient({ isAdmin }: NavbarClientProps) {
             isSignedIn={userIsSignedIn}
             hasClerk={hasClerk}
             wishlistCount={wishlistCount}
+            dmUnreadCount={dmUnreadCount}
           />
 
           {/* Mobile Menu Toggle */}
