@@ -27,6 +27,13 @@ import { SubscriptionSection } from "./components/SubscriptionSection";
 import { CreatorsPicks } from "@/components/storefront/creators-picks";
 import { FollowCreatorCTA } from "@/components/storefront/follow-creator-cta";
 import {
+  StorefrontLayout,
+  StorefrontSkeleton,
+  StorefrontHero,
+  ProductFilters,
+  ProductShowcase,
+} from "@/components/storefront";
+import {
   AnimatedFilterResults,
   AnimatedGridItem,
 } from "@/components/ui/animated-filter-transitions";
@@ -372,49 +379,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
 
   // Show loading if we're still determining what to show
   if ((store === undefined && artistProfile === undefined) || isLoadingStore || isLoadingArtist) {
-    return (
-      <div className="min-h-screen bg-background">
-        {/* Header Skeleton */}
-        <div className="border-b bg-white">
-          <div className="container mx-auto px-4 py-6">
-            <div className="flex items-center gap-4">
-              <Skeleton className="h-16 w-16 rounded-full" />
-              <div className="flex-1">
-                <Skeleton className="mb-2 h-6 w-48" />
-                <Skeleton className="h-4 w-32" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Search and Filter Skeleton */}
-        <div className="container mx-auto px-4 py-6">
-          <div className="mb-8 flex flex-col gap-4 md:flex-row">
-            <Skeleton className="h-10 flex-1" />
-            <Skeleton className="h-10 w-32" />
-            <Skeleton className="h-10 w-32" />
-            <Skeleton className="h-10 w-32" />
-          </div>
-
-          {/* Products Grid Skeleton */}
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Card key={i} className="overflow-hidden">
-                <Skeleton className="h-48 w-full" />
-                <CardContent className="p-4">
-                  <Skeleton className="mb-2 h-6 w-full" />
-                  <Skeleton className="mb-4 h-4 w-3/4" />
-                  <div className="flex items-center justify-between">
-                    <Skeleton className="h-6 w-16" />
-                    <Skeleton className="h-9 w-24" />
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
+    return <StorefrontSkeleton />;
   }
 
   // Show artist profile if no store or store has no products
@@ -464,7 +429,7 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
   const avatarUrl = user?.imageUrl || "";
 
   return (
-    <div className="min-h-screen bg-background">
+    <StorefrontLayout>
       {/* Structured Data for SEO */}
       <StorefrontStructuredDataWrapper
         name={displayName}
@@ -478,313 +443,30 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
         }}
       />
 
-      {/* Enhanced Header with Stats and Social */}
-      <div className="border-b bg-card shadow-sm">
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex flex-col items-center gap-6 lg:flex-row lg:items-start lg:gap-8">
-            {/* Avatar */}
-            <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/80 text-2xl font-bold text-primary-foreground shadow-lg md:h-24 md:w-24">
-              {avatarUrl ? (
-                <Image
-                  src={avatarUrl}
-                  alt={displayName}
-                  width={96}
-                  height={96}
-                  className="h-full w-full rounded-full object-cover"
-                />
-              ) : (
-                initials
-              )}
-            </div>
-
-            {/* Name, Bio, and Stats */}
-            <div className="min-w-0 flex-1 text-center lg:text-left">
-              <h1 className="mb-2 text-3xl font-bold text-foreground md:text-4xl">{displayName}</h1>
-              <p className="mb-4 text-lg text-muted-foreground">{store.name}</p>
-
-              {/* Bio if available */}
-              {(store.bio || store.description) && (
-                <p className="mb-4 line-clamp-2 max-w-2xl text-sm text-muted-foreground">
-                  {store.bio || store.description}
-                </p>
-              )}
-
-              {/* Stats Row */}
-              <div className="flex flex-wrap items-center justify-center gap-4 md:gap-6 lg:justify-start">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                    <Star className="h-5 w-5 fill-current text-primary" />
-                  </div>
-                  <div className="text-left">
-                    <div className="text-2xl font-bold text-foreground">
-                      {storeStats?.totalItems || allProducts.length}
-                    </div>
-                    <div className="text-xs text-muted-foreground">Products</div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-chart-2/10">
-                    <Users className="h-5 w-5 text-chart-2" />
-                  </div>
-                  <div className="text-left">
-                    <div className="text-2xl font-bold text-foreground">
-                      {storeStats?.totalStudents || 0}
-                    </div>
-                    <div className="text-xs text-muted-foreground">Students</div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-chart-3/10">
-                    <ShoppingCart className="h-5 w-5 text-chart-3" />
-                  </div>
-                  <div className="text-left">
-                    <div className="text-2xl font-bold text-foreground">
-                      {storeStats?.totalSales || 0}
-                    </div>
-                    <div className="text-xs text-muted-foreground">Sales</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Social Media Links - Desktop */}
-            {(store.socialLinks?.instagram ||
-              store.socialLinks?.twitter ||
-              store.socialLinks?.youtube ||
-              store.socialLinks?.tiktok ||
-              store.socialLinks?.spotify) && (
-              <div className="hidden flex-col items-end gap-3 lg:flex">
-                <span className="text-sm font-medium text-muted-foreground">Connect</span>
-                <div className="flex flex-wrap justify-end gap-2">
-                  {store.socialLinks?.instagram && (
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-10 w-10 rounded-full transition-colors hover:border-[#E4405F] hover:bg-[#E4405F]/10 hover:text-[#E4405F]"
-                      asChild
-                    >
-                      <a
-                        href={store.socialLinks.instagram}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label="Instagram"
-                      >
-                        <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
-                        </svg>
-                      </a>
-                    </Button>
-                  )}
-
-                  {store.socialLinks?.twitter && (
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-10 w-10 rounded-full transition-colors hover:border-[#1DA1F2] hover:bg-[#1DA1F2]/10 hover:text-[#1DA1F2]"
-                      asChild
-                    >
-                      <a
-                        href={store.socialLinks.twitter}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label="Twitter"
-                      >
-                        <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                        </svg>
-                      </a>
-                    </Button>
-                  )}
-
-                  {store.socialLinks?.youtube && (
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-10 w-10 rounded-full transition-colors hover:border-[#FF0000] hover:bg-[#FF0000]/10 hover:text-[#FF0000]"
-                      asChild
-                    >
-                      <a
-                        href={store.socialLinks.youtube}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label="YouTube"
-                      >
-                        <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
-                        </svg>
-                      </a>
-                    </Button>
-                  )}
-
-                  {store.socialLinks?.tiktok && (
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-10 w-10 rounded-full transition-colors hover:border-foreground hover:bg-black/10 dark:hover:bg-white/10"
-                      asChild
-                    >
-                      <a
-                        href={store.socialLinks.tiktok}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label="TikTok"
-                      >
-                        <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
-                        </svg>
-                      </a>
-                    </Button>
-                  )}
-
-                  {store.socialLinks?.spotify && (
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-10 w-10 rounded-full transition-colors hover:border-[#1DB954] hover:bg-[#1DB954]/10 hover:text-[#1DB954]"
-                      asChild
-                    >
-                      <a
-                        href={store.socialLinks.spotify}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label="Spotify"
-                      >
-                        <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
-                        </svg>
-                      </a>
-                    </Button>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Social Media Links - Mobile */}
-          {(store.socialLinks?.instagram ||
-            store.socialLinks?.twitter ||
-            store.socialLinks?.youtube ||
-            store.socialLinks?.tiktok ||
-            store.socialLinks?.spotify) && (
-            <div className="mt-4 flex flex-col items-center gap-3 border-t border-border pt-4 lg:hidden">
-              <span className="text-sm font-medium text-muted-foreground">Connect</span>
-              <div className="flex flex-wrap justify-center gap-2">
-                {store.socialLinks?.instagram && (
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-10 w-10 rounded-full transition-colors hover:border-[#E4405F] hover:bg-[#E4405F]/10 hover:text-[#E4405F]"
-                    asChild
-                  >
-                    <a
-                      href={store.socialLinks.instagram}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label="Instagram"
-                    >
-                      <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
-                      </svg>
-                    </a>
-                  </Button>
-                )}
-
-                {store.socialLinks?.twitter && (
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-10 w-10 rounded-full transition-colors hover:border-[#1DA1F2] hover:bg-[#1DA1F2]/10 hover:text-[#1DA1F2]"
-                    asChild
-                  >
-                    <a
-                      href={store.socialLinks.twitter}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label="Twitter"
-                    >
-                      <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                      </svg>
-                    </a>
-                  </Button>
-                )}
-
-                {store.socialLinks?.youtube && (
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-10 w-10 rounded-full transition-colors hover:border-[#FF0000] hover:bg-[#FF0000]/10 hover:text-[#FF0000]"
-                    asChild
-                  >
-                    <a
-                      href={store.socialLinks.youtube}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label="YouTube"
-                    >
-                      <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
-                      </svg>
-                    </a>
-                  </Button>
-                )}
-
-                {store.socialLinks?.tiktok && (
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-10 w-10 rounded-full transition-colors hover:border-foreground hover:bg-black/10 dark:hover:bg-white/10"
-                    asChild
-                  >
-                    <a
-                      href={store.socialLinks.tiktok}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label="TikTok"
-                    >
-                      <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
-                      </svg>
-                    </a>
-                  </Button>
-                )}
-
-                {store.socialLinks?.spotify && (
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-10 w-10 rounded-full transition-colors hover:border-[#1DB954] hover:bg-[#1DB954]/10 hover:text-[#1DB954]"
-                    asChild
-                  >
-                    <a
-                      href={store.socialLinks.spotify}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label="Spotify"
-                    >
-                      <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
-                      </svg>
-                    </a>
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Hero Section */}
+      <StorefrontHero
+        displayName={displayName}
+        storeName={store.name}
+        bio={store.bio || store.description}
+        avatarUrl={avatarUrl}
+        initials={initials}
+        stats={{
+          products: storeStats?.totalItems || allProducts.length,
+          students: storeStats?.totalStudents || 0,
+          sales: storeStats?.totalSales || 0,
+        }}
+        socialLinks={store.socialLinks}
+      />
 
       {/* Main Content with Sidebar */}
-      <div className="container mx-auto px-4 py-8 md:py-12">
+      <div className="container mx-auto px-6 py-8 md:py-12">
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
           {/* Main Content */}
           <div className="space-y-8 lg:col-span-3">
             {/* Search and Filters */}
-            <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-              <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold">
-                <Filter className="h-5 w-5" />
+            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] backdrop-blur-sm p-6">
+              <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-white">
+                <Filter className="h-5 w-5 text-cyan-400" />
                 Search & Filter
               </h2>
               <div className="flex flex-col gap-4 md:flex-row">
@@ -1913,6 +1595,6 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </StorefrontLayout>
   );
 }
