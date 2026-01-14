@@ -1,14 +1,13 @@
-import { internalMutation } from "../_generated/server";
+import { mutation } from "../_generated/server";
 import { v } from "convex/values";
 
 /**
  * Backfill emailContacts from existing customers
  * This syncs all customers to the emailContacts table for email marketing
  *
- * Run this via the Convex dashboard:
- * npx convex run migrations/backfillCustomersToContacts:backfillCustomersToContacts --args '{"storeId": "YOUR_STORE_ID"}'
+ * Run this via the Convex dashboard Functions tab
  */
-export const backfillCustomersToContacts = internalMutation({
+export const backfillCustomersToContacts = mutation({
   args: {
     storeId: v.string(),
   },
