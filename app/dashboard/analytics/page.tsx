@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { RevenueChart, CoursePerformanceChart, LiveActivityFeed, VideoAnalytics, StudentProgress } from "@/components/dashboard/analytics";
 
 export default function AnalyticsPage() {
   const { user, isLoaded } = useUser();
@@ -201,6 +202,25 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Charts Section */}
+      {user?.id && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <RevenueChart userId={user.id} days={30} />
+          <CoursePerformanceChart userId={user.id} />
+        </div>
+      )}
+
+      {/* Live Activity Feed & Video Analytics */}
+      {user?.id && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <LiveActivityFeed userId={user.id} limit={10} />
+          <VideoAnalytics userId={user.id} />
+        </div>
+      )}
+
+      {/* Student Progress */}
+      {user?.id && <StudentProgress userId={user.id} />}
 
       {/* Recent Purchases */}
       <Card>

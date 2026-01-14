@@ -13,10 +13,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { 
-  BookOpen, 
-  Users, 
-  TrendingUp, 
+import {
+  BookOpen,
+  Users,
+  TrendingUp,
   Plus,
   Eye,
   Edit,
@@ -34,6 +34,8 @@ import CourseCard from "@/components/course-card";
 import { createCoachApplication, getUserCoachProfile, updateCoachApplication } from "@/app/actions/coaching-actions";
 import type { User, CourseWithDetails } from "@/lib/types";
 import { generateSlug } from "@/lib/utils";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import CoachScheduleManager from "@/components/coach-schedule-manager";
 
 interface CreatorDashboardProps {
@@ -70,6 +72,11 @@ export function CreatorDashboard({
     timezone: "",
     availableDays: "",
     availableHours: "",
+  });
+
+  // Fetch real engagement rate from Convex
+  const engagementData = useQuery(api.analytics.getCreatorEngagementRate, {
+    userId: user.id,
   });
 
   // Load coach profile on component mount
@@ -281,9 +288,13 @@ export function CreatorDashboard({
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0%</div>
+            <div className="text-2xl font-bold">
+              {engagementData?.engagementRate ?? 0}%
+            </div>
             <p className="text-xs text-muted-foreground">
-              Student activity
+              {engagementData
+                ? `${engagementData.activeStudents} active of ${engagementData.totalStudents} students`
+                : "Student activity"}
             </p>
           </CardContent>
         </Card>

@@ -266,6 +266,19 @@ export default defineSchema({
     courseId: v.string(),
     audioUrl: v.optional(v.string()),
     lessonId: v.optional(v.string()),
+    // Mux video fields
+    muxAssetId: v.optional(v.string()),
+    muxPlaybackId: v.optional(v.string()),
+    muxUploadId: v.optional(v.string()),
+    muxAssetStatus: v.optional(
+      v.union(
+        v.literal("waiting"),
+        v.literal("preparing"),
+        v.literal("ready"),
+        v.literal("errored")
+      )
+    ),
+    videoDuration: v.optional(v.number()), // Duration in seconds from Mux
     // AI-generated content fields
     generatedAudioUrl: v.optional(v.string()),
     generatedVideoUrl: v.optional(v.string()),
@@ -292,7 +305,8 @@ export default defineSchema({
   })
     .index("by_courseId", ["courseId"])
     .index("by_lessonId", ["lessonId"])
-    .index("by_position", ["position"]),
+    .index("by_position", ["position"])
+    .index("by_muxAssetId", ["muxAssetId"]),
 
   enrollments: defineTable({
     userId: v.string(),

@@ -1758,3 +1758,107 @@ export const getCourseChapters = query({
       .collect();
   },
 });
+
+// ============================================
+// Mux Video Integration
+// ============================================
+
+/**
+ * Update chapter with Mux upload ID when upload starts
+ */
+export const setChapterMuxUpload = mutation({
+  args: {
+    chapterId: v.id("courseChapters"),
+    muxUploadId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.chapterId, {
+      muxUploadId: args.muxUploadId,
+      muxAssetStatus: "waiting",
+    });
+  },
+});
+
+/**
+ * Update chapter with Mux asset info (called by webhook)
+ * This mutation finds the chapter by muxAssetId and updates it
+ */
+export const updateChapterMuxAsset = mutation({
+  args: {
+    muxAssetId: v.string(),
+    muxPlaybackId: v.optional(v.string()),
+    muxAssetStatus: v.union(
+      v.literal("waiting"),
+      v.literal("preparing"),
+      v.literal("ready"),
+      v.literal("errored")
+    ),
+    videoDuration: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    // Find chapter by muxAssetId
+    const chapter = await ctx.db
+      .query("courseChapters")
+      .withIndex("by_muxAssetId", (q) => q.eq("muxAssetId", args.muxAssetId))
+      .first();
+
+    if (!chapter) {
+      // Asset ID not found - might be new upload, try to find by null assetId and update
+      console.log(`No chapter found with muxAssetId: ${args.muxAssetId}`);
+      return;
+    }
+
+    await ctx.db.patch(chapter._id, {
+      muxAssetId: args.muxAssetId,
+      muxPlaybackId: args.muxPlaybackId,
+      muxAssetStatus: args.muxAssetStatus,
+      videoDuration: args.videoDuration,
+    });
+
+    console.log(`Updated chapter ${chapter._id} with Mux playback ID: ${args.muxPlaybackId}`);
+  },
+});
+
+/**
+ * Set Mux asset ID on chapter after upload completes
+ * Called from frontend after getting asset ID from upload status check
+ */
+export const setChapterMuxAssetId = mutation({
+  args: {
+    chapterId: v.id("courseChapters"),
+    muxAssetId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.chapterId, {
+      muxAssetId: args.muxAssetId,
+      muxAssetStatus: "preparing",
+    });
+  },
+});
+
+/**
+ * Get chapter video info for player
+ */
+export const getChapterVideo = query({
+  args: { chapterId: v.id("courseChapters") },
+  returns: v.union(
+    v.null(),
+    v.object({
+      muxPlaybackId: v.optional(v.string()),
+      muxAssetStatus: v.optional(v.string()),
+      videoDuration: v.optional(v.number()),
+      videoUrl: v.optional(v.string()), // Legacy fallback
+    })
+  ),
+  handler: async (ctx, args) => {
+    const chapter = await ctx.db.get(args.chapterId);
+    if (!chapter) return null;
+
+    return {
+      muxPlaybackId: chapter.muxPlaybackId,
+      muxAssetStatus: chapter.muxAssetStatus,
+      videoDuration: chapter.videoDuration,
+      videoUrl: chapter.videoUrl,
+    };
+  },
+});

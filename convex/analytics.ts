@@ -563,3 +563,678 @@ export const getProductAnalytics = query({
     return null;
   },
 });
+
+/**
+ * Get creator engagement rate
+ * Calculates: (active students in last 7 days / total enrolled students) * 100
+ */
+export const getCreatorEngagementRate = query({
+  args: { userId: v.string() },
+  returns: v.object({
+    engagementRate: v.number(),
+    activeStudents: v.number(),
+    totalStudents: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    // Get all courses by this creator
+    const courses = await ctx.db
+      .query("courses")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    if (courses.length === 0) {
+      return { engagementRate: 0, activeStudents: 0, totalStudents: 0 };
+    }
+
+    const courseIds = courses.map(c => c._id);
+
+    // Get all enrollments for these courses
+    const allEnrollments: { userId: string; courseId: string }[] = [];
+    for (const courseId of courseIds) {
+      const enrollments = await ctx.db
+        .query("enrollments")
+        .withIndex("by_courseId", (q) => q.eq("courseId", courseId as any))
+        .collect();
+      allEnrollments.push(...enrollments.map(e => ({ userId: e.userId, courseId: e.courseId })));
+    }
+
+    const totalStudents = new Set(allEnrollments.map(e => e.userId)).size;
+
+    if (totalStudents === 0) {
+      return { engagementRate: 0, activeStudents: 0, totalStudents: 0 };
+    }
+
+    // Get activity in last 7 days
+    const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+
+    // Check user events for activity
+    const activeUserIds = new Set<string>();
+
+    for (const courseId of courseIds) {
+      const recentEvents = await ctx.db
+        .query("userEvents")
+        .withIndex("by_course", (q) => q.eq("courseId", courseId))
+        .filter((q) => q.gte(q.field("timestamp"), sevenDaysAgo))
+        .collect();
+
+      recentEvents.forEach(event => activeUserIds.add(event.userId));
+    }
+
+    const activeStudents = activeUserIds.size;
+    const engagementRate = totalStudents > 0
+      ? Math.round((activeStudents / totalStudents) * 100)
+      : 0;
+
+    return {
+      engagementRate,
+      activeStudents,
+      totalStudents,
+    };
+  },
+});
+
+/**
+ * Get creator revenue over time (last 30 days)
+ * For charts on the creator dashboard
+ */
+export const getCreatorRevenueOverTime = query({
+  args: {
+    userId: v.string(),
+    days: v.optional(v.number()),
+  },
+  returns: v.array(
+    v.object({
+      date: v.string(),
+      revenue: v.number(),
+      sales: v.number(),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const numDays = args.days || 30;
+
+    // Get creator's store
+    const store = await ctx.db
+      .query("stores")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .first();
+
+    if (!store) {
+      // Return empty data for numDays
+      const emptyData = [];
+      for (let i = numDays - 1; i >= 0; i--) {
+        const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+        emptyData.push({
+          date: date.toISOString().split("T")[0],
+          revenue: 0,
+          sales: 0,
+        });
+      }
+      return emptyData;
+    }
+
+    // Get all purchases for this store
+    const purchases = await ctx.db
+      .query("purchases")
+      .withIndex("by_storeId", (q) => q.eq("storeId", store._id))
+      .collect();
+
+    const completedPurchases = purchases.filter((p) => p.status === "completed");
+
+    // Group by date
+    const revenueData = [];
+    for (let i = numDays - 1; i >= 0; i--) {
+      const date = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+      const dateStr = date.toISOString().split("T")[0];
+      const dayStart = new Date(dateStr).getTime();
+      const dayEnd = dayStart + 24 * 60 * 60 * 1000;
+
+      const dayPurchases = completedPurchases.filter(
+        (p) => p._creationTime >= dayStart && p._creationTime < dayEnd
+      );
+
+      const dailyRevenue = dayPurchases.reduce(
+        (sum, p) => sum + (p.amount || 0),
+        0
+      );
+
+      revenueData.push({
+        date: dateStr,
+        revenue: dailyRevenue / 100, // Convert cents to dollars
+        sales: dayPurchases.length,
+      });
+    }
+
+    return revenueData;
+  },
+});
+
+/**
+ * Get creator's course performance comparison
+ */
+export const getCreatorCoursePerformance = query({
+  args: { userId: v.string() },
+  returns: v.array(
+    v.object({
+      courseId: v.string(),
+      title: v.string(),
+      enrollments: v.number(),
+      revenue: v.number(),
+      completionRate: v.number(),
+    })
+  ),
+  handler: async (ctx, args) => {
+    // Get all courses by this creator
+    const courses = await ctx.db
+      .query("courses")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    const coursePerformance = await Promise.all(
+      courses.map(async (course) => {
+        // Get enrollments
+        const enrollments = await ctx.db
+          .query("enrollments")
+          .withIndex("by_courseId", (q) => q.eq("courseId", course._id as any))
+          .collect();
+
+        // Calculate completion rate (students who finished / total enrolled)
+        const completedCount = enrollments.filter(
+          (e) => (e.progress || 0) >= 100
+        ).length;
+        const completionRate =
+          enrollments.length > 0
+            ? Math.round((completedCount / enrollments.length) * 100)
+            : 0;
+
+        // Calculate revenue
+        const revenue = (course.price || 0) * enrollments.length;
+
+        return {
+          courseId: course._id,
+          title: course.title,
+          enrollments: enrollments.length,
+          revenue,
+          completionRate,
+        };
+      })
+    );
+
+    // Sort by enrollments descending
+    return coursePerformance.sort((a, b) => b.enrollments - a.enrollments);
+  },
+});
+
+/**
+ * Get recent activity for creator's live feed
+ * Combines purchases, enrollments, and course completions
+ */
+export const getCreatorRecentActivity = query({
+  args: {
+    userId: v.string(),
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(
+    v.object({
+      id: v.string(),
+      type: v.union(
+        v.literal("purchase"),
+        v.literal("enrollment"),
+        v.literal("completion")
+      ),
+      title: v.string(),
+      description: v.string(),
+      amount: v.optional(v.number()),
+      timestamp: v.number(),
+      userInfo: v.optional(
+        v.object({
+          name: v.optional(v.string()),
+          email: v.optional(v.string()),
+        })
+      ),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const maxItems = args.limit || 20;
+    const activities: Array<{
+      id: string;
+      type: "purchase" | "enrollment" | "completion";
+      title: string;
+      description: string;
+      amount?: number;
+      timestamp: number;
+      userInfo?: { name?: string; email?: string };
+    }> = [];
+
+    // Get creator's store
+    const store = await ctx.db
+      .query("stores")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .first();
+
+    if (store) {
+      // Get recent purchases
+      const purchases = await ctx.db
+        .query("purchases")
+        .withIndex("by_storeId", (q) => q.eq("storeId", store._id))
+        .order("desc")
+        .take(maxItems);
+
+      for (const purchase of purchases) {
+        if (purchase.status === "completed") {
+          // Get product/course title
+          let productTitle = "Product";
+          if (purchase.courseId) {
+            const course = await ctx.db.get(purchase.courseId);
+            productTitle = course?.title || "Course";
+          } else if (purchase.productId) {
+            const product = await ctx.db.get(purchase.productId);
+            productTitle = product?.title || "Digital Product";
+          }
+
+          // Get buyer info
+          const buyer = await ctx.db
+            .query("users")
+            .withIndex("by_clerkId", (q) => q.eq("clerkId", purchase.userId))
+            .first();
+
+          activities.push({
+            id: purchase._id,
+            type: "purchase",
+            title: productTitle,
+            description: `New purchase`,
+            amount: (purchase.amount || 0) / 100,
+            timestamp: purchase._creationTime,
+            userInfo: buyer
+              ? {
+                  name: buyer.name || undefined,
+                  email: buyer.email || undefined,
+                }
+              : undefined,
+          });
+        }
+      }
+    }
+
+    // Get creator's courses
+    const courses = await ctx.db
+      .query("courses")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    for (const course of courses) {
+      // Get recent enrollments
+      const enrollments = await ctx.db
+        .query("enrollments")
+        .withIndex("by_courseId", (q) => q.eq("courseId", course._id as any))
+        .order("desc")
+        .take(10);
+
+      for (const enrollment of enrollments) {
+        // Get user info
+        const user = await ctx.db
+          .query("users")
+          .withIndex("by_clerkId", (q) => q.eq("clerkId", enrollment.userId))
+          .first();
+
+        activities.push({
+          id: enrollment._id,
+          type: "enrollment",
+          title: course.title,
+          description: "New student enrolled",
+          timestamp: enrollment._creationTime,
+          userInfo: user
+            ? {
+                name: user.name || undefined,
+                email: user.email || undefined,
+              }
+            : undefined,
+        });
+
+        // Check for completions
+        if ((enrollment.progress || 0) >= 100) {
+          activities.push({
+            id: `${enrollment._id}-complete`,
+            type: "completion",
+            title: course.title,
+            description: "Course completed",
+            timestamp: enrollment._creationTime + 1, // Slightly after enrollment
+            userInfo: user
+              ? {
+                  name: user.name || undefined,
+                  email: user.email || undefined,
+                }
+              : undefined,
+          });
+        }
+      }
+    }
+
+    // Sort by timestamp descending and limit
+    return activities
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, maxItems);
+  },
+});
+
+/**
+ * Get creator's video analytics across all courses
+ * Shows watch duration, completion rates, drop-off points, rewatches
+ */
+export const getCreatorVideoAnalytics = query({
+  args: { userId: v.string() },
+  returns: v.object({
+    totalWatchTime: v.number(),
+    avgCompletionRate: v.number(),
+    totalViews: v.number(),
+    chapters: v.array(
+      v.object({
+        chapterId: v.string(),
+        chapterTitle: v.string(),
+        courseTitle: v.string(),
+        totalWatchTime: v.number(),
+        avgPercentWatched: v.number(),
+        viewCount: v.number(),
+        completionCount: v.number(),
+        completionRate: v.number(),
+        avgDropOffPoint: v.number(),
+        rewatchCount: v.number(),
+      })
+    ),
+    dropOffHotspots: v.array(
+      v.object({
+        chapterId: v.string(),
+        chapterTitle: v.string(),
+        courseTitle: v.string(),
+        dropOffRate: v.number(),
+        avgDropOffPoint: v.number(),
+      })
+    ),
+  }),
+  handler: async (ctx, args) => {
+    // Get all courses by this creator
+    const courses = await ctx.db
+      .query("courses")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    if (courses.length === 0) {
+      return {
+        totalWatchTime: 0,
+        avgCompletionRate: 0,
+        totalViews: 0,
+        chapters: [],
+        dropOffHotspots: [],
+      };
+    }
+
+    // Build chapter lookup from courseChapters table
+    const chapterLookup: Record<string, { title: string; courseTitle: string; order: number }> = {};
+    for (const course of courses) {
+      const chapters = await ctx.db
+        .query("courseChapters")
+        .filter((q) => q.eq(q.field("courseId"), course._id))
+        .collect();
+
+      chapters.forEach((chapter, index) => {
+        chapterLookup[chapter._id] = {
+          title: chapter.title,
+          courseTitle: course.title,
+          order: chapter.position || index,
+        };
+      });
+    }
+
+    // Get video analytics for all courses
+    const allVideoAnalytics = [];
+    for (const course of courses) {
+      const analytics = await ctx.db
+        .query("videoAnalytics")
+        .withIndex("by_course", (q) => q.eq("courseId", course._id))
+        .collect();
+      allVideoAnalytics.push(...analytics);
+    }
+
+    if (allVideoAnalytics.length === 0) {
+      return {
+        totalWatchTime: 0,
+        avgCompletionRate: 0,
+        totalViews: 0,
+        chapters: [],
+        dropOffHotspots: [],
+      };
+    }
+
+    // Aggregate by chapter
+    const chapterStats: Record<string, {
+      totalWatchTime: number;
+      totalPercentWatched: number;
+      viewCount: number;
+      completionCount: number;
+      dropOffPoints: number[];
+      rewatchCount: number;
+    }> = {};
+
+    for (const va of allVideoAnalytics) {
+      if (!chapterStats[va.chapterId]) {
+        chapterStats[va.chapterId] = {
+          totalWatchTime: 0,
+          totalPercentWatched: 0,
+          viewCount: 0,
+          completionCount: 0,
+          dropOffPoints: [],
+          rewatchCount: 0,
+        };
+      }
+
+      const stats = chapterStats[va.chapterId];
+      stats.totalWatchTime += va.watchDuration;
+      stats.totalPercentWatched += va.percentWatched;
+      stats.viewCount += 1;
+      if (va.completedWatch) stats.completionCount += 1;
+      if (va.dropOffPoint) stats.dropOffPoints.push(va.dropOffPoint);
+      stats.rewatchCount += va.rewatches;
+    }
+
+    // Build chapter results
+    const chapters = Object.entries(chapterStats)
+      .map(([chapterId, stats]) => {
+        const chapterInfo = chapterLookup[chapterId] || {
+          title: "Unknown Chapter",
+          courseTitle: "Unknown Course",
+          order: 999,
+        };
+        const avgDropOff =
+          stats.dropOffPoints.length > 0
+            ? stats.dropOffPoints.reduce((a, b) => a + b, 0) / stats.dropOffPoints.length
+            : 0;
+
+        return {
+          chapterId,
+          chapterTitle: chapterInfo.title,
+          courseTitle: chapterInfo.courseTitle,
+          totalWatchTime: Math.round(stats.totalWatchTime / 60), // Convert to minutes
+          avgPercentWatched: Math.round(stats.totalPercentWatched / stats.viewCount),
+          viewCount: stats.viewCount,
+          completionCount: stats.completionCount,
+          completionRate: Math.round((stats.completionCount / stats.viewCount) * 100),
+          avgDropOffPoint: Math.round(avgDropOff),
+          rewatchCount: stats.rewatchCount,
+        };
+      })
+      .sort((a, b) => b.viewCount - a.viewCount);
+
+    // Calculate totals
+    const totalWatchTime = chapters.reduce((sum, c) => sum + c.totalWatchTime, 0);
+    const totalViews = chapters.reduce((sum, c) => sum + c.viewCount, 0);
+    const avgCompletionRate =
+      chapters.length > 0
+        ? Math.round(chapters.reduce((sum, c) => sum + c.completionRate, 0) / chapters.length)
+        : 0;
+
+    // Find drop-off hotspots (chapters with low completion rates)
+    const dropOffHotspots = chapters
+      .filter((c) => c.completionRate < 50 && c.viewCount >= 5)
+      .sort((a, b) => a.completionRate - b.completionRate)
+      .slice(0, 5)
+      .map((c) => ({
+        chapterId: c.chapterId,
+        chapterTitle: c.chapterTitle,
+        courseTitle: c.courseTitle,
+        dropOffRate: 100 - c.completionRate,
+        avgDropOffPoint: c.avgDropOffPoint,
+      }));
+
+    return {
+      totalWatchTime,
+      avgCompletionRate,
+      totalViews,
+      chapters: chapters.slice(0, 10), // Top 10 by views
+      dropOffHotspots,
+    };
+  },
+});
+
+/**
+ * Get student progress overview for a creator
+ * Shows all enrolled students, their progress, and at-risk indicators
+ */
+export const getCreatorStudentProgress = query({
+  args: {
+    userId: v.string(),
+    limit: v.optional(v.number()),
+  },
+  returns: v.object({
+    totalStudents: v.number(),
+    activeStudents: v.number(),
+    atRiskStudents: v.number(),
+    avgProgress: v.number(),
+    students: v.array(
+      v.object({
+        id: v.string(),
+        name: v.optional(v.string()),
+        email: v.optional(v.string()),
+        courseTitle: v.string(),
+        progress: v.number(),
+        lastActivity: v.optional(v.number()),
+        isAtRisk: v.boolean(),
+        enrolledAt: v.number(),
+        streak: v.optional(v.number()),
+      })
+    ),
+  }),
+  handler: async (ctx, args) => {
+    const maxStudents = args.limit || 20;
+
+    // Get all courses by this creator
+    const courses = await ctx.db
+      .query("courses")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    if (courses.length === 0) {
+      return {
+        totalStudents: 0,
+        activeStudents: 0,
+        atRiskStudents: 0,
+        avgProgress: 0,
+        students: [],
+      };
+    }
+
+    const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+
+    // Collect all enrollments with course context
+    const allStudentData: Array<{
+      id: string;
+      name?: string;
+      email?: string;
+      courseTitle: string;
+      progress: number;
+      lastActivity?: number;
+      isAtRisk: boolean;
+      enrolledAt: number;
+      streak?: number;
+    }> = [];
+
+    for (const course of courses) {
+      const enrollments = await ctx.db
+        .query("enrollments")
+        .withIndex("by_courseId", (q) => q.eq("courseId", course._id as any))
+        .collect();
+
+      for (const enrollment of enrollments) {
+        // Get user info
+        const user = await ctx.db
+          .query("users")
+          .withIndex("by_clerkId", (q) => q.eq("clerkId", enrollment.userId))
+          .first();
+
+        // Get learning streak
+        const streak = await ctx.db
+          .query("learningStreaks")
+          .withIndex("by_user", (q) => q.eq("userId", enrollment.userId))
+          .first();
+
+        // Get last activity
+        const lastEvent = await ctx.db
+          .query("userEvents")
+          .withIndex("by_user", (q) => q.eq("userId", enrollment.userId))
+          .order("desc")
+          .first();
+
+        const progress = enrollment.progress || 0;
+        const lastActivity = lastEvent?.timestamp;
+        const isAtRisk =
+          progress < 25 &&
+          (!lastActivity || lastActivity < sevenDaysAgo) &&
+          enrollment._creationTime < sevenDaysAgo;
+
+        allStudentData.push({
+          id: enrollment.userId,
+          name: user?.name || undefined,
+          email: user?.email || undefined,
+          courseTitle: course.title,
+          progress,
+          lastActivity,
+          isAtRisk,
+          enrolledAt: enrollment._creationTime,
+          streak: streak?.currentStreak,
+        });
+      }
+    }
+
+    // Calculate metrics
+    const uniqueStudentIds = new Set(allStudentData.map((s) => s.id));
+    const totalStudents = uniqueStudentIds.size;
+    const activeStudents = allStudentData.filter(
+      (s) => s.lastActivity && s.lastActivity >= sevenDaysAgo
+    ).length;
+    const atRiskStudents = allStudentData.filter((s) => s.isAtRisk).length;
+    const avgProgress =
+      allStudentData.length > 0
+        ? Math.round(
+            allStudentData.reduce((sum, s) => sum + s.progress, 0) /
+              allStudentData.length
+          )
+        : 0;
+
+    // Sort by last activity (most recent first), then by at-risk status
+    const sortedStudents = allStudentData
+      .sort((a, b) => {
+        // At-risk students first
+        if (a.isAtRisk && !b.isAtRisk) return -1;
+        if (!a.isAtRisk && b.isAtRisk) return 1;
+        // Then by last activity
+        return (b.lastActivity || 0) - (a.lastActivity || 0);
+      })
+      .slice(0, maxStudents);
+
+    return {
+      totalStudents,
+      activeStudents,
+      atRiskStudents,
+      avgProgress,
+      students: sortedStudents,
+    };
+  },
+});
