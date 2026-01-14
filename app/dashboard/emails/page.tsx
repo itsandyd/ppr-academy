@@ -88,7 +88,10 @@ export default function EmailCampaignsPage() {
   const contacts = useQuery(
     api.emailContacts.listContacts,
     storeId
-      ? { storeId, tagId: selectedTagFilter as Id<"emailTags"> | undefined }
+      ? {
+          storeId,
+          ...(selectedTagFilter ? { tagId: selectedTagFilter as Id<"emailTags"> } : {}),
+        }
       : "skip"
   );
   // Unfiltered contacts for broadcast (so it's not affected by contacts tab filter)
