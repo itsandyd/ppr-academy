@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 import { useUser } from "@clerk/nextjs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -42,7 +43,6 @@ import {
   Workflow,
   MoreHorizontal,
   Search,
-  Play,
   Upload,
   UserPlus,
   RefreshCw,
@@ -75,32 +75,32 @@ export default function EmailCampaignsPage() {
   const { toast } = useToast();
 
   const [activeTab, setActiveTab] = useState("broadcast");
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isCreateContactOpen, setIsCreateContactOpen] = useState(false);
   const [isCreateTagOpen, setIsCreateTagOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-
-  const [newCampaign, setNewCampaign] = useState({
-    name: "",
-    description: "",
-    triggerType: "lead_signup" as "lead_signup" | "product_purchase" | "tag_added" | "manual",
-  });
+  const [selectedTagFilter, setSelectedTagFilter] = useState<string | null>(null);
 
   const [newContact, setNewContact] = useState({ email: "", firstName: "", lastName: "" });
   const [newTag, setNewTag] = useState({ name: "", color: "#3b82f6", description: "" });
 
   const storeId = user?.id ?? "";
 
-  const campaigns = useQuery(api.dripCampaigns.getCampaignsByStore, storeId ? { storeId } : "skip");
-  const contacts = useQuery(api.emailContacts.listContacts, storeId ? { storeId } : "skip");
+  const contacts = useQuery(
+    api.emailContacts.listContacts,
+    storeId
+      ? { storeId, tagId: selectedTagFilter as Id<"emailTags"> | undefined }
+      : "skip"
+  );
+  // Unfiltered contacts for broadcast (so it's not affected by contacts tab filter)
+  const allContacts = useQuery(
+    api.emailContacts.listContacts,
+    storeId ? { storeId } : "skip"
+  );
   const contactStats = useQuery(api.emailContacts.getContactStats, storeId ? { storeId } : "skip");
   const tags = useQuery(api.emailTags.listTags, storeId ? { storeId } : "skip");
   const tagStats = useQuery(api.emailTags.getTagStats, storeId ? { storeId } : "skip");
   const workflows = useQuery(api.emailWorkflows.listWorkflows, storeId ? { storeId } : "skip");
 
-  const createCampaign = useMutation(api.dripCampaigns.createCampaign);
-  const toggleCampaign = useMutation(api.dripCampaigns.toggleCampaign);
-  const deleteCampaign = useMutation(api.dripCampaigns.deleteCampaign);
   const createContact = useMutation(api.emailContacts.createContact);
   const deleteContact = useMutation(api.emailContacts.deleteContact);
   const syncCustomers = useMutation(api.emailContacts.syncCustomersToEmailContacts);
@@ -124,56 +124,13 @@ export default function EmailCampaignsPage() {
   const [selectedBroadcastContacts, setSelectedBroadcastContacts] = useState<Set<string>>(new Set());
   const [isSendingBroadcast, setIsSendingBroadcast] = useState(false);
   const [broadcastSearchQuery, setBroadcastSearchQuery] = useState("");
+  const [broadcastTagFilter, setBroadcastTagFilter] = useState<string | null>(null);
   const sendBroadcastEmail = useAction(api.emails.sendBroadcastEmail);
 
   if (isLoaded && mode !== "create") {
     router.push("/dashboard?mode=create");
     return null;
   }
-
-  const handleCreateCampaign = async () => {
-    if (!newCampaign.name.trim()) {
-      toast({ title: "Name required", variant: "destructive" });
-      return;
-    }
-
-    try {
-      await createCampaign({
-        storeId,
-        name: newCampaign.name,
-        description: newCampaign.description,
-        triggerType: newCampaign.triggerType,
-      });
-
-      toast({ title: "Sequence created!" });
-      setIsCreateOpen(false);
-      setNewCampaign({ name: "", description: "", triggerType: "lead_signup" });
-    } catch {
-      toast({ title: "Failed to create sequence", variant: "destructive" });
-    }
-  };
-
-  const handleToggle = async (campaignId: string) => {
-    try {
-      const result = await toggleCampaign({ campaignId: campaignId as any });
-      toast({
-        title: result.isActive ? "Sequence activated" : "Sequence paused",
-      });
-    } catch {
-      toast({ title: "Failed to toggle sequence", variant: "destructive" });
-    }
-  };
-
-  const handleDeleteCampaign = async (campaignId: string) => {
-    if (!confirm("Delete this sequence and all its steps?")) return;
-
-    try {
-      await deleteCampaign({ campaignId: campaignId as any });
-      toast({ title: "Sequence deleted" });
-    } catch {
-      toast({ title: "Failed to delete sequence", variant: "destructive" });
-    }
-  };
 
   const handleCreateContact = async () => {
     if (!newContact.email.trim()) {
@@ -349,19 +306,6 @@ export default function EmailCampaignsPage() {
     }
   };
 
-  const getTriggerIcon = (type: string) => {
-    switch (type) {
-      case "lead_signup":
-        return <Users className="h-4 w-4" />;
-      case "product_purchase":
-        return <CheckCircle2 className="h-4 w-4" />;
-      case "tag_added":
-        return <Zap className="h-4 w-4" />;
-      default:
-        return <Play className="h-4 w-4" />;
-    }
-  };
-
   const getTriggerLabel = (type: string) => {
     switch (type) {
       case "lead_signup":
@@ -377,12 +321,6 @@ export default function EmailCampaignsPage() {
     }
   };
 
-  const totalEnrolled =
-    campaigns?.reduce((sum: number, c: any) => sum + (c.totalEnrolled || 0), 0) || 0;
-  const totalCompleted =
-    campaigns?.reduce((sum: number, c: any) => sum + (c.totalCompleted || 0), 0) || 0;
-  const activeCampaigns = campaigns?.filter((c: any) => c.isActive).length || 0;
-
   const filteredContacts = contacts?.filter((c: any) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
@@ -394,8 +332,11 @@ export default function EmailCampaignsPage() {
   });
 
   // Filtered contacts for broadcast
-  const filteredBroadcastContacts = contacts?.filter((c: any) => {
+  const filteredBroadcastContacts = allContacts?.filter((c: any) => {
     if (c.status !== "subscribed") return false;
+    // Apply tag filter
+    if (broadcastTagFilter && !c.tagIds?.includes(broadcastTagFilter)) return false;
+    // Apply search filter
     if (!broadcastSearchQuery) return true;
     const query = broadcastSearchQuery.toLowerCase();
     return (
@@ -477,13 +418,13 @@ export default function EmailCampaignsPage() {
             Email Marketing
           </h1>
           <p className="mt-1 text-xs text-muted-foreground md:text-sm">
-            Manage contacts, tags, and automated email sequences
+            Manage contacts, send broadcasts, and create automated workflows
           </p>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 bg-transparent p-0 md:grid md:grid-cols-5 md:gap-0 md:bg-muted md:p-1">
+        <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 bg-transparent p-0 md:grid md:grid-cols-4 md:gap-0 md:bg-muted md:p-1">
           <TabsTrigger
             value="broadcast"
             className="gap-1.5 rounded-md border border-transparent bg-muted px-3 py-1.5 text-sm data-[state=active]:border-border data-[state=active]:bg-background md:gap-2 md:border-0 md:bg-transparent md:px-4 md:py-2 md:data-[state=active]:border-0"
@@ -491,14 +432,6 @@ export default function EmailCampaignsPage() {
             <Megaphone className="h-3.5 w-3.5 md:h-4 md:w-4" />
             <span className="hidden xs:inline">Broadcast</span>
             <span className="xs:hidden">Send</span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="sequences"
-            className="gap-1.5 rounded-md border border-transparent bg-muted px-3 py-1.5 text-sm data-[state=active]:border-border data-[state=active]:bg-background md:gap-2 md:border-0 md:bg-transparent md:px-4 md:py-2 md:data-[state=active]:border-0"
-          >
-            <Send className="h-3.5 w-3.5 md:h-4 md:w-4" />
-            <span className="hidden xs:inline">Sequences</span>
-            <span className="xs:hidden">Seq</span>
           </TabsTrigger>
           <TabsTrigger
             value="contacts"
@@ -633,6 +566,40 @@ The unsubscribe link will be added automatically."
                     />
                   </div>
 
+                  {/* Tag filter chips */}
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant={broadcastTagFilter === null ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setBroadcastTagFilter(null)}
+                      className="h-7 text-xs"
+                    >
+                      All ({allContacts?.filter((c: any) => c.status === "subscribed").length || 0})
+                    </Button>
+                    {tags?.map((tag: any) => {
+                      const count = allContacts?.filter(
+                        (c: any) => c.status === "subscribed" && c.tagIds?.includes(tag._id)
+                      ).length || 0;
+                      return (
+                        <Button
+                          key={tag._id}
+                          variant={broadcastTagFilter === tag._id ? "default" : "outline"}
+                          size="sm"
+                          onClick={() =>
+                            setBroadcastTagFilter(broadcastTagFilter === tag._id ? null : tag._id)
+                          }
+                          className="h-7 gap-1.5 text-xs"
+                        >
+                          <div
+                            className="h-2 w-2 rounded-full"
+                            style={{ backgroundColor: tag.color }}
+                          />
+                          {tag.name} ({count})
+                        </Button>
+                      );
+                    })}
+                  </div>
+
                   <div className="max-h-[400px] space-y-1 overflow-y-auto">
                     {!filteredBroadcastContacts || filteredBroadcastContacts.length === 0 ? (
                       <div className="py-8 text-center text-sm text-muted-foreground">
@@ -679,224 +646,6 @@ The unsubscribe link will be added automatically."
               </Card>
             </div>
           </div>
-        </TabsContent>
-
-        <TabsContent value="sequences" className="mt-4 space-y-4 md:mt-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="grid flex-1 grid-cols-3 gap-2 md:mr-4 md:gap-4">
-              <Card>
-                <CardContent className="p-3 md:pt-4">
-                  <div className="flex items-center gap-2 md:gap-3">
-                    <div className="rounded-lg bg-cyan-100 p-1.5 dark:bg-cyan-900 md:p-2">
-                      <Send className="h-3.5 w-3.5 text-cyan-600 md:h-4 md:w-4" />
-                    </div>
-                    <div>
-                      <div className="text-lg font-bold md:text-xl">{activeCampaigns}</div>
-                      <div className="text-[10px] text-muted-foreground md:text-xs">Active</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-3 md:pt-4">
-                  <div className="flex items-center gap-2 md:gap-3">
-                    <div className="rounded-lg bg-blue-100 p-1.5 dark:bg-blue-900 md:p-2">
-                      <Users className="h-3.5 w-3.5 text-blue-600 md:h-4 md:w-4" />
-                    </div>
-                    <div>
-                      <div className="text-lg font-bold md:text-xl">{totalEnrolled}</div>
-                      <div className="text-[10px] text-muted-foreground md:text-xs">Enrolled</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardContent className="p-3 md:pt-4">
-                  <div className="flex items-center gap-2 md:gap-3">
-                    <div className="rounded-lg bg-green-100 p-1.5 dark:bg-green-900 md:p-2">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-green-600 md:h-4 md:w-4" />
-                    </div>
-                    <div>
-                      <div className="text-lg font-bold md:text-xl">{totalCompleted}</div>
-                      <div className="text-[10px] text-muted-foreground md:text-xs">Completed</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-              <DialogTrigger asChild>
-                <Button className="gap-2 self-end md:self-auto">
-                  <Plus className="h-4 w-4" />
-                  <span className="hidden sm:inline">New Sequence</span>
-                  <span className="sm:hidden">New</span>
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="bg-white dark:bg-black">
-                <DialogHeader>
-                  <DialogTitle>Create Email Sequence</DialogTitle>
-                  <DialogDescription>Set up an automated drip campaign</DialogDescription>
-                </DialogHeader>
-
-                <div className="space-y-4 py-4">
-                  <div className="space-y-2">
-                    <Label>Sequence Name</Label>
-                    <Input
-                      placeholder="7-Day Welcome Sequence"
-                      value={newCampaign.name}
-                      onChange={(e) => setNewCampaign({ ...newCampaign, name: e.target.value })}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Description</Label>
-                    <Input
-                      placeholder="Welcomes new subscribers..."
-                      value={newCampaign.description}
-                      onChange={(e) =>
-                        setNewCampaign({ ...newCampaign, description: e.target.value })
-                      }
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Trigger</Label>
-                    <Select
-                      value={newCampaign.triggerType}
-                      onValueChange={(v: any) => setNewCampaign({ ...newCampaign, triggerType: v })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white dark:bg-black">
-                        <SelectItem value="lead_signup">When someone joins your list</SelectItem>
-                        <SelectItem value="product_purchase">After a purchase</SelectItem>
-                        <SelectItem value="tag_added">When tag is added</SelectItem>
-                        <SelectItem value="manual">Manual enrollment</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleCreateCampaign}>Create Sequence</Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          {!campaigns || campaigns.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-10 md:py-16">
-                <Mail className="mb-3 h-12 w-12 text-muted-foreground/30 md:mb-4 md:h-16 md:w-16" />
-                <h3 className="mb-2 text-lg font-semibold md:text-xl">No email sequences yet</h3>
-                <p className="mb-4 max-w-md text-center text-sm text-muted-foreground md:mb-6">
-                  Create automated email sequences to nurture leads and drive sales on autopilot.
-                </p>
-                <Button onClick={() => setIsCreateOpen(true)} className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  Create Your First Sequence
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-2 md:space-y-3">
-              {campaigns.map((campaign: any) => (
-                <Card
-                  key={campaign._id}
-                  className="cursor-pointer transition-shadow hover:shadow-md"
-                  onClick={() =>
-                    router.push(`/dashboard/emails/sequences/${campaign._id}?mode=create`)
-                  }
-                >
-                  <CardContent className="p-3 md:p-4">
-                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                      <div className="flex items-center gap-3 md:gap-4">
-                        <div
-                          className={cn(
-                            "shrink-0 rounded-lg p-1.5 md:p-2",
-                            campaign.isActive
-                              ? "bg-green-100 dark:bg-green-900"
-                              : "bg-slate-100 dark:bg-slate-800"
-                          )}
-                        >
-                          <Mail
-                            className={cn(
-                              "h-4 w-4 md:h-5 md:w-5",
-                              campaign.isActive ? "text-green-600" : "text-slate-400"
-                            )}
-                          />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
-                            <span className="truncate text-sm font-semibold md:text-base">
-                              {campaign.name}
-                            </span>
-                            <Badge
-                              variant={campaign.isActive ? "default" : "secondary"}
-                              className="shrink-0 text-[10px] md:text-xs"
-                            >
-                              {campaign.isActive ? "Active" : "Paused"}
-                            </Badge>
-                          </div>
-                          <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground md:gap-2 md:text-sm">
-                            {getTriggerIcon(campaign.triggerType)}
-                            <span className="truncate">
-                              {getTriggerLabel(campaign.triggerType)}
-                              {campaign.description && ` • ${campaign.description}`}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between border-t border-border/50 pt-2 md:justify-end md:gap-6 md:border-t-0 md:pt-0">
-                        <div className="flex items-center gap-4 md:gap-6">
-                          <div className="text-center md:text-right">
-                            <div className="text-xs font-medium md:text-sm">
-                              {campaign.totalEnrolled || 0}
-                            </div>
-                            <div className="text-[10px] text-muted-foreground md:text-xs">
-                              enrolled
-                            </div>
-                          </div>
-                          <div className="text-center md:text-right">
-                            <div className="text-xs font-medium md:text-sm">
-                              {campaign.totalCompleted || 0}
-                            </div>
-                            <div className="text-[10px] text-muted-foreground md:text-xs">
-                              completed
-                            </div>
-                          </div>
-                        </div>
-                        <div
-                          className="flex items-center gap-1 md:gap-2"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <Switch
-                            checked={campaign.isActive}
-                            onCheckedChange={() => handleToggle(campaign._id)}
-                            className="scale-90 md:scale-100"
-                          />
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteCampaign(campaign._id)}
-                            className="h-8 w-8 text-red-600 hover:bg-red-50 hover:text-red-700 md:h-9 md:w-9"
-                          >
-                            <Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
         </TabsContent>
 
         <TabsContent value="contacts" className="mt-4 space-y-4 md:mt-6">
@@ -1013,7 +762,7 @@ The unsubscribe link will be added automatically."
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
             <div className="relative flex-1 md:max-w-sm">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -1023,6 +772,29 @@ The unsubscribe link will be added automatically."
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
+            <Select
+              value={selectedTagFilter || "all"}
+              onValueChange={(v) => setSelectedTagFilter(v === "all" ? null : v)}
+            >
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Filter by tag" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Contacts</SelectItem>
+                {tags?.map((tag: any) => (
+                  <SelectItem key={tag._id} value={tag._id}>
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="h-2.5 w-2.5 rounded-full"
+                        style={{ backgroundColor: tag.color }}
+                      />
+                      <span>{tag.name}</span>
+                      <span className="text-muted-foreground">({tag.contactCount || 0})</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {!filteredContacts || filteredContacts.length === 0 ? (
@@ -1042,12 +814,17 @@ The unsubscribe link will be added automatically."
           ) : (
             <>
               {/* Bulk Action Bar */}
-              {selectedContacts.size > 0 && (
-                <Card className="border-primary bg-primary/5">
+              {selectedContacts.size > 0 ? (
+                <Card className="sticky top-0 z-10 border-primary bg-primary/10 shadow-md">
                   <CardContent className="flex items-center justify-between p-3">
-                    <span className="text-sm font-medium">
-                      {selectedContacts.size} contact{selectedContacts.size > 1 ? "s" : ""} selected
-                    </span>
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                        {selectedContacts.size}
+                      </div>
+                      <span className="text-sm font-medium">
+                        contact{selectedContacts.size > 1 ? "s" : ""} selected
+                      </span>
+                    </div>
                     <div className="flex items-center gap-2">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -1062,7 +839,14 @@ The unsubscribe link will be added automatically."
                               <DropdownMenuItem
                                 key={workflow._id}
                                 onClick={() => handleBulkEnroll(workflow._id)}
+                                className="flex items-center gap-2"
                               >
+                                <div
+                                  className={cn(
+                                    "h-2 w-2 rounded-full",
+                                    workflow.isActive ? "bg-green-500" : "bg-gray-400"
+                                  )}
+                                />
                                 {workflow.name}
                               </DropdownMenuItem>
                             ))
@@ -1081,6 +865,10 @@ The unsubscribe link will be added automatically."
                     </div>
                   </CardContent>
                 </Card>
+              ) : (
+                <div className="rounded-lg border border-dashed border-border bg-muted/30 p-3 text-center text-sm text-muted-foreground">
+                  Select contacts to add them to an automation workflow
+                </div>
               )}
 
               {/* Mobile: Card-based layout */}

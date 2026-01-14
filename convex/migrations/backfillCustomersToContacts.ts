@@ -2,14 +2,17 @@ import { mutation } from "../_generated/server";
 import { v } from "convex/values";
 
 /**
- * Backfill emailContacts from existing customers
- * This syncs all customers to the emailContacts table for email marketing
- *
- * Run this via the Convex dashboard Functions tab
+ * Backfill emailContacts from existing customers (paginated version)
+ * This syncs customers to the emailContacts table for email marketing
+ * 
+ * Run multiple times until isDone is true
+ * Each run processes up to 100 customers to avoid hitting document read limits
  */
 export const backfillCustomersToContacts = mutation({
   args: {
     storeId: v.string(),
+    batchSize: v.optional(v.number()), // Default 100
+    cursor: v.optional(v.string()), // For pagination
   },
   returns: v.object({
     success: v.boolean(),
@@ -19,6 +22,8 @@ export const backfillCustomersToContacts = mutation({
     alreadyExisted: v.number(),
     errors: v.number(),
     errorDetails: v.array(v.string()),
+    isDone: v.boolean(),
+    nextCursor: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
     let contactsCreated = 0;
@@ -27,13 +32,21 @@ export const backfillCustomersToContacts = mutation({
     let alreadyExisted = 0;
     let errors = 0;
     const errorDetails: string[] = [];
+    const batchSize = args.batchSize || 100;
 
     try {
-      // Get all customers for this store
-      const customers = await ctx.db
+      // Get customers with pagination
+      const paginationOpts = {
+        numItems: batchSize,
+        cursor: args.cursor || null,
+      };
+      
+      const customersResult = await ctx.db
         .query("customers")
         .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-        .collect();
+        .paginate(paginationOpts);
+      
+      const customers = customersResult.page;
 
       console.log(`Found ${customers.length} customers to process for store ${args.storeId}`);
 
@@ -130,7 +143,8 @@ export const backfillCustomersToContacts = mutation({
         }
       }
 
-      console.log(`Backfill complete: ${contactsCreated} created, ${contactsUpdated} updated, ${alreadyExisted} already existed, ${errors} errors`);
+      const isDone = customersResult.isDone;
+      console.log(`Backfill batch complete: ${contactsCreated} created, ${contactsUpdated} updated, ${alreadyExisted} already existed, ${errors} errors. Done: ${isDone}`);
 
       return {
         success: true,
@@ -139,7 +153,9 @@ export const backfillCustomersToContacts = mutation({
         customersProcessed,
         alreadyExisted,
         errors,
-        errorDetails: errorDetails.slice(0, 10), // Limit error details
+        errorDetails: errorDetails.slice(0, 10),
+        isDone,
+        nextCursor: isDone ? undefined : customersResult.continueCursor,
       };
     } catch (error) {
       console.error("Backfill failed:", error);
@@ -151,6 +167,8 @@ export const backfillCustomersToContacts = mutation({
         alreadyExisted,
         errors: errors + 1,
         errorDetails: [...errorDetails, `Fatal: ${error}`].slice(0, 10),
+        isDone: false,
+        nextCursor: undefined,
       };
     }
   },

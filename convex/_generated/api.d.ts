@@ -12221,6 +12221,38 @@ export declare const api: {
     >;
   };
   migrations: {
+    backfillCustomersToContacts: {
+      backfillCustomersToContacts: FunctionReference<
+        "mutation",
+        "public",
+        { batchSize?: number; cursor?: string; storeId: string },
+        {
+          alreadyExisted: number;
+          contactsCreated: number;
+          contactsUpdated: number;
+          customersProcessed: number;
+          errorDetails: Array<string>;
+          errors: number;
+          isDone: boolean;
+          nextCursor?: string;
+          success: boolean;
+        }
+      >;
+    };
+    fixContactStoreIds: {
+      fixContactStoreIds: FunctionReference<
+        "mutation",
+        "public",
+        { batchSize?: number; clerkUserId: string; convexStoreId: string },
+        {
+          duplicates: number;
+          errors: Array<string>;
+          skipped: number;
+          success: boolean;
+          updated: number;
+        }
+      >;
+    };
     importPlugins: {
       batchCreatePlugins: FunctionReference<
         "action",
@@ -12259,6 +12291,52 @@ export declare const api: {
             pluginsSuccess: number;
             studioToolCategories: number;
           };
+          success: boolean;
+        }
+      >;
+    };
+    removeNonStudentContacts: {
+      removeNonStudentContacts: FunctionReference<
+        "mutation",
+        "public",
+        { batchSize?: number; dryRun?: boolean; storeId: string },
+        {
+          bySource: any;
+          deleted: number;
+          isDryRun: boolean;
+          kept: number;
+          success: boolean;
+        }
+      >;
+    };
+    syncStudentsToContacts: {
+      syncStudentsToContacts: FunctionReference<
+        "mutation",
+        "public",
+        { batchSize?: number; cursor?: string; storeId: string },
+        {
+          errors: Array<string>;
+          isDone: boolean;
+          nextCursor?: string;
+          skipped: number;
+          studentsProcessed: number;
+          success: boolean;
+          synced: number;
+        }
+      >;
+    };
+    tagStudentsVsLeads: {
+      tagStudentsVsLeads: FunctionReference<
+        "mutation",
+        "public",
+        { batchSize?: number; cursor?: string; storeId: string },
+        {
+          alreadyTagged: number;
+          isDone: boolean;
+          leadsTagged: number;
+          nextCursor?: string;
+          processed: number;
+          studentsTagged: number;
           success: boolean;
         }
       >;
