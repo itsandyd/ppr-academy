@@ -109,7 +109,10 @@ export { MINUTE, HOUR } from "@convex-dev/rate-limiter";
 // HELPER FUNCTIONS
 // ============================================================================
 
-type RateLimitName = Parameters<typeof rateLimiter.limit>[1];
+export type RateLimitName = Parameters<typeof rateLimiter.limit>[1];
+
+// Type for rate limit options
+type RateLimitOptions = { key?: string; count?: number; reserve?: boolean; throws?: boolean };
 
 /**
  * Check rate limit and throw ConvexError if exceeded.
@@ -125,9 +128,9 @@ export async function checkRateLimit(
   limitName: RateLimitName,
   key?: string
 ): Promise<void> {
-  const { ok, retryAfter } = await rateLimiter.limit(ctx, limitName, {
-    key: key ?? "system",
-  });
+  const options: RateLimitOptions = { key: key ?? "system" };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { ok, retryAfter } = await rateLimiter.limit(ctx, limitName, options as any);
 
   if (!ok) {
     const retryInSeconds = Math.ceil((retryAfter ?? 60000) / 1000);
@@ -152,9 +155,9 @@ export async function checkRateLimitSoft(
   limitName: RateLimitName,
   key?: string
 ): Promise<{ ok: boolean; retryAfter: number | null }> {
-  const { ok, retryAfter } = await rateLimiter.limit(ctx, limitName, {
-    key: key ?? "system",
-  });
+  const options: RateLimitOptions = { key: key ?? "system" };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { ok, retryAfter } = await rateLimiter.limit(ctx, limitName, options as any);
 
   return { ok, retryAfter: retryAfter ?? null };
 }
@@ -172,9 +175,9 @@ export async function wouldBeRateLimited(
   limitName: RateLimitName,
   key?: string
 ): Promise<boolean> {
-  const { ok } = await rateLimiter.check(ctx, limitName, {
-    key: key ?? "system",
-  });
+  const options: RateLimitOptions = { key: key ?? "system" };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { ok } = await rateLimiter.check(ctx, limitName, options as any);
 
   return !ok;
 }

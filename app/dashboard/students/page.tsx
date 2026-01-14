@@ -1,5 +1,6 @@
 "use client";
 
+import { Fragment } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -292,9 +293,8 @@ export default function StudentsPage() {
                   {filteredStudents.map((student) => {
                     const isExpanded = expandedStudents.has(student.clerkId);
                     return (
-                      <>
+                      <Fragment key={student.clerkId}>
                         <TableRow
-                          key={student.clerkId}
                           className={cn(
                             "cursor-pointer transition-colors hover:bg-muted/50",
                             isExpanded && "bg-muted/30"
@@ -429,7 +429,7 @@ export default function StudentsPage() {
                             </TableCell>
                           </TableRow>
                         )}
-                      </>
+                      </Fragment>
                     );
                   })}
                 </TableBody>

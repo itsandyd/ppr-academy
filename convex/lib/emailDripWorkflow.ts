@@ -81,13 +81,13 @@ function findNextNode(
   nodes: WorkflowNode[],
   edges: WorkflowEdge[],
   handle?: string
-): WorkflowNode | null {
+): WorkflowNode | undefined {
   const edge = edges.find(
     (e) =>
       e.source === currentNodeId && (handle ? e.sourceHandle === handle : true)
   );
-  if (!edge) return null;
-  return nodes.find((n) => n.id === edge.target) || null;
+  if (!edge) return undefined;
+  return nodes.find((n) => n.id === edge.target);
 }
 
 /**
@@ -134,9 +134,9 @@ export const emailDripWorkflow = workflow.define({
 
       switch (currentNode.type) {
         case "email": {
-          // Send email via the existing email action
+          // Send email via the workflow email sender
           if (currentNode.data.templateId) {
-            await ctx.runAction(internal.dripCampaignActions.sendDripEmail, {
+            await ctx.runAction(internal.emailWorkflowActions.sendWorkflowEmail, {
               contactId: args.contactId,
               templateId: currentNode.data.templateId,
               storeId: args.storeId,
@@ -148,12 +148,30 @@ export const emailDripWorkflow = workflow.define({
         }
 
         case "delay": {
-          // DURABLE SLEEP - survives server restarts!
+          // Schedule the next step with a delay using runAfter
           const delayMs = calculateDelayMs(currentNode);
           if (delayMs > 0) {
-            console.log(`[DripWorkflow] Sleeping for ${delayMs}ms (${delayMs / 3600000} hours)`);
-            await ctx.sleep(delayMs);
-            console.log(`[DripWorkflow] Woke up after delay`);
+            console.log(`[DripWorkflow] Scheduling delay of ${delayMs}ms (${delayMs / 3600000} hours)`);
+            // Use runAfter to delay the next operation
+            // The next runQuery/runMutation/runAction will respect this delay
+            const nextNode = findNextNode(currentNode.id, nodes, edges);
+            if (nextNode && nextNode.type === "email" && nextNode.data.templateId) {
+              // Schedule the email with delay
+              await ctx.runAction(
+                internal.emailWorkflowActions.sendWorkflowEmail,
+                {
+                  contactId: args.contactId,
+                  templateId: nextNode.data.templateId,
+                  storeId: args.storeId,
+                  customerEmail: args.customerEmail,
+                },
+                { runAfter: delayMs }
+              );
+              console.log(`[DripWorkflow] Scheduled email to ${args.customerEmail} after ${delayMs}ms`);
+              // Skip to the node after the email since we just processed it
+              currentNode = findNextNode(nextNode.id, nodes, edges);
+              continue;
+            }
           }
           break;
         }
@@ -257,18 +275,17 @@ export const abTestWorkflow = workflow.define({
 
     console.log(`[ABTest] ${args.customerEmail} assigned to variant ${variantName}`);
 
-    // Wait the specified delay
-    if (variant.delayMs > 0) {
-      await ctx.sleep(variant.delayMs);
-    }
-
-    // Send the email
-    await ctx.runAction(internal.dripCampaignActions.sendDripEmail, {
-      contactId: args.contactId,
-      templateId: variant.templateId,
-      storeId: args.storeId,
-      customerEmail: args.customerEmail,
-    });
+    // Send the email (with delay if specified)
+    await ctx.runAction(
+      internal.emailWorkflowActions.sendWorkflowEmail,
+      {
+        contactId: args.contactId,
+        templateId: variant.templateId,
+        storeId: args.storeId,
+        customerEmail: args.customerEmail,
+      },
+      variant.delayMs > 0 ? { runAfter: variant.delayMs } : undefined
+    );
 
     // Track which variant was sent
     await ctx.runMutation(internal.emailWorkflows.trackABTestResult, {

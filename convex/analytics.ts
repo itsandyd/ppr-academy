@@ -951,11 +951,11 @@ export const getCreatorVideoAnalytics = query({
     ),
   }),
   handler: async (ctx, args) => {
-    // Get all courses by this creator
+    // Get only first 3 courses by this creator to avoid reading too much data
     const courses = await ctx.db
       .query("courses")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .collect();
+      .take(3);
 
     if (courses.length === 0) {
       return {
@@ -967,13 +967,13 @@ export const getCreatorVideoAnalytics = query({
       };
     }
 
-    // Build chapter lookup from courseChapters table
+    // Build chapter lookup from courseChapters table (limit to 10 per course)
     const chapterLookup: Record<string, { title: string; courseTitle: string; order: number }> = {};
     for (const course of courses) {
       const chapters = await ctx.db
         .query("courseChapters")
         .filter((q) => q.eq(q.field("courseId"), course._id))
-        .collect();
+        .take(10);
 
       chapters.forEach((chapter, index) => {
         chapterLookup[chapter._id] = {
@@ -984,13 +984,13 @@ export const getCreatorVideoAnalytics = query({
       });
     }
 
-    // Get video analytics for all courses
+    // Get video analytics (limit to 50 per course)
     const allVideoAnalytics = [];
     for (const course of courses) {
       const analytics = await ctx.db
         .query("videoAnalytics")
         .withIndex("by_course", (q) => q.eq("courseId", course._id))
-        .collect();
+        .take(50);
       allVideoAnalytics.push(...analytics);
     }
 

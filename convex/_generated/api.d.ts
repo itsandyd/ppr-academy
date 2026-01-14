@@ -19178,6 +19178,19 @@ export declare const internal: {
       null
     >;
   };
+  emailWorkflowActions: {
+    sendWorkflowEmail: FunctionReference<
+      "action",
+      "internal",
+      {
+        contactId?: Id<"emailContacts">;
+        customerEmail: string;
+        storeId: string;
+        templateId: Id<"emailTemplates">;
+      },
+      null
+    >;
+  };
   emailWorkflows: {
     callWebhook: FunctionReference<
       "action",
@@ -19196,6 +19209,18 @@ export declare const internal: {
       "internal",
       { condition?: any; contactId?: Id<"emailContacts"> },
       boolean
+    >;
+    getContactInternal: FunctionReference<
+      "query",
+      "internal",
+      { contactId: Id<"emailContacts"> },
+      any
+    >;
+    getEmailTemplateInternal: FunctionReference<
+      "query",
+      "internal",
+      { templateId: Id<"emailTemplates"> },
+      any
     >;
     getWorkflowInternal: FunctionReference<
       "query",

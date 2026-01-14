@@ -62,7 +62,7 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
 
   const store = useQuery(
     api.stores.getStoreById,
-    product?.storeId ? { storeId: product.storeId } : "skip"
+    product?.storeId ? { storeId: product.storeId as Id<"stores"> } : "skip"
   );
 
   const isInWishlist = useQuery(
@@ -185,7 +185,7 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
       } else {
         await addToWishlist({
           productId: product._id,
-          productType: product.category,
+          productType: (product as { category?: string }).category || product.productType || "digital_product",
         });
         toast.success("Added to wishlist!");
       }
@@ -233,9 +233,9 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
               transition={{ duration: 0.5 }}
             >
               {/* Category Badge */}
-              {product.category && (
+              {(product.productType || (product as { category?: string }).category) && (
                 <Badge className="border-chart-1/20 bg-chart-1/10 text-chart-1">
-                  {product.category}
+                  {product.productType || (product as { category?: string }).category}
                 </Badge>
               )}
 

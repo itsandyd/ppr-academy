@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query, internalMutation, internalQuery, internalAction } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 
 export const listEmailTemplates = query({
@@ -643,10 +644,15 @@ export const checkGoalAchieved = internalQuery({
 
     switch (args.goalType) {
       case "has_purchased":
-        // Check if contact has made a purchase
+        // Check if contact has made a purchase by looking up user by email
+        const user = await ctx.db
+          .query("users")
+          .withIndex("by_email", (q) => q.eq("email", contact.email))
+          .first();
+        if (!user) return false;
         const purchases = await ctx.db
           .query("purchases")
-          .filter((q) => q.eq(q.field("customerEmail"), contact.email))
+          .withIndex("by_userId", (q) => q.eq("userId", user.clerkId || ""))
           .take(1);
         return purchases.length > 0;
 
@@ -655,7 +661,7 @@ export const checkGoalAchieved = internalQuery({
         const opens = await ctx.db
           .query("emailContactActivity")
           .withIndex("by_contactId", (q) => q.eq("contactId", args.contactId!))
-          .filter((q) => q.eq(q.field("type"), "opened"))
+          .filter((q) => q.eq(q.field("activityType"), "opened"))
           .take(1);
         return opens.length > 0;
 
@@ -664,13 +670,14 @@ export const checkGoalAchieved = internalQuery({
         const clicks = await ctx.db
           .query("emailContactActivity")
           .withIndex("by_contactId", (q) => q.eq("contactId", args.contactId!))
-          .filter((q) => q.eq(q.field("type"), "clicked"))
+          .filter((q) => q.eq(q.field("activityType"), "clicked"))
           .take(1);
         return clicks.length > 0;
 
       case "tag_applied":
-        // Check if contact has a specific tag
-        return contact.tags?.includes(args.goalValue as string) ?? false;
+        // TODO: Implement when contact tagging system is added
+        // For now, always return false as tags aren't implemented yet
+        return false;
 
       default:
         return false;
@@ -723,14 +730,31 @@ export const trackABTestResult = internalMutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    // Track which variant was sent for analytics
-    await ctx.db.insert("analyticsEvents", {
-      type: "ab_test_assigned",
-      workflowId: args.workflowId,
-      contactId: args.contactId,
-      variant: args.variant,
-      timestamp: Date.now(),
-    });
+    // Log A/B test assignment for now
+    // TODO: Store in a dedicated ab_test_results table when needed
+    console.log(`[ABTest] Workflow ${args.workflowId}: Contact ${args.contactId} assigned to variant ${args.variant}`);
     return null;
+  },
+});
+
+/**
+ * Get email template (internal)
+ */
+export const getEmailTemplateInternal = internalQuery({
+  args: { templateId: v.id("emailTemplates") },
+  returns: v.any(),
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.templateId);
+  },
+});
+
+/**
+ * Get contact (internal)
+ */
+export const getContactInternal = internalQuery({
+  args: { contactId: v.id("emailContacts") },
+  returns: v.any(),
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.contactId);
   },
 });

@@ -75,9 +75,10 @@ export function CreatorDashboard({
   });
 
   // Fetch real engagement rate from Convex
-  const engagementData = useQuery(api.analytics.getCreatorEngagementRate, {
-    userId: user.id,
-  });
+  const engagementData = useQuery(
+    api.analytics.getCreatorEngagementRate,
+    user.id ? { userId: user.id } : "skip"
+  );
 
   // Load coach profile on component mount
   useEffect(() => {

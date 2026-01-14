@@ -51,7 +51,7 @@ export async function generateMetadata({ params }: GuideDetailPageProps): Promis
     }
 
     const priceText = product.price === 0 ? "Free" : `$${(product.price / 100).toFixed(2)}`;
-    const categoryText = product.category || "Music Production";
+    const categoryText = (product as { category?: string }).category || "Music Production";
 
     return {
       title: `${product.title} | Guide | PausePlayRepeat`,

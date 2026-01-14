@@ -120,7 +120,10 @@ export const getCustomerOrders = query({
     // Enrich with product info
     const ordersWithProducts = await Promise.all(
       orders.map(async (order) => {
-        const product = await ctx.db.get(order.productId);
+        const product = await ctx.db
+          .query("digitalProducts")
+          .filter((q) => q.eq(q.field("_id"), order.productId))
+          .first();
         return {
           ...order,
           productTitle: product?.title || "Unknown Service",
@@ -178,7 +181,10 @@ export const getCreatorOrders = query({
           .withIndex("by_clerkId", (q) => q.eq("clerkId", order.customerId))
           .first();
 
-        const product = await ctx.db.get(order.productId);
+        const product = await ctx.db
+          .query("digitalProducts")
+          .filter((q) => q.eq(q.field("_id"), order.productId))
+          .first();
 
         return {
           ...order,
