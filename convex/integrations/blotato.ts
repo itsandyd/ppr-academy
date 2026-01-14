@@ -2,6 +2,7 @@
 
 import { action, internalAction } from "../_generated/server";
 import { v } from "convex/values";
+import { checkRateLimit } from "../lib/rateLimiter";
 
 // ============================================================================
 // BLOTATO API INTEGRATION
@@ -110,6 +111,7 @@ export const publishPost = action({
       text: v.string(),
       mediaUrls: v.optional(v.array(v.string())),
     }))), // For Twitter threads
+    userId: v.optional(v.string()), // For per-user rate limiting
   },
   returns: v.object({
     success: v.boolean(),
@@ -118,6 +120,11 @@ export const publishPost = action({
     error: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
+    // Rate limit Blotato API calls
+    if (args.userId) {
+      await checkRateLimit(ctx, "userBlotatoPost", args.userId);
+    }
+
     try {
       const payload: any = {
         post: {

@@ -7,6 +7,7 @@ import { Id } from "../_generated/dataModel";
 import { callLLM, safeParseJson } from "./llmClient";
 import { type ModelId } from "./types";
 import { createFalClient } from "@fal-ai/client";
+import { checkRateLimit } from "../lib/rateLimiter";
 
 const ANDREW_1_VOICE_ID = "IXQAN2tgDlb8raWmXvzP";
 const DEFAULT_MODEL: ModelId = "gemini-2.5-flash";
@@ -587,6 +588,7 @@ export const generatePlatformScripts = action({
     sourceContent: v.string(),
     courseTitle: v.optional(v.string()),
     chapterTitle: v.optional(v.string()),
+    userId: v.optional(v.string()), // For per-user rate limiting
   },
   returns: v.object({
     tiktokScript: v.string(),
@@ -594,7 +596,15 @@ export const generatePlatformScripts = action({
     instagramScript: v.string(),
   }),
   handler: async (ctx, args) => {
-    const { sourceContent, courseTitle, chapterTitle } = args;
+    const { sourceContent, courseTitle, chapterTitle, userId } = args;
+
+    // Rate limit: 3 LLM calls for this action
+    // Use per-user limit if userId provided, otherwise system limit
+    if (userId) {
+      await checkRateLimit(ctx, "userOpenaiCall", userId);
+    } else {
+      await checkRateLimit(ctx, "systemLLMCall");
+    }
 
     const contextHeader = [
       courseTitle && `Course: ${courseTitle}`,
@@ -836,6 +846,7 @@ export const generateSocialImage = action({
     prompt: v.string(),
     aspectRatio: v.union(v.literal("16:9"), v.literal("9:16")),
     sentence: v.optional(v.string()),
+    userId: v.optional(v.string()), // For per-user rate limiting
   },
   returns: v.object({
     success: v.boolean(),
@@ -844,7 +855,14 @@ export const generateSocialImage = action({
     error: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
-    const { prompt, aspectRatio, sentence } = args;
+    const { prompt, aspectRatio, sentence, userId } = args;
+
+    // Rate limit FAL.ai image generation
+    if (userId) {
+      await checkRateLimit(ctx, "userFalaiImage", userId);
+    } else {
+      await checkRateLimit(ctx, "systemImageGeneration");
+    }
 
     console.log(`🎨 Generating social image (${aspectRatio})`);
 

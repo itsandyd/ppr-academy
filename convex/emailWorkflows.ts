@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query, internalMutation } from "./_generated/server";
+import { mutation, query, internalMutation, internalQuery, internalAction } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 
 export const listEmailTemplates = query({
@@ -562,5 +562,175 @@ export const getContactWorkflowStatus = query({
       ...execution,
       workflow: workflows.find((w) => w?._id === execution.workflowId),
     }));
+  },
+});
+
+// ============================================================================
+// INTERNAL HELPERS FOR DURABLE WORKFLOWS
+// These functions are called by the durable workflow component
+// ============================================================================
+
+/**
+ * Internal query to get workflow definition for durable workflow processing
+ */
+export const getWorkflowInternal = internalQuery({
+  args: { workflowId: v.id("emailWorkflows") },
+  returns: v.any(),
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.workflowId);
+  },
+});
+
+/**
+ * Evaluate a workflow condition
+ */
+export const evaluateCondition = internalQuery({
+  args: {
+    contactId: v.optional(v.id("emailContacts")),
+    condition: v.optional(v.any()),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    if (!args.condition || !args.contactId) return true;
+
+    const contact = await ctx.db.get(args.contactId);
+    if (!contact) return false;
+
+    const { field, operator, value } = args.condition as {
+      field: string;
+      operator: string;
+      value: string;
+    };
+
+    const fieldValue = (contact as Record<string, unknown>)[field];
+
+    switch (operator) {
+      case "equals":
+        return fieldValue === value;
+      case "not_equals":
+        return fieldValue !== value;
+      case "contains":
+        return String(fieldValue || "").includes(value);
+      case "starts_with":
+        return String(fieldValue || "").startsWith(value);
+      case "ends_with":
+        return String(fieldValue || "").endsWith(value);
+      case "is_set":
+        return fieldValue !== undefined && fieldValue !== null;
+      case "is_not_set":
+        return fieldValue === undefined || fieldValue === null;
+      default:
+        return true;
+    }
+  },
+});
+
+/**
+ * Check if a workflow goal has been achieved
+ */
+export const checkGoalAchieved = internalQuery({
+  args: {
+    contactId: v.optional(v.id("emailContacts")),
+    goalType: v.optional(v.string()),
+    goalValue: v.optional(v.any()),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    if (!args.contactId || !args.goalType) return false;
+
+    const contact = await ctx.db.get(args.contactId);
+    if (!contact) return false;
+
+    switch (args.goalType) {
+      case "has_purchased":
+        // Check if contact has made a purchase
+        const purchases = await ctx.db
+          .query("purchases")
+          .filter((q) => q.eq(q.field("customerEmail"), contact.email))
+          .take(1);
+        return purchases.length > 0;
+
+      case "has_opened_email":
+        // Check contact activity for email opens
+        const opens = await ctx.db
+          .query("emailContactActivity")
+          .withIndex("by_contactId", (q) => q.eq("contactId", args.contactId!))
+          .filter((q) => q.eq(q.field("type"), "opened"))
+          .take(1);
+        return opens.length > 0;
+
+      case "has_clicked_link":
+        // Check contact activity for link clicks
+        const clicks = await ctx.db
+          .query("emailContactActivity")
+          .withIndex("by_contactId", (q) => q.eq("contactId", args.contactId!))
+          .filter((q) => q.eq(q.field("type"), "clicked"))
+          .take(1);
+        return clicks.length > 0;
+
+      case "tag_applied":
+        // Check if contact has a specific tag
+        return contact.tags?.includes(args.goalValue as string) ?? false;
+
+      default:
+        return false;
+    }
+  },
+});
+
+/**
+ * Call an external webhook
+ */
+export const callWebhook = internalAction({
+  args: {
+    url: v.string(),
+    payload: v.any(),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    status: v.optional(v.number()),
+    error: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    try {
+      const response = await fetch(args.url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(args.payload),
+      });
+
+      return {
+        success: response.ok,
+        status: response.status,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  },
+});
+
+/**
+ * Track A/B test result
+ */
+export const trackABTestResult = internalMutation({
+  args: {
+    workflowId: v.id("emailWorkflows"),
+    contactId: v.optional(v.id("emailContacts")),
+    variant: v.union(v.literal("A"), v.literal("B")),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    // Track which variant was sent for analytics
+    await ctx.db.insert("analyticsEvents", {
+      type: "ab_test_assigned",
+      workflowId: args.workflowId,
+      contactId: args.contactId,
+      variant: args.variant,
+      timestamp: Date.now(),
+    });
+    return null;
   },
 });

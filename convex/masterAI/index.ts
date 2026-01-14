@@ -3,6 +3,7 @@
 import { action, internalAction } from "../_generated/server";
 import { v } from "convex/values";
 import { internal, api } from "../_generated/api";
+import { checkRateLimit } from "../lib/rateLimiter";
 import {
   chatSettingsValidator,
   masterAIResponseValidator,
@@ -69,6 +70,14 @@ export const askMasterAI = action({
   },
   returns: masterAIResponseValidator,
   handler: async (ctx, args): Promise<MasterAIResponse> => {
+    // Rate limit the entire AI pipeline (makes multiple LLM calls)
+    // Per-user if userId provided, otherwise use system limit
+    if (args.userId) {
+      await checkRateLimit(ctx, "userOpenaiCall", args.userId);
+    } else {
+      await checkRateLimit(ctx, "systemLLMCall");
+    }
+
     const settings: ChatSettings = args.settings || DEFAULT_CHAT_SETTINGS;
     const startTime = Date.now();
 
@@ -533,6 +542,13 @@ export const quickAsk = action({
     ),
   }),
   handler: async (ctx, args): Promise<{ answer: string; sources: Array<{ title: string; sourceType: string }> }> => {
+    // Rate limit quick AI queries
+    if (args.userId) {
+      await checkRateLimit(ctx, "userOpenaiCall", args.userId);
+    } else {
+      await checkRateLimit(ctx, "systemLLMCall");
+    }
+
     // Use speed preset for quick queries
     const settings: ChatSettings = {
       ...DEFAULT_CHAT_SETTINGS,
@@ -652,6 +668,9 @@ export const askAgenticAI = action({
   returns: agenticResponseValidator,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   handler: async (ctx, args): Promise<any> => {
+    // Rate limit agentic AI calls (userId is required for this endpoint)
+    await checkRateLimit(ctx, "userOpenaiCall", args.userId);
+
     const settings: ChatSettings = args.settings || DEFAULT_CHAT_SETTINGS;
     const startTime = Date.now();
     const userRole = args.userRole || "creator";
