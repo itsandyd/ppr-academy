@@ -96,19 +96,21 @@ export default function EmailCampaignsPage() {
 
   const storeId = user?.id ?? "";
 
-  const contacts = useQuery(
+  const contactsResult = useQuery(
     api.emailContacts.listContacts,
     storeId
       ? {
           storeId,
+          limit: contactsPerPage,
+          offset: (currentPage - 1) * contactsPerPage,
           ...(selectedTagFilter ? { tagId: selectedTagFilter as Id<"emailTags"> } : {}),
         }
       : "skip"
   );
   // Unfiltered contacts for broadcast (so it's not affected by contacts tab filter)
-  const allContacts = useQuery(
+  const allContactsResult = useQuery(
     api.emailContacts.listContacts,
-    storeId ? { storeId } : "skip"
+    storeId ? { storeId, limit: 500 } : "skip"
   );
   const contactStats = useQuery(api.emailContacts.getContactStats, storeId ? { storeId } : "skip");
   const tags = useQuery(api.emailTags.listTags, storeId ? { storeId } : "skip");
@@ -492,7 +494,8 @@ export default function EmailCampaignsPage() {
     }
   };
 
-  const filteredContacts = contacts?.filter((c: any) => {
+  // Filter contacts client-side for search (server handles tag filter and pagination)
+  const filteredContacts = contactsResult?.contacts?.filter((c: any) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     return (
@@ -502,12 +505,10 @@ export default function EmailCampaignsPage() {
     );
   });
 
-  // Pagination for contacts
-  const totalPages = Math.ceil((filteredContacts?.length || 0) / contactsPerPage);
-  const paginatedContacts = filteredContacts?.slice(
-    (currentPage - 1) * contactsPerPage,
-    currentPage * contactsPerPage
-  );
+  // Pagination - use server-side total count
+  const totalPages = Math.ceil((contactsResult?.totalCount || 0) / contactsPerPage);
+  // Contacts are already paginated from server, just use filtered result
+  const paginatedContacts = filteredContacts;
 
   // Reset to page 1 when filters change
   const handleSearchChange = (value: string) => {
@@ -521,7 +522,7 @@ export default function EmailCampaignsPage() {
   };
 
   // Filtered contacts for broadcast
-  const filteredBroadcastContacts = allContacts?.filter((c: any) => {
+  const filteredBroadcastContacts = allContactsResult?.contacts?.filter((c: any) => {
     if (c.status !== "subscribed") return false;
     // Apply tag filter
     if (broadcastTagFilter && !c.tagIds?.includes(broadcastTagFilter)) return false;
@@ -763,10 +764,10 @@ The unsubscribe link will be added automatically."
                       onClick={() => setBroadcastTagFilter(null)}
                       className="h-7 text-xs"
                     >
-                      All ({allContacts?.filter((c: any) => c.status === "subscribed").length || 0})
+                      All ({allContactsResult?.contacts?.filter((c: any) => c.status === "subscribed").length || 0})
                     </Button>
                     {tags?.map((tag: any) => {
-                      const count = allContacts?.filter(
+                      const count = allContactsResult?.contacts?.filter(
                         (c: any) => c.status === "subscribed" && c.tagIds?.includes(tag._id)
                       ).length || 0;
                       return (

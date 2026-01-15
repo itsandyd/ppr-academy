@@ -167,32 +167,42 @@ export const listContacts = query({
     ),
     tagId: v.optional(v.id("emailTags")),
     limit: v.optional(v.number()),
+    offset: v.optional(v.number()),
   },
-  returns: v.array(v.any()),
+  returns: v.object({
+    contacts: v.array(v.any()),
+    totalCount: v.number(),
+    hasMore: v.boolean(),
+  }),
   handler: async (ctx, args) => {
-    let contactsQuery = ctx.db
+    const limit = Math.min(args.limit || 100, 500); // Max 500 per page
+    const offset = args.offset || 0;
+
+    // First, get total count (without fetching all data)
+    let allContacts = await ctx.db
       .query("emailContacts")
-      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId));
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+      .collect();
 
-    let contacts = await contactsQuery.order("desc").collect();
-
+    // Apply filters
     if (args.status) {
-      contacts = contacts.filter((c) => c.status === args.status);
+      allContacts = allContacts.filter((c) => c.status === args.status);
     }
 
     if (args.tagId) {
-      contacts = contacts.filter((c) => c.tagIds.includes(args.tagId as Id<"emailTags">));
+      allContacts = allContacts.filter((c) => c.tagIds.includes(args.tagId as Id<"emailTags">));
     }
 
-    if (args.limit) {
-      contacts = contacts.slice(0, args.limit);
-    }
+    const totalCount = allContacts.length;
+
+    // Apply pagination
+    const paginatedContacts = allContacts.slice(offset, offset + limit);
 
     const tagsCache: Record<string, { _id: Id<"emailTags">; name: string; color?: string } | null> =
       {};
 
-    return await Promise.all(
-      contacts.map(async (contact) => {
+    const contactsWithTags = await Promise.all(
+      paginatedContacts.map(async (contact) => {
         const tags = await Promise.all(
           contact.tagIds.map(async (tagId) => {
             if (tagsCache[tagId] === undefined) {
@@ -207,6 +217,12 @@ export const listContacts = query({
         };
       })
     );
+
+    return {
+      contacts: contactsWithTags,
+      totalCount,
+      hasMore: offset + limit < totalCount,
+    };
   },
 });
 

@@ -266,7 +266,8 @@ export default function WorkflowBuilderPage() {
     workflowId ? { workflowId: workflowId as Id<"emailWorkflows"> } : "skip"
   );
 
-  const contacts = useQuery(api.emailContacts.listContacts, storeId ? { storeId } : "skip");
+  const contactsResult = useQuery(api.emailContacts.listContacts, storeId ? { storeId } : "skip");
+  const contacts = contactsResult?.contacts;
 
   const tags = useQuery(api.emailTags.listTags, storeId ? { storeId } : "skip");
 

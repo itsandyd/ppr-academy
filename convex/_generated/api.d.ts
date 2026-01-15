@@ -8464,11 +8464,12 @@ export declare const api: {
       "public",
       {
         limit?: number;
+        offset?: number;
         status?: "subscribed" | "unsubscribed" | "bounced" | "complained";
         storeId: string;
         tagId?: Id<"emailTags">;
       },
-      Array<any>
+      { contacts: Array<any>; hasMore: boolean; totalCount: number }
     >;
     removeTagFromContact: FunctionReference<
       "mutation",
