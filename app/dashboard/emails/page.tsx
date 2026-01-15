@@ -297,8 +297,8 @@ export default function EmailCampaignsPage() {
         return;
       }
 
-      // Batch import - Convex has 8192 array limit
-      const BATCH_SIZE = 5000;
+      // Batch import - smaller batches to avoid mutation timeout
+      const BATCH_SIZE = 200;
       let totalImported = 0;
       let totalSkipped = 0;
       let totalErrors = 0;
@@ -319,11 +319,11 @@ export default function EmailCampaignsPage() {
           totalSkipped += result.skipped;
           totalErrors += result.errors;
 
-          // Update progress
-          if (batches > 1) {
+          // Update progress every 10 batches or on last batch
+          if (batches > 1 && (batchNum % 10 === 0 || batchNum === batches)) {
             toast({
-              title: `Batch ${batchNum}/${batches} complete`,
-              description: `Imported ${result.imported}, skipped ${result.skipped}`,
+              title: `Progress: ${batchNum}/${batches} batches`,
+              description: `Imported ${totalImported} so far, skipped ${totalSkipped}`,
             });
           }
         } catch (error: any) {

@@ -439,12 +439,8 @@ export const importContacts = mutation({
 
     const now = Date.now();
 
-    // Get existing emails to check for duplicates
-    const existingContacts = await ctx.db
-      .query("emailContacts")
-      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
-    const existingEmails = new Set(existingContacts.map((c) => c.email.toLowerCase()));
+    // Track emails we've seen in this batch to prevent duplicates within the batch
+    const seenEmails = new Set<string>();
 
     for (const contact of args.contacts) {
       // Validate email
@@ -454,14 +450,26 @@ export const importContacts = mutation({
         continue;
       }
 
-      // Skip duplicates
-      if (existingEmails.has(email)) {
+      // Skip if we've already processed this email in this batch
+      if (seenEmails.has(email)) {
         skipped++;
         continue;
       }
+      seenEmails.add(email);
 
-      // Add to set to prevent duplicates within this import batch
-      existingEmails.add(email);
+      // Check for existing contact using index (efficient single lookup)
+      const existingContact = await ctx.db
+        .query("emailContacts")
+        .withIndex("by_storeId_and_email", (q) =>
+          q.eq("storeId", args.storeId).eq("email", email)
+        )
+        .first();
+
+      // Skip duplicates
+      if (existingContact) {
+        skipped++;
+        continue;
+      }
 
       try {
         await ctx.db.insert("emailContacts", {
