@@ -426,6 +426,8 @@ export default defineSchema({
       type: v.union(
         v.literal("lead_signup"),
         v.literal("product_purchase"),
+        v.literal("tag_added"),
+        v.literal("manual"),
         v.literal("time_delay"),
         v.literal("date_time"),
         v.literal("customer_action")

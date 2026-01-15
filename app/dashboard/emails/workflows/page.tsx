@@ -47,6 +47,8 @@ import WorkflowCanvas from "./components/WorkflowCanvas";
 type TriggerType =
   | "lead_signup"
   | "product_purchase"
+  | "tag_added"
+  | "manual"
   | "time_delay"
   | "date_time"
   | "customer_action";
@@ -54,6 +56,8 @@ type TriggerType =
 const triggerOptions: { value: TriggerType; label: string }[] = [
   { value: "lead_signup", label: "Lead Signs Up" },
   { value: "product_purchase", label: "Product Purchased" },
+  { value: "tag_added", label: "Tag Added to Contact" },
+  { value: "manual", label: "Manual Enrollment" },
   { value: "time_delay", label: "Time Delay" },
   { value: "date_time", label: "Specific Date/Time" },
   { value: "customer_action", label: "Customer Action" },

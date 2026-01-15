@@ -7,6 +7,8 @@ import { Zap } from "lucide-react";
 const triggerLabels: Record<string, string> = {
   lead_signup: "Lead Signs Up",
   product_purchase: "Product Purchased",
+  tag_added: "Tag Added to Contact",
+  manual: "Manual Enrollment",
   time_delay: "Time Delay",
   date_time: "Date/Time",
   customer_action: "Customer Action",

@@ -609,7 +609,7 @@ The unsubscribe link will be added automatically."
                         No subscribed contacts found
                       </div>
                     ) : (
-                      filteredBroadcastContacts.slice(0, 100).map((contact: any) => (
+                      filteredBroadcastContacts.map((contact: any) => (
                         <div
                           key={contact._id}
                           className={cn(
@@ -638,11 +638,6 @@ The unsubscribe link will be added automatically."
                           </div>
                         </div>
                       ))
-                    )}
-                    {filteredBroadcastContacts && filteredBroadcastContacts.length > 100 && (
-                      <div className="py-2 text-center text-xs text-muted-foreground">
-                        Showing 100 of {filteredBroadcastContacts.length} contacts
-                      </div>
                     )}
                   </div>
                 </CardContent>
@@ -876,7 +871,7 @@ The unsubscribe link will be added automatically."
 
               {/* Mobile: Card-based layout */}
               <div className="space-y-2 md:hidden">
-                {filteredContacts.slice(0, 50).map((contact: any) => (
+                {filteredContacts.map((contact: any) => (
                   <Card
                     key={contact._id}
                     className={cn(
@@ -1022,7 +1017,7 @@ The unsubscribe link will be added automatically."
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredContacts.slice(0, 50).map((contact: any) => (
+                      {filteredContacts.map((contact: any) => (
                         <tr
                           key={contact._id}
                           className={cn(

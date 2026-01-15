@@ -69,6 +69,8 @@ const triggerValidator = v.object({
   type: v.union(
     v.literal("lead_signup"),
     v.literal("product_purchase"),
+    v.literal("tag_added"),
+    v.literal("manual"),
     v.literal("time_delay"),
     v.literal("date_time"),
     v.literal("customer_action")
@@ -411,6 +413,92 @@ export const triggerProductPurchaseWorkflows = internalMutation({
       console.log(
         `[Workflows] Enrolled ${args.customerEmail} in purchase workflow "${workflow.name}"`
       );
+    }
+
+    return null;
+  },
+});
+
+// Trigger workflows when a tag is added to a contact
+export const triggerTagAddedWorkflows = internalMutation({
+  args: {
+    storeId: v.string(),
+    contactId: v.id("emailContacts"),
+    tagId: v.id("emailTags"),
+    tagName: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const activeWorkflows = await ctx.db
+      .query("emailWorkflows")
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+      .filter((q) => q.eq(q.field("isActive"), true))
+      .collect();
+
+    // Filter workflows with tag_added trigger
+    // Optionally filter by specific tag if configured
+    const tagAddedWorkflows = activeWorkflows.filter((w) => {
+      if (w.trigger.type !== "tag_added") return false;
+      // If a specific tag is configured, check it matches
+      const configTagId = w.trigger.config?.tagId;
+      if (configTagId && configTagId !== args.tagId) return false;
+      return true;
+    });
+
+    if (tagAddedWorkflows.length === 0) {
+      console.log(`[Workflows] No active tag_added workflows for store ${args.storeId}`);
+      return null;
+    }
+
+    const contact = await ctx.db.get(args.contactId);
+    if (!contact) {
+      console.log(`[Workflows] Contact ${args.contactId} not found`);
+      return null;
+    }
+
+    const now = Date.now();
+
+    for (const workflow of tagAddedWorkflows) {
+      // Check if contact is already in this workflow
+      const existingExecution = await ctx.db
+        .query("workflowExecutions")
+        .withIndex("by_workflowId", (q) => q.eq("workflowId", workflow._id))
+        .filter((q) =>
+          q.and(
+            q.eq(q.field("contactId"), args.contactId),
+            q.or(q.eq(q.field("status"), "pending"), q.eq(q.field("status"), "running"))
+          )
+        )
+        .first();
+
+      if (existingExecution) {
+        console.log(`[Workflows] Contact ${contact.email} already in workflow ${workflow.name}`);
+        continue;
+      }
+
+      const firstNode = workflow.nodes.find((n: { type: string }) => n.type !== "trigger");
+
+      await ctx.db.insert("workflowExecutions", {
+        workflowId: workflow._id,
+        storeId: args.storeId,
+        contactId: args.contactId,
+        customerEmail: contact.email,
+        status: "pending",
+        currentNodeId: firstNode?.id || workflow.nodes[0]?.id,
+        scheduledFor: now,
+        executionData: {
+          triggerType: "tag_added",
+          tagId: args.tagId,
+          tagName: args.tagName,
+        },
+      });
+
+      await ctx.db.patch(workflow._id, {
+        totalExecutions: (workflow.totalExecutions || 0) + 1,
+        lastExecuted: now,
+      });
+
+      console.log(`[Workflows] Enrolled ${contact.email} in workflow "${workflow.name}" via tag "${args.tagName}"`);
     }
 
     return null;

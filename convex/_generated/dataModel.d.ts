@@ -4542,6 +4542,8 @@ export type DataModel = {
         type:
           | "lead_signup"
           | "product_purchase"
+          | "tag_added"
+          | "manual"
           | "time_delay"
           | "date_time"
           | "customer_action";

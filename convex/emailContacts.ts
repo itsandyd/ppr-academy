@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query, internalMutation } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 
 export const createContact = mutation({
@@ -245,6 +246,14 @@ export const addTagToContact = mutation({
         tagName: tag.name,
       },
       timestamp: Date.now(),
+    });
+
+    // Trigger any workflows that start when this tag is added
+    await ctx.runMutation(internal.emailWorkflows.triggerTagAddedWorkflows, {
+      storeId: contact.storeId,
+      contactId: args.contactId,
+      tagId: args.tagId,
+      tagName: tag.name,
     });
 
     return null;

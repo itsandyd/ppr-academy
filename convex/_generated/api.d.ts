@@ -9425,6 +9425,8 @@ export declare const api: {
           type:
             | "lead_signup"
             | "product_purchase"
+            | "tag_added"
+            | "manual"
             | "time_delay"
             | "date_time"
             | "customer_action";
@@ -9533,6 +9535,8 @@ export declare const api: {
           type:
             | "lead_signup"
             | "product_purchase"
+            | "tag_added"
+            | "manual"
             | "time_delay"
             | "date_time"
             | "customer_action";
@@ -19414,6 +19418,17 @@ export declare const internal: {
         productName?: string;
         productType?: string;
         storeId: string;
+      },
+      null
+    >;
+    triggerTagAddedWorkflows: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        contactId: Id<"emailContacts">;
+        storeId: string;
+        tagId: Id<"emailTags">;
+        tagName: string;
       },
       null
     >;
