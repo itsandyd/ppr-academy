@@ -188,10 +188,13 @@ export const getNodeExecutionCounts = query({
   args: { workflowId: v.id("emailWorkflows") },
   returns: v.any(),
   handler: async (ctx, args) => {
+    // Get all active executions (pending or running)
     const executions = await ctx.db
       .query("workflowExecutions")
       .withIndex("by_workflowId", (q) => q.eq("workflowId", args.workflowId))
-      .filter((q) => q.eq(q.field("status"), "pending"))
+      .filter((q) =>
+        q.or(q.eq(q.field("status"), "pending"), q.eq(q.field("status"), "running"))
+      )
       .collect();
 
     const counts: Record<string, number> = {};
