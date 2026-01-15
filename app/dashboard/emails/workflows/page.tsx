@@ -268,6 +268,8 @@ export default function WorkflowBuilderPage() {
 
   const contacts = useQuery(api.emailContacts.listContacts, storeId ? { storeId } : "skip");
 
+  const tags = useQuery(api.emailTags.listTags, storeId ? { storeId } : "skip");
+
   const nodeExecutionCounts = useQuery(
     api.emailWorkflows.getNodeExecutionCounts,
     workflowId ? { workflowId: workflowId as Id<"emailWorkflows"> } : "skip"
@@ -768,28 +770,129 @@ export default function WorkflowBuilderPage() {
                 )}
 
                 {selectedNode.type === "condition" && (
-                  <div className="space-y-2">
-                    <Label>Condition Type</Label>
-                    <Select
-                      value={selectedNode.data.conditionType || "opened_email"}
-                      onValueChange={(v) => updateNodeData(selectedNode.id, { conditionType: v })}
-                    >
-                      <SelectTrigger className="bg-white dark:bg-black">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white dark:bg-black">
-                        {conditionOptions.map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Condition Type</Label>
+                      <Select
+                        value={selectedNode.data.conditionType || "opened_email"}
+                        onValueChange={(v) => updateNodeData(selectedNode.id, { conditionType: v })}
+                      >
+                        <SelectTrigger className="bg-white dark:bg-black">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white dark:bg-black">
+                          {conditionOptions.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Has Tag - show tag selector */}
+                    {selectedNode.data.conditionType === "has_tag" && (
+                      <div className="space-y-2">
+                        <Label>Select Tag</Label>
+                        <Select
+                          value={selectedNode.data.tagId || ""}
+                          onValueChange={(v) => updateNodeData(selectedNode.id, { tagId: v })}
+                        >
+                          <SelectTrigger className="bg-white dark:bg-black">
+                            <SelectValue placeholder="Choose a tag..." />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white dark:bg-black">
+                            {tags?.map((tag: { _id: string; name: string; color?: string }) => (
+                              <SelectItem key={tag._id} value={tag._id}>
+                                <div className="flex items-center gap-2">
+                                  <div
+                                    className="h-2 w-2 rounded-full"
+                                    style={{ backgroundColor: tag.color || "#6b7280" }}
+                                  />
+                                  {tag.name}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {/* Opened Email - show email selector */}
+                    {selectedNode.data.conditionType === "opened_email" && (
+                      <div className="space-y-2">
+                        <Label>Which Email</Label>
+                        <Select
+                          value={selectedNode.data.emailNodeId || "any"}
+                          onValueChange={(v) => updateNodeData(selectedNode.id, { emailNodeId: v })}
+                        >
+                          <SelectTrigger className="bg-white dark:bg-black">
+                            <SelectValue placeholder="Select email..." />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white dark:bg-black">
+                            <SelectItem value="any">Any previous email</SelectItem>
+                            {nodes
+                              .filter((n) => n.type === "email")
+                              .map((emailNode) => (
+                                <SelectItem key={emailNode.id} value={emailNode.id}>
+                                  {emailNode.data?.subject || `Email (${emailNode.id})`}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {/* Clicked Link - show link input */}
+                    {selectedNode.data.conditionType === "clicked_link" && (
+                      <div className="space-y-2">
+                        <Label>Link URL (optional)</Label>
+                        <Input
+                          value={selectedNode.data.linkUrl || ""}
+                          onChange={(e) => updateNodeData(selectedNode.id, { linkUrl: e.target.value })}
+                          placeholder="Leave empty for any link"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Leave empty to match any clicked link, or enter a specific URL to match.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Time Based - show time options */}
+                    {selectedNode.data.conditionType === "time_based" && (
+                      <div className="space-y-2">
+                        <Label>Time Condition</Label>
+                        <Select
+                          value={selectedNode.data.timeCondition || "after_hours"}
+                          onValueChange={(v) => updateNodeData(selectedNode.id, { timeCondition: v })}
+                        >
+                          <SelectTrigger className="bg-white dark:bg-black">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white dark:bg-black">
+                            <SelectItem value="after_hours">After X hours since enrollment</SelectItem>
+                            <SelectItem value="after_days">After X days since enrollment</SelectItem>
+                            <SelectItem value="day_of_week">On specific day of week</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {(selectedNode.data.timeCondition === "after_hours" ||
+                          selectedNode.data.timeCondition === "after_days") && (
+                          <Input
+                            type="number"
+                            min="1"
+                            value={selectedNode.data.timeValue || 24}
+                            onChange={(e) =>
+                              updateNodeData(selectedNode.id, { timeValue: parseInt(e.target.value) || 1 })
+                            }
+                          />
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
                 {selectedNode.type === "action" && (
-                  <>
+                  <div className="space-y-4">
                     <div className="space-y-2">
                       <Label>Action Type</Label>
                       <Select
@@ -808,15 +911,49 @@ export default function WorkflowBuilderPage() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div className="space-y-2">
-                      <Label>Value</Label>
-                      <Input
-                        value={selectedNode.data.value || ""}
-                        onChange={(e) => updateNodeData(selectedNode.id, { value: e.target.value })}
-                        placeholder="Tag name, list name, etc."
-                      />
-                    </div>
-                  </>
+
+                    {/* Tag selector for add_tag and remove_tag */}
+                    {(selectedNode.data.actionType === "add_tag" ||
+                      selectedNode.data.actionType === "remove_tag") && (
+                      <div className="space-y-2">
+                        <Label>Select Tag</Label>
+                        <Select
+                          value={selectedNode.data.tagId || ""}
+                          onValueChange={(v) => updateNodeData(selectedNode.id, { tagId: v })}
+                        >
+                          <SelectTrigger className="bg-white dark:bg-black">
+                            <SelectValue placeholder="Choose a tag..." />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white dark:bg-black">
+                            {tags?.map((tag: { _id: string; name: string; color?: string }) => (
+                              <SelectItem key={tag._id} value={tag._id}>
+                                <div className="flex items-center gap-2">
+                                  <div
+                                    className="h-2 w-2 rounded-full"
+                                    style={{ backgroundColor: tag.color || "#6b7280" }}
+                                  />
+                                  {tag.name}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {/* Text input for other action types */}
+                    {selectedNode.data.actionType !== "add_tag" &&
+                      selectedNode.data.actionType !== "remove_tag" && (
+                        <div className="space-y-2">
+                          <Label>Value</Label>
+                          <Input
+                            value={selectedNode.data.value || ""}
+                            onChange={(e) => updateNodeData(selectedNode.id, { value: e.target.value })}
+                            placeholder="List name, field value, etc."
+                          />
+                        </div>
+                      )}
+                  </div>
                 )}
 
                 {selectedNode.type === "webhook" && (
