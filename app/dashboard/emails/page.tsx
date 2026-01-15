@@ -83,6 +83,8 @@ export default function EmailCampaignsPage() {
   const [activeTab, setActiveTab] = useState("broadcast");
   const [isCreateContactOpen, setIsCreateContactOpen] = useState(false);
   const [isCreateTagOpen, setIsCreateTagOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTagFilter, setSelectedTagFilter] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -90,6 +92,7 @@ export default function EmailCampaignsPage() {
 
   const [newContact, setNewContact] = useState({ email: "", firstName: "", lastName: "" });
   const [newTag, setNewTag] = useState({ name: "", color: "#3b82f6", description: "" });
+  const [editingTag, setEditingTag] = useState<{ id: string; name: string; color: string; description: string } | null>(null);
 
   const storeId = user?.id ?? "";
 
@@ -116,7 +119,9 @@ export default function EmailCampaignsPage() {
   const deleteContact = useMutation(api.emailContacts.deleteContact);
   const syncCustomers = useMutation(api.emailContacts.syncCustomersToEmailContacts);
   const createTag = useMutation(api.emailTags.createTag);
+  const updateTag = useMutation(api.emailTags.updateTag);
   const deleteTag = useMutation(api.emailTags.deleteTag);
+  const importContacts = useMutation(api.emailContacts.importContacts);
   const enrollContact = useMutation(api.emailWorkflows.enrollContactInWorkflow);
   const bulkEnrollContacts = useMutation(api.emailWorkflows.bulkEnrollContactsInWorkflow);
   const bulkAddTag = useMutation(api.emailContacts.bulkAddTagToContacts);
@@ -211,6 +216,80 @@ export default function EmailCampaignsPage() {
       toast({ title: "Tag deleted" });
     } catch {
       toast({ title: "Failed to delete tag", variant: "destructive" });
+    }
+  };
+
+  const handleUpdateTag = async () => {
+    if (!editingTag || !editingTag.name.trim()) {
+      toast({ title: "Tag name required", variant: "destructive" });
+      return;
+    }
+
+    try {
+      await updateTag({
+        tagId: editingTag.id as any,
+        name: editingTag.name,
+        color: editingTag.color,
+        description: editingTag.description || undefined,
+      });
+
+      toast({ title: "Tag updated!" });
+      setEditingTag(null);
+    } catch {
+      toast({ title: "Failed to update tag", variant: "destructive" });
+    }
+  };
+
+  const handleImportContacts = async (file: File) => {
+    setIsImporting(true);
+    try {
+      const text = await file.text();
+      const lines = text.split("\n").filter((line) => line.trim());
+
+      if (lines.length === 0) {
+        toast({ title: "Empty file", variant: "destructive" });
+        return;
+      }
+
+      // Parse header to find column indices
+      const header = lines[0].toLowerCase().split(",").map((h) => h.trim());
+      const emailIdx = header.findIndex((h) => h === "email" || h === "e-mail" || h === "email address");
+      const firstNameIdx = header.findIndex((h) => h === "firstname" || h === "first name" || h === "first_name" || h === "name");
+      const lastNameIdx = header.findIndex((h) => h === "lastname" || h === "last name" || h === "last_name");
+
+      if (emailIdx === -1) {
+        toast({ title: "No email column found in CSV", description: "Make sure your CSV has an 'email' column", variant: "destructive" });
+        return;
+      }
+
+      const contacts = [];
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(",").map((v) => v.trim().replace(/^["']|["']$/g, ""));
+        const email = values[emailIdx];
+        if (email) {
+          contacts.push({
+            email,
+            firstName: firstNameIdx >= 0 ? values[firstNameIdx] : undefined,
+            lastName: lastNameIdx >= 0 ? values[lastNameIdx] : undefined,
+          });
+        }
+      }
+
+      if (contacts.length === 0) {
+        toast({ title: "No valid contacts found", variant: "destructive" });
+        return;
+      }
+
+      const result = await importContacts({ storeId, contacts });
+      toast({
+        title: "Import Complete",
+        description: `Imported ${result.imported}, skipped ${result.skipped} duplicates, ${result.errors} errors`,
+      });
+      setIsImportOpen(false);
+    } catch (error: any) {
+      toast({ title: "Import failed", description: error.message, variant: "destructive" });
+    } finally {
+      setIsImporting(false);
     }
   };
 
@@ -779,10 +858,51 @@ The unsubscribe link will be added automatically."
                   {isRetagging ? "Re-tagging..." : "Re-tag All"}
                 </span>
               </Button>
-              <Button variant="outline" size="sm" className="gap-2 md:h-10 md:px-4">
-                <Upload className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                <span className="hidden sm:inline">Import</span>
-              </Button>
+              <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2 md:h-10 md:px-4">
+                    <Upload className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                    <span className="hidden sm:inline">Import</span>
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="bg-white dark:bg-black">
+                  <DialogHeader>
+                    <DialogTitle>Import Contacts</DialogTitle>
+                    <DialogDescription>
+                      Upload a CSV file with contacts. The file should have an &quot;email&quot; column, and optionally &quot;firstName&quot; and &quot;lastName&quot; columns.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="csv-file">CSV File</Label>
+                      <Input
+                        id="csv-file"
+                        type="file"
+                        accept=".csv"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleImportContacts(file);
+                        }}
+                        disabled={isImporting}
+                      />
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      <p className="font-medium">Expected format:</p>
+                      <code className="mt-1 block rounded bg-muted p-2">
+                        email,firstName,lastName<br />
+                        john@example.com,John,Doe<br />
+                        jane@example.com,Jane,Smith
+                      </code>
+                    </div>
+                  </div>
+                  {isImporting && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <RefreshCw className="h-4 w-4 animate-spin" />
+                      Importing contacts...
+                    </div>
+                  )}
+                </DialogContent>
+              </Dialog>
               <Dialog open={isCreateContactOpen} onOpenChange={setIsCreateContactOpen}>
                 <DialogTrigger asChild>
                   <Button size="sm" className="gap-2 md:h-10 md:px-4">
@@ -1509,7 +1629,16 @@ The unsubscribe link will be added automatically."
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="bg-white dark:bg-black">
-                          <DropdownMenuItem>Edit Tag</DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => setEditingTag({
+                              id: tag._id,
+                              name: tag.name,
+                              color: tag.color || "#3b82f6",
+                              description: tag.description || "",
+                            })}
+                          >
+                            Edit Tag
+                          </DropdownMenuItem>
                           <DropdownMenuItem
                             onClick={() => {
                               setSelectedTagFilter(tag._id);
@@ -1538,6 +1667,69 @@ The unsubscribe link will be added automatically."
               ))}
             </div>
           )}
+
+          {/* Edit Tag Dialog */}
+          <Dialog open={!!editingTag} onOpenChange={(open) => !open && setEditingTag(null)}>
+            <DialogContent className="bg-white dark:bg-black">
+              <DialogHeader>
+                <DialogTitle>Edit Tag</DialogTitle>
+                <DialogDescription>Update the tag details.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-tag-name">Name</Label>
+                  <Input
+                    id="edit-tag-name"
+                    value={editingTag?.name || ""}
+                    onChange={(e) =>
+                      setEditingTag((prev) => prev ? { ...prev, name: e.target.value } : null)
+                    }
+                    placeholder="e.g., VIP Customer"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-tag-color">Color</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="edit-tag-color"
+                      type="color"
+                      value={editingTag?.color || "#3b82f6"}
+                      onChange={(e) =>
+                        setEditingTag((prev) => prev ? { ...prev, color: e.target.value } : null)
+                      }
+                      className="h-10 w-20 cursor-pointer p-1"
+                    />
+                    <Input
+                      value={editingTag?.color || "#3b82f6"}
+                      onChange={(e) =>
+                        setEditingTag((prev) => prev ? { ...prev, color: e.target.value } : null)
+                      }
+                      className="flex-1"
+                      placeholder="#3b82f6"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-tag-description">Description (optional)</Label>
+                  <Textarea
+                    id="edit-tag-description"
+                    value={editingTag?.description || ""}
+                    onChange={(e) =>
+                      setEditingTag((prev) => prev ? { ...prev, description: e.target.value } : null)
+                    }
+                    placeholder="What is this tag used for?"
+                    rows={2}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setEditingTag(null)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleUpdateTag}>Save Changes</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
         <TabsContent value="automations" className="mt-4 space-y-4 md:mt-6">

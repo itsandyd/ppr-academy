@@ -374,6 +374,82 @@ export const bulkAddTagToContacts = mutation({
   },
 });
 
+/**
+ * Bulk import contacts from CSV data
+ */
+export const importContacts = mutation({
+  args: {
+    storeId: v.string(),
+    contacts: v.array(
+      v.object({
+        email: v.string(),
+        firstName: v.optional(v.string()),
+        lastName: v.optional(v.string()),
+      })
+    ),
+  },
+  returns: v.object({
+    imported: v.number(),
+    skipped: v.number(),
+    errors: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    let imported = 0;
+    let skipped = 0;
+    let errors = 0;
+
+    const now = Date.now();
+
+    // Get existing emails to check for duplicates
+    const existingContacts = await ctx.db
+      .query("emailContacts")
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+      .collect();
+    const existingEmails = new Set(existingContacts.map((c) => c.email.toLowerCase()));
+
+    for (const contact of args.contacts) {
+      // Validate email
+      const email = contact.email?.trim().toLowerCase();
+      if (!email || !email.includes("@")) {
+        errors++;
+        continue;
+      }
+
+      // Skip duplicates
+      if (existingEmails.has(email)) {
+        skipped++;
+        continue;
+      }
+
+      // Add to set to prevent duplicates within this import batch
+      existingEmails.add(email);
+
+      try {
+        await ctx.db.insert("emailContacts", {
+          storeId: args.storeId,
+          email,
+          firstName: contact.firstName?.trim() || undefined,
+          lastName: contact.lastName?.trim() || undefined,
+          status: "subscribed",
+          subscribedAt: now,
+          tagIds: [],
+          source: "import",
+          emailsSent: 0,
+          emailsOpened: 0,
+          emailsClicked: 0,
+          createdAt: now,
+          updatedAt: now,
+        });
+        imported++;
+      } catch {
+        errors++;
+      }
+    }
+
+    return { imported, skipped, errors };
+  },
+});
+
 export const getContactActivity = query({
   args: {
     contactId: v.id("emailContacts"),

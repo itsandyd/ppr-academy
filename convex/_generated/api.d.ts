@@ -8446,6 +8446,19 @@ export declare const api: {
         unsubscribed: number;
       }
     >;
+    importContacts: FunctionReference<
+      "mutation",
+      "public",
+      {
+        contacts: Array<{
+          email: string;
+          firstName?: string;
+          lastName?: string;
+        }>;
+        storeId: string;
+      },
+      { errors: number; imported: number; skipped: number }
+    >;
     listContacts: FunctionReference<
       "query",
       "public",
