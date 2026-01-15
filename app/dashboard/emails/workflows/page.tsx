@@ -38,11 +38,61 @@ import {
   UserPlus,
   Search,
   Power,
+  Users,
+  Clock,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import NodeSidebar from "./components/NodeSidebar";
 import WorkflowCanvas from "./components/WorkflowCanvas";
+
+// Component to show contacts waiting at a node
+function ContactsAtNodeList({
+  workflowId,
+  nodeId,
+}: {
+  workflowId: Id<"emailWorkflows">;
+  nodeId: string;
+}) {
+  const contacts = useQuery(
+    api.emailWorkflows.getContactsAtNode,
+    workflowId ? { workflowId, nodeId } : "skip"
+  );
+
+  if (!contacts || contacts.length === 0) {
+    return <p className="text-xs text-muted-foreground">No contacts waiting</p>;
+  }
+
+  return (
+    <div className="max-h-[150px] space-y-1 overflow-y-auto">
+      {contacts.map((contact) => (
+        <div
+          key={contact.executionId}
+          className="flex items-center justify-between rounded bg-white px-2 py-1 text-xs dark:bg-zinc-800"
+        >
+          <div className="min-w-0 flex-1">
+            <div className="truncate font-medium">{contact.name || contact.email}</div>
+            {contact.name && (
+              <div className="truncate text-muted-foreground">{contact.email}</div>
+            )}
+          </div>
+          {contact.scheduledFor && (
+            <div className="ml-2 flex items-center gap-1 text-muted-foreground">
+              <Clock className="h-3 w-3" />
+              <span>
+                {new Date(contact.scheduledFor).toLocaleDateString()}{" "}
+                {new Date(contact.scheduledFor).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </span>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 type TriggerType =
   | "lead_signup"
@@ -639,38 +689,54 @@ export default function WorkflowBuilderPage() {
                 )}
 
                 {selectedNode.type === "delay" && (
-                  <div className="flex gap-2">
-                    <div className="flex-1 space-y-2">
-                      <Label>Duration</Label>
-                      <Input
-                        type="number"
-                        min="1"
-                        value={selectedNode.data.delayValue || 1}
-                        onChange={(e) =>
-                          updateNodeData(selectedNode.id, {
-                            delayValue: parseInt(e.target.value) || 1,
-                          })
-                        }
-                      />
+                  <div className="space-y-4">
+                    <div className="flex gap-2">
+                      <div className="flex-1 space-y-2">
+                        <Label>Duration</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={selectedNode.data.delayValue || 1}
+                          onChange={(e) =>
+                            updateNodeData(selectedNode.id, {
+                              delayValue: parseInt(e.target.value) || 1,
+                            })
+                          }
+                        />
+                      </div>
+                      <div className="flex-1 space-y-2">
+                        <Label>Unit</Label>
+                        <Select
+                          value={selectedNode.data.delayUnit || "hours"}
+                          onValueChange={(v) => updateNodeData(selectedNode.id, { delayUnit: v })}
+                        >
+                          <SelectTrigger className="bg-white dark:bg-black">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white dark:bg-black">
+                            {delayUnits.map((opt) => (
+                              <SelectItem key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
-                    <div className="flex-1 space-y-2">
-                      <Label>Unit</Label>
-                      <Select
-                        value={selectedNode.data.delayUnit || "hours"}
-                        onValueChange={(v) => updateNodeData(selectedNode.id, { delayUnit: v })}
-                      >
-                        <SelectTrigger className="bg-white dark:bg-black">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-white dark:bg-black">
-                          {delayUnits.map((opt) => (
-                            <SelectItem key={opt.value} value={opt.value}>
-                              {opt.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+
+                    {/* Contacts waiting at this delay */}
+                    {selectedNode.data.waitingCount > 0 && (
+                      <div className="rounded-md border bg-orange-50 p-3 dark:bg-orange-900/20">
+                        <div className="mb-2 flex items-center gap-2 text-sm font-medium text-orange-700 dark:text-orange-300">
+                          <Users className="h-4 w-4" />
+                          {selectedNode.data.waitingCount} contact{selectedNode.data.waitingCount !== 1 ? "s" : ""} waiting
+                        </div>
+                        <ContactsAtNodeList
+                          workflowId={workflowId as Id<"emailWorkflows">}
+                          nodeId={selectedNode.id}
+                        />
+                      </div>
+                    )}
                   </div>
                 )}
 

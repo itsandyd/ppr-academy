@@ -9472,6 +9472,19 @@ export declare const api: {
       { contactId: Id<"emailContacts">; workflowId: Id<"emailWorkflows"> },
       Id<"workflowExecutions">
     >;
+    getContactsAtNode: FunctionReference<
+      "query",
+      "public",
+      { nodeId: string; workflowId: Id<"emailWorkflows"> },
+      Array<{
+        contactId?: Id<"emailContacts">;
+        email: string;
+        executionId: Id<"workflowExecutions">;
+        name?: string;
+        scheduledFor?: number;
+        startedAt?: number;
+      }>
+    >;
     getContactWorkflowStatus: FunctionReference<
       "query",
       "public",

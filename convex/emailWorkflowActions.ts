@@ -83,16 +83,27 @@ export const executeWorkflowNode = internalAction({
       // Send email
       const templateId = currentNode.data?.templateId;
       const customSubject = currentNode.data?.subject;
-      const customContent = currentNode.data?.content;
+      // Check both 'content' and 'body' fields (editor might use either)
+      const customContent = currentNode.data?.content || currentNode.data?.body;
+
+      console.log(`[EmailWorkflows] Email node data:`, JSON.stringify({
+        templateId,
+        subject: customSubject,
+        hasContent: !!customContent,
+        allData: currentNode.data,
+      }));
 
       if (templateId) {
+        console.log(`[EmailWorkflows] Sending template email ${templateId} to ${execution.customerEmail}`);
         await ctx.runAction(internal.emailWorkflowActions.sendWorkflowEmail, {
           contactId: execution.contactId,
           templateId,
           storeId: execution.storeId,
           customerEmail: execution.customerEmail,
         });
+        console.log(`[EmailWorkflows] Template email sent successfully`);
       } else if (customSubject && customContent) {
+        console.log(`[EmailWorkflows] Sending custom email "${customSubject}" to ${execution.customerEmail}`);
         await ctx.runAction(internal.emailWorkflowActions.sendCustomWorkflowEmail, {
           contactId: execution.contactId,
           subject: customSubject,
@@ -100,6 +111,9 @@ export const executeWorkflowNode = internalAction({
           storeId: execution.storeId,
           customerEmail: execution.customerEmail,
         });
+        console.log(`[EmailWorkflows] Custom email sent successfully`);
+      } else {
+        console.error(`[EmailWorkflows] Email node has no template or custom content! Node data:`, currentNode.data);
       }
     } else if (currentNode.type === "delay") {
       // Delay is handled by scheduling - just log

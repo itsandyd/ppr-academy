@@ -207,15 +207,84 @@ export const getNodeExecutionCounts = query({
   },
 });
 
+export const getContactsAtNode = query({
+  args: {
+    workflowId: v.id("emailWorkflows"),
+    nodeId: v.string(),
+  },
+  returns: v.array(
+    v.object({
+      executionId: v.id("workflowExecutions"),
+      contactId: v.optional(v.id("emailContacts")),
+      email: v.string(),
+      name: v.optional(v.string()),
+      scheduledFor: v.optional(v.number()),
+      startedAt: v.optional(v.number()),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const executions = await ctx.db
+      .query("workflowExecutions")
+      .withIndex("by_workflowId", (q) => q.eq("workflowId", args.workflowId))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("currentNodeId"), args.nodeId),
+          q.or(q.eq(q.field("status"), "pending"), q.eq(q.field("status"), "running"))
+        )
+      )
+      .collect();
+
+    const results = [];
+    for (const exec of executions) {
+      let name: string | undefined;
+      if (exec.contactId) {
+        const contact = await ctx.db.get(exec.contactId);
+        if (contact) {
+          name = contact.firstName
+            ? `${contact.firstName} ${contact.lastName || ""}`.trim()
+            : undefined;
+        }
+      }
+      results.push({
+        executionId: exec._id,
+        contactId: exec.contactId,
+        email: exec.customerEmail,
+        name,
+        scheduledFor: exec.scheduledFor,
+        startedAt: exec.startedAt,
+      });
+    }
+    return results;
+  },
+});
+
 export const listWorkflows = query({
   args: { storeId: v.string() },
   returns: v.array(v.any()),
   handler: async (ctx, args) => {
-    return await ctx.db
+    // First try to find by storeId (Clerk user ID)
+    const workflowsByStoreId = await ctx.db
       .query("emailWorkflows")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .order("desc")
       .collect();
+
+    // Also check by userId in case storeId was stored incorrectly
+    const workflowsByUserId = await ctx.db
+      .query("emailWorkflows")
+      .withIndex("by_userId", (q) => q.eq("userId", args.storeId))
+      .order("desc")
+      .collect();
+
+    // Merge and deduplicate
+    const allWorkflows = [...workflowsByStoreId];
+    for (const w of workflowsByUserId) {
+      if (!allWorkflows.find((existing) => existing._id === w._id)) {
+        allWorkflows.push(w);
+      }
+    }
+
+    return allWorkflows.sort((a, b) => b._creationTime - a._creationTime);
   },
 });
 
@@ -578,6 +647,11 @@ export const enrollContactInWorkflow = mutation({
       executionData: { enrolledManually: true },
     });
 
+    // Trigger immediate execution instead of waiting for cron
+    await ctx.scheduler.runAfter(0, internal.emailWorkflowActions.executeWorkflowNode, {
+      executionId,
+    });
+
     await ctx.db.patch(args.workflowId, {
       totalExecutions: (workflow.totalExecutions || 0) + 1,
       lastExecuted: now,
@@ -633,7 +707,7 @@ export const bulkEnrollContactsInWorkflow = mutation({
         continue;
       }
 
-      await ctx.db.insert("workflowExecutions", {
+      const executionId = await ctx.db.insert("workflowExecutions", {
         workflowId: args.workflowId,
         storeId: workflow.storeId,
         contactId,
@@ -642,6 +716,11 @@ export const bulkEnrollContactsInWorkflow = mutation({
         currentNodeId: firstNode?.id || triggerNode?.id,
         scheduledFor: now,
         executionData: { enrolledManually: true },
+      });
+
+      // Trigger immediate execution instead of waiting for cron
+      await ctx.scheduler.runAfter(0, internal.emailWorkflowActions.executeWorkflowNode, {
+        executionId,
       });
 
       enrolled++;
