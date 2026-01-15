@@ -8472,6 +8472,12 @@ export declare const api: {
       },
       { contacts: Array<any>; hasMore: boolean; nextCursor: string | null }
     >;
+    recalculateContactStats: FunctionReference<
+      "mutation",
+      "public",
+      { storeId: string },
+      { message: string; success: boolean }
+    >;
     removeTagFromContact: FunctionReference<
       "mutation",
       "public",
@@ -18987,6 +18993,29 @@ export declare const internal: {
     updateReputationScores: FunctionReference<"mutation", "internal", {}, null>;
   };
   emailContacts: {
+    importContactsBatchInternal: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        contacts: Array<{
+          email: string;
+          firstName?: string;
+          lastName?: string;
+        }>;
+        storeId: string;
+      },
+      { inserted: number }
+    >;
+    incrementContactStats: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        count: number;
+        status: "subscribed" | "unsubscribed" | "bounced" | "complained";
+        storeId: string;
+      },
+      null
+    >;
     recordEmailClicked: FunctionReference<
       "mutation",
       "internal",
@@ -19011,6 +19040,12 @@ export declare const internal: {
         contactId: Id<"emailContacts">;
         emailSubject?: string;
       },
+      null
+    >;
+    refreshContactStats: FunctionReference<
+      "mutation",
+      "internal",
+      { storeId: string },
       null
     >;
     upsertFromCustomer: FunctionReference<

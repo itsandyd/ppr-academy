@@ -146,9 +146,11 @@ export default function EmailCampaignsPage() {
   const deleteWorkflow = useMutation(api.emailWorkflows.deleteWorkflow);
   const toggleWorkflowActive = useMutation(api.emailWorkflows.toggleWorkflowActive);
   const retagAllContacts = useMutation(api.emailContactSync.retagAllContacts);
+  const recalculateStats = useMutation(api.emailContacts.recalculateContactStats);
 
   const [isSyncing, setIsSyncing] = useState(false);
   const [isRetagging, setIsRetagging] = useState(false);
+  const [isRecalculating, setIsRecalculating] = useState(false);
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
   const [isEnrolling, setIsEnrolling] = useState(false);
   const [isAddingTag, setIsAddingTag] = useState(false);
@@ -297,8 +299,8 @@ export default function EmailCampaignsPage() {
         return;
       }
 
-      // Batch import - smaller batches to avoid mutation timeout
-      const BATCH_SIZE = 200;
+      // Batch import - small batches to avoid mutation timeout (inserts only, no reads)
+      const BATCH_SIZE = 50;
       let totalImported = 0;
       let totalSkipped = 0;
       let totalErrors = 0;
@@ -383,6 +385,25 @@ export default function EmailCampaignsPage() {
       });
     } finally {
       setIsRetagging(false);
+    }
+  };
+
+  const handleRecalculateStats = async () => {
+    setIsRecalculating(true);
+    try {
+      const result = await recalculateStats({ storeId });
+      toast({
+        title: "Stats Recalculated",
+        description: result.message,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Failed to recalculate stats",
+        description: error.message || "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRecalculating(false);
     }
   };
 
@@ -915,6 +936,20 @@ The unsubscribe link will be added automatically."
                 />
                 <span className="hidden sm:inline">
                   {isRetagging ? "Re-tagging..." : "Re-tag All"}
+                </span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 md:h-10 md:px-4"
+                onClick={handleRecalculateStats}
+                disabled={isRecalculating}
+              >
+                <RefreshCw
+                  className={cn("h-3.5 w-3.5 md:h-4 md:w-4", isRecalculating && "animate-spin")}
+                />
+                <span className="hidden sm:inline">
+                  {isRecalculating ? "Calculating..." : "Recalculate Stats"}
                 </span>
               </Button>
               <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>

@@ -3941,6 +3941,36 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  emailContactStats: {
+    document: {
+      bouncedCount: number;
+      complainedCount: number;
+      storeId: string;
+      subscribedCount: number;
+      totalContacts: number;
+      unsubscribedCount: number;
+      updatedAt: number;
+      _id: Id<"emailContactStats">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "bouncedCount"
+      | "complainedCount"
+      | "storeId"
+      | "subscribedCount"
+      | "totalContacts"
+      | "unsubscribedCount"
+      | "updatedAt";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_storeId: ["storeId", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   emailCreatorStats: {
     document: {
       bounceRate: number;

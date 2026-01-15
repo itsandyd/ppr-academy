@@ -4741,6 +4741,17 @@ export default defineSchema({
     .index("by_subscribedAt", ["subscribedAt"])
     .index("by_engagementScore", ["engagementScore"]),
 
+  // Email Contact Stats - Aggregated counts maintained separately for performance
+  emailContactStats: defineTable({
+    storeId: v.string(),
+    totalContacts: v.number(),
+    subscribedCount: v.number(),
+    unsubscribedCount: v.number(),
+    bouncedCount: v.number(),
+    complainedCount: v.number(),
+    updatedAt: v.number(),
+  }).index("by_storeId", ["storeId"]),
+
   // Contact Activity Log - Track all contact interactions
   emailContactActivity: defineTable({
     contactId: v.id("emailContacts"),
