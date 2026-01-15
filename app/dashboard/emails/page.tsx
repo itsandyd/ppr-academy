@@ -262,7 +262,7 @@ export default function EmailCampaignsPage() {
         return;
       }
 
-      const contacts = [];
+      const contacts: { email: string; firstName?: string; lastName?: string }[] = [];
       for (let i = 1; i < lines.length; i++) {
         const values = lines[i].split(",").map((v) => v.trim().replace(/^["']|["']$/g, ""));
         const email = values[emailIdx];
@@ -280,10 +280,48 @@ export default function EmailCampaignsPage() {
         return;
       }
 
-      const result = await importContacts({ storeId, contacts });
+      // Batch import - Convex has 8192 array limit
+      const BATCH_SIZE = 5000;
+      let totalImported = 0;
+      let totalSkipped = 0;
+      let totalErrors = 0;
+      const batches = Math.ceil(contacts.length / BATCH_SIZE);
+
+      toast({
+        title: "Importing...",
+        description: `Processing ${contacts.length} contacts in ${batches} batch${batches > 1 ? "es" : ""}`,
+      });
+
+      for (let i = 0; i < contacts.length; i += BATCH_SIZE) {
+        const batch = contacts.slice(i, i + BATCH_SIZE);
+        const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+
+        try {
+          const result = await importContacts({ storeId, contacts: batch });
+          totalImported += result.imported;
+          totalSkipped += result.skipped;
+          totalErrors += result.errors;
+
+          // Update progress
+          if (batches > 1) {
+            toast({
+              title: `Batch ${batchNum}/${batches} complete`,
+              description: `Imported ${result.imported}, skipped ${result.skipped}`,
+            });
+          }
+        } catch (error: any) {
+          totalErrors += batch.length;
+          toast({
+            title: `Batch ${batchNum} failed`,
+            description: error.message,
+            variant: "destructive",
+          });
+        }
+      }
+
       toast({
         title: "Import Complete",
-        description: `Imported ${result.imported}, skipped ${result.skipped} duplicates, ${result.errors} errors`,
+        description: `Imported ${totalImported}, skipped ${totalSkipped} duplicates, ${totalErrors} errors`,
       });
       setIsImportOpen(false);
     } catch (error: any) {
