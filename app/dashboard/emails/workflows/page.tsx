@@ -170,11 +170,12 @@ export default function WorkflowBuilderPage() {
     api.stores.getUserStore,
     user?.id ? { userId: user.id } : "skip"
   ) as { _id: Id<"stores">; plan?: string } | null | undefined;
-  const storeId = store?._id;
+  // Use Clerk user ID for storeId since that's what emailContacts uses
+  const storeId = user?.id || "";
 
   // Check if user has access to automations feature
   const { hasAccess, isLoading: featureLoading, UpgradePromptComponent } = useFeatureAccess(
-    storeId,
+    store?._id,
     "automations"
   );
 
