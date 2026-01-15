@@ -167,37 +167,59 @@ export const listContacts = query({
     ),
     tagId: v.optional(v.id("emailTags")),
     limit: v.optional(v.number()),
-    offset: v.optional(v.number()),
+    cursor: v.optional(v.string()), // Cursor for pagination (contact ID)
   },
   returns: v.object({
     contacts: v.array(v.any()),
-    totalCount: v.number(),
+    nextCursor: v.union(v.string(), v.null()),
     hasMore: v.boolean(),
   }),
   handler: async (ctx, args) => {
-    const limit = Math.min(args.limit || 100, 500); // Max 500 per page
-    const offset = args.offset || 0;
+    const limit = Math.min(args.limit || 100, 200); // Max 200 per page to stay under read limits
 
-    // First, get total count (without fetching all data)
-    let allContacts = await ctx.db
-      .query("emailContacts")
-      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
-
-    // Apply filters
+    // Build query based on filters
+    let query;
     if (args.status) {
-      allContacts = allContacts.filter((c) => c.status === args.status);
+      // Use compound index for status filtering
+      const status = args.status; // Capture for TypeScript narrowing
+      query = ctx.db
+        .query("emailContacts")
+        .withIndex("by_storeId_and_status", (q) =>
+          q.eq("storeId", args.storeId).eq("status", status)
+        );
+    } else {
+      query = ctx.db
+        .query("emailContacts")
+        .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId));
     }
 
+    // For tag filtering, we need to scan and filter manually
+    // Fetch extra to account for filtering + check hasMore
+    const fetchLimit = args.tagId ? limit * 5 : limit + 1;
+
+    let contacts = await query.order("desc").take(fetchLimit);
+
+    // Apply cursor - skip contacts until we find the cursor
+    if (args.cursor) {
+      const cursorIndex = contacts.findIndex((c) => c._id === args.cursor);
+      if (cursorIndex >= 0) {
+        contacts = contacts.slice(cursorIndex + 1);
+      }
+    }
+
+    // Filter by tag if needed
     if (args.tagId) {
-      allContacts = allContacts.filter((c) => c.tagIds.includes(args.tagId as Id<"emailTags">));
+      contacts = contacts.filter((c) => c.tagIds.includes(args.tagId as Id<"emailTags">));
     }
 
-    const totalCount = allContacts.length;
+    // Determine hasMore and trim to limit
+    const hasMore = contacts.length > limit;
+    const paginatedContacts = contacts.slice(0, limit);
+    const nextCursor = paginatedContacts.length > 0
+      ? paginatedContacts[paginatedContacts.length - 1]._id
+      : null;
 
-    // Apply pagination
-    const paginatedContacts = allContacts.slice(offset, offset + limit);
-
+    // Resolve tags for display
     const tagsCache: Record<string, { _id: Id<"emailTags">; name: string; color?: string } | null> =
       {};
 
@@ -206,7 +228,8 @@ export const listContacts = query({
         const tags = await Promise.all(
           contact.tagIds.map(async (tagId) => {
             if (tagsCache[tagId] === undefined) {
-              tagsCache[tagId] = await ctx.db.get(tagId);
+              const tag = await ctx.db.get(tagId) as { _id: Id<"emailTags">; name: string; color?: string } | null;
+              tagsCache[tagId] = tag;
             }
             return tagsCache[tagId];
           })
@@ -220,8 +243,8 @@ export const listContacts = query({
 
     return {
       contacts: contactsWithTags,
-      totalCount,
-      hasMore: offset + limit < totalCount,
+      nextCursor,
+      hasMore,
     };
   },
 });
@@ -491,18 +514,54 @@ export const getContactStats = query({
     unsubscribed: v.number(),
     bounced: v.number(),
     avgEngagement: v.number(),
+    isEstimate: v.optional(v.boolean()),
   }),
   handler: async (ctx, args) => {
-    const contacts = await ctx.db
+    // Use indexed queries to count each status separately
+    // This avoids reading all documents at once
+    const COUNT_LIMIT = 10000; // Max to count per status
+
+    // Count subscribed contacts
+    const subscribedContacts = await ctx.db
       .query("emailContacts")
-      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .withIndex("by_storeId_and_status", (q) =>
+        q.eq("storeId", args.storeId).eq("status", "subscribed")
+      )
+      .take(COUNT_LIMIT);
+    const subscribed = subscribedContacts.length;
 
-    const subscribed = contacts.filter((c) => c.status === "subscribed").length;
-    const unsubscribed = contacts.filter((c) => c.status === "unsubscribed").length;
-    const bounced = contacts.filter((c) => c.status === "bounced").length;
+    // Count unsubscribed contacts
+    const unsubscribedContacts = await ctx.db
+      .query("emailContacts")
+      .withIndex("by_storeId_and_status", (q) =>
+        q.eq("storeId", args.storeId).eq("status", "unsubscribed")
+      )
+      .take(COUNT_LIMIT);
+    const unsubscribed = unsubscribedContacts.length;
 
-    const engagementScores = contacts
+    // Count bounced contacts
+    const bouncedContacts = await ctx.db
+      .query("emailContacts")
+      .withIndex("by_storeId_and_status", (q) =>
+        q.eq("storeId", args.storeId).eq("status", "bounced")
+      )
+      .take(COUNT_LIMIT);
+    const bounced = bouncedContacts.length;
+
+    // Count complained contacts
+    const complainedContacts = await ctx.db
+      .query("emailContacts")
+      .withIndex("by_storeId_and_status", (q) =>
+        q.eq("storeId", args.storeId).eq("status", "complained")
+      )
+      .take(COUNT_LIMIT);
+    const complained = complainedContacts.length;
+
+    const total = subscribed + unsubscribed + bounced + complained;
+
+    // Sample engagement scores from subscribed contacts (use what we already fetched)
+    const engagementScores = subscribedContacts
+      .slice(0, 1000) // Sample from first 1000
       .filter((c) => c.engagementScore !== undefined)
       .map((c) => c.engagementScore as number);
 
@@ -511,12 +570,20 @@ export const getContactStats = query({
         ? engagementScores.reduce((a, b) => a + b, 0) / engagementScores.length
         : 0;
 
+    // Flag if any count hit the limit (estimate)
+    const isEstimate =
+      subscribed >= COUNT_LIMIT ||
+      unsubscribed >= COUNT_LIMIT ||
+      bounced >= COUNT_LIMIT ||
+      complained >= COUNT_LIMIT;
+
     return {
-      total: contacts.length,
+      total,
       subscribed,
       unsubscribed,
       bounced,
       avgEngagement: Math.round(avgEngagement),
+      isEstimate,
     };
   },
 });

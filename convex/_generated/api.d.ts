@@ -8441,6 +8441,7 @@ export declare const api: {
       {
         avgEngagement: number;
         bounced: number;
+        isEstimate?: boolean;
         subscribed: number;
         total: number;
         unsubscribed: number;
@@ -8463,13 +8464,13 @@ export declare const api: {
       "query",
       "public",
       {
+        cursor?: string;
         limit?: number;
-        offset?: number;
         status?: "subscribed" | "unsubscribed" | "bounced" | "complained";
         storeId: string;
         tagId?: Id<"emailTags">;
       },
-      { contacts: Array<any>; hasMore: boolean; totalCount: number }
+      { contacts: Array<any>; hasMore: boolean; nextCursor: string | null }
     >;
     removeTagFromContact: FunctionReference<
       "mutation",

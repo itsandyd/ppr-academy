@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -87,8 +87,9 @@ export default function EmailCampaignsPage() {
   const [isImporting, setIsImporting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTagFilter, setSelectedTagFilter] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const contactsPerPage = 50;
+  const [contactsCursor, setContactsCursor] = useState<string | null>(null);
+  const [loadedContacts, setLoadedContacts] = useState<any[]>([]);
+  const contactsPerPage = 100;
 
   const [newContact, setNewContact] = useState({ email: "", firstName: "", lastName: "" });
   const [newTag, setNewTag] = useState({ name: "", color: "#3b82f6", description: "" });
@@ -102,15 +103,29 @@ export default function EmailCampaignsPage() {
       ? {
           storeId,
           limit: contactsPerPage,
-          offset: (currentPage - 1) * contactsPerPage,
+          ...(contactsCursor ? { cursor: contactsCursor } : {}),
           ...(selectedTagFilter ? { tagId: selectedTagFilter as Id<"emailTags"> } : {}),
         }
       : "skip"
   );
+
+  // Accumulate contacts when new data arrives
+  useEffect(() => {
+    if (contactsResult?.contacts) {
+      if (!contactsCursor) {
+        // First load or filter change - replace all
+        setLoadedContacts(contactsResult.contacts);
+      } else {
+        // Load more - append
+        setLoadedContacts(prev => [...prev, ...contactsResult.contacts]);
+      }
+    }
+  }, [contactsResult, contactsCursor]);
+
   // Unfiltered contacts for broadcast (so it's not affected by contacts tab filter)
   const allContactsResult = useQuery(
     api.emailContacts.listContacts,
-    storeId ? { storeId, limit: 500 } : "skip"
+    storeId ? { storeId, limit: 200 } : "skip"
   );
   const contactStats = useQuery(api.emailContacts.getContactStats, storeId ? { storeId } : "skip");
   const tags = useQuery(api.emailTags.listTags, storeId ? { storeId } : "skip");
@@ -494,8 +509,8 @@ export default function EmailCampaignsPage() {
     }
   };
 
-  // Filter contacts client-side for search (server handles tag filter and pagination)
-  const filteredContacts = contactsResult?.contacts?.filter((c: any) => {
+  // Filter contacts client-side for search (server handles tag filter)
+  const filteredContacts = loadedContacts.filter((c: any) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     return (
@@ -505,20 +520,25 @@ export default function EmailCampaignsPage() {
     );
   });
 
-  // Pagination - use server-side total count
-  const totalPages = Math.ceil((contactsResult?.totalCount || 0) / contactsPerPage);
-  // Contacts are already paginated from server, just use filtered result
+  // Use filtered contacts directly
   const paginatedContacts = filteredContacts;
 
-  // Reset to page 1 when filters change
+  // Load more contacts
+  const handleLoadMore = () => {
+    if (contactsResult?.nextCursor) {
+      setContactsCursor(contactsResult.nextCursor);
+    }
+  };
+
+  // Reset cursor when filters change
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
-    setCurrentPage(1);
   };
 
   const handleTagFilterChange = (value: string | null) => {
     setSelectedTagFilter(value);
-    setCurrentPage(1);
+    setContactsCursor(null);
+    setLoadedContacts([]);
   };
 
   // Filtered contacts for broadcast
@@ -1459,67 +1479,22 @@ The unsubscribe link will be added automatically."
                 </div>
               </Card>
 
-              {/* Pagination Controls */}
-              {totalPages > 1 && (
-                <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
-                  <div className="text-sm text-muted-foreground">
-                    Showing {((currentPage - 1) * contactsPerPage) + 1} - {Math.min(currentPage * contactsPerPage, filteredContacts?.length || 0)} of {filteredContacts?.length || 0} contacts
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(1)}
-                      disabled={currentPage === 1}
-                    >
-                      First
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(currentPage - 1)}
-                      disabled={currentPage === 1}
-                    >
-                      Previous
-                    </Button>
-                    <div className="flex items-center gap-1 text-sm">
-                      <span>Page</span>
-                      <Select
-                        value={currentPage.toString()}
-                        onValueChange={(v) => setCurrentPage(parseInt(v))}
-                      >
-                        <SelectTrigger className="h-8 w-16">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Array.from({ length: totalPages }, (_, i) => (
-                            <SelectItem key={i + 1} value={(i + 1).toString()}>
-                              {i + 1}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <span>of {totalPages}</span>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(currentPage + 1)}
-                      disabled={currentPage === totalPages}
-                    >
-                      Next
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(totalPages)}
-                      disabled={currentPage === totalPages}
-                    >
-                      Last
-                    </Button>
-                  </div>
+              {/* Load More / Stats */}
+              <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
+                <div className="text-sm text-muted-foreground">
+                  Showing {loadedContacts.length} contacts
+                  {contactStats?.total ? ` of ${contactStats.total}${contactStats.isEstimate ? '+' : ''}` : ''}
                 </div>
-              )}
+                {contactsResult?.hasMore && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleLoadMore}
+                  >
+                    Load More
+                  </Button>
+                )}
+              </div>
             </>
           )}
         </TabsContent>
@@ -1681,7 +1656,8 @@ The unsubscribe link will be added automatically."
                           <DropdownMenuItem
                             onClick={() => {
                               setSelectedTagFilter(tag._id);
-                              setCurrentPage(1);
+                              setContactsCursor(null);
+                              setLoadedContacts([]);
                               setActiveTab("contacts");
                             }}
                           >
