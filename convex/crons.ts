@@ -33,4 +33,11 @@ crons.interval(
   {}
 );
 
+crons.interval(
+  "process email workflow executions",
+  { minutes: 5 },
+  internal.emailWorkflowActions.processEmailWorkflowExecutions,
+  {}
+);
+
 export default crons;

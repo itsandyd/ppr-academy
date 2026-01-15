@@ -872,3 +872,95 @@ export const getContactInternal = internalQuery({
     return await ctx.db.get(args.contactId);
   },
 });
+
+/**
+ * Get execution (internal)
+ */
+export const getExecutionInternal = internalQuery({
+  args: { executionId: v.id("workflowExecutions") },
+  returns: v.any(),
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.executionId);
+  },
+});
+
+/**
+ * Get executions that are due to run
+ */
+export const getDueExecutions = internalQuery({
+  args: {},
+  returns: v.array(v.any()),
+  handler: async (ctx) => {
+    const now = Date.now();
+
+    // Get pending executions that are scheduled for now or earlier
+    const dueExecutions = await ctx.db
+      .query("workflowExecutions")
+      .withIndex("by_status", (q) => q.eq("status", "pending"))
+      .filter((q) => q.lte(q.field("scheduledFor"), now))
+      .take(50);
+
+    // Also get running executions that might be stuck
+    const runningExecutions = await ctx.db
+      .query("workflowExecutions")
+      .withIndex("by_status", (q) => q.eq("status", "running"))
+      .filter((q) => q.lte(q.field("scheduledFor"), now))
+      .take(50);
+
+    return [...dueExecutions, ...runningExecutions];
+  },
+});
+
+/**
+ * Mark execution as failed
+ */
+export const markExecutionFailed = internalMutation({
+  args: {
+    executionId: v.id("workflowExecutions"),
+    error: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.executionId, {
+      status: "failed",
+      completedAt: Date.now(),
+      errorMessage: args.error,
+    });
+    return null;
+  },
+});
+
+/**
+ * Complete execution
+ */
+export const completeExecution = internalMutation({
+  args: { executionId: v.id("workflowExecutions") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.executionId, {
+      status: "completed",
+      completedAt: Date.now(),
+    });
+    return null;
+  },
+});
+
+/**
+ * Advance execution to next node
+ */
+export const advanceExecution = internalMutation({
+  args: {
+    executionId: v.id("workflowExecutions"),
+    nextNodeId: v.string(),
+    scheduledFor: v.number(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.executionId, {
+      currentNodeId: args.nextNodeId,
+      scheduledFor: args.scheduledFor,
+      status: "pending",
+    });
+    return null;
+  },
+});

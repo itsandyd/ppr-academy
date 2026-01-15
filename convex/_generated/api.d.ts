@@ -19347,6 +19347,30 @@ export declare const internal: {
     >;
   };
   emailWorkflowActions: {
+    executeWorkflowNode: FunctionReference<
+      "action",
+      "internal",
+      { executionId: Id<"workflowExecutions"> },
+      null
+    >;
+    processEmailWorkflowExecutions: FunctionReference<
+      "action",
+      "internal",
+      {},
+      null
+    >;
+    sendCustomWorkflowEmail: FunctionReference<
+      "action",
+      "internal",
+      {
+        contactId?: Id<"emailContacts">;
+        content: string;
+        customerEmail: string;
+        storeId: string;
+        subject: string;
+      },
+      null
+    >;
     sendWorkflowEmail: FunctionReference<
       "action",
       "internal",
@@ -19360,6 +19384,16 @@ export declare const internal: {
     >;
   };
   emailWorkflows: {
+    advanceExecution: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        executionId: Id<"workflowExecutions">;
+        nextNodeId: string;
+        scheduledFor: number;
+      },
+      null
+    >;
     callWebhook: FunctionReference<
       "action",
       "internal",
@@ -19371,6 +19405,12 @@ export declare const internal: {
       "internal",
       { contactId?: Id<"emailContacts">; goalType?: string; goalValue?: any },
       boolean
+    >;
+    completeExecution: FunctionReference<
+      "mutation",
+      "internal",
+      { executionId: Id<"workflowExecutions"> },
+      null
     >;
     evaluateCondition: FunctionReference<
       "query",
@@ -19384,10 +19424,17 @@ export declare const internal: {
       { contactId: Id<"emailContacts"> },
       any
     >;
+    getDueExecutions: FunctionReference<"query", "internal", {}, Array<any>>;
     getEmailTemplateInternal: FunctionReference<
       "query",
       "internal",
       { templateId: Id<"emailTemplates"> },
+      any
+    >;
+    getExecutionInternal: FunctionReference<
+      "query",
+      "internal",
+      { executionId: Id<"workflowExecutions"> },
       any
     >;
     getWorkflowInternal: FunctionReference<
@@ -19395,6 +19442,12 @@ export declare const internal: {
       "internal",
       { workflowId: Id<"emailWorkflows"> },
       any
+    >;
+    markExecutionFailed: FunctionReference<
+      "mutation",
+      "internal",
+      { error: string; executionId: Id<"workflowExecutions"> },
+      null
     >;
     processScheduledExecutions: FunctionReference<
       "mutation",
