@@ -1019,50 +1019,58 @@ The unsubscribe link will be added automatically."
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
-                      <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-border/50 pt-2">
-                        <span className="text-[10px] text-muted-foreground">
-                          {contact.emailsOpened}/{contact.emailsSent} opened
-                        </span>
-                        <span className="text-muted-foreground/50">•</span>
-                        <span className="text-[10px] text-muted-foreground">
-                          {new Date(contact.createdAt).toLocaleDateString()}
-                        </span>
-                        {contact.tags?.slice(0, 2).map((tag: any) => (
-                          <Badge
-                            key={tag._id}
-                            variant="outline"
-                            style={{ borderColor: tag.color, color: tag.color }}
-                            className="text-[10px]"
-                          >
-                            {tag.name}
-                          </Badge>
-                        ))}
-                        {contact.tags?.length > 2 && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Badge variant="outline" className="cursor-pointer text-[10px]">
-                                  +{contact.tags.length - 2}
-                                </Badge>
-                              </TooltipTrigger>
-                              <TooltipContent className="max-w-xs bg-white dark:bg-zinc-900">
-                                <div className="flex flex-wrap gap-1">
-                                  {contact.tags.slice(2).map((tag: any) => (
-                                    <Badge
-                                      key={tag._id}
-                                      variant="outline"
-                                      style={{ borderColor: tag.color, color: tag.color }}
-                                      className="text-[10px]"
-                                    >
-                                      {tag.name}
+                      {(() => {
+                        const uniqueTags = contact.tags?.filter(
+                          (tag: any, index: number, self: any[]) =>
+                            index === self.findIndex((t) => t._id === tag._id)
+                        ) || [];
+                        return (
+                          <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-border/50 pt-2">
+                            <span className="text-[10px] text-muted-foreground">
+                              {contact.emailsOpened}/{contact.emailsSent} opened
+                            </span>
+                            <span className="text-muted-foreground/50">•</span>
+                            <span className="text-[10px] text-muted-foreground">
+                              {new Date(contact.createdAt).toLocaleDateString()}
+                            </span>
+                            {uniqueTags.slice(0, 2).map((tag: any) => (
+                              <Badge
+                                key={tag._id}
+                                variant="outline"
+                                style={{ borderColor: tag.color, color: tag.color }}
+                                className="text-[10px]"
+                              >
+                                {tag.name}
+                              </Badge>
+                            ))}
+                            {uniqueTags.length > 2 && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge variant="outline" className="cursor-pointer text-[10px]">
+                                      +{uniqueTags.length - 2}
                                     </Badge>
-                                  ))}
-                                </div>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
-                      </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="max-w-xs bg-white dark:bg-zinc-900">
+                                    <div className="flex flex-wrap gap-1">
+                                      {uniqueTags.slice(2).map((tag: any) => (
+                                        <Badge
+                                          key={tag._id}
+                                          variant="outline"
+                                          style={{ borderColor: tag.color, color: tag.color }}
+                                          className="text-[10px]"
+                                        >
+                                          {tag.name}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </CardContent>
                   </Card>
                 ))}
@@ -1130,43 +1138,51 @@ The unsubscribe link will be added automatically."
                             </Badge>
                           </td>
                           <td className="p-4">
-                            <div className="flex flex-wrap gap-1">
-                              {contact.tags?.slice(0, 3).map((tag: any) => (
-                                <Badge
-                                  key={tag._id}
-                                  variant="outline"
-                                  style={{ borderColor: tag.color, color: tag.color }}
-                                  className="text-xs"
-                                >
-                                  {tag.name}
-                                </Badge>
-                              ))}
-                              {contact.tags?.length > 3 && (
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Badge variant="outline" className="cursor-pointer text-xs">
-                                        +{contact.tags.length - 3}
-                                      </Badge>
-                                    </TooltipTrigger>
-                                    <TooltipContent className="max-w-xs bg-white dark:bg-zinc-900">
-                                      <div className="flex flex-wrap gap-1">
-                                        {contact.tags.slice(3).map((tag: any) => (
-                                          <Badge
-                                            key={tag._id}
-                                            variant="outline"
-                                            style={{ borderColor: tag.color, color: tag.color }}
-                                            className="text-xs"
-                                          >
-                                            {tag.name}
+                            {(() => {
+                              const uniqueTags = contact.tags?.filter(
+                                (tag: any, index: number, self: any[]) =>
+                                  index === self.findIndex((t) => t._id === tag._id)
+                              ) || [];
+                              return (
+                                <div className="flex flex-wrap gap-1">
+                                  {uniqueTags.slice(0, 3).map((tag: any) => (
+                                    <Badge
+                                      key={tag._id}
+                                      variant="outline"
+                                      style={{ borderColor: tag.color, color: tag.color }}
+                                      className="text-xs"
+                                    >
+                                      {tag.name}
+                                    </Badge>
+                                  ))}
+                                  {uniqueTags.length > 3 && (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Badge variant="outline" className="cursor-pointer text-xs">
+                                            +{uniqueTags.length - 3}
                                           </Badge>
-                                        ))}
-                                      </div>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              )}
-                            </div>
+                                        </TooltipTrigger>
+                                        <TooltipContent className="max-w-xs bg-white dark:bg-zinc-900">
+                                          <div className="flex flex-wrap gap-1">
+                                            {uniqueTags.slice(3).map((tag: any) => (
+                                              <Badge
+                                                key={tag._id}
+                                                variant="outline"
+                                                style={{ borderColor: tag.color, color: tag.color }}
+                                                className="text-xs"
+                                              >
+                                                {tag.name}
+                                              </Badge>
+                                            ))}
+                                          </div>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </td>
                           <td className="p-4">
                             <div className="text-sm">
