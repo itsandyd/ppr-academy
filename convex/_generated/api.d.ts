@@ -8373,6 +8373,12 @@ export declare const api: {
       { contactId: Id<"emailContacts">; tagId: Id<"emailTags"> },
       null
     >;
+    bulkAddTagToContacts: FunctionReference<
+      "mutation",
+      "public",
+      { contactIds: Array<Id<"emailContacts">>; tagId: Id<"emailTags"> },
+      { added: number; skipped: number }
+    >;
     bulkImportContacts: FunctionReference<
       "mutation",
       "public",
@@ -19437,6 +19443,12 @@ export declare const internal: {
       { executionId: Id<"workflowExecutions"> },
       null
     >;
+    createTagInternal: FunctionReference<
+      "mutation",
+      "internal",
+      { name: string; storeId: string },
+      Id<"emailTags">
+    >;
     evaluateCondition: FunctionReference<
       "query",
       "internal",
@@ -19460,6 +19472,12 @@ export declare const internal: {
       "query",
       "internal",
       { executionId: Id<"workflowExecutions"> },
+      any
+    >;
+    getTagByNameInternal: FunctionReference<
+      "query",
+      "internal",
+      { name: string; storeId: string },
       any
     >;
     getWorkflowInternal: FunctionReference<

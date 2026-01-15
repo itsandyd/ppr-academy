@@ -968,6 +968,49 @@ export const getContactInternal = internalQuery({
 });
 
 /**
+ * Get tag by name (internal) - for backwards compatibility with action nodes
+ */
+export const getTagByNameInternal = internalQuery({
+  args: {
+    storeId: v.string(),
+    name: v.string(),
+  },
+  returns: v.any(),
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("emailTags")
+      .withIndex("by_storeId_and_name", (q) =>
+        q.eq("storeId", args.storeId).eq("name", args.name)
+      )
+      .first();
+  },
+});
+
+/**
+ * Create tag (internal) - auto-create tags from workflow actions
+ */
+export const createTagInternal = internalMutation({
+  args: {
+    storeId: v.string(),
+    name: v.string(),
+  },
+  returns: v.id("emailTags"),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const tagId = await ctx.db.insert("emailTags", {
+      storeId: args.storeId,
+      name: args.name,
+      color: "#6b7280", // Default gray color
+      contactCount: 0,
+      createdAt: now,
+      updatedAt: now,
+    });
+    console.log(`[EmailWorkflows] Auto-created tag "${args.name}" with ID ${tagId}`);
+    return tagId;
+  },
+});
+
+/**
  * Get execution (internal)
  */
 export const getExecutionInternal = internalQuery({

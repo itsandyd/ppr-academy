@@ -119,6 +119,7 @@ export default function EmailCampaignsPage() {
   const deleteTag = useMutation(api.emailTags.deleteTag);
   const enrollContact = useMutation(api.emailWorkflows.enrollContactInWorkflow);
   const bulkEnrollContacts = useMutation(api.emailWorkflows.bulkEnrollContactsInWorkflow);
+  const bulkAddTag = useMutation(api.emailContacts.bulkAddTagToContacts);
   const updateWorkflow = useMutation(api.emailWorkflows.updateWorkflow);
   const deleteWorkflow = useMutation(api.emailWorkflows.deleteWorkflow);
   const toggleWorkflowActive = useMutation(api.emailWorkflows.toggleWorkflowActive);
@@ -128,6 +129,7 @@ export default function EmailCampaignsPage() {
   const [isRetagging, setIsRetagging] = useState(false);
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
   const [isEnrolling, setIsEnrolling] = useState(false);
+  const [isAddingTag, setIsAddingTag] = useState(false);
   const [renameWorkflowId, setRenameWorkflowId] = useState<string | null>(null);
   const [renameWorkflowName, setRenameWorkflowName] = useState("");
 
@@ -280,6 +282,26 @@ export default function EmailCampaignsPage() {
       toast({ title: "Failed to enroll contacts", variant: "destructive" });
     } finally {
       setIsEnrolling(false);
+    }
+  };
+
+  const handleBulkAddTag = async (tagId: string) => {
+    if (selectedContacts.size === 0) return;
+    setIsAddingTag(true);
+    try {
+      const result = await bulkAddTag({
+        tagId: tagId as any,
+        contactIds: Array.from(selectedContacts) as any[],
+      });
+      toast({
+        title: "Tag Added",
+        description: `Added tag to ${result.added} contacts, skipped ${result.skipped} (already had tag)`,
+      });
+      setSelectedContacts(new Set());
+    } catch {
+      toast({ title: "Failed to add tag", variant: "destructive" });
+    } finally {
+      setIsAddingTag(false);
     }
   };
 
@@ -885,6 +907,33 @@ The unsubscribe link will be added automatically."
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button size="sm" disabled={isAddingTag} variant="outline" className="gap-2">
+                            <Tag className="h-4 w-4" />
+                            {isAddingTag ? "Adding..." : "Add Tag"}
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="bg-white dark:bg-black">
+                          {tags && tags.length > 0 ? (
+                            tags.map((tag: any) => (
+                              <DropdownMenuItem
+                                key={tag._id}
+                                onClick={() => handleBulkAddTag(tag._id)}
+                                className="flex items-center gap-2"
+                              >
+                                <div
+                                  className="h-2 w-2 rounded-full"
+                                  style={{ backgroundColor: tag.color || "#6b7280" }}
+                                />
+                                {tag.name}
+                              </DropdownMenuItem>
+                            ))
+                          ) : (
+                            <DropdownMenuItem disabled>No tags yet</DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button size="sm" disabled={isEnrolling} className="gap-2">

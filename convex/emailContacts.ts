@@ -302,6 +302,78 @@ export const removeTagFromContact = mutation({
   },
 });
 
+/**
+ * Bulk add tag to multiple contacts
+ */
+export const bulkAddTagToContacts = mutation({
+  args: {
+    contactIds: v.array(v.id("emailContacts")),
+    tagId: v.id("emailTags"),
+  },
+  returns: v.object({
+    added: v.number(),
+    skipped: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    const tag = await ctx.db.get(args.tagId);
+    if (!tag) throw new Error("Tag not found");
+
+    let added = 0;
+    let skipped = 0;
+
+    // Fetch all contacts in parallel
+    const contacts = await Promise.all(
+      args.contactIds.map((id) => ctx.db.get(id))
+    );
+
+    const now = Date.now();
+
+    for (let i = 0; i < args.contactIds.length; i++) {
+      const contactId = args.contactIds[i];
+      const contact = contacts[i];
+
+      if (!contact) {
+        skipped++;
+        continue;
+      }
+
+      // Skip if already has tag
+      if (contact.tagIds.includes(args.tagId)) {
+        skipped++;
+        continue;
+      }
+
+      await ctx.db.patch(contactId, {
+        tagIds: [...contact.tagIds, args.tagId],
+        updatedAt: now,
+      });
+
+      await ctx.db.insert("emailContactActivity", {
+        contactId,
+        storeId: contact.storeId,
+        activityType: "tag_added",
+        metadata: {
+          tagId: args.tagId,
+          tagName: tag.name,
+        },
+        timestamp: now,
+      });
+
+      added++;
+    }
+
+    // Update tag count once at the end
+    if (added > 0) {
+      await ctx.db.patch(args.tagId, {
+        contactCount: tag.contactCount + added,
+        updatedAt: now,
+      });
+    }
+
+    return { added, skipped };
+  },
+});
+
 export const getContactActivity = query({
   args: {
     contactId: v.id("emailContacts"),

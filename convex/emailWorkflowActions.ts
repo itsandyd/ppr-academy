@@ -125,22 +125,71 @@ export const executeWorkflowNode = internalAction({
     } else if (currentNode.type === "action") {
       // Handle action nodes (add tag, etc.)
       const actionType = currentNode.data?.actionType;
-      console.log(`[EmailWorkflows] Processing action node (${actionType}) for ${execution.customerEmail}`);
+      console.log(`[EmailWorkflows] Processing action node (${actionType}) for ${execution.customerEmail}`, {
+        nodeData: currentNode.data,
+        contactId: execution.contactId,
+      });
 
-      if (actionType === "add_tag" && currentNode.data?.tagId && execution.contactId) {
-        // Add tag to contact
-        await ctx.runMutation(internal.emailWorkflows.addTagToContactInternal, {
-          contactId: execution.contactId,
-          tagId: currentNode.data.tagId,
-        });
-        console.log(`[EmailWorkflows] Added tag ${currentNode.data.tagId} to contact`);
-      } else if (actionType === "remove_tag" && currentNode.data?.tagId && execution.contactId) {
-        // Remove tag from contact
-        await ctx.runMutation(internal.emailWorkflows.removeTagFromContactInternal, {
-          contactId: execution.contactId,
-          tagId: currentNode.data.tagId,
-        });
-        console.log(`[EmailWorkflows] Removed tag ${currentNode.data.tagId} from contact`);
+      if (actionType === "add_tag" && execution.contactId) {
+        // Get tag ID - either from tagId field or look up by name from value field
+        let tagId = currentNode.data?.tagId;
+
+        if (!tagId && currentNode.data?.value) {
+          // Backwards compatibility: look up tag by name
+          console.log(`[EmailWorkflows] Looking up tag by name: ${currentNode.data.value}`);
+          const tag = await ctx.runQuery(internal.emailWorkflows.getTagByNameInternal, {
+            storeId: execution.storeId,
+            name: currentNode.data.value,
+          });
+          if (tag) {
+            tagId = tag._id;
+            console.log(`[EmailWorkflows] Found tag ID: ${tagId}`);
+          } else {
+            // Auto-create the tag if it doesn't exist
+            console.log(`[EmailWorkflows] Tag not found, creating: ${currentNode.data.value}`);
+            tagId = await ctx.runMutation(internal.emailWorkflows.createTagInternal, {
+              storeId: execution.storeId,
+              name: currentNode.data.value,
+            });
+            console.log(`[EmailWorkflows] Created tag ID: ${tagId}`);
+          }
+        }
+
+        if (tagId) {
+          await ctx.runMutation(internal.emailWorkflows.addTagToContactInternal, {
+            contactId: execution.contactId,
+            tagId,
+          });
+          console.log(`[EmailWorkflows] Added tag ${tagId} to contact`);
+        } else {
+          console.log(`[EmailWorkflows] No tag ID found for add_tag action`);
+        }
+      } else if (actionType === "remove_tag" && execution.contactId) {
+        // Get tag ID - either from tagId field or look up by name from value field
+        let tagId = currentNode.data?.tagId;
+
+        if (!tagId && currentNode.data?.value) {
+          // Backwards compatibility: look up tag by name
+          const tag = await ctx.runQuery(internal.emailWorkflows.getTagByNameInternal, {
+            storeId: execution.storeId,
+            name: currentNode.data.value,
+          });
+          if (tag) {
+            tagId = tag._id;
+          }
+        }
+
+        if (tagId) {
+          await ctx.runMutation(internal.emailWorkflows.removeTagFromContactInternal, {
+            contactId: execution.contactId,
+            tagId,
+          });
+          console.log(`[EmailWorkflows] Removed tag ${tagId} from contact`);
+        } else {
+          console.log(`[EmailWorkflows] No tag ID found for remove_tag action`);
+        }
+      } else if (!execution.contactId) {
+        console.log(`[EmailWorkflows] Cannot add/remove tag: no contactId on execution`);
       }
     } else {
       console.log(`[EmailWorkflows] Unknown node type: ${currentNode.type}`);
