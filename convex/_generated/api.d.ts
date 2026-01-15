@@ -8529,6 +8529,12 @@ export declare const api: {
       { email: string; storeId: string; tags: Array<string> },
       { contactId: Id<"emailContacts"> | null; tagsAdded: Array<string> }
     >;
+    retagAllContacts: FunctionReference<
+      "mutation",
+      "public",
+      { storeId: string },
+      { errors: number; processed: number; tagsAdded: number }
+    >;
   };
   emailCopyGenerator: {
     generateEmailCopy: FunctionReference<

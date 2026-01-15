@@ -892,3 +892,243 @@ export const getContactsByTags = query({
     }));
   },
 });
+
+/**
+ * Re-tag all contacts based on their purchase history, enrollments, and engagement.
+ * This is useful for retroactively applying tags to existing contacts.
+ */
+export const retagAllContacts = mutation({
+  args: {
+    storeId: v.string(),
+  },
+  returns: v.object({
+    processed: v.number(),
+    tagsAdded: v.number(),
+    errors: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    let processed = 0;
+    let tagsAdded = 0;
+    let errors = 0;
+
+    // Get all contacts for this store
+    const contacts = await ctx.db
+      .query("emailContacts")
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+      .collect();
+
+    // Get the actual store to find courses
+    const store = await ctx.db
+      .query("stores")
+      .withIndex("by_userId", (q) => q.eq("userId", args.storeId))
+      .first();
+
+    for (const contact of contacts) {
+      try {
+        const tagsToAdd: string[] = [];
+
+        // 1. Check if they have a customerId - means they're a customer
+        if (contact.customerId) {
+          tagsToAdd.push("customer");
+
+          // Get customer to check purchase history
+          const customer = await ctx.db.get(contact.customerId);
+          if (customer) {
+            // Check purchases from customer record
+            const purchases = await ctx.db
+              .query("purchases")
+              .withIndex("by_customerId", (q) => q.eq("customerId", contact.customerId!))
+              .collect();
+
+            for (const purchase of purchases) {
+              // Check if it's a product purchase
+              if (purchase.productId) {
+                const product = await ctx.db.get(purchase.productId);
+                if (product) {
+                  // Add product type tag
+                  if (product.productType && PRODUCT_TYPE_TAGS[product.productType]) {
+                    tagsToAdd.push(PRODUCT_TYPE_TAGS[product.productType]);
+                  }
+                  // Infer genres from product
+                  const textToAnalyze = [
+                    product.title || "",
+                    product.description || "",
+                    ...(product.genre || []),
+                  ].join(" ");
+                  tagsToAdd.push(...inferGenresFromText(textToAnalyze));
+
+                  // Infer skill level
+                  const skillLevel = inferSkillLevelFromText(textToAnalyze);
+                  if (skillLevel) {
+                    tagsToAdd.push(`skill:${skillLevel}`);
+                  }
+                }
+              }
+
+              // Check if it's a course purchase
+              if (purchase.courseId) {
+                const course = await ctx.db.get(purchase.courseId);
+                if (course) {
+                  tagsToAdd.push("interest:learning");
+                  tagsToAdd.push("student");
+
+                  if (course.skillLevel) {
+                    tagsToAdd.push(`skill:${course.skillLevel}`);
+                  }
+                  if (course.category) {
+                    tagsToAdd.push(`category:${course.category.toLowerCase().replace(/\s+/g, "-")}`);
+                  }
+
+                  const textToAnalyze = [
+                    course.title || "",
+                    course.description || "",
+                    course.category || "",
+                  ].join(" ");
+                  tagsToAdd.push(...inferGenresFromText(textToAnalyze));
+                }
+              }
+            }
+          }
+        }
+
+        // 2. Check customFields for enrolled courses
+        const customFields = contact.customFields || {};
+        if (customFields.enrolledCourses && Array.isArray(customFields.enrolledCourses)) {
+          for (const courseId of customFields.enrolledCourses) {
+            try {
+              const course = await ctx.db.get(courseId as Id<"courses">);
+              if (course) {
+                tagsToAdd.push("interest:learning");
+                tagsToAdd.push("student");
+
+                if (course.skillLevel) {
+                  tagsToAdd.push(`skill:${course.skillLevel}`);
+                }
+                if (course.category) {
+                  tagsToAdd.push(`category:${course.category.toLowerCase().replace(/\s+/g, "-")}`);
+                }
+
+                const textToAnalyze = [
+                  course.title || "",
+                  course.description || "",
+                  course.category || "",
+                ].join(" ");
+                tagsToAdd.push(...inferGenresFromText(textToAnalyze));
+              }
+            } catch {
+              // Course might not exist anymore
+            }
+          }
+        }
+
+        // 3. Check customFields for follow gate products
+        if (customFields.followGateProducts && Array.isArray(customFields.followGateProducts)) {
+          for (const productId of customFields.followGateProducts) {
+            try {
+              const product = await ctx.db.get(productId as Id<"digitalProducts">);
+              if (product) {
+                if (product.productType && PRODUCT_TYPE_TAGS[product.productType]) {
+                  tagsToAdd.push(PRODUCT_TYPE_TAGS[product.productType]);
+                }
+
+                const textToAnalyze = [
+                  product.title || "",
+                  product.description || "",
+                  ...(product.genre || []),
+                ].join(" ");
+                tagsToAdd.push(...inferGenresFromText(textToAnalyze));
+
+                const skillLevel = inferSkillLevelFromText(textToAnalyze);
+                if (skillLevel) {
+                  tagsToAdd.push(`skill:${skillLevel}`);
+                }
+              }
+            } catch {
+              // Product might not exist anymore
+            }
+          }
+          tagsToAdd.push("source:follow-gate");
+        }
+
+        // 4. Check source-based tags
+        if (contact.source === "purchase" || contact.source === "customer_sync") {
+          tagsToAdd.push("customer");
+        }
+        if (contact.source === "course_enrollment" || contact.source === "student_sync") {
+          tagsToAdd.push("student");
+          tagsToAdd.push("interest:learning");
+        }
+        if (contact.source === "follow_gate") {
+          tagsToAdd.push("lead");
+        }
+
+        // 5. Check engagement score for engagement tags
+        const engagementScore = contact.engagementScore || 0;
+        if (engagementScore >= 80) {
+          tagsToAdd.push("engagement:hot");
+        } else if (engagementScore >= 50) {
+          tagsToAdd.push("engagement:warm");
+        } else if (engagementScore < 20 && contact.emailsSent > 5) {
+          tagsToAdd.push("engagement:cold");
+        }
+
+        // 6. Check for source product/course
+        if (contact.sourceProductId) {
+          try {
+            const product = await ctx.db.get(contact.sourceProductId);
+            if (product) {
+              if (product.productType && PRODUCT_TYPE_TAGS[product.productType]) {
+                tagsToAdd.push(PRODUCT_TYPE_TAGS[product.productType]);
+              }
+              const textToAnalyze = [
+                product.title || "",
+                product.description || "",
+                ...(product.genre || []),
+              ].join(" ");
+              tagsToAdd.push(...inferGenresFromText(textToAnalyze));
+            }
+          } catch {
+            // Product might not exist
+          }
+        }
+
+        if (contact.sourceCourseId) {
+          try {
+            const course = await ctx.db.get(contact.sourceCourseId);
+            if (course) {
+              tagsToAdd.push("interest:learning");
+              if (course.skillLevel) {
+                tagsToAdd.push(`skill:${course.skillLevel}`);
+              }
+              if (course.category) {
+                tagsToAdd.push(`category:${course.category.toLowerCase().replace(/\s+/g, "-")}`);
+              }
+            }
+          } catch {
+            // Course might not exist
+          }
+        }
+
+        // Deduplicate tags
+        const uniqueTags = [...new Set(tagsToAdd)];
+
+        // Add tags to contact
+        if (uniqueTags.length > 0) {
+          await addTagsToContact(ctx, contact._id, args.storeId, uniqueTags);
+          tagsAdded += uniqueTags.length;
+        }
+
+        processed++;
+      } catch (error) {
+        console.error(`Error processing contact ${contact._id}:`, error);
+        errors++;
+      }
+    }
+
+    return {
+      processed,
+      tagsAdded,
+      errors,
+    };
+  },
+});

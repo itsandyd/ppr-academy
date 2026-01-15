@@ -62,6 +62,12 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 function cn(...classes: (string | boolean | undefined)[]) {
   return classes.filter(Boolean).join(" ");
@@ -79,6 +85,8 @@ export default function EmailCampaignsPage() {
   const [isCreateTagOpen, setIsCreateTagOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTagFilter, setSelectedTagFilter] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const contactsPerPage = 50;
 
   const [newContact, setNewContact] = useState({ email: "", firstName: "", lastName: "" });
   const [newTag, setNewTag] = useState({ name: "", color: "#3b82f6", description: "" });
@@ -114,8 +122,10 @@ export default function EmailCampaignsPage() {
   const updateWorkflow = useMutation(api.emailWorkflows.updateWorkflow);
   const deleteWorkflow = useMutation(api.emailWorkflows.deleteWorkflow);
   const toggleWorkflowActive = useMutation(api.emailWorkflows.toggleWorkflowActive);
+  const retagAllContacts = useMutation(api.emailContactSync.retagAllContacts);
 
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isRetagging, setIsRetagging] = useState(false);
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
   const [isEnrolling, setIsEnrolling] = useState(false);
   const [renameWorkflowId, setRenameWorkflowId] = useState<string | null>(null);
@@ -218,6 +228,25 @@ export default function EmailCampaignsPage() {
       });
     } finally {
       setIsSyncing(false);
+    }
+  };
+
+  const handleRetagContacts = async () => {
+    setIsRetagging(true);
+    try {
+      const result = await retagAllContacts({ storeId });
+      toast({
+        title: "Re-tagging Complete",
+        description: `Processed ${result.processed} contacts, added ${result.tagsAdded} tags${result.errors > 0 ? `, ${result.errors} errors` : ""}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Failed to re-tag contacts",
+        description: error.message || "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRetagging(false);
     }
   };
 
@@ -333,6 +362,24 @@ export default function EmailCampaignsPage() {
       c.lastName?.toLowerCase().includes(query)
     );
   });
+
+  // Pagination for contacts
+  const totalPages = Math.ceil((filteredContacts?.length || 0) / contactsPerPage);
+  const paginatedContacts = filteredContacts?.slice(
+    (currentPage - 1) * contactsPerPage,
+    currentPage * contactsPerPage
+  );
+
+  // Reset to page 1 when filters change
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    setCurrentPage(1);
+  };
+
+  const handleTagFilterChange = (value: string | null) => {
+    setSelectedTagFilter(value);
+    setCurrentPage(1);
+  };
 
   // Filtered contacts for broadcast
   const filteredBroadcastContacts = allContacts?.filter((c: any) => {
@@ -681,7 +728,7 @@ The unsubscribe link will be added automatically."
               </Card>
             </div>
 
-            <div className="flex gap-2 self-end md:self-auto">
+            <div className="flex flex-wrap gap-2 self-end md:self-auto">
               <Button
                 variant="outline"
                 size="sm"
@@ -694,6 +741,20 @@ The unsubscribe link will be added automatically."
                 />
                 <span className="hidden sm:inline">
                   {isSyncing ? "Syncing..." : "Sync Enrolled Users"}
+                </span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 md:h-10 md:px-4"
+                onClick={handleRetagContacts}
+                disabled={isRetagging}
+              >
+                <Tag
+                  className={cn("h-3.5 w-3.5 md:h-4 md:w-4", isRetagging && "animate-pulse")}
+                />
+                <span className="hidden sm:inline">
+                  {isRetagging ? "Re-tagging..." : "Re-tag All"}
                 </span>
               </Button>
               <Button variant="outline" size="sm" className="gap-2 md:h-10 md:px-4">
@@ -767,12 +828,12 @@ The unsubscribe link will be added automatically."
                 placeholder="Search contacts..."
                 className="pl-10"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
               />
             </div>
             <Select
               value={selectedTagFilter || "all"}
-              onValueChange={(v) => setSelectedTagFilter(v === "all" ? null : v)}
+              onValueChange={(v) => handleTagFilterChange(v === "all" ? null : v)}
             >
               <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Filter by tag" />
@@ -871,7 +932,7 @@ The unsubscribe link will be added automatically."
 
               {/* Mobile: Card-based layout */}
               <div className="space-y-2 md:hidden">
-                {filteredContacts.map((contact: any) => (
+                {paginatedContacts?.map((contact: any) => (
                   <Card
                     key={contact._id}
                     className={cn(
@@ -977,19 +1038,34 @@ The unsubscribe link will be added automatically."
                           </Badge>
                         ))}
                         {contact.tags?.length > 2 && (
-                          <Badge variant="outline" className="text-[10px]">
-                            +{contact.tags.length - 2}
-                          </Badge>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant="outline" className="cursor-pointer text-[10px]">
+                                  +{contact.tags.length - 2}
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs bg-white dark:bg-zinc-900">
+                                <div className="flex flex-wrap gap-1">
+                                  {contact.tags.slice(2).map((tag: any) => (
+                                    <Badge
+                                      key={tag._id}
+                                      variant="outline"
+                                      style={{ borderColor: tag.color, color: tag.color }}
+                                      className="text-[10px]"
+                                    >
+                                      {tag.name}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         )}
                       </div>
                     </CardContent>
                   </Card>
                 ))}
-                {filteredContacts.length > 50 && (
-                  <div className="py-3 text-center text-xs text-muted-foreground">
-                    Showing 50 of {filteredContacts.length} contacts
-                  </div>
-                )}
               </div>
 
               {/* Desktop: Table layout */}
@@ -1017,7 +1093,7 @@ The unsubscribe link will be added automatically."
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredContacts.map((contact: any) => (
+                      {paginatedContacts?.map((contact: any) => (
                         <tr
                           key={contact._id}
                           className={cn(
@@ -1066,9 +1142,29 @@ The unsubscribe link will be added automatically."
                                 </Badge>
                               ))}
                               {contact.tags?.length > 3 && (
-                                <Badge variant="outline" className="text-xs">
-                                  +{contact.tags.length - 3}
-                                </Badge>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Badge variant="outline" className="cursor-pointer text-xs">
+                                        +{contact.tags.length - 3}
+                                      </Badge>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-xs bg-white dark:bg-zinc-900">
+                                      <div className="flex flex-wrap gap-1">
+                                        {contact.tags.slice(3).map((tag: any) => (
+                                          <Badge
+                                            key={tag._id}
+                                            variant="outline"
+                                            style={{ borderColor: tag.color, color: tag.color }}
+                                            className="text-xs"
+                                          >
+                                            {tag.name}
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
                               )}
                             </div>
                           </td>
@@ -1137,12 +1233,69 @@ The unsubscribe link will be added automatically."
                     </tbody>
                   </table>
                 </div>
-                {filteredContacts.length > 50 && (
-                  <div className="p-4 text-center text-sm text-muted-foreground">
-                    Showing 50 of {filteredContacts.length} contacts
-                  </div>
-                )}
               </Card>
+
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
+                  <div className="text-sm text-muted-foreground">
+                    Showing {((currentPage - 1) * contactsPerPage) + 1} - {Math.min(currentPage * contactsPerPage, filteredContacts?.length || 0)} of {filteredContacts?.length || 0} contacts
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(1)}
+                      disabled={currentPage === 1}
+                    >
+                      First
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(currentPage - 1)}
+                      disabled={currentPage === 1}
+                    >
+                      Previous
+                    </Button>
+                    <div className="flex items-center gap-1 text-sm">
+                      <span>Page</span>
+                      <Select
+                        value={currentPage.toString()}
+                        onValueChange={(v) => setCurrentPage(parseInt(v))}
+                      >
+                        <SelectTrigger className="h-8 w-16">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: totalPages }, (_, i) => (
+                            <SelectItem key={i + 1} value={(i + 1).toString()}>
+                              {i + 1}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <span>of {totalPages}</span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                    >
+                      Next
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(totalPages)}
+                      disabled={currentPage === totalPages}
+                    >
+                      Last
+                    </Button>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </TabsContent>
