@@ -684,28 +684,40 @@ export const bulkEnrollContactsInWorkflow = mutation({
 
     const now = Date.now();
 
-    for (const contactId of args.contactIds) {
-      const contact = await ctx.db.get(contactId);
+    // Fetch all active executions for this workflow upfront (single query)
+    const activeExecutions = await ctx.db
+      .query("workflowExecutions")
+      .withIndex("by_workflowId", (q) => q.eq("workflowId", args.workflowId))
+      .filter((q) =>
+        q.or(q.eq(q.field("status"), "pending"), q.eq(q.field("status"), "running"))
+      )
+      .collect();
+
+    // Build a Set of emails already enrolled for O(1) lookup
+    const enrolledEmails = new Set(activeExecutions.map((e) => e.customerEmail));
+
+    // Fetch all contacts in one batch using Promise.all
+    const contacts = await Promise.all(
+      args.contactIds.map((id) => ctx.db.get(id))
+    );
+
+    for (let i = 0; i < args.contactIds.length; i++) {
+      const contactId = args.contactIds[i];
+      const contact = contacts[i];
+
       if (!contact) {
         errors.push(`Contact ${contactId} not found`);
         continue;
       }
 
-      const existingExecution = await ctx.db
-        .query("workflowExecutions")
-        .withIndex("by_workflowId", (q) => q.eq("workflowId", args.workflowId))
-        .filter((q) =>
-          q.and(
-            q.eq(q.field("customerEmail"), contact.email),
-            q.or(q.eq(q.field("status"), "pending"), q.eq(q.field("status"), "running"))
-          )
-        )
-        .first();
-
-      if (existingExecution) {
+      // Check against the Set instead of querying
+      if (enrolledEmails.has(contact.email)) {
         skipped++;
         continue;
       }
+
+      // Add to Set to prevent duplicates within this batch
+      enrolledEmails.add(contact.email);
 
       const executionId = await ctx.db.insert("workflowExecutions", {
         workflowId: args.workflowId,
