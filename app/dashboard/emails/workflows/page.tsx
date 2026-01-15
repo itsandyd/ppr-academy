@@ -11,7 +11,7 @@ import { useFeatureAccess } from "@/hooks/use-feature-access";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -160,6 +160,9 @@ export default function WorkflowBuilderPage() {
   const [contactSearchQuery, setContactSearchQuery] = useState("");
   const [isEnrolling, setIsEnrolling] = useState(false);
   const [isActive, setIsActive] = useState(false);
+  const [isSavingTemplate, setIsSavingTemplate] = useState(false);
+  const [templateName, setTemplateName] = useState("");
+  const [isEmailEditorOpen, setIsEmailEditorOpen] = useState(false);
 
   // Get user's store
   const store = useQuery(
@@ -197,6 +200,7 @@ export default function WorkflowBuilderPage() {
   const deleteWorkflow = useMutation(api.emailWorkflows.deleteWorkflow);
   const bulkEnrollContacts = useMutation(api.emailWorkflows.bulkEnrollContactsInWorkflow);
   const toggleActive = useMutation(api.emailWorkflows.toggleWorkflowActive);
+  const createEmailTemplate = useMutation(api.emailWorkflows.createEmailTemplate);
 
   useEffect(() => {
     if (existingWorkflow) {
@@ -333,6 +337,35 @@ export default function WorkflowBuilderPage() {
       router.push("/dashboard/emails?mode=create");
     } catch {
       toast({ title: "Error", description: "Failed to delete workflow", variant: "destructive" });
+    }
+  };
+
+  const handleSaveAsTemplate = async () => {
+    if (!selectedNode || !storeId) return;
+    if (!templateName.trim()) {
+      toast({ title: "Error", description: "Template name is required", variant: "destructive" });
+      return;
+    }
+    if (!selectedNode.data.subject) {
+      toast({ title: "Error", description: "Email subject is required", variant: "destructive" });
+      return;
+    }
+
+    setIsSavingTemplate(true);
+    try {
+      await createEmailTemplate({
+        storeId,
+        name: templateName.trim(),
+        subject: selectedNode.data.subject,
+        content: selectedNode.data.body || "",
+        category: "workflow",
+      });
+      toast({ title: "Template Saved", description: "Email saved as template for reuse" });
+      setTemplateName("");
+    } catch {
+      toast({ title: "Error", description: "Failed to save template", variant: "destructive" });
+    } finally {
+      setIsSavingTemplate(false);
     }
   };
 
@@ -566,98 +599,29 @@ export default function WorkflowBuilderPage() {
 
                 {selectedNode.type === "email" && (
                   <>
-                    <div className="space-y-2">
-                      <Label>Email Source</Label>
-                      <Tabs
-                        value={selectedNode.data.mode || "custom"}
-                        onValueChange={(v) =>
-                          updateNodeData(selectedNode.id, { mode: v as "template" | "custom" })
-                        }
-                        className="w-full"
-                      >
-                        <TabsList className="grid w-full grid-cols-2">
-                          <TabsTrigger value="template">Use Template</TabsTrigger>
-                          <TabsTrigger value="custom">Custom Email</TabsTrigger>
-                        </TabsList>
-                      </Tabs>
+                    {/* Email Preview */}
+                    <div className="rounded-md border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-800 dark:bg-zinc-900">
+                      {selectedNode.data.subject ? (
+                        <>
+                          <p className="text-xs text-zinc-500">Subject:</p>
+                          <p className="text-sm font-medium">{selectedNode.data.subject}</p>
+                          {selectedNode.data.templateName && (
+                            <p className="mt-1 text-xs text-zinc-500">
+                              Template: {selectedNode.data.templateName}
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <p className="text-sm text-zinc-500">No email configured</p>
+                      )}
                     </div>
 
-                    {(selectedNode.data.mode || "custom") === "template" ? (
-                      <div className="space-y-2">
-                        <Label>Select Template</Label>
-                        <Select
-                          value={selectedNode.data.templateId || ""}
-                          onValueChange={(v) => {
-                            const template = emailTemplates?.find((t: any) => t._id === v);
-                            updateNodeData(selectedNode.id, {
-                              templateId: v,
-                              templateName: template?.name,
-                              subject: template?.subject,
-                            });
-                          }}
-                        >
-                          <SelectTrigger className="bg-white dark:bg-black">
-                            <SelectValue placeholder="Choose a template..." />
-                          </SelectTrigger>
-                          <SelectContent className="bg-white dark:bg-black">
-                            {emailTemplates && emailTemplates.length > 0 ? (
-                              emailTemplates.map((template: any) => (
-                                <SelectItem key={template._id} value={template._id}>
-                                  {template.name}
-                                  {template.category && (
-                                    <span className="ml-2 text-xs text-zinc-500">
-                                      ({template.category})
-                                    </span>
-                                  )}
-                                </SelectItem>
-                              ))
-                            ) : (
-                              <div className="px-2 py-1.5 text-sm text-zinc-500">
-                                No templates found
-                              </div>
-                            )}
-                          </SelectContent>
-                        </Select>
-                        {selectedNode.data.templateId && selectedNode.data.subject && (
-                          <div className="rounded-md border border-zinc-200 bg-zinc-50 p-2 dark:border-zinc-800 dark:bg-zinc-900">
-                            <p className="text-xs text-zinc-500">Subject:</p>
-                            <p className="text-sm">{selectedNode.data.subject}</p>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <>
-                        <div className="space-y-2">
-                          <Label>Subject *</Label>
-                          <Input
-                            value={selectedNode.data.subject || ""}
-                            onChange={(e) =>
-                              updateNodeData(selectedNode.id, { subject: e.target.value })
-                            }
-                            placeholder="Email subject line"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Preview Text</Label>
-                          <Input
-                            value={selectedNode.data.previewText || ""}
-                            onChange={(e) =>
-                              updateNodeData(selectedNode.id, { previewText: e.target.value })
-                            }
-                            placeholder="Shows in inbox preview"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Email Body</Label>
-                          <WysiwygEditor
-                            content={selectedNode.data.body || ""}
-                            onChange={(html) => updateNodeData(selectedNode.id, { body: html })}
-                            placeholder="Write your email content here..."
-                            className="min-h-[200px]"
-                          />
-                        </div>
-                      </>
-                    )}
+                    <Button
+                      className="w-full"
+                      onClick={() => setIsEmailEditorOpen(true)}
+                    >
+                      {selectedNode.data.subject ? "Edit Email" : "Configure Email"}
+                    </Button>
 
                     {validationErrors.some((e) => e.nodeId === selectedNode.id) && (
                       <div className="rounded-md border border-red-200 bg-red-50 p-2 dark:border-red-900 dark:bg-red-900/20">
@@ -994,6 +958,143 @@ export default function WorkflowBuilderPage() {
                 {isEnrolling
                   ? "Enrolling..."
                   : `Enroll ${selectedContacts.size} Contact${selectedContacts.size !== 1 ? "s" : ""}`}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Email Editor Dialog */}
+        <Dialog open={isEmailEditorOpen} onOpenChange={setIsEmailEditorOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-black">
+            <DialogHeader>
+              <DialogTitle>Configure Email</DialogTitle>
+              <DialogDescription>
+                Create your email content or select from a saved template
+              </DialogDescription>
+            </DialogHeader>
+
+            {selectedNode?.type === "email" && (
+              <div className="space-y-6 py-4">
+                <Tabs
+                  value={selectedNode.data.mode || "custom"}
+                  onValueChange={(v) =>
+                    updateNodeData(selectedNode.id, { mode: v as "template" | "custom" })
+                  }
+                  className="w-full"
+                >
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="template">Use Template</TabsTrigger>
+                    <TabsTrigger value="custom">Custom Email</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="template" className="mt-4 space-y-4">
+                    <div className="space-y-2">
+                      <Label>Select Template</Label>
+                      <Select
+                        value={selectedNode.data.templateId || ""}
+                        onValueChange={(v) => {
+                          const template = emailTemplates?.find((t: any) => t._id === v);
+                          updateNodeData(selectedNode.id, {
+                            templateId: v,
+                            templateName: template?.name,
+                            subject: template?.subject,
+                          });
+                        }}
+                      >
+                        <SelectTrigger className="bg-white dark:bg-black">
+                          <SelectValue placeholder="Choose a template..." />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white dark:bg-black">
+                          {emailTemplates && emailTemplates.length > 0 ? (
+                            emailTemplates.map((template: any) => (
+                              <SelectItem key={template._id} value={template._id}>
+                                {template.name}
+                                {template.category && (
+                                  <span className="ml-2 text-xs text-zinc-500">
+                                    ({template.category})
+                                  </span>
+                                )}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <div className="px-2 py-1.5 text-sm text-zinc-500">
+                              No templates found. Create one using Custom Email.
+                            </div>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {selectedNode.data.templateId && selectedNode.data.subject && (
+                      <div className="rounded-md border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
+                        <p className="text-xs text-zinc-500">Subject:</p>
+                        <p className="text-lg font-medium">{selectedNode.data.subject}</p>
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  <TabsContent value="custom" className="mt-4 space-y-4">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label>Subject Line *</Label>
+                        <Input
+                          value={selectedNode.data.subject || ""}
+                          onChange={(e) =>
+                            updateNodeData(selectedNode.id, { subject: e.target.value })
+                          }
+                          placeholder="Email subject line"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Preview Text</Label>
+                        <Input
+                          value={selectedNode.data.previewText || ""}
+                          onChange={(e) =>
+                            updateNodeData(selectedNode.id, { previewText: e.target.value })
+                          }
+                          placeholder="Shows in inbox preview"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Email Body</Label>
+                      <WysiwygEditor
+                        content={selectedNode.data.body || ""}
+                        onChange={(html) => updateNodeData(selectedNode.id, { body: html })}
+                        placeholder="Write your email content here..."
+                        className="min-h-[350px]"
+                      />
+                    </div>
+
+                    {/* Save as Template */}
+                    <div className="rounded-md border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
+                      <Label className="text-sm font-medium">Save for Reuse</Label>
+                      <p className="mb-3 text-xs text-zinc-500">
+                        Save this email as a template to use in other workflows
+                      </p>
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Template name..."
+                          value={templateName}
+                          onChange={(e) => setTemplateName(e.target.value)}
+                          className="flex-1"
+                        />
+                        <Button
+                          variant="outline"
+                          onClick={handleSaveAsTemplate}
+                          disabled={isSavingTemplate || !selectedNode.data.subject}
+                        >
+                          {isSavingTemplate ? "Saving..." : "Save as Template"}
+                        </Button>
+                      </div>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button onClick={() => setIsEmailEditorOpen(false)}>
+                Done
               </Button>
             </DialogFooter>
           </DialogContent>

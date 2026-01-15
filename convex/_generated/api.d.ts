@@ -9390,6 +9390,19 @@ export declare const api: {
       },
       { enrolled: number; errors: Array<string>; skipped: number }
     >;
+    createEmailTemplate: FunctionReference<
+      "mutation",
+      "public",
+      {
+        category?: string;
+        content: string;
+        description?: string;
+        name: string;
+        storeId: string;
+        subject: string;
+      },
+      Id<"emailTemplates">
+    >;
     createWorkflow: FunctionReference<
       "mutation",
       "public",

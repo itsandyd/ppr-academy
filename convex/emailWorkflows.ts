@@ -28,6 +28,32 @@ export const listEmailTemplates = query({
   },
 });
 
+export const createEmailTemplate = mutation({
+  args: {
+    storeId: v.string(),
+    name: v.string(),
+    subject: v.string(),
+    content: v.string(),
+    category: v.optional(v.string()),
+    description: v.optional(v.string()),
+  },
+  returns: v.id("emailTemplates"),
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    const adminUserId = identity?.subject || "system";
+
+    return await ctx.db.insert("emailTemplates", {
+      storeId: args.storeId,
+      adminUserId,
+      name: args.name,
+      subject: args.subject,
+      content: args.content,
+      category: args.category,
+      description: args.description,
+    });
+  },
+});
+
 export const getEmailTemplate = query({
   args: { templateId: v.id("emailTemplates") },
   returns: v.any(),
