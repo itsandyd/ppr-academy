@@ -1445,7 +1445,15 @@ The unsubscribe link will be added automatically."
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="bg-white dark:bg-black">
                           <DropdownMenuItem>Edit Tag</DropdownMenuItem>
-                          <DropdownMenuItem>View Contacts</DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setSelectedTagFilter(tag._id);
+                              setCurrentPage(1);
+                              setActiveTab("contacts");
+                            }}
+                          >
+                            View Contacts
+                          </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-red-600"
                             onClick={() => handleDeleteTag(tag._id)}
