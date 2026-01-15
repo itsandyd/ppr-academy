@@ -219,11 +219,15 @@ function WorkflowCanvasInner({
         fitView
         snapToGrid
         snapGrid={[15, 15]}
+        deleteKeyCode={["Backspace", "Delete"]}
         defaultEdgeOptions={{
           type: "smoothstep",
           animated: true,
+          deletable: true,
           style: { stroke: "#6366f1", strokeWidth: 2 },
         }}
+        edgesUpdatable
+        edgesFocusable
         className="bg-zinc-100 dark:bg-zinc-900"
       >
         <Controls className="!border-zinc-300 !bg-white !shadow-md dark:!border-zinc-700 dark:!bg-zinc-800 [&>button:hover]:!bg-zinc-100 dark:[&>button:hover]:!bg-zinc-700 [&>button]:!border-zinc-300 [&>button]:!bg-white dark:[&>button]:!border-zinc-700 dark:[&>button]:!bg-zinc-800" />
