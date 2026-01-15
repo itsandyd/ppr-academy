@@ -122,6 +122,28 @@ export const executeWorkflowNode = internalAction({
       // For now, just take the "yes" path
       // TODO: Implement actual condition evaluation
       console.log(`[EmailWorkflows] Processing condition node for ${execution.customerEmail}`);
+    } else if (currentNode.type === "action") {
+      // Handle action nodes (add tag, etc.)
+      const actionType = currentNode.data?.actionType;
+      console.log(`[EmailWorkflows] Processing action node (${actionType}) for ${execution.customerEmail}`);
+
+      if (actionType === "add_tag" && currentNode.data?.tagId && execution.contactId) {
+        // Add tag to contact
+        await ctx.runMutation(internal.emailWorkflows.addTagToContactInternal, {
+          contactId: execution.contactId,
+          tagId: currentNode.data.tagId,
+        });
+        console.log(`[EmailWorkflows] Added tag ${currentNode.data.tagId} to contact`);
+      } else if (actionType === "remove_tag" && currentNode.data?.tagId && execution.contactId) {
+        // Remove tag from contact
+        await ctx.runMutation(internal.emailWorkflows.removeTagFromContactInternal, {
+          contactId: execution.contactId,
+          tagId: currentNode.data.tagId,
+        });
+        console.log(`[EmailWorkflows] Removed tag ${currentNode.data.tagId} from contact`);
+      }
+    } else {
+      console.log(`[EmailWorkflows] Unknown node type: ${currentNode.type}`);
     }
 
     // Find next node

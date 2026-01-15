@@ -1028,6 +1028,33 @@ export const completeExecution = internalMutation({
 });
 
 /**
+ * Cancel/remove a contact from a workflow execution
+ */
+export const cancelExecution = mutation({
+  args: { executionId: v.id("workflowExecutions") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const execution = await ctx.db.get(args.executionId);
+    if (!execution) {
+      throw new Error("Execution not found");
+    }
+
+    // Only cancel if not already completed or failed
+    if (execution.status === "completed" || execution.status === "failed") {
+      throw new Error("Cannot cancel a completed or failed execution");
+    }
+
+    await ctx.db.patch(args.executionId, {
+      status: "cancelled",
+      completedAt: Date.now(),
+    });
+
+    console.log(`[EmailWorkflows] Cancelled execution ${args.executionId} for ${execution.customerEmail}`);
+    return null;
+  },
+});
+
+/**
  * Advance execution to next node
  */
 export const advanceExecution = internalMutation({
@@ -1043,6 +1070,74 @@ export const advanceExecution = internalMutation({
       scheduledFor: args.scheduledFor,
       status: "pending",
     });
+    return null;
+  },
+});
+
+/**
+ * Internal mutation to add a tag to a contact (for workflow actions)
+ */
+export const addTagToContactInternal = internalMutation({
+  args: {
+    contactId: v.id("emailContacts"),
+    tagId: v.id("emailTags"),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const contact = await ctx.db.get(args.contactId);
+    if (!contact) {
+      console.log(`[EmailWorkflows] Contact ${args.contactId} not found for tag add`);
+      return null;
+    }
+
+    const tag = await ctx.db.get(args.tagId);
+    if (!tag) {
+      console.log(`[EmailWorkflows] Tag ${args.tagId} not found`);
+      return null;
+    }
+
+    const existingTagIds = contact.tagIds || [];
+    if (!existingTagIds.includes(args.tagId)) {
+      await ctx.db.patch(args.contactId, {
+        tagIds: [...existingTagIds, args.tagId],
+      });
+      console.log(`[EmailWorkflows] Added tag "${tag.name}" to contact ${contact.email}`);
+    }
+
+    return null;
+  },
+});
+
+/**
+ * Internal mutation to remove a tag from a contact (for workflow actions)
+ */
+export const removeTagFromContactInternal = internalMutation({
+  args: {
+    contactId: v.id("emailContacts"),
+    tagId: v.id("emailTags"),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const contact = await ctx.db.get(args.contactId);
+    if (!contact) {
+      console.log(`[EmailWorkflows] Contact ${args.contactId} not found for tag remove`);
+      return null;
+    }
+
+    const tag = await ctx.db.get(args.tagId);
+    if (!tag) {
+      console.log(`[EmailWorkflows] Tag ${args.tagId} not found`);
+      return null;
+    }
+
+    const existingTagIds = contact.tagIds || [];
+    if (existingTagIds.includes(args.tagId)) {
+      await ctx.db.patch(args.contactId, {
+        tagIds: existingTagIds.filter((t: Id<"emailTags">) => t !== args.tagId),
+      });
+      console.log(`[EmailWorkflows] Removed tag "${tag.name}" from contact ${contact.email}`);
+    }
+
     return null;
   },
 });

@@ -58,6 +58,24 @@ function ContactsAtNodeList({
     api.emailWorkflows.getContactsAtNode,
     workflowId ? { workflowId, nodeId } : "skip"
   );
+  const cancelExecution = useMutation(api.emailWorkflows.cancelExecution);
+  const { toast } = useToast();
+
+  const handleRemove = async (executionId: Id<"workflowExecutions">, email: string) => {
+    try {
+      await cancelExecution({ executionId });
+      toast({
+        title: "Contact removed",
+        description: `${email} has been removed from this automation.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to remove contact from automation.",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (!contacts || contacts.length === 0) {
     return <p className="text-xs text-muted-foreground">No contacts waiting</p>;
@@ -76,18 +94,27 @@ function ContactsAtNodeList({
               <div className="truncate text-muted-foreground">{contact.email}</div>
             )}
           </div>
-          {contact.scheduledFor && (
-            <div className="ml-2 flex items-center gap-1 text-muted-foreground">
-              <Clock className="h-3 w-3" />
-              <span>
-                {new Date(contact.scheduledFor).toLocaleDateString()}{" "}
-                {new Date(contact.scheduledFor).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </span>
-            </div>
-          )}
+          <div className="ml-2 flex items-center gap-2">
+            {contact.scheduledFor && (
+              <div className="flex items-center gap-1 text-muted-foreground">
+                <Clock className="h-3 w-3" />
+                <span>
+                  {new Date(contact.scheduledFor).toLocaleDateString()}{" "}
+                  {new Date(contact.scheduledFor).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              </div>
+            )}
+            <button
+              onClick={() => handleRemove(contact.executionId, contact.email)}
+              className="rounded p-1 text-red-500 hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-900/30"
+              title="Remove from automation"
+            >
+              <Trash2 className="h-3 w-3" />
+            </button>
+          </div>
         </div>
       ))}
     </div>

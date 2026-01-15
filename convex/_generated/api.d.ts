@@ -9396,6 +9396,12 @@ export declare const api: {
       },
       { enrolled: number; errors: Array<string>; skipped: number }
     >;
+    cancelExecution: FunctionReference<
+      "mutation",
+      "public",
+      { executionId: Id<"workflowExecutions"> },
+      null
+    >;
     createEmailTemplate: FunctionReference<
       "mutation",
       "public",
@@ -19397,6 +19403,12 @@ export declare const internal: {
     >;
   };
   emailWorkflows: {
+    addTagToContactInternal: FunctionReference<
+      "mutation",
+      "internal",
+      { contactId: Id<"emailContacts">; tagId: Id<"emailTags"> },
+      null
+    >;
     advanceExecution: FunctionReference<
       "mutation",
       "internal",
@@ -19466,6 +19478,12 @@ export declare const internal: {
       "mutation",
       "internal",
       {},
+      null
+    >;
+    removeTagFromContactInternal: FunctionReference<
+      "mutation",
+      "internal",
+      { contactId: Id<"emailContacts">; tagId: Id<"emailTags"> },
       null
     >;
     trackABTestResult: FunctionReference<
