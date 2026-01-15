@@ -8466,6 +8466,7 @@ export declare const api: {
       {
         cursor?: string;
         limit?: number;
+        noTags?: boolean;
         status?: "subscribed" | "unsubscribed" | "bounced" | "complained";
         storeId: string;
         tagId?: Id<"emailTags">;
@@ -8473,7 +8474,7 @@ export declare const api: {
       { contacts: Array<any>; hasMore: boolean; nextCursor: string | null }
     >;
     recalculateContactStats: FunctionReference<
-      "mutation",
+      "action",
       "public",
       { storeId: string },
       { message: string; success: boolean }
@@ -9414,6 +9415,17 @@ export declare const api: {
     >;
   };
   emailWorkflows: {
+    bulkEnrollAllContactsByFilter: FunctionReference<
+      "action",
+      "public",
+      {
+        noTags?: boolean;
+        storeId: string;
+        tagId?: Id<"emailTags">;
+        workflowId: Id<"emailWorkflows">;
+      },
+      { enrolled: number; message: string; skipped: number }
+    >;
     bulkEnrollContactsInWorkflow: FunctionReference<
       "mutation",
       "public",
@@ -18993,6 +19005,12 @@ export declare const internal: {
     updateReputationScores: FunctionReference<"mutation", "internal", {}, null>;
   };
   emailContacts: {
+    countContactsBatch: FunctionReference<
+      "mutation",
+      "internal",
+      { cursor?: string; status: string; storeId: string },
+      { count: number; done: boolean; nextCursor: string | null }
+    >;
     importContactsBatchInternal: FunctionReference<
       "mutation",
       "internal",
@@ -19046,6 +19064,18 @@ export declare const internal: {
       "mutation",
       "internal",
       { storeId: string },
+      null
+    >;
+    saveContactStats: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        bouncedCount: number;
+        complainedCount: number;
+        storeId: string;
+        subscribedCount: number;
+        unsubscribedCount: number;
+      },
       null
     >;
     upsertFromCustomer: FunctionReference<
@@ -19499,11 +19529,39 @@ export declare const internal: {
       { name: string; storeId: string },
       Id<"emailTags">
     >;
+    enrollContactBatchInternal: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        contactIds: Array<Id<"emailContacts">>;
+        enrolledEmails: Array<string>;
+        workflowId: Id<"emailWorkflows">;
+      },
+      { enrolled: number; newEnrolledEmails: Array<string>; skipped: number }
+    >;
     evaluateCondition: FunctionReference<
       "query",
       "internal",
       { condition?: any; contactId?: Id<"emailContacts"> },
       boolean
+    >;
+    getActiveExecutionEmails: FunctionReference<
+      "query",
+      "internal",
+      { workflowId: Id<"emailWorkflows"> },
+      Array<string>
+    >;
+    getContactIdsBatch: FunctionReference<
+      "query",
+      "internal",
+      {
+        cursor?: string;
+        limit: number;
+        noTags?: boolean;
+        storeId: string;
+        tagId?: Id<"emailTags">;
+      },
+      { contactIds: Array<string>; hasMore: boolean; nextCursor: string | null }
     >;
     getContactInternal: FunctionReference<
       "query",
@@ -19601,6 +19659,12 @@ export declare const internal: {
         tagId: Id<"emailTags">;
         tagName: string;
       },
+      null
+    >;
+    updateWorkflowStats: FunctionReference<
+      "mutation",
+      "internal",
+      { enrolledCount: number; workflowId: Id<"emailWorkflows"> },
       null
     >;
   };

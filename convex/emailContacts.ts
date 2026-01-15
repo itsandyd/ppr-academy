@@ -1,6 +1,6 @@
 import { v } from "convex/values";
-import { mutation, query, internalMutation } from "./_generated/server";
-import { internal } from "./_generated/api";
+import { mutation, query, internalMutation, action } from "./_generated/server";
+import { internal, api } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 
 export const createContact = mutation({
@@ -166,6 +166,7 @@ export const listContacts = query({
       )
     ),
     tagId: v.optional(v.id("emailTags")),
+    noTags: v.optional(v.boolean()), // Filter for contacts with no tags
     limit: v.optional(v.number()),
     cursor: v.optional(v.string()), // Cursor for pagination (contact ID)
   },
@@ -193,9 +194,10 @@ export const listContacts = query({
         .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId));
     }
 
-    // For tag filtering, we need to scan and filter manually
+    // For tag/noTags filtering, we need to scan and filter manually
     // Fetch extra to account for filtering + check hasMore
-    const fetchLimit = args.tagId ? limit * 5 : limit + 1;
+    const needsFiltering = args.tagId || args.noTags;
+    const fetchLimit = needsFiltering ? limit * 5 : limit + 1;
 
     let contacts = await query.order("desc").take(fetchLimit);
 
@@ -210,6 +212,11 @@ export const listContacts = query({
     // Filter by tag if needed
     if (args.tagId) {
       contacts = contacts.filter((c) => c.tagIds.includes(args.tagId as Id<"emailTags">));
+    }
+
+    // Filter for contacts with no tags
+    if (args.noTags) {
+      contacts = contacts.filter((c) => !c.tagIds || c.tagIds.length === 0);
     }
 
     // Determine hasMore and trim to limit
@@ -554,50 +561,66 @@ export const importContacts = mutation({
 });
 
 /**
- * Public mutation to refresh contact stats
+ * Internal query to count contacts with a specific status in batches
  */
-export const recalculateContactStats = mutation({
-  args: { storeId: v.string() },
-  returns: v.object({ success: v.boolean(), message: v.string() }),
+export const countContactsBatch = internalMutation({
+  args: {
+    storeId: v.string(),
+    status: v.string(),
+    cursor: v.optional(v.string()),
+  },
+  returns: v.object({
+    count: v.number(),
+    nextCursor: v.union(v.string(), v.null()),
+    done: v.boolean(),
+  }),
   handler: async (ctx, args) => {
-    // Count in batches - 8000 per query to stay under 32k limit
     const BATCH_SIZE = 8000;
 
-    const subscribedBatch = await ctx.db
+    let query = ctx.db
       .query("emailContacts")
       .withIndex("by_storeId_and_status", (q) =>
-        q.eq("storeId", args.storeId).eq("status", "subscribed")
-      )
-      .take(BATCH_SIZE);
+        q.eq("storeId", args.storeId).eq("status", args.status as any)
+      );
 
-    const unsubscribedBatch = await ctx.db
-      .query("emailContacts")
-      .withIndex("by_storeId_and_status", (q) =>
-        q.eq("storeId", args.storeId).eq("status", "unsubscribed")
-      )
-      .take(BATCH_SIZE);
+    const batch = await query.take(BATCH_SIZE);
 
-    const bouncedBatch = await ctx.db
-      .query("emailContacts")
-      .withIndex("by_storeId_and_status", (q) =>
-        q.eq("storeId", args.storeId).eq("status", "bounced")
-      )
-      .take(BATCH_SIZE);
+    // If cursor provided, filter to items after cursor
+    let filteredBatch = batch;
+    if (args.cursor) {
+      const cursorIdx = batch.findIndex((c) => c._id === args.cursor);
+      if (cursorIdx >= 0) {
+        filteredBatch = batch.slice(cursorIdx + 1);
+      }
+    }
 
-    const complainedBatch = await ctx.db
-      .query("emailContacts")
-      .withIndex("by_storeId_and_status", (q) =>
-        q.eq("storeId", args.storeId).eq("status", "complained")
-      )
-      .take(BATCH_SIZE);
+    const lastItem = filteredBatch[filteredBatch.length - 1];
+    const done = filteredBatch.length < BATCH_SIZE || !lastItem;
 
-    const subscribedCount = subscribedBatch.length;
-    const unsubscribedCount = unsubscribedBatch.length;
-    const bouncedCount = bouncedBatch.length;
-    const complainedCount = complainedBatch.length;
-    const totalContacts = subscribedCount + unsubscribedCount + bouncedCount + complainedCount;
+    return {
+      count: filteredBatch.length,
+      nextCursor: lastItem?._id ?? null,
+      done,
+    };
+  },
+});
 
-    // Upsert stats
+/**
+ * Internal mutation to save stats
+ */
+export const saveContactStats = internalMutation({
+  args: {
+    storeId: v.string(),
+    subscribedCount: v.number(),
+    unsubscribedCount: v.number(),
+    bouncedCount: v.number(),
+    complainedCount: v.number(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const totalContacts =
+      args.subscribedCount + args.unsubscribedCount + args.bouncedCount + args.complainedCount;
+
     const existing = await ctx.db
       .query("emailContactStats")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
@@ -606,30 +629,113 @@ export const recalculateContactStats = mutation({
     if (existing) {
       await ctx.db.patch(existing._id, {
         totalContacts,
-        subscribedCount,
-        unsubscribedCount,
-        bouncedCount,
-        complainedCount,
+        subscribedCount: args.subscribedCount,
+        unsubscribedCount: args.unsubscribedCount,
+        bouncedCount: args.bouncedCount,
+        complainedCount: args.complainedCount,
         updatedAt: Date.now(),
       });
     } else {
       await ctx.db.insert("emailContactStats", {
         storeId: args.storeId,
         totalContacts,
-        subscribedCount,
-        unsubscribedCount,
-        bouncedCount,
-        complainedCount,
+        subscribedCount: args.subscribedCount,
+        unsubscribedCount: args.unsubscribedCount,
+        bouncedCount: args.bouncedCount,
+        complainedCount: args.complainedCount,
         updatedAt: Date.now(),
       });
     }
 
-    const isEstimate = subscribedCount >= BATCH_SIZE;
+    return null;
+  },
+});
+
+/**
+ * Action to count all contacts - can run longer and iterate through batches
+ */
+export const recalculateContactStats = action({
+  args: { storeId: v.string() },
+  returns: v.object({ success: v.boolean(), message: v.string() }),
+  handler: async (ctx, args) => {
+    // Count each status by iterating through batches
+    let subscribedCount = 0;
+    let unsubscribedCount = 0;
+    let bouncedCount = 0;
+    let complainedCount = 0;
+
+    // Type for the batch result
+    type BatchResult = { count: number; nextCursor: string | null; done: boolean };
+
+    // Count subscribed
+    let cursor: string | null = null;
+    let done = false;
+    while (!done) {
+      const result: BatchResult = await ctx.runMutation(internal.emailContacts.countContactsBatch, {
+        storeId: args.storeId,
+        status: "subscribed",
+        cursor: cursor ?? undefined,
+      });
+      subscribedCount += result.count;
+      cursor = result.nextCursor;
+      done = result.done;
+    }
+
+    // Count unsubscribed
+    cursor = null;
+    done = false;
+    while (!done) {
+      const result: BatchResult = await ctx.runMutation(internal.emailContacts.countContactsBatch, {
+        storeId: args.storeId,
+        status: "unsubscribed",
+        cursor: cursor ?? undefined,
+      });
+      unsubscribedCount += result.count;
+      cursor = result.nextCursor;
+      done = result.done;
+    }
+
+    // Count bounced
+    cursor = null;
+    done = false;
+    while (!done) {
+      const result: BatchResult = await ctx.runMutation(internal.emailContacts.countContactsBatch, {
+        storeId: args.storeId,
+        status: "bounced",
+        cursor: cursor ?? undefined,
+      });
+      bouncedCount += result.count;
+      cursor = result.nextCursor;
+      done = result.done;
+    }
+
+    // Count complained
+    cursor = null;
+    done = false;
+    while (!done) {
+      const result: BatchResult = await ctx.runMutation(internal.emailContacts.countContactsBatch, {
+        storeId: args.storeId,
+        status: "complained",
+        cursor: cursor ?? undefined,
+      });
+      complainedCount += result.count;
+      cursor = result.nextCursor;
+      done = result.done;
+    }
+
+    // Save the stats
+    await ctx.runMutation(internal.emailContacts.saveContactStats, {
+      storeId: args.storeId,
+      subscribedCount,
+      unsubscribedCount,
+      bouncedCount,
+      complainedCount,
+    });
+
+    const total = subscribedCount + unsubscribedCount + bouncedCount + complainedCount;
     return {
       success: true,
-      message: isEstimate
-        ? `Stats updated (estimate): ${totalContacts}+ contacts`
-        : `Stats updated: ${totalContacts} contacts`,
+      message: `Stats updated: ${total.toLocaleString()} total contacts (${subscribedCount.toLocaleString()} subscribed)`,
     };
   },
 });

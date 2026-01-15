@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query, internalMutation, internalQuery, internalAction } from "./_generated/server";
+import { mutation, query, internalMutation, internalQuery, internalAction, action } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 
@@ -746,6 +746,239 @@ export const bulkEnrollContactsInWorkflow = mutation({
     }
 
     return { enrolled, skipped, errors };
+  },
+});
+
+/**
+ * Internal mutation to enroll a batch of contacts by IDs
+ */
+export const enrollContactBatchInternal = internalMutation({
+  args: {
+    workflowId: v.id("emailWorkflows"),
+    contactIds: v.array(v.id("emailContacts")),
+    enrolledEmails: v.array(v.string()), // Emails already enrolled
+  },
+  returns: v.object({
+    enrolled: v.number(),
+    skipped: v.number(),
+    newEnrolledEmails: v.array(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    const workflow = await ctx.db.get(args.workflowId);
+    if (!workflow) return { enrolled: 0, skipped: 0, newEnrolledEmails: [] };
+
+    const enrolledSet = new Set(args.enrolledEmails);
+    const triggerNode = workflow.nodes.find((n: { type: string }) => n.type === "trigger");
+    const firstNode = workflow.nodes.find((n: { type: string }) => n.type !== "trigger");
+    const now = Date.now();
+
+    let enrolled = 0;
+    let skipped = 0;
+    const newEnrolledEmails: string[] = [];
+
+    for (const contactId of args.contactIds) {
+      const contact = await ctx.db.get(contactId);
+      if (!contact || enrolledSet.has(contact.email)) {
+        skipped++;
+        continue;
+      }
+
+      enrolledSet.add(contact.email);
+      newEnrolledEmails.push(contact.email);
+
+      const executionId = await ctx.db.insert("workflowExecutions", {
+        workflowId: args.workflowId,
+        storeId: workflow.storeId,
+        contactId,
+        customerEmail: contact.email,
+        status: "pending",
+        currentNodeId: firstNode?.id || triggerNode?.id,
+        scheduledFor: now,
+        executionData: { enrolledManually: true },
+      });
+
+      await ctx.scheduler.runAfter(0, internal.emailWorkflowActions.executeWorkflowNode, {
+        executionId,
+      });
+
+      enrolled++;
+    }
+
+    return { enrolled, skipped, newEnrolledEmails };
+  },
+});
+
+/**
+ * Action to enroll ALL contacts matching a filter into a workflow
+ * Can handle 47k+ contacts by processing in batches
+ */
+export const bulkEnrollAllContactsByFilter = action({
+  args: {
+    workflowId: v.id("emailWorkflows"),
+    storeId: v.string(),
+    tagId: v.optional(v.id("emailTags")),
+    noTags: v.optional(v.boolean()),
+  },
+  returns: v.object({
+    enrolled: v.number(),
+    skipped: v.number(),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    let totalEnrolled = 0;
+    let totalSkipped = 0;
+    const enrolledEmails: string[] = [];
+
+    // Get already enrolled emails first
+    const activeExecutions = await ctx.runQuery(internal.emailWorkflows.getActiveExecutionEmails, {
+      workflowId: args.workflowId,
+    });
+    enrolledEmails.push(...activeExecutions);
+
+    // Type definitions for batch results
+    type BatchResult = { contactIds: string[]; nextCursor: string | null; hasMore: boolean };
+    type EnrollResult = { enrolled: number; skipped: number; newEnrolledEmails: string[] };
+
+    // Process contacts in batches
+    let cursor: string | undefined = undefined;
+    let done = false;
+    const BATCH_SIZE = 50; // Small batches for mutations
+
+    while (!done) {
+      // Fetch a batch of contact IDs
+      const batch: BatchResult = await ctx.runQuery(internal.emailWorkflows.getContactIdsBatch, {
+        storeId: args.storeId,
+        tagId: args.tagId,
+        noTags: args.noTags,
+        cursor,
+        limit: BATCH_SIZE,
+      });
+
+      if (batch.contactIds.length === 0) {
+        done = true;
+        break;
+      }
+
+      // Enroll this batch
+      const result: EnrollResult = await ctx.runMutation(internal.emailWorkflows.enrollContactBatchInternal, {
+        workflowId: args.workflowId,
+        contactIds: batch.contactIds as Id<"emailContacts">[],
+        enrolledEmails,
+      });
+
+      totalEnrolled += result.enrolled;
+      totalSkipped += result.skipped;
+      enrolledEmails.push(...result.newEnrolledEmails);
+
+      cursor = batch.nextCursor ?? undefined;
+      done = !batch.hasMore;
+    }
+
+    // Update workflow stats
+    if (totalEnrolled > 0) {
+      await ctx.runMutation(internal.emailWorkflows.updateWorkflowStats, {
+        workflowId: args.workflowId,
+        enrolledCount: totalEnrolled,
+      });
+    }
+
+    return {
+      enrolled: totalEnrolled,
+      skipped: totalSkipped,
+      message: `Enrolled ${totalEnrolled.toLocaleString()} contacts, skipped ${totalSkipped.toLocaleString()} (already enrolled or invalid)`,
+    };
+  },
+});
+
+/**
+ * Get active execution emails for a workflow
+ */
+export const getActiveExecutionEmails = internalQuery({
+  args: { workflowId: v.id("emailWorkflows") },
+  returns: v.array(v.string()),
+  handler: async (ctx, args) => {
+    const executions = await ctx.db
+      .query("workflowExecutions")
+      .withIndex("by_workflowId", (q) => q.eq("workflowId", args.workflowId))
+      .filter((q) =>
+        q.or(q.eq(q.field("status"), "pending"), q.eq(q.field("status"), "running"))
+      )
+      .take(10000);
+    return executions.map((e) => e.customerEmail);
+  },
+});
+
+/**
+ * Get a batch of contact IDs matching filter
+ */
+export const getContactIdsBatch = internalQuery({
+  args: {
+    storeId: v.string(),
+    tagId: v.optional(v.id("emailTags")),
+    noTags: v.optional(v.boolean()),
+    cursor: v.optional(v.string()),
+    limit: v.number(),
+  },
+  returns: v.object({
+    contactIds: v.array(v.string()),
+    nextCursor: v.union(v.string(), v.null()),
+    hasMore: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    let contacts = await ctx.db
+      .query("emailContacts")
+      .withIndex("by_storeId_and_status", (q) =>
+        q.eq("storeId", args.storeId).eq("status", "subscribed")
+      )
+      .take(args.limit * 5);
+
+    // Apply cursor
+    if (args.cursor) {
+      const idx = contacts.findIndex((c) => c._id === args.cursor);
+      if (idx >= 0) contacts = contacts.slice(idx + 1);
+    }
+
+    // Apply tag filter
+    if (args.tagId) {
+      contacts = contacts.filter((c) => c.tagIds?.includes(args.tagId as Id<"emailTags">));
+    }
+
+    // Apply no tags filter
+    if (args.noTags) {
+      contacts = contacts.filter((c) => !c.tagIds || c.tagIds.length === 0);
+    }
+
+    const hasMore = contacts.length > args.limit;
+    const batch = contacts.slice(0, args.limit);
+    const lastItem = batch[batch.length - 1];
+
+    return {
+      contactIds: batch.map((c) => c._id),
+      nextCursor: lastItem?._id ?? null,
+      hasMore,
+    };
+  },
+});
+
+/**
+ * Update workflow stats after bulk enrollment
+ */
+export const updateWorkflowStats = internalMutation({
+  args: {
+    workflowId: v.id("emailWorkflows"),
+    enrolledCount: v.number(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const workflow = await ctx.db.get(args.workflowId);
+    if (!workflow) return null;
+
+    await ctx.db.patch(args.workflowId, {
+      totalExecutions: (workflow.totalExecutions || 0) + args.enrolledCount,
+      lastExecuted: Date.now(),
+    });
+
+    return null;
   },
 });
 

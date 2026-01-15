@@ -87,6 +87,7 @@ export default function EmailCampaignsPage() {
   const [isImporting, setIsImporting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTagFilter, setSelectedTagFilter] = useState<string | null>(null);
+  const [noTagsFilter, setNoTagsFilter] = useState(false);
   const [contactsCursor, setContactsCursor] = useState<string | null>(null);
   const [loadedContacts, setLoadedContacts] = useState<any[]>([]);
   const contactsPerPage = 100;
@@ -105,22 +106,17 @@ export default function EmailCampaignsPage() {
           limit: contactsPerPage,
           ...(contactsCursor ? { cursor: contactsCursor } : {}),
           ...(selectedTagFilter ? { tagId: selectedTagFilter as Id<"emailTags"> } : {}),
+          ...(noTagsFilter ? { noTags: true } : {}),
         }
       : "skip"
   );
 
-  // Accumulate contacts when new data arrives
+  // Replace contacts when page changes (not accumulating)
   useEffect(() => {
     if (contactsResult?.contacts) {
-      if (!contactsCursor) {
-        // First load or filter change - replace all
-        setLoadedContacts(contactsResult.contacts);
-      } else {
-        // Load more - append
-        setLoadedContacts(prev => [...prev, ...contactsResult.contacts]);
-      }
+      setLoadedContacts(contactsResult.contacts);
     }
-  }, [contactsResult, contactsCursor]);
+  }, [contactsResult]);
 
   // Unfiltered contacts for broadcast (so it's not affected by contacts tab filter)
   const allContactsResult = useQuery(
@@ -146,14 +142,18 @@ export default function EmailCampaignsPage() {
   const deleteWorkflow = useMutation(api.emailWorkflows.deleteWorkflow);
   const toggleWorkflowActive = useMutation(api.emailWorkflows.toggleWorkflowActive);
   const retagAllContacts = useMutation(api.emailContactSync.retagAllContacts);
-  const recalculateStats = useMutation(api.emailContacts.recalculateContactStats);
+  const recalculateStats = useAction(api.emailContacts.recalculateContactStats);
+  const bulkEnrollAllByFilter = useAction(api.emailWorkflows.bulkEnrollAllContactsByFilter);
 
   const [isSyncing, setIsSyncing] = useState(false);
   const [isRetagging, setIsRetagging] = useState(false);
   const [isRecalculating, setIsRecalculating] = useState(false);
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
   const [isEnrolling, setIsEnrolling] = useState(false);
+  const [isEnrollingAll, setIsEnrollingAll] = useState(false);
   const [isAddingTag, setIsAddingTag] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [cursorHistory, setCursorHistory] = useState<(string | null)[]>([null]);
   const [renameWorkflowId, setRenameWorkflowId] = useState<string | null>(null);
   const [renameWorkflowName, setRenameWorkflowName] = useState("");
 
@@ -460,6 +460,31 @@ export default function EmailCampaignsPage() {
     }
   };
 
+  const handleEnrollAllByFilter = async (workflowId: string) => {
+    if (!confirm(`This will enroll ALL contacts matching the current filter to this automation. Continue?`)) return;
+    setIsEnrollingAll(true);
+    try {
+      const result = await bulkEnrollAllByFilter({
+        workflowId: workflowId as any,
+        storeId,
+        ...(selectedTagFilter ? { tagId: selectedTagFilter as any } : {}),
+        ...(noTagsFilter ? { noTags: true } : {}),
+      });
+      toast({
+        title: "Bulk Enrollment Complete",
+        description: `Enrolled ${result.enrolled} contacts, skipped ${result.skipped} (already enrolled)`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Failed to enroll contacts",
+        description: error.message || "Unknown error",
+        variant: "destructive"
+      });
+    } finally {
+      setIsEnrollingAll(false);
+    }
+  };
+
   const toggleContactSelection = (contactId: string) => {
     setSelectedContacts((prev) => {
       const newSet = new Set(prev);
@@ -544,10 +569,22 @@ export default function EmailCampaignsPage() {
   // Use filtered contacts directly
   const paginatedContacts = filteredContacts;
 
-  // Load more contacts
-  const handleLoadMore = () => {
+  // Go to next page
+  const handleNextPage = () => {
     if (contactsResult?.nextCursor) {
+      setCursorHistory(prev => [...prev, contactsResult.nextCursor]);
       setContactsCursor(contactsResult.nextCursor);
+      setCurrentPage(prev => prev + 1);
+    }
+  };
+
+  // Go to previous page
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      const prevCursor = cursorHistory[currentPage - 2]; // Get cursor for previous page
+      setContactsCursor(prevCursor);
+      setCursorHistory(prev => prev.slice(0, -1));
+      setCurrentPage(prev => prev - 1);
     }
   };
 
@@ -557,9 +594,18 @@ export default function EmailCampaignsPage() {
   };
 
   const handleTagFilterChange = (value: string | null) => {
-    setSelectedTagFilter(value);
+    if (value === "no-tags") {
+      setSelectedTagFilter(null);
+      setNoTagsFilter(true);
+    } else {
+      setSelectedTagFilter(value);
+      setNoTagsFilter(false);
+    }
     setContactsCursor(null);
     setLoadedContacts([]);
+    setCurrentPage(1);
+    setCursorHistory([null]);
+    setSelectedContacts(new Set());
   };
 
   // Filtered contacts for broadcast
@@ -1068,7 +1114,7 @@ The unsubscribe link will be added automatically."
               />
             </div>
             <Select
-              value={selectedTagFilter || "all"}
+              value={noTagsFilter ? "no-tags" : selectedTagFilter || "all"}
               onValueChange={(v) => handleTagFilterChange(v === "all" ? null : v)}
             >
               <SelectTrigger className="w-full sm:w-[180px]">
@@ -1076,6 +1122,7 @@ The unsubscribe link will be added automatically."
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Contacts</SelectItem>
+                <SelectItem value="no-tags">No Tags</SelectItem>
                 {tags?.map((tag: any) => (
                   <SelectItem key={tag._id} value={tag._id}>
                     <div className="flex items-center gap-2">
@@ -1109,89 +1156,138 @@ The unsubscribe link will be added automatically."
           ) : (
             <>
               {/* Bulk Action Bar */}
-              {selectedContacts.size > 0 ? (
-                <Card className="sticky top-0 z-10 border-primary bg-primary/10 shadow-md">
-                  <CardContent className="flex items-center justify-between p-3">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                        {selectedContacts.size}
-                      </div>
-                      <span className="text-sm font-medium">
-                        contact{selectedContacts.size > 1 ? "s" : ""} selected
+              <Card className={cn(
+                "sticky top-0 z-10 shadow-md",
+                selectedContacts.size > 0 ? "border-primary bg-primary/10" : "border-border bg-muted/50"
+              )}>
+                <CardContent className="flex flex-wrap items-center justify-between gap-2 p-3">
+                  <div className="flex items-center gap-3">
+                    {selectedContacts.size > 0 ? (
+                      <>
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                          {selectedContacts.size}
+                        </div>
+                        <span className="text-sm font-medium">
+                          contact{selectedContacts.size > 1 ? "s" : ""} selected
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">
+                        Select contacts or enroll all {noTagsFilter ? "untagged" : selectedTagFilter ? "filtered" : ""} contacts
                       </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button size="sm" disabled={isAddingTag} variant="outline" className="gap-2">
-                            <Tag className="h-4 w-4" />
-                            {isAddingTag ? "Adding..." : "Add Tag"}
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent className="bg-white dark:bg-black">
-                          {tags && tags.length > 0 ? (
-                            tags.map((tag: any) => (
-                              <DropdownMenuItem
-                                key={tag._id}
-                                onClick={() => handleBulkAddTag(tag._id)}
-                                className="flex items-center gap-2"
-                              >
-                                <div
-                                  className="h-2 w-2 rounded-full"
-                                  style={{ backgroundColor: tag.color || "#6b7280" }}
-                                />
-                                {tag.name}
-                              </DropdownMenuItem>
-                            ))
+                    )}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {selectedContacts.size > 0 && (
+                      <>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button size="sm" disabled={isAddingTag} variant="outline" className="gap-2">
+                              <Tag className="h-4 w-4" />
+                              {isAddingTag ? "Adding..." : "Add Tag"}
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="bg-white dark:bg-black">
+                            {tags && tags.length > 0 ? (
+                              tags.map((tag: any) => (
+                                <DropdownMenuItem
+                                  key={tag._id}
+                                  onClick={() => handleBulkAddTag(tag._id)}
+                                  className="flex items-center gap-2"
+                                >
+                                  <div
+                                    className="h-2 w-2 rounded-full"
+                                    style={{ backgroundColor: tag.color || "#6b7280" }}
+                                  />
+                                  {tag.name}
+                                </DropdownMenuItem>
+                              ))
+                            ) : (
+                              <DropdownMenuItem disabled>No tags yet</DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button size="sm" disabled={isEnrolling} variant="outline" className="gap-2">
+                              <Workflow className="h-4 w-4" />
+                              {isEnrolling ? "Enrolling..." : "Add Selected"}
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="bg-white dark:bg-black">
+                            {workflows && workflows.length > 0 ? (
+                              workflows.map((workflow: any) => (
+                                <DropdownMenuItem
+                                  key={workflow._id}
+                                  onClick={() => handleBulkEnroll(workflow._id)}
+                                  className="flex items-center gap-2"
+                                >
+                                  <div
+                                    className={cn(
+                                      "h-2 w-2 rounded-full",
+                                      workflow.isActive ? "bg-green-500" : "bg-gray-400"
+                                    )}
+                                  />
+                                  {workflow.name}
+                                </DropdownMenuItem>
+                              ))
+                            ) : (
+                              <DropdownMenuItem disabled>No automations yet</DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedContacts(new Set())}
+                        >
+                          Clear
+                        </Button>
+                      </>
+                    )}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="sm" disabled={isEnrollingAll} className="gap-2">
+                          <Users className="h-4 w-4" />
+                          {isEnrollingAll ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Enrolling All...
+                            </>
                           ) : (
-                            <DropdownMenuItem disabled>No tags yet</DropdownMenuItem>
+                            "Enroll All to Automation"
                           )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button size="sm" disabled={isEnrolling} className="gap-2">
-                            <Workflow className="h-4 w-4" />
-                            {isEnrolling ? "Enrolling..." : "Add to Automation"}
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent className="bg-white dark:bg-black">
-                          {workflows && workflows.length > 0 ? (
-                            workflows.map((workflow: any) => (
-                              <DropdownMenuItem
-                                key={workflow._id}
-                                onClick={() => handleBulkEnroll(workflow._id)}
-                                className="flex items-center gap-2"
-                              >
-                                <div
-                                  className={cn(
-                                    "h-2 w-2 rounded-full",
-                                    workflow.isActive ? "bg-green-500" : "bg-gray-400"
-                                  )}
-                                />
-                                {workflow.name}
-                              </DropdownMenuItem>
-                            ))
-                          ) : (
-                            <DropdownMenuItem disabled>No automations yet</DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedContacts(new Set())}
-                      >
-                        Clear
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="rounded-lg border border-dashed border-border bg-muted/30 p-3 text-center text-sm text-muted-foreground">
-                  Select contacts to add them to an automation workflow
-                </div>
-              )}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="bg-white dark:bg-black">
+                        <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                          Enroll ALL {noTagsFilter ? "untagged" : selectedTagFilter ? "filtered" : ""} contacts
+                        </div>
+                        <DropdownMenuSeparator />
+                        {workflows && workflows.length > 0 ? (
+                          workflows.map((workflow: any) => (
+                            <DropdownMenuItem
+                              key={workflow._id}
+                              onClick={() => handleEnrollAllByFilter(workflow._id)}
+                              className="flex items-center gap-2"
+                            >
+                              <div
+                                className={cn(
+                                  "h-2 w-2 rounded-full",
+                                  workflow.isActive ? "bg-green-500" : "bg-gray-400"
+                                )}
+                              />
+                              {workflow.name}
+                            </DropdownMenuItem>
+                          ))
+                        ) : (
+                          <DropdownMenuItem disabled>No automations yet</DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </CardContent>
+              </Card>
 
               {/* Mobile: Card-based layout */}
               <div className="space-y-2 md:hidden">
@@ -1514,21 +1610,33 @@ The unsubscribe link will be added automatically."
                 </div>
               </Card>
 
-              {/* Load More / Stats */}
+              {/* Pagination Controls */}
               <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
                 <div className="text-sm text-muted-foreground">
-                  Showing {loadedContacts.length} contacts
-                  {contactStats?.total ? ` of ${contactStats.total}${contactStats.isEstimate ? '+' : ''}` : ''}
+                  Page {currentPage} · Showing {loadedContacts.length} contacts per page
+                  {contactStats?.total ? ` · ${contactStats.total.toLocaleString()}${contactStats.isEstimate ? '+' : ''} total` : ''}
                 </div>
-                {contactsResult?.hasMore && (
+                <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={handleLoadMore}
+                    onClick={handlePrevPage}
+                    disabled={currentPage === 1}
                   >
-                    Load More
+                    Previous
                   </Button>
-                )}
+                  <span className="px-3 py-1 text-sm font-medium">
+                    {currentPage}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleNextPage}
+                    disabled={!contactsResult?.hasMore}
+                  >
+                    Next
+                  </Button>
+                </div>
               </div>
             </>
           )}
