@@ -910,6 +910,7 @@ export const getActiveExecutionEmails = internalQuery({
 
 /**
  * Get a batch of contact IDs matching filter
+ * Uses proper Convex pagination to handle large datasets (43,000+ contacts)
  */
 export const getContactIdsBatch = internalQuery({
   args: {
@@ -925,36 +926,80 @@ export const getContactIdsBatch = internalQuery({
     hasMore: v.boolean(),
   }),
   handler: async (ctx, args) => {
-    let contacts = await ctx.db
+    const needsFiltering = args.tagId || args.noTags;
+    const baseQuery = ctx.db
       .query("emailContacts")
       .withIndex("by_storeId_and_status", (q) =>
         q.eq("storeId", args.storeId).eq("status", "subscribed")
-      )
-      .take(args.limit * 5);
+      );
 
-    // Apply cursor
-    if (args.cursor) {
-      const idx = contacts.findIndex((c) => c._id === args.cursor);
-      if (idx >= 0) contacts = contacts.slice(idx + 1);
+    const collectedContacts: { _id: Id<"emailContacts">; tagIds?: Id<"emailTags">[] }[] = [];
+    let currentCursor = args.cursor || null;
+    let hasMore = false;
+    let finalCursor: string | null = null;
+
+    if (needsFiltering) {
+      // For filtered queries, iterate through pages until we have enough results
+      const MAX_ITERATIONS = 200; // Safety limit
+      let iterations = 0;
+
+      while (collectedContacts.length < args.limit + 1 && iterations < MAX_ITERATIONS) {
+        iterations++;
+
+        const paginationResult = await baseQuery.paginate({
+          cursor: currentCursor,
+          numItems: 1000, // Fetch larger batches for efficiency
+        });
+
+        // Filter the batch
+        let filteredBatch = paginationResult.page;
+
+        if (args.tagId) {
+          filteredBatch = filteredBatch.filter((c) =>
+            c.tagIds?.includes(args.tagId as Id<"emailTags">)
+          );
+        }
+
+        if (args.noTags) {
+          filteredBatch = filteredBatch.filter((c) =>
+            !c.tagIds || c.tagIds.length === 0
+          );
+        }
+
+        collectedContacts.push(...filteredBatch);
+
+        if (paginationResult.isDone) {
+          break;
+        }
+
+        currentCursor = paginationResult.continueCursor;
+      }
+
+      hasMore = collectedContacts.length > args.limit;
+      if (hasMore) {
+        collectedContacts.length = args.limit;
+      }
+      finalCursor = hasMore ? currentCursor : null;
+    } else {
+      // For non-filtered queries, use simple pagination
+      const paginationResult = await baseQuery.paginate({
+        cursor: currentCursor,
+        numItems: args.limit + 1,
+      });
+
+      collectedContacts.push(...paginationResult.page);
+      hasMore = collectedContacts.length > args.limit;
+
+      if (hasMore) {
+        collectedContacts.length = args.limit;
+      }
+
+      finalCursor = paginationResult.isDone ? null : paginationResult.continueCursor;
     }
-
-    // Apply tag filter
-    if (args.tagId) {
-      contacts = contacts.filter((c) => c.tagIds?.includes(args.tagId as Id<"emailTags">));
-    }
-
-    // Apply no tags filter
-    if (args.noTags) {
-      contacts = contacts.filter((c) => !c.tagIds || c.tagIds.length === 0);
-    }
-
-    const hasMore = contacts.length > args.limit;
-    const batch = contacts.slice(0, args.limit);
-    const lastItem = batch[batch.length - 1];
 
     return {
-      contactIds: batch.map((c) => c._id),
-      nextCursor: lastItem?._id ?? null,
+      contactIds: collectedContacts.map((c) => c._id),
+      nextCursor: finalCursor,
       hasMore,
     };
   },

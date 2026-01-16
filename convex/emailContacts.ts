@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query, internalMutation, action } from "./_generated/server";
+import { mutation, query, internalMutation, internalQuery, action } from "./_generated/server";
 import { internal, api } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 
@@ -168,7 +168,7 @@ export const listContacts = query({
     tagId: v.optional(v.id("emailTags")),
     noTags: v.optional(v.boolean()), // Filter for contacts with no tags
     limit: v.optional(v.number()),
-    cursor: v.optional(v.string()), // Cursor for pagination (contact ID)
+    cursor: v.optional(v.string()), // Cursor for pagination (Convex pagination cursor)
   },
   returns: v.object({
     contacts: v.array(v.any()),
@@ -177,54 +177,98 @@ export const listContacts = query({
   }),
   handler: async (ctx, args) => {
     const limit = Math.min(args.limit || 100, 200); // Max 200 per page to stay under read limits
+    const needsFiltering = args.tagId || args.noTags;
 
-    // Build query based on filters
-    let query;
+    // Build base query
+    let baseQuery;
     if (args.status) {
-      // Use compound index for status filtering
-      const status = args.status; // Capture for TypeScript narrowing
-      query = ctx.db
+      const status = args.status;
+      baseQuery = ctx.db
         .query("emailContacts")
         .withIndex("by_storeId_and_status", (q) =>
           q.eq("storeId", args.storeId).eq("status", status)
         );
     } else {
-      query = ctx.db
+      baseQuery = ctx.db
         .query("emailContacts")
         .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId));
     }
 
-    // For tag/noTags filtering, we need to scan and filter manually
-    // Fetch extra to account for filtering + check hasMore
-    const needsFiltering = args.tagId || args.noTags;
-    const fetchLimit = needsFiltering ? limit * 5 : limit + 1;
+    // Use proper Convex pagination
+    const paginatedContacts: typeof baseQuery extends { collect: () => Promise<infer T> } ? T extends (infer U)[] ? U[] : any[] : any[] = [];
+    let currentCursor = args.cursor || null;
+    let hasMore = false;
+    let finalCursor: string | null = null;
 
-    let contacts = await query.order("desc").take(fetchLimit);
+    if (needsFiltering) {
+      // For filtered queries, we need to iterate through pages until we have enough results
+      // This handles the case where we need to scan through many contacts to find matching ones
+      const MAX_ITERATIONS = 100; // Safety limit to prevent infinite loops
+      let iterations = 0;
 
-    // Apply cursor - skip contacts until we find the cursor
-    if (args.cursor) {
-      const cursorIndex = contacts.findIndex((c) => c._id === args.cursor);
-      if (cursorIndex >= 0) {
-        contacts = contacts.slice(cursorIndex + 1);
+      while (paginatedContacts.length < limit + 1 && iterations < MAX_ITERATIONS) {
+        iterations++;
+
+        const paginationResult = await baseQuery
+          .order("desc")
+          .paginate({
+            cursor: currentCursor,
+            numItems: 500, // Fetch larger batches for efficiency when filtering
+          });
+
+        // Filter the batch
+        let filteredBatch = paginationResult.page;
+
+        if (args.tagId) {
+          filteredBatch = filteredBatch.filter((c) =>
+            c.tagIds?.includes(args.tagId as Id<"emailTags">)
+          );
+        }
+
+        if (args.noTags) {
+          filteredBatch = filteredBatch.filter((c) =>
+            !c.tagIds || c.tagIds.length === 0
+          );
+        }
+
+        // Add filtered results
+        paginatedContacts.push(...filteredBatch);
+
+        // Check if we've exhausted all contacts
+        if (paginationResult.isDone) {
+          break;
+        }
+
+        currentCursor = paginationResult.continueCursor;
       }
-    }
 
-    // Filter by tag if needed
-    if (args.tagId) {
-      contacts = contacts.filter((c) => c.tagIds.includes(args.tagId as Id<"emailTags">));
-    }
+      // Determine hasMore and trim to limit
+      hasMore = paginatedContacts.length > limit;
+      if (hasMore) {
+        paginatedContacts.length = limit; // Trim to limit
+      }
 
-    // Filter for contacts with no tags
-    if (args.noTags) {
-      contacts = contacts.filter((c) => !c.tagIds || c.tagIds.length === 0);
-    }
+      // For filtered queries, we store the last Convex cursor we used
+      // This allows continuation even if we haven't filled a full page
+      finalCursor = hasMore ? currentCursor : null;
+    } else {
+      // For non-filtered queries, use simple pagination
+      const paginationResult = await baseQuery
+        .order("desc")
+        .paginate({
+          cursor: currentCursor,
+          numItems: limit + 1, // Fetch one extra to check hasMore
+        });
 
-    // Determine hasMore and trim to limit
-    const hasMore = contacts.length > limit;
-    const paginatedContacts = contacts.slice(0, limit);
-    const nextCursor = paginatedContacts.length > 0
-      ? paginatedContacts[paginatedContacts.length - 1]._id
-      : null;
+      paginatedContacts.push(...paginationResult.page);
+      hasMore = paginatedContacts.length > limit;
+
+      if (hasMore) {
+        paginatedContacts.length = limit; // Trim to limit
+      }
+
+      finalCursor = paginationResult.isDone ? null : paginationResult.continueCursor;
+    }
 
     // Resolve tags for display
     const tagsCache: Record<string, { _id: Id<"emailTags">; name: string; color?: string } | null> =
@@ -233,7 +277,7 @@ export const listContacts = query({
     const contactsWithTags = await Promise.all(
       paginatedContacts.map(async (contact) => {
         const tags = await Promise.all(
-          contact.tagIds.map(async (tagId) => {
+          (contact.tagIds || []).map(async (tagId) => {
             if (tagsCache[tagId] === undefined) {
               const tag = await ctx.db.get(tagId) as { _id: Id<"emailTags">; name: string; color?: string } | null;
               tagsCache[tagId] = tag;
@@ -250,7 +294,7 @@ export const listContacts = query({
 
     return {
       contacts: contactsWithTags,
-      nextCursor,
+      nextCursor: finalCursor,
       hasMore,
     };
   },
@@ -577,30 +621,22 @@ export const countContactsBatch = internalMutation({
   handler: async (ctx, args) => {
     const BATCH_SIZE = 8000;
 
-    let query = ctx.db
+    const query = ctx.db
       .query("emailContacts")
       .withIndex("by_storeId_and_status", (q) =>
         q.eq("storeId", args.storeId).eq("status", args.status as any)
       );
 
-    const batch = await query.take(BATCH_SIZE);
-
-    // If cursor provided, filter to items after cursor
-    let filteredBatch = batch;
-    if (args.cursor) {
-      const cursorIdx = batch.findIndex((c) => c._id === args.cursor);
-      if (cursorIdx >= 0) {
-        filteredBatch = batch.slice(cursorIdx + 1);
-      }
-    }
-
-    const lastItem = filteredBatch[filteredBatch.length - 1];
-    const done = filteredBatch.length < BATCH_SIZE || !lastItem;
+    // Use proper Convex pagination
+    const paginationResult = await query.paginate({
+      cursor: args.cursor || null,
+      numItems: BATCH_SIZE,
+    });
 
     return {
-      count: filteredBatch.length,
-      nextCursor: lastItem?._id ?? null,
-      done,
+      count: paginationResult.page.length,
+      nextCursor: paginationResult.isDone ? null : paginationResult.continueCursor,
+      done: paginationResult.isDone,
     };
   },
 });
@@ -840,57 +876,38 @@ export const refreshContactStats = internalMutation({
   args: { storeId: v.string() },
   returns: v.null(),
   handler: async (ctx, args) => {
-    // Count in batches to avoid read limits
-    let subscribedCount = 0;
-    let unsubscribedCount = 0;
-    let bouncedCount = 0;
-    let complainedCount = 0;
+    // Helper function to count all contacts with a specific status using proper pagination
+    const countByStatus = async (status: string): Promise<number> => {
+      const BATCH_SIZE = 8000;
+      let count = 0;
+      let cursor: string | null = null;
 
-    const BATCH_SIZE = 8000;
+      while (true) {
+        const query = ctx.db
+          .query("emailContacts")
+          .withIndex("by_storeId_and_status", (q) =>
+            q.eq("storeId", args.storeId).eq("status", status as any)
+          );
 
-    // Count subscribed
-    let cursor: string | null = null;
-    while (true) {
-      let query = ctx.db
-        .query("emailContacts")
-        .withIndex("by_storeId_and_status", (q) =>
-          q.eq("storeId", args.storeId).eq("status", "subscribed")
-        );
+        const paginationResult = await query.paginate({
+          cursor,
+          numItems: BATCH_SIZE,
+        });
 
-      const batch = await query.take(BATCH_SIZE);
-      subscribedCount += batch.length;
+        count += paginationResult.page.length;
 
-      if (batch.length < BATCH_SIZE) break;
-      // Can't easily paginate without proper cursor, so just count one batch
-      break;
-    }
+        if (paginationResult.isDone) break;
+        cursor = paginationResult.continueCursor;
+      }
 
-    // Count unsubscribed
-    const unsubBatch = await ctx.db
-      .query("emailContacts")
-      .withIndex("by_storeId_and_status", (q) =>
-        q.eq("storeId", args.storeId).eq("status", "unsubscribed")
-      )
-      .take(BATCH_SIZE);
-    unsubscribedCount = unsubBatch.length;
+      return count;
+    };
 
-    // Count bounced
-    const bouncedBatch = await ctx.db
-      .query("emailContacts")
-      .withIndex("by_storeId_and_status", (q) =>
-        q.eq("storeId", args.storeId).eq("status", "bounced")
-      )
-      .take(BATCH_SIZE);
-    bouncedCount = bouncedBatch.length;
-
-    // Count complained
-    const complainedBatch = await ctx.db
-      .query("emailContacts")
-      .withIndex("by_storeId_and_status", (q) =>
-        q.eq("storeId", args.storeId).eq("status", "complained")
-      )
-      .take(BATCH_SIZE);
-    complainedCount = complainedBatch.length;
+    // Count all statuses using proper pagination
+    const subscribedCount = await countByStatus("subscribed");
+    const unsubscribedCount = await countByStatus("unsubscribed");
+    const bouncedCount = await countByStatus("bounced");
+    const complainedCount = await countByStatus("complained");
 
     const totalContacts = subscribedCount + unsubscribedCount + bouncedCount + complainedCount;
 
@@ -1436,5 +1453,272 @@ export const bulkImportContacts = mutation({
     }
 
     return { imported, skipped, errors };
+  },
+});
+
+/**
+ * Find duplicate contacts by email for a store
+ * Returns a summary of duplicates found
+ */
+export const findDuplicateContacts = action({
+  args: {
+    storeId: v.string(),
+  },
+  returns: v.object({
+    totalContacts: v.number(),
+    uniqueEmails: v.number(),
+    duplicateCount: v.number(),
+    topDuplicates: v.array(v.object({
+      email: v.string(),
+      count: v.number(),
+    })),
+  }),
+  handler: async (ctx, args) => {
+    // Use internal query to scan all contacts
+    type ScanResult = { emails: string[]; nextCursor: string | null; done: boolean };
+
+    const emailCounts: Record<string, number> = {};
+    let cursor: string | null = null;
+    let totalContacts = 0;
+
+    // Iterate through all contacts
+    while (true) {
+      const result: ScanResult = await ctx.runQuery(internal.emailContacts.scanContactEmails, {
+        storeId: args.storeId,
+        cursor: cursor ?? undefined,
+      });
+
+      for (const email of result.emails) {
+        const normalizedEmail = email.toLowerCase();
+        emailCounts[normalizedEmail] = (emailCounts[normalizedEmail] || 0) + 1;
+        totalContacts++;
+      }
+
+      if (result.done) break;
+      cursor = result.nextCursor;
+    }
+
+    const uniqueEmails = Object.keys(emailCounts).length;
+    const duplicateCount = totalContacts - uniqueEmails;
+
+    // Find top duplicates (emails with most copies)
+    const topDuplicates = Object.entries(emailCounts)
+      .filter(([_, count]) => count > 1)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 20)
+      .map(([email, count]) => ({ email, count }));
+
+    return {
+      totalContacts,
+      uniqueEmails,
+      duplicateCount,
+      topDuplicates,
+    };
+  },
+});
+
+/**
+ * Internal query to scan contact emails in batches
+ */
+export const scanContactEmails = internalQuery({
+  args: {
+    storeId: v.string(),
+    cursor: v.optional(v.string()),
+  },
+  returns: v.object({
+    emails: v.array(v.string()),
+    nextCursor: v.union(v.string(), v.null()),
+    done: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    const BATCH_SIZE = 8000;
+
+    const query = ctx.db
+      .query("emailContacts")
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId));
+
+    const paginationResult = await query.paginate({
+      cursor: args.cursor || null,
+      numItems: BATCH_SIZE,
+    });
+
+    return {
+      emails: paginationResult.page.map((c) => c.email),
+      nextCursor: paginationResult.isDone ? null : paginationResult.continueCursor,
+      done: paginationResult.isDone,
+    };
+  },
+});
+
+/**
+ * Remove duplicate contacts, keeping the oldest one (first created)
+ * This action processes duplicates in batches to handle large datasets
+ */
+export const removeDuplicateContacts = action({
+  args: {
+    storeId: v.string(),
+    dryRun: v.optional(v.boolean()), // If true, just count without deleting
+  },
+  returns: v.object({
+    processed: v.number(),
+    deleted: v.number(),
+    kept: v.number(),
+    errors: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    const dryRun = args.dryRun ?? false;
+
+    // First, build a map of email -> contact IDs (sorted by creation time)
+    type ScanResult = { contacts: Array<{ id: string; email: string; createdAt: number }>; nextCursor: string | null; done: boolean };
+
+    const emailToContacts: Record<string, Array<{ id: string; createdAt: number }>> = {};
+    let cursor: string | null = null;
+    let totalProcessed = 0;
+
+    // Scan all contacts
+    while (true) {
+      const result: ScanResult = await ctx.runQuery(internal.emailContacts.scanContactsForDedup, {
+        storeId: args.storeId,
+        cursor: cursor ?? undefined,
+      });
+
+      for (const contact of result.contacts) {
+        const normalizedEmail = contact.email.toLowerCase();
+        if (!emailToContacts[normalizedEmail]) {
+          emailToContacts[normalizedEmail] = [];
+        }
+        emailToContacts[normalizedEmail].push({
+          id: contact.id,
+          createdAt: contact.createdAt,
+        });
+        totalProcessed++;
+      }
+
+      if (result.done) break;
+      cursor = result.nextCursor;
+    }
+
+    // Find duplicates and delete all but the oldest
+    let deleted = 0;
+    let kept = 0;
+    let errors = 0;
+
+    for (const [email, contacts] of Object.entries(emailToContacts)) {
+      if (contacts.length <= 1) {
+        kept++;
+        continue;
+      }
+
+      // Sort by createdAt ascending (oldest first)
+      contacts.sort((a, b) => a.createdAt - b.createdAt);
+
+      // Keep the oldest, delete the rest
+      kept++;
+      const toDelete = contacts.slice(1);
+
+      if (!dryRun) {
+        // Delete in batches
+        for (const contact of toDelete) {
+          try {
+            await ctx.runMutation(internal.emailContacts.deleteContactInternal, {
+              contactId: contact.id as Id<"emailContacts">,
+            });
+            deleted++;
+          } catch (e) {
+            errors++;
+          }
+        }
+      } else {
+        deleted += toDelete.length;
+      }
+    }
+
+    // Refresh stats after deduplication
+    if (!dryRun && deleted > 0) {
+      await ctx.runMutation(internal.emailContacts.refreshContactStats, {
+        storeId: args.storeId,
+      });
+    }
+
+    return {
+      processed: totalProcessed,
+      deleted,
+      kept,
+      errors,
+    };
+  },
+});
+
+/**
+ * Internal query to scan contacts for deduplication
+ */
+export const scanContactsForDedup = internalQuery({
+  args: {
+    storeId: v.string(),
+    cursor: v.optional(v.string()),
+  },
+  returns: v.object({
+    contacts: v.array(v.object({
+      id: v.string(),
+      email: v.string(),
+      createdAt: v.number(),
+    })),
+    nextCursor: v.union(v.string(), v.null()),
+    done: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    const BATCH_SIZE = 8000;
+
+    const query = ctx.db
+      .query("emailContacts")
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId));
+
+    const paginationResult = await query.paginate({
+      cursor: args.cursor || null,
+      numItems: BATCH_SIZE,
+    });
+
+    return {
+      contacts: paginationResult.page.map((c) => ({
+        id: c._id,
+        email: c.email,
+        createdAt: c.createdAt || c._creationTime,
+      })),
+      nextCursor: paginationResult.isDone ? null : paginationResult.continueCursor,
+      done: paginationResult.isDone,
+    };
+  },
+});
+
+/**
+ * Internal mutation to delete a contact (used by deduplication)
+ */
+export const deleteContactInternal = internalMutation({
+  args: { contactId: v.id("emailContacts") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const contact = await ctx.db.get(args.contactId);
+    if (!contact) return null;
+
+    // Update tag counts
+    for (const tagId of contact.tagIds || []) {
+      const tag = await ctx.db.get(tagId);
+      if (tag && tag.contactCount > 0) {
+        await ctx.db.patch(tagId, { contactCount: tag.contactCount - 1 });
+      }
+    }
+
+    // Delete associated activities
+    const activities = await ctx.db
+      .query("emailContactActivity")
+      .withIndex("by_contactId", (q) => q.eq("contactId", args.contactId))
+      .take(100);
+
+    for (const activity of activities) {
+      await ctx.db.delete(activity._id);
+    }
+
+    await ctx.db.delete(args.contactId);
+    return null;
   },
 });

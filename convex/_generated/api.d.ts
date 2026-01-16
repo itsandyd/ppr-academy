@@ -8416,6 +8416,17 @@ export declare const api: {
       { contactId: Id<"emailContacts"> },
       null
     >;
+    findDuplicateContacts: FunctionReference<
+      "action",
+      "public",
+      { storeId: string },
+      {
+        duplicateCount: number;
+        topDuplicates: Array<{ count: number; email: string }>;
+        totalContacts: number;
+        uniqueEmails: number;
+      }
+    >;
     getContact: FunctionReference<
       "query",
       "public",
@@ -8478,6 +8489,12 @@ export declare const api: {
       "public",
       { storeId: string },
       { message: string; success: boolean }
+    >;
+    removeDuplicateContacts: FunctionReference<
+      "action",
+      "public",
+      { dryRun?: boolean; storeId: string },
+      { deleted: number; errors: number; kept: number; processed: number }
     >;
     removeTagFromContact: FunctionReference<
       "mutation",
@@ -19011,6 +19028,12 @@ export declare const internal: {
       { cursor?: string; status: string; storeId: string },
       { count: number; done: boolean; nextCursor: string | null }
     >;
+    deleteContactInternal: FunctionReference<
+      "mutation",
+      "internal",
+      { contactId: Id<"emailContacts"> },
+      null
+    >;
     importContactsBatchInternal: FunctionReference<
       "mutation",
       "internal",
@@ -19077,6 +19100,22 @@ export declare const internal: {
         unsubscribedCount: number;
       },
       null
+    >;
+    scanContactEmails: FunctionReference<
+      "query",
+      "internal",
+      { cursor?: string; storeId: string },
+      { done: boolean; emails: Array<string>; nextCursor: string | null }
+    >;
+    scanContactsForDedup: FunctionReference<
+      "query",
+      "internal",
+      { cursor?: string; storeId: string },
+      {
+        contacts: Array<{ createdAt: number; email: string; id: string }>;
+        done: boolean;
+        nextCursor: string | null;
+      }
     >;
     upsertFromCustomer: FunctionReference<
       "mutation",

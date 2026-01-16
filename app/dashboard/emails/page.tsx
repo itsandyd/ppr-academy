@@ -144,10 +144,21 @@ export default function EmailCampaignsPage() {
   const retagAllContacts = useMutation(api.emailContactSync.retagAllContacts);
   const recalculateStats = useAction(api.emailContacts.recalculateContactStats);
   const bulkEnrollAllByFilter = useAction(api.emailWorkflows.bulkEnrollAllContactsByFilter);
+  const findDuplicates = useAction(api.emailContacts.findDuplicateContacts);
+  const removeDuplicates = useAction(api.emailContacts.removeDuplicateContacts);
 
   const [isSyncing, setIsSyncing] = useState(false);
   const [isRetagging, setIsRetagging] = useState(false);
   const [isRecalculating, setIsRecalculating] = useState(false);
+  const [isDedupOpen, setIsDedupOpen] = useState(false);
+  const [isFindingDuplicates, setIsFindingDuplicates] = useState(false);
+  const [isRemovingDuplicates, setIsRemovingDuplicates] = useState(false);
+  const [duplicateInfo, setDuplicateInfo] = useState<{
+    totalContacts: number;
+    uniqueEmails: number;
+    duplicateCount: number;
+    topDuplicates: Array<{ email: string; count: number }>;
+  } | null>(null);
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
   const [isEnrolling, setIsEnrolling] = useState(false);
   const [isEnrollingAll, setIsEnrollingAll] = useState(false);
@@ -404,6 +415,52 @@ export default function EmailCampaignsPage() {
       });
     } finally {
       setIsRecalculating(false);
+    }
+  };
+
+  const handleFindDuplicates = async () => {
+    setIsFindingDuplicates(true);
+    setDuplicateInfo(null);
+    try {
+      const result = await findDuplicates({ storeId });
+      setDuplicateInfo(result);
+      if (result.duplicateCount === 0) {
+        toast({
+          title: "No Duplicates Found",
+          description: "All contacts have unique email addresses.",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Failed to find duplicates",
+        description: error.message || "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setIsFindingDuplicates(false);
+    }
+  };
+
+  const handleRemoveDuplicates = async () => {
+    if (!duplicateInfo || duplicateInfo.duplicateCount === 0) return;
+
+    setIsRemovingDuplicates(true);
+    try {
+      const result = await removeDuplicates({ storeId, dryRun: false });
+      toast({
+        title: "Duplicates Removed",
+        description: `Deleted ${result.deleted.toLocaleString()} duplicates, kept ${result.kept.toLocaleString()} unique contacts.`,
+      });
+      setDuplicateInfo(null);
+      setIsDedupOpen(false);
+    } catch (error: any) {
+      toast({
+        title: "Failed to remove duplicates",
+        description: error.message || "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRemovingDuplicates(false);
     }
   };
 
@@ -998,6 +1055,117 @@ The unsubscribe link will be added automatically."
                   {isRecalculating ? "Calculating..." : "Recalculate Stats"}
                 </span>
               </Button>
+              <Dialog open={isDedupOpen} onOpenChange={(open) => {
+                setIsDedupOpen(open);
+                if (!open) setDuplicateInfo(null);
+              }}>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2 md:h-10 md:px-4">
+                    <Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                    <span className="hidden sm:inline">Remove Duplicates</span>
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="bg-white dark:bg-black max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle>Remove Duplicate Contacts</DialogTitle>
+                    <DialogDescription>
+                      Find and remove duplicate contacts by email address. The oldest contact for each email will be kept.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    {!duplicateInfo ? (
+                      <div className="text-center">
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Click &quot;Find Duplicates&quot; to scan your contacts for duplicates.
+                        </p>
+                        <Button
+                          onClick={handleFindDuplicates}
+                          disabled={isFindingDuplicates}
+                          className="gap-2"
+                        >
+                          {isFindingDuplicates ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Scanning...
+                            </>
+                          ) : (
+                            <>
+                              <Search className="h-4 w-4" />
+                              Find Duplicates
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-3 gap-4 text-center">
+                          <div className="rounded-lg border p-3">
+                            <div className="text-2xl font-bold">{duplicateInfo.totalContacts.toLocaleString()}</div>
+                            <div className="text-xs text-muted-foreground">Total Contacts</div>
+                          </div>
+                          <div className="rounded-lg border p-3">
+                            <div className="text-2xl font-bold">{duplicateInfo.uniqueEmails.toLocaleString()}</div>
+                            <div className="text-xs text-muted-foreground">Unique Emails</div>
+                          </div>
+                          <div className="rounded-lg border p-3 bg-destructive/10">
+                            <div className="text-2xl font-bold text-destructive">{duplicateInfo.duplicateCount.toLocaleString()}</div>
+                            <div className="text-xs text-muted-foreground">Duplicates</div>
+                          </div>
+                        </div>
+
+                        {duplicateInfo.topDuplicates.length > 0 && (
+                          <div>
+                            <h4 className="text-sm font-medium mb-2">Top Duplicated Emails:</h4>
+                            <div className="max-h-40 overflow-y-auto space-y-1 text-sm">
+                              {duplicateInfo.topDuplicates.slice(0, 10).map((dup, i) => (
+                                <div key={i} className="flex justify-between items-center py-1 px-2 rounded bg-muted/50">
+                                  <span className="truncate">{dup.email}</span>
+                                  <Badge variant="secondary">{dup.count}x</Badge>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {duplicateInfo.duplicateCount > 0 && (
+                          <div className="pt-2 border-t">
+                            <p className="text-sm text-muted-foreground mb-3">
+                              This will delete <strong>{duplicateInfo.duplicateCount.toLocaleString()}</strong> duplicate contacts,
+                              keeping the oldest entry for each email.
+                            </p>
+                            <Button
+                              variant="destructive"
+                              onClick={handleRemoveDuplicates}
+                              disabled={isRemovingDuplicates}
+                              className="w-full gap-2"
+                            >
+                              {isRemovingDuplicates ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                  Removing Duplicates...
+                                </>
+                              ) : (
+                                <>
+                                  <Trash2 className="h-4 w-4" />
+                                  Remove {duplicateInfo.duplicateCount.toLocaleString()} Duplicates
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        )}
+
+                        {duplicateInfo.duplicateCount === 0 && (
+                          <div className="text-center py-4 text-green-600">
+                            <CheckCircle2 className="h-8 w-8 mx-auto mb-2" />
+                            <p className="font-medium">No duplicates found!</p>
+                            <p className="text-sm text-muted-foreground">All contacts have unique email addresses.</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </DialogContent>
+              </Dialog>
               <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
                 <DialogTrigger asChild>
                   <Button variant="outline" size="sm" className="gap-2 md:h-10 md:px-4">
