@@ -978,93 +978,151 @@ The unsubscribe link will be added automatically."
         </TabsContent>
 
         <TabsContent value="contacts" className="mt-4 space-y-4 md:mt-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="grid flex-1 grid-cols-2 gap-2 md:mr-4 md:grid-cols-4 md:gap-4">
+          {/* Stats Row - Compact inline on mobile, cards on desktop */}
+          <div className="flex flex-col gap-3">
+            {/* Stats - inline badges on mobile, cards on desktop */}
+            <div className="flex flex-wrap items-center gap-2 md:hidden">
+              <Badge variant="secondary" className="gap-1 px-2 py-1">
+                <Users className="h-3 w-3" />
+                {(contactStats?.total || 0).toLocaleString()}
+              </Badge>
+              <Badge variant="secondary" className="gap-1 px-2 py-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                <CheckCircle2 className="h-3 w-3" />
+                {(contactStats?.subscribed || 0).toLocaleString()}
+              </Badge>
+              <Badge variant="secondary" className="gap-1 px-2 py-1 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                {(contactStats?.unsubscribed || 0).toLocaleString()} unsub
+              </Badge>
+              <Badge variant="secondary" className="gap-1 px-2 py-1">
+                {contactStats?.avgEngagement || 0}% engaged
+              </Badge>
+            </div>
+
+            {/* Stats cards - desktop only */}
+            <div className="hidden md:grid md:grid-cols-4 md:gap-3">
               <Card>
-                <CardContent className="p-3 md:pt-4">
-                  <div className="text-lg font-bold md:text-xl">{contactStats?.total || 0}</div>
-                  <div className="text-[10px] text-muted-foreground md:text-xs">Total Contacts</div>
+                <CardContent className="p-3">
+                  <div className="text-xl font-bold">{(contactStats?.total || 0).toLocaleString()}</div>
+                  <div className="text-xs text-muted-foreground">Total Contacts</div>
                 </CardContent>
               </Card>
               <Card>
-                <CardContent className="p-3 md:pt-4">
-                  <div className="text-lg font-bold text-green-600 md:text-xl">
-                    {contactStats?.subscribed || 0}
-                  </div>
-                  <div className="text-[10px] text-muted-foreground md:text-xs">Subscribed</div>
+                <CardContent className="p-3">
+                  <div className="text-xl font-bold text-green-600">{(contactStats?.subscribed || 0).toLocaleString()}</div>
+                  <div className="text-xs text-muted-foreground">Subscribed</div>
                 </CardContent>
               </Card>
               <Card>
-                <CardContent className="p-3 md:pt-4">
-                  <div className="text-lg font-bold text-amber-600 md:text-xl">
-                    {contactStats?.unsubscribed || 0}
-                  </div>
-                  <div className="text-[10px] text-muted-foreground md:text-xs">Unsubscribed</div>
+                <CardContent className="p-3">
+                  <div className="text-xl font-bold text-amber-600">{(contactStats?.unsubscribed || 0).toLocaleString()}</div>
+                  <div className="text-xs text-muted-foreground">Unsubscribed</div>
                 </CardContent>
               </Card>
               <Card>
-                <CardContent className="p-3 md:pt-4">
-                  <div className="text-lg font-bold md:text-xl">
-                    {contactStats?.avgEngagement || 0}%
-                  </div>
-                  <div className="text-[10px] text-muted-foreground md:text-xs">Avg Engagement</div>
+                <CardContent className="p-3">
+                  <div className="text-xl font-bold">{contactStats?.avgEngagement || 0}%</div>
+                  <div className="text-xs text-muted-foreground">Avg Engagement</div>
                 </CardContent>
               </Card>
             </div>
 
-            <div className="flex flex-wrap gap-2 self-end md:self-auto">
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2 md:h-10 md:px-4"
-                onClick={handleSyncCustomers}
-                disabled={isSyncing}
-              >
-                <RefreshCw
-                  className={cn("h-3.5 w-3.5 md:h-4 md:w-4", isSyncing && "animate-spin")}
-                />
-                <span className="hidden sm:inline">
-                  {isSyncing ? "Syncing..." : "Sync Enrolled Users"}
-                </span>
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2 md:h-10 md:px-4"
-                onClick={handleRetagContacts}
-                disabled={isRetagging}
-              >
-                <Tag
-                  className={cn("h-3.5 w-3.5 md:h-4 md:w-4", isRetagging && "animate-pulse")}
-                />
-                <span className="hidden sm:inline">
-                  {isRetagging ? "Re-tagging..." : "Re-tag All"}
-                </span>
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2 md:h-10 md:px-4"
-                onClick={handleRecalculateStats}
-                disabled={isRecalculating}
-              >
-                <RefreshCw
-                  className={cn("h-3.5 w-3.5 md:h-4 md:w-4", isRecalculating && "animate-spin")}
-                />
-                <span className="hidden sm:inline">
-                  {isRecalculating ? "Calculating..." : "Recalculate Stats"}
-                </span>
-              </Button>
-              <Dialog open={isDedupOpen} onOpenChange={(open) => {
-                setIsDedupOpen(open);
-                if (!open) setDuplicateInfo(null);
-              }}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2 md:h-10 md:px-4">
-                    <Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                    <span className="hidden sm:inline">Remove Duplicates</span>
+            {/* Actions Row */}
+            <div className="flex items-center justify-between gap-2">
+              {/* Primary Actions - always visible */}
+              <div className="flex items-center gap-2">
+                <Button size="sm" className="gap-1.5" onClick={() => setIsCreateContactOpen(true)}>
+                  <UserPlus className="h-4 w-4" />
+                  <span className="hidden sm:inline">Add Contact</span>
+                  <span className="sm:hidden">Add</span>
+                </Button>
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setIsImportOpen(true)}>
+                  <Upload className="h-4 w-4" />
+                  <span className="hidden sm:inline">Import</span>
+                </Button>
+              </div>
+
+              {/* Admin Actions - dropdown on mobile, inline on desktop */}
+              <div className="flex items-center gap-2">
+                {/* Desktop: Show all buttons */}
+                <div className="hidden lg:flex lg:items-center lg:gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-1.5 text-muted-foreground hover:text-foreground"
+                    onClick={handleSyncCustomers}
+                    disabled={isSyncing}
+                  >
+                    <RefreshCw className={cn("h-4 w-4", isSyncing && "animate-spin")} />
+                    {isSyncing ? "Syncing..." : "Sync"}
                   </Button>
-                </DialogTrigger>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-1.5 text-muted-foreground hover:text-foreground"
+                    onClick={handleRetagContacts}
+                    disabled={isRetagging}
+                  >
+                    <Tag className={cn("h-4 w-4", isRetagging && "animate-pulse")} />
+                    {isRetagging ? "Re-tagging..." : "Re-tag"}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-1.5 text-muted-foreground hover:text-foreground"
+                    onClick={handleRecalculateStats}
+                    disabled={isRecalculating}
+                  >
+                    <RefreshCw className={cn("h-4 w-4", isRecalculating && "animate-spin")} />
+                    {isRecalculating ? "Calculating..." : "Recalculate"}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-1.5 text-muted-foreground hover:text-foreground"
+                    onClick={() => setIsDedupOpen(true)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Dedupe
+                  </Button>
+                </div>
+
+                {/* Mobile/Tablet: Dropdown menu for admin actions */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="lg:hidden gap-1.5">
+                      <MoreHorizontal className="h-4 w-4" />
+                      <span className="hidden sm:inline">Actions</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={handleSyncCustomers} disabled={isSyncing}>
+                      <RefreshCw className={cn("h-4 w-4 mr-2", isSyncing && "animate-spin")} />
+                      {isSyncing ? "Syncing..." : "Sync Enrolled Users"}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleRetagContacts} disabled={isRetagging}>
+                      <Tag className={cn("h-4 w-4 mr-2", isRetagging && "animate-pulse")} />
+                      {isRetagging ? "Re-tagging..." : "Re-tag All Contacts"}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleRecalculateStats} disabled={isRecalculating}>
+                      <RefreshCw className={cn("h-4 w-4 mr-2", isRecalculating && "animate-spin")} />
+                      {isRecalculating ? "Calculating..." : "Recalculate Stats"}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setIsDedupOpen(true)}>
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Remove Duplicates
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          </div>
+
+          {/* Dedup Dialog - moved outside the button area */}
+          <Dialog open={isDedupOpen} onOpenChange={(open) => {
+            setIsDedupOpen(open);
+            if (!open) setDuplicateInfo(null);
+          }}>
                 <DialogContent className="bg-white dark:bg-black max-w-lg">
                   <DialogHeader>
                     <DialogTitle>Remove Duplicate Contacts</DialogTitle>
@@ -1166,13 +1224,9 @@ The unsubscribe link will be added automatically."
                   </div>
                 </DialogContent>
               </Dialog>
-              <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2 md:h-10 md:px-4">
-                    <Upload className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                    <span className="hidden sm:inline">Import</span>
-                  </Button>
-                </DialogTrigger>
+
+          {/* Import Dialog Content */}
+          <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
                 <DialogContent className="bg-white dark:bg-black">
                   <DialogHeader>
                     <DialogTitle>Import Contacts</DialogTitle>
@@ -1211,14 +1265,9 @@ The unsubscribe link will be added automatically."
                   )}
                 </DialogContent>
               </Dialog>
-              <Dialog open={isCreateContactOpen} onOpenChange={setIsCreateContactOpen}>
-                <DialogTrigger asChild>
-                  <Button size="sm" className="gap-2 md:h-10 md:px-4">
-                    <UserPlus className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                    <span className="hidden sm:inline">Add Contact</span>
-                    <span className="sm:hidden">Add</span>
-                  </Button>
-                </DialogTrigger>
+
+          {/* Create Contact Dialog Content */}
+          <Dialog open={isCreateContactOpen} onOpenChange={setIsCreateContactOpen}>
                 <DialogContent className="bg-white dark:bg-black">
                   <DialogHeader>
                     <DialogTitle>Add Contact</DialogTitle>
@@ -1268,8 +1317,6 @@ The unsubscribe link will be added automatically."
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
-            </div>
-          </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
             <div className="relative flex-1 md:max-w-sm">
