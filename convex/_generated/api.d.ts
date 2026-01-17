@@ -4623,6 +4623,14 @@ export declare const api: {
       any
     >;
   };
+  changelogActions: {
+    generateNotificationContent: FunctionReference<
+      "action",
+      "public",
+      { clerkId: string; entryIds: Array<Id<"changelogEntries">> },
+      { message: string; success: boolean; title: string }
+    >;
+  };
   clerkSync: {
     getSyncStats: FunctionReference<
       "query",
@@ -18417,6 +18425,20 @@ export declare const internal: {
         userId: string;
       },
       any
+    >;
+  };
+  changelog: {
+    getEntriesByIds: FunctionReference<
+      "query",
+      "internal",
+      { entryIds: Array<Id<"changelogEntries">> },
+      any
+    >;
+    verifyAdmin: FunctionReference<
+      "query",
+      "internal",
+      { clerkId: string },
+      { admin: boolean } | null
     >;
   };
   clerkSync: {

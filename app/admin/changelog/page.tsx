@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useUser } from "@clerk/nextjs";
@@ -140,6 +140,7 @@ export default function AdminChangelogPage() {
   const [notifyMessage, setNotifyMessage] = useState("");
   const [notifyTarget, setNotifyTarget] = useState<"all" | "students" | "creators">("all");
   const [isSending, setIsSending] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [activeTab, setActiveTab] = useState<"commits" | "entries">("commits");
 
   // Convex queries
@@ -150,12 +151,13 @@ export default function AdminChangelogPage() {
   );
   const stats = useQuery(api.changelog.getChangelogStats, user?.id ? { clerkId: user.id } : "skip");
 
-  // Convex mutations
+  // Convex mutations and actions
   const saveConfig = useMutation(api.changelog.saveGithubConfig);
   const saveCommits = useMutation(api.changelog.saveCommitsAsEntries);
   const updateEntry = useMutation(api.changelog.updateEntry);
   const deleteEntry = useMutation(api.changelog.deleteEntry);
   const sendNotification = useMutation(api.changelog.sendChangelogNotification);
+  const generateNotification = useAction(api.changelogActions.generateNotificationContent);
 
   // Load saved config
   useEffect(() => {
@@ -326,30 +328,51 @@ export default function AdminChangelogPage() {
     }
   };
 
-  // Generate notification message from selected entries
-  const generateNotificationContent = () => {
-    if (!entries || selectedEntries.size === 0) return;
+  // Generate notification message from selected entries using AI
+  const handleGenerateNotification = async () => {
+    if (!user?.id || selectedEntries.size === 0) return;
 
-    const selected = entries.filter((e: ChangelogEntry) => selectedEntries.has(e._id));
-    const features = selected.filter((e: ChangelogEntry) => e.category === "feature");
-    const improvements = selected.filter((e: ChangelogEntry) => e.category === "improvement");
-    const fixes = selected.filter((e: ChangelogEntry) => e.category === "fix");
+    setIsGenerating(true);
+    try {
+      const entryIds = Array.from(selectedEntries) as Id<"changelogEntries">[];
+      const result = await generateNotification({
+        clerkId: user.id,
+        entryIds,
+      });
 
-    let title = "New Updates Available";
-    let message = "We've made some updates to improve your experience:\n\n";
+      setNotifyTitle(result.title);
+      setNotifyMessage(result.message);
+      toast.success("Notification content generated");
+    } catch (error: unknown) {
+      console.error("AI generation error:", error);
 
-    if (features.length > 0) {
-      message += `New Features:\n${features.map((f: ChangelogEntry) => `- ${f.title}`).join("\n")}\n\n`;
+      // Fallback to simple generation
+      if (!entries) return;
+
+      const selected = entries.filter((e: ChangelogEntry) => selectedEntries.has(e._id));
+      const features = selected.filter((e: ChangelogEntry) => e.category === "feature");
+      const improvements = selected.filter((e: ChangelogEntry) => e.category === "improvement");
+      const fixes = selected.filter((e: ChangelogEntry) => e.category === "fix");
+
+      let title = "New Updates Available";
+      let message = "We've made some updates to improve your experience:\n\n";
+
+      if (features.length > 0) {
+        message += `New Features:\n${features.map((f: ChangelogEntry) => `- ${f.title}`).join("\n")}\n\n`;
+      }
+      if (improvements.length > 0) {
+        message += `Improvements:\n${improvements.map((i: ChangelogEntry) => `- ${i.title}`).join("\n")}\n\n`;
+      }
+      if (fixes.length > 0) {
+        message += `Bug Fixes:\n${fixes.map((f: ChangelogEntry) => `- ${f.title}`).join("\n")}\n\n`;
+      }
+
+      setNotifyTitle(title);
+      setNotifyMessage(message.trim());
+      toast.info("Used fallback generation (AI unavailable)");
+    } finally {
+      setIsGenerating(false);
     }
-    if (improvements.length > 0) {
-      message += `Improvements:\n${improvements.map((i: ChangelogEntry) => `- ${i.title}`).join("\n")}\n\n`;
-    }
-    if (fixes.length > 0) {
-      message += `Bug Fixes:\n${fixes.map((f: ChangelogEntry) => `- ${f.title}`).join("\n")}\n\n`;
-    }
-
-    setNotifyTitle(title);
-    setNotifyMessage(message.trim());
   };
 
   // Format date
@@ -480,9 +503,14 @@ export default function AdminChangelogPage() {
 
                 <div className="mt-4 space-y-4">
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={generateNotificationContent}>
-                      <Sparkles className="mr-2 h-4 w-4" />
-                      Auto-generate
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleGenerateNotification}
+                      disabled={isGenerating}
+                    >
+                      <Sparkles className={`mr-2 h-4 w-4 ${isGenerating ? "animate-spin" : ""}`} />
+                      {isGenerating ? "Generating..." : "AI Generate"}
                     </Button>
                   </div>
 

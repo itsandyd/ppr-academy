@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query, action } from "./_generated/server";
+import { mutation, query, internalQuery } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 
 // ============================================================================
@@ -505,3 +505,37 @@ function extractTitle(message: string): string {
 
   return title;
 }
+
+// ============================================================================
+// AI-POWERED NOTIFICATION GENERATION
+// ============================================================================
+
+// Internal query to verify admin (needed for action in changelogActions.ts)
+export const verifyAdmin = internalQuery({
+  args: { clerkId: v.string() },
+  returns: v.union(v.object({ admin: v.boolean() }), v.null()),
+  handler: async (ctx, { clerkId }) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", clerkId))
+      .first();
+
+    if (!user?.admin) return null;
+    return { admin: true };
+  },
+});
+
+// Internal query to get entries by IDs (needed for action in changelogActions.ts)
+export const getEntriesByIds = internalQuery({
+  args: { entryIds: v.array(v.id("changelogEntries")) },
+  handler: async (ctx, { entryIds }) => {
+    const entries = await Promise.all(entryIds.map((id) => ctx.db.get(id)));
+    return entries.filter(Boolean).map((entry) => ({
+      _id: entry!._id,
+      commitSha: entry!.commitSha,
+      commitMessage: entry!.commitMessage,
+      title: entry!.title,
+      category: entry!.category,
+    }));
+  },
+});
