@@ -10096,8 +10096,10 @@ export type DataModel = {
       by_contactId: ["contactId", "_creationTime"];
       by_scheduledFor: ["scheduledFor", "_creationTime"];
       by_status: ["status", "_creationTime"];
+      by_status_scheduledFor: ["status", "scheduledFor", "_creationTime"];
       by_storeId: ["storeId", "_creationTime"];
       by_workflowId: ["workflowId", "_creationTime"];
+      by_workflowId_status: ["workflowId", "status", "_creationTime"];
     };
     searchIndexes: {};
     vectorIndexes: {};

@@ -35,7 +35,7 @@ crons.interval(
 
 crons.interval(
   "process email workflow executions",
-  { minutes: 5 },
+  { minutes: 1 },
   internal.emailWorkflowActions.processEmailWorkflowExecutions,
   {}
 );

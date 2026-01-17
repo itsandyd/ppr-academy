@@ -57,7 +57,12 @@ export default defineSchema({
     userId: v.string(), // Clerk ID
     skillLevel: v.union(v.literal("beginner"), v.literal("intermediate"), v.literal("advanced")),
     interests: v.array(v.string()), // e.g., ["mixing", "mastering", "sound_design"]
-    goal: v.union(v.literal("hobby"), v.literal("career"), v.literal("skills"), v.literal("certification")),
+    goal: v.union(
+      v.literal("hobby"),
+      v.literal("career"),
+      v.literal("skills"),
+      v.literal("certification")
+    ),
     weeklyHours: v.optional(v.number()),
     onboardingCompletedAt: v.optional(v.number()),
   }).index("by_userId", ["userId"]),
@@ -502,7 +507,9 @@ export default defineSchema({
     .index("by_storeId", ["storeId"])
     .index("by_contactId", ["contactId"])
     .index("by_status", ["status"])
-    .index("by_scheduledFor", ["scheduledFor"]),
+    .index("by_scheduledFor", ["scheduledFor"])
+    .index("by_workflowId_status", ["workflowId", "status"])
+    .index("by_status_scheduledFor", ["status", "scheduledFor"]),
 
   digitalProducts: defineTable({
     title: v.string(),
@@ -4975,30 +4982,38 @@ export default defineSchema({
     ),
 
     // Customer files (uploaded by customer)
-    customerFiles: v.optional(v.array(v.object({
-      id: v.string(),
-      name: v.string(),
-      storageId: v.string(),
-      url: v.optional(v.string()),
-      size: v.number(),
-      type: v.string(),
-      uploadedAt: v.number(),
-    }))),
+    customerFiles: v.optional(
+      v.array(
+        v.object({
+          id: v.string(),
+          name: v.string(),
+          storageId: v.string(),
+          url: v.optional(v.string()),
+          size: v.number(),
+          type: v.string(),
+          uploadedAt: v.number(),
+        })
+      )
+    ),
     customerNotes: v.optional(v.string()),
     referenceTrackUrl: v.optional(v.string()),
 
     // Delivered files (uploaded by creator)
-    deliveredFiles: v.optional(v.array(v.object({
-      id: v.string(),
-      name: v.string(),
-      storageId: v.string(),
-      url: v.optional(v.string()),
-      size: v.number(),
-      type: v.string(),
-      uploadedAt: v.number(),
-      version: v.number(), // 1 = initial, 2+ = revisions
-      notes: v.optional(v.string()),
-    }))),
+    deliveredFiles: v.optional(
+      v.array(
+        v.object({
+          id: v.string(),
+          name: v.string(),
+          storageId: v.string(),
+          url: v.optional(v.string()),
+          size: v.number(),
+          type: v.string(),
+          uploadedAt: v.number(),
+          version: v.number(), // 1 = initial, 2+ = revisions
+          notes: v.optional(v.string()),
+        })
+      )
+    ),
 
     // Revision tracking
     revisionsUsed: v.number(),
@@ -5032,14 +5047,18 @@ export default defineSchema({
     senderId: v.string(), // Clerk ID
     senderType: v.union(v.literal("customer"), v.literal("creator")),
     content: v.string(),
-    attachments: v.optional(v.array(v.object({
-      id: v.string(),
-      name: v.string(),
-      storageId: v.string(),
-      url: v.optional(v.string()),
-      size: v.number(),
-      type: v.string(),
-    }))),
+    attachments: v.optional(
+      v.array(
+        v.object({
+          id: v.string(),
+          name: v.string(),
+          storageId: v.string(),
+          url: v.optional(v.string()),
+          size: v.number(),
+          type: v.string(),
+        })
+      )
+    ),
     isSystemMessage: v.optional(v.boolean()), // For automated status updates
     readAt: v.optional(v.number()),
     createdAt: v.number(),

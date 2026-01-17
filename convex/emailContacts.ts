@@ -1575,6 +1575,8 @@ export const removeDuplicateContacts = action({
     let cursor: string | null = null;
     let totalProcessed = 0;
 
+    console.log(`[Dedup] Starting scan for store ${args.storeId}...`);
+
     // Scan all contacts
     while (true) {
       const result: ScanResult = await ctx.runQuery(internal.emailContacts.scanContactsForDedup, {
@@ -1598,12 +1600,13 @@ export const removeDuplicateContacts = action({
       cursor = result.nextCursor;
     }
 
-    // Find duplicates and delete all but the oldest
-    let deleted = 0;
-    let kept = 0;
-    let errors = 0;
+    console.log(`[Dedup] Scanned ${totalProcessed} contacts, found ${Object.keys(emailToContacts).length} unique emails`);
 
-    for (const [email, contacts] of Object.entries(emailToContacts)) {
+    // Collect all IDs to delete
+    const idsToDelete: string[] = [];
+    let kept = 0;
+
+    for (const [_, contacts] of Object.entries(emailToContacts)) {
       if (contacts.length <= 1) {
         kept++;
         continue;
@@ -1612,33 +1615,57 @@ export const removeDuplicateContacts = action({
       // Sort by createdAt ascending (oldest first)
       contacts.sort((a, b) => a.createdAt - b.createdAt);
 
-      // Keep the oldest, delete the rest
+      // Keep the oldest, mark the rest for deletion
       kept++;
       const toDelete = contacts.slice(1);
+      idsToDelete.push(...toDelete.map(c => c.id));
+    }
 
-      if (!dryRun) {
-        // Delete in batches
-        for (const contact of toDelete) {
-          try {
-            await ctx.runMutation(internal.emailContacts.deleteContactInternal, {
-              contactId: contact.id as Id<"emailContacts">,
-            });
-            deleted++;
-          } catch (e) {
-            errors++;
-          }
-        }
-      } else {
-        deleted += toDelete.length;
+    console.log(`[Dedup] Found ${idsToDelete.length} duplicates to delete, keeping ${kept} contacts`);
+
+    if (dryRun) {
+      return {
+        processed: totalProcessed,
+        deleted: idsToDelete.length,
+        kept,
+        errors: 0,
+      };
+    }
+
+    // Delete in batches of 100 to avoid conflicts and timeouts
+    const BATCH_SIZE = 100;
+    let deleted = 0;
+    let errors = 0;
+
+    for (let i = 0; i < idsToDelete.length; i += BATCH_SIZE) {
+      const batch = idsToDelete.slice(i, i + BATCH_SIZE);
+
+      try {
+        const result = await ctx.runMutation(internal.emailContacts.deleteContactsBatch, {
+          contactIds: batch as Id<"emailContacts">[],
+        });
+        deleted += result.deleted;
+        errors += result.errors;
+      } catch (e) {
+        console.error(`[Dedup] Batch delete error:`, e);
+        errors += batch.length;
+      }
+
+      // Log progress every 1000 deletions
+      if ((i + BATCH_SIZE) % 1000 === 0 || i + BATCH_SIZE >= idsToDelete.length) {
+        console.log(`[Dedup] Progress: ${Math.min(i + BATCH_SIZE, idsToDelete.length)}/${idsToDelete.length} processed`);
       }
     }
 
     // Refresh stats after deduplication
-    if (!dryRun && deleted > 0) {
+    if (deleted > 0) {
+      console.log(`[Dedup] Refreshing stats...`);
       await ctx.runMutation(internal.emailContacts.refreshContactStats, {
         storeId: args.storeId,
       });
     }
+
+    console.log(`[Dedup] Complete! Deleted ${deleted}, kept ${kept}, errors ${errors}`);
 
     return {
       processed: totalProcessed,
@@ -1646,6 +1673,42 @@ export const removeDuplicateContacts = action({
       kept,
       errors,
     };
+  },
+});
+
+/**
+ * Internal mutation to delete contacts in batches (used by deduplication)
+ * This is more efficient than deleting one at a time
+ */
+export const deleteContactsBatch = internalMutation({
+  args: {
+    contactIds: v.array(v.id("emailContacts")),
+  },
+  returns: v.object({
+    deleted: v.number(),
+    errors: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    let deleted = 0;
+    let errors = 0;
+
+    for (const contactId of args.contactIds) {
+      try {
+        const contact = await ctx.db.get(contactId);
+        if (!contact) {
+          continue; // Already deleted
+        }
+
+        // Just delete the contact - skip tag count updates for speed
+        // Stats will be recalculated at the end
+        await ctx.db.delete(contactId);
+        deleted++;
+      } catch (e) {
+        errors++;
+      }
+    }
+
+    return { deleted, errors };
   },
 });
 

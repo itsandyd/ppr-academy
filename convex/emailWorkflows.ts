@@ -1,5 +1,12 @@
 import { v } from "convex/values";
-import { mutation, query, internalMutation, internalQuery, internalAction, action } from "./_generated/server";
+import {
+  mutation,
+  query,
+  internalMutation,
+  internalQuery,
+  internalAction,
+  action,
+} from "./_generated/server";
 import { internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 
@@ -160,19 +167,38 @@ export const updateWorkflow = mutation({
 
 export const deleteWorkflow = mutation({
   args: { workflowId: v.id("emailWorkflows") },
-  returns: v.null(),
+  returns: v.object({
+    deleted: v.boolean(),
+    remainingExecutions: v.number(),
+  }),
   handler: async (ctx, args) => {
+    // Delete executions in batches to avoid 32k document limit
+    // Process up to 5000 at a time (safe limit for mutations)
+    const BATCH_SIZE = 5000;
+
     const executions = await ctx.db
       .query("workflowExecutions")
       .withIndex("by_workflowId", (q) => q.eq("workflowId", args.workflowId))
-      .collect();
+      .take(BATCH_SIZE);
 
     for (const execution of executions) {
       await ctx.db.delete(execution._id);
     }
 
+    // Check if there are more executions to delete
+    const remaining = await ctx.db
+      .query("workflowExecutions")
+      .withIndex("by_workflowId", (q) => q.eq("workflowId", args.workflowId))
+      .first();
+
+    if (remaining) {
+      // More executions exist, client should call again
+      return { deleted: false, remainingExecutions: 1 };
+    }
+
+    // All executions deleted, now delete the workflow
     await ctx.db.delete(args.workflowId);
-    return null;
+    return { deleted: true, remainingExecutions: 0 };
   },
 });
 
@@ -188,21 +214,39 @@ export const getNodeExecutionCounts = query({
   args: { workflowId: v.id("emailWorkflows") },
   returns: v.any(),
   handler: async (ctx, args) => {
-    // Get all active executions (pending or running)
-    const executions = await ctx.db
-      .query("workflowExecutions")
-      .withIndex("by_workflowId", (q) => q.eq("workflowId", args.workflowId))
-      .filter((q) =>
-        q.or(q.eq(q.field("status"), "pending"), q.eq(q.field("status"), "running"))
-      )
-      .collect();
-
     const counts: Record<string, number> = {};
-    for (const exec of executions) {
+    // Use .take() instead of pagination since Convex only allows one paginated query per function
+    // With compound index, we directly get only matching records (no filtering overhead)
+    const LIMIT = 15000; // Stay under 32k total (15k pending + 15k running + buffer)
+
+    // Get pending executions
+    const pendingExecutions = await ctx.db
+      .query("workflowExecutions")
+      .withIndex("by_workflowId_status", (q) =>
+        q.eq("workflowId", args.workflowId).eq("status", "pending")
+      )
+      .take(LIMIT);
+
+    for (const exec of pendingExecutions) {
       if (exec.currentNodeId) {
         counts[exec.currentNodeId] = (counts[exec.currentNodeId] || 0) + 1;
       }
     }
+
+    // Get running executions
+    const runningExecutions = await ctx.db
+      .query("workflowExecutions")
+      .withIndex("by_workflowId_status", (q) =>
+        q.eq("workflowId", args.workflowId).eq("status", "running")
+      )
+      .take(LIMIT);
+
+    for (const exec of runningExecutions) {
+      if (exec.currentNodeId) {
+        counts[exec.currentNodeId] = (counts[exec.currentNodeId] || 0) + 1;
+      }
+    }
+
     return counts;
   },
 });
@@ -211,6 +255,7 @@ export const getContactsAtNode = query({
   args: {
     workflowId: v.id("emailWorkflows"),
     nodeId: v.string(),
+    limit: v.optional(v.number()),
   },
   returns: v.array(
     v.object({
@@ -223,19 +268,27 @@ export const getContactsAtNode = query({
     })
   ),
   handler: async (ctx, args) => {
-    const executions = await ctx.db
-      .query("workflowExecutions")
-      .withIndex("by_workflowId", (q) => q.eq("workflowId", args.workflowId))
-      .filter((q) =>
-        q.and(
-          q.eq(q.field("currentNodeId"), args.nodeId),
-          q.or(q.eq(q.field("status"), "pending"), q.eq(q.field("status"), "running"))
-        )
-      )
-      .collect();
+    const maxResults = args.limit ?? 100; // Default to 100 contacts per node display
+    const results: {
+      executionId: Id<"workflowExecutions">;
+      contactId: Id<"emailContacts"> | undefined;
+      email: string;
+      name: string | undefined;
+      scheduledFor: number | undefined;
+      startedAt: number | undefined;
+    }[] = [];
 
-    const results = [];
-    for (const exec of executions) {
+    // Query pending executions at this node
+    // We take more than maxResults since we're filtering by nodeId
+    const pendingExecutions = await ctx.db
+      .query("workflowExecutions")
+      .withIndex("by_workflowId_status", (q) =>
+        q.eq("workflowId", args.workflowId).eq("status", "pending")
+      )
+      .filter((q) => q.eq(q.field("currentNodeId"), args.nodeId))
+      .take(maxResults);
+
+    for (const exec of pendingExecutions) {
       let name: string | undefined;
       if (exec.contactId) {
         const contact = await ctx.db.get(exec.contactId);
@@ -254,6 +307,39 @@ export const getContactsAtNode = query({
         startedAt: exec.startedAt,
       });
     }
+
+    // If we need more results, query running executions
+    if (results.length < maxResults) {
+      const remainingLimit = maxResults - results.length;
+      const runningExecutions = await ctx.db
+        .query("workflowExecutions")
+        .withIndex("by_workflowId_status", (q) =>
+          q.eq("workflowId", args.workflowId).eq("status", "running")
+        )
+        .filter((q) => q.eq(q.field("currentNodeId"), args.nodeId))
+        .take(remainingLimit);
+
+      for (const exec of runningExecutions) {
+        let name: string | undefined;
+        if (exec.contactId) {
+          const contact = await ctx.db.get(exec.contactId);
+          if (contact) {
+            name = contact.firstName
+              ? `${contact.firstName} ${contact.lastName || ""}`.trim()
+              : undefined;
+          }
+        }
+        results.push({
+          executionId: exec._id,
+          contactId: exec.contactId,
+          email: exec.customerEmail,
+          name,
+          scheduledFor: exec.scheduledFor,
+          startedAt: exec.startedAt,
+        });
+      }
+    }
+
     return results;
   },
 });
@@ -327,11 +413,11 @@ export const processScheduledExecutions = internalMutation({
   handler: async (ctx) => {
     const now = Date.now();
 
+    // Use compound index for efficient querying without filtering
     const pendingExecutions = await ctx.db
       .query("workflowExecutions")
-      .withIndex("by_status", (q) => q.eq("status", "pending"))
-      .filter((q) =>
-        q.and(q.neq(q.field("scheduledFor"), undefined), q.lte(q.field("scheduledFor"), now))
+      .withIndex("by_status_scheduledFor", (q) =>
+        q.eq("status", "pending").lte("scheduledFor", now)
       )
       .take(50);
 
@@ -596,7 +682,9 @@ export const triggerTagAddedWorkflows = internalMutation({
         lastExecuted: now,
       });
 
-      console.log(`[Workflows] Enrolled ${contact.email} in workflow "${workflow.name}" via tag "${args.tagName}"`);
+      console.log(
+        `[Workflows] Enrolled ${contact.email} in workflow "${workflow.name}" via tag "${args.tagName}"`
+      );
     }
 
     return null;
@@ -684,22 +772,34 @@ export const bulkEnrollContactsInWorkflow = mutation({
 
     const now = Date.now();
 
-    // Fetch all active executions for this workflow upfront (single query)
-    const activeExecutions = await ctx.db
-      .query("workflowExecutions")
-      .withIndex("by_workflowId", (q) => q.eq("workflowId", args.workflowId))
-      .filter((q) =>
-        q.or(q.eq(q.field("status"), "pending"), q.eq(q.field("status"), "running"))
-      )
-      .collect();
-
     // Build a Set of emails already enrolled for O(1) lookup
-    const enrolledEmails = new Set(activeExecutions.map((e) => e.customerEmail));
+    // Use .take() with limit to stay under 32k document read limit
+    const LIMIT = 15000; // 15k per status = 30k total, under 32k limit
+
+    const pendingExecutions = await ctx.db
+      .query("workflowExecutions")
+      .withIndex("by_workflowId_status", (q) =>
+        q.eq("workflowId", args.workflowId).eq("status", "pending")
+      )
+      .take(LIMIT);
+
+    const runningExecutions = await ctx.db
+      .query("workflowExecutions")
+      .withIndex("by_workflowId_status", (q) =>
+        q.eq("workflowId", args.workflowId).eq("status", "running")
+      )
+      .take(LIMIT);
+
+    const enrolledEmails = new Set<string>();
+    for (const exec of pendingExecutions) {
+      enrolledEmails.add(exec.customerEmail);
+    }
+    for (const exec of runningExecutions) {
+      enrolledEmails.add(exec.customerEmail);
+    }
 
     // Fetch all contacts in one batch using Promise.all
-    const contacts = await Promise.all(
-      args.contactIds.map((id) => ctx.db.get(id))
-    );
+    const contacts = await Promise.all(args.contactIds.map((id) => ctx.db.get(id)));
 
     for (let i = 0; i < args.contactIds.length; i++) {
       const contactId = args.contactIds[i];
@@ -756,35 +856,45 @@ export const enrollContactBatchInternal = internalMutation({
   args: {
     workflowId: v.id("emailWorkflows"),
     contactIds: v.array(v.id("emailContacts")),
-    enrolledEmails: v.array(v.string()), // Emails already enrolled
   },
   returns: v.object({
     enrolled: v.number(),
     skipped: v.number(),
-    newEnrolledEmails: v.array(v.string()),
   }),
   handler: async (ctx, args) => {
     const workflow = await ctx.db.get(args.workflowId);
-    if (!workflow) return { enrolled: 0, skipped: 0, newEnrolledEmails: [] };
+    if (!workflow) return { enrolled: 0, skipped: 0 };
 
-    const enrolledSet = new Set(args.enrolledEmails);
     const triggerNode = workflow.nodes.find((n: { type: string }) => n.type === "trigger");
     const firstNode = workflow.nodes.find((n: { type: string }) => n.type !== "trigger");
     const now = Date.now();
 
     let enrolled = 0;
     let skipped = 0;
-    const newEnrolledEmails: string[] = [];
 
     for (const contactId of args.contactIds) {
       const contact = await ctx.db.get(contactId);
-      if (!contact || enrolledSet.has(contact.email)) {
+      if (!contact) {
         skipped++;
         continue;
       }
 
-      enrolledSet.add(contact.email);
-      newEnrolledEmails.push(contact.email);
+      // Check if this contact is already enrolled in this workflow (active execution)
+      const existingExecution = await ctx.db
+        .query("workflowExecutions")
+        .withIndex("by_contactId", (q) => q.eq("contactId", contactId))
+        .filter((q) =>
+          q.and(
+            q.eq(q.field("workflowId"), args.workflowId),
+            q.or(q.eq(q.field("status"), "pending"), q.eq(q.field("status"), "running"))
+          )
+        )
+        .first();
+
+      if (existingExecution) {
+        skipped++;
+        continue;
+      }
 
       const executionId = await ctx.db.insert("workflowExecutions", {
         workflowId: args.workflowId,
@@ -804,7 +914,7 @@ export const enrollContactBatchInternal = internalMutation({
       enrolled++;
     }
 
-    return { enrolled, skipped, newEnrolledEmails };
+    return { enrolled, skipped };
   },
 });
 
@@ -827,17 +937,10 @@ export const bulkEnrollAllContactsByFilter = action({
   handler: async (ctx, args) => {
     let totalEnrolled = 0;
     let totalSkipped = 0;
-    const enrolledEmails: string[] = [];
-
-    // Get already enrolled emails first
-    const activeExecutions = await ctx.runQuery(internal.emailWorkflows.getActiveExecutionEmails, {
-      workflowId: args.workflowId,
-    });
-    enrolledEmails.push(...activeExecutions);
 
     // Type definitions for batch results
     type BatchResult = { contactIds: string[]; nextCursor: string | null; hasMore: boolean };
-    type EnrollResult = { enrolled: number; skipped: number; newEnrolledEmails: string[] };
+    type EnrollResult = { enrolled: number; skipped: number };
 
     // Process contacts in batches
     let cursor: string | undefined = undefined;
@@ -859,16 +962,17 @@ export const bulkEnrollAllContactsByFilter = action({
         break;
       }
 
-      // Enroll this batch
-      const result: EnrollResult = await ctx.runMutation(internal.emailWorkflows.enrollContactBatchInternal, {
-        workflowId: args.workflowId,
-        contactIds: batch.contactIds as Id<"emailContacts">[],
-        enrolledEmails,
-      });
+      // Enroll this batch (duplicate checking happens in the mutation via DB query)
+      const result: EnrollResult = await ctx.runMutation(
+        internal.emailWorkflows.enrollContactBatchInternal,
+        {
+          workflowId: args.workflowId,
+          contactIds: batch.contactIds as Id<"emailContacts">[],
+        }
+      );
 
       totalEnrolled += result.enrolled;
       totalSkipped += result.skipped;
-      enrolledEmails.push(...result.newEnrolledEmails);
 
       cursor = batch.nextCursor ?? undefined;
       done = !batch.hasMore;
@@ -897,14 +1001,25 @@ export const getActiveExecutionEmails = internalQuery({
   args: { workflowId: v.id("emailWorkflows") },
   returns: v.array(v.string()),
   handler: async (ctx, args) => {
-    const executions = await ctx.db
+    // Use compound index to query only pending/running executions directly
+    const pendingExecutions = await ctx.db
       .query("workflowExecutions")
-      .withIndex("by_workflowId", (q) => q.eq("workflowId", args.workflowId))
-      .filter((q) =>
-        q.or(q.eq(q.field("status"), "pending"), q.eq(q.field("status"), "running"))
+      .withIndex("by_workflowId_status", (q) =>
+        q.eq("workflowId", args.workflowId).eq("status", "pending")
       )
       .take(10000);
-    return executions.map((e) => e.customerEmail);
+
+    const runningExecutions = await ctx.db
+      .query("workflowExecutions")
+      .withIndex("by_workflowId_status", (q) =>
+        q.eq("workflowId", args.workflowId).eq("status", "running")
+      )
+      .take(10000);
+
+    return [
+      ...pendingExecutions.map((e) => e.customerEmail),
+      ...runningExecutions.map((e) => e.customerEmail),
+    ];
   },
 });
 
@@ -961,9 +1076,7 @@ export const getContactIdsBatch = internalQuery({
         }
 
         if (args.noTags) {
-          filteredBatch = filteredBatch.filter((c) =>
-            !c.tagIds || c.tagIds.length === 0
-          );
+          filteredBatch = filteredBatch.filter((c) => !c.tagIds || c.tagIds.length === 0);
         }
 
         collectedContacts.push(...filteredBatch);
@@ -1218,7 +1331,9 @@ export const trackABTestResult = internalMutation({
   handler: async (ctx, args) => {
     // Log A/B test assignment for now
     // TODO: Store in a dedicated ab_test_results table when needed
-    console.log(`[ABTest] Workflow ${args.workflowId}: Contact ${args.contactId} assigned to variant ${args.variant}`);
+    console.log(
+      `[ABTest] Workflow ${args.workflowId}: Contact ${args.contactId} assigned to variant ${args.variant}`
+    );
     return null;
   },
 });
@@ -1257,9 +1372,7 @@ export const getTagByNameInternal = internalQuery({
   handler: async (ctx, args) => {
     return await ctx.db
       .query("emailTags")
-      .withIndex("by_storeId_and_name", (q) =>
-        q.eq("storeId", args.storeId).eq("name", args.name)
-      )
+      .withIndex("by_storeId_and_name", (q) => q.eq("storeId", args.storeId).eq("name", args.name))
       .first();
   },
 });
@@ -1309,18 +1422,21 @@ export const getDueExecutions = internalQuery({
     const now = Date.now();
 
     // Get pending executions that are scheduled for now or earlier
+    // Using compound index for efficient querying without filtering
     const dueExecutions = await ctx.db
       .query("workflowExecutions")
-      .withIndex("by_status", (q) => q.eq("status", "pending"))
-      .filter((q) => q.lte(q.field("scheduledFor"), now))
-      .take(50);
+      .withIndex("by_status_scheduledFor", (q) =>
+        q.eq("status", "pending").lte("scheduledFor", now)
+      )
+      .take(500);
 
     // Also get running executions that might be stuck
     const runningExecutions = await ctx.db
       .query("workflowExecutions")
-      .withIndex("by_status", (q) => q.eq("status", "running"))
-      .filter((q) => q.lte(q.field("scheduledFor"), now))
-      .take(50);
+      .withIndex("by_status_scheduledFor", (q) =>
+        q.eq("status", "running").lte("scheduledFor", now)
+      )
+      .take(100);
 
     return [...dueExecutions, ...runningExecutions];
   },
@@ -1382,7 +1498,9 @@ export const cancelExecution = mutation({
       completedAt: Date.now(),
     });
 
-    console.log(`[EmailWorkflows] Cancelled execution ${args.executionId} for ${execution.customerEmail}`);
+    console.log(
+      `[EmailWorkflows] Cancelled execution ${args.executionId} for ${execution.customerEmail}`
+    );
     return null;
   },
 });

@@ -36,6 +36,19 @@ const PRODUCT_TYPE_TAGS: Record<string, string> = {
   service: "interest:services",
 };
 
+/**
+ * Generate a URL-safe slug from a product title
+ */
+function generateProductTagSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "") // Remove special characters
+    .replace(/\s+/g, "-") // Replace spaces with hyphens
+    .replace(/-+/g, "-") // Replace multiple hyphens with single
+    .substring(0, 50) // Limit length
+    .replace(/^-|-$/g, ""); // Remove leading/trailing hyphens
+}
+
 function inferGenresFromText(text: string): string[] {
   const lowerText = text.toLowerCase();
   const matchedGenres: string[] = [];
@@ -76,19 +89,34 @@ async function getOrCreateTag(
   }
 
   const now = Date.now();
+
+  // Determine color based on tag type
+  let color = "#6B7280"; // Default gray
+  let description = `Auto-generated tag: ${tagName}`;
+
+  if (tagName.startsWith("product:")) {
+    color = "#EC4899"; // Pink for product-specific tags
+    const productName = tagName.replace("product:", "").replace(/-/g, " ");
+    description = `Purchased: ${productName}`;
+  } else if (tagName.startsWith("course:")) {
+    color = "#8B5CF6"; // Purple for course-specific tags
+    const courseName = tagName.replace("course:", "").replace(/-/g, " ");
+    description = `Enrolled in: ${courseName}`;
+  } else if (tagName.startsWith("genre:")) {
+    color = "#8B5CF6"; // Purple for genres
+  } else if (tagName.startsWith("interest:")) {
+    color = "#3B82F6"; // Blue for interests
+  } else if (tagName.startsWith("skill:")) {
+    color = "#10B981"; // Green for skills
+  } else if (tagName === "customer") {
+    color = "#F59E0B"; // Amber for customers
+  }
+
   return await ctx.db.insert("emailTags", {
     storeId,
     name: tagName,
-    color: tagName.startsWith("genre:")
-      ? "#8B5CF6"
-      : tagName.startsWith("interest:")
-        ? "#3B82F6"
-        : tagName.startsWith("skill:")
-          ? "#10B981"
-          : tagName === "customer"
-            ? "#F59E0B"
-            : "#6B7280",
-    description: `Auto-generated tag: ${tagName}`,
+    color,
+    description,
     contactCount: 0,
     createdAt: now,
     updatedAt: now,
@@ -286,8 +314,22 @@ export const syncContactFromPurchase = internalMutation({
           ...(product.genre || []),
         ].join(" ");
 
+        // Add product-specific tag (e.g., "product:epic-drums-vol-1")
+        if (product.title) {
+          const productSlug = generateProductTagSlug(product.title);
+          if (productSlug) {
+            tagsToAdd.push(`product:${productSlug}`);
+          }
+        }
+
+        // Add product type interest tag
         if (product.productType && PRODUCT_TYPE_TAGS[product.productType]) {
           tagsToAdd.push(PRODUCT_TYPE_TAGS[product.productType]);
+        }
+
+        // Also check productCategory for more specific tagging
+        if (product.productCategory && PRODUCT_TYPE_TAGS[product.productCategory]) {
+          tagsToAdd.push(PRODUCT_TYPE_TAGS[product.productCategory]);
         }
       }
     }
@@ -299,6 +341,14 @@ export const syncContactFromPurchase = internalMutation({
         textToAnalyze = [course.title || "", course.description || "", course.category || ""].join(
           " "
         );
+
+        // Add course-specific tag (e.g., "course:mixing-masterclass")
+        if (course.title) {
+          const courseSlug = generateProductTagSlug(course.title);
+          if (courseSlug) {
+            tagsToAdd.push(`course:${courseSlug}`);
+          }
+        }
 
         tagsToAdd.push("interest:learning");
 

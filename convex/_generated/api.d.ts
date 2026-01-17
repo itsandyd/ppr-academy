@@ -9520,7 +9520,7 @@ export declare const api: {
       "mutation",
       "public",
       { workflowId: Id<"emailWorkflows"> },
-      null
+      { deleted: boolean; remainingExecutions: number }
     >;
     duplicateWorkflow: FunctionReference<
       "mutation",
@@ -9537,7 +9537,7 @@ export declare const api: {
     getContactsAtNode: FunctionReference<
       "query",
       "public",
-      { nodeId: string; workflowId: Id<"emailWorkflows"> },
+      { limit?: number; nodeId: string; workflowId: Id<"emailWorkflows"> },
       Array<{
         contactId?: Id<"emailContacts">;
         email: string;
@@ -19034,6 +19034,12 @@ export declare const internal: {
       { contactId: Id<"emailContacts"> },
       null
     >;
+    deleteContactsBatch: FunctionReference<
+      "mutation",
+      "internal",
+      { contactIds: Array<Id<"emailContacts">> },
+      { deleted: number; errors: number }
+    >;
     importContactsBatchInternal: FunctionReference<
       "mutation",
       "internal",
@@ -19573,10 +19579,9 @@ export declare const internal: {
       "internal",
       {
         contactIds: Array<Id<"emailContacts">>;
-        enrolledEmails: Array<string>;
         workflowId: Id<"emailWorkflows">;
       },
-      { enrolled: number; newEnrolledEmails: Array<string>; skipped: number }
+      { enrolled: number; skipped: number }
     >;
     evaluateCondition: FunctionReference<
       "query",

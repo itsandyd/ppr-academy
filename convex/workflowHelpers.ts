@@ -7,21 +7,26 @@ export const getDueExecutions = internalQuery({
   handler: async (ctx, args) => {
     const now = Date.now();
 
+    // Use compound index for efficient querying of due executions
+    // Note: This only gets executions with scheduledFor <= now
+    // Executions with undefined scheduledFor are considered immediately due
     const pendingExecutions = await ctx.db
       .query("workflowExecutions")
-      .withIndex("by_status", (q) => q.eq("status", "pending"))
-      .filter((q) =>
-        q.or(q.eq(q.field("scheduledFor"), undefined), q.lte(q.field("scheduledFor"), now))
+      .withIndex("by_status_scheduledFor", (q) =>
+        q.eq("status", "pending").lte("scheduledFor", now)
       )
       .take(args.limit);
 
-    const runningExecutions = await ctx.db
-      .query("workflowExecutions")
-      .withIndex("by_status", (q) => q.eq("status", "running"))
-      .filter((q) =>
-        q.or(q.eq(q.field("scheduledFor"), undefined), q.lte(q.field("scheduledFor"), now))
-      )
-      .take(args.limit - pendingExecutions.length);
+    const remainingLimit = args.limit - pendingExecutions.length;
+    const runningExecutions =
+      remainingLimit > 0
+        ? await ctx.db
+            .query("workflowExecutions")
+            .withIndex("by_status_scheduledFor", (q) =>
+              q.eq("status", "running").lte("scheduledFor", now)
+            )
+            .take(remainingLimit)
+        : [];
 
     return [...pendingExecutions, ...runningExecutions];
   },
