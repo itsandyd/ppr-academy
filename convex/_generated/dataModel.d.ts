@@ -1799,6 +1799,96 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  changelogEntries: {
+    document: {
+      authorAvatar?: string;
+      authorEmail?: string;
+      authorName: string;
+      category: "feature" | "improvement" | "fix" | "breaking" | "internal";
+      commitMessage: string;
+      commitSha: string;
+      commitUrl: string;
+      committedAt: number;
+      createdAt: number;
+      description?: string;
+      isPublished: boolean;
+      notificationId?: Id<"notifications">;
+      notificationSent?: boolean;
+      notificationSentAt?: number;
+      title: string;
+      updatedAt: number;
+      _id: Id<"changelogEntries">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "authorAvatar"
+      | "authorEmail"
+      | "authorName"
+      | "category"
+      | "commitMessage"
+      | "commitSha"
+      | "committedAt"
+      | "commitUrl"
+      | "createdAt"
+      | "description"
+      | "isPublished"
+      | "notificationId"
+      | "notificationSent"
+      | "notificationSentAt"
+      | "title"
+      | "updatedAt";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_category: ["category", "_creationTime"];
+      by_commitSha: ["commitSha", "_creationTime"];
+      by_committedAt: ["committedAt", "_creationTime"];
+      by_isPublished: ["isPublished", "_creationTime"];
+      by_published_date: ["isPublished", "committedAt", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
+  changelogReleases: {
+    document: {
+      createdAt: number;
+      description?: string;
+      entryIds: Array<Id<"changelogEntries">>;
+      isPublished: boolean;
+      notificationSent?: boolean;
+      notificationSentAt?: number;
+      publishedAt?: number;
+      title: string;
+      updatedAt: number;
+      version: string;
+      _id: Id<"changelogReleases">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "createdAt"
+      | "description"
+      | "entryIds"
+      | "isPublished"
+      | "notificationSent"
+      | "notificationSentAt"
+      | "publishedAt"
+      | "title"
+      | "updatedAt"
+      | "version";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_isPublished: ["isPublished", "_creationTime"];
+      by_publishedAt: ["publishedAt", "_creationTime"];
+      by_version: ["version", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   chapterAnalytics: {
     document: {
       avgEngagementScore: number;
@@ -4994,6 +5084,36 @@ export type DataModel = {
       by_userId: ["userId", "_creationTime"];
       by_user_status: ["userId", "status", "_creationTime"];
       by_viralityScore: ["viralityScore", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
+  githubConfig: {
+    document: {
+      branch: string;
+      createdAt: number;
+      isConnected: boolean;
+      lastSyncAt?: number;
+      lastSyncCommitSha?: string;
+      repository: string;
+      updatedAt: number;
+      _id: Id<"githubConfig">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "branch"
+      | "createdAt"
+      | "isConnected"
+      | "lastSyncAt"
+      | "lastSyncCommitSha"
+      | "repository"
+      | "updatedAt";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_repository: ["repository", "_creationTime"];
     };
     searchIndexes: {};
     vectorIndexes: {};

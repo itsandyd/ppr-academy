@@ -5356,4 +5356,80 @@ export default defineSchema({
     .index("by_senderId", ["senderId"])
     .index("by_createdAt", ["createdAt"])
     .index("by_conversation_created", ["conversationId", "createdAt"]),
+
+  // ============================================================================
+  // CHANGELOG SYSTEM - GitHub Integration for Release Notes
+  // ============================================================================
+
+  // GitHub Repository Configuration
+  githubConfig: defineTable({
+    repository: v.string(), // "owner/repo" format
+    branch: v.string(), // Default branch to track
+    // Token is stored in env vars, not in DB for security
+    isConnected: v.boolean(),
+    lastSyncAt: v.optional(v.number()),
+    lastSyncCommitSha: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_repository", ["repository"]),
+
+  // Changelog Entries - Generated from commits
+  changelogEntries: defineTable({
+    // Git info
+    commitSha: v.string(),
+    commitMessage: v.string(),
+    commitUrl: v.string(),
+    authorName: v.string(),
+    authorEmail: v.optional(v.string()),
+    authorAvatar: v.optional(v.string()),
+    committedAt: v.number(), // Git commit timestamp
+
+    // Categorization
+    category: v.union(
+      v.literal("feature"), // New features
+      v.literal("improvement"), // Enhancements
+      v.literal("fix"), // Bug fixes
+      v.literal("breaking"), // Breaking changes
+      v.literal("internal") // Internal changes (not shown to users)
+    ),
+
+    // User-facing content (editable)
+    title: v.string(), // Short title for the change
+    description: v.optional(v.string()), // Longer description
+    isPublished: v.boolean(), // Whether to include in public changelog
+
+    // Notification tracking
+    notificationSent: v.optional(v.boolean()),
+    notificationSentAt: v.optional(v.number()),
+    notificationId: v.optional(v.id("notifications")),
+
+    // Metadata
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_commitSha", ["commitSha"])
+    .index("by_committedAt", ["committedAt"])
+    .index("by_category", ["category"])
+    .index("by_isPublished", ["isPublished"])
+    .index("by_published_date", ["isPublished", "committedAt"]),
+
+  // Changelog Releases - Group entries into releases
+  changelogReleases: defineTable({
+    version: v.string(), // Semantic version or date-based
+    title: v.string(),
+    description: v.optional(v.string()),
+    entryIds: v.array(v.id("changelogEntries")),
+    publishedAt: v.optional(v.number()),
+    isPublished: v.boolean(),
+
+    // Notification
+    notificationSent: v.optional(v.boolean()),
+    notificationSentAt: v.optional(v.number()),
+
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_version", ["version"])
+    .index("by_publishedAt", ["publishedAt"])
+    .index("by_isPublished", ["isPublished"]),
 });

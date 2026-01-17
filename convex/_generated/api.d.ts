@@ -4525,6 +4525,104 @@ export declare const api: {
       }
     >;
   };
+  changelog: {
+    createRelease: FunctionReference<
+      "mutation",
+      "public",
+      {
+        clerkId: string;
+        description?: string;
+        entryIds: Array<Id<"changelogEntries">>;
+        publish?: boolean;
+        title: string;
+        version: string;
+      },
+      any
+    >;
+    deleteEntry: FunctionReference<
+      "mutation",
+      "public",
+      { clerkId: string; entryId: Id<"changelogEntries"> },
+      any
+    >;
+    getChangelogEntries: FunctionReference<
+      "query",
+      "public",
+      {
+        category?: "feature" | "improvement" | "fix" | "breaking" | "internal";
+        clerkId: string;
+        limit?: number;
+        publishedOnly?: boolean;
+      },
+      any
+    >;
+    getChangelogStats: FunctionReference<
+      "query",
+      "public",
+      { clerkId: string },
+      any
+    >;
+    getGithubConfig: FunctionReference<
+      "query",
+      "public",
+      { clerkId: string },
+      any
+    >;
+    getReleases: FunctionReference<
+      "query",
+      "public",
+      { clerkId: string; limit?: number },
+      any
+    >;
+    saveCommitsAsEntries: FunctionReference<
+      "mutation",
+      "public",
+      {
+        clerkId: string;
+        commits: Array<{
+          authorAvatar?: string;
+          authorEmail?: string;
+          authorName: string;
+          committedAt: number;
+          message: string;
+          sha: string;
+          url: string;
+        }>;
+      },
+      any
+    >;
+    saveGithubConfig: FunctionReference<
+      "mutation",
+      "public",
+      { branch: string; clerkId: string; repository: string },
+      any
+    >;
+    sendChangelogNotification: FunctionReference<
+      "mutation",
+      "public",
+      {
+        clerkId: string;
+        entryIds: Array<Id<"changelogEntries">>;
+        message: string;
+        targetType: "all" | "students" | "creators";
+        title: string;
+      },
+      any
+    >;
+    updateEntry: FunctionReference<
+      "mutation",
+      "public",
+      {
+        category?: "feature" | "improvement" | "fix" | "breaking" | "internal";
+        clerkId: string;
+        description?: string;
+        entryId: Id<"changelogEntries">;
+        isPublished?: boolean;
+        title?: string;
+      },
+      any
+    >;
+  };
   clerkSync: {
     getSyncStats: FunctionReference<
       "query",
