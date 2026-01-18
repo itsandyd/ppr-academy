@@ -12260,6 +12260,12 @@ export declare const api: {
         { jobId: Id<"scriptGenerationJobs"> },
         any
       >;
+      startRescoring: FunctionReference<
+        "action",
+        "public",
+        { storeId: string; userId: string },
+        any
+      >;
       startScriptGeneration: FunctionReference<
         "action",
         "public",
@@ -22042,6 +22048,12 @@ export declare const internal: {
         { jobId: Id<"scriptGenerationJobs"> },
         any
       >;
+      getScriptsForRescoring: FunctionReference<
+        "query",
+        "internal",
+        { storeId: string },
+        any
+      >;
       updateJobProgress: FunctionReference<
         "mutation",
         "internal",
@@ -22067,6 +22079,21 @@ export declare const internal: {
             | "completed"
             | "failed"
             | "cancelled";
+        },
+        any
+      >;
+      updateScriptVirality: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          scriptId: Id<"generatedScripts">;
+          viralityAnalysis: {
+            educationalValue: number;
+            engagementPotential: number;
+            reasoning: string;
+            trendAlignment: number;
+          };
+          viralityScore: number;
         },
         any
       >;

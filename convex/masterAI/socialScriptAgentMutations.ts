@@ -292,3 +292,54 @@ export const getChapterInfo = internalQuery({
     };
   },
 });
+
+// ============================================================================
+// RESCORING FUNCTIONS
+// ============================================================================
+
+/**
+ * Get all scripts for a store that need rescoring
+ */
+export const getScriptsForRescoring = internalQuery({
+  args: {
+    storeId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const scripts = await ctx.db
+      .query("generatedScripts")
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+      .filter((q) => q.neq(q.field("status"), "archived"))
+      .collect();
+
+    return scripts.map((s) => ({
+      _id: s._id,
+      chapterTitle: s.chapterTitle,
+      tiktokScript: s.tiktokScript,
+      combinedScript: s.combinedScript,
+      sourceContentSnippet: s.sourceContentSnippet,
+      viralityScore: s.viralityScore,
+    }));
+  },
+});
+
+/**
+ * Update a script's virality score
+ */
+export const updateScriptVirality = internalMutation({
+  args: {
+    scriptId: v.id("generatedScripts"),
+    viralityScore: v.number(),
+    viralityAnalysis: v.object({
+      engagementPotential: v.number(),
+      educationalValue: v.number(),
+      trendAlignment: v.number(),
+      reasoning: v.string(),
+    }),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.scriptId, {
+      viralityScore: args.viralityScore,
+      viralityAnalysis: args.viralityAnalysis,
+    });
+  },
+});

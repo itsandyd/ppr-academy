@@ -6,7 +6,7 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Sparkles, FileText, Loader2 } from "lucide-react";
+import { Sparkles, FileText, Loader2, RefreshCw } from "lucide-react";
 import { ScriptCard } from "./ScriptCard";
 import { ScriptFilters } from "./ScriptFilters";
 import { PerformanceFeedbackDialog } from "./PerformanceFeedbackDialog";
@@ -31,6 +31,7 @@ export function ScriptLibrary({ storeId, userId }: ScriptLibraryProps) {
   const [minViralityScore, setMinViralityScore] = useState(1);
   const [courseFilter, setCourseFilter] = useState("all");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isRescoring, setIsRescoring] = useState(false);
 
   // Feedback dialog state
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
@@ -77,6 +78,7 @@ export function ScriptLibrary({ storeId, userId }: ScriptLibraryProps) {
 
   // Start generation action
   const startGeneration = useAction(api.masterAI.socialScriptAgent.startScriptGeneration);
+  const startRescoring = useAction(api.masterAI.socialScriptAgent.startRescoring);
 
   const handleStartGeneration = async (jobType: "full_scan" | "incremental") => {
     setIsGenerating(true);
@@ -101,6 +103,28 @@ export function ScriptLibrary({ storeId, userId }: ScriptLibraryProps) {
       });
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleRescore = async () => {
+    setIsRescoring(true);
+    try {
+      const result = await startRescoring({
+        storeId,
+        userId,
+      });
+      toast({
+        title: "Rescoring complete",
+        description: `Rescored ${result.rescored}/${result.total} scripts with updated criteria.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to rescore scripts",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRescoring(false);
     }
   };
 
@@ -168,7 +192,19 @@ export function ScriptLibrary({ storeId, userId }: ScriptLibraryProps) {
             )}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            onClick={handleRescore}
+            disabled={isRescoring || isGenerating || hasActiveJob || !stats?.total}
+          >
+            {isRescoring ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <RefreshCw className="mr-2 h-4 w-4" />
+            )}
+            Rescore All
+          </Button>
           <Button
             variant="outline"
             onClick={() => handleStartGeneration("incremental")}

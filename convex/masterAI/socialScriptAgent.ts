@@ -555,6 +555,90 @@ async function scoreVirality(
   };
 }
 
+// ============================================================================
+// RESCORING FUNCTIONS
+// ============================================================================
+
+const RESCORE_BATCH_SIZE = 10; // Process 10 scripts at a time
+
+/**
+ * Start rescoring all scripts for a store
+ */
+export const startRescoring = action({
+  args: {
+    storeId: v.string(),
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    console.log(`🔄 Starting rescore job for store ${args.storeId}`);
+
+    // Get all scripts that need rescoring
+    const scripts = await ctx.runQuery(
+      internal.masterAI.socialScriptAgentMutations.getScriptsForRescoring,
+      { storeId: args.storeId }
+    );
+
+    if (scripts.length === 0) {
+      console.log("No scripts to rescore");
+      return { rescored: 0, total: 0 };
+    }
+
+    console.log(`📚 Found ${scripts.length} scripts to rescore`);
+
+    // Process in batches
+    const batches = [];
+    for (let i = 0; i < scripts.length; i += RESCORE_BATCH_SIZE) {
+      batches.push(scripts.slice(i, i + RESCORE_BATCH_SIZE));
+    }
+
+    let rescored = 0;
+    for (let i = 0; i < batches.length; i++) {
+      const batch = batches[i];
+      console.log(`🔄 Rescoring batch ${i + 1}/${batches.length}`);
+
+      // Process batch in parallel
+      const results = await Promise.allSettled(
+        batch.map((script: any) => rescoreScript(ctx, script))
+      );
+
+      rescored += results.filter((r) => r.status === "fulfilled").length;
+    }
+
+    console.log(`✅ Rescoring complete: ${rescored}/${scripts.length} scripts`);
+    return { rescored, total: scripts.length };
+  },
+});
+
+/**
+ * Rescore a single script
+ */
+async function rescoreScript(ctx: any, script: any) {
+  // Score virality with new criteria
+  const viralityAnalysis = await scoreVirality(ctx, {
+    tiktokScript: script.tiktokScript,
+    combinedScript: script.combinedScript,
+    sourceContentSnippet: script.sourceContentSnippet || "",
+  });
+
+  // Update the script
+  await ctx.runMutation(internal.masterAI.socialScriptAgentMutations.updateScriptVirality, {
+    scriptId: script._id,
+    viralityScore: viralityAnalysis.viralityScore,
+    viralityAnalysis: {
+      engagementPotential: viralityAnalysis.engagementPotential,
+      educationalValue: viralityAnalysis.educationalValue,
+      trendAlignment: viralityAnalysis.trendAlignment,
+      reasoning: viralityAnalysis.reasoning,
+    },
+  });
+
+  console.log(
+    `   📊 Rescored "${script.chapterTitle}": ${script.viralityScore} → ${viralityAnalysis.viralityScore}`
+  );
+
+  return viralityAnalysis.viralityScore;
+}
+
 /**
  * Match script to account profile
  */
