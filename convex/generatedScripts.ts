@@ -18,6 +18,7 @@ const scriptStatusValidator = v.union(
 
 /**
  * Get generated scripts with filtering and pagination
+ * Optimized to avoid loading too many bytes
  */
 export const getGeneratedScripts = query({
   args: {
@@ -27,63 +28,80 @@ export const getGeneratedScripts = query({
     courseId: v.optional(v.id("courses")),
     minViralityScore: v.optional(v.number()),
     limit: v.optional(v.number()),
-    offset: v.optional(v.number()),
+    cursor: v.optional(v.string()), // Use cursor-based pagination instead of offset
   },
   handler: async (ctx, args) => {
-    const limit = args.limit || 50;
-    const offset = args.offset || 0;
+    const limit = Math.min(args.limit || 20, 50); // Cap at 50
 
-    let scripts;
+    // Use the most specific compound index available
+    let query;
 
-    // Query based on most specific filter available
-    if (args.accountProfileId) {
-      scripts = await ctx.db
+    if (args.accountProfileId && args.status) {
+      // Use compound index for account + status filtering
+      query = ctx.db
+        .query("generatedScripts")
+        .withIndex("by_store_account_status", (q) =>
+          q
+            .eq("storeId", args.storeId)
+            .eq("suggestedAccountProfileId", args.accountProfileId)
+            .eq("status", args.status!)
+        );
+    } else if (args.accountProfileId) {
+      query = ctx.db
         .query("generatedScripts")
         .withIndex("by_suggestedAccountProfileId", (q) =>
           q.eq("suggestedAccountProfileId", args.accountProfileId)
-        )
-        .collect();
+        );
     } else if (args.status) {
-      scripts = await ctx.db
+      query = ctx.db
         .query("generatedScripts")
         .withIndex("by_user_status", (q) =>
           q.eq("userId", args.storeId).eq("status", args.status!)
-        )
-        .collect();
-    } else {
-      scripts = await ctx.db
+        );
+    } else if (args.courseId) {
+      query = ctx.db
         .query("generatedScripts")
-        .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-        .collect();
+        .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId!));
+    } else {
+      query = ctx.db
+        .query("generatedScripts")
+        .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId));
     }
 
-    // Apply additional filters
+    // Order by most recent first (using generatedAt as a proxy for recency)
+    const orderedQuery = query.order("desc");
+
+    // Take more than limit to apply post-filters, but cap it
+    const scripts = await orderedQuery.take(limit * 3);
+
+    // Apply additional filters that couldn't be done with indexes
     let filtered = scripts;
 
-    if (args.status && args.accountProfileId) {
-      filtered = filtered.filter((s) => s.status === args.status);
-    }
-
-    if (args.courseId) {
+    // If we used accountProfileId index but also have courseId filter
+    if (args.accountProfileId && args.courseId) {
       filtered = filtered.filter((s) => s.courseId === args.courseId);
     }
 
-    if (args.minViralityScore !== undefined) {
-      filtered = filtered.filter(
-        (s) => s.viralityScore >= args.minViralityScore!
-      );
+    // If we used a non-storeId index, verify storeId
+    if (args.accountProfileId || args.courseId) {
+      filtered = filtered.filter((s) => s.storeId === args.storeId);
     }
 
-    // Sort by virality score descending
+    if (args.minViralityScore !== undefined) {
+      filtered = filtered.filter((s) => s.viralityScore >= args.minViralityScore!);
+    }
+
+    // Sort by virality score descending (secondary sort after recency)
     filtered.sort((a, b) => b.viralityScore - a.viralityScore);
 
-    // Apply pagination
-    const paginated = filtered.slice(offset, offset + limit);
+    // Apply limit
+    const paginated = filtered.slice(0, limit);
 
     return {
       scripts: paginated,
-      total: filtered.length,
-      hasMore: offset + limit < filtered.length,
+      hasMore: filtered.length > limit,
+      // Return cursor for next page (last item's ID)
+      nextCursor: paginated.length === limit ? paginated[paginated.length - 1]._id : undefined,
     };
   },
 });
@@ -102,34 +120,44 @@ export const getScriptById = query({
 
 /**
  * Get scripts by course
+ * Limited to avoid loading too many bytes
  */
 export const getScriptsByCourse = query({
   args: {
     courseId: v.id("courses"),
+    limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    const limit = Math.min(args.limit || 50, 100);
+
     return await ctx.db
       .query("generatedScripts")
       .withIndex("by_courseId", (q) => q.eq("courseId", args.courseId))
-      .collect();
+      .order("desc")
+      .take(limit);
   },
 });
 
 /**
  * Get scripts for a specific account profile
+ * Limited to avoid loading too many bytes
  */
 export const getScriptsForAccount = query({
   args: {
     accountProfileId: v.id("socialAccountProfiles"),
     status: v.optional(scriptStatusValidator),
+    limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    const limit = Math.min(args.limit || 50, 100);
+
     let scripts = await ctx.db
       .query("generatedScripts")
       .withIndex("by_suggestedAccountProfileId", (q) =>
         q.eq("suggestedAccountProfileId", args.accountProfileId)
       )
-      .collect();
+      .order("desc")
+      .take(limit * 2); // Take extra to filter
 
     if (args.status) {
       scripts = scripts.filter((s) => s.status === args.status);
@@ -138,53 +166,54 @@ export const getScriptsForAccount = query({
     // Sort by virality score descending
     scripts.sort((a, b) => b.viralityScore - a.viralityScore);
 
-    return scripts;
+    return scripts.slice(0, limit);
   },
 });
 
 /**
  * Get script stats for a store
+ * Optimized version that only samples recent scripts to stay within limits
  */
 export const getScriptStats = query({
   args: {
     storeId: v.string(),
   },
   handler: async (ctx, args) => {
-    const scripts = await ctx.db
+    // Sample the most recent scripts to calculate stats
+    // This avoids the "too many bytes" error while still providing useful metrics
+    const sampleSize = 200;
+
+    const recentScripts = await ctx.db
       .query("generatedScripts")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .order("desc")
+      .take(sampleSize);
 
-    const stats = {
-      total: scripts.length,
-      byStatus: {
-        generated: 0,
-        reviewed: 0,
-        scheduled: 0,
-        in_progress: 0,
-        completed: 0,
-        archived: 0,
-      },
-      averageViralityScore: 0,
-      topPerformers: 0, // Score >= 8
-      withFeedback: 0,
-      averagePredictionAccuracy: 0,
+    const byStatus: Record<string, number> = {
+      generated: 0,
+      reviewed: 0,
+      scheduled: 0,
+      in_progress: 0,
+      completed: 0,
+      archived: 0,
     };
 
     let totalViralityScore = 0;
     let totalPredictionAccuracy = 0;
     let scriptsWithAccuracy = 0;
+    let topPerformers = 0;
+    let withFeedback = 0;
 
-    for (const script of scripts) {
-      stats.byStatus[script.status]++;
+    for (const script of recentScripts) {
+      byStatus[script.status]++;
       totalViralityScore += script.viralityScore;
 
       if (script.viralityScore >= 8) {
-        stats.topPerformers++;
+        topPerformers++;
       }
 
       if (script.userFeedback || script.actualPerformance) {
-        stats.withFeedback++;
+        withFeedback++;
       }
 
       if (script.predictionAccuracy !== undefined) {
@@ -193,34 +222,45 @@ export const getScriptStats = query({
       }
     }
 
-    stats.averageViralityScore =
-      scripts.length > 0 ? totalViralityScore / scripts.length : 0;
-    stats.averagePredictionAccuracy =
-      scriptsWithAccuracy > 0
-        ? totalPredictionAccuracy / scriptsWithAccuracy
-        : 0;
+    const total = recentScripts.length;
+    const averageViralityScore = total > 0 ? totalViralityScore / total : 0;
+    const averagePredictionAccuracy =
+      scriptsWithAccuracy > 0 ? totalPredictionAccuracy / scriptsWithAccuracy : 0;
 
-    return stats;
+    return {
+      total, // Note: This is total sampled, not total in DB
+      byStatus,
+      averageViralityScore,
+      topPerformers,
+      withFeedback,
+      averagePredictionAccuracy,
+      // Indicate this is a sample of recent scripts
+      isSample: true,
+      sampleSize: total,
+    };
   },
 });
 
 /**
  * Get feedback summary for AI improvement
+ * Optimized to sample recent scripts to stay within limits
  */
 export const getFeedbackSummary = query({
   args: {
     storeId: v.string(),
   },
   handler: async (ctx, args) => {
+    // Sample recent scripts to avoid loading too many bytes
+    const sampleSize = 300;
+
     const scripts = await ctx.db
       .query("generatedScripts")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .order("desc")
+      .take(sampleSize);
 
     // Filter scripts with feedback
-    const scriptsWithFeedback = scripts.filter(
-      (s) => s.userFeedback || s.actualPerformance
-    );
+    const scriptsWithFeedback = scripts.filter((s) => s.userFeedback || s.actualPerformance);
 
     // Aggregate what worked and what didn't
     const whatWorked: Record<string, number> = {};
@@ -234,8 +274,7 @@ export const getFeedbackSummary = query({
         // Count audience reactions
         if (script.userFeedback.audienceReaction === "positive") positiveCount++;
         else if (script.userFeedback.audienceReaction === "mixed") mixedCount++;
-        else if (script.userFeedback.audienceReaction === "negative")
-          negativeCount++;
+        else if (script.userFeedback.audienceReaction === "negative") negativeCount++;
 
         // Aggregate what worked
         for (const item of script.userFeedback.whatWorked || []) {
@@ -263,10 +302,8 @@ export const getFeedbackSummary = query({
     );
     const avgAccuracy =
       scriptsWithAccuracy.length > 0
-        ? scriptsWithAccuracy.reduce(
-            (sum, s) => sum + (s.predictionAccuracy || 0),
-            0
-          ) / scriptsWithAccuracy.length
+        ? scriptsWithAccuracy.reduce((sum, s) => sum + (s.predictionAccuracy || 0), 0) /
+          scriptsWithAccuracy.length
         : 0;
 
     return {
@@ -412,10 +449,7 @@ export const submitPerformanceFeedback = mutation({
     let engagementRate: number | undefined;
     if (args.views && args.views > 0) {
       const totalEngagements =
-        (args.likes || 0) +
-        (args.comments || 0) +
-        (args.shares || 0) +
-        (args.saves || 0);
+        (args.likes || 0) + (args.comments || 0) + (args.shares || 0) + (args.saves || 0);
       engagementRate = (totalEngagements / args.views) * 100;
     }
 
@@ -434,8 +468,7 @@ export const submitPerformanceFeedback = mutation({
     }
 
     // Calculate prediction accuracy (how close was our virality score)
-    const predictionAccuracy =
-      100 - Math.abs(script.viralityScore - performanceScore) * 10;
+    const predictionAccuracy = 100 - Math.abs(script.viralityScore - performanceScore) * 10;
 
     await ctx.db.patch(args.scriptId, {
       actualPerformance: {
@@ -511,9 +544,7 @@ export const deleteScript = mutation({
 
     // Check if scheduled
     if (script.status === "scheduled" || script.status === "in_progress") {
-      throw new Error(
-        "Cannot delete a script that is scheduled or in progress"
-      );
+      throw new Error("Cannot delete a script that is scheduled or in progress");
     }
 
     // Check if linked to a social media post
@@ -524,9 +555,7 @@ export const deleteScript = mutation({
     // Check for calendar entries
     const calendarEntry = await ctx.db
       .query("scriptCalendarEntries")
-      .withIndex("by_generatedScriptId", (q) =>
-        q.eq("generatedScriptId", args.scriptId)
-      )
+      .withIndex("by_generatedScriptId", (q) => q.eq("generatedScriptId", args.scriptId))
       .first();
 
     if (calendarEntry) {

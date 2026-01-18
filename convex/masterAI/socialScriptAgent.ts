@@ -560,9 +560,11 @@ async function scoreVirality(
 // ============================================================================
 
 const RESCORE_BATCH_SIZE = 10; // Process 10 scripts at a time
+const RESCORE_PAGE_SIZE = 50; // Fetch 50 scripts at a time from DB
 
 /**
  * Start rescoring all scripts for a store
+ * Uses pagination to avoid loading too many bytes
  */
 export const startRescoring = action({
   args: {
@@ -572,40 +574,62 @@ export const startRescoring = action({
   handler: async (ctx, args) => {
     console.log(`🔄 Starting rescore job for store ${args.storeId}`);
 
-    // Get all scripts that need rescoring
-    const scripts = await ctx.runQuery(
-      internal.masterAI.socialScriptAgentMutations.getScriptsForRescoring,
-      { storeId: args.storeId }
-    );
-
-    if (scripts.length === 0) {
-      console.log("No scripts to rescore");
-      return { rescored: 0, total: 0 };
-    }
-
-    console.log(`📚 Found ${scripts.length} scripts to rescore`);
-
-    // Process in batches
-    const batches = [];
-    for (let i = 0; i < scripts.length; i += RESCORE_BATCH_SIZE) {
-      batches.push(scripts.slice(i, i + RESCORE_BATCH_SIZE));
-    }
-
     let rescored = 0;
-    for (let i = 0; i < batches.length; i++) {
-      const batch = batches[i];
-      console.log(`🔄 Rescoring batch ${i + 1}/${batches.length}`);
+    let total = 0;
+    let cursor: any = undefined;
+    let pageNumber = 0;
 
-      // Process batch in parallel
-      const results = await Promise.allSettled(
-        batch.map((script: any) => rescoreScript(ctx, script))
+    // Process scripts in pages to avoid memory limits
+    while (true) {
+      pageNumber++;
+
+      // Get a page of scripts
+      const result = await ctx.runQuery(
+        internal.masterAI.socialScriptAgentMutations.getScriptsForRescoring,
+        { storeId: args.storeId, limit: RESCORE_PAGE_SIZE, cursor }
       );
 
-      rescored += results.filter((r) => r.status === "fulfilled").length;
+      const scripts = result.scripts;
+
+      if (scripts.length === 0) {
+        if (total === 0) {
+          console.log("No scripts to rescore");
+          return { rescored: 0, total: 0 };
+        }
+        break;
+      }
+
+      console.log(`📚 Page ${pageNumber}: Processing ${scripts.length} scripts`);
+      total += scripts.length;
+
+      // Process this page in batches
+      const batches = [];
+      for (let i = 0; i < scripts.length; i += RESCORE_BATCH_SIZE) {
+        batches.push(scripts.slice(i, i + RESCORE_BATCH_SIZE));
+      }
+
+      for (let i = 0; i < batches.length; i++) {
+        const batch = batches[i];
+        console.log(`🔄 Rescoring batch ${i + 1}/${batches.length} (page ${pageNumber})`);
+
+        // Process batch in parallel
+        const results = await Promise.allSettled(
+          batch.map((script: any) => rescoreScript(ctx, script))
+        );
+
+        rescored += results.filter((r) => r.status === "fulfilled").length;
+      }
+
+      // Check if there are more pages
+      if (!result.hasMore) {
+        break;
+      }
+
+      cursor = result.nextCursor;
     }
 
-    console.log(`✅ Rescoring complete: ${rescored}/${scripts.length} scripts`);
-    return { rescored, total: scripts.length };
+    console.log(`✅ Rescoring complete: ${rescored}/${total} scripts`);
+    return { rescored, total };
   },
 });
 

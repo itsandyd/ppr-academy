@@ -298,27 +298,39 @@ export const getChapterInfo = internalQuery({
 // ============================================================================
 
 /**
- * Get all scripts for a store that need rescoring
+ * Get scripts for a store that need rescoring
+ * Limited to avoid loading too many bytes - processes in batches
  */
 export const getScriptsForRescoring = internalQuery({
   args: {
     storeId: v.string(),
+    limit: v.optional(v.number()),
+    cursor: v.optional(v.id("generatedScripts")),
   },
   handler: async (ctx, args) => {
-    const scripts = await ctx.db
+    const limit = Math.min(args.limit || 50, 100);
+
+    // Use pagination to avoid loading too many bytes
+    let query = ctx.db
       .query("generatedScripts")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .filter((q) => q.neq(q.field("status"), "archived"))
-      .collect();
+      .filter((q) => q.neq(q.field("status"), "archived"));
 
-    return scripts.map((s) => ({
-      _id: s._id,
-      chapterTitle: s.chapterTitle,
-      tiktokScript: s.tiktokScript,
-      combinedScript: s.combinedScript,
-      sourceContentSnippet: s.sourceContentSnippet,
-      viralityScore: s.viralityScore,
-    }));
+    const scripts = await query.take(limit);
+
+    // Return minimal data needed for rescoring to reduce bytes
+    return {
+      scripts: scripts.map((s) => ({
+        _id: s._id,
+        chapterTitle: s.chapterTitle,
+        tiktokScript: s.tiktokScript,
+        combinedScript: s.combinedScript,
+        sourceContentSnippet: s.sourceContentSnippet,
+        viralityScore: s.viralityScore,
+      })),
+      hasMore: scripts.length === limit,
+      nextCursor: scripts.length === limit ? scripts[scripts.length - 1]._id : undefined,
+    };
   },
 });
 

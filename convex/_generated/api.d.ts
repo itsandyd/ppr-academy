@@ -10169,9 +10169,9 @@ export declare const api: {
       {
         accountProfileId?: Id<"socialAccountProfiles">;
         courseId?: Id<"courses">;
+        cursor?: string;
         limit?: number;
         minViralityScore?: number;
-        offset?: number;
         status?:
           | "generated"
           | "reviewed"
@@ -10192,7 +10192,7 @@ export declare const api: {
     getScriptsByCourse: FunctionReference<
       "query",
       "public",
-      { courseId: Id<"courses"> },
+      { courseId: Id<"courses">; limit?: number },
       any
     >;
     getScriptsForAccount: FunctionReference<
@@ -10200,6 +10200,7 @@ export declare const api: {
       "public",
       {
         accountProfileId: Id<"socialAccountProfiles">;
+        limit?: number;
         status?:
           | "generated"
           | "reviewed"
@@ -22109,7 +22110,7 @@ export declare const internal: {
       getScriptsForRescoring: FunctionReference<
         "query",
         "internal",
-        { storeId: string },
+        { cursor?: Id<"generatedScripts">; limit?: number; storeId: string },
         any
       >;
       updateJobProgress: FunctionReference<
