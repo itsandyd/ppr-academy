@@ -29,9 +29,18 @@ export function ScriptLibrary({ storeId, userId }: ScriptLibraryProps) {
   const [accountFilter, setAccountFilter] = useState(initialAccount);
   const [statusFilter, setStatusFilter] = useState("all");
   const [minViralityScore, setMinViralityScore] = useState(1);
+  const [debouncedViralityScore, setDebouncedViralityScore] = useState(1);
   const [courseFilter, setCourseFilter] = useState("all");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRescoring, setIsRescoring] = useState(false);
+
+  // Debounce virality score changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedViralityScore(minViralityScore);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [minViralityScore]);
 
   // Feedback dialog state
   const [feedbackDialogOpen, setFeedbackDialogOpen] = useState(false);
@@ -49,7 +58,7 @@ export function ScriptLibrary({ storeId, userId }: ScriptLibraryProps) {
     }
   }, [searchParams]);
 
-  // Get scripts
+  // Get scripts (using debounced virality score to avoid excessive queries)
   // @ts-ignore - Convex type inference depth issue
   const scriptsData = useQuery(api.generatedScripts.getGeneratedScripts, {
     storeId,
@@ -59,7 +68,7 @@ export function ScriptLibrary({ storeId, userId }: ScriptLibraryProps) {
         ? (accountFilter as Id<"socialAccountProfiles">)
         : undefined,
     courseId: courseFilter !== "all" ? (courseFilter as Id<"courses">) : undefined,
-    minViralityScore: minViralityScore > 1 ? minViralityScore : undefined,
+    minViralityScore: debouncedViralityScore > 1 ? debouncedViralityScore : undefined,
     limit: 50,
   });
 

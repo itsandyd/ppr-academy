@@ -59,7 +59,7 @@ export function ScriptFilters({
     courseFilter !== "all";
 
   return (
-    <div className="flex flex-wrap items-end gap-4 p-4 bg-muted/30 rounded-lg">
+    <div className="flex flex-wrap items-end gap-4 rounded-lg bg-muted/30 p-4">
       {/* Account Filter */}
       <div className="space-y-1.5">
         <Label className="text-sm">Account</Label>
@@ -117,10 +117,8 @@ export function ScriptFilters({
       </div>
 
       {/* Virality Score Filter */}
-      <div className="space-y-1.5 w-[200px]">
-        <Label className="text-sm">
-          Min Virality Score: {minViralityScore}
-        </Label>
+      <div className="w-[200px] space-y-1.5">
+        <Label className="text-sm">Min Virality Score: {minViralityScore}</Label>
         <Slider
           value={[minViralityScore]}
           onValueChange={(v) => onMinViralityScoreChange(v[0])}
