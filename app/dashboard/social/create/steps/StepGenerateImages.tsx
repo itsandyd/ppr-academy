@@ -55,7 +55,9 @@ export function StepGenerateImages() {
   // @ts-ignore - Convex type inference depth issue
   const editSocialImage = useAction(api.masterAI.socialMediaGenerator.editSocialImage);
   // @ts-ignore - Convex type inference depth issue
-  const generateFromUploadedImage = useAction(api.masterAI.socialMediaGenerator.generateFromUploadedImage);
+  const generateFromUploadedImage = useAction(
+    api.masterAI.socialMediaGenerator.generateFromUploadedImage
+  );
   // @ts-ignore - Convex type inference depth issue
   const generateUploadUrl = useMutation(api.files.generateUploadUrl);
   // @ts-ignore - Convex type inference depth issue
@@ -575,8 +577,12 @@ export function StepGenerateImages() {
                             className="h-10 w-10 rounded object-cover"
                           />
                           <div className="flex-1">
-                            <p className="text-xs font-medium text-primary">Source image uploaded</p>
-                            <p className="text-xs text-muted-foreground">Will transform with style</p>
+                            <p className="text-xs font-medium text-primary">
+                              Source image uploaded
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              Will transform with style
+                            </p>
                           </div>
                           <Button
                             size="sm"
@@ -593,9 +599,11 @@ export function StepGenerateImages() {
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-medium text-muted-foreground">Prompt</span>
+                            <span className="text-xs font-medium text-muted-foreground">
+                              Prompt
+                            </span>
                             {image.isPromptEdited && (
-                              <Badge variant="secondary" className="text-[10px] px-1 py-0">
+                              <Badge variant="secondary" className="px-1 py-0 text-[10px]">
                                 Edited
                               </Badge>
                             )}
@@ -604,7 +612,9 @@ export function StepGenerateImages() {
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() => setEditingPromptIndex(editingPromptIndex === index ? null : index)}
+                              onClick={() =>
+                                setEditingPromptIndex(editingPromptIndex === index ? null : index)
+                              }
                               className="h-6 px-2 text-xs"
                             >
                               <Pencil className="mr-1 h-3 w-3" />
@@ -633,7 +643,7 @@ export function StepGenerateImages() {
                             placeholder="Edit the image prompt..."
                           />
                         ) : (
-                          <p className="text-xs text-muted-foreground/70 line-clamp-2">
+                          <p className="line-clamp-2 text-xs text-muted-foreground/70">
                             {image.prompt}
                           </p>
                         )}

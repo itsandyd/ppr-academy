@@ -30,6 +30,7 @@ export const rateLimiter = new RateLimiter(components.rateLimiter, {
     rate: 10,
     period: MINUTE,
     capacity: 5,
+    shards: 10, // Sharding prevents OCC conflicts when multiple requests hit simultaneously
   },
   userTavilySearch: {
     kind: "token bucket",
@@ -99,6 +100,7 @@ export const rateLimiter = new RateLimiter(components.rateLimiter, {
     rate: 30,
     period: MINUTE,
     capacity: 15,
+    shards: 10, // Sharding prevents OCC conflicts when multiple requests hit simultaneously
   },
 });
 
