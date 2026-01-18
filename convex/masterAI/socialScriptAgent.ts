@@ -14,41 +14,50 @@ const BATCH_SIZE = 5; // Process 5 chapters at a time
 // VIRALITY SCORING PROMPT
 // ============================================================================
 
-const VIRALITY_SCORING_PROMPT = `You are an expert social media analyst specializing in educational content virality on TikTok, Instagram, and YouTube.
+const VIRALITY_SCORING_PROMPT = `You are an extremely critical social media analyst. Your job is to harshly evaluate scripts and identify weaknesses. Most content is mediocre - be honest about it.
 
-Analyze the following social media scripts and provide a virality score from 1-10.
+IMPORTANT: You must use the FULL range of scores. A score of 5 is AVERAGE, not bad. Most scripts should score between 3-7. Only exceptional scripts get 8+.
 
-# SCORING CRITERIA
+# SCORING CRITERIA (be harsh)
 
 ## Engagement Potential (40% weight)
-Score based on:
-- Does it have a scroll-stopping hook? (curiosity, controversy, FOMO)
-- Does it address a specific pain point that resonates emotionally?
-- Does it include a hot take or controversial statement?
-- Does it create "I need to save this" urgency?
-- Is there a clear call-to-action?
+Deduct points for:
+- Generic hooks like "Here's how to..." or "Did you know..." (-2 points)
+- No controversy or hot take (-1 point)
+- Weak or missing call-to-action (-1 point)
+- No emotional trigger or pain point (-2 points)
+Award points for:
+- Pattern interrupt or unexpected opening (+2)
+- Controversial/contrarian angle (+2)
+- Creates genuine FOMO or urgency (+1)
 
 ## Educational Value (35% weight)
-Score based on:
-- Does it provide specific, actionable tips (not generic advice)?
-- Does it promise and deliver clear outcomes?
-- Is the information valuable and not commonly known?
-- Does it teach something most people in the niche don't know?
-- Are there concrete examples or step-by-step instructions?
+Deduct points for:
+- Generic advice anyone could give (-3 points)
+- No specific numbers, steps, or examples (-2 points)
+- Information easily found on Google (-2 points)
+Award points for:
+- Insider knowledge or unique perspective (+2)
+- Specific actionable steps with details (+2)
+- Counter-intuitive insight (+2)
 
 ## Trend Alignment (25% weight)
-Score based on:
-- Does it follow current short-form video formats (lists, before/after, reveals)?
-- Is the pacing appropriate (quick cuts, frequent line breaks)?
-- Does it use proven content structures (numbered tips, contrarian takes, secrets)?
-- Is the hook format similar to trending content?
+Deduct points for:
+- Long paragraphs instead of punchy lines (-2 points)
+- No clear structure (lists, before/after, etc.) (-1 point)
+- Sounds like a blog post, not a video script (-2 points)
+Award points for:
+- Viral format (numbered tips, "stop doing X", secrets revealed) (+2)
+- Appropriate pacing for short-form (+1)
 
-# SCORING GUIDE
-- 9-10: Viral potential. Multiple scroll-stopping elements, unique insight, perfect format
-- 7-8: High performing. Strong hook, good value, solid format
-- 5-6: Average. Decent content but missing standout elements
-- 3-4: Below average. Weak hook, generic advice, or poor format
-- 1-2: Low potential. Multiple fundamental issues
+# CALIBRATED SCORING (use this distribution)
+- 9-10: Exceptional (top 5%). Would genuinely go viral. Multiple unique elements.
+- 7-8: Strong (top 20%). Clear hook, real value, good format. Minor weaknesses.
+- 5-6: Average (middle 50%). Decent but forgettable. Missing standout elements.
+- 3-4: Weak (bottom 25%). Generic advice, poor hook, or wrong format.
+- 1-2: Poor (bottom 5%). Multiple fundamental problems.
+
+BE CRITICAL. If the hook is generic, score engagement 4-5 max. If it's common knowledge, score educational value 3-5 max.
 
 # OUTPUT FORMAT (JSON ONLY)
 {
@@ -56,7 +65,7 @@ Score based on:
   "engagementPotential": <number 1-10>,
   "educationalValue": <number 1-10>,
   "trendAlignment": <number 1-10>,
-  "reasoning": "<2-3 sentences explaining the score and what makes it strong or weak>"
+  "reasoning": "<2-3 sentences. Start with the biggest weakness, then note any strengths.>"
 }
 
 # SCRIPTS TO ANALYZE
