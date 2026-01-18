@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
+import { useState, useEffect, useMemo } from "react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
   Plus,
@@ -38,8 +39,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Brain,
+  Sparkles,
+  Loader2,
+  X,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { useDebounce } from "@/hooks/use-debounce";
 
 interface ConversationSidebarProps {
   userId: string;
@@ -48,6 +53,50 @@ interface ConversationSidebarProps {
   onNewConversation: () => void;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+}
+
+// Type for search results (includes matchedMessageCount and matchedMessagePreview)
+interface SearchResult {
+  _id: Id<"aiConversations">;
+  _creationTime: number;
+  userId: string;
+  title: string;
+  preview?: string;
+  lastMessageAt: number;
+  messageCount: number;
+  conversationGoal?: {
+    originalIntent: string;
+    deliverableType?: string;
+    keyConstraints?: string[];
+    extractedAt: number;
+  };
+  preset?: string;
+  responseStyle?: string;
+  settings?: {
+    preset: string;
+    maxFacets: number;
+    chunksPerFacet: number;
+    similarityThreshold: number;
+    enableCritic: boolean;
+    enableCreativeMode: boolean;
+    enableWebResearch: boolean;
+    enableFactVerification: boolean;
+    autoSaveWebResearch: boolean;
+    qualityThreshold?: number;
+    maxRetries?: number;
+    webSearchMaxResults?: number;
+    responseStyle: string;
+    agenticMode?: boolean;
+  };
+  agentId?: Id<"aiAgents">;
+  agentSlug?: string;
+  agentName?: string;
+  archived?: boolean;
+  starred?: boolean;
+  createdAt: number;
+  updatedAt: number;
+  matchedMessageCount: number;
+  matchedMessagePreview?: string;
 }
 
 export default function ConversationSidebar({
@@ -65,13 +114,30 @@ export default function ConversationSidebar({
   const [conversationToDelete, setConversationToDelete] = useState<Id<"aiConversations"> | null>(
     null
   );
+  const [generatingTitleFor, setGeneratingTitleFor] = useState<Id<"aiConversations"> | null>(null);
 
-  // Queries
+  // Debounce search query to avoid excessive API calls
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+
+  // Queries - use search query when searching, otherwise get all conversations
   const conversations = useQuery(api.aiConversations.getUserConversations, {
     userId,
     limit: 100,
     includeArchived: false,
   });
+
+  // Search query - only run when there's a debounced search term
+  const searchResults = useQuery(
+    api.aiConversations.searchConversations,
+    debouncedSearchQuery.trim()
+      ? {
+          userId,
+          searchQuery: debouncedSearchQuery.trim(),
+          limit: 50,
+          includeArchived: false,
+        }
+      : "skip"
+  ) as SearchResult[] | undefined;
 
   // Mutations
   const updateTitle = useMutation(api.aiConversations.updateConversationTitle);
@@ -79,14 +145,31 @@ export default function ConversationSidebar({
   const archiveConversation = useMutation(api.aiConversations.archiveConversation);
   const deleteConversation = useMutation(api.aiConversations.deleteConversation);
 
-  // Filter conversations by search
-  const filteredConversations = conversations?.filter((c: any) =>
-    c.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // AI title generation action
+  const generateTitle = useAction(api.aiConversations.generateConversationTitle);
 
-  // Separate starred and regular conversations
-  const starredConversations = filteredConversations?.filter((c: any) => c.starred) || [];
-  const regularConversations = filteredConversations?.filter((c: any) => !c.starred) || [];
+  // Use search results when searching, otherwise use filtered conversations
+  const displayConversations = useMemo(() => {
+    if (debouncedSearchQuery.trim() && searchResults) {
+      return searchResults;
+    }
+    return conversations || [];
+  }, [debouncedSearchQuery, searchResults, conversations]);
+
+  // Check if we're currently searching
+  const isSearching = Boolean(debouncedSearchQuery.trim());
+  const isSearchLoading = isSearching && searchResults === undefined;
+
+  // Separate starred and regular conversations (only when not searching)
+  const starredConversations = useMemo(() => {
+    if (isSearching) return [];
+    return displayConversations.filter((c) => c.starred) || [];
+  }, [displayConversations, isSearching]);
+
+  const regularConversations = useMemo(() => {
+    if (isSearching) return displayConversations; // Show all search results together
+    return displayConversations.filter((c) => !c.starred) || [];
+  }, [displayConversations, isSearching]);
 
   const handleStartEdit = (id: Id<"aiConversations">, currentTitle: string) => {
     setEditingId(id);
@@ -112,13 +195,38 @@ export default function ConversationSidebar({
     }
   };
 
+  const handleAIRename = async (conversationId: Id<"aiConversations">) => {
+    setGeneratingTitleFor(conversationId);
+    try {
+      const result = await generateTitle({
+        conversationId,
+        userId,
+      });
+      if (!result.success) {
+        console.error("Failed to generate title");
+      }
+    } catch (error) {
+      console.error("Error generating title:", error);
+    } finally {
+      setGeneratingTitleFor(null);
+    }
+  };
+
+  const clearSearch = () => {
+    setSearchQuery("");
+  };
+
   const ConversationItem = ({
     conversation,
+    isSearchResult = false,
   }: {
-    conversation: NonNullable<typeof conversations>[0];
+    conversation: (typeof displayConversations)[0];
+    isSearchResult?: boolean;
   }) => {
     const isActive = currentConversationId === conversation._id;
     const isEditing = editingId === conversation._id;
+    const isGeneratingTitle = generatingTitleFor === conversation._id;
+    const searchResult = conversation as SearchResult;
 
     return (
       <div
@@ -152,9 +260,32 @@ export default function ConversationSidebar({
                   <Star className="h-3 w-3 flex-shrink-0 fill-yellow-500 text-yellow-500" />
                 )}
                 <span className="line-clamp-2 text-sm font-medium leading-tight">
-                  {conversation.title}
+                  {isGeneratingTitle ? (
+                    <span className="flex items-center gap-1.5 text-muted-foreground">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Generating title...
+                    </span>
+                  ) : (
+                    conversation.title
+                  )}
                 </span>
               </div>
+
+              {/* Search result match info */}
+              {isSearchResult && searchResult.matchedMessageCount > 0 && (
+                <div className="mb-1">
+                  <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
+                    {searchResult.matchedMessageCount} message match
+                    {searchResult.matchedMessageCount > 1 ? "es" : ""}
+                  </Badge>
+                  {searchResult.matchedMessagePreview && (
+                    <p className="mt-1 line-clamp-2 text-[11px] italic text-muted-foreground">
+                      "{searchResult.matchedMessagePreview}"
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Clock className="h-3 w-3 flex-shrink-0" />
                 <span className="truncate">
@@ -186,6 +317,14 @@ export default function ConversationSidebar({
                 <Edit3 className="mr-2 h-4 w-4" />
                 Rename
               </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => handleAIRename(conversation._id)}
+                disabled={isGeneratingTitle}
+              >
+                <Sparkles className="mr-2 h-4 w-4" />
+                {isGeneratingTitle ? "Generating..." : "AI Rename"}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => toggleStarred({ conversationId: conversation._id })}>
                 <Star className={cn("mr-2 h-4 w-4", conversation.starred && "fill-current")} />
                 {conversation.starred ? "Unstar" : "Star"}
@@ -322,19 +461,60 @@ export default function ConversationSidebar({
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search conversations..."
+              placeholder="Search messages & titles..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-9 bg-muted/50 pl-8"
+              className="h-9 bg-muted/50 pl-8 pr-8"
             />
+            {searchQuery && (
+              <button
+                onClick={clearSearch}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
+
+          {/* Search status */}
+          {isSearching && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              {isSearchLoading ? (
+                <>
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <span>Searching messages...</span>
+                </>
+              ) : (
+                <>
+                  <Search className="h-3 w-3" />
+                  <span>
+                    {displayConversations.length} result
+                    {displayConversations.length !== 1 ? "s" : ""} for "{debouncedSearchQuery}"
+                  </span>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Conversations List */}
         <ScrollArea className="flex-1">
           <div className="space-y-1 p-2">
-            {/* Starred Section */}
-            {starredConversations.length > 0 && (
+            {/* Search Results */}
+            {isSearching && (
+              <div>
+                {regularConversations.map((conversation: any) => (
+                  <ConversationItem
+                    key={conversation._id}
+                    conversation={conversation}
+                    isSearchResult
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Non-search view: Starred Section */}
+            {!isSearching && starredConversations.length > 0 && (
               <div className="mb-4">
                 <div className="px-3 py-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                   Starred
@@ -345,8 +525,8 @@ export default function ConversationSidebar({
               </div>
             )}
 
-            {/* Regular Section */}
-            {regularConversations.length > 0 && (
+            {/* Non-search view: Regular Section */}
+            {!isSearching && regularConversations.length > 0 && (
               <div>
                 {starredConversations.length > 0 && (
                   <div className="px-3 py-1.5 text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -360,13 +540,17 @@ export default function ConversationSidebar({
             )}
 
             {/* Empty State */}
-            {filteredConversations?.length === 0 && (
+            {displayConversations.length === 0 && !isSearchLoading && (
               <div className="p-8 text-center text-muted-foreground">
                 <MessageSquare className="mx-auto mb-3 h-12 w-12 opacity-20" />
                 <p className="text-sm">
-                  {searchQuery ? "No conversations found" : "No conversations yet"}
+                  {isSearching ? "No conversations found" : "No conversations yet"}
                 </p>
-                {!searchQuery && <p className="mt-1 text-xs">Start a new conversation to begin</p>}
+                {isSearching ? (
+                  <p className="mt-1 text-xs">Try different search terms</p>
+                ) : (
+                  <p className="mt-1 text-xs">Start a new conversation to begin</p>
+                )}
               </div>
             )}
           </div>
@@ -376,7 +560,10 @@ export default function ConversationSidebar({
         <div className="border-t bg-muted/30 p-3">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>{conversations?.length || 0} conversations</span>
-            <span>{conversations?.reduce((sum: number, c: any) => sum + c.messageCount, 0) || 0} messages</span>
+            <span>
+              {conversations?.reduce((sum: number, c: any) => sum + c.messageCount, 0) || 0}{" "}
+              messages
+            </span>
           </div>
         </div>
       </div>

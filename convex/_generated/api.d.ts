@@ -1078,6 +1078,12 @@ export declare const api: {
       { conversationId: Id<"aiConversations"> },
       null
     >;
+    generateConversationTitle: FunctionReference<
+      "action",
+      "public",
+      { conversationId: Id<"aiConversations">; userId: string },
+      { success: boolean; title: string }
+    >;
     getConversation: FunctionReference<
       "query",
       "public",
@@ -1231,6 +1237,58 @@ export declare const api: {
         userId: string;
       },
       Id<"aiMessages"> | null
+    >;
+    searchConversations: FunctionReference<
+      "query",
+      "public",
+      {
+        includeArchived?: boolean;
+        limit?: number;
+        searchQuery: string;
+        userId: string;
+      },
+      Array<{
+        _creationTime: number;
+        _id: Id<"aiConversations">;
+        agentId?: Id<"aiAgents">;
+        agentName?: string;
+        agentSlug?: string;
+        archived?: boolean;
+        conversationGoal?: {
+          deliverableType?: string;
+          extractedAt: number;
+          keyConstraints?: Array<string>;
+          originalIntent: string;
+        };
+        createdAt: number;
+        lastMessageAt: number;
+        matchedMessageCount: number;
+        matchedMessagePreview?: string;
+        messageCount: number;
+        preset?: string;
+        preview?: string;
+        responseStyle?: string;
+        settings?: {
+          agenticMode?: boolean;
+          autoSaveWebResearch: boolean;
+          chunksPerFacet: number;
+          enableCreativeMode: boolean;
+          enableCritic: boolean;
+          enableFactVerification: boolean;
+          enableWebResearch: boolean;
+          maxFacets: number;
+          maxRetries?: number;
+          preset: string;
+          qualityThreshold?: number;
+          responseStyle: string;
+          similarityThreshold: number;
+          webSearchMaxResults?: number;
+        };
+        starred?: boolean;
+        title: string;
+        updatedAt: number;
+        userId: string;
+      }>
     >;
     toggleStarred: FunctionReference<
       "mutation",
