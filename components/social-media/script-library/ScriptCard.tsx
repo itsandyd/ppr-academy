@@ -75,16 +75,13 @@ interface ScriptCardProps {
   onFeedback?: (scriptId: Id<"generatedScripts">) => void;
 }
 
-export function ScriptCard({
-  script,
-  accountName,
-  onSchedule,
-  onFeedback,
-}: ScriptCardProps) {
+export function ScriptCard({ script, accountName, onSchedule, onFeedback }: ScriptCardProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [showDetailDialog, setShowDetailDialog] = useState(false);
-  const [activeTab, setActiveTab] = useState<"combined" | "tiktok" | "youtube" | "instagram">("combined");
+  const [activeTab, setActiveTab] = useState<"combined" | "tiktok" | "youtube" | "instagram">(
+    "combined"
+  );
 
   const archiveScript = useMutation(api.generatedScripts.archiveScript);
 
@@ -136,16 +133,14 @@ export function ScriptCard({
 
   return (
     <>
-      <Card className="hover:shadow-md transition-shadow">
+      <Card className="overflow-hidden transition-shadow hover:shadow-md">
         <CardHeader className="pb-2">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
               <ViralityBadge score={script.viralityScore} />
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold truncate">{script.chapterTitle}</h3>
-                <p className="text-sm text-muted-foreground truncate">
-                  {script.courseTitle}
-                </p>
+              <div className="min-w-0 flex-1">
+                <h3 className="truncate font-semibold">{script.chapterTitle}</h3>
+                <p className="truncate text-sm text-muted-foreground">{script.courseTitle}</p>
               </div>
             </div>
             <DropdownMenu>
@@ -169,13 +164,12 @@ export function ScriptCard({
                   <BookOpen className="mr-2 h-4 w-4" />
                   View Details
                 </DropdownMenuItem>
-                {(script.status === "completed" || script.status === "scheduled") &&
-                  onFeedback && (
-                    <DropdownMenuItem onClick={() => onFeedback(script._id)}>
-                      <MessageSquare className="mr-2 h-4 w-4" />
-                      Add Feedback
-                    </DropdownMenuItem>
-                  )}
+                {(script.status === "completed" || script.status === "scheduled") && onFeedback && (
+                  <DropdownMenuItem onClick={() => onFeedback(script._id)}>
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    Add Feedback
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleArchive} className="text-muted-foreground">
                   <Archive className="mr-2 h-4 w-4" />
@@ -186,11 +180,9 @@ export function ScriptCard({
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
-          <p className="text-sm text-muted-foreground line-clamp-2">
-            {scriptPreview}...
-          </p>
+          <p className="line-clamp-2 text-sm text-muted-foreground">{scriptPreview}...</p>
 
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex flex-wrap items-center gap-2">
             <Badge variant="outline" className={getStatusColor(script.status)}>
               {script.status.replace("_", " ")}
             </Badge>
@@ -214,11 +206,7 @@ export function ScriptCard({
           )}
 
           <div className="flex items-center justify-between pt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowDetailDialog(true)}
-            >
+            <Button variant="outline" size="sm" onClick={() => setShowDetailDialog(true)}>
               View Script
               <ChevronRight className="ml-1 h-4 w-4" />
             </Button>
@@ -231,7 +219,7 @@ export function ScriptCard({
 
       {/* Detail Dialog */}
       <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-h-[80vh] max-w-3xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
               <ViralityBadge score={script.viralityScore} size="lg" />
@@ -242,15 +230,13 @@ export function ScriptCard({
                 </span>
               </div>
             </DialogTitle>
-            <DialogDescription>
-              {script.viralityAnalysis.reasoning}
-            </DialogDescription>
+            <DialogDescription>{script.viralityAnalysis.reasoning}</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-6">
             {/* Virality Breakdown */}
-            <div className="border rounded-lg p-4">
-              <h4 className="font-medium mb-3">Virality Analysis</h4>
+            <div className="rounded-lg border p-4">
+              <h4 className="mb-3 font-medium">Virality Analysis</h4>
               <ViralityBreakdown
                 engagementPotential={script.viralityAnalysis.engagementPotential}
                 educationalValue={script.viralityAnalysis.educationalValue}
@@ -274,8 +260,8 @@ export function ScriptCard({
                 ))}
               </div>
 
-              <div className="border rounded-lg p-4 bg-muted/30">
-                <pre className="whitespace-pre-wrap text-sm font-mono">
+              <div className="rounded-lg border bg-muted/30 p-4">
+                <pre className="whitespace-pre-wrap font-mono text-sm">
                   {activeTab === "combined" && script.combinedScript}
                   {activeTab === "tiktok" && script.tiktokScript}
                   {activeTab === "youtube" && script.youtubeScript}
@@ -289,9 +275,7 @@ export function ScriptCard({
               <Button variant="outline" onClick={() => setShowDetailDialog(false)}>
                 Close
               </Button>
-              <Button onClick={handleUseScript}>
-                Use This Script
-              </Button>
+              <Button onClick={handleUseScript}>Use This Script</Button>
             </div>
           </div>
         </DialogContent>

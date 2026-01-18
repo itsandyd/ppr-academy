@@ -57,10 +57,7 @@ export function ScriptLibrary({ storeId, userId }: ScriptLibraryProps) {
       accountFilter !== "all" && accountFilter !== "unassigned"
         ? (accountFilter as Id<"socialAccountProfiles">)
         : undefined,
-    courseId:
-      courseFilter !== "all"
-        ? (courseFilter as Id<"courses">)
-        : undefined,
+    courseId: courseFilter !== "all" ? (courseFilter as Id<"courses">) : undefined,
     minViralityScore: minViralityScore > 1 ? minViralityScore : undefined,
     limit: 50,
   });
@@ -81,9 +78,7 @@ export function ScriptLibrary({ storeId, userId }: ScriptLibraryProps) {
   // Start generation action
   const startGeneration = useAction(api.masterAI.socialScriptAgent.startScriptGeneration);
 
-  const handleStartGeneration = async (
-    jobType: "full_scan" | "incremental"
-  ) => {
+  const handleStartGeneration = async (jobType: "full_scan" | "incremental") => {
     setIsGenerating(true);
     try {
       await startGeneration({
@@ -135,9 +130,10 @@ export function ScriptLibrary({ storeId, userId }: ScriptLibraryProps) {
 
   // Filter for unassigned if needed
   const allScripts = scriptsData?.scripts || [];
-  const filteredScripts = accountFilter === "unassigned"
-    ? allScripts.filter((s: any) => !s.suggestedAccountProfileId)
-    : allScripts;
+  const filteredScripts =
+    accountFilter === "unassigned"
+      ? allScripts.filter((s: any) => !s.suggestedAccountProfileId)
+      : allScripts;
 
   const hasActiveJob = activeJobs && activeJobs.length > 0;
 
@@ -152,10 +148,7 @@ export function ScriptLibrary({ storeId, userId }: ScriptLibraryProps) {
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="h-48 rounded-lg border bg-muted/50 animate-pulse"
-            />
+            <div key={i} className="h-48 animate-pulse rounded-lg border bg-muted/50" />
           ))}
         </div>
       </div>
@@ -203,9 +196,7 @@ export function ScriptLibrary({ storeId, userId }: ScriptLibraryProps) {
       </div>
 
       {/* Active Job Status */}
-      {activeJobs && activeJobs.length > 0 && (
-        <GenerationJobStatus job={activeJobs[0]} />
-      )}
+      {activeJobs && activeJobs.length > 0 && <GenerationJobStatus job={activeJobs[0]} />}
 
       {/* Filters */}
       <ScriptFilters
@@ -225,9 +216,9 @@ export function ScriptLibrary({ storeId, userId }: ScriptLibraryProps) {
       {/* Scripts Grid */}
       {filteredScripts.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
-          <FileText className="h-12 w-12 text-muted-foreground mb-4" />
+          <FileText className="mb-4 h-12 w-12 text-muted-foreground" />
           <h3 className="text-lg font-medium">No scripts found</h3>
-          <p className="text-sm text-muted-foreground max-w-sm mt-1 mb-4">
+          <p className="mb-4 mt-1 max-w-sm text-sm text-muted-foreground">
             {scriptsData.total === 0
               ? "Generate scripts from your course content to get started."
               : "No scripts match your current filters. Try adjusting them."}
@@ -240,7 +231,7 @@ export function ScriptLibrary({ storeId, userId }: ScriptLibraryProps) {
           )}
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
           {filteredScripts.map((script: any) => (
             <ScriptCard
               key={script._id}
