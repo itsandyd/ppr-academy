@@ -10,11 +10,7 @@ export const createJob = internalMutation({
   args: {
     storeId: v.string(),
     userId: v.string(),
-    jobType: v.union(
-      v.literal("full_scan"),
-      v.literal("course_scan"),
-      v.literal("incremental")
-    ),
+    jobType: v.union(v.literal("full_scan"), v.literal("course_scan"), v.literal("incremental")),
     courseId: v.optional(v.id("courses")),
   },
   handler: async (ctx, args) => {
@@ -103,14 +99,11 @@ export const completeJob = internalMutation({
       .withIndex("by_storeId", (q) => q.eq("storeId", job.storeId))
       .collect();
 
-    const recentScripts = scripts.filter(
-      (s) => s.generationBatchId?.startsWith("batch-")
-    );
+    const recentScripts = scripts.filter((s) => s.generationBatchId?.startsWith("batch-"));
 
     const avgScore =
       recentScripts.length > 0
-        ? recentScripts.reduce((sum, s) => sum + s.viralityScore, 0) /
-          recentScripts.length
+        ? recentScripts.reduce((sum, s) => sum + s.viralityScore, 0) / recentScripts.length
         : 0;
 
     await ctx.db.patch(args.jobId, {
@@ -135,12 +128,7 @@ export const getActiveJobs = query({
     const jobs = await ctx.db
       .query("scriptGenerationJobs")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
-      .filter((q) =>
-        q.or(
-          q.eq(q.field("status"), "queued"),
-          q.eq(q.field("status"), "processing")
-        )
-      )
+      .filter((q) => q.or(q.eq(q.field("status"), "queued"), q.eq(q.field("status"), "processing")))
       .order("desc")
       .take(5);
 
@@ -173,6 +161,30 @@ export const getRecentJobs = query({
   },
 });
 
+/**
+ * Cancel a stuck or running job
+ */
+export const cancelJob = internalMutation({
+  args: {
+    jobId: v.id("scriptGenerationJobs"),
+  },
+  handler: async (ctx, args) => {
+    const job = await ctx.db.get(args.jobId);
+    if (!job) return;
+
+    // Only allow cancelling queued or processing jobs
+    if (job.status !== "queued" && job.status !== "processing") {
+      return;
+    }
+
+    await ctx.db.patch(args.jobId, {
+      status: "cancelled",
+      completedAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+  },
+});
+
 // ============================================================================
 // INTERNAL QUERIES
 // ============================================================================
@@ -189,11 +201,7 @@ export const getJobInternal = internalQuery({
 export const getChaptersToProcess = internalQuery({
   args: {
     userId: v.string(),
-    jobType: v.union(
-      v.literal("full_scan"),
-      v.literal("course_scan"),
-      v.literal("incremental")
-    ),
+    jobType: v.union(v.literal("full_scan"), v.literal("course_scan"), v.literal("incremental")),
     courseId: v.optional(v.id("courses")),
   },
   handler: async (ctx, args) => {

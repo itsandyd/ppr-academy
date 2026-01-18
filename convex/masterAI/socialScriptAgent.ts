@@ -115,11 +115,7 @@ export const startScriptGeneration = action({
   args: {
     storeId: v.string(),
     userId: v.string(),
-    jobType: v.union(
-      v.literal("full_scan"),
-      v.literal("course_scan"),
-      v.literal("incremental")
-    ),
+    jobType: v.union(v.literal("full_scan"), v.literal("course_scan"), v.literal("incremental")),
     courseId: v.optional(v.id("courses")),
   },
   returns: v.id("scriptGenerationJobs"),
@@ -136,11 +132,14 @@ export const startScriptGeneration = action({
     });
 
     // Get chapters to process
-    const chapters = await ctx.runQuery(internal.masterAI.socialScriptAgentMutations.getChaptersToProcess, {
-      userId: args.userId,
-      jobType: args.jobType,
-      courseId: args.courseId,
-    });
+    const chapters = await ctx.runQuery(
+      internal.masterAI.socialScriptAgentMutations.getChaptersToProcess,
+      {
+        userId: args.userId,
+        jobType: args.jobType,
+        courseId: args.courseId,
+      }
+    );
 
     console.log(`📚 Found ${chapters.length} chapters to process`);
 
@@ -191,6 +190,98 @@ export const getJobStatus = action({
   },
 });
 
+/**
+ * Cancel a job that's stuck or running
+ */
+export const cancelJob = action({
+  args: {
+    jobId: v.id("scriptGenerationJobs"),
+  },
+  handler: async (ctx, args) => {
+    await ctx.runMutation(internal.masterAI.socialScriptAgentMutations.cancelJob, {
+      jobId: args.jobId,
+    });
+  },
+});
+
+/**
+ * Resume a stalled job from where it left off
+ */
+// @ts-ignore - Convex type inference issue
+export const resumeJob = action({
+  args: {
+    jobId: v.id("scriptGenerationJobs"),
+  },
+  handler: async (ctx, args): Promise<boolean> => {
+    // Get the job
+    const job = await ctx.runQuery(internal.masterAI.socialScriptAgentMutations.getJobInternal, {
+      jobId: args.jobId,
+    });
+
+    if (!job) {
+      throw new Error("Job not found");
+    }
+
+    // Only allow resuming processing jobs that appear stalled
+    if (job.status !== "processing") {
+      throw new Error("Job is not in processing state");
+    }
+
+    // Check if job is stalled (no update in last 2 minutes)
+    const stalledThreshold = 2 * 60 * 1000; // 2 minutes
+    const timeSinceUpdate = Date.now() - job.updatedAt;
+    if (timeSinceUpdate < stalledThreshold) {
+      throw new Error("Job is still active. Wait 2 minutes before resuming.");
+    }
+
+    console.log(
+      `🔄 Resuming stalled job ${args.jobId} from ${job.processedChapters}/${job.totalChapters} chapters`
+    );
+
+    // Get remaining chapters to process
+    const allChapters = await ctx.runQuery(
+      internal.masterAI.socialScriptAgentMutations.getChaptersToProcess,
+      {
+        userId: job.userId,
+        jobType: job.jobType,
+        courseId: job.courseId,
+      }
+    );
+
+    // Calculate remaining batches
+    const processedCount = job.processedChapters || 0;
+    const totalChapters = job.totalChapters || allChapters.length;
+    const totalBatches = Math.ceil(totalChapters / BATCH_SIZE);
+    const currentBatchIndex = Math.floor(processedCount / BATCH_SIZE);
+
+    // Get chapters for next batch (skip already processed)
+    const nextBatchStart = currentBatchIndex * BATCH_SIZE;
+    const nextBatchChapters = allChapters
+      .slice(nextBatchStart, nextBatchStart + BATCH_SIZE)
+      .map((c: any) => c.chapterId);
+
+    if (nextBatchChapters.length === 0) {
+      // No more chapters, mark as complete
+      await ctx.runMutation(internal.masterAI.socialScriptAgentMutations.completeJob, {
+        jobId: args.jobId,
+        scriptsGenerated: job.scriptsGenerated,
+      });
+      return true;
+    }
+
+    // Schedule the next batch
+    await ctx.scheduler.runAfter(0, internal.masterAI.socialScriptAgent.processChapterBatch, {
+      jobId: args.jobId,
+      chapterIds: nextBatchChapters,
+      batchId: `batch-resume-${Date.now()}`,
+      batchIndex: currentBatchIndex,
+      totalBatches,
+    });
+
+    return true;
+  },
+});
+
 // ============================================================================
 // INTERNAL ACTIONS FOR BATCH PROCESSING
 // ============================================================================
@@ -209,7 +300,9 @@ export const processChapterBatch = internalAction({
   handler: async (ctx, args) => {
     const { jobId, chapterIds, batchId, batchIndex, totalBatches } = args;
 
-    console.log(`🔄 Processing batch ${batchIndex + 1}/${totalBatches} (${chapterIds.length} chapters)`);
+    console.log(
+      `🔄 Processing batch ${batchIndex + 1}/${totalBatches} (${chapterIds.length} chapters)`
+    );
 
     // Get job info
     const job = await ctx.runQuery(internal.masterAI.socialScriptAgentMutations.getJobInternal, {
@@ -376,40 +469,36 @@ async function processChapter(
   }
 
   // Calculate chapter position (e.g., 1.2 for module 1, chapter 2)
-  const chapterPosition =
-    (modulePosition || 1) + (chapter.position || 0) / 10;
+  const chapterPosition = (modulePosition || 1) + (chapter.position || 0) / 10;
 
   // Store the generated script
-  const scriptId = await ctx.runMutation(
-    internal.generatedScripts.createGeneratedScript,
-    {
-      storeId,
-      userId,
-      courseId: course._id,
-      chapterId: chapter._id,
-      moduleId: chapterInfo.moduleId,
-      lessonId: chapterInfo.lessonId,
-      courseTitle: course.title,
-      chapterTitle: chapter.title,
-      chapterPosition,
-      sourceContentSnippet: sourceContent.slice(0, 500),
-      tiktokScript: scripts.tiktokScript,
-      youtubeScript: scripts.youtubeScript,
-      instagramScript: scripts.instagramScript,
-      combinedScript: combined.combinedScript,
-      viralityScore: viralityAnalysis.viralityScore,
-      viralityAnalysis: {
-        engagementPotential: viralityAnalysis.engagementPotential,
-        educationalValue: viralityAnalysis.educationalValue,
-        trendAlignment: viralityAnalysis.trendAlignment,
-        reasoning: viralityAnalysis.reasoning,
-      },
-      suggestedAccountProfileId: accountMatch?.suggestedAccountProfileId,
-      topicMatch: accountMatch?.topicMatches,
-      accountMatchScore: accountMatch?.matchScore,
-      generationBatchId,
-    }
-  );
+  const scriptId = await ctx.runMutation(internal.generatedScripts.createGeneratedScript, {
+    storeId,
+    userId,
+    courseId: course._id,
+    chapterId: chapter._id,
+    moduleId: chapterInfo.moduleId,
+    lessonId: chapterInfo.lessonId,
+    courseTitle: course.title,
+    chapterTitle: chapter.title,
+    chapterPosition,
+    sourceContentSnippet: sourceContent.slice(0, 500),
+    tiktokScript: scripts.tiktokScript,
+    youtubeScript: scripts.youtubeScript,
+    instagramScript: scripts.instagramScript,
+    combinedScript: combined.combinedScript,
+    viralityScore: viralityAnalysis.viralityScore,
+    viralityAnalysis: {
+      engagementPotential: viralityAnalysis.engagementPotential,
+      educationalValue: viralityAnalysis.educationalValue,
+      trendAlignment: viralityAnalysis.trendAlignment,
+      reasoning: viralityAnalysis.reasoning,
+    },
+    suggestedAccountProfileId: accountMatch?.suggestedAccountProfileId,
+    topicMatch: accountMatch?.topicMatches,
+    accountMatchScore: accountMatch?.matchScore,
+    generationBatchId,
+  });
 
   console.log(
     `   ✅ Created script for "${chapter.title}" - Virality: ${viralityAnalysis.viralityScore}/10`
@@ -507,4 +596,3 @@ async function matchToAccount(
     reasoning: parsed.reasoning || "",
   };
 }
-

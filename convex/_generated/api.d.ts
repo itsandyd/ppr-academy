@@ -12242,7 +12242,19 @@ export declare const api: {
       >;
     };
     socialScriptAgent: {
+      cancelJob: FunctionReference<
+        "action",
+        "public",
+        { jobId: Id<"scriptGenerationJobs"> },
+        any
+      >;
       getJobStatus: FunctionReference<
+        "action",
+        "public",
+        { jobId: Id<"scriptGenerationJobs"> },
+        any
+      >;
+      resumeJob: FunctionReference<
         "action",
         "public",
         { jobId: Id<"scriptGenerationJobs"> },
@@ -21979,6 +21991,12 @@ export declare const internal: {
       >;
     };
     socialScriptAgentMutations: {
+      cancelJob: FunctionReference<
+        "mutation",
+        "internal",
+        { jobId: Id<"scriptGenerationJobs"> },
+        any
+      >;
       completeJob: FunctionReference<
         "mutation",
         "internal",

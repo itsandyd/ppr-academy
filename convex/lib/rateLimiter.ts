@@ -29,7 +29,7 @@ export const rateLimiter = new RateLimiter(components.rateLimiter, {
     kind: "token bucket",
     rate: 10,
     period: MINUTE,
-    capacity: 5,
+    capacity: 20, // Allow burst of up to 20 images at once per user
     shards: 10, // Sharding prevents OCC conflicts when multiple requests hit simultaneously
   },
   userTavilySearch: {
@@ -99,7 +99,7 @@ export const rateLimiter = new RateLimiter(components.rateLimiter, {
     kind: "token bucket",
     rate: 30,
     period: MINUTE,
-    capacity: 15,
+    capacity: 30, // Allow burst of up to 30 images at once
     shards: 10, // Sharding prevents OCC conflicts when multiple requests hit simultaneously
   },
 });
