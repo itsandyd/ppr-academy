@@ -598,12 +598,20 @@ export const getCampaignRecipients = internalQuery({
         break;
 
       case "creators":
-        // Get all users who have stores (creators)
+        // Get all users who have stores (creators) - include store name
         const stores = await ctx.db.query("stores").collect();
-        const creatorUserIds = new Set(stores.map((s) => s.userId));
+        const storesByUserId = new Map(stores.map((s) => [s.userId, s]));
         recipients = allUsers
-          .filter((u) => u.email && u.clerkId && creatorUserIds.has(u.clerkId))
-          .map((u) => ({ email: u.email!, userId: u.clerkId!, name: u.name }));
+          .filter((u) => u.email && u.clerkId && storesByUserId.has(u.clerkId))
+          .map((u) => {
+            const store = storesByUserId.get(u.clerkId!);
+            return {
+              email: u.email!,
+              userId: u.clerkId!,
+              name: u.name,
+              storeName: store?.name,
+            };
+          });
         break;
     }
 

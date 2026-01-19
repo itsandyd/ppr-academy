@@ -149,6 +149,7 @@ function personalizeContent(
     city?: string;
     state?: string;
     country?: string;
+    storeName?: string;
     unsubscribeUrl?: string;
   }
 ): string {
@@ -168,6 +169,8 @@ function personalizeContent(
     .replace(/\{\{city\}\}/g, recipient.city || "")
     .replace(/\{\{state\}\}/g, recipient.state || "")
     .replace(/\{\{country\}\}/g, recipient.country || "")
+    .replace(/\{\{storeName\}\}/g, recipient.storeName || "")
+    .replace(/\{\{store_name\}\}/g, recipient.storeName || "")
     .replace(/\{\{customer\.name\}\}/g, recipient.name)
     .replace(/\{\{unsubscribeLink\}\}/g, unsubscribeUrl)
     .replace(/\{\{unsubscribe_link\}\}/g, unsubscribeUrl)
@@ -386,6 +389,7 @@ export const sendCampaignBatch = internalAction({
           city: recipient.city,
           state: recipient.state,
           country: recipient.country,
+          storeName: recipient.storeName,
           unsubscribeUrl,
         });
 
@@ -398,6 +402,7 @@ export const sendCampaignBatch = internalAction({
           city: recipient.city,
           state: recipient.state,
           country: recipient.country,
+          storeName: recipient.storeName,
         });
 
         await resend.emails.send({
@@ -729,16 +734,13 @@ export const connectAdminResendSecure = action({
     const encryptedApiKey = encryptApiKey(args.resendApiKey);
 
     // Store the connection with encrypted key
-    const connectionId = await ctx.runMutation(
-      internal.emailQueries.saveAdminResendConnection,
-      {
-        encryptedApiKey,
-        fromEmail: args.fromEmail,
-        fromName: args.fromName,
-        replyToEmail: args.replyToEmail,
-        userId: args.userId,
-      }
-    );
+    const connectionId = await ctx.runMutation(internal.emailQueries.saveAdminResendConnection, {
+      encryptedApiKey,
+      fromEmail: args.fromEmail,
+      fromName: args.fromName,
+      replyToEmail: args.replyToEmail,
+      userId: args.userId,
+    });
 
     return connectionId;
   },
@@ -763,17 +765,14 @@ export const connectStoreResendSecure = action({
     const encryptedApiKey = encryptApiKey(args.resendApiKey);
 
     // Store the connection with encrypted key
-    const connectionId = await ctx.runMutation(
-      internal.emailQueries.saveStoreResendConnection,
-      {
-        storeId: args.storeId,
-        encryptedApiKey,
-        fromEmail: args.fromEmail,
-        fromName: args.fromName,
-        replyToEmail: args.replyToEmail,
-        userId: args.userId,
-      }
-    );
+    const connectionId = await ctx.runMutation(internal.emailQueries.saveStoreResendConnection, {
+      storeId: args.storeId,
+      encryptedApiKey,
+      fromEmail: args.fromEmail,
+      fromName: args.fromName,
+      replyToEmail: args.replyToEmail,
+      userId: args.userId,
+    });
 
     return connectionId;
   },
@@ -808,7 +807,10 @@ export const getDecryptedApiKey = internalAction({
 export const migrateApiKeysToEncrypted = internalAction({
   args: {},
   handler: async (ctx) => {
-    const adminConnection = await ctx.runQuery(internal.emailQueries.getAdminConnectionInternal, {});
+    const adminConnection = await ctx.runQuery(
+      internal.emailQueries.getAdminConnectionInternal,
+      {}
+    );
 
     let migratedCount = 0;
     const errors: string[] = [];
@@ -834,9 +836,10 @@ export const migrateApiKeysToEncrypted = internalAction({
     return {
       migratedCount,
       errors,
-      message: errors.length > 0
-        ? `Migrated ${migratedCount} connections with ${errors.length} errors`
-        : `Successfully migrated ${migratedCount} connections`,
+      message:
+        errors.length > 0
+          ? `Migrated ${migratedCount} connections with ${errors.length} errors`
+          : `Successfully migrated ${migratedCount} connections`,
     };
   },
 });
