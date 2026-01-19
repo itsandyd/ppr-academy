@@ -1609,3 +1609,216 @@ export const debugContactTags = query({
     };
   },
 });
+
+/**
+ * Retroactively tag purchasers of a specific product with product-specific tags.
+ * Use this to add tags to contacts who purchased before the automation was set up.
+ */
+export const tagProductPurchasers = mutation({
+  args: {
+    storeId: v.string(),
+    productId: v.optional(v.id("digitalProducts")),
+    courseId: v.optional(v.id("courses")),
+  },
+  returns: v.object({
+    processed: v.number(),
+    contactsTagged: v.number(),
+    alreadyTagged: v.number(),
+    noContact: v.number(),
+    productTitle: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    let processed = 0;
+    let contactsTagged = 0;
+    let alreadyTagged = 0;
+    let noContact = 0;
+    let productTitle: string | undefined;
+
+    // Get all purchases for this product/course
+    const purchases = await ctx.db.query("purchases").collect();
+
+    // Filter to this store's purchases for the specific product
+    const relevantPurchases = purchases.filter((p) => {
+      if (args.productId) {
+        return p.productId === args.productId;
+      }
+      if (args.courseId) {
+        return p.courseId === args.courseId;
+      }
+      return false;
+    });
+
+    // Get product/course title for the tag
+    if (args.productId) {
+      const product = await ctx.db.get(args.productId);
+      productTitle = product?.title;
+    } else if (args.courseId) {
+      const course = await ctx.db.get(args.courseId);
+      productTitle = course?.title;
+    }
+
+    if (!productTitle) {
+      return { processed: 0, contactsTagged: 0, alreadyTagged: 0, noContact: 0, productTitle };
+    }
+
+    // Generate the tag name
+    const tagSlug = generateProductTagSlug(productTitle);
+    const tagName = args.courseId ? `course:${tagSlug}` : `product:${tagSlug}`;
+
+    // Process each purchase
+    for (const purchase of relevantPurchases) {
+      processed++;
+
+      // Find the user
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", purchase.userId))
+        .first();
+
+      if (!user?.email) {
+        noContact++;
+        continue;
+      }
+
+      // Find the contact
+      const contact = await ctx.db
+        .query("emailContacts")
+        .withIndex("by_storeId_and_email", (q) =>
+          q.eq("storeId", args.storeId).eq("email", user.email!.toLowerCase())
+        )
+        .first();
+
+      if (!contact) {
+        noContact++;
+        continue;
+      }
+
+      // Check if already has the tag
+      const existingTag = await ctx.db
+        .query("emailTags")
+        .withIndex("by_storeId_and_name", (q) => q.eq("storeId", args.storeId).eq("name", tagName))
+        .first();
+
+      if (existingTag && contact.tagIds?.includes(existingTag._id)) {
+        alreadyTagged++;
+        continue;
+      }
+
+      // Add the tag
+      await addTagsToContact(ctx, contact._id, args.storeId, [tagName, "customer"]);
+      contactsTagged++;
+    }
+
+    return {
+      processed,
+      contactsTagged,
+      alreadyTagged,
+      noContact,
+      productTitle,
+    };
+  },
+});
+
+/**
+ * Get contacts who purchased a specific product, with their tag status.
+ * Useful for seeing who needs to be retroactively tagged.
+ */
+export const getProductPurchasers = query({
+  args: {
+    storeId: v.string(),
+    productId: v.optional(v.id("digitalProducts")),
+    courseId: v.optional(v.id("courses")),
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(
+    v.object({
+      email: v.string(),
+      name: v.optional(v.string()),
+      purchaseDate: v.number(),
+      hasProductTag: v.boolean(),
+      contactId: v.optional(v.id("emailContacts")),
+    })
+  ),
+  handler: async (ctx, args) => {
+    const limit = args.limit || 100;
+
+    // Get all purchases for this product/course
+    const purchases = await ctx.db.query("purchases").collect();
+
+    // Filter to relevant purchases
+    const relevantPurchases = purchases.filter((p) => {
+      if (args.productId) {
+        return p.productId === args.productId;
+      }
+      if (args.courseId) {
+        return p.courseId === args.courseId;
+      }
+      return false;
+    });
+
+    // Get product/course title for the tag
+    let productTitle: string | undefined;
+    if (args.productId) {
+      const product = await ctx.db.get(args.productId);
+      productTitle = product?.title;
+    } else if (args.courseId) {
+      const course = await ctx.db.get(args.courseId);
+      productTitle = course?.title;
+    }
+
+    if (!productTitle) {
+      return [];
+    }
+
+    // Generate the tag name
+    const tagSlug = generateProductTagSlug(productTitle);
+    const tagName = args.courseId ? `course:${tagSlug}` : `product:${tagSlug}`;
+
+    // Find the tag
+    const tag = await ctx.db
+      .query("emailTags")
+      .withIndex("by_storeId_and_name", (q) => q.eq("storeId", args.storeId).eq("name", tagName))
+      .first();
+
+    const results: Array<{
+      email: string;
+      name?: string;
+      purchaseDate: number;
+      hasProductTag: boolean;
+      contactId?: Id<"emailContacts">;
+    }> = [];
+
+    // Process each purchase
+    for (const purchase of relevantPurchases.slice(0, limit)) {
+      // Find the user
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", purchase.userId))
+        .first();
+
+      if (!user?.email) {
+        continue;
+      }
+
+      // Find the contact
+      const contact = await ctx.db
+        .query("emailContacts")
+        .withIndex("by_storeId_and_email", (q) =>
+          q.eq("storeId", args.storeId).eq("email", user.email!.toLowerCase())
+        )
+        .first();
+
+      const hasProductTag = tag && contact?.tagIds?.includes(tag._id);
+
+      results.push({
+        email: user.email,
+        name: `${user.firstName || ""} ${user.lastName || ""}`.trim() || undefined,
+        purchaseDate: purchase._creationTime,
+        hasProductTag: !!hasProductTag,
+        contactId: contact?._id,
+      });
+    }
+
+    return results;
+  },
+});

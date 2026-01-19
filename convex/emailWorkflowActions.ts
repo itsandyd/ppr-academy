@@ -119,9 +119,45 @@ export const executeWorkflowNode = internalAction({
       // Delay is handled by scheduling - just log
       console.log(`[EmailWorkflows] Processing delay node for ${execution.customerEmail}`);
     } else if (currentNode.type === "condition") {
-      // For now, just take the "yes" path
-      // TODO: Implement actual condition evaluation
-      console.log(`[EmailWorkflows] Processing condition node for ${execution.customerEmail}`);
+      // Evaluate the condition to determine which path to take
+      console.log(`[EmailWorkflows] Processing condition node for ${execution.customerEmail}`, {
+        conditionType: currentNode.data?.conditionType,
+        nodeData: currentNode.data,
+      });
+
+      // Evaluate the condition
+      const conditionResult = await ctx.runQuery(internal.emailWorkflows.evaluateWorkflowCondition, {
+        contactId: execution.contactId,
+        storeId: execution.storeId,
+        customerEmail: execution.customerEmail,
+        conditionType: currentNode.data?.conditionType,
+        conditionData: currentNode.data,
+      });
+
+      console.log(`[EmailWorkflows] Condition "${currentNode.data?.conditionType}" evaluated to: ${conditionResult}`);
+
+      // Find the correct outgoing edge based on condition result
+      const sourceHandle = conditionResult ? "yes" : "no";
+      const conditionEdge = workflow.edges?.find(
+        (e: any) => e.source === currentNode.id && e.sourceHandle === sourceHandle
+      );
+
+      if (conditionEdge) {
+        const nextConditionNode = workflow.nodes.find((n: any) => n.id === conditionEdge.target);
+        if (nextConditionNode) {
+          // Advance to the appropriate path
+          await ctx.runMutation(internal.emailWorkflows.advanceExecution, {
+            executionId: args.executionId,
+            nextNodeId: nextConditionNode.id,
+            scheduledFor: Date.now(),
+          });
+          console.log(`[EmailWorkflows] Condition branched to ${sourceHandle} path, node ${nextConditionNode.id}`);
+          return null;
+        }
+      }
+
+      // If no matching edge, try default connection (backwards compatibility)
+      console.log(`[EmailWorkflows] No ${sourceHandle} edge found, falling through to default`);
     } else if (currentNode.type === "action") {
       // Handle action nodes (add tag, etc.)
       const actionType = currentNode.data?.actionType;

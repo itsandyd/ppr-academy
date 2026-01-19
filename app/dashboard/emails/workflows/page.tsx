@@ -142,6 +142,7 @@ const conditionOptions = [
   { value: "opened_email", label: "Opened Email" },
   { value: "clicked_link", label: "Clicked Link" },
   { value: "has_tag", label: "Has Tag" },
+  { value: "has_purchased_product", label: "Has Purchased Product" },
   { value: "time_based", label: "Time Based" },
 ];
 
@@ -960,6 +961,74 @@ export default function WorkflowBuilderPage() {
                             ))}
                           </SelectContent>
                         </Select>
+                      </div>
+                    )}
+
+                    {/* Has Purchased Product - show product/course selector */}
+                    {selectedNode.data.conditionType === "has_purchased_product" && (
+                      <div className="space-y-2">
+                        <Label>Which Product/Course?</Label>
+                        <Select
+                          value={
+                            selectedNode.data.productId
+                              ? `product:${selectedNode.data.productId}`
+                              : selectedNode.data.courseId
+                                ? `course:${selectedNode.data.courseId}`
+                                : "any"
+                          }
+                          onValueChange={(v) => {
+                            if (v === "any") {
+                              updateNodeData(selectedNode.id, {
+                                productId: undefined,
+                                courseId: undefined,
+                              });
+                            } else if (v.startsWith("product:")) {
+                              updateNodeData(selectedNode.id, {
+                                productId: v.replace("product:", ""),
+                                courseId: undefined,
+                              });
+                            } else if (v.startsWith("course:")) {
+                              updateNodeData(selectedNode.id, {
+                                courseId: v.replace("course:", ""),
+                                productId: undefined,
+                              });
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="bg-white dark:bg-black">
+                            <SelectValue placeholder="Select product or course..." />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-[300px] bg-white dark:bg-black">
+                            <SelectItem value="any">Any product or course</SelectItem>
+                            {courses && courses.length > 0 && (
+                              <>
+                                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                                  Courses
+                                </div>
+                                {courses.map((course: any) => (
+                                  <SelectItem key={course._id} value={`course:${course._id}`}>
+                                    {course.title}
+                                  </SelectItem>
+                                ))}
+                              </>
+                            )}
+                            {products && products.length > 0 && (
+                              <>
+                                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                                  Digital Products
+                                </div>
+                                {products.map((product: any) => (
+                                  <SelectItem key={product._id} value={`product:${product._id}`}>
+                                    {product.title}
+                                  </SelectItem>
+                                ))}
+                              </>
+                            )}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">
+                          Check if the contact has purchased a specific product/course
+                        </p>
                       </div>
                     )}
 

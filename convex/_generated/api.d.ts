@@ -8548,6 +8548,12 @@ export declare const api: {
       { contactId: Id<"emailContacts">; tagId: Id<"emailTags"> },
       null
     >;
+    addTagToContactWithJunction: FunctionReference<
+      "mutation",
+      "public",
+      { contactId: Id<"emailContacts">; tagId: Id<"emailTags"> },
+      boolean
+    >;
     bulkAddTagToContacts: FunctionReference<
       "mutation",
       "public",
@@ -8584,6 +8590,12 @@ export declare const api: {
         tagIds?: Array<Id<"emailTags">>;
       },
       Id<"emailContacts">
+    >;
+    debugTagFilter: FunctionReference<
+      "query",
+      "public",
+      { storeId: string; tagId: Id<"emailTags"> },
+      any
     >;
     deleteContact: FunctionReference<
       "mutation",
@@ -8659,6 +8671,17 @@ export declare const api: {
       },
       { contacts: Array<any>; hasMore: boolean; nextCursor: string | null }
     >;
+    migrateTagsToJunctionTable: FunctionReference<
+      "mutation",
+      "public",
+      { batchSize?: number; cursor?: string; storeId: string },
+      {
+        created: number;
+        done: boolean;
+        nextCursor: string | null;
+        processed: number;
+      }
+    >;
     recalculateContactStats: FunctionReference<
       "action",
       "public",
@@ -8676,6 +8699,18 @@ export declare const api: {
       "public",
       { contactId: Id<"emailContacts">; tagId: Id<"emailTags"> },
       null
+    >;
+    removeTagFromContactWithJunction: FunctionReference<
+      "mutation",
+      "public",
+      { contactId: Id<"emailContacts">; tagId: Id<"emailTags"> },
+      boolean
+    >;
+    runFullTagMigration: FunctionReference<
+      "action",
+      "public",
+      { storeId: string },
+      { batches: number; totalCreated: number; totalProcessed: number }
     >;
     searchContacts: FunctionReference<
       "query",
@@ -8742,6 +8777,23 @@ export declare const api: {
         name?: string;
       }>
     >;
+    getProductPurchasers: FunctionReference<
+      "query",
+      "public",
+      {
+        courseId?: Id<"courses">;
+        limit?: number;
+        productId?: Id<"digitalProducts">;
+        storeId: string;
+      },
+      Array<{
+        contactId?: Id<"emailContacts">;
+        email: string;
+        hasProductTag: boolean;
+        name?: string;
+        purchaseDate: number;
+      }>
+    >;
     getSegmentsByTag: FunctionReference<
       "query",
       "public",
@@ -8789,6 +8841,22 @@ export declare const api: {
         nextCursor: string | null;
         processed: number;
         tagsAdded: number;
+      }
+    >;
+    tagProductPurchasers: FunctionReference<
+      "mutation",
+      "public",
+      {
+        courseId?: Id<"courses">;
+        productId?: Id<"digitalProducts">;
+        storeId: string;
+      },
+      {
+        alreadyTagged: number;
+        contactsTagged: number;
+        noContact: number;
+        processed: number;
+        productTitle?: string;
       }
     >;
   };
@@ -19848,6 +19916,18 @@ export declare const internal: {
       { condition?: any; contactId?: Id<"emailContacts"> },
       boolean
     >;
+    evaluateWorkflowCondition: FunctionReference<
+      "query",
+      "internal",
+      {
+        conditionData?: any;
+        conditionType?: string;
+        contactId?: Id<"emailContacts">;
+        customerEmail: string;
+        storeId: string;
+      },
+      boolean
+    >;
     getActiveExecutionEmails: FunctionReference<
       "query",
       "internal",
@@ -19943,6 +20023,8 @@ export declare const internal: {
       "internal",
       {
         amount?: number;
+        courseId?: string;
+        courseName?: string;
         customerEmail: string;
         customerName?: string;
         orderId?: string;

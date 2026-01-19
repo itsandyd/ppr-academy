@@ -4067,6 +4067,33 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  emailContactTags: {
+    document: {
+      contactId: Id<"emailContacts">;
+      createdAt: number;
+      storeId: string;
+      tagId: Id<"emailTags">;
+      _id: Id<"emailContactTags">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "contactId"
+      | "createdAt"
+      | "storeId"
+      | "tagId";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_contactId: ["contactId", "_creationTime"];
+      by_contactId_and_tagId: ["contactId", "tagId", "_creationTime"];
+      by_storeId_and_tagId: ["storeId", "tagId", "_creationTime"];
+      by_tagId: ["tagId", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   emailCreatorStats: {
     document: {
       bounceRate: number;

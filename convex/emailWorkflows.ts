@@ -520,6 +520,8 @@ export const triggerProductPurchaseWorkflows = internalMutation({
     productId: v.optional(v.string()),
     productName: v.optional(v.string()),
     productType: v.optional(v.string()),
+    courseId: v.optional(v.string()),
+    courseName: v.optional(v.string()),
     orderId: v.optional(v.string()),
     amount: v.optional(v.number()),
   },
@@ -549,7 +551,14 @@ export const triggerProductPurchaseWorkflows = internalMutation({
 
     for (const workflow of purchaseWorkflows) {
       const triggerConfig = workflow.trigger?.config || {};
+
+      // Check if workflow is filtered to a specific product
       if (triggerConfig.productId && triggerConfig.productId !== args.productId) {
+        continue;
+      }
+
+      // Check if workflow is filtered to a specific course
+      if (triggerConfig.courseId && triggerConfig.courseId !== args.courseId) {
         continue;
       }
 
@@ -584,6 +593,8 @@ export const triggerProductPurchaseWorkflows = internalMutation({
           productId: args.productId,
           productName: args.productName,
           productType: args.productType,
+          courseId: args.courseId,
+          courseName: args.courseName,
           orderId: args.orderId,
           amount: args.amount,
         },
@@ -1220,6 +1231,133 @@ export const evaluateCondition = internalQuery({
       case "is_not_set":
         return fieldValue === undefined || fieldValue === null;
       default:
+        return true;
+    }
+  },
+});
+
+/**
+ * Evaluate a workflow condition node
+ * Supports: opened_email, clicked_link, has_tag, has_purchased_product, time_based
+ */
+export const evaluateWorkflowCondition = internalQuery({
+  args: {
+    contactId: v.optional(v.id("emailContacts")),
+    storeId: v.string(),
+    customerEmail: v.string(),
+    conditionType: v.optional(v.string()),
+    conditionData: v.optional(v.any()),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    if (!args.conditionType) return true;
+
+    const contact = args.contactId ? await ctx.db.get(args.contactId) : null;
+
+    switch (args.conditionType) {
+      case "opened_email": {
+        // Check if contact has opened any email (or specific email if emailNodeId is set)
+        if (!args.contactId) return false;
+        const emailNodeId = args.conditionData?.emailNodeId;
+
+        const opens = await ctx.db
+          .query("emailContactActivity")
+          .withIndex("by_contactId", (q) => q.eq("contactId", args.contactId!))
+          .filter((q) => q.eq(q.field("activityType"), "email_opened"))
+          .collect();
+
+        if (emailNodeId && emailNodeId !== "any") {
+          // Check for specific email open (would need to track which email was opened)
+          return opens.length > 0;
+        }
+        return opens.length > 0;
+      }
+
+      case "clicked_link": {
+        // Check if contact has clicked any link (or specific link if specified)
+        if (!args.contactId) return false;
+        const linkUrl = args.conditionData?.linkUrl;
+
+        const clicks = await ctx.db
+          .query("emailContactActivity")
+          .withIndex("by_contactId", (q) => q.eq("contactId", args.contactId!))
+          .filter((q) => q.eq(q.field("activityType"), "email_clicked"))
+          .collect();
+
+        if (linkUrl) {
+          // Check for specific link click
+          return clicks.some((c) => c.metadata?.linkClicked?.includes(linkUrl));
+        }
+        return clicks.length > 0;
+      }
+
+      case "has_tag": {
+        // Check if contact has a specific tag
+        if (!contact || !args.conditionData?.tagId) return false;
+        const tagIds = contact.tagIds || [];
+        return tagIds.includes(args.conditionData.tagId);
+      }
+
+      case "has_purchased_product": {
+        // Check if contact has purchased a specific product or any product
+        const productId = args.conditionData?.productId;
+        const courseId = args.conditionData?.courseId;
+
+        // Find the user by email
+        const user = await ctx.db
+          .query("users")
+          .filter((q) => q.eq(q.field("email"), args.customerEmail.toLowerCase()))
+          .first();
+
+        if (!user) return false;
+
+        // Get all purchases by this user
+        const purchases = await ctx.db
+          .query("purchases")
+          .withIndex("by_userId", (q) => q.eq("userId", user.clerkId || ""))
+          .filter((q) => q.eq(q.field("status"), "completed"))
+          .collect();
+
+        if (productId) {
+          // Check for specific product purchase
+          return purchases.some((p) => p.productId === productId);
+        }
+
+        if (courseId) {
+          // Check for specific course purchase
+          return purchases.some((p) => p.courseId === courseId);
+        }
+
+        // Check for any purchase
+        return purchases.length > 0;
+      }
+
+      case "time_based": {
+        // Check time-based conditions (e.g., days since signup, last activity)
+        if (!contact) return false;
+        const timeField = args.conditionData?.timeField || "subscribedAt";
+        const operator = args.conditionData?.timeOperator || "greater_than";
+        const days = args.conditionData?.timeDays || 0;
+
+        const fieldValue = (contact as Record<string, unknown>)[timeField] as number | undefined;
+        if (!fieldValue) return false;
+
+        const daysSinceField = (Date.now() - fieldValue) / (1000 * 60 * 60 * 24);
+
+        switch (operator) {
+          case "greater_than":
+            return daysSinceField > days;
+          case "less_than":
+            return daysSinceField < days;
+          case "equals":
+            return Math.floor(daysSinceField) === days;
+          default:
+            return false;
+        }
+      }
+
+      default:
+        console.log(`[Workflows] Unknown condition type: ${args.conditionType}`);
         return true;
     }
   },

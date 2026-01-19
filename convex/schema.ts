@@ -4764,6 +4764,18 @@ export default defineSchema({
     updatedAt: v.number(),
   }).index("by_storeId", ["storeId"]),
 
+  // Junction table for contact-tag relationships (enables efficient tag filtering)
+  emailContactTags: defineTable({
+    contactId: v.id("emailContacts"),
+    tagId: v.id("emailTags"),
+    storeId: v.string(), // Denormalized for efficient queries
+    createdAt: v.number(),
+  })
+    .index("by_contactId", ["contactId"])
+    .index("by_tagId", ["tagId"])
+    .index("by_storeId_and_tagId", ["storeId", "tagId"])
+    .index("by_contactId_and_tagId", ["contactId", "tagId"]),
+
   // Contact Activity Log - Track all contact interactions
   emailContactActivity: defineTable({
     contactId: v.id("emailContacts"),

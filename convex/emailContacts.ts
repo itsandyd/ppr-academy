@@ -179,84 +179,69 @@ export const listContacts = query({
     const limit = Math.min(args.limit || 100, 200); // Max 200 per page to stay under read limits
     const needsFiltering = args.tagId || args.noTags;
 
-    // Build base query
-    let baseQuery;
-    if (args.status) {
-      const status = args.status;
-      baseQuery = ctx.db
-        .query("emailContacts")
-        .withIndex("by_storeId_and_status", (q) =>
-          q.eq("storeId", args.storeId).eq("status", status)
-        );
-    } else {
-      baseQuery = ctx.db
-        .query("emailContacts")
-        .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId));
-    }
+    // Helper to create a fresh query (Convex queries can only be used once)
+    const createQuery = () => {
+      if (args.status) {
+        const status = args.status;
+        return ctx.db
+          .query("emailContacts")
+          .withIndex("by_storeId_and_status", (q) =>
+            q.eq("storeId", args.storeId).eq("status", status)
+          );
+      } else {
+        return ctx.db
+          .query("emailContacts")
+          .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId));
+      }
+    };
 
     // Use proper Convex pagination
-    const paginatedContacts: typeof baseQuery extends { collect: () => Promise<infer T> }
-      ? T extends (infer U)[]
-        ? U[]
-        : any[]
-      : any[] = [];
+    const paginatedContacts: any[] = [];
     let currentCursor = args.cursor || null;
     let hasMore = false;
     let finalCursor: string | null = null;
 
-    if (needsFiltering) {
-      // For filtered queries, we need to iterate through pages until we have enough results
-      // This handles the case where we need to scan through many contacts to find matching ones
-      const MAX_ITERATIONS = 100; // Safety limit to prevent infinite loops
-      let iterations = 0;
+    if (args.tagId) {
+      // Use junction table for efficient tag filtering
+      // This is indexed and can handle any number of contacts
+      const tagRelations = await ctx.db
+        .query("emailContactTags")
+        .withIndex("by_storeId_and_tagId", (q) =>
+          q.eq("storeId", args.storeId).eq("tagId", args.tagId as Id<"emailTags">)
+        )
+        .order("desc")
+        .take(limit + 1);
 
-      while (paginatedContacts.length < limit + 1 && iterations < MAX_ITERATIONS) {
-        iterations++;
+      hasMore = tagRelations.length > limit;
+      const relationsToUse = tagRelations.slice(0, limit);
 
-        const paginationResult = await baseQuery.order("desc").paginate({
-          cursor: currentCursor,
-          numItems: 500, // Fetch larger batches for efficiency when filtering
-        });
-
-        // Filter the batch
-        let filteredBatch = paginationResult.page;
-
-        if (args.tagId) {
-          filteredBatch = filteredBatch.filter((c) =>
-            c.tagIds?.includes(args.tagId as Id<"emailTags">)
-          );
+      // Fetch the actual contacts
+      for (const rel of relationsToUse) {
+        const contact = await ctx.db.get(rel.contactId);
+        if (contact && (!args.status || contact.status === args.status)) {
+          paginatedContacts.push(contact);
         }
-
-        if (args.noTags) {
-          filteredBatch = filteredBatch.filter((c) => !c.tagIds || c.tagIds.length === 0);
-        }
-
-        // Add filtered results
-        paginatedContacts.push(...filteredBatch);
-
-        // Check if we've exhausted all contacts
-        if (paginationResult.isDone) {
-          break;
-        }
-
-        currentCursor = paginationResult.continueCursor;
       }
 
-      // Determine hasMore and trim to limit
-      hasMore = paginatedContacts.length > limit;
-      if (hasMore) {
-        paginatedContacts.length = limit; // Trim to limit
-      }
+      finalCursor = null; // Simple approach for filtered queries
+    } else if (args.noTags) {
+      // For no-tags filter, we need to scan contacts
+      // Fetch a batch and filter - this is less efficient but rare use case
+      const FETCH_SIZE = 1000;
+      const contacts = await createQuery().order("desc").take(FETCH_SIZE);
+      const noTagContacts = contacts.filter((c) => !c.tagIds || c.tagIds.length === 0);
 
-      // For filtered queries, we store the last Convex cursor we used
-      // This allows continuation even if we haven't filled a full page
-      finalCursor = hasMore ? currentCursor : null;
+      hasMore = noTagContacts.length > limit;
+      paginatedContacts.push(...noTagContacts.slice(0, limit));
+      finalCursor = null;
     } else {
       // For non-filtered queries, use simple pagination
-      const paginationResult = await baseQuery.order("desc").paginate({
-        cursor: currentCursor,
-        numItems: limit + 1, // Fetch one extra to check hasMore
-      });
+      const paginationResult = await createQuery()
+        .order("desc")
+        .paginate({
+          cursor: currentCursor,
+          numItems: limit + 1, // Fetch one extra to check hasMore
+        });
 
       paginatedContacts.push(...paginationResult.page);
       hasMore = paginatedContacts.length > limit;
@@ -275,7 +260,7 @@ export const listContacts = query({
     const contactsWithTags = await Promise.all(
       paginatedContacts.map(async (contact) => {
         const tags = await Promise.all(
-          (contact.tagIds || []).map(async (tagId) => {
+          (contact.tagIds || []).map(async (tagId: Id<"emailTags">) => {
             if (tagsCache[tagId] === undefined) {
               const tag = (await ctx.db.get(tagId)) as {
                 _id: Id<"emailTags">;
@@ -303,6 +288,49 @@ export const listContacts = query({
 });
 
 /**
+ * Debug query to test tag filtering directly
+ */
+export const debugTagFilter = query({
+  args: {
+    storeId: v.string(),
+    tagId: v.id("emailTags"),
+  },
+  returns: v.any(),
+  handler: async (ctx, args) => {
+    // Get the tag
+    const tag = await ctx.db.get(args.tagId);
+
+    // Get all contacts for this store (first 500)
+    const allContacts = await ctx.db
+      .query("emailContacts")
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+      .take(500);
+
+    // Find contacts with this tag
+    const contactsWithTag = allContacts.filter((c) => c.tagIds?.includes(args.tagId));
+
+    // Sample of contacts with their tagIds
+    const sampleContacts = allContacts.slice(0, 5).map((c) => ({
+      id: c._id,
+      email: c.email,
+      tagIds: c.tagIds,
+    }));
+
+    return {
+      tag: tag ? { id: tag._id, name: (tag as any).name } : null,
+      totalContacts: allContacts.length,
+      contactsWithThisTag: contactsWithTag.length,
+      sampleContacts,
+      sampleContactsWithTag: contactsWithTag.slice(0, 3).map((c) => ({
+        id: c._id,
+        email: c.email,
+        tagIds: c.tagIds,
+      })),
+    };
+  },
+});
+
+/**
  * Search contacts by email, name, or get recent contacts.
  * Uses a search index for efficient full-text search on email.
  */
@@ -317,57 +345,84 @@ export const searchContacts = query({
     const limit = Math.min(args.limit || 50, 100);
     const searchTerm = args.search?.trim();
 
+    let contacts: any[] = [];
+
     // If no search term, return recent contacts
     if (!searchTerm) {
-      const recentContacts = await ctx.db
+      contacts = await ctx.db
         .query("emailContacts")
         .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
         .order("desc")
         .take(limit);
-      return recentContacts;
+    } else {
+      // First try exact email match with index (fast)
+      const exactMatch = await ctx.db
+        .query("emailContacts")
+        .withIndex("by_storeId_and_email", (q) =>
+          q.eq("storeId", args.storeId).eq("email", searchTerm.toLowerCase())
+        )
+        .first();
+
+      if (exactMatch) {
+        contacts = [exactMatch];
+      } else {
+        // Use search index for partial email matches
+        const searchResults = await ctx.db
+          .query("emailContacts")
+          .withSearchIndex("search_email", (q) =>
+            q.search("email", searchTerm).eq("storeId", args.storeId)
+          )
+          .take(limit);
+
+        if (searchResults.length > 0) {
+          contacts = searchResults;
+        } else {
+          // Fallback: scan recent contacts for name matches
+          const searchTermLower = searchTerm.toLowerCase();
+          const recentContacts = await ctx.db
+            .query("emailContacts")
+            .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+            .order("desc")
+            .take(2000);
+
+          contacts = recentContacts
+            .filter((contact) => {
+              const firstName = contact.firstName?.toLowerCase() || "";
+              const lastName = contact.lastName?.toLowerCase() || "";
+              return firstName.includes(searchTermLower) || lastName.includes(searchTermLower);
+            })
+            .slice(0, limit);
+        }
+      }
     }
 
-    // First try exact email match with index (fast)
-    const exactMatch = await ctx.db
-      .query("emailContacts")
-      .withIndex("by_storeId_and_email", (q) =>
-        q.eq("storeId", args.storeId).eq("email", searchTerm.toLowerCase())
-      )
-      .first();
+    // Resolve tags for display (same as listContacts)
+    const tagsCache: Record<string, { _id: Id<"emailTags">; name: string; color?: string } | null> =
+      {};
 
-    if (exactMatch) {
-      return [exactMatch];
-    }
+    const contactsWithTags = await Promise.all(
+      contacts.map(async (contact) => {
+        const tags = await Promise.all(
+          (contact.tagIds || []).map(async (tagId: Id<"emailTags">) => {
+            if (tagsCache[tagId] === undefined) {
+              const tag = (await ctx.db.get(tagId)) as {
+                _id: Id<"emailTags">;
+                name: string;
+                color?: string;
+              } | null;
+              tagsCache[tagId] = tag;
+            }
+            return tagsCache[tagId];
+          })
+        );
+        return {
+          ...contact,
+          tags: tags.filter(Boolean),
+        };
+      })
+    );
 
-    // Use search index for partial email matches
-    // This efficiently searches across all contacts
-    const searchResults = await ctx.db
-      .query("emailContacts")
-      .withSearchIndex("search_email", (q) =>
-        q.search("email", searchTerm).eq("storeId", args.storeId)
-      )
-      .take(limit);
-
-    if (searchResults.length > 0) {
-      return searchResults;
-    }
-
-    // Fallback: scan recent contacts for name matches
-    // (search index only covers email field)
-    const searchTermLower = searchTerm.toLowerCase();
-    const recentContacts = await ctx.db
-      .query("emailContacts")
-      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .order("desc")
-      .take(2000);
-
-    const nameMatches = recentContacts.filter((contact) => {
-      const firstName = contact.firstName?.toLowerCase() || "";
-      const lastName = contact.lastName?.toLowerCase() || "";
-      return firstName.includes(searchTermLower) || lastName.includes(searchTermLower);
-    });
-
-    return nameMatches.slice(0, limit);
+    return contactsWithTags;
   },
 });
 
@@ -1871,7 +1926,207 @@ export const deleteContactInternal = internalMutation({
       await ctx.db.delete(activity._id);
     }
 
+    // Delete contact-tag relationships
+    const contactTags = await ctx.db
+      .query("emailContactTags")
+      .withIndex("by_contactId", (q) => q.eq("contactId", args.contactId))
+      .collect();
+
+    for (const ct of contactTags) {
+      await ctx.db.delete(ct._id);
+    }
+
     await ctx.db.delete(args.contactId);
     return null;
+  },
+});
+
+// ============================================
+// Junction Table Migration & Management
+// ============================================
+
+/**
+ * Migrate existing tagIds to the emailContactTags junction table.
+ * This is a one-time migration that processes contacts in batches.
+ */
+export const migrateTagsToJunctionTable = mutation({
+  args: {
+    storeId: v.string(),
+    batchSize: v.optional(v.number()),
+    cursor: v.optional(v.string()),
+  },
+  returns: v.object({
+    processed: v.number(),
+    created: v.number(),
+    nextCursor: v.union(v.string(), v.null()),
+    done: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    const batchSize = args.batchSize || 100;
+
+    // Get a batch of contacts
+    const result = await ctx.db
+      .query("emailContacts")
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+      .paginate({
+        cursor: args.cursor ?? null,
+        numItems: batchSize,
+      });
+
+    let created = 0;
+    const now = Date.now();
+
+    for (const contact of result.page) {
+      if (!contact.tagIds || contact.tagIds.length === 0) continue;
+
+      for (const tagId of contact.tagIds) {
+        // Check if relationship already exists
+        const existing = await ctx.db
+          .query("emailContactTags")
+          .withIndex("by_contactId_and_tagId", (q) =>
+            q.eq("contactId", contact._id).eq("tagId", tagId)
+          )
+          .first();
+
+        if (!existing) {
+          await ctx.db.insert("emailContactTags", {
+            contactId: contact._id,
+            tagId,
+            storeId: args.storeId,
+            createdAt: now,
+          });
+          created++;
+        }
+      }
+    }
+
+    return {
+      processed: result.page.length,
+      created,
+      nextCursor: result.isDone ? null : result.continueCursor,
+      done: result.isDone,
+    };
+  },
+});
+
+/**
+ * Run the full migration in batches (use this action to migrate all contacts)
+ */
+export const runFullTagMigration = action({
+  args: {
+    storeId: v.string(),
+  },
+  returns: v.object({
+    totalProcessed: v.number(),
+    totalCreated: v.number(),
+    batches: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    let cursor: string | null = null;
+    let totalProcessed = 0;
+    let totalCreated = 0;
+    let batches = 0;
+
+    do {
+      const result = await ctx.runMutation(api.emailContacts.migrateTagsToJunctionTable, {
+        storeId: args.storeId,
+        batchSize: 100,
+        cursor: cursor ?? undefined,
+      });
+
+      totalProcessed += result.processed;
+      totalCreated += result.created;
+      batches++;
+      cursor = result.nextCursor;
+
+      console.log(`Batch ${batches}: processed ${result.processed}, created ${result.created}`);
+    } while (cursor);
+
+    console.log(
+      `Migration complete: ${totalProcessed} contacts, ${totalCreated} tag relationships`
+    );
+
+    return { totalProcessed, totalCreated, batches };
+  },
+});
+
+/**
+ * Add a tag to a contact (updates both tagIds array and junction table)
+ */
+export const addTagToContactWithJunction = mutation({
+  args: {
+    contactId: v.id("emailContacts"),
+    tagId: v.id("emailTags"),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const contact = await ctx.db.get(args.contactId);
+    if (!contact) return false;
+
+    // Check if already has this tag
+    const hasTag = contact.tagIds?.includes(args.tagId);
+    if (hasTag) return true;
+
+    // Update contact's tagIds array
+    const newTagIds = [...(contact.tagIds || []), args.tagId];
+    await ctx.db.patch(args.contactId, {
+      tagIds: newTagIds,
+      updatedAt: Date.now(),
+    });
+
+    // Add to junction table
+    const existing = await ctx.db
+      .query("emailContactTags")
+      .withIndex("by_contactId_and_tagId", (q) =>
+        q.eq("contactId", args.contactId).eq("tagId", args.tagId)
+      )
+      .first();
+
+    if (!existing) {
+      await ctx.db.insert("emailContactTags", {
+        contactId: args.contactId,
+        tagId: args.tagId,
+        storeId: contact.storeId,
+        createdAt: Date.now(),
+      });
+    }
+
+    return true;
+  },
+});
+
+/**
+ * Remove a tag from a contact (updates both tagIds array and junction table)
+ */
+export const removeTagFromContactWithJunction = mutation({
+  args: {
+    contactId: v.id("emailContacts"),
+    tagId: v.id("emailTags"),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const contact = await ctx.db.get(args.contactId);
+    if (!contact) return false;
+
+    // Update contact's tagIds array
+    const newTagIds = (contact.tagIds || []).filter((id) => id !== args.tagId);
+    await ctx.db.patch(args.contactId, {
+      tagIds: newTagIds,
+      updatedAt: Date.now(),
+    });
+
+    // Remove from junction table
+    const junctionRecord = await ctx.db
+      .query("emailContactTags")
+      .withIndex("by_contactId_and_tagId", (q) =>
+        q.eq("contactId", args.contactId).eq("tagId", args.tagId)
+      )
+      .first();
+
+    if (junctionRecord) {
+      await ctx.db.delete(junctionRecord._id);
+    }
+
+    return true;
   },
 });
