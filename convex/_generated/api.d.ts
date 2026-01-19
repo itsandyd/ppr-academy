@@ -8773,6 +8773,12 @@ export declare const api: {
         tagsAdded: number;
       }
     >;
+    tagContactWithEnrollments: FunctionReference<
+      "mutation",
+      "public",
+      { contactId: Id<"emailContacts">; storeId: string },
+      { error?: string; success: boolean; tagsAdded: Array<string> }
+    >;
     tagEnrolledUsersWithCourseTags: FunctionReference<
       "mutation",
       "public",

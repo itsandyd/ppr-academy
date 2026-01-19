@@ -78,6 +78,9 @@ export default function ContactProfilePage({ params }: { params: Promise<{ conta
   const deleteContact = useMutation(api.emailContacts.deleteContact);
   const addTag = useMutation(api.emailContacts.addTagToContact);
   const removeTag = useMutation(api.emailContacts.removeTagFromContact);
+  const tagWithEnrollments = useMutation(api.emailContactSync.tagContactWithEnrollments);
+
+  const [isTaggingEnrollments, setIsTaggingEnrollments] = useState(false);
 
   if (isLoaded && mode !== "create") {
     router.push("/dashboard?mode=create");
@@ -174,6 +177,36 @@ export default function ContactProfilePage({ params }: { params: Promise<{ conta
       toast({ title: "Tag removed" });
     } catch {
       toast({ title: "Failed to remove tag", variant: "destructive" });
+    }
+  };
+
+  const handleTagWithEnrollments = async () => {
+    setIsTaggingEnrollments(true);
+    try {
+      const result = await tagWithEnrollments({
+        storeId,
+        contactId: contactId as Id<"emailContacts">,
+      });
+      if (result.success) {
+        toast({
+          title: "Tags added from enrollments",
+          description: `Added ${result.tagsAdded.length} tags: ${result.tagsAdded.slice(0, 3).join(", ")}${result.tagsAdded.length > 3 ? "..." : ""}`,
+        });
+      } else {
+        toast({
+          title: "Could not add enrollment tags",
+          description: result.error,
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Failed to tag enrollments",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsTaggingEnrollments(false);
     }
   };
 
@@ -355,48 +388,59 @@ export default function ContactProfilePage({ params }: { params: Promise<{ conta
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg">Tags</CardTitle>
-              <Dialog open={isAddTagOpen} onOpenChange={setIsAddTagOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" disabled={!availableTags?.length}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Tag
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="bg-white dark:bg-black">
-                  <DialogHeader>
-                    <DialogTitle>Add Tag</DialogTitle>
-                    <DialogDescription>Select a tag to add to this contact</DialogDescription>
-                  </DialogHeader>
-                  <div className="py-4">
-                    <Select value={selectedTagId} onValueChange={setSelectedTagId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a tag" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white dark:bg-black">
-                        {availableTags?.map((tag: any) => (
-                          <SelectItem key={tag._id} value={tag._id}>
-                            <div className="flex items-center gap-2">
-                              <div
-                                className="h-3 w-3 rounded-full"
-                                style={{ backgroundColor: tag.color }}
-                              />
-                              {tag.name}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsAddTagOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button onClick={handleAddTag} disabled={!selectedTagId}>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleTagWithEnrollments}
+                  disabled={isTaggingEnrollments}
+                >
+                  <Tag className={cn("mr-2 h-4 w-4", isTaggingEnrollments && "animate-pulse")} />
+                  {isTaggingEnrollments ? "Tagging..." : "Tag from Enrollments"}
+                </Button>
+                <Dialog open={isAddTagOpen} onOpenChange={setIsAddTagOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" disabled={!availableTags?.length}>
+                      <Plus className="mr-2 h-4 w-4" />
                       Add Tag
                     </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+                  </DialogTrigger>
+                  <DialogContent className="bg-white dark:bg-black">
+                    <DialogHeader>
+                      <DialogTitle>Add Tag</DialogTitle>
+                      <DialogDescription>Select a tag to add to this contact</DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4">
+                      <Select value={selectedTagId} onValueChange={setSelectedTagId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a tag" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white dark:bg-black">
+                          {availableTags?.map((tag: any) => (
+                            <SelectItem key={tag._id} value={tag._id}>
+                              <div className="flex items-center gap-2">
+                                <div
+                                  className="h-3 w-3 rounded-full"
+                                  style={{ backgroundColor: tag.color }}
+                                />
+                                {tag.name}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setIsAddTagOpen(false)}>
+                        Cancel
+                      </Button>
+                      <Button onClick={handleAddTag} disabled={!selectedTagId}>
+                        Add Tag
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </CardHeader>
             <CardContent>
               {contact.tags?.length ? (

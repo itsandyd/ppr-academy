@@ -1390,6 +1390,123 @@ export const tagEnrolledUsersWithCourseTags = mutation({
 });
 
 /**
+ * Manually tag a specific contact with their course enrollments.
+ * Use this to fix contacts that didn't get tagged properly.
+ */
+export const tagContactWithEnrollments = mutation({
+  args: {
+    storeId: v.string(),
+    contactId: v.id("emailContacts"),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    tagsAdded: v.array(v.string()),
+    error: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    // 1. Get the contact
+    const contact = await ctx.db.get(args.contactId);
+    if (!contact) {
+      return { success: false, tagsAdded: [], error: "Contact not found" };
+    }
+
+    // 2. Find the user by email
+    const user = await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("email"), contact.email))
+      .first();
+
+    if (!user) {
+      return { success: false, tagsAdded: [], error: `No user found with email ${contact.email}` };
+    }
+
+    // 3. Get the store
+    const store = await ctx.db
+      .query("stores")
+      .withIndex("by_userId", (q) => q.eq("userId", args.storeId))
+      .first();
+
+    // 4. Get all courses for this store
+    const coursesByStoreId = store
+      ? await ctx.db
+          .query("courses")
+          .withIndex("by_storeId", (q) => q.eq("storeId", store._id))
+          .collect()
+      : [];
+    const coursesByUserId = await ctx.db
+      .query("courses")
+      .withIndex("by_userId", (q) => q.eq("userId", args.storeId))
+      .collect();
+
+    const coursesMap = new Map<string, (typeof coursesByStoreId)[0]>();
+    for (const course of [...coursesByStoreId, ...coursesByUserId]) {
+      coursesMap.set(course._id.toString(), course);
+    }
+
+    if (coursesMap.size === 0) {
+      return { success: false, tagsAdded: [], error: "No courses found for this store" };
+    }
+
+    // 5. Find all enrollments for this user (try multiple ID formats)
+    const possibleUserIds = [user.clerkId, user._id.toString(), contact.email].filter(Boolean);
+
+    let allEnrollments: any[] = [];
+    for (const userId of possibleUserIds) {
+      const enrollments = await ctx.db
+        .query("enrollments")
+        .withIndex("by_userId", (q) => q.eq("userId", userId as string))
+        .collect();
+      allEnrollments = [...allEnrollments, ...enrollments];
+    }
+
+    // Deduplicate enrollments
+    const seenCourseIds = new Set<string>();
+    const uniqueEnrollments = allEnrollments.filter((e) => {
+      if (seenCourseIds.has(e.courseId)) return false;
+      seenCourseIds.add(e.courseId);
+      return true;
+    });
+
+    // 6. Filter to this store's courses
+    const storeEnrollments = uniqueEnrollments.filter((e) => coursesMap.has(e.courseId));
+
+    if (storeEnrollments.length === 0) {
+      return {
+        success: false,
+        tagsAdded: [],
+        error: `No enrollments found. Checked ${uniqueEnrollments.length} total enrollments, ${coursesMap.size} store courses. User IDs tried: ${possibleUserIds.join(", ")}`,
+      };
+    }
+
+    // 7. Build tags
+    const tagsToAdd: string[] = ["student", "interest:learning"];
+
+    for (const enrollment of storeEnrollments) {
+      const course = coursesMap.get(enrollment.courseId);
+      if (!course) continue;
+
+      const courseSlug = course.slug || generateCourseTagSlug(course.title || "");
+      if (courseSlug) {
+        tagsToAdd.push(`course:${courseSlug}`);
+      }
+
+      if (course.skillLevel) {
+        tagsToAdd.push(`skill:${course.skillLevel}`);
+      }
+      if (course.category) {
+        tagsToAdd.push(`category:${course.category.toLowerCase().replace(/\s+/g, "-")}`);
+      }
+    }
+
+    // 8. Add tags
+    const uniqueTags = [...new Set(tagsToAdd)];
+    await addTagsToContact(ctx, args.contactId, args.storeId, uniqueTags);
+
+    return { success: true, tagsAdded: uniqueTags };
+  },
+});
+
+/**
  * Debug function to check why a contact doesn't have tags.
  * Returns diagnostic info about enrollments and tagging.
  */
