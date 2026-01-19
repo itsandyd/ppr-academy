@@ -598,7 +598,7 @@ export const getCampaignRecipients = internalQuery({
         break;
 
       case "creators":
-        // Get all users who have stores (creators) - include store name
+        // Get all users who have stores (creators) - include store name and slug
         const stores = await ctx.db.query("stores").collect();
         const storesByUserId = new Map(stores.map((s) => [s.userId, s]));
         recipients = allUsers
@@ -610,6 +610,7 @@ export const getCampaignRecipients = internalQuery({
               userId: u.clerkId!,
               name: u.name,
               storeName: store?.name,
+              storeSlug: store?.slug,
             };
           });
         break;

@@ -150,6 +150,7 @@ function personalizeContent(
     state?: string;
     country?: string;
     storeName?: string;
+    storeSlug?: string;
     unsubscribeUrl?: string;
   }
 ): string {
@@ -171,6 +172,8 @@ function personalizeContent(
     .replace(/\{\{country\}\}/g, recipient.country || "")
     .replace(/\{\{storeName\}\}/g, recipient.storeName || "")
     .replace(/\{\{store_name\}\}/g, recipient.storeName || "")
+    .replace(/\{\{storeSlug\}\}/g, recipient.storeSlug || "")
+    .replace(/\{\{store_slug\}\}/g, recipient.storeSlug || "")
     .replace(/\{\{customer\.name\}\}/g, recipient.name)
     .replace(/\{\{unsubscribeLink\}\}/g, unsubscribeUrl)
     .replace(/\{\{unsubscribe_link\}\}/g, unsubscribeUrl)
@@ -390,6 +393,7 @@ export const sendCampaignBatch = internalAction({
           state: recipient.state,
           country: recipient.country,
           storeName: recipient.storeName,
+          storeSlug: recipient.storeSlug,
           unsubscribeUrl,
         });
 
@@ -403,6 +407,7 @@ export const sendCampaignBatch = internalAction({
           state: recipient.state,
           country: recipient.country,
           storeName: recipient.storeName,
+          storeSlug: recipient.storeSlug,
         });
 
         await resend.emails.send({

@@ -25,10 +25,18 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { WysiwygEditor } from "@/components/ui/wysiwyg-editor";
+import { WysiwygEditor, WysiwygEditorRef } from "@/components/ui/wysiwyg-editor";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useQuery, useMutation, useAction, useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useUser } from "@clerk/nextjs";
 import {
   Mail,
@@ -53,6 +61,10 @@ import {
   Megaphone,
   Store,
   Loader2,
+  Braces,
+  User,
+  AtSign,
+  Link2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
@@ -135,6 +147,35 @@ export default function AdminEmailsPage() {
   const [creatorBroadcastSubject, setCreatorBroadcastSubject] = useState("");
   const [creatorBroadcastContent, setCreatorBroadcastContent] = useState("");
   const [isSendingCreatorBroadcast, setIsSendingCreatorBroadcast] = useState(false);
+  const editorRef = useRef<WysiwygEditorRef>(null);
+
+  // Available personalization variables
+  const personalizationVariables = [
+    {
+      label: "First Name",
+      variable: "{{firstName}}",
+      icon: User,
+      description: "Creator's first name",
+    },
+    { label: "Full Name", variable: "{{name}}", icon: User, description: "Creator's full name" },
+    { label: "Email", variable: "{{email}}", icon: AtSign, description: "Creator's email address" },
+    {
+      label: "Store Name",
+      variable: "{{storeName}}",
+      icon: Store,
+      description: "Creator's store display name",
+    },
+    {
+      label: "Store URL Slug",
+      variable: "{{storeSlug}}",
+      icon: Link2,
+      description: "For links: pauseplayrepeat.com/{{storeSlug}}",
+    },
+  ];
+
+  const insertVariable = (variable: string) => {
+    editorRef.current?.insertText(variable);
+  };
 
   // Creator queries
   const creators = useQuery(
@@ -558,21 +599,50 @@ export default function AdminEmailsPage() {
                       onChange={(e) => setCreatorBroadcastSubject(e.target.value)}
                     />
                     <p className="text-xs text-muted-foreground">
-                      Use {"{{name}}"}, {"{{storeName}}"}, {"{{email}}"} for personalization
+                      Use {"{{name}}"}, {"{{storeName}}"}, {"{{storeSlug}}"}, {"{{email}}"} for
+                      personalization
                     </p>
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Email Content</Label>
+                    <div className="flex items-center justify-between">
+                      <Label>Email Content</Label>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm" className="gap-2">
+                            <Braces className="h-4 w-4" />
+                            Insert Variable
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-64 bg-white dark:bg-black">
+                          <DropdownMenuLabel>Personalization Variables</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          {personalizationVariables.map((v) => (
+                            <DropdownMenuItem
+                              key={v.variable}
+                              onClick={() => insertVariable(v.variable)}
+                              className="flex items-start gap-3 py-2"
+                            >
+                              <v.icon className="mt-0.5 h-4 w-4 text-muted-foreground" />
+                              <div className="flex-1">
+                                <div className="font-medium">{v.label}</div>
+                                <div className="text-xs text-muted-foreground">{v.description}</div>
+                              </div>
+                              <code className="text-xs text-cyan-600">{v.variable}</code>
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                     <WysiwygEditor
+                      ref={editorRef}
                       content={creatorBroadcastContent}
                       onChange={setCreatorBroadcastContent}
                       placeholder="Write your message to creators here..."
                       className="min-h-[300px]"
                     />
                     <p className="text-xs text-muted-foreground">
-                      Tip: Use {"{{name}}"} or {"{{storeName}}"} for personalization. Unsubscribe
-                      link added automatically.
+                      Unsubscribe link is added automatically to the footer.
                     </p>
                   </div>
 
