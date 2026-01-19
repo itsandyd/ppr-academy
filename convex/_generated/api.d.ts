@@ -8666,6 +8666,12 @@ export declare const api: {
       { contactId: Id<"emailContacts">; tagId: Id<"emailTags"> },
       null
     >;
+    searchContacts: FunctionReference<
+      "query",
+      "public",
+      { limit?: number; search?: string; storeId: string },
+      Array<any>
+    >;
     syncCustomersToEmailContacts: FunctionReference<
       "mutation",
       "public",

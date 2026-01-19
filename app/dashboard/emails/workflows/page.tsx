@@ -233,7 +233,16 @@ export default function WorkflowBuilderPage() {
   const [isAddContactsOpen, setIsAddContactsOpen] = useState(false);
   const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set());
   const [contactSearchQuery, setContactSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [isEnrolling, setIsEnrolling] = useState(false);
+
+  // Debounce the search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(contactSearchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [contactSearchQuery]);
   const [isActive, setIsActive] = useState(false);
   const [isSavingTemplate, setIsSavingTemplate] = useState(false);
   const [templateName, setTemplateName] = useState("");
@@ -265,8 +274,11 @@ export default function WorkflowBuilderPage() {
     workflowId ? { workflowId: workflowId as Id<"emailWorkflows"> } : "skip"
   );
 
-  const contactsResult = useQuery(api.emailContacts.listContacts, storeId ? { storeId } : "skip");
-  const contacts = contactsResult?.contacts;
+  // Search contacts with server-side filtering for the "Add Contacts" dialog
+  const contacts = useQuery(
+    api.emailContacts.searchContacts,
+    storeId ? { storeId, search: debouncedSearchQuery || undefined, limit: 100 } : "skip"
+  );
 
   const tags = useQuery(api.emailTags.listTags, storeId ? { storeId } : "skip");
 
@@ -459,17 +471,8 @@ export default function WorkflowBuilderPage() {
     }
   };
 
-  const filteredContacts = useMemo(() => {
-    if (!contacts) return [];
-    if (!contactSearchQuery) return contacts;
-    const query = contactSearchQuery.toLowerCase();
-    return contacts.filter(
-      (c: any) =>
-        c.email?.toLowerCase().includes(query) ||
-        c.firstName?.toLowerCase().includes(query) ||
-        c.lastName?.toLowerCase().includes(query)
-    );
-  }, [contacts, contactSearchQuery]);
+  // Contacts are now filtered server-side via the search query
+  const filteredContacts = contacts || [];
 
   const toggleContactSelection = useCallback((contactId: string) => {
     setSelectedContacts((prev) => {
@@ -1292,9 +1295,17 @@ export default function WorkflowBuilderPage() {
                     <span className="text-sm font-medium">Select All</span>
                   </div>
                 )}
-                {filteredContacts.length === 0 ? (
+                {contacts === undefined ? (
                   <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
-                    {contacts === undefined ? "Loading contacts..." : "No contacts found"}
+                    {contactSearchQuery !== debouncedSearchQuery
+                      ? "Searching..."
+                      : "Loading contacts..."}
+                  </div>
+                ) : filteredContacts.length === 0 ? (
+                  <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+                    {debouncedSearchQuery
+                      ? `No contacts found for "${debouncedSearchQuery}"`
+                      : "No contacts found"}
                   </div>
                 ) : (
                   filteredContacts.slice(0, 100).map((contact: any) => (

@@ -81,7 +81,16 @@ export default function EmailCampaignsPage() {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [selectedTagFilter, setSelectedTagFilter] = useState<string | null>(null);
+
+  // Debounce search query for server-side search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
   const [noTagsFilter, setNoTagsFilter] = useState(false);
   const [contactsCursor, setContactsCursor] = useState<string | null>(null);
   const [loadedContacts, setLoadedContacts] = useState<any[]>([]);
@@ -98,9 +107,12 @@ export default function EmailCampaignsPage() {
 
   const storeId = user?.id ?? "";
 
+  // Use search query when searching, otherwise use paginated list
+  const isSearching = debouncedSearchQuery.length > 0;
+
   const contactsResult = useQuery(
     api.emailContacts.listContacts,
-    storeId
+    storeId && !isSearching
       ? {
           storeId,
           limit: contactsPerPage,
@@ -111,12 +123,20 @@ export default function EmailCampaignsPage() {
       : "skip"
   );
 
+  // Server-side search when user types in search box
+  const searchResult = useQuery(
+    api.emailContacts.searchContacts,
+    storeId && isSearching ? { storeId, search: debouncedSearchQuery, limit: 100 } : "skip"
+  );
+
   // Replace contacts when page changes (not accumulating)
   useEffect(() => {
-    if (contactsResult?.contacts) {
+    if (isSearching && searchResult) {
+      setLoadedContacts(searchResult);
+    } else if (!isSearching && contactsResult?.contacts) {
       setLoadedContacts(contactsResult.contacts);
     }
-  }, [contactsResult]);
+  }, [contactsResult, searchResult, isSearching]);
 
   // Unfiltered contacts for broadcast (so it's not affected by contacts tab filter)
   const allContactsResult = useQuery(
@@ -727,32 +747,24 @@ export default function EmailCampaignsPage() {
     }
   };
 
-  // Filter contacts client-side for search (server handles tag filter)
-  const filteredContacts = loadedContacts.filter((c: any) => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      c.email?.toLowerCase().includes(query) ||
-      c.firstName?.toLowerCase().includes(query) ||
-      c.lastName?.toLowerCase().includes(query)
-    );
-  });
+  // Contacts are now filtered server-side (via searchContacts or listContacts with tag filter)
+  const filteredContacts = loadedContacts;
 
   // Use filtered contacts directly
   const paginatedContacts = filteredContacts;
 
-  // Go to next page
+  // Go to next page (only available when not searching)
   const handleNextPage = () => {
-    if (contactsResult?.nextCursor) {
+    if (!isSearching && contactsResult?.nextCursor) {
       setCursorHistory((prev) => [...prev, contactsResult.nextCursor]);
       setContactsCursor(contactsResult.nextCursor);
       setCurrentPage((prev) => prev + 1);
     }
   };
 
-  // Go to previous page
+  // Go to previous page (only available when not searching)
   const handlePrevPage = () => {
-    if (currentPage > 1) {
+    if (!isSearching && currentPage > 1) {
       const prevCursor = cursorHistory[currentPage - 2]; // Get cursor for previous page
       setContactsCursor(prevCursor);
       setCursorHistory((prev) => prev.slice(0, -1));
@@ -2015,23 +2027,33 @@ The unsubscribe link will be added automatically."
                     : ""}
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handlePrevPage}
-                    disabled={currentPage === 1}
-                  >
-                    Previous
-                  </Button>
-                  <span className="px-3 py-1 text-sm font-medium">{currentPage}</span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleNextPage}
-                    disabled={!contactsResult?.hasMore}
-                  >
-                    Next
-                  </Button>
+                  {isSearching ? (
+                    <span className="text-sm text-muted-foreground">
+                      {searchQuery !== debouncedSearchQuery
+                        ? "Searching..."
+                        : `${filteredContacts.length} results`}
+                    </span>
+                  ) : (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handlePrevPage}
+                        disabled={currentPage === 1}
+                      >
+                        Previous
+                      </Button>
+                      <span className="px-3 py-1 text-sm font-medium">{currentPage}</span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleNextPage}
+                        disabled={!contactsResult?.hasMore}
+                      >
+                        Next
+                      </Button>
+                    </>
+                  )}
                 </div>
               </div>
             </>
