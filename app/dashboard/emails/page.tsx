@@ -2320,14 +2320,24 @@ The unsubscribe link will be added automatically."
                 {workflows?.length || 0} workflow{workflows?.length !== 1 ? "s" : ""}
               </p>
             </div>
-            <Button
-              onClick={() => router.push("/dashboard/emails/workflows?mode=create")}
-              className="gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">New Workflow</span>
-              <span className="sm:hidden">New</span>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                onClick={() => router.push("/dashboard/emails/workflows/templates?mode=create")}
+                className="gap-2"
+              >
+                <Zap className="h-4 w-4" />
+                <span className="hidden sm:inline">Templates</span>
+              </Button>
+              <Button
+                onClick={() => router.push("/dashboard/emails/workflows?mode=create")}
+                className="gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">New Workflow</span>
+                <span className="sm:hidden">New</span>
+              </Button>
+            </div>
           </div>
 
           {!workflows || workflows.length === 0 ? (
@@ -2336,15 +2346,26 @@ The unsubscribe link will be added automatically."
                 <Workflow className="mb-3 h-12 w-12 text-muted-foreground/30 md:mb-4 md:h-16 md:w-16" />
                 <h3 className="mb-2 text-lg font-semibold md:text-xl">Visual Workflow Builder</h3>
                 <p className="mb-4 max-w-md text-center text-sm text-muted-foreground md:mb-6">
-                  Build complex automation workflows with our drag-and-drop visual editor.
+                  Build complex automation workflows with our drag-and-drop visual editor, or start
+                  from a pre-built template.
                 </p>
-                <Button
-                  onClick={() => router.push("/dashboard/emails/workflows?mode=create")}
-                  className="gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  Create Your First Workflow
-                </Button>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push("/dashboard/emails/workflows/templates?mode=create")}
+                    className="gap-2"
+                  >
+                    <Zap className="h-4 w-4" />
+                    Browse Templates
+                  </Button>
+                  <Button
+                    onClick={() => router.push("/dashboard/emails/workflows?mode=create")}
+                    className="gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Start from Scratch
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ) : (
