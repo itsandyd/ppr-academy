@@ -956,41 +956,48 @@ The unsubscribe link will be added automatically."
                   </div>
 
                   {/* Tag filter chips */}
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex max-h-[200px] flex-wrap gap-2 overflow-y-auto">
                     <Button
                       variant={broadcastTagFilter === null ? "default" : "outline"}
                       size="sm"
                       onClick={() => setBroadcastTagFilter(null)}
-                      className="h-7 text-xs"
+                      className="h-7 shrink-0 text-xs"
                     >
-                      All (
-                      {allContactsResult?.contacts?.filter((c: any) => c.status === "subscribed")
-                        .length || 0}
-                      )
+                      All ({contactStats?.subscribed || 0})
                     </Button>
-                    {tags?.map((tag: any) => {
-                      const count =
-                        allContactsResult?.contacts?.filter(
-                          (c: any) => c.status === "subscribed" && c.tagIds?.includes(tag._id)
-                        ).length || 0;
-                      return (
-                        <Button
-                          key={tag._id}
-                          variant={broadcastTagFilter === tag._id ? "default" : "outline"}
-                          size="sm"
-                          onClick={() =>
-                            setBroadcastTagFilter(broadcastTagFilter === tag._id ? null : tag._id)
-                          }
-                          className="h-7 gap-1.5 text-xs"
-                        >
-                          <div
-                            className="h-2 w-2 rounded-full"
-                            style={{ backgroundColor: tag.color }}
-                          />
-                          {tag.name} ({count})
-                        </Button>
-                      );
-                    })}
+                    {tags
+                      ?.filter((tag: any) => tag.contactCount > 0)
+                      .map((tag: any) => (
+                        <TooltipProvider key={tag._id}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant={broadcastTagFilter === tag._id ? "default" : "outline"}
+                                size="sm"
+                                onClick={() =>
+                                  setBroadcastTagFilter(
+                                    broadcastTagFilter === tag._id ? null : tag._id
+                                  )
+                                }
+                                className="h-7 max-w-[200px] shrink-0 gap-1.5 text-xs"
+                              >
+                                <div
+                                  className="h-2 w-2 shrink-0 rounded-full"
+                                  style={{ backgroundColor: tag.color }}
+                                />
+                                <span className="truncate">{tag.name}</span>
+                                <span className="shrink-0">({tag.contactCount})</span>
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs bg-white dark:bg-zinc-900">
+                              <p>{tag.name}</p>
+                              {tag.description && (
+                                <p className="text-xs text-muted-foreground">{tag.description}</p>
+                              )}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ))}
                   </div>
 
                   <div className="max-h-[400px] space-y-1 overflow-y-auto">
