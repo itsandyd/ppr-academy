@@ -25,6 +25,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { WysiwygEditor } from "@/components/ui/wysiwyg-editor";
 import { useQuery, useMutation, useAction, useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useState } from "react";
@@ -177,7 +178,9 @@ export default function AdminEmailsPage() {
       toast.error("Subject line required");
       return;
     }
-    if (!creatorBroadcastContent.trim()) {
+    // Check if content is empty (WysiwygEditor returns <p></p> when empty)
+    const contentIsEmpty = !creatorBroadcastContent.trim() || creatorBroadcastContent === "<p></p>";
+    if (contentIsEmpty) {
       toast.error("Email content required");
       return;
     }
@@ -188,21 +191,26 @@ export default function AdminEmailsPage() {
 
     setIsSendingCreatorBroadcast(true);
     try {
-      // Format the HTML content with basic styling
-      const htmlContent = `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        ${creatorBroadcastContent.replace(/\n/g, "<br>")}
-        <br><br>
+      // Wrap the WYSIWYG HTML content with email-safe styling
+      const htmlContent = `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; line-height: 1.6;">
+        ${creatorBroadcastContent}
         <p style="color: #6b7280; font-size: 12px; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
           <a href="{{unsubscribeLink}}" style="color: #6b7280;">Unsubscribe</a>
         </p>
       </div>`;
+
+      // Strip HTML tags for plain text version
+      const textContent = creatorBroadcastContent
+        .replace(/<[^>]*>/g, "")
+        .replace(/&nbsp;/g, " ")
+        .trim();
 
       // Create a campaign with the content and send it
       const campaignId = await createCampaign({
         name: `Creator Broadcast: ${creatorBroadcastSubject.substring(0, 50)}`,
         subject: creatorBroadcastSubject,
         htmlContent,
-        textContent: creatorBroadcastContent,
+        textContent,
         audienceType: "creators",
         scheduledFor: undefined,
       });
@@ -555,18 +563,17 @@ export default function AdminEmailsPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="creator-content">Email Content</Label>
-                    <Textarea
-                      id="creator-content"
-                      placeholder="Write your message to creators here...
-
-Use {{name}} or {{storeName}} for personalization.
-
-The unsubscribe link will be added automatically."
-                      value={creatorBroadcastContent}
-                      onChange={(e) => setCreatorBroadcastContent(e.target.value)}
-                      className="min-h-[200px]"
+                    <Label>Email Content</Label>
+                    <WysiwygEditor
+                      content={creatorBroadcastContent}
+                      onChange={setCreatorBroadcastContent}
+                      placeholder="Write your message to creators here..."
+                      className="min-h-[300px]"
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Tip: Use {"{{name}}"} or {"{{storeName}}"} for personalization. Unsubscribe
+                      link added automatically.
+                    </p>
                   </div>
 
                   <div className="flex items-center justify-between rounded-lg border bg-muted/50 p-3">
