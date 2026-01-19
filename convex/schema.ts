@@ -4528,6 +4528,7 @@ export default defineSchema({
       v.literal("generating_outline"), // AI is generating the outline
       v.literal("outline_ready"), // Outline generated, ready for review
       v.literal("expanding_content"), // Detailed content being generated
+      v.literal("reformatting"), // Reformatting chapter content with markdown
       v.literal("ready_to_create"), // All content ready, waiting to create course
       v.literal("creating_course"), // Creating the actual course
       v.literal("completed"), // Course created successfully
@@ -4746,7 +4747,11 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_storeId_and_status", ["storeId", "status"])
     .index("by_subscribedAt", ["subscribedAt"])
-    .index("by_engagementScore", ["engagementScore"]),
+    .index("by_engagementScore", ["engagementScore"])
+    .searchIndex("search_email", {
+      searchField: "email",
+      filterFields: ["storeId"],
+    }),
 
   // Email Contact Stats - Aggregated counts maintained separately for performance
   emailContactStats: defineTable({

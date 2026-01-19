@@ -1717,7 +1717,7 @@ export const processExistingCourseExpansionInBackground = internalAction({
   },
   handler: async (ctx, args) => {
     console.log(`\n🚀 [Background] Starting existing course expansion for queue ${args.queueId}`);
-    
+
     try {
       // Update status
       await (ctx as any).runMutation(
@@ -1738,7 +1738,7 @@ export const processExistingCourseExpansionInBackground = internalAction({
       let expandedCount = 0;
       let skippedCount = 0;
       let errorMessage = "";
-      
+
       try {
         const result = await (ctx as any).runAction(
           api.aiCourseBuilder.expandExistingCourseChapters,
@@ -1749,7 +1749,7 @@ export const processExistingCourseExpansionInBackground = internalAction({
             queueId: args.queueId,
           }
         ) as { success: boolean; expandedCount?: number; skippedCount?: number; error?: string };
-        
+
         success = result.success;
         expandedCount = result.expandedCount || 0;
         skippedCount = result.skippedCount || 0;
@@ -1757,12 +1757,12 @@ export const processExistingCourseExpansionInBackground = internalAction({
       } catch (actionError) {
         // Check if expansion actually worked
         console.log(`⚠️ [Background] Action call error, checking queue status...`);
-        
+
         const queueItem = await (ctx as any).runQuery(
           internal.aiCourseBuilderQueries.getQueueItemInternal,
           { queueId: args.queueId }
         ) as { status: string; progress?: { completedSteps?: number } } | null;
-        
+
         if (queueItem?.progress?.completedSteps && queueItem.progress.completedSteps > 0) {
           success = true;
           expandedCount = queueItem.progress.completedSteps;
@@ -1796,6 +1796,252 @@ export const processExistingCourseExpansionInBackground = internalAction({
           }
         );
       }
+    } catch (error) {
+      console.error(`❌ [Background] Fatal error:`, error);
+      try {
+        await (ctx as any).runMutation(
+          internal.aiCourseBuilderQueries.updateQueueStatus,
+          {
+            queueId: args.queueId,
+            status: "failed",
+            error: error instanceof Error ? error.message : "Unknown error",
+          }
+        );
+      } catch (updateError) {
+        console.error(`❌ [Background] Failed to update status:`, updateError);
+      }
+    }
+  },
+});
+
+/**
+ * Internal action to process reformatting in background with chunking
+ * Processes a limited batch of chapters, then schedules continuation if needed
+ * This prevents timeout issues for courses with many chapters
+ */
+export const processReformattingInBackground = internalAction({
+  args: {
+    queueId: v.id("aiCourseQueue"),
+    courseId: v.id("courses"),
+    parallelBatchSize: v.optional(v.number()),
+    // Track progress across scheduled runs
+    processedChapterIds: v.optional(v.array(v.string())), // Already processed chapter IDs
+    totalChapters: v.optional(v.number()),
+    reformattedCount: v.optional(v.number()),
+    skippedCount: v.optional(v.number()),
+    failedCount: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const maxBatchSize = args.parallelBatchSize || 5; // Process 5 chapters per scheduled run
+    const maxChaptersPerRun = 15; // Process max 15 chapters per action invocation to stay well under timeout
+    const processedIds = new Set(args.processedChapterIds || []);
+    let reformattedCount = args.reformattedCount || 0;
+    let skippedCount = args.skippedCount || 0;
+    let failedCount = args.failedCount || 0;
+
+    console.log(`\n📝 [Background] Reformatting chapters for queue ${args.queueId}`);
+    console.log(`   Already processed: ${processedIds.size}, reformatted: ${reformattedCount}, skipped: ${skippedCount}, failed: ${failedCount}`);
+
+    try {
+      // Get course structure
+      const structure = await (ctx as any).runAction(
+        api.aiCourseBuilder.getCourseStructureForExpansion,
+        { courseId: args.courseId }
+      ) as {
+        success: boolean;
+        course?: { _id: Id<"courses">; title: string };
+        modules?: Array<{
+          _id: Id<"courseModules">;
+          title: string;
+          lessons: Array<{
+            _id: Id<"courseLessons">;
+            title: string;
+            chapters: Array<{
+              _id: Id<"courseChapters">;
+              title: string;
+              hasContent: boolean;
+              wordCount: number;
+            }>;
+          }>;
+        }>;
+        error?: string;
+      };
+
+      if (!structure.success || !structure.course || !structure.modules) {
+        throw new Error(structure.error || "Failed to get course structure");
+      }
+
+      // Collect all chapters that need reformatting (not yet processed)
+      const chaptersToReformat: Array<{
+        chapterId: Id<"courseChapters">;
+        title: string;
+        wordCount: number;
+      }> = [];
+
+      let totalChapters = args.totalChapters || 0;
+
+      for (const mod of structure.modules) {
+        for (const lesson of mod.lessons) {
+          for (const ch of lesson.chapters) {
+            if (!args.totalChapters) {
+              // First run - count total chapters
+              if (ch.hasContent && ch.wordCount > 50) {
+                totalChapters++;
+              }
+            }
+
+            // Skip already processed chapters
+            if (processedIds.has(ch._id)) {
+              continue;
+            }
+
+            if (ch.hasContent && ch.wordCount > 50) {
+              chaptersToReformat.push({
+                chapterId: ch._id,
+                title: ch.title,
+                wordCount: ch.wordCount,
+              });
+            } else if (!processedIds.has(ch._id)) {
+              // Mark as skipped
+              skippedCount++;
+              processedIds.add(ch._id);
+            }
+          }
+        }
+      }
+
+      // Use calculated total if this is first run
+      if (!args.totalChapters) {
+        totalChapters = totalChapters; // Keep the calculated value
+      }
+
+      console.log(`   Found ${chaptersToReformat.length} chapters remaining to reformat`);
+
+      // Update progress
+      await (ctx as any).runMutation(
+        internal.aiCourseBuilderQueries.updateQueueStatus,
+        {
+          queueId: args.queueId,
+          status: "reformatting",
+          progress: {
+            currentStep: `Reformatting chapters (${reformattedCount + failedCount}/${totalChapters})`,
+            totalSteps: totalChapters,
+            completedSteps: reformattedCount + failedCount,
+          },
+        }
+      );
+
+      // If no more chapters to process, we're done!
+      if (chaptersToReformat.length === 0) {
+        console.log(`✅ [Background] Reformatting complete: ${reformattedCount} reformatted, ${skippedCount} skipped, ${failedCount} failed`);
+
+        await (ctx as any).runMutation(
+          internal.aiCourseBuilderQueries.updateQueueStatus,
+          {
+            queueId: args.queueId,
+            status: "completed",
+            progress: {
+              currentStep: `Reformatting complete`,
+              totalSteps: totalChapters,
+              completedSteps: reformattedCount + failedCount,
+            },
+          }
+        );
+        return;
+      }
+
+      // Process up to maxChaptersPerRun in this invocation
+      const chaptersThisRun = chaptersToReformat.slice(0, maxChaptersPerRun);
+      console.log(`   Processing ${chaptersThisRun.length} chapters in this run`);
+
+      // Process in batches of maxBatchSize
+      for (let i = 0; i < chaptersThisRun.length; i += maxBatchSize) {
+        const batch = chaptersThisRun.slice(i, i + maxBatchSize);
+
+        console.log(`   Batch ${Math.floor(i / maxBatchSize) + 1}/${Math.ceil(chaptersThisRun.length / maxBatchSize)}`);
+
+        const results = await Promise.allSettled(
+          batch.map(ch =>
+            (ctx as any).runAction(
+              api.aiCourseBuilder.reformatChapterContent,
+              { chapterId: ch.chapterId, chapterTitle: ch.title }
+            ) as Promise<{ success: boolean; error?: string }>
+          )
+        );
+
+        for (let j = 0; j < results.length; j++) {
+          const result = results[j];
+          const ch = batch[j];
+
+          processedIds.add(ch.chapterId);
+
+          if (result.status === "fulfilled" && result.value.success) {
+            reformattedCount++;
+            console.log(`   ✓ ${ch.title}`);
+          } else {
+            failedCount++;
+            const error = result.status === "rejected"
+              ? result.reason?.message
+              : result.value?.error;
+            console.log(`   ✗ ${ch.title}: ${error}`);
+          }
+        }
+
+        // Update progress after each batch
+        await (ctx as any).runMutation(
+          internal.aiCourseBuilderQueries.updateQueueStatus,
+          {
+            queueId: args.queueId,
+            status: "reformatting",
+            progress: {
+              currentStep: `Reformatting chapters (${reformattedCount + failedCount}/${totalChapters})`,
+              totalSteps: totalChapters,
+              completedSteps: reformattedCount + failedCount,
+            },
+          }
+        );
+
+        // Small delay between batches
+        if (i + maxBatchSize < chaptersThisRun.length) {
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
+      }
+
+      // Check if there are more chapters to process
+      const remainingChapters = chaptersToReformat.length - chaptersThisRun.length;
+
+      if (remainingChapters > 0) {
+        console.log(`📅 [Background] Scheduling continuation: ${remainingChapters} chapters remaining`);
+
+        // Schedule the next batch
+        await ctx.scheduler.runAfter(100, internal.aiCourseBuilder.processReformattingInBackground, {
+          queueId: args.queueId,
+          courseId: args.courseId,
+          parallelBatchSize: args.parallelBatchSize,
+          processedChapterIds: Array.from(processedIds),
+          totalChapters,
+          reformattedCount,
+          skippedCount,
+          failedCount,
+        });
+      } else {
+        // We're done!
+        console.log(`✅ [Background] Reformatting complete: ${reformattedCount} reformatted, ${skippedCount} skipped, ${failedCount} failed`);
+
+        await (ctx as any).runMutation(
+          internal.aiCourseBuilderQueries.updateQueueStatus,
+          {
+            queueId: args.queueId,
+            status: "completed",
+            progress: {
+              currentStep: `Reformatting complete`,
+              totalSteps: totalChapters,
+              completedSteps: reformattedCount + failedCount,
+            },
+          }
+        );
+      }
+
     } catch (error) {
       console.error(`❌ [Background] Fatal error:`, error);
       try {

@@ -1100,13 +1100,77 @@ export const startBackgroundExistingCourseExpansion = mutation({
       });
 
       console.log(`🚀 Started background existing course expansion: ${queueId}`);
-      
+
       return { success: true, queueId };
     } catch (error) {
       console.error("Error starting background expansion:", error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : "Unknown error" 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error"
+      };
+    }
+  },
+});
+
+/**
+ * Start reformatting all chapters in an existing course in the background
+ * Uses chunked processing to avoid timeout issues
+ */
+export const startBackgroundReformatting = mutation({
+  args: {
+    userId: v.string(),
+    storeId: v.string(),
+    courseId: v.id("courses"),
+    parallelBatchSize: v.optional(v.number()),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    queueId: v.optional(v.id("aiCourseQueue")),
+    error: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    try {
+      // Get course info
+      const course = await ctx.db.get(args.courseId);
+      if (!course) {
+        return { success: false, error: "Course not found" };
+      }
+
+      // Create queue item for tracking
+      const queueId = await ctx.db.insert("aiCourseQueue", {
+        userId: args.userId,
+        storeId: args.storeId,
+        prompt: `Reformat chapters for: ${course.title}`,
+        topic: course.title,
+        skillLevel: (course.skillLevel as "beginner" | "intermediate" | "advanced") || "intermediate",
+        targetModules: 0,
+        targetLessonsPerModule: 0,
+        status: "reformatting",
+        courseId: args.courseId,
+        createdAt: Date.now(),
+        priority: 10,
+        progress: {
+          currentStep: "Queued for reformatting...",
+          totalSteps: 100,
+          completedSteps: 0,
+        },
+      });
+
+      // Schedule the background action
+      await ctx.scheduler.runAfter(0, internal.aiCourseBuilder.processReformattingInBackground, {
+        queueId,
+        courseId: args.courseId,
+        parallelBatchSize: args.parallelBatchSize,
+      });
+
+      console.log(`🚀 Started background reformatting: ${queueId}`);
+
+      return { success: true, queueId };
+    } catch (error) {
+      console.error("Error starting background reformatting:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error"
       };
     }
   },
@@ -1165,8 +1229,8 @@ export const getActiveQueueItems = query({
   },
   returns: v.array(v.any()),
   handler: async (ctx, args) => {
-    const activeStatuses = ["queued", "generating_outline", "expanding_content", "creating_course"];
-    
+    const activeStatuses = ["queued", "generating_outline", "expanding_content", "creating_course", "reformatting"];
+
     const items = await ctx.db
       .query("aiCourseQueue")
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))

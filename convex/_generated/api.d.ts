@@ -2759,6 +2759,17 @@ export declare const api: {
       },
       { error?: string; queueId?: Id<"aiCourseQueue">; success: boolean }
     >;
+    startBackgroundReformatting: FunctionReference<
+      "mutation",
+      "public",
+      {
+        courseId: Id<"courses">;
+        parallelBatchSize?: number;
+        storeId: string;
+        userId: string;
+      },
+      { error?: string; queueId?: Id<"aiCourseQueue">; success: boolean }
+    >;
     subscribeToQueueItem: FunctionReference<
       "query",
       "public",
@@ -8707,6 +8718,12 @@ export declare const api: {
         segments: Array<{ name: string; tagId: Id<"emailTags"> }>;
         skipped: number;
       }
+    >;
+    debugContactTags: FunctionReference<
+      "query",
+      "public",
+      { email: string; storeId: string },
+      any
     >;
     getContactsByTags: FunctionReference<
       "query",
@@ -17963,6 +17980,21 @@ export declare const internal: {
           >;
           webSearchMaxResults?: number;
         };
+      },
+      any
+    >;
+    processReformattingInBackground: FunctionReference<
+      "action",
+      "internal",
+      {
+        courseId: Id<"courses">;
+        failedCount?: number;
+        parallelBatchSize?: number;
+        processedChapterIds?: Array<string>;
+        queueId: Id<"aiCourseQueue">;
+        reformattedCount?: number;
+        skippedCount?: number;
+        totalChapters?: number;
       },
       any
     >;

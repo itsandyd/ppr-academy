@@ -1388,3 +1388,107 @@ export const tagEnrolledUsersWithCourseTags = mutation({
     };
   },
 });
+
+/**
+ * Debug function to check why a contact doesn't have tags.
+ * Returns diagnostic info about enrollments and tagging.
+ */
+export const debugContactTags = query({
+  args: {
+    storeId: v.string(),
+    email: v.string(),
+  },
+  returns: v.any(),
+  handler: async (ctx, args) => {
+    const email = args.email.toLowerCase();
+
+    // 1. Find the contact
+    const contact = await ctx.db
+      .query("emailContacts")
+      .withIndex("by_storeId_and_email", (q) => q.eq("storeId", args.storeId).eq("email", email))
+      .first();
+
+    if (!contact) {
+      return { error: "Contact not found", email, storeId: args.storeId };
+    }
+
+    // 2. Find the user by email
+    const user = await ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("email"), email))
+      .first();
+
+    if (!user) {
+      return {
+        error: "User not found by email",
+        email,
+        contact: { id: contact._id, tagIds: contact.tagIds },
+      };
+    }
+
+    // 3. Get the store
+    const store = await ctx.db
+      .query("stores")
+      .withIndex("by_userId", (q) => q.eq("userId", args.storeId))
+      .first();
+
+    // 4. Get courses for this store
+    const coursesByStoreId = store
+      ? await ctx.db
+          .query("courses")
+          .withIndex("by_storeId", (q) => q.eq("storeId", store._id))
+          .collect()
+      : [];
+    const coursesByUserId = await ctx.db
+      .query("courses")
+      .withIndex("by_userId", (q) => q.eq("userId", args.storeId))
+      .collect();
+
+    const allCourses = [...coursesByStoreId, ...coursesByUserId];
+    const courseIds = new Set(allCourses.map((c) => c._id.toString()));
+
+    // 5. Find enrollments for this user
+    const userEnrollments = await ctx.db
+      .query("enrollments")
+      .withIndex("by_userId", (q) => q.eq("userId", user.clerkId || ""))
+      .collect();
+
+    // 6. Filter to this store's courses
+    const storeEnrollments = userEnrollments.filter((e) => courseIds.has(e.courseId));
+
+    // 7. Get current tags
+    const currentTags = await Promise.all(
+      (contact.tagIds || []).map(async (tagId: any) => {
+        const tag = await ctx.db.get(tagId);
+        return tag ? { id: tagId, name: (tag as any).name } : { id: tagId, name: "deleted" };
+      })
+    );
+
+    return {
+      contact: {
+        id: contact._id,
+        email: contact.email,
+        tagCount: contact.tagIds?.length || 0,
+        currentTags,
+      },
+      user: {
+        id: user._id,
+        clerkId: user.clerkId,
+        email: user.email,
+      },
+      store: store ? { id: store._id, name: (store as any).name } : null,
+      courses: {
+        total: allCourses.length,
+        sample: allCourses.slice(0, 3).map((c) => ({ id: c._id, title: c.title })),
+      },
+      enrollments: {
+        totalForUser: userEnrollments.length,
+        forThisStore: storeEnrollments.length,
+        sample: storeEnrollments.slice(0, 5).map((e) => ({
+          courseId: e.courseId,
+          matchesCourse: courseIds.has(e.courseId),
+        })),
+      },
+    };
+  },
+});

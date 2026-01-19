@@ -506,6 +506,7 @@ export type DataModel = {
         | "generating_outline"
         | "outline_ready"
         | "expanding_content"
+        | "reformatting"
         | "ready_to_create"
         | "creating_course"
         | "completed"
@@ -4028,7 +4029,12 @@ export type DataModel = {
       by_storeId_and_status: ["storeId", "status", "_creationTime"];
       by_subscribedAt: ["subscribedAt", "_creationTime"];
     };
-    searchIndexes: {};
+    searchIndexes: {
+      search_email: {
+        searchField: "email";
+        filterFields: "storeId";
+      };
+    };
     vectorIndexes: {};
   };
   emailContactStats: {

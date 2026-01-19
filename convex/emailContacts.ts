@@ -304,7 +304,7 @@ export const listContacts = query({
 
 /**
  * Search contacts by email, name, or get recent contacts.
- * Optimized for the "Add Contacts to Workflow" dialog.
+ * Uses a search index for efficient full-text search on email.
  */
 export const searchContacts = query({
   args: {
@@ -315,45 +315,59 @@ export const searchContacts = query({
   returns: v.array(v.any()),
   handler: async (ctx, args) => {
     const limit = Math.min(args.limit || 50, 100);
-    const searchTerm = args.search?.toLowerCase().trim();
+    const searchTerm = args.search?.trim();
 
-    // If searching for an exact email, use the index for efficiency
-    if (searchTerm && searchTerm.includes("@")) {
-      const exactMatch = await ctx.db
+    // If no search term, return recent contacts
+    if (!searchTerm) {
+      const recentContacts = await ctx.db
         .query("emailContacts")
-        .withIndex("by_storeId_and_email", (q) =>
-          q.eq("storeId", args.storeId).eq("email", searchTerm)
-        )
-        .first();
-
-      if (exactMatch) {
-        return [exactMatch];
-      }
+        .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+        .order("desc")
+        .take(limit);
+      return recentContacts;
     }
 
-    // Get contacts and filter by search term if provided
-    const allContacts = await ctx.db
+    // First try exact email match with index (fast)
+    const exactMatch = await ctx.db
+      .query("emailContacts")
+      .withIndex("by_storeId_and_email", (q) =>
+        q.eq("storeId", args.storeId).eq("email", searchTerm.toLowerCase())
+      )
+      .first();
+
+    if (exactMatch) {
+      return [exactMatch];
+    }
+
+    // Use search index for partial email matches
+    // This efficiently searches across all contacts
+    const searchResults = await ctx.db
+      .query("emailContacts")
+      .withSearchIndex("search_email", (q) =>
+        q.search("email", searchTerm).eq("storeId", args.storeId)
+      )
+      .take(limit);
+
+    if (searchResults.length > 0) {
+      return searchResults;
+    }
+
+    // Fallback: scan recent contacts for name matches
+    // (search index only covers email field)
+    const searchTermLower = searchTerm.toLowerCase();
+    const recentContacts = await ctx.db
       .query("emailContacts")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
       .order("desc")
-      .take(searchTerm ? 1000 : limit); // Take more if searching to find matches
+      .take(2000);
 
-    let filteredContacts = allContacts;
+    const nameMatches = recentContacts.filter((contact) => {
+      const firstName = contact.firstName?.toLowerCase() || "";
+      const lastName = contact.lastName?.toLowerCase() || "";
+      return firstName.includes(searchTermLower) || lastName.includes(searchTermLower);
+    });
 
-    if (searchTerm) {
-      filteredContacts = allContacts.filter((contact) => {
-        const email = contact.email?.toLowerCase() || "";
-        const firstName = contact.firstName?.toLowerCase() || "";
-        const lastName = contact.lastName?.toLowerCase() || "";
-        return (
-          email.includes(searchTerm) ||
-          firstName.includes(searchTerm) ||
-          lastName.includes(searchTerm)
-        );
-      });
-    }
-
-    return filteredContacts.slice(0, limit);
+    return nameMatches.slice(0, limit);
   },
 });
 

@@ -604,6 +604,7 @@ export default function AdminCourseBuilderPage() {
   const startBackgroundOutline = useMutation(api.aiCourseBuilderQueries.startBackgroundOutlineGeneration);
   const startBackgroundExpansion = useMutation(api.aiCourseBuilderQueries.startBackgroundChapterExpansion);
   const startBackgroundExistingExpansion = useMutation(api.aiCourseBuilderQueries.startBackgroundExistingCourseExpansion);
+  const startBackgroundReformatting = useMutation(api.aiCourseBuilderQueries.startBackgroundReformatting);
   
   // Real-time subscription to queue item status (enables background processing!)
   const queueItemStatus = useQuery(
@@ -712,9 +713,9 @@ export default function AdminCourseBuilderPage() {
         break;
         
       case "expanding_content":
-        updateStep("expand", { 
-          status: "running", 
-          detail: progress?.currentChapter 
+        updateStep("expand", {
+          status: "running",
+          detail: progress?.currentChapter
             ? `Expanding: ${progress.currentChapter} (${progress.completedSteps}/${progress.totalSteps})`
             : `Expanding chapters... (${progress?.completedSteps || 0}/${progress?.totalSteps || "?"})`,
         });
@@ -725,7 +726,18 @@ export default function AdminCourseBuilderPage() {
           description: progress?.currentStep || "Expanding chapters...",
         });
         break;
-        
+
+      case "reformatting":
+        // Reformatting is running in the background
+        setIsReformattingAll(true);
+        setPipelineStatus({
+          stage: "reformatting",
+          model: "GPT-4o-mini",
+          isActive: true,
+          description: progress?.currentStep || "Reformatting chapters...",
+        });
+        break;
+
       case "ready_to_create":
         updateStep("expand", { status: "completed", detail: "All chapters expanded" });
         break;
@@ -738,12 +750,13 @@ export default function AdminCourseBuilderPage() {
         setIsGenerating(false);
         setIsFullAuto(false);
         setIsExpandingExisting(false);
+        setIsReformattingAll(false);
         setPipelineStatus(null);
-        
+
         // Mark all steps as completed
         setGenerationSteps(prev => prev.map(step => ({ ...step, status: "completed" as const })));
         setExpandExistingSteps(prev => prev.map(step => ({ ...step, status: "completed" as const })));
-        
+
         // Update with created course info
         if (queueItemStatus.course) {
           setCreatedCourseId(queueItemStatus.course._id);
@@ -755,6 +768,11 @@ export default function AdminCourseBuilderPage() {
               onClick: () => window.open(`/store/${selectedStoreId}/courses/${queueItemStatus.course!._id}`, "_blank"),
             },
           });
+        } else if (queueItemStatus.prompt?.startsWith("Reformat chapters for:")) {
+          // This was a reformatting job
+          toast.success("🎉 Reformatting completed!", {
+            description: `${progress?.completedSteps || "All"} chapters have been reformatted with markdown formatting.`,
+          });
         } else if (queueItemStatus.courseId && activeTab === "existing") {
           // This was an expansion of an existing course
           // No need to manually reload - Convex reactive query auto-updates!
@@ -763,22 +781,23 @@ export default function AdminCourseBuilderPage() {
           });
         }
         break;
-        
+
       case "failed":
         setIsGenerating(false);
         setIsFullAuto(false);
         setIsExpandingExisting(false);
+        setIsReformattingAll(false);
         setPipelineStatus(null);
-        
+
         // Mark current running step as failed
-        setGenerationSteps(prev => prev.map(step => 
+        setGenerationSteps(prev => prev.map(step =>
           step.status === "running" ? { ...step, status: "failed" as const, detail: queueItemStatus.error } : step
         ));
-        setExpandExistingSteps(prev => prev.map(step => 
+        setExpandExistingSteps(prev => prev.map(step =>
           step.status === "running" ? { ...step, status: "failed" as const, detail: queueItemStatus.error } : step
         ));
-        
-        toast.error("Generation failed", {
+
+        toast.error("Operation failed", {
           description: queueItemStatus.error || "An unknown error occurred",
         });
         break;
@@ -1278,33 +1297,45 @@ export default function AdminCourseBuilderPage() {
     }
   };
 
-  // Reformat all chapters in the course
+  // Reformat all chapters in the course (background processing)
   const handleReformatAllChapters = async () => {
-    if (!selectedExistingCourseId || !existingCourseStructure) {
-      toast.error("No course loaded");
+    if (!selectedExistingCourseId || !existingCourseStructure || !user?.id || !selectedStoreId) {
+      toast.error("No course loaded or missing user/store info");
       return;
     }
-    
+
     setIsReformattingAll(true);
-    
+
     try {
-      const result = await reformatAllChaptersAction({
+      // Start background reformatting job
+      const result = await startBackgroundReformatting({
+        userId: user.id,
+        storeId: selectedStoreId,
         courseId: selectedExistingCourseId,
-        parallelBatchSize: 3, // Can be higher since reformatting is cheaper
+        parallelBatchSize: 5, // Higher batch size since reformatting is cheaper
       });
-      
-      if (result.success) {
-        // No need to reload - Convex reactive query auto-updates!
-        toast.success(`Reformatted ${result.reformattedCount} chapters!`);
-      } else {
-        toast.warning(`Reformatted ${result.reformattedCount} chapters, ${result.failedCount} failed`);
+
+      if (!result.success || !result.queueId) {
+        throw new Error(result.error || "Failed to start background reformatting");
       }
+
+      // Set queue ID to enable real-time subscription
+      setCurrentQueueId(result.queueId);
+
+      toast.success("Background reformatting started!", {
+        description: "You can navigate away - reformatting will continue in the background.",
+        duration: 5000,
+      });
+
+      // The useEffect watching queueItemStatus will handle all progress updates
+      // and will set isReformattingAll to false when complete
+
     } catch (error) {
-      console.error("Error reformatting all chapters:", error);
-      toast.error(`Failed to reformat: ${error instanceof Error ? error.message : "Unknown error"}`);
-    } finally {
+      console.error("Error starting background reformatting:", error);
+      toast.error(`Failed to start reformatting: ${error instanceof Error ? error.message : "Unknown error"}`);
       setIsReformattingAll(false);
     }
+    // Note: We don't setIsReformattingAll(false) here - the subscription effect handles that
   };
 
   // Toggle chapter content preview
