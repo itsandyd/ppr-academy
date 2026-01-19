@@ -142,6 +142,7 @@ export default function EmailCampaignsPage() {
   const deleteWorkflow = useMutation(api.emailWorkflows.deleteWorkflow);
   const toggleWorkflowActive = useMutation(api.emailWorkflows.toggleWorkflowActive);
   const retagAllContacts = useMutation(api.emailContactSync.retagAllContacts);
+  const tagEnrolledUsers = useMutation(api.emailContactSync.tagEnrolledUsersWithCourseTags);
   const recalculateStats = useAction(api.emailContacts.recalculateContactStats);
   const bulkEnrollAllByFilter = useAction(api.emailWorkflows.bulkEnrollAllContactsByFilter);
   const findDuplicates = useAction(api.emailContacts.findDuplicateContacts);
@@ -149,6 +150,7 @@ export default function EmailCampaignsPage() {
 
   const [isSyncing, setIsSyncing] = useState(false);
   const [isRetagging, setIsRetagging] = useState(false);
+  const [isTaggingEnrolled, setIsTaggingEnrolled] = useState(false);
   const [isRecalculating, setIsRecalculating] = useState(false);
   const [isDedupOpen, setIsDedupOpen] = useState(false);
   const [isFindingDuplicates, setIsFindingDuplicates] = useState(false);
@@ -446,6 +448,64 @@ export default function EmailCampaignsPage() {
       });
     } finally {
       setIsRetagging(false);
+    }
+  };
+
+  const handleTagEnrolledUsers = async () => {
+    setIsTaggingEnrolled(true);
+    let totalProcessed = 0;
+    let totalTagsAdded = 0;
+    let totalErrors = 0;
+    let cursor: string | null = null;
+    let batchCount = 0;
+    let isDone = false;
+
+    try {
+      toast({
+        title: "Tagging enrolled users...",
+        description: "This processes enrolled students and adds course-specific tags",
+      });
+
+      while (!isDone) {
+        const result: {
+          processed: number;
+          tagsAdded: number;
+          errors: number;
+          nextCursor: string | null;
+          done: boolean;
+        } = await tagEnrolledUsers({
+          storeId,
+          ...(cursor ? { cursor } : {}),
+        });
+
+        totalProcessed += result.processed;
+        totalTagsAdded += result.tagsAdded;
+        totalErrors += result.errors;
+        batchCount++;
+        isDone = result.done;
+        cursor = result.nextCursor;
+
+        // Show progress every 10 batches
+        if (batchCount % 10 === 0 && !isDone) {
+          toast({
+            title: "Tagging in progress...",
+            description: `Processed ${totalProcessed} enrolled users so far`,
+          });
+        }
+      }
+
+      toast({
+        title: "Course Tagging Complete",
+        description: `Processed ${totalProcessed} enrolled users, added ${totalTagsAdded} tags${totalErrors > 0 ? `, ${totalErrors} errors` : ""}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Failed to tag enrolled users",
+        description: error.message || "Unknown error",
+        variant: "destructive",
+      });
+    } finally {
+      setIsTaggingEnrolled(false);
     }
   };
 
@@ -1142,11 +1202,11 @@ The unsubscribe link will be added automatically."
                     variant="ghost"
                     size="sm"
                     className="gap-1.5 text-muted-foreground hover:text-foreground"
-                    onClick={handleRetagContacts}
-                    disabled={isRetagging}
+                    onClick={handleTagEnrolledUsers}
+                    disabled={isTaggingEnrolled}
                   >
-                    <Tag className={cn("h-4 w-4", isRetagging && "animate-pulse")} />
-                    {isRetagging ? "Re-tagging..." : "Re-tag"}
+                    <Tag className={cn("h-4 w-4", isTaggingEnrolled && "animate-pulse")} />
+                    {isTaggingEnrolled ? "Tagging..." : "Tag Enrolled"}
                   </Button>
                   <Button
                     variant="ghost"
@@ -1182,9 +1242,9 @@ The unsubscribe link will be added automatically."
                       <RefreshCw className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
                       {isSyncing ? "Syncing..." : "Sync Enrolled Users"}
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleRetagContacts} disabled={isRetagging}>
-                      <Tag className={cn("mr-2 h-4 w-4", isRetagging && "animate-pulse")} />
-                      {isRetagging ? "Re-tagging..." : "Re-tag All Contacts"}
+                    <DropdownMenuItem onClick={handleTagEnrolledUsers} disabled={isTaggingEnrolled}>
+                      <Tag className={cn("mr-2 h-4 w-4", isTaggingEnrolled && "animate-pulse")} />
+                      {isTaggingEnrolled ? "Tagging..." : "Tag Enrolled Users"}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleRecalculateStats} disabled={isRecalculating}>
                       <RefreshCw

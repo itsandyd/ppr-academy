@@ -8750,6 +8750,18 @@ export declare const api: {
         tagsAdded: number;
       }
     >;
+    tagEnrolledUsersWithCourseTags: FunctionReference<
+      "mutation",
+      "public",
+      { batchSize?: number; cursor?: string; storeId: string },
+      {
+        done: boolean;
+        errors: number;
+        nextCursor: string | null;
+        processed: number;
+        tagsAdded: number;
+      }
+    >;
   };
   emailCopyGenerator: {
     generateEmailCopy: FunctionReference<

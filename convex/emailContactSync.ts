@@ -1231,3 +1231,160 @@ export const retagAllContacts = mutation({
     };
   },
 });
+
+/**
+ * Tag enrolled users with course-specific tags.
+ * This is much faster than retagAllContacts because it only processes enrolled users
+ * by looking at the enrollments table directly, rather than scanning all contacts.
+ */
+export const tagEnrolledUsersWithCourseTags = mutation({
+  args: {
+    storeId: v.string(), // Clerk userId from frontend
+    cursor: v.optional(v.string()),
+    batchSize: v.optional(v.number()),
+  },
+  returns: v.object({
+    processed: v.number(),
+    tagsAdded: v.number(),
+    errors: v.number(),
+    nextCursor: v.union(v.string(), v.null()),
+    done: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    let processed = 0;
+    let tagsAdded = 0;
+    let errors = 0;
+    const BATCH_SIZE = args.batchSize || 50;
+
+    // Get the actual store
+    const store = await ctx.db
+      .query("stores")
+      .withIndex("by_userId", (q) => q.eq("userId", args.storeId))
+      .first();
+
+    if (!store) {
+      return { processed: 0, tagsAdded: 0, errors: 0, nextCursor: null, done: true };
+    }
+
+    // Get all courses for this store (cache for the batch)
+    const coursesByStoreId = await ctx.db
+      .query("courses")
+      .withIndex("by_storeId", (q) => q.eq("storeId", store._id))
+      .collect();
+    const coursesByUserId = await ctx.db
+      .query("courses")
+      .withIndex("by_userId", (q) => q.eq("userId", args.storeId))
+      .collect();
+
+    // Merge and deduplicate courses, create lookup map
+    const coursesMap = new Map<string, (typeof coursesByStoreId)[0]>();
+    for (const course of [...coursesByStoreId, ...coursesByUserId]) {
+      if (!coursesMap.has(course._id.toString())) {
+        coursesMap.set(course._id.toString(), course);
+      }
+    }
+
+    if (coursesMap.size === 0) {
+      return { processed: 0, tagsAdded: 0, errors: 0, nextCursor: null, done: true };
+    }
+
+    const courseIds = new Set(coursesMap.keys());
+
+    // Paginate through enrollments
+    const paginationResult = await ctx.db.query("enrollments").paginate({
+      numItems: BATCH_SIZE * 3, // Fetch more since we'll filter
+      cursor: args.cursor ? (args.cursor as any) : null,
+    });
+
+    // Filter to only enrollments for this store's courses
+    const storeEnrollments = paginationResult.page.filter((e) => courseIds.has(e.courseId));
+
+    // Group enrollments by user
+    const enrollmentsByUser = new Map<string, string[]>();
+    for (const enrollment of storeEnrollments) {
+      const existing = enrollmentsByUser.get(enrollment.userId) || [];
+      existing.push(enrollment.courseId);
+      enrollmentsByUser.set(enrollment.userId, existing);
+    }
+
+    // Process each unique user in this batch
+    for (const [clerkId, userCourseIds] of enrollmentsByUser) {
+      try {
+        // Find the user
+        const user = await ctx.db
+          .query("users")
+          .withIndex("by_clerkId", (q) => q.eq("clerkId", clerkId))
+          .first();
+
+        if (!user?.email) {
+          errors++;
+          continue;
+        }
+
+        // Find their contact
+        const contact = await ctx.db
+          .query("emailContacts")
+          .withIndex("by_storeId_and_email", (q) =>
+            q.eq("storeId", args.storeId).eq("email", user.email!.toLowerCase())
+          )
+          .first();
+
+        if (!contact) {
+          // No contact exists - they weren't synced yet
+          errors++;
+          continue;
+        }
+
+        // Build tags for all their enrolled courses
+        const tagsToAdd: string[] = ["student", "interest:learning"];
+
+        for (const courseIdStr of userCourseIds) {
+          const course = coursesMap.get(courseIdStr);
+          if (!course) continue;
+
+          // Add course-specific tag
+          const courseSlug = course.slug || generateCourseTagSlug(course.title || "");
+          if (courseSlug) {
+            tagsToAdd.push(`course:${courseSlug}`);
+          }
+
+          // Add category and skill tags
+          if (course.skillLevel) {
+            tagsToAdd.push(`skill:${course.skillLevel}`);
+          }
+          if (course.category) {
+            tagsToAdd.push(`category:${course.category.toLowerCase().replace(/\s+/g, "-")}`);
+          }
+
+          // Infer genre tags
+          const textToAnalyze = [
+            course.title || "",
+            course.description || "",
+            course.category || "",
+          ].join(" ");
+          tagsToAdd.push(...inferGenresFromText(textToAnalyze));
+        }
+
+        // Deduplicate and add tags
+        const uniqueTags = [...new Set(tagsToAdd)];
+        if (uniqueTags.length > 0) {
+          await addTagsToContact(ctx, contact._id, args.storeId, uniqueTags);
+          tagsAdded += uniqueTags.length;
+        }
+
+        processed++;
+      } catch (error) {
+        console.error(`Error processing user ${clerkId}:`, error);
+        errors++;
+      }
+    }
+
+    return {
+      processed,
+      tagsAdded,
+      errors,
+      nextCursor: paginationResult.isDone ? null : paginationResult.continueCursor,
+      done: paginationResult.isDone,
+    };
+  },
+});
