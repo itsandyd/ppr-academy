@@ -101,6 +101,7 @@ export default function EmailCampaignsPage() {
   const [loadedBroadcastContacts, setLoadedBroadcastContacts] = useState<any[]>([]);
   const [isLoadingMoreBroadcast, setIsLoadingMoreBroadcast] = useState(false);
   const [broadcastTagFilter, setBroadcastTagFilter] = useState<string | null>(null);
+  const [debouncedBroadcastSearch, setDebouncedBroadcastSearch] = useState("");
 
   const [newContact, setNewContact] = useState({ email: "", firstName: "", lastName: "" });
   const [newTag, setNewTag] = useState({ name: "", color: "#3b82f6", description: "" });
@@ -240,6 +241,23 @@ export default function EmailCampaignsPage() {
   const [isSendingBroadcast, setIsSendingBroadcast] = useState(false);
   const [broadcastSearchQuery, setBroadcastSearchQuery] = useState("");
   const sendBroadcastEmail = useAction(api.emails.sendBroadcastEmail);
+
+  // Debounce broadcast search for server-side search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedBroadcastSearch(broadcastSearchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [broadcastSearchQuery]);
+
+  // Server-side search for broadcast recipients
+  const isBroadcastSearching = debouncedBroadcastSearch.length > 0;
+  const broadcastSearchResult = useQuery(
+    api.emailContacts.searchContacts,
+    storeId && isBroadcastSearching
+      ? { storeId, search: debouncedBroadcastSearch, limit: 100 }
+      : "skip"
+  );
 
   if (isLoaded && mode !== "create") {
     router.push("/dashboard?mode=create");
@@ -832,17 +850,10 @@ export default function EmailCampaignsPage() {
     setSelectedContacts(new Set());
   };
 
-  // Filtered contacts for broadcast (status and tag already filtered in query)
-  const filteredBroadcastContacts = loadedBroadcastContacts.filter((c: any) => {
-    // Apply search filter only (status and tag filter handled by query)
-    if (!broadcastSearchQuery) return true;
-    const query = broadcastSearchQuery.toLowerCase();
-    return (
-      c.email?.toLowerCase().includes(query) ||
-      c.firstName?.toLowerCase().includes(query) ||
-      c.lastName?.toLowerCase().includes(query)
-    );
-  });
+  // Filtered contacts for broadcast - use server search results when searching
+  const filteredBroadcastContacts = isBroadcastSearching
+    ? (broadcastSearchResult || []).filter((c: any) => c.status === "subscribed")
+    : loadedBroadcastContacts;
 
   // Load more broadcast contacts
   const handleLoadMoreBroadcastContacts = () => {
