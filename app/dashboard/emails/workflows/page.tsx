@@ -48,6 +48,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import NodeSidebar from "./components/NodeSidebar";
 import WorkflowCanvas from "./components/WorkflowCanvas";
+import {
+  prebuiltEmailTemplates,
+  emailTemplateCategories,
+  type EmailTemplate,
+} from "./templates/email-templates";
 
 // Component to show contacts waiting at a node
 function ContactsAtNodeList({
@@ -1458,42 +1463,46 @@ export default function WorkflowBuilderPage() {
                   </TabsList>
 
                   <TabsContent value="template" className="mt-4 space-y-4">
-                    {/* Selected Template Preview */}
-                    {selectedNode.data.templateId && selectedNode.data.subject ? (
-                      <div className="space-y-3">
-                        <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <p className="text-xs text-zinc-500">Selected Template</p>
-                              <p className="font-medium">{selectedNode.data.templateName}</p>
-                              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                    {/* Quick start - always show browse button prominently */}
+                    <div className="space-y-4">
+                      <Button
+                        onClick={() => setIsTemplateBrowserOpen(true)}
+                        className="w-full gap-2"
+                        size="lg"
+                      >
+                        <Search className="h-4 w-4" />
+                        Browse Email Templates
+                      </Button>
+
+                      {/* Selected Template Preview */}
+                      {(selectedNode.data.templateId ||
+                        selectedNode.data.prebuiltTemplateId ||
+                        selectedNode.data.subject) && (
+                        <div className="rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-900 dark:bg-green-950/30">
+                          <div className="flex items-start gap-3">
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
+                              <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                                Template loaded: {selectedNode.data.templateName || "Custom"}
+                              </p>
+                              <p className="mt-0.5 truncate text-sm text-green-600 dark:text-green-400">
                                 Subject: {selectedNode.data.subject}
                               </p>
+                              <p className="mt-2 text-xs text-green-600 dark:text-green-400">
+                                Switch to &quot;Custom Email&quot; tab to edit the content
+                              </p>
                             </div>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setIsTemplateBrowserOpen(true)}
-                            >
-                              Change
-                            </Button>
                           </div>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        <div className="rounded-lg border-2 border-dashed border-zinc-300 bg-zinc-50 p-6 text-center dark:border-zinc-700 dark:bg-zinc-900">
-                          <Mail className="mx-auto mb-2 h-8 w-8 text-zinc-400" />
-                          <p className="mb-3 text-sm text-zinc-600 dark:text-zinc-400">
-                            No template selected
-                          </p>
-                          <Button onClick={() => setIsTemplateBrowserOpen(true)} className="gap-2">
-                            <Search className="h-4 w-4" />
-                            Browse Templates
-                          </Button>
-                        </div>
-                      </div>
-                    )}
+                      )}
+
+                      <p className="text-center text-xs text-zinc-500">
+                        Choose from {prebuiltEmailTemplates.length} pre-built templates designed for
+                        music producers
+                      </p>
+                    </div>
                   </TabsContent>
 
                   <TabsContent value="custom" className="mt-4 space-y-4">
@@ -1562,118 +1571,125 @@ export default function WorkflowBuilderPage() {
           </DialogContent>
         </Dialog>
 
-        {/* Template Browser Dialog */}
+        {/* Template Browser Dialog - Pre-built Templates */}
         <Dialog open={isTemplateBrowserOpen} onOpenChange={setIsTemplateBrowserOpen}>
-          <DialogContent className="max-h-[85vh] max-w-3xl overflow-hidden bg-white dark:bg-black">
+          <DialogContent className="max-h-[85vh] max-w-4xl overflow-hidden bg-white dark:bg-black">
             <DialogHeader>
-              <DialogTitle>Select Email Template</DialogTitle>
-              <DialogDescription>Choose a template to use for this email node</DialogDescription>
+              <DialogTitle>Choose an Email Template</DialogTitle>
+              <DialogDescription>
+                Select a pre-built template to get started quickly. You can customize the content
+                after selecting.
+              </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4 py-2">
               {/* Category Filter */}
               <div className="flex flex-wrap gap-2">
-                <Button
-                  variant={templateCategoryFilter === null ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setTemplateCategoryFilter(null)}
-                  className="gap-1.5"
-                >
-                  <Grid3X3 className="h-3.5 w-3.5" />
-                  All
-                </Button>
-                {(() => {
-                  const categories = [
-                    ...new Set(
-                      emailTemplates
-                        ?.map((t: any) => t.category)
-                        .filter((c: string | undefined) => c)
-                    ),
-                  ] as string[];
-                  return categories.map((category) => (
-                    <Button
-                      key={category}
-                      variant={templateCategoryFilter === category ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setTemplateCategoryFilter(category)}
-                      className="capitalize"
-                    >
-                      {category}
-                    </Button>
-                  ));
-                })()}
+                {emailTemplateCategories.map((cat) => (
+                  <Button
+                    key={cat.id}
+                    variant={
+                      (cat.id === "all" && templateCategoryFilter === null) ||
+                      templateCategoryFilter === cat.id
+                        ? "default"
+                        : "outline"
+                    }
+                    size="sm"
+                    onClick={() => setTemplateCategoryFilter(cat.id === "all" ? null : cat.id)}
+                  >
+                    {cat.label}
+                  </Button>
+                ))}
               </div>
 
               {/* Templates Grid */}
-              <div className="max-h-[50vh] overflow-y-auto">
-                {emailTemplates && emailTemplates.length > 0 ? (
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {emailTemplates
-                      .filter(
-                        (t: any) => !templateCategoryFilter || t.category === templateCategoryFilter
-                      )
-                      .map((template: any) => (
-                        <div
-                          key={template._id}
-                          className={`cursor-pointer rounded-lg border p-4 transition-all hover:border-primary hover:shadow-md ${
-                            selectedNode?.data.templateId === template._id
-                              ? "border-primary bg-primary/5 ring-1 ring-primary"
-                              : "border-zinc-200 dark:border-zinc-800"
-                          }`}
-                          onClick={() => {
-                            if (selectedNode) {
-                              updateNodeData(selectedNode.id, {
-                                templateId: template._id,
-                                templateName: template.name,
-                                subject: template.subject,
-                              });
-                            }
-                            setIsTemplateBrowserOpen(false);
-                          }}
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
-                              <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2">
-                                <span className="truncate font-medium">{template.name}</span>
-                                {template.category && (
-                                  <span className="shrink-0 rounded bg-zinc-100 px-1.5 py-0.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-                                    {template.category}
-                                  </span>
-                                )}
-                              </div>
-                              <p className="mt-1 truncate text-sm text-zinc-500">
-                                {template.subject}
-                              </p>
-                            </div>
+              <div className="max-h-[55vh] overflow-y-auto pr-2">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {prebuiltEmailTemplates
+                    .filter((t) => !templateCategoryFilter || t.category === templateCategoryFilter)
+                    .map((template) => (
+                      <div
+                        key={template.id}
+                        className={`cursor-pointer rounded-lg border p-4 transition-all hover:border-primary hover:shadow-md ${
+                          selectedNode?.data.prebuiltTemplateId === template.id
+                            ? "border-primary bg-primary/5 ring-1 ring-primary"
+                            : "border-zinc-200 dark:border-zinc-800"
+                        }`}
+                        onClick={() => {
+                          if (selectedNode) {
+                            updateNodeData(selectedNode.id, {
+                              prebuiltTemplateId: template.id,
+                              templateName: template.name,
+                              subject: template.subject,
+                              body: template.body,
+                              mode: "custom", // Switch to custom mode so they can edit
+                            });
+                          }
+                          setIsTemplateBrowserOpen(false);
+                          toast({
+                            title: "Template loaded",
+                            description:
+                              "You can now customize the subject and content in the editor.",
+                          });
+                        }}
+                      >
+                        <div className="space-y-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="font-medium leading-tight">{template.name}</span>
+                            <span className="shrink-0 rounded bg-zinc-100 px-1.5 py-0.5 text-[10px] capitalize text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+                              {template.category}
+                            </span>
                           </div>
+                          <p className="text-xs text-zinc-500">{template.description}</p>
+                          <p className="truncate rounded bg-zinc-50 px-2 py-1 text-xs text-zinc-600 dark:bg-zinc-900 dark:text-zinc-400">
+                            <span className="text-zinc-400">Subject:</span> {template.subject}
+                          </p>
                         </div>
-                      ))}
-                  </div>
-                ) : (
-                  <div className="py-12 text-center">
-                    <Mail className="mx-auto mb-3 h-12 w-12 text-zinc-300 dark:text-zinc-700" />
-                    <h3 className="font-medium text-zinc-900 dark:text-zinc-100">
-                      No templates yet
-                    </h3>
-                    <p className="mt-1 text-sm text-zinc-500">
-                      Create your first template using the Custom Email option
-                    </p>
+                      </div>
+                    ))}
+                </div>
+
+                {prebuiltEmailTemplates.filter(
+                  (t) => !templateCategoryFilter || t.category === templateCategoryFilter
+                ).length === 0 && (
+                  <div className="py-8 text-center text-sm text-zinc-500">
+                    No templates in this category
                   </div>
                 )}
-
-                {emailTemplates &&
-                  emailTemplates.length > 0 &&
-                  emailTemplates.filter(
-                    (t: any) => !templateCategoryFilter || t.category === templateCategoryFilter
-                  ).length === 0 && (
-                    <div className="py-8 text-center text-sm text-zinc-500">
-                      No templates in this category
-                    </div>
-                  )}
               </div>
+
+              {/* User's saved templates section */}
+              {emailTemplates && emailTemplates.length > 0 && (
+                <div className="border-t pt-4">
+                  <p className="mb-3 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    Your Saved Templates
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {emailTemplates.map((template: any) => (
+                      <Button
+                        key={template._id}
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                        onClick={() => {
+                          if (selectedNode) {
+                            updateNodeData(selectedNode.id, {
+                              templateId: template._id,
+                              templateName: template.name,
+                              subject: template.subject,
+                              mode: "template",
+                            });
+                          }
+                          setIsTemplateBrowserOpen(false);
+                        }}
+                      >
+                        <FileText className="h-3.5 w-3.5" />
+                        {template.name}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <DialogFooter>
