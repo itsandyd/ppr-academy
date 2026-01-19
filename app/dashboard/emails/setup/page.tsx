@@ -9,13 +9,13 @@ import { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import {
   Check,
   ChevronRight,
   Loader2,
   Mail,
-  Package,
   GraduationCap,
   Sparkles,
   Zap,
@@ -23,13 +23,11 @@ import {
   ShoppingBag,
   Heart,
   ArrowLeft,
-  Music,
   Mic2,
-  Radio,
 } from "lucide-react";
 import { generateSmartWorkflows, type GeneratedWorkflow } from "./workflow-generator";
 
-type WizardStep = "welcome" | "analyze" | "tone" | "preview" | "creating" | "complete";
+type WizardStep = "welcome" | "analyze" | "select" | "tone" | "preview" | "creating" | "complete";
 
 type ToneOption = "professional" | "casual" | "hype";
 
@@ -38,22 +36,53 @@ const toneOptions: { id: ToneOption; label: string; description: string; icon: R
     {
       id: "professional",
       label: "Professional",
-      description: "Clean, polished, industry-standard communication",
+      description: "Clean, polished, industry-standard",
       icon: <Mic2 className="h-6 w-6" />,
     },
     {
       id: "casual",
       label: "Casual & Friendly",
-      description: "Warm, approachable, like texting a friend",
+      description: "Warm, approachable, conversational",
       icon: <Heart className="h-6 w-6" />,
     },
     {
       id: "hype",
       label: "Hype & Energetic",
-      description: "High energy, exciting, gets people pumped",
+      description: "High energy, exciting, bold",
       icon: <Zap className="h-6 w-6" />,
     },
   ];
+
+const workflowTypeInfo = {
+  welcome: {
+    icon: Users,
+    label: "Welcome Series",
+    description: "Automatically welcome new subscribers and introduce them to your content",
+    color: "text-green-600",
+    bgColor: "bg-green-100 dark:bg-green-900/30",
+  },
+  purchase: {
+    icon: ShoppingBag,
+    label: "Purchase Follow-up",
+    description: "Thank customers, check on their progress, and request reviews",
+    color: "text-blue-600",
+    bgColor: "bg-blue-100 dark:bg-blue-900/30",
+  },
+  course: {
+    icon: GraduationCap,
+    label: "Course Onboarding",
+    description: "Guide students through your course with check-ins and encouragement",
+    color: "text-purple-600",
+    bgColor: "bg-purple-100 dark:bg-purple-900/30",
+  },
+  winback: {
+    icon: Heart,
+    label: "Win Back Inactive",
+    description: "Re-engage subscribers who haven't opened emails in a while",
+    color: "text-orange-600",
+    bgColor: "bg-orange-100 dark:bg-orange-900/30",
+  },
+};
 
 export default function EmailSetupWizard() {
   const router = useRouter();
@@ -63,6 +92,7 @@ export default function EmailSetupWizard() {
   const [step, setStep] = useState<WizardStep>("welcome");
   const [selectedTone, setSelectedTone] = useState<ToneOption>("casual");
   const [generatedWorkflows, setGeneratedWorkflows] = useState<GeneratedWorkflow[]>([]);
+  const [selectedWorkflowIds, setSelectedWorkflowIds] = useState<Set<string>>(new Set());
   const [isCreating, setIsCreating] = useState(false);
   const [creationProgress, setCreationProgress] = useState(0);
 
@@ -101,16 +131,11 @@ export default function EmailSetupWizard() {
     hasCourses: (courses?.length || 0) > 0,
     productCount: products?.length || 0,
     courseCount: courses?.length || 0,
-    productTypes: [
-      ...new Set(products?.map((p: any) => p.productCategory).filter(Boolean)),
-    ] as string[],
-    topProducts: products?.slice(0, 3) || [],
-    topCourses: courses?.slice(0, 3) || [],
     hasExistingWorkflows: (existingWorkflows?.length || 0) > 0,
     existingWorkflowCount: existingWorkflows?.length || 0,
   };
 
-  // Generate workflows when we have data and move to preview
+  // Generate workflows when we have data
   useEffect(() => {
     if (step === "analyze" && store && (products !== undefined || courses !== undefined)) {
       const timer = setTimeout(() => {
@@ -123,7 +148,9 @@ export default function EmailSetupWizard() {
           storeUrl: `{{storeUrl}}`,
         });
         setGeneratedWorkflows(workflows);
-        setStep("tone");
+        // Select all by default
+        setSelectedWorkflowIds(new Set(workflows.map((w) => w.id)));
+        setStep("select");
       }, 1500);
       return () => clearTimeout(timer);
     }
@@ -142,21 +169,49 @@ export default function EmailSetupWizard() {
         storeUrl: `{{storeUrl}}`,
       });
       setGeneratedWorkflows(workflows);
+      // Keep same selections
+      const newIds = new Set(workflows.map((w) => w.id));
+      setSelectedWorkflowIds((prev) => new Set([...prev].filter((id) => newIds.has(id))));
     }
   };
 
-  // Create all workflows
+  // Toggle workflow selection
+  const toggleWorkflow = (workflowId: string) => {
+    setSelectedWorkflowIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(workflowId)) {
+        newSet.delete(workflowId);
+      } else {
+        newSet.add(workflowId);
+      }
+      return newSet;
+    });
+  };
+
+  // Select/deselect all
+  const toggleAll = () => {
+    if (selectedWorkflowIds.size === generatedWorkflows.length) {
+      setSelectedWorkflowIds(new Set());
+    } else {
+      setSelectedWorkflowIds(new Set(generatedWorkflows.map((w) => w.id)));
+    }
+  };
+
+  // Get selected workflows
+  const selectedWorkflows = generatedWorkflows.filter((w) => selectedWorkflowIds.has(w.id));
+
+  // Create selected workflows
   const handleCreateWorkflows = async () => {
-    if (!storeId || !user?.id) return;
+    if (!storeId || !user?.id || selectedWorkflows.length === 0) return;
 
     setStep("creating");
     setIsCreating(true);
     setCreationProgress(0);
 
     try {
-      for (let i = 0; i < generatedWorkflows.length; i++) {
-        const workflow = generatedWorkflows[i];
-        setCreationProgress(Math.round(((i + 1) / generatedWorkflows.length) * 100));
+      for (let i = 0; i < selectedWorkflows.length; i++) {
+        const workflow = selectedWorkflows[i];
+        setCreationProgress(Math.round(((i + 1) / selectedWorkflows.length) * 100));
 
         const triggerNode = workflow.nodes.find((n) => n.type === "trigger");
 
@@ -190,7 +245,7 @@ export default function EmailSetupWizard() {
       setStep("complete");
       toast({
         title: "Email marketing is ready!",
-        description: `Created ${generatedWorkflows.length} automated workflows for your store.`,
+        description: `Created ${selectedWorkflows.length} automated workflows for your store.`,
       });
     } catch (error) {
       toast({
@@ -247,8 +302,8 @@ export default function EmailSetupWizard() {
               </div>
               <h1 className="text-3xl font-bold md:text-4xl">Let's set up your email marketing</h1>
               <p className="mx-auto max-w-xl text-lg text-muted-foreground">
-                We'll analyze your store and create personalized email automations that run on
-                autopilot. This takes about 2 minutes.
+                We'll analyze your store and create personalized email automations. You choose which
+                ones to activate.
               </p>
             </div>
 
@@ -257,25 +312,21 @@ export default function EmailSetupWizard() {
                 <CardContent className="pt-6 text-center">
                   <Users className="mx-auto mb-3 h-8 w-8 text-green-600" />
                   <h3 className="font-semibold">Welcome Series</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Automatically nurture new subscribers
-                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">Nurture new subscribers</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="pt-6 text-center">
                   <ShoppingBag className="mx-auto mb-3 h-8 w-8 text-blue-600" />
                   <h3 className="font-semibold">Purchase Follow-up</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Thank customers & get reviews
-                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">Thank & get reviews</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="pt-6 text-center">
                   <GraduationCap className="mx-auto mb-3 h-8 w-8 text-purple-600" />
                   <h3 className="font-semibold">Course Onboarding</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">Guide students to completion</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Guide students</p>
                 </CardContent>
               </Card>
             </div>
@@ -283,9 +334,9 @@ export default function EmailSetupWizard() {
             {storeAnalysis.hasExistingWorkflows && (
               <div className="mx-auto max-w-md rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/30">
                 <p className="text-sm text-amber-800 dark:text-amber-200">
-                  You already have {storeAnalysis.existingWorkflowCount} workflow
-                  {storeAnalysis.existingWorkflowCount !== 1 ? "s" : ""}. This wizard will create
-                  additional workflows without affecting your existing ones.
+                  You have {storeAnalysis.existingWorkflowCount} existing workflow
+                  {storeAnalysis.existingWorkflowCount !== 1 ? "s" : ""}. New workflows will be
+                  added without affecting them.
                 </p>
               </div>
             )}
@@ -319,8 +370,97 @@ export default function EmailSetupWizard() {
               </div>
               <div className="flex items-center gap-3 rounded-lg border bg-white p-3 dark:bg-zinc-900">
                 <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                <span>Generating personalized emails...</span>
+                <span>Generating personalized workflows...</span>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Step: Select Workflows */}
+        {step === "select" && (
+          <div className="space-y-6">
+            <div className="text-center">
+              <h1 className="text-2xl font-bold md:text-3xl">Choose your workflows</h1>
+              <p className="mt-2 text-muted-foreground">
+                Select which automations you want to create for {storeName}
+              </p>
+            </div>
+
+            {/* Select All */}
+            <div className="flex items-center justify-between rounded-lg border bg-white p-4 dark:bg-zinc-900">
+              <div className="flex items-center gap-3">
+                <Checkbox
+                  checked={selectedWorkflowIds.size === generatedWorkflows.length}
+                  onCheckedChange={toggleAll}
+                  id="select-all"
+                />
+                <label htmlFor="select-all" className="cursor-pointer font-medium">
+                  Select All ({generatedWorkflows.length} workflows)
+                </label>
+              </div>
+              <Badge variant="secondary">{selectedWorkflowIds.size} selected</Badge>
+            </div>
+
+            {/* Workflow List */}
+            <div className="space-y-3">
+              {generatedWorkflows.map((workflow) => {
+                const typeInfo = workflowTypeInfo[workflow.type];
+                const Icon = typeInfo.icon;
+                const isSelected = selectedWorkflowIds.has(workflow.id);
+
+                return (
+                  <Card
+                    key={workflow.id}
+                    className={`cursor-pointer transition-all ${
+                      isSelected ? "border-primary ring-1 ring-primary" : "hover:border-primary/50"
+                    }`}
+                    onClick={() => toggleWorkflow(workflow.id)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-4">
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => toggleWorkflow(workflow.id)}
+                          className="mt-1"
+                        />
+                        <div
+                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${typeInfo.bgColor}`}
+                        >
+                          <Icon className={`h-5 w-5 ${typeInfo.color}`} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold">{workflow.name}</h3>
+                            <Badge variant="outline" className="text-xs">
+                              {workflow.nodes.filter((n) => n.type === "email").length} emails
+                            </Badge>
+                          </div>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            {workflow.description}
+                          </p>
+                          <p className="mt-2 text-xs text-muted-foreground">
+                            <strong>Trigger:</strong> {workflow.triggerDescription}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+
+            <div className="flex justify-center gap-3">
+              <Button variant="outline" onClick={() => setStep("welcome")}>
+                Back
+              </Button>
+              <Button
+                onClick={() => setStep("tone")}
+                disabled={selectedWorkflowIds.size === 0}
+                className="gap-2"
+              >
+                Continue ({selectedWorkflowIds.size} selected)
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         )}
@@ -331,7 +471,7 @@ export default function EmailSetupWizard() {
             <div className="text-center">
               <h1 className="text-2xl font-bold md:text-3xl">What's your vibe?</h1>
               <p className="mt-2 text-muted-foreground">
-                Choose a tone that matches your brand personality
+                Choose a tone for your emails - this affects how they're written
               </p>
             </div>
 
@@ -364,11 +504,11 @@ export default function EmailSetupWizard() {
             </div>
 
             <div className="flex justify-center gap-3">
-              <Button variant="outline" onClick={() => setStep("welcome")}>
+              <Button variant="outline" onClick={() => setStep("select")}>
                 Back
               </Button>
               <Button onClick={() => setStep("preview")} className="gap-2">
-                Preview Workflows
+                Preview Emails
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
@@ -379,71 +519,62 @@ export default function EmailSetupWizard() {
         {step === "preview" && (
           <div className="space-y-6">
             <div className="text-center">
-              <h1 className="text-2xl font-bold md:text-3xl">Here's what we'll create for you</h1>
+              <h1 className="text-2xl font-bold md:text-3xl">Preview your workflows</h1>
               <p className="mt-2 text-muted-foreground">
-                {generatedWorkflows.length} automated workflows, personalized for {storeName}
+                {selectedWorkflows.length} workflow{selectedWorkflows.length !== 1 ? "s" : ""} ready
+                to create
               </p>
             </div>
 
             <div className="space-y-4">
-              {generatedWorkflows.map((workflow, index) => (
-                <Card key={workflow.id} className="overflow-hidden">
-                  <CardContent className="p-0">
-                    <div className="flex items-start gap-4 p-4">
-                      <div
-                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
-                          workflow.type === "welcome"
-                            ? "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400"
-                            : workflow.type === "purchase"
-                              ? "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400"
-                              : workflow.type === "course"
-                                ? "bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400"
-                                : "bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400"
-                        }`}
-                      >
-                        {workflow.type === "welcome" && <Users className="h-5 w-5" />}
-                        {workflow.type === "purchase" && <ShoppingBag className="h-5 w-5" />}
-                        {workflow.type === "course" && <GraduationCap className="h-5 w-5" />}
-                        {workflow.type === "winback" && <Heart className="h-5 w-5" />}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold">{workflow.name}</h3>
-                          <Badge variant="secondary" className="text-xs">
-                            {workflow.nodes.filter((n) => n.type === "email").length} emails
-                          </Badge>
-                        </div>
-                        <p className="mt-1 text-sm text-muted-foreground">{workflow.description}</p>
-                        <p className="mt-2 text-xs text-muted-foreground">
-                          <strong>Trigger:</strong> {workflow.triggerDescription}
-                        </p>
-                      </div>
-                    </div>
+              {selectedWorkflows.map((workflow) => {
+                const typeInfo = workflowTypeInfo[workflow.type];
+                const Icon = typeInfo.icon;
 
-                    {/* Email previews */}
-                    <div className="border-t bg-zinc-50 p-4 dark:bg-zinc-900/50">
-                      <p className="mb-2 text-xs font-medium text-muted-foreground">
-                        Email subjects:
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {workflow.nodes
-                          .filter((n) => n.type === "email")
-                          .slice(0, 3)
-                          .map((node, i) => (
-                            <Badge key={i} variant="outline" className="text-xs font-normal">
-                              {node.data.subject}
+                return (
+                  <Card key={workflow.id} className="overflow-hidden">
+                    <CardContent className="p-0">
+                      <div className="flex items-start gap-4 p-4">
+                        <div
+                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${typeInfo.bgColor}`}
+                        >
+                          <Icon className={`h-5 w-5 ${typeInfo.color}`} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold">{workflow.name}</h3>
+                            <Badge variant="secondary" className="text-xs">
+                              {workflow.nodes.filter((n) => n.type === "email").length} emails
                             </Badge>
-                          ))}
-                        {workflow.nodes.filter((n) => n.type === "email").length > 3 && (
-                          <Badge variant="outline" className="text-xs font-normal">
-                            +{workflow.nodes.filter((n) => n.type === "email").length - 3} more
-                          </Badge>
-                        )}
+                          </div>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            {workflow.triggerDescription}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+
+                      {/* Email previews */}
+                      <div className="border-t bg-zinc-50 p-4 dark:bg-zinc-900/50">
+                        <p className="mb-2 text-xs font-medium text-muted-foreground">
+                          Email subjects:
+                        </p>
+                        <div className="space-y-1">
+                          {workflow.nodes
+                            .filter((n) => n.type === "email")
+                            .map((node, i) => (
+                              <div
+                                key={i}
+                                className="truncate rounded bg-white px-2 py-1 text-sm dark:bg-zinc-800"
+                              >
+                                {i + 1}. {node.data.subject}
+                              </div>
+                            ))}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
 
             <div className="flex justify-center gap-3">
@@ -452,7 +583,8 @@ export default function EmailSetupWizard() {
               </Button>
               <Button onClick={handleCreateWorkflows} size="lg" className="gap-2">
                 <Sparkles className="h-4 w-4" />
-                Create All Workflows
+                Create {selectedWorkflows.length} Workflow
+                {selectedWorkflows.length !== 1 ? "s" : ""}
               </Button>
             </div>
           </div>
@@ -488,12 +620,12 @@ export default function EmailSetupWizard() {
               </div>
               <h1 className="text-3xl font-bold">You're all set!</h1>
               <p className="mx-auto max-w-xl text-lg text-muted-foreground">
-                Your email marketing is now running on autopilot. Here's what will happen:
+                Your email marketing is now ready. Here's what will happen:
               </p>
             </div>
 
             <div className="mx-auto max-w-lg space-y-3 text-left">
-              {generatedWorkflows.map((workflow) => (
+              {selectedWorkflows.map((workflow) => (
                 <div
                   key={workflow.id}
                   className="flex items-center gap-3 rounded-lg border bg-white p-3 dark:bg-zinc-900"
@@ -506,15 +638,16 @@ export default function EmailSetupWizard() {
               ))}
             </div>
 
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/30">
+              <p className="text-sm text-amber-800 dark:text-amber-200">
+                <strong>Note:</strong> Workflows are created as drafts. Go to each workflow to
+                review and activate when ready.
+              </p>
+            </div>
+
             <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-              <Button
-                variant="outline"
-                onClick={() => router.push("/dashboard/emails?mode=create")}
-              >
-                View All Workflows
-              </Button>
-              <Button onClick={() => router.push("/dashboard?mode=create")}>
-                Back to Dashboard
+              <Button onClick={() => router.push("/dashboard/emails?mode=create")} size="lg">
+                View My Workflows
               </Button>
             </div>
           </div>
