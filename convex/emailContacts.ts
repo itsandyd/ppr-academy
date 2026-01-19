@@ -2028,7 +2028,12 @@ export const runFullTagMigration = action({
     let batches = 0;
 
     do {
-      const result = await ctx.runMutation(api.emailContacts.migrateTagsToJunctionTable, {
+      const result: {
+        processed: number;
+        created: number;
+        nextCursor: string | null;
+        done: boolean;
+      } = await ctx.runMutation(api.emailContacts.migrateTagsToJunctionTable, {
         storeId: args.storeId,
         batchSize: 100,
         cursor: cursor ?? undefined,

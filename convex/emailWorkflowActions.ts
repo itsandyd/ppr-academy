@@ -227,6 +227,16 @@ export const executeWorkflowNode = internalAction({
       } else if (!execution.contactId) {
         console.log(`[EmailWorkflows] Cannot add/remove tag: no contactId on execution`);
       }
+    } else if (currentNode.type === "stop") {
+      // Stop node - complete the workflow execution
+      console.log(`[EmailWorkflows] Stop node reached, completing workflow for ${execution.customerEmail}`);
+      await ctx.runMutation(internal.emailWorkflows.completeExecution, {
+        executionId: args.executionId,
+      });
+      return null;
+    } else if (currentNode.type === "trigger") {
+      // Trigger nodes don't need processing, just continue to next node
+      console.log(`[EmailWorkflows] Skipping trigger node, moving to next`);
     } else {
       console.log(`[EmailWorkflows] Unknown node type: ${currentNode.type}`);
     }
