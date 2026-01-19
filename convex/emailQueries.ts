@@ -155,11 +155,14 @@ export const createCampaign = mutation({
     name: v.string(),
     subject: v.string(),
     templateId: v.optional(v.id("resendTemplates")),
+    htmlContent: v.optional(v.string()),
+    textContent: v.optional(v.string()),
     audienceType: v.union(
       v.literal("all"),
       v.literal("enrolled"),
       v.literal("active"),
-      v.literal("specific")
+      v.literal("specific"),
+      v.literal("creators")
     ),
     scheduledFor: v.optional(v.number()),
     specificUserIds: v.optional(v.array(v.id("users"))),
@@ -175,13 +178,16 @@ export const createCampaign = mutation({
       | "store_students"
       | "inactive_users"
       | "completed_course"
-      | "custom_list" = "all_users";
+      | "custom_list"
+      | "creators" = "all_users";
     if (args.audienceType === "specific") {
       targetAudience = "custom_list";
     } else if (args.audienceType === "enrolled") {
       targetAudience = "course_students";
     } else if (args.audienceType === "active") {
       targetAudience = "inactive_users";
+    } else if (args.audienceType === "creators") {
+      targetAudience = "creators";
     }
 
     return await ctx.db.insert("resendCampaigns", {
@@ -189,6 +195,8 @@ export const createCampaign = mutation({
       templateId: args.templateId,
       name: args.name,
       subject: args.subject,
+      htmlContent: args.htmlContent,
+      textContent: args.textContent,
       targetAudience,
       customRecipients: args.audienceType === "specific" ? args.specificUserIds : undefined,
       status,
@@ -587,6 +595,15 @@ export const getCampaignRecipients = internalQuery({
             .filter((u) => u.email && u.clerkId && completedIds.has(u.clerkId))
             .map((u) => ({ email: u.email!, userId: u.clerkId!, name: u.name }));
         }
+        break;
+
+      case "creators":
+        // Get all users who have stores (creators)
+        const stores = await ctx.db.query("stores").collect();
+        const creatorUserIds = new Set(stores.map((s) => s.userId));
+        recipients = allUsers
+          .filter((u) => u.email && u.clerkId && creatorUserIds.has(u.clerkId))
+          .map((u) => ({ email: u.email!, userId: u.clerkId!, name: u.name }));
         break;
     }
 

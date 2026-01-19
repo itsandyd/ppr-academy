@@ -7487,7 +7487,8 @@ export type DataModel = {
         | "store_students"
         | "inactive_users"
         | "completed_course"
-        | "custom_list";
+        | "custom_list"
+        | "creators";
       targetCourseId?: Id<"courses">;
       targetStoreId?: Id<"stores">;
       templateId?: Id<"resendTemplates">;

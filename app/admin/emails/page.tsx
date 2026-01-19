@@ -49,8 +49,12 @@ import {
   Target,
   BarChart3,
   Eye,
+  Megaphone,
+  Store,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Id } from "@/convex/_generated/dataModel";
 
 export default function AdminEmailsPage() {
   const { user } = useUser();
@@ -108,7 +112,7 @@ export default function AdminEmailsPage() {
     name: "",
     subject: "",
     templateId: "",
-    audienceType: "all" as "all" | "enrolled" | "active" | "specific",
+    audienceType: "all" as "all" | "enrolled" | "active" | "specific" | "creators",
     scheduledFor: "",
     selectedUserIds: [] as string[],
   });
@@ -123,6 +127,98 @@ export default function AdminEmailsPage() {
     templateId: "",
     delayMinutes: 0,
   });
+
+  // Creator broadcast state
+  const [creatorSearchQuery, setCreatorSearchQuery] = useState("");
+  const [selectedCreators, setSelectedCreators] = useState<Set<string>>(new Set());
+  const [creatorBroadcastSubject, setCreatorBroadcastSubject] = useState("");
+  const [creatorBroadcastContent, setCreatorBroadcastContent] = useState("");
+  const [isSendingCreatorBroadcast, setIsSendingCreatorBroadcast] = useState(false);
+
+  // Creator queries
+  const creators = useQuery(
+    api.adminAnalytics.getCreatorsForEmail,
+    user?.id ? { clerkId: user.id, search: creatorSearchQuery || undefined } : "skip"
+  );
+  const creatorStats = useQuery(
+    api.adminAnalytics.getCreatorEmailStats,
+    user?.id ? { clerkId: user.id } : "skip"
+  );
+
+  // Send broadcast email action
+  const sendBroadcastEmail = useAction(api.emails.sendBroadcastEmail);
+
+  // Toggle creator selection
+  const toggleCreatorSelection = (creatorId: string) => {
+    setSelectedCreators((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(creatorId)) {
+        newSet.delete(creatorId);
+      } else {
+        newSet.add(creatorId);
+      }
+      return newSet;
+    });
+  };
+
+  // Select/deselect all creators
+  const toggleAllCreators = () => {
+    if (!creators) return;
+    if (selectedCreators.size === creators.length) {
+      setSelectedCreators(new Set());
+    } else {
+      setSelectedCreators(new Set(creators.map((c) => c._id)));
+    }
+  };
+
+  // Send broadcast to creators
+  const handleSendCreatorBroadcast = async () => {
+    if (!creatorBroadcastSubject.trim()) {
+      toast.error("Subject line required");
+      return;
+    }
+    if (!creatorBroadcastContent.trim()) {
+      toast.error("Email content required");
+      return;
+    }
+    if (selectedCreators.size === 0) {
+      toast.error("Select at least one creator");
+      return;
+    }
+
+    setIsSendingCreatorBroadcast(true);
+    try {
+      // Format the HTML content with basic styling
+      const htmlContent = `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        ${creatorBroadcastContent.replace(/\n/g, "<br>")}
+        <br><br>
+        <p style="color: #6b7280; font-size: 12px; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+          <a href="{{unsubscribeLink}}" style="color: #6b7280;">Unsubscribe</a>
+        </p>
+      </div>`;
+
+      // Create a campaign with the content and send it
+      const campaignId = await createCampaign({
+        name: `Creator Broadcast: ${creatorBroadcastSubject.substring(0, 50)}`,
+        subject: creatorBroadcastSubject,
+        htmlContent,
+        textContent: creatorBroadcastContent,
+        audienceType: "creators",
+        scheduledFor: undefined,
+      });
+
+      await sendCampaignAction({ campaignId });
+
+      toast.success(`Broadcast sent to all creators!`);
+      setCreatorBroadcastSubject("");
+      setCreatorBroadcastContent("");
+      setSelectedCreators(new Set());
+    } catch (error: any) {
+      toast.error(`Failed to send broadcast: ${error.message}`);
+    } finally {
+      setIsSendingCreatorBroadcast(false);
+    }
+  };
 
   const handleCreateTemplate = async () => {
     if (!templateForm.name || !templateForm.subject || !templateForm.htmlContent) {
@@ -356,8 +452,12 @@ export default function AdminEmailsPage() {
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="campaigns" className="space-y-6">
-          <TabsList className="grid h-12 w-full grid-cols-3 p-1">
+        <Tabs defaultValue="creators" className="space-y-6">
+          <TabsList className="grid h-12 w-full grid-cols-4 p-1">
+            <TabsTrigger value="creators" className="text-base">
+              <Store className="mr-2 h-4 w-4" />
+              Creators
+            </TabsTrigger>
             <TabsTrigger value="campaigns" className="text-base">
               <Send className="mr-2 h-4 w-4" />
               Campaigns
@@ -371,6 +471,210 @@ export default function AdminEmailsPage() {
               Automations
             </TabsTrigger>
           </TabsList>
+
+          {/* Creators Tab - Broadcast to Creators */}
+          <TabsContent value="creators" className="space-y-6">
+            {/* Creator Stats */}
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+              <Card className="border-2">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total Creators</p>
+                      <p className="text-2xl font-bold">{creatorStats?.totalCreators || 0}</p>
+                    </div>
+                    <Store className="h-8 w-8 text-blue-500/20" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-2">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">With Email</p>
+                      <p className="text-2xl font-bold text-green-600">
+                        {creatorStats?.creatorsWithEmail || 0}
+                      </p>
+                    </div>
+                    <Mail className="h-8 w-8 text-green-500/20" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-2">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Active Creators</p>
+                      <p className="text-2xl font-bold text-purple-600">
+                        {creatorStats?.activeCreators || 0}
+                      </p>
+                    </div>
+                    <Activity className="h-8 w-8 text-purple-500/20" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className="border-2">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">New This Month</p>
+                      <p className="text-2xl font-bold text-amber-600">
+                        {creatorStats?.newCreatorsThisMonth || 0}
+                      </p>
+                    </div>
+                    <TrendingUp className="h-8 w-8 text-amber-500/20" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-2">
+              {/* Compose Email */}
+              <Card className="border-2">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Megaphone className="h-5 w-5 text-cyan-600" />
+                    Broadcast to Creators
+                  </CardTitle>
+                  <CardDescription>
+                    Send announcements, updates, or newsletters to your creators
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="creator-subject">Subject Line</Label>
+                    <Input
+                      id="creator-subject"
+                      placeholder="Hey {{name}}, exciting platform update!"
+                      value={creatorBroadcastSubject}
+                      onChange={(e) => setCreatorBroadcastSubject(e.target.value)}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Use {"{{name}}"}, {"{{storeName}}"}, {"{{email}}"} for personalization
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="creator-content">Email Content</Label>
+                    <Textarea
+                      id="creator-content"
+                      placeholder="Write your message to creators here...
+
+Use {{name}} or {{storeName}} for personalization.
+
+The unsubscribe link will be added automatically."
+                      value={creatorBroadcastContent}
+                      onChange={(e) => setCreatorBroadcastContent(e.target.value)}
+                      className="min-h-[200px]"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between rounded-lg border bg-muted/50 p-3">
+                    <div className="text-sm">
+                      <span className="font-medium">{selectedCreators.size}</span> creator
+                      {selectedCreators.size !== 1 ? "s" : ""} selected
+                    </div>
+                    <Button
+                      onClick={handleSendCreatorBroadcast}
+                      disabled={
+                        isSendingCreatorBroadcast ||
+                        selectedCreators.size === 0 ||
+                        !creatorBroadcastSubject.trim() ||
+                        !creatorBroadcastContent.trim()
+                      }
+                      className="gap-2"
+                    >
+                      {isSendingCreatorBroadcast ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="h-4 w-4" />
+                          Send Broadcast
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Select Creators */}
+              <Card className="border-2">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Select Recipients</CardTitle>
+                      <CardDescription>{creators?.length || 0} creators available</CardDescription>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={toggleAllCreators}>
+                      {selectedCreators.size === creators?.length && creators?.length > 0
+                        ? "Deselect All"
+                        : "Select All"}
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      placeholder="Search creators by name, email, or store..."
+                      className="pl-10"
+                      value={creatorSearchQuery}
+                      onChange={(e) => setCreatorSearchQuery(e.target.value)}
+                    />
+                  </div>
+
+                  <ScrollArea className="h-[400px] rounded-md border p-2">
+                    {!creators || creators.length === 0 ? (
+                      <div className="py-8 text-center text-sm text-muted-foreground">
+                        No creators found
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        {creators.map((creator) => (
+                          <div
+                            key={creator._id}
+                            className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors ${
+                              selectedCreators.has(creator._id)
+                                ? "border-primary bg-primary/5"
+                                : "border-transparent hover:bg-muted/50"
+                            }`}
+                            onClick={() => toggleCreatorSelection(creator._id)}
+                          >
+                            <Checkbox
+                              checked={selectedCreators.has(creator._id)}
+                              onCheckedChange={() => toggleCreatorSelection(creator._id)}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="truncate font-medium">
+                                  {creator.name || creator.email}
+                                </span>
+                                {creator.storeName && (
+                                  <Badge variant="outline" className="text-xs">
+                                    {creator.storeName}
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <span className="truncate">{creator.email}</span>
+                                <span>-</span>
+                                <span>{creator.courseCount} courses</span>
+                                <span>-</span>
+                                <span>{creator.productCount} products</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
 
           {/* Campaigns Tab */}
           <TabsContent value="campaigns" className="space-y-6">

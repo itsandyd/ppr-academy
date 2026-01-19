@@ -487,6 +487,35 @@ export declare const api: {
       { clerkId?: string },
       Array<{ category: string; count: number; revenue: number }>
     >;
+    getCreatorEmailStats: FunctionReference<
+      "query",
+      "public",
+      { clerkId?: string },
+      {
+        activeCreators: number;
+        creatorsWithEmail: number;
+        newCreatorsThisMonth: number;
+        totalCreators: number;
+      }
+    >;
+    getCreatorsForEmail: FunctionReference<
+      "query",
+      "public",
+      { clerkId?: string; limit?: number; search?: string },
+      Array<{
+        _id: Id<"users">;
+        clerkId: string;
+        courseCount: number;
+        email?: string;
+        imageUrl?: string;
+        lastActive?: number;
+        name?: string;
+        productCount: number;
+        storeName?: string;
+        storeSlug?: string;
+        totalRevenue: number;
+      }>
+    >;
     getPlatformOverview: FunctionReference<
       "query",
       "public",
@@ -9057,12 +9086,14 @@ export declare const api: {
       "mutation",
       "public",
       {
-        audienceType: "all" | "enrolled" | "active" | "specific";
+        audienceType: "all" | "enrolled" | "active" | "specific" | "creators";
+        htmlContent?: string;
         name: string;
         scheduledFor?: number;
         specificUserIds?: Array<Id<"users">>;
         subject: string;
         templateId?: Id<"resendTemplates">;
+        textContent?: string;
       },
       Id<"resendCampaigns">
     >;
