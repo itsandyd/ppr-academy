@@ -2323,11 +2323,21 @@ The unsubscribe link will be added automatically."
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
+                onClick={() => router.push("/dashboard/emails/setup?mode=create")}
+                className="hidden gap-2 sm:flex"
+              >
+                <Zap className="h-4 w-4" />
+                Setup Wizard
+              </Button>
+              <Button
+                variant="outline"
                 onClick={() => router.push("/dashboard/emails/workflows/templates?mode=create")}
                 className="gap-2"
               >
-                <Zap className="h-4 w-4" />
                 <span className="hidden sm:inline">Templates</span>
+                <span className="sm:hidden">
+                  <Zap className="h-4 w-4" />
+                </span>
               </Button>
               <Button
                 onClick={() => router.push("/dashboard/emails/workflows?mode=create")}
@@ -2341,33 +2351,58 @@ The unsubscribe link will be added automatically."
           </div>
 
           {!workflows || workflows.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-10 md:py-16">
-                <Workflow className="mb-3 h-12 w-12 text-muted-foreground/30 md:mb-4 md:h-16 md:w-16" />
-                <h3 className="mb-2 text-lg font-semibold md:text-xl">Visual Workflow Builder</h3>
-                <p className="mb-4 max-w-md text-center text-sm text-muted-foreground md:mb-6">
-                  Build complex automation workflows with our drag-and-drop visual editor, or start
-                  from a pre-built template.
-                </p>
-                <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="space-y-4">
+              {/* Setup Wizard CTA - Featured */}
+              <Card className="border-primary/50 bg-gradient-to-r from-primary/5 to-primary/10">
+                <CardContent className="flex flex-col items-center justify-center py-8 md:py-12">
+                  <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+                    <Zap className="h-8 w-8 text-primary" />
+                  </div>
+                  <h3 className="mb-2 text-xl font-bold md:text-2xl">Done-For-You Email Setup</h3>
+                  <p className="mb-6 max-w-lg text-center text-muted-foreground">
+                    Let us analyze your store and create personalized email automations in minutes.
+                    Welcome sequences, purchase follow-ups, course onboarding - all set up
+                    automatically.
+                  </p>
                   <Button
-                    variant="outline"
-                    onClick={() => router.push("/dashboard/emails/workflows/templates?mode=create")}
+                    size="lg"
+                    onClick={() => router.push("/dashboard/emails/setup?mode=create")}
                     className="gap-2"
                   >
                     <Zap className="h-4 w-4" />
-                    Browse Templates
+                    Set Up My Email Marketing
                   </Button>
-                  <Button
-                    onClick={() => router.push("/dashboard/emails/workflows?mode=create")}
-                    className="gap-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    Start from Scratch
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+
+              {/* Manual Options */}
+              <Card>
+                <CardContent className="py-6">
+                  <p className="mb-4 text-center text-sm text-muted-foreground">
+                    Or build your own workflows manually
+                  </p>
+                  <div className="flex flex-col justify-center gap-2 sm:flex-row">
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        router.push("/dashboard/emails/workflows/templates?mode=create")
+                      }
+                      className="gap-2"
+                    >
+                      Browse Templates
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => router.push("/dashboard/emails/workflows?mode=create")}
+                      className="gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Start from Scratch
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           ) : (
             <div className="space-y-2 md:space-y-3">
               {workflows.map((workflow: any) => (
