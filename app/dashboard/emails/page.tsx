@@ -96,6 +96,12 @@ export default function EmailCampaignsPage() {
   const [loadedContacts, setLoadedContacts] = useState<any[]>([]);
   const contactsPerPage = 100;
 
+  // Broadcast recipient pagination state (must be before query that uses it)
+  const [broadcastContactsCursor, setBroadcastContactsCursor] = useState<string | null>(null);
+  const [loadedBroadcastContacts, setLoadedBroadcastContacts] = useState<any[]>([]);
+  const [isLoadingMoreBroadcast, setIsLoadingMoreBroadcast] = useState(false);
+  const [broadcastTagFilter, setBroadcastTagFilter] = useState<string | null>(null);
+
   const [newContact, setNewContact] = useState({ email: "", firstName: "", lastName: "" });
   const [newTag, setNewTag] = useState({ name: "", color: "#3b82f6", description: "" });
   const [editingTag, setEditingTag] = useState<{
@@ -138,11 +144,46 @@ export default function EmailCampaignsPage() {
     }
   }, [contactsResult, searchResult, isSearching]);
 
-  // Unfiltered contacts for broadcast (so it's not affected by contacts tab filter)
-  const allContactsResult = useQuery(
+  // Contacts for broadcast with pagination
+  const broadcastContactsResult = useQuery(
     api.emailContacts.listContacts,
-    storeId ? { storeId, limit: 200 } : "skip"
+    storeId
+      ? {
+          storeId,
+          status: "subscribed" as const,
+          limit: 200,
+          ...(broadcastContactsCursor ? { cursor: broadcastContactsCursor } : {}),
+          ...(broadcastTagFilter ? { tagId: broadcastTagFilter as Id<"emailTags"> } : {}),
+        }
+      : "skip"
   );
+
+  // Accumulate broadcast contacts when loading more pages
+  useEffect(() => {
+    if (broadcastContactsResult?.contacts) {
+      setIsLoadingMoreBroadcast(false);
+      if (broadcastContactsCursor) {
+        // Append to existing contacts (loading more)
+        setLoadedBroadcastContacts((prev) => {
+          const existingIds = new Set(prev.map((c) => c._id));
+          const newContacts = broadcastContactsResult.contacts.filter(
+            (c: any) => !existingIds.has(c._id)
+          );
+          return [...prev, ...newContacts];
+        });
+      } else {
+        // Initial load or filter changed - replace contacts
+        setLoadedBroadcastContacts(broadcastContactsResult.contacts);
+      }
+    }
+  }, [broadcastContactsResult, broadcastContactsCursor]);
+
+  // Reset broadcast contacts when tag filter changes
+  useEffect(() => {
+    setBroadcastContactsCursor(null);
+    setLoadedBroadcastContacts([]);
+  }, [broadcastTagFilter]);
+
   const contactStats = useQuery(api.emailContacts.getContactStats, storeId ? { storeId } : "skip");
   const tags = useQuery(api.emailTags.listTags, storeId ? { storeId } : "skip");
   const tagStats = useQuery(api.emailTags.getTagStats, storeId ? { storeId } : "skip");
@@ -198,7 +239,6 @@ export default function EmailCampaignsPage() {
   );
   const [isSendingBroadcast, setIsSendingBroadcast] = useState(false);
   const [broadcastSearchQuery, setBroadcastSearchQuery] = useState("");
-  const [broadcastTagFilter, setBroadcastTagFilter] = useState<string | null>(null);
   const sendBroadcastEmail = useAction(api.emails.sendBroadcastEmail);
 
   if (isLoaded && mode !== "create") {
@@ -792,12 +832,9 @@ export default function EmailCampaignsPage() {
     setSelectedContacts(new Set());
   };
 
-  // Filtered contacts for broadcast
-  const filteredBroadcastContacts = allContactsResult?.contacts?.filter((c: any) => {
-    if (c.status !== "subscribed") return false;
-    // Apply tag filter
-    if (broadcastTagFilter && !c.tagIds?.includes(broadcastTagFilter)) return false;
-    // Apply search filter
+  // Filtered contacts for broadcast (status and tag already filtered in query)
+  const filteredBroadcastContacts = loadedBroadcastContacts.filter((c: any) => {
+    // Apply search filter only (status and tag filter handled by query)
     if (!broadcastSearchQuery) return true;
     const query = broadcastSearchQuery.toLowerCase();
     return (
@@ -806,6 +843,14 @@ export default function EmailCampaignsPage() {
       c.lastName?.toLowerCase().includes(query)
     );
   });
+
+  // Load more broadcast contacts
+  const handleLoadMoreBroadcastContacts = () => {
+    if (broadcastContactsResult?.hasMore && broadcastContactsResult?.nextCursor) {
+      setIsLoadingMoreBroadcast(true);
+      setBroadcastContactsCursor(broadcastContactsResult.nextCursor);
+    }
+  };
 
   const toggleBroadcastContactSelection = (contactId: string) => {
     setSelectedBroadcastContacts((prev) => {
@@ -1002,7 +1047,17 @@ The unsubscribe link will be added automatically."
                     <div>
                       <h3 className="font-semibold">Select Recipients</h3>
                       <p className="text-sm text-muted-foreground">
-                        {filteredBroadcastContacts?.length || 0} subscribed contacts
+                        {filteredBroadcastContacts?.length || 0} loaded
+                        {broadcastContactsResult?.hasMore && (
+                          <span className="text-blue-600 dark:text-blue-400">
+                            {" "}(more available)
+                          </span>
+                        )}
+                        {" / "}
+                        {broadcastTagFilter
+                          ? tags?.find((t: any) => t._id === broadcastTagFilter)?.contactCount || 0
+                          : contactStats?.subscribed || 0}{" "}
+                        total subscribed
                       </p>
                     </div>
                     <Button
@@ -1011,9 +1066,10 @@ The unsubscribe link will be added automatically."
                       onClick={toggleAllBroadcastContacts}
                       disabled={!filteredBroadcastContacts?.length}
                     >
-                      {selectedBroadcastContacts.size === filteredBroadcastContacts?.length
+                      {selectedBroadcastContacts.size === filteredBroadcastContacts?.length &&
+                      filteredBroadcastContacts?.length > 0
                         ? "Deselect All"
-                        : "Select All"}
+                        : "Select Loaded"}
                     </Button>
                   </div>
 
@@ -1075,38 +1131,66 @@ The unsubscribe link will be added automatically."
                   <div className="max-h-[400px] space-y-1 overflow-y-auto">
                     {!filteredBroadcastContacts || filteredBroadcastContacts.length === 0 ? (
                       <div className="py-8 text-center text-sm text-muted-foreground">
-                        No subscribed contacts found
+                        {isLoadingMoreBroadcast ? (
+                          <div className="flex items-center justify-center gap-2">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Loading contacts...
+                          </div>
+                        ) : (
+                          "No subscribed contacts found"
+                        )}
                       </div>
                     ) : (
-                      filteredBroadcastContacts.map((contact: any) => (
-                        <div
-                          key={contact._id}
-                          className={cn(
-                            "flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors",
-                            selectedBroadcastContacts.has(contact._id)
-                              ? "border-primary bg-primary/5"
-                              : "border-transparent hover:bg-muted/50"
-                          )}
-                          onClick={() => toggleBroadcastContactSelection(contact._id)}
-                        >
-                          <Checkbox
-                            checked={selectedBroadcastContacts.has(contact._id)}
-                            onCheckedChange={() => toggleBroadcastContactSelection(contact._id)}
-                          />
-                          <div className="min-w-0 flex-1">
-                            <div className="truncate text-sm font-medium">
-                              {contact.firstName || contact.lastName
-                                ? `${contact.firstName || ""} ${contact.lastName || ""}`.trim()
-                                : contact.email}
-                            </div>
-                            {(contact.firstName || contact.lastName) && (
-                              <div className="truncate text-xs text-muted-foreground">
-                                {contact.email}
-                              </div>
+                      <>
+                        {filteredBroadcastContacts.map((contact: any) => (
+                          <div
+                            key={contact._id}
+                            className={cn(
+                              "flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors",
+                              selectedBroadcastContacts.has(contact._id)
+                                ? "border-primary bg-primary/5"
+                                : "border-transparent hover:bg-muted/50"
                             )}
+                            onClick={() => toggleBroadcastContactSelection(contact._id)}
+                          >
+                            <Checkbox
+                              checked={selectedBroadcastContacts.has(contact._id)}
+                              onCheckedChange={() => toggleBroadcastContactSelection(contact._id)}
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate text-sm font-medium">
+                                {contact.firstName || contact.lastName
+                                  ? `${contact.firstName || ""} ${contact.lastName || ""}`.trim()
+                                  : contact.email}
+                              </div>
+                              {(contact.firstName || contact.lastName) && (
+                                <div className="truncate text-xs text-muted-foreground">
+                                  {contact.email}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      ))
+                        ))}
+                        {/* Load More Button */}
+                        {broadcastContactsResult?.hasMore && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="mt-2 w-full"
+                            onClick={handleLoadMoreBroadcastContacts}
+                            disabled={isLoadingMoreBroadcast}
+                          >
+                            {isLoadingMoreBroadcast ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Loading...
+                              </>
+                            ) : (
+                              <>Load More Contacts</>
+                            )}
+                          </Button>
+                        )}
+                      </>
                     )}
                   </div>
                 </CardContent>
