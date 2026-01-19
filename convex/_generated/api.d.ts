@@ -8741,8 +8741,14 @@ export declare const api: {
     retagAllContacts: FunctionReference<
       "mutation",
       "public",
-      { storeId: string },
-      { errors: number; processed: number; tagsAdded: number }
+      { batchSize?: number; cursor?: string; storeId: string },
+      {
+        done: boolean;
+        errors: number;
+        nextCursor: string | null;
+        processed: number;
+        tagsAdded: number;
+      }
     >;
   };
   emailCopyGenerator: {

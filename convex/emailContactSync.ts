@@ -49,6 +49,19 @@ function generateProductTagSlug(title: string): string {
     .replace(/^-|-$/g, ""); // Remove leading/trailing hyphens
 }
 
+/**
+ * Generate a URL-safe slug from a course title (used for course tags)
+ */
+function generateCourseTagSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "") // Remove special characters
+    .replace(/\s+/g, "-") // Replace spaces with hyphens
+    .replace(/-+/g, "-") // Replace multiple hyphens with single
+    .substring(0, 50) // Limit length
+    .replace(/^-|-$/g, ""); // Remove leading/trailing hyphens
+}
+
 function inferGenresFromText(text: string): string[] {
   const lowerText = text.toLowerCase();
   const matchedGenres: string[] = [];
@@ -476,8 +489,14 @@ export const syncContactFromEnrollment = internalMutation({
       throw new Error("Course not found");
     }
 
-    const tagsToAdd: string[] = ["interest:learning"];
+    const tagsToAdd: string[] = ["interest:learning", "student"];
     let skillLevelUpdated = false;
+
+    // Add course-specific tag using slug or generated slug from title
+    const courseSlug = course.slug || generateCourseTagSlug(course.title || "");
+    if (courseSlug) {
+      tagsToAdd.push(`course:${courseSlug}`);
+    }
 
     const textToAnalyze = [
       course.title || "",
@@ -944,30 +963,44 @@ export const getContactsByTags = query({
 });
 
 /**
- * Re-tag all contacts based on their purchase history, enrollments, and engagement.
- * This is useful for retroactively applying tags to existing contacts.
+ * Re-tag contacts based on their purchase history, enrollments, and engagement.
+ * This processes contacts in batches to avoid document read limits.
+ * Call repeatedly with cursor until done is true.
  */
 export const retagAllContacts = mutation({
   args: {
     storeId: v.string(),
+    cursor: v.optional(v.string()),
+    batchSize: v.optional(v.number()),
   },
   returns: v.object({
     processed: v.number(),
     tagsAdded: v.number(),
     errors: v.number(),
+    nextCursor: v.union(v.string(), v.null()),
+    done: v.boolean(),
   }),
   handler: async (ctx, args) => {
     let processed = 0;
     let tagsAdded = 0;
     let errors = 0;
+    const BATCH_SIZE = args.batchSize || 25; // Process 25 contacts at a time to stay well under limits
 
-    // Get all contacts for this store
-    const contacts = await ctx.db
+    // Get a batch of contacts for this store using pagination
+    let query = ctx.db
       .query("emailContacts")
-      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId));
 
-    // Get the actual store to find courses
+    const paginationResult = await query.paginate({
+      numItems: BATCH_SIZE,
+      cursor: args.cursor ? (args.cursor as any) : null,
+    });
+
+    const contacts = paginationResult.page;
+    const nextCursor = paginationResult.continueCursor;
+    const isDone = paginationResult.isDone;
+
+    // Get the actual store to find courses (only once per batch)
     const store = await ctx.db
       .query("stores")
       .withIndex("by_userId", (q) => q.eq("userId", args.storeId))
@@ -1022,11 +1055,19 @@ export const retagAllContacts = mutation({
                   tagsToAdd.push("interest:learning");
                   tagsToAdd.push("student");
 
+                  // Add course-specific tag
+                  const courseSlug = course.slug || generateCourseTagSlug(course.title || "");
+                  if (courseSlug) {
+                    tagsToAdd.push(`course:${courseSlug}`);
+                  }
+
                   if (course.skillLevel) {
                     tagsToAdd.push(`skill:${course.skillLevel}`);
                   }
                   if (course.category) {
-                    tagsToAdd.push(`category:${course.category.toLowerCase().replace(/\s+/g, "-")}`);
+                    tagsToAdd.push(
+                      `category:${course.category.toLowerCase().replace(/\s+/g, "-")}`
+                    );
                   }
 
                   const textToAnalyze = [
@@ -1050,6 +1091,12 @@ export const retagAllContacts = mutation({
               if (course) {
                 tagsToAdd.push("interest:learning");
                 tagsToAdd.push("student");
+
+                // Add course-specific tag
+                const courseSlug = course.slug || generateCourseTagSlug(course.title || "");
+                if (courseSlug) {
+                  tagsToAdd.push(`course:${courseSlug}`);
+                }
 
                 if (course.skillLevel) {
                   tagsToAdd.push(`skill:${course.skillLevel}`);
@@ -1179,6 +1226,8 @@ export const retagAllContacts = mutation({
       processed,
       tagsAdded,
       errors,
+      nextCursor: isDone ? null : nextCursor,
+      done: isDone,
     };
   },
 });

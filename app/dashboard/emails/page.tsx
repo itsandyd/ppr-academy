@@ -62,12 +62,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 function cn(...classes: (string | boolean | undefined)[]) {
   return classes.filter(Boolean).join(" ");
@@ -94,7 +89,12 @@ export default function EmailCampaignsPage() {
 
   const [newContact, setNewContact] = useState({ email: "", firstName: "", lastName: "" });
   const [newTag, setNewTag] = useState({ name: "", color: "#3b82f6", description: "" });
-  const [editingTag, setEditingTag] = useState<{ id: string; name: string; color: string; description: string } | null>(null);
+  const [editingTag, setEditingTag] = useState<{
+    id: string;
+    name: string;
+    color: string;
+    description: string;
+  } | null>(null);
 
   const storeId = user?.id ?? "";
 
@@ -171,7 +171,9 @@ export default function EmailCampaignsPage() {
   // Broadcast email state
   const [broadcastSubject, setBroadcastSubject] = useState("");
   const [broadcastContent, setBroadcastContent] = useState("");
-  const [selectedBroadcastContacts, setSelectedBroadcastContacts] = useState<Set<string>>(new Set());
+  const [selectedBroadcastContacts, setSelectedBroadcastContacts] = useState<Set<string>>(
+    new Set()
+  );
   const [isSendingBroadcast, setIsSendingBroadcast] = useState(false);
   const [broadcastSearchQuery, setBroadcastSearchQuery] = useState("");
   const [broadcastTagFilter, setBroadcastTagFilter] = useState<string | null>(null);
@@ -282,13 +284,26 @@ export default function EmailCampaignsPage() {
       }
 
       // Parse header to find column indices
-      const header = lines[0].toLowerCase().split(",").map((h) => h.trim());
-      const emailIdx = header.findIndex((h) => h === "email" || h === "e-mail" || h === "email address");
-      const firstNameIdx = header.findIndex((h) => h === "firstname" || h === "first name" || h === "first_name" || h === "name");
-      const lastNameIdx = header.findIndex((h) => h === "lastname" || h === "last name" || h === "last_name");
+      const header = lines[0]
+        .toLowerCase()
+        .split(",")
+        .map((h) => h.trim());
+      const emailIdx = header.findIndex(
+        (h) => h === "email" || h === "e-mail" || h === "email address"
+      );
+      const firstNameIdx = header.findIndex(
+        (h) => h === "firstname" || h === "first name" || h === "first_name" || h === "name"
+      );
+      const lastNameIdx = header.findIndex(
+        (h) => h === "lastname" || h === "last name" || h === "last_name"
+      );
 
       if (emailIdx === -1) {
-        toast({ title: "No email column found in CSV", description: "Make sure your CSV has an 'email' column", variant: "destructive" });
+        toast({
+          title: "No email column found in CSV",
+          description: "Make sure your CSV has an 'email' column",
+          variant: "destructive",
+        });
         return;
       }
 
@@ -382,11 +397,46 @@ export default function EmailCampaignsPage() {
 
   const handleRetagContacts = async () => {
     setIsRetagging(true);
+    let totalProcessed = 0;
+    let totalTagsAdded = 0;
+    let totalErrors = 0;
+    let cursor: string | null = null;
+    let batchCount = 0;
+    let isDone = false;
+
     try {
-      const result = await retagAllContacts({ storeId });
+      // Process in batches until done
+      while (!isDone) {
+        const result: {
+          processed: number;
+          tagsAdded: number;
+          errors: number;
+          nextCursor: string | null;
+          done: boolean;
+        } = await retagAllContacts({
+          storeId,
+          ...(cursor ? { cursor } : {}),
+        });
+
+        totalProcessed += result.processed;
+        totalTagsAdded += result.tagsAdded;
+        totalErrors += result.errors;
+        batchCount++;
+        isDone = result.done;
+        cursor = result.nextCursor;
+
+        // Show progress every 5 batches
+        if (batchCount % 5 === 0 && !isDone) {
+          toast({
+            title: "Re-tagging in progress...",
+            description: `Processed ${totalProcessed} contacts so far`,
+          });
+        }
+      }
+
       toast({
         title: "Re-tagging Complete",
-        description: `Processed ${result.processed} contacts, added ${result.tagsAdded} tags${result.errors > 0 ? `, ${result.errors} errors` : ""}`,
+        description: `Processed ${totalProcessed} contacts, added ${totalTagsAdded} tags${totalErrors > 0 ? `, ${totalErrors} errors` : ""}`,
       });
     } catch (error: any) {
       toast({
@@ -518,7 +568,12 @@ export default function EmailCampaignsPage() {
   };
 
   const handleEnrollAllByFilter = async (workflowId: string) => {
-    if (!confirm(`This will enroll ALL contacts matching the current filter to this automation. Continue?`)) return;
+    if (
+      !confirm(
+        `This will enroll ALL contacts matching the current filter to this automation. Continue?`
+      )
+    )
+      return;
     setIsEnrollingAll(true);
     try {
       const result = await bulkEnrollAllByFilter({
@@ -535,7 +590,7 @@ export default function EmailCampaignsPage() {
       toast({
         title: "Failed to enroll contacts",
         description: error.message || "Unknown error",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setIsEnrollingAll(false);
@@ -629,9 +684,9 @@ export default function EmailCampaignsPage() {
   // Go to next page
   const handleNextPage = () => {
     if (contactsResult?.nextCursor) {
-      setCursorHistory(prev => [...prev, contactsResult.nextCursor]);
+      setCursorHistory((prev) => [...prev, contactsResult.nextCursor]);
       setContactsCursor(contactsResult.nextCursor);
-      setCurrentPage(prev => prev + 1);
+      setCurrentPage((prev) => prev + 1);
     }
   };
 
@@ -640,8 +695,8 @@ export default function EmailCampaignsPage() {
     if (currentPage > 1) {
       const prevCursor = cursorHistory[currentPage - 2]; // Get cursor for previous page
       setContactsCursor(prevCursor);
-      setCursorHistory(prev => prev.slice(0, -1));
-      setCurrentPage(prev => prev - 1);
+      setCursorHistory((prev) => prev.slice(0, -1));
+      setCurrentPage((prev) => prev - 1);
     }
   };
 
@@ -764,7 +819,7 @@ export default function EmailCampaignsPage() {
             className="gap-1.5 rounded-md border border-transparent bg-muted px-3 py-1.5 text-sm data-[state=active]:border-border data-[state=active]:bg-background md:gap-2 md:border-0 md:bg-transparent md:px-4 md:py-2 md:data-[state=active]:border-0"
           >
             <Megaphone className="h-3.5 w-3.5 md:h-4 md:w-4" />
-            <span className="hidden xs:inline">Broadcast</span>
+            <span className="xs:inline hidden">Broadcast</span>
             <span className="xs:hidden">Send</span>
           </TabsTrigger>
           <TabsTrigger
@@ -908,12 +963,16 @@ The unsubscribe link will be added automatically."
                       onClick={() => setBroadcastTagFilter(null)}
                       className="h-7 text-xs"
                     >
-                      All ({allContactsResult?.contacts?.filter((c: any) => c.status === "subscribed").length || 0})
+                      All (
+                      {allContactsResult?.contacts?.filter((c: any) => c.status === "subscribed")
+                        .length || 0}
+                      )
                     </Button>
                     {tags?.map((tag: any) => {
-                      const count = allContactsResult?.contacts?.filter(
-                        (c: any) => c.status === "subscribed" && c.tagIds?.includes(tag._id)
-                      ).length || 0;
+                      const count =
+                        allContactsResult?.contacts?.filter(
+                          (c: any) => c.status === "subscribed" && c.tagIds?.includes(tag._id)
+                        ).length || 0;
                       return (
                         <Button
                           key={tag._id}
@@ -986,11 +1045,17 @@ The unsubscribe link will be added automatically."
                 <Users className="h-3 w-3" />
                 {(contactStats?.total || 0).toLocaleString()}
               </Badge>
-              <Badge variant="secondary" className="gap-1 px-2 py-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+              <Badge
+                variant="secondary"
+                className="gap-1 bg-green-100 px-2 py-1 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+              >
                 <CheckCircle2 className="h-3 w-3" />
                 {(contactStats?.subscribed || 0).toLocaleString()}
               </Badge>
-              <Badge variant="secondary" className="gap-1 px-2 py-1 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+              <Badge
+                variant="secondary"
+                className="gap-1 bg-amber-100 px-2 py-1 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+              >
                 {(contactStats?.unsubscribed || 0).toLocaleString()} unsub
               </Badge>
               <Badge variant="secondary" className="gap-1 px-2 py-1">
@@ -1002,19 +1067,25 @@ The unsubscribe link will be added automatically."
             <div className="hidden md:grid md:grid-cols-4 md:gap-3">
               <Card>
                 <CardContent className="p-3">
-                  <div className="text-xl font-bold">{(contactStats?.total || 0).toLocaleString()}</div>
+                  <div className="text-xl font-bold">
+                    {(contactStats?.total || 0).toLocaleString()}
+                  </div>
                   <div className="text-xs text-muted-foreground">Total Contacts</div>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-3">
-                  <div className="text-xl font-bold text-green-600">{(contactStats?.subscribed || 0).toLocaleString()}</div>
+                  <div className="text-xl font-bold text-green-600">
+                    {(contactStats?.subscribed || 0).toLocaleString()}
+                  </div>
                   <div className="text-xs text-muted-foreground">Subscribed</div>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-3">
-                  <div className="text-xl font-bold text-amber-600">{(contactStats?.unsubscribed || 0).toLocaleString()}</div>
+                  <div className="text-xl font-bold text-amber-600">
+                    {(contactStats?.unsubscribed || 0).toLocaleString()}
+                  </div>
                   <div className="text-xs text-muted-foreground">Unsubscribed</div>
                 </CardContent>
               </Card>
@@ -1035,7 +1106,12 @@ The unsubscribe link will be added automatically."
                   <span className="hidden sm:inline">Add Contact</span>
                   <span className="sm:hidden">Add</span>
                 </Button>
-                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setIsImportOpen(true)}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => setIsImportOpen(true)}
+                >
                   <Upload className="h-4 w-4" />
                   <span className="hidden sm:inline">Import</span>
                 </Button>
@@ -1089,27 +1165,29 @@ The unsubscribe link will be added automatically."
                 {/* Mobile/Tablet: Dropdown menu for admin actions */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="lg:hidden gap-1.5">
+                    <Button variant="outline" size="sm" className="gap-1.5 lg:hidden">
                       <MoreHorizontal className="h-4 w-4" />
                       <span className="hidden sm:inline">Actions</span>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-48">
                     <DropdownMenuItem onClick={handleSyncCustomers} disabled={isSyncing}>
-                      <RefreshCw className={cn("h-4 w-4 mr-2", isSyncing && "animate-spin")} />
+                      <RefreshCw className={cn("mr-2 h-4 w-4", isSyncing && "animate-spin")} />
                       {isSyncing ? "Syncing..." : "Sync Enrolled Users"}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleRetagContacts} disabled={isRetagging}>
-                      <Tag className={cn("h-4 w-4 mr-2", isRetagging && "animate-pulse")} />
+                      <Tag className={cn("mr-2 h-4 w-4", isRetagging && "animate-pulse")} />
                       {isRetagging ? "Re-tagging..." : "Re-tag All Contacts"}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleRecalculateStats} disabled={isRecalculating}>
-                      <RefreshCw className={cn("h-4 w-4 mr-2", isRecalculating && "animate-spin")} />
+                      <RefreshCw
+                        className={cn("mr-2 h-4 w-4", isRecalculating && "animate-spin")}
+                      />
                       {isRecalculating ? "Calculating..." : "Recalculate Stats"}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => setIsDedupOpen(true)}>
-                      <Trash2 className="h-4 w-4 mr-2" />
+                      <Trash2 className="mr-2 h-4 w-4" />
                       Remove Duplicates
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -1119,204 +1197,219 @@ The unsubscribe link will be added automatically."
           </div>
 
           {/* Dedup Dialog - moved outside the button area */}
-          <Dialog open={isDedupOpen} onOpenChange={(open) => {
-            setIsDedupOpen(open);
-            if (!open) setDuplicateInfo(null);
-          }}>
-                <DialogContent className="bg-white dark:bg-black max-w-lg">
-                  <DialogHeader>
-                    <DialogTitle>Remove Duplicate Contacts</DialogTitle>
-                    <DialogDescription>
-                      Find and remove duplicate contacts by email address. The oldest contact for each email will be kept.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    {!duplicateInfo ? (
-                      <div className="text-center">
-                        <p className="text-sm text-muted-foreground mb-4">
-                          Click &quot;Find Duplicates&quot; to scan your contacts for duplicates.
+          <Dialog
+            open={isDedupOpen}
+            onOpenChange={(open) => {
+              setIsDedupOpen(open);
+              if (!open) setDuplicateInfo(null);
+            }}
+          >
+            <DialogContent className="max-w-lg bg-white dark:bg-black">
+              <DialogHeader>
+                <DialogTitle>Remove Duplicate Contacts</DialogTitle>
+                <DialogDescription>
+                  Find and remove duplicate contacts by email address. The oldest contact for each
+                  email will be kept.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                {!duplicateInfo ? (
+                  <div className="text-center">
+                    <p className="mb-4 text-sm text-muted-foreground">
+                      Click &quot;Find Duplicates&quot; to scan your contacts for duplicates.
+                    </p>
+                    <Button
+                      onClick={handleFindDuplicates}
+                      disabled={isFindingDuplicates}
+                      className="gap-2"
+                    >
+                      {isFindingDuplicates ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Scanning...
+                        </>
+                      ) : (
+                        <>
+                          <Search className="h-4 w-4" />
+                          Find Duplicates
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-3 gap-4 text-center">
+                      <div className="rounded-lg border p-3">
+                        <div className="text-2xl font-bold">
+                          {duplicateInfo.totalContacts.toLocaleString()}
+                        </div>
+                        <div className="text-xs text-muted-foreground">Total Contacts</div>
+                      </div>
+                      <div className="rounded-lg border p-3">
+                        <div className="text-2xl font-bold">
+                          {duplicateInfo.uniqueEmails.toLocaleString()}
+                        </div>
+                        <div className="text-xs text-muted-foreground">Unique Emails</div>
+                      </div>
+                      <div className="rounded-lg border bg-destructive/10 p-3">
+                        <div className="text-2xl font-bold text-destructive">
+                          {duplicateInfo.duplicateCount.toLocaleString()}
+                        </div>
+                        <div className="text-xs text-muted-foreground">Duplicates</div>
+                      </div>
+                    </div>
+
+                    {duplicateInfo.topDuplicates.length > 0 && (
+                      <div>
+                        <h4 className="mb-2 text-sm font-medium">Top Duplicated Emails:</h4>
+                        <div className="max-h-40 space-y-1 overflow-y-auto text-sm">
+                          {duplicateInfo.topDuplicates.slice(0, 10).map((dup, i) => (
+                            <div
+                              key={i}
+                              className="flex items-center justify-between rounded bg-muted/50 px-2 py-1"
+                            >
+                              <span className="truncate">{dup.email}</span>
+                              <Badge variant="secondary">{dup.count}x</Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {duplicateInfo.duplicateCount > 0 && (
+                      <div className="border-t pt-2">
+                        <p className="mb-3 text-sm text-muted-foreground">
+                          This will delete{" "}
+                          <strong>{duplicateInfo.duplicateCount.toLocaleString()}</strong> duplicate
+                          contacts, keeping the oldest entry for each email.
                         </p>
                         <Button
-                          onClick={handleFindDuplicates}
-                          disabled={isFindingDuplicates}
-                          className="gap-2"
+                          variant="destructive"
+                          onClick={handleRemoveDuplicates}
+                          disabled={isRemovingDuplicates}
+                          className="w-full gap-2"
                         >
-                          {isFindingDuplicates ? (
+                          {isRemovingDuplicates ? (
                             <>
                               <Loader2 className="h-4 w-4 animate-spin" />
-                              Scanning...
+                              Removing Duplicates...
                             </>
                           ) : (
                             <>
-                              <Search className="h-4 w-4" />
-                              Find Duplicates
+                              <Trash2 className="h-4 w-4" />
+                              Remove {duplicateInfo.duplicateCount.toLocaleString()} Duplicates
                             </>
                           )}
                         </Button>
                       </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-3 gap-4 text-center">
-                          <div className="rounded-lg border p-3">
-                            <div className="text-2xl font-bold">{duplicateInfo.totalContacts.toLocaleString()}</div>
-                            <div className="text-xs text-muted-foreground">Total Contacts</div>
-                          </div>
-                          <div className="rounded-lg border p-3">
-                            <div className="text-2xl font-bold">{duplicateInfo.uniqueEmails.toLocaleString()}</div>
-                            <div className="text-xs text-muted-foreground">Unique Emails</div>
-                          </div>
-                          <div className="rounded-lg border p-3 bg-destructive/10">
-                            <div className="text-2xl font-bold text-destructive">{duplicateInfo.duplicateCount.toLocaleString()}</div>
-                            <div className="text-xs text-muted-foreground">Duplicates</div>
-                          </div>
-                        </div>
+                    )}
 
-                        {duplicateInfo.topDuplicates.length > 0 && (
-                          <div>
-                            <h4 className="text-sm font-medium mb-2">Top Duplicated Emails:</h4>
-                            <div className="max-h-40 overflow-y-auto space-y-1 text-sm">
-                              {duplicateInfo.topDuplicates.slice(0, 10).map((dup, i) => (
-                                <div key={i} className="flex justify-between items-center py-1 px-2 rounded bg-muted/50">
-                                  <span className="truncate">{dup.email}</span>
-                                  <Badge variant="secondary">{dup.count}x</Badge>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {duplicateInfo.duplicateCount > 0 && (
-                          <div className="pt-2 border-t">
-                            <p className="text-sm text-muted-foreground mb-3">
-                              This will delete <strong>{duplicateInfo.duplicateCount.toLocaleString()}</strong> duplicate contacts,
-                              keeping the oldest entry for each email.
-                            </p>
-                            <Button
-                              variant="destructive"
-                              onClick={handleRemoveDuplicates}
-                              disabled={isRemovingDuplicates}
-                              className="w-full gap-2"
-                            >
-                              {isRemovingDuplicates ? (
-                                <>
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                  Removing Duplicates...
-                                </>
-                              ) : (
-                                <>
-                                  <Trash2 className="h-4 w-4" />
-                                  Remove {duplicateInfo.duplicateCount.toLocaleString()} Duplicates
-                                </>
-                              )}
-                            </Button>
-                          </div>
-                        )}
-
-                        {duplicateInfo.duplicateCount === 0 && (
-                          <div className="text-center py-4 text-green-600">
-                            <CheckCircle2 className="h-8 w-8 mx-auto mb-2" />
-                            <p className="font-medium">No duplicates found!</p>
-                            <p className="text-sm text-muted-foreground">All contacts have unique email addresses.</p>
-                          </div>
-                        )}
+                    {duplicateInfo.duplicateCount === 0 && (
+                      <div className="py-4 text-center text-green-600">
+                        <CheckCircle2 className="mx-auto mb-2 h-8 w-8" />
+                        <p className="font-medium">No duplicates found!</p>
+                        <p className="text-sm text-muted-foreground">
+                          All contacts have unique email addresses.
+                        </p>
                       </div>
                     )}
                   </div>
-                </DialogContent>
-              </Dialog>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
 
           {/* Import Dialog Content */}
           <Dialog open={isImportOpen} onOpenChange={setIsImportOpen}>
-                <DialogContent className="bg-white dark:bg-black">
-                  <DialogHeader>
-                    <DialogTitle>Import Contacts</DialogTitle>
-                    <DialogDescription>
-                      Upload a CSV file with contacts. The file should have an &quot;email&quot; column, and optionally &quot;firstName&quot; and &quot;lastName&quot; columns.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="csv-file">CSV File</Label>
-                      <Input
-                        id="csv-file"
-                        type="file"
-                        accept=".csv"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleImportContacts(file);
-                        }}
-                        disabled={isImporting}
-                      />
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      <p className="font-medium">Expected format:</p>
-                      <code className="mt-1 block rounded bg-muted p-2">
-                        email,firstName,lastName<br />
-                        john@example.com,John,Doe<br />
-                        jane@example.com,Jane,Smith
-                      </code>
-                    </div>
-                  </div>
-                  {isImporting && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <RefreshCw className="h-4 w-4 animate-spin" />
-                      Importing contacts...
-                    </div>
-                  )}
-                </DialogContent>
-              </Dialog>
+            <DialogContent className="bg-white dark:bg-black">
+              <DialogHeader>
+                <DialogTitle>Import Contacts</DialogTitle>
+                <DialogDescription>
+                  Upload a CSV file with contacts. The file should have an &quot;email&quot; column,
+                  and optionally &quot;firstName&quot; and &quot;lastName&quot; columns.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="csv-file">CSV File</Label>
+                  <Input
+                    id="csv-file"
+                    type="file"
+                    accept=".csv"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleImportContacts(file);
+                    }}
+                    disabled={isImporting}
+                  />
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  <p className="font-medium">Expected format:</p>
+                  <code className="mt-1 block rounded bg-muted p-2">
+                    email,firstName,lastName
+                    <br />
+                    john@example.com,John,Doe
+                    <br />
+                    jane@example.com,Jane,Smith
+                  </code>
+                </div>
+              </div>
+              {isImporting && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  Importing contacts...
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
 
           {/* Create Contact Dialog Content */}
           <Dialog open={isCreateContactOpen} onOpenChange={setIsCreateContactOpen}>
-                <DialogContent className="bg-white dark:bg-black">
-                  <DialogHeader>
-                    <DialogTitle>Add Contact</DialogTitle>
-                    <DialogDescription>Add a new subscriber to your list</DialogDescription>
-                  </DialogHeader>
+            <DialogContent className="bg-white dark:bg-black">
+              <DialogHeader>
+                <DialogTitle>Add Contact</DialogTitle>
+                <DialogDescription>Add a new subscriber to your list</DialogDescription>
+              </DialogHeader>
 
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label>Email *</Label>
-                      <Input
-                        type="email"
-                        placeholder="email@example.com"
-                        value={newContact.email}
-                        onChange={(e) => setNewContact({ ...newContact, email: e.target.value })}
-                      />
-                    </div>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Email *</Label>
+                  <Input
+                    type="email"
+                    placeholder="email@example.com"
+                    value={newContact.email}
+                    onChange={(e) => setNewContact({ ...newContact, email: e.target.value })}
+                  />
+                </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>First Name</Label>
-                        <Input
-                          placeholder="John"
-                          value={newContact.firstName}
-                          onChange={(e) =>
-                            setNewContact({ ...newContact, firstName: e.target.value })
-                          }
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Last Name</Label>
-                        <Input
-                          placeholder="Doe"
-                          value={newContact.lastName}
-                          onChange={(e) =>
-                            setNewContact({ ...newContact, lastName: e.target.value })
-                          }
-                        />
-                      </div>
-                    </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>First Name</Label>
+                    <Input
+                      placeholder="John"
+                      value={newContact.firstName}
+                      onChange={(e) => setNewContact({ ...newContact, firstName: e.target.value })}
+                    />
                   </div>
+                  <div className="space-y-2">
+                    <Label>Last Name</Label>
+                    <Input
+                      placeholder="Doe"
+                      value={newContact.lastName}
+                      onChange={(e) => setNewContact({ ...newContact, lastName: e.target.value })}
+                    />
+                  </div>
+                </div>
+              </div>
 
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsCreateContactOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button onClick={handleCreateContact}>Add Contact</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsCreateContactOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleCreateContact}>Add Contact</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
             <div className="relative flex-1 md:max-w-sm">
@@ -1371,10 +1464,14 @@ The unsubscribe link will be added automatically."
           ) : (
             <>
               {/* Bulk Action Bar */}
-              <Card className={cn(
-                "sticky top-0 z-10 shadow-md",
-                selectedContacts.size > 0 ? "border-primary bg-primary/10" : "border-border bg-muted/50"
-              )}>
+              <Card
+                className={cn(
+                  "sticky top-0 z-10 shadow-md",
+                  selectedContacts.size > 0
+                    ? "border-primary bg-primary/10"
+                    : "border-border bg-muted/50"
+                )}
+              >
                 <CardContent className="flex flex-wrap items-center justify-between gap-2 p-3">
                   <div className="flex items-center gap-3">
                     {selectedContacts.size > 0 ? (
@@ -1388,7 +1485,8 @@ The unsubscribe link will be added automatically."
                       </>
                     ) : (
                       <span className="text-sm text-muted-foreground">
-                        Select contacts or enroll all {noTagsFilter ? "untagged" : selectedTagFilter ? "filtered" : ""} contacts
+                        Select contacts or enroll all{" "}
+                        {noTagsFilter ? "untagged" : selectedTagFilter ? "filtered" : ""} contacts
                       </span>
                     )}
                   </div>
@@ -1397,7 +1495,12 @@ The unsubscribe link will be added automatically."
                       <>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button size="sm" disabled={isAddingTag} variant="outline" className="gap-2">
+                            <Button
+                              size="sm"
+                              disabled={isAddingTag}
+                              variant="outline"
+                              className="gap-2"
+                            >
                               <Tag className="h-4 w-4" />
                               {isAddingTag ? "Adding..." : "Add Tag"}
                             </Button>
@@ -1424,7 +1527,12 @@ The unsubscribe link will be added automatically."
                         </DropdownMenu>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button size="sm" disabled={isEnrolling} variant="outline" className="gap-2">
+                            <Button
+                              size="sm"
+                              disabled={isEnrolling}
+                              variant="outline"
+                              className="gap-2"
+                            >
                               <Workflow className="h-4 w-4" />
                               {isEnrolling ? "Enrolling..." : "Add Selected"}
                             </Button>
@@ -1476,7 +1584,8 @@ The unsubscribe link will be added automatically."
                       </DropdownMenuTrigger>
                       <DropdownMenuContent className="bg-white dark:bg-black">
                         <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                          Enroll ALL {noTagsFilter ? "untagged" : selectedTagFilter ? "filtered" : ""} contacts
+                          Enroll ALL{" "}
+                          {noTagsFilter ? "untagged" : selectedTagFilter ? "filtered" : ""} contacts
                         </div>
                         <DropdownMenuSeparator />
                         {workflows && workflows.length > 0 ? (
@@ -1594,10 +1703,11 @@ The unsubscribe link will be added automatically."
                         </DropdownMenu>
                       </div>
                       {(() => {
-                        const uniqueTags = contact.tags?.filter(
-                          (tag: any, index: number, self: any[]) =>
-                            index === self.findIndex((t) => t._id === tag._id)
-                        ) || [];
+                        const uniqueTags =
+                          contact.tags?.filter(
+                            (tag: any, index: number, self: any[]) =>
+                              index === self.findIndex((t) => t._id === tag._id)
+                          ) || [];
                         return (
                           <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-border/50 pt-2">
                             <span className="text-[10px] text-muted-foreground">
@@ -1713,10 +1823,11 @@ The unsubscribe link will be added automatically."
                           </td>
                           <td className="p-4">
                             {(() => {
-                              const uniqueTags = contact.tags?.filter(
-                                (tag: any, index: number, self: any[]) =>
-                                  index === self.findIndex((t) => t._id === tag._id)
-                              ) || [];
+                              const uniqueTags =
+                                contact.tags?.filter(
+                                  (tag: any, index: number, self: any[]) =>
+                                    index === self.findIndex((t) => t._id === tag._id)
+                                ) || [];
                               return (
                                 <div className="flex flex-wrap gap-1">
                                   {uniqueTags.slice(0, 3).map((tag: any) => (
@@ -1733,7 +1844,10 @@ The unsubscribe link will be added automatically."
                                     <TooltipProvider>
                                       <Tooltip>
                                         <TooltipTrigger asChild>
-                                          <Badge variant="outline" className="cursor-pointer text-xs">
+                                          <Badge
+                                            variant="outline"
+                                            className="cursor-pointer text-xs"
+                                          >
                                             +{uniqueTags.length - 3}
                                           </Badge>
                                         </TooltipTrigger>
@@ -1829,7 +1943,9 @@ The unsubscribe link will be added automatically."
               <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
                 <div className="text-sm text-muted-foreground">
                   Page {currentPage} · Showing {loadedContacts.length} contacts per page
-                  {contactStats?.total ? ` · ${contactStats.total.toLocaleString()}${contactStats.isEstimate ? '+' : ''} total` : ''}
+                  {contactStats?.total
+                    ? ` · ${contactStats.total.toLocaleString()}${contactStats.isEstimate ? "+" : ""} total`
+                    : ""}
                 </div>
                 <div className="flex items-center gap-2">
                   <Button
@@ -1840,9 +1956,7 @@ The unsubscribe link will be added automatically."
                   >
                     Previous
                   </Button>
-                  <span className="px-3 py-1 text-sm font-medium">
-                    {currentPage}
-                  </span>
+                  <span className="px-3 py-1 text-sm font-medium">{currentPage}</span>
                   <Button
                     variant="outline"
                     size="sm"
@@ -2002,12 +2116,14 @@ The unsubscribe link will be added automatically."
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="bg-white dark:bg-black">
                           <DropdownMenuItem
-                            onClick={() => setEditingTag({
-                              id: tag._id,
-                              name: tag.name,
-                              color: tag.color || "#3b82f6",
-                              description: tag.description || "",
-                            })}
+                            onClick={() =>
+                              setEditingTag({
+                                id: tag._id,
+                                name: tag.name,
+                                color: tag.color || "#3b82f6",
+                                description: tag.description || "",
+                              })
+                            }
                           >
                             Edit Tag
                           </DropdownMenuItem>
@@ -2055,7 +2171,7 @@ The unsubscribe link will be added automatically."
                     id="edit-tag-name"
                     value={editingTag?.name || ""}
                     onChange={(e) =>
-                      setEditingTag((prev) => prev ? { ...prev, name: e.target.value } : null)
+                      setEditingTag((prev) => (prev ? { ...prev, name: e.target.value } : null))
                     }
                     placeholder="e.g., VIP Customer"
                   />
@@ -2068,14 +2184,14 @@ The unsubscribe link will be added automatically."
                       type="color"
                       value={editingTag?.color || "#3b82f6"}
                       onChange={(e) =>
-                        setEditingTag((prev) => prev ? { ...prev, color: e.target.value } : null)
+                        setEditingTag((prev) => (prev ? { ...prev, color: e.target.value } : null))
                       }
                       className="h-10 w-20 cursor-pointer p-1"
                     />
                     <Input
                       value={editingTag?.color || "#3b82f6"}
                       onChange={(e) =>
-                        setEditingTag((prev) => prev ? { ...prev, color: e.target.value } : null)
+                        setEditingTag((prev) => (prev ? { ...prev, color: e.target.value } : null))
                       }
                       className="flex-1"
                       placeholder="#3b82f6"
@@ -2088,7 +2204,9 @@ The unsubscribe link will be added automatically."
                     id="edit-tag-description"
                     value={editingTag?.description || ""}
                     onChange={(e) =>
-                      setEditingTag((prev) => prev ? { ...prev, description: e.target.value } : null)
+                      setEditingTag((prev) =>
+                        prev ? { ...prev, description: e.target.value } : null
+                      )
                     }
                     placeholder="What is this tag used for?"
                     rows={2}
