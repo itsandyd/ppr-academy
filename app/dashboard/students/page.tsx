@@ -113,6 +113,51 @@ export default function StudentsPage() {
     store?._id ? { storeId: store._id } : "skip"
   );
 
+  // Extract all unique products from students for the filter dropdown
+  // Must be called before any early returns to follow React hooks rules
+  const allProducts = useMemo(() => {
+    if (!students) return [];
+    const productMap = new Map<string, { id: string; title: string; type: string }>();
+    for (const student of students) {
+      for (const product of student.products || []) {
+        if (!productMap.has(product.productId)) {
+          productMap.set(product.productId, {
+            id: product.productId,
+            title: product.productTitle,
+            type: product.productType,
+          });
+        }
+      }
+    }
+    return Array.from(productMap.values()).sort((a, b) =>
+      a.title.localeCompare(b.title)
+    );
+  }, [students]);
+
+  // Filter students based on search and product filter
+  // Must be called before any early returns to follow React hooks rules
+  const filteredStudents: Student[] = useMemo(() => {
+    if (!students) return [];
+    return students.filter((student) => {
+      // Apply search filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const matchesSearch =
+          student.name?.toLowerCase().includes(query) ||
+          student.email?.toLowerCase().includes(query);
+        if (!matchesSearch) return false;
+      }
+
+      // Apply product filter
+      if (productFilter && productFilter !== "all") {
+        const hasProduct = student.products?.some(p => p.productId === productFilter);
+        if (!hasProduct) return false;
+      }
+
+      return true;
+    });
+  }, [students, searchQuery, productFilter]);
+
   const toggleStudentExpanded = (studentId: string) => {
     setExpandedStudents((prev) => {
       const newSet = new Set(prev);
@@ -157,46 +202,6 @@ export default function StudentsPage() {
       </div>
     );
   }
-
-  // Extract all unique products from students for the filter dropdown
-  const allProducts = useMemo(() => {
-    if (!students) return [];
-    const productMap = new Map<string, { id: string; title: string; type: string }>();
-    for (const student of students) {
-      for (const product of student.products || []) {
-        if (!productMap.has(product.productId)) {
-          productMap.set(product.productId, {
-            id: product.productId,
-            title: product.productTitle,
-            type: product.productType,
-          });
-        }
-      }
-    }
-    return Array.from(productMap.values()).sort((a, b) =>
-      a.title.localeCompare(b.title)
-    );
-  }, [students]);
-
-  // Filter students based on search and product filter
-  const filteredStudents: Student[] = students?.filter((student) => {
-    // Apply search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      const matchesSearch =
-        student.name?.toLowerCase().includes(query) ||
-        student.email?.toLowerCase().includes(query);
-      if (!matchesSearch) return false;
-    }
-
-    // Apply product filter
-    if (productFilter && productFilter !== "all") {
-      const hasProduct = student.products?.some(p => p.productId === productFilter);
-      if (!hasProduct) return false;
-    }
-
-    return true;
-  }) ?? [];
 
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleDateString("en-US", {
