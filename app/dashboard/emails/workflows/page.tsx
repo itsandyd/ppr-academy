@@ -40,6 +40,9 @@ import {
   Power,
   Users,
   Clock,
+  Mail,
+  Grid3X3,
+  FileText,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
@@ -248,6 +251,8 @@ export default function WorkflowBuilderPage() {
   const [isSavingTemplate, setIsSavingTemplate] = useState(false);
   const [templateName, setTemplateName] = useState("");
   const [isEmailEditorOpen, setIsEmailEditorOpen] = useState(false);
+  const [isTemplateBrowserOpen, setIsTemplateBrowserOpen] = useState(false);
+  const [templateCategoryFilter, setTemplateCategoryFilter] = useState<string | null>(null);
 
   // Get user's store
   const store = useQuery(
@@ -1453,46 +1458,40 @@ export default function WorkflowBuilderPage() {
                   </TabsList>
 
                   <TabsContent value="template" className="mt-4 space-y-4">
-                    <div className="space-y-2">
-                      <Label>Select Template</Label>
-                      <Select
-                        value={selectedNode.data.templateId || ""}
-                        onValueChange={(v) => {
-                          const template = emailTemplates?.find((t: any) => t._id === v);
-                          updateNodeData(selectedNode.id, {
-                            templateId: v,
-                            templateName: template?.name,
-                            subject: template?.subject,
-                          });
-                        }}
-                      >
-                        <SelectTrigger className="bg-white dark:bg-black">
-                          <SelectValue placeholder="Choose a template..." />
-                        </SelectTrigger>
-                        <SelectContent className="bg-white dark:bg-black">
-                          {emailTemplates && emailTemplates.length > 0 ? (
-                            emailTemplates.map((template: any) => (
-                              <SelectItem key={template._id} value={template._id}>
-                                {template.name}
-                                {template.category && (
-                                  <span className="ml-2 text-xs text-zinc-500">
-                                    ({template.category})
-                                  </span>
-                                )}
-                              </SelectItem>
-                            ))
-                          ) : (
-                            <div className="px-2 py-1.5 text-sm text-zinc-500">
-                              No templates found. Create one using Custom Email.
+                    {/* Selected Template Preview */}
+                    {selectedNode.data.templateId && selectedNode.data.subject ? (
+                      <div className="space-y-3">
+                        <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <p className="text-xs text-zinc-500">Selected Template</p>
+                              <p className="font-medium">{selectedNode.data.templateName}</p>
+                              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                                Subject: {selectedNode.data.subject}
+                              </p>
                             </div>
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    {selectedNode.data.templateId && selectedNode.data.subject && (
-                      <div className="rounded-md border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
-                        <p className="text-xs text-zinc-500">Subject:</p>
-                        <p className="text-lg font-medium">{selectedNode.data.subject}</p>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setIsTemplateBrowserOpen(true)}
+                            >
+                              Change
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="rounded-lg border-2 border-dashed border-zinc-300 bg-zinc-50 p-6 text-center dark:border-zinc-700 dark:bg-zinc-900">
+                          <Mail className="mx-auto mb-2 h-8 w-8 text-zinc-400" />
+                          <p className="mb-3 text-sm text-zinc-600 dark:text-zinc-400">
+                            No template selected
+                          </p>
+                          <Button onClick={() => setIsTemplateBrowserOpen(true)} className="gap-2">
+                            <Search className="h-4 w-4" />
+                            Browse Templates
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </TabsContent>
@@ -1559,6 +1558,128 @@ export default function WorkflowBuilderPage() {
 
             <DialogFooter>
               <Button onClick={() => setIsEmailEditorOpen(false)}>Done</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Template Browser Dialog */}
+        <Dialog open={isTemplateBrowserOpen} onOpenChange={setIsTemplateBrowserOpen}>
+          <DialogContent className="max-h-[85vh] max-w-3xl overflow-hidden bg-white dark:bg-black">
+            <DialogHeader>
+              <DialogTitle>Select Email Template</DialogTitle>
+              <DialogDescription>Choose a template to use for this email node</DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-2">
+              {/* Category Filter */}
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant={templateCategoryFilter === null ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setTemplateCategoryFilter(null)}
+                  className="gap-1.5"
+                >
+                  <Grid3X3 className="h-3.5 w-3.5" />
+                  All
+                </Button>
+                {(() => {
+                  const categories = [
+                    ...new Set(
+                      emailTemplates
+                        ?.map((t: any) => t.category)
+                        .filter((c: string | undefined) => c)
+                    ),
+                  ] as string[];
+                  return categories.map((category) => (
+                    <Button
+                      key={category}
+                      variant={templateCategoryFilter === category ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setTemplateCategoryFilter(category)}
+                      className="capitalize"
+                    >
+                      {category}
+                    </Button>
+                  ));
+                })()}
+              </div>
+
+              {/* Templates Grid */}
+              <div className="max-h-[50vh] overflow-y-auto">
+                {emailTemplates && emailTemplates.length > 0 ? (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {emailTemplates
+                      .filter(
+                        (t: any) => !templateCategoryFilter || t.category === templateCategoryFilter
+                      )
+                      .map((template: any) => (
+                        <div
+                          key={template._id}
+                          className={`cursor-pointer rounded-lg border p-4 transition-all hover:border-primary hover:shadow-md ${
+                            selectedNode?.data.templateId === template._id
+                              ? "border-primary bg-primary/5 ring-1 ring-primary"
+                              : "border-zinc-200 dark:border-zinc-800"
+                          }`}
+                          onClick={() => {
+                            if (selectedNode) {
+                              updateNodeData(selectedNode.id, {
+                                templateId: template._id,
+                                templateName: template.name,
+                                subject: template.subject,
+                              });
+                            }
+                            setIsTemplateBrowserOpen(false);
+                          }}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                              <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="truncate font-medium">{template.name}</span>
+                                {template.category && (
+                                  <span className="shrink-0 rounded bg-zinc-100 px-1.5 py-0.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+                                    {template.category}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="mt-1 truncate text-sm text-zinc-500">
+                                {template.subject}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                ) : (
+                  <div className="py-12 text-center">
+                    <Mail className="mx-auto mb-3 h-12 w-12 text-zinc-300 dark:text-zinc-700" />
+                    <h3 className="font-medium text-zinc-900 dark:text-zinc-100">
+                      No templates yet
+                    </h3>
+                    <p className="mt-1 text-sm text-zinc-500">
+                      Create your first template using the Custom Email option
+                    </p>
+                  </div>
+                )}
+
+                {emailTemplates &&
+                  emailTemplates.length > 0 &&
+                  emailTemplates.filter(
+                    (t: any) => !templateCategoryFilter || t.category === templateCategoryFilter
+                  ).length === 0 && (
+                    <div className="py-8 text-center text-sm text-zinc-500">
+                      No templates in this category
+                    </div>
+                  )}
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsTemplateBrowserOpen(false)}>
+                Cancel
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
