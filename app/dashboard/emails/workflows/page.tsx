@@ -90,9 +90,7 @@ function ContactsAtNodeList({
         >
           <div className="min-w-0 flex-1">
             <div className="truncate font-medium">{contact.name || contact.email}</div>
-            {contact.name && (
-              <div className="truncate text-muted-foreground">{contact.email}</div>
-            )}
+            {contact.name && <div className="truncate text-muted-foreground">{contact.email}</div>}
           </div>
           <div className="ml-2 flex items-center gap-2">
             {contact.scheduledFor && (
@@ -251,10 +249,11 @@ export default function WorkflowBuilderPage() {
   const storeId = user?.id || "";
 
   // Check if user has access to automations feature
-  const { hasAccess, isLoading: featureLoading, UpgradePromptComponent } = useFeatureAccess(
-    store?._id,
-    "automations"
-  );
+  const {
+    hasAccess,
+    isLoading: featureLoading,
+    UpgradePromptComponent,
+  } = useFeatureAccess(store?._id, "automations");
 
   const emailTemplates = useQuery(
     api.emailWorkflows.listEmailTemplates,
@@ -270,6 +269,16 @@ export default function WorkflowBuilderPage() {
   const contacts = contactsResult?.contacts;
 
   const tags = useQuery(api.emailTags.listTags, storeId ? { storeId } : "skip");
+
+  // Get products and courses for trigger configuration
+  const products = useQuery(
+    api.digitalProducts.getProductsByStore,
+    store?._id ? { storeId: store._id } : "skip"
+  );
+  const courses = useQuery(
+    api.courses.getCoursesByStore,
+    store?._id ? { storeId: store._id } : "skip"
+  );
 
   const nodeExecutionCounts = useQuery(
     api.emailWorkflows.getNodeExecutionCounts,
@@ -508,7 +517,7 @@ export default function WorkflowBuilderPage() {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto mb-4" />
+          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
           <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
@@ -519,13 +528,14 @@ export default function WorkflowBuilderPage() {
   if (!hasAccess) {
     return (
       <div className="flex h-screen flex-col items-center justify-center p-8">
-        <div className="max-w-md text-center space-y-6">
-          <div className="mx-auto w-16 h-16 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+        <div className="max-w-md space-y-6 text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
             <AlertTriangle className="h-8 w-8 text-amber-600 dark:text-amber-400" />
           </div>
           <h1 className="text-2xl font-bold">Email Automations</h1>
           <p className="text-muted-foreground">
-            Email automation workflows are a Creator Pro feature. Upgrade your plan to create automated email sequences that nurture your leads and customers.
+            Email automation workflows are a Creator Pro feature. Upgrade your plan to create
+            automated email sequences that nurture your leads and customers.
           </p>
           <div className="space-y-3">
             <Button
@@ -658,23 +668,156 @@ export default function WorkflowBuilderPage() {
             {selectedNode && (
               <div className="mt-6 space-y-4">
                 {selectedNode.type === "trigger" && (
-                  <div className="space-y-2">
-                    <Label>Trigger Type</Label>
-                    <Select
-                      value={selectedNode.data.triggerType || "lead_signup"}
-                      onValueChange={(v) => updateNodeData(selectedNode.id, { triggerType: v })}
-                    >
-                      <SelectTrigger className="bg-white dark:bg-black">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white dark:bg-black">
-                        {triggerOptions.map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Trigger Type</Label>
+                      <Select
+                        value={selectedNode.data.triggerType || "lead_signup"}
+                        onValueChange={(v) =>
+                          updateNodeData(selectedNode.id, {
+                            triggerType: v,
+                            // Reset product/course/tag selection when changing trigger type
+                            productId: undefined,
+                            courseId: undefined,
+                            tagId: undefined,
+                          })
+                        }
+                      >
+                        <SelectTrigger className="bg-white dark:bg-black">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white dark:bg-black">
+                          {triggerOptions.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Product Purchased - show product/course selector */}
+                    {selectedNode.data.triggerType === "product_purchase" && (
+                      <div className="space-y-2">
+                        <Label>Which Product/Course?</Label>
+                        <Select
+                          value={
+                            selectedNode.data.productId
+                              ? `product:${selectedNode.data.productId}`
+                              : selectedNode.data.courseId
+                                ? `course:${selectedNode.data.courseId}`
+                                : "any"
+                          }
+                          onValueChange={(v) => {
+                            if (v === "any") {
+                              updateNodeData(selectedNode.id, {
+                                productId: undefined,
+                                productName: undefined,
+                                courseId: undefined,
+                                courseName: undefined,
+                              });
+                            } else if (v.startsWith("product:")) {
+                              const productId = v.replace("product:", "");
+                              const product = products?.find((p: any) => p._id === productId);
+                              updateNodeData(selectedNode.id, {
+                                productId,
+                                productName: product?.title,
+                                courseId: undefined,
+                                courseName: undefined,
+                              });
+                            } else if (v.startsWith("course:")) {
+                              const courseId = v.replace("course:", "");
+                              const course = courses?.find((c: any) => c._id === courseId);
+                              updateNodeData(selectedNode.id, {
+                                courseId,
+                                courseName: course?.title,
+                                productId: undefined,
+                                productName: undefined,
+                              });
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="bg-white dark:bg-black">
+                            <SelectValue placeholder="Select product or course..." />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-[300px] bg-white dark:bg-black">
+                            <SelectItem value="any">Any product or course</SelectItem>
+                            {courses && courses.length > 0 && (
+                              <>
+                                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                                  Courses
+                                </div>
+                                {courses.map((course: any) => (
+                                  <SelectItem key={course._id} value={`course:${course._id}`}>
+                                    {course.title}
+                                  </SelectItem>
+                                ))}
+                              </>
+                            )}
+                            {products && products.length > 0 && (
+                              <>
+                                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                                  Digital Products
+                                </div>
+                                {products.map((product: any) => (
+                                  <SelectItem key={product._id} value={`product:${product._id}`}>
+                                    {product.title}
+                                  </SelectItem>
+                                ))}
+                              </>
+                            )}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">
+                          Choose a specific product/course or trigger on any purchase
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Tag Added - show tag selector */}
+                    {selectedNode.data.triggerType === "tag_added" && (
+                      <div className="space-y-2">
+                        <Label>Which Tag?</Label>
+                        <Select
+                          value={selectedNode.data.tagId || "any"}
+                          onValueChange={(v) => {
+                            if (v === "any") {
+                              updateNodeData(selectedNode.id, {
+                                tagId: undefined,
+                                tagName: undefined,
+                              });
+                            } else {
+                              const tag = tags?.find((t: any) => t._id === v);
+                              updateNodeData(selectedNode.id, {
+                                tagId: v,
+                                tagName: tag?.name,
+                              });
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="bg-white dark:bg-black">
+                            <SelectValue placeholder="Select a tag..." />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white dark:bg-black">
+                            <SelectItem value="any">Any tag</SelectItem>
+                            {tags?.map((tag: { _id: string; name: string; color?: string }) => (
+                              <SelectItem key={tag._id} value={tag._id}>
+                                <div className="flex items-center gap-2">
+                                  <div
+                                    className="h-2 w-2 rounded-full"
+                                    style={{ backgroundColor: tag.color || "#6b7280" }}
+                                  />
+                                  {tag.name}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">
+                          Trigger when this tag is added to a contact
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -697,10 +840,7 @@ export default function WorkflowBuilderPage() {
                       )}
                     </div>
 
-                    <Button
-                      className="w-full"
-                      onClick={() => setIsEmailEditorOpen(true)}
-                    >
+                    <Button className="w-full" onClick={() => setIsEmailEditorOpen(true)}>
                       {selectedNode.data.subject ? "Edit Email" : "Configure Email"}
                     </Button>
 
@@ -759,7 +899,8 @@ export default function WorkflowBuilderPage() {
                       <div className="rounded-md border bg-orange-50 p-3 dark:bg-orange-900/20">
                         <div className="mb-2 flex items-center gap-2 text-sm font-medium text-orange-700 dark:text-orange-300">
                           <Users className="h-4 w-4" />
-                          {selectedNode.data.waitingCount} contact{selectedNode.data.waitingCount !== 1 ? "s" : ""} waiting
+                          {selectedNode.data.waitingCount} contact
+                          {selectedNode.data.waitingCount !== 1 ? "s" : ""} waiting
                         </div>
                         <ContactsAtNodeList
                           workflowId={workflowId as Id<"emailWorkflows">}
@@ -850,7 +991,9 @@ export default function WorkflowBuilderPage() {
                         <Label>Link URL (optional)</Label>
                         <Input
                           value={selectedNode.data.linkUrl || ""}
-                          onChange={(e) => updateNodeData(selectedNode.id, { linkUrl: e.target.value })}
+                          onChange={(e) =>
+                            updateNodeData(selectedNode.id, { linkUrl: e.target.value })
+                          }
                           placeholder="Leave empty for any link"
                         />
                         <p className="text-xs text-muted-foreground">
@@ -865,14 +1008,20 @@ export default function WorkflowBuilderPage() {
                         <Label>Time Condition</Label>
                         <Select
                           value={selectedNode.data.timeCondition || "after_hours"}
-                          onValueChange={(v) => updateNodeData(selectedNode.id, { timeCondition: v })}
+                          onValueChange={(v) =>
+                            updateNodeData(selectedNode.id, { timeCondition: v })
+                          }
                         >
                           <SelectTrigger className="bg-white dark:bg-black">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent className="bg-white dark:bg-black">
-                            <SelectItem value="after_hours">After X hours since enrollment</SelectItem>
-                            <SelectItem value="after_days">After X days since enrollment</SelectItem>
+                            <SelectItem value="after_hours">
+                              After X hours since enrollment
+                            </SelectItem>
+                            <SelectItem value="after_days">
+                              After X days since enrollment
+                            </SelectItem>
                             <SelectItem value="day_of_week">On specific day of week</SelectItem>
                           </SelectContent>
                         </Select>
@@ -883,7 +1032,9 @@ export default function WorkflowBuilderPage() {
                             min="1"
                             value={selectedNode.data.timeValue || 24}
                             onChange={(e) =>
-                              updateNodeData(selectedNode.id, { timeValue: parseInt(e.target.value) || 1 })
+                              updateNodeData(selectedNode.id, {
+                                timeValue: parseInt(e.target.value) || 1,
+                              })
                             }
                           />
                         )}
@@ -949,7 +1100,9 @@ export default function WorkflowBuilderPage() {
                           <Label>Value</Label>
                           <Input
                             value={selectedNode.data.value || ""}
-                            onChange={(e) => updateNodeData(selectedNode.id, { value: e.target.value })}
+                            onChange={(e) =>
+                              updateNodeData(selectedNode.id, { value: e.target.value })
+                            }
                             placeholder="List name, field value, etc."
                           />
                         </div>
@@ -1197,7 +1350,7 @@ export default function WorkflowBuilderPage() {
 
         {/* Email Editor Dialog */}
         <Dialog open={isEmailEditorOpen} onOpenChange={setIsEmailEditorOpen}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-black">
+          <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto bg-white dark:bg-black">
             <DialogHeader>
               <DialogTitle>Configure Email</DialogTitle>
               <DialogDescription>
@@ -1325,9 +1478,7 @@ export default function WorkflowBuilderPage() {
             )}
 
             <DialogFooter>
-              <Button onClick={() => setIsEmailEditorOpen(false)}>
-                Done
-              </Button>
+              <Button onClick={() => setIsEmailEditorOpen(false)}>Done</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

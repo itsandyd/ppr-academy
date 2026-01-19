@@ -13,6 +13,10 @@ import ReactFlow, {
   BackgroundVariant,
   ReactFlowProvider,
   ReactFlowInstance,
+  applyNodeChanges,
+  applyEdgeChanges,
+  NodeChange,
+  EdgeChange,
 } from "reactflow";
 import "reactflow/dist/style.css";
 
@@ -76,8 +80,8 @@ function WorkflowCanvasInner({
   onAddNodeRef,
 }: WorkflowCanvasProps) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes] = useNodesState([]);
+  const [edges, setEdges] = useEdgesState([]);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
   const [initialized, setInitialized] = useState(false);
 
@@ -172,23 +176,29 @@ function WorkflowCanvasInner({
   );
 
   const handleNodesChange = useCallback(
-    (changes: Parameters<typeof onNodesChange>[0]) => {
-      onNodesChange(changes);
-      setTimeout(() => {
-        onNodesChangeCallback?.(nodes);
-      }, 0);
+    (changes: NodeChange[]) => {
+      // Apply changes and get the new nodes
+      setNodes((nds) => {
+        const updatedNodes = applyNodeChanges(changes, nds);
+        // Notify parent with updated nodes
+        onNodesChangeCallback?.(updatedNodes);
+        return updatedNodes;
+      });
     },
-    [onNodesChange, onNodesChangeCallback, nodes]
+    [setNodes, onNodesChangeCallback]
   );
 
   const handleEdgesChange = useCallback(
-    (changes: Parameters<typeof onEdgesChange>[0]) => {
-      onEdgesChange(changes);
-      setTimeout(() => {
-        onEdgesChangeCallback?.(edges);
-      }, 0);
+    (changes: EdgeChange[]) => {
+      // Apply changes and get the new edges
+      setEdges((eds) => {
+        const updatedEdges = applyEdgeChanges(changes, eds);
+        // Notify parent with updated edges
+        onEdgesChangeCallback?.(updatedEdges);
+        return updatedEdges;
+      });
     },
-    [onEdgesChange, onEdgesChangeCallback, edges]
+    [setEdges, onEdgesChangeCallback]
   );
 
   const onNodeClick = useCallback(
