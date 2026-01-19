@@ -409,6 +409,12 @@ export const getStudentsWithProgress = query({
       userPurchasesMap.set(purchase.userId, existing);
     }
 
+    // Get all digital products for this store to resolve product names
+    const storeProducts = await ctx.db
+      .query("digitalProducts")
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+      .collect();
+
     // Build student list with progress data
     const students: Array<{
       clerkId: string;
@@ -434,6 +440,12 @@ export const getStudentsWithProgress = query({
         totalChapters: number;
         lastAccessedAt: number | undefined;
         enrolledAt: number;
+      }>;
+      products: Array<{
+        productId: string;
+        productTitle: string;
+        productType: string;
+        purchasedAt: number;
       }>;
     }> = [];
 
@@ -515,6 +527,38 @@ export const getStudentsWithProgress = query({
           ? Math.round((totalChaptersCompleted / totalChaptersAll) * 100)
           : 0;
 
+      // Build products array with all purchased items (courses and digital products)
+      const products: Array<{
+        productId: string;
+        productTitle: string;
+        productType: string;
+        purchasedAt: number;
+      }> = [];
+
+      for (const purchase of purchases) {
+        if (purchase.productType === "course" && purchase.courseId) {
+          const course = storeCourses.find((c) => c._id === purchase.courseId);
+          if (course) {
+            products.push({
+              productId: course._id,
+              productTitle: course.title,
+              productType: "course",
+              purchasedAt: purchase._creationTime,
+            });
+          }
+        } else if (purchase.productId) {
+          const product = storeProducts.find((p) => p._id === purchase.productId);
+          if (product) {
+            products.push({
+              productId: product._id,
+              productTitle: product.title,
+              productType: purchase.productType || "digitalProduct",
+              purchasedAt: purchase._creationTime,
+            });
+          }
+        }
+      }
+
       students.push({
         clerkId: userId,
         name: user?.name || undefined,
@@ -532,6 +576,7 @@ export const getStudentsWithProgress = query({
         totalChapters: totalChaptersAll,
         lastActivityAt,
         courseProgress: courseProgress.sort((a, b) => b.enrolledAt - a.enrolledAt),
+        products: products.sort((a, b) => b.purchasedAt - a.purchasedAt),
       });
     }
 

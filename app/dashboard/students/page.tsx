@@ -16,6 +16,8 @@ import {
   Clock,
   TrendingUp,
   GraduationCap,
+  Filter,
+  X,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -31,7 +33,14 @@ import {
 } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
 
 // Explicit types to avoid TypeScript deep recursion with Convex
@@ -51,6 +60,13 @@ interface CourseProgress {
   enrolledAt: number;
 }
 
+interface StudentProduct {
+  productId: string;
+  productTitle: string;
+  productType: string;
+  purchasedAt: number;
+}
+
 interface Student {
   clerkId: string;
   name?: string;
@@ -68,12 +84,14 @@ interface Student {
   totalChapters: number;
   lastActivityAt?: number;
   courseProgress: CourseProgress[];
+  products: StudentProduct[];
 }
 
 export default function StudentsPage() {
   const { user, isLoaded } = useUser();
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedStudents, setExpandedStudents] = useState<Set<string>>(new Set());
+  const [productFilter, setProductFilter] = useState<string>("all");
 
   // Get user's store
   const store = useQuery(
@@ -140,14 +158,44 @@ export default function StudentsPage() {
     );
   }
 
-  // Filter students based on search
-  const filteredStudents: Student[] = students?.filter((student) => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      student.name?.toLowerCase().includes(query) ||
-      student.email?.toLowerCase().includes(query)
+  // Extract all unique products from students for the filter dropdown
+  const allProducts = useMemo(() => {
+    if (!students) return [];
+    const productMap = new Map<string, { id: string; title: string; type: string }>();
+    for (const student of students) {
+      for (const product of student.products || []) {
+        if (!productMap.has(product.productId)) {
+          productMap.set(product.productId, {
+            id: product.productId,
+            title: product.productTitle,
+            type: product.productType,
+          });
+        }
+      }
+    }
+    return Array.from(productMap.values()).sort((a, b) =>
+      a.title.localeCompare(b.title)
     );
+  }, [students]);
+
+  // Filter students based on search and product filter
+  const filteredStudents: Student[] = students?.filter((student) => {
+    // Apply search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const matchesSearch =
+        student.name?.toLowerCase().includes(query) ||
+        student.email?.toLowerCase().includes(query);
+      if (!matchesSearch) return false;
+    }
+
+    // Apply product filter
+    if (productFilter && productFilter !== "all") {
+      const hasProduct = student.products?.some(p => p.productId === productFilter);
+      if (!hasProduct) return false;
+    }
+
+    return true;
   }) ?? [];
 
   const formatDate = (timestamp: number) => {
@@ -253,21 +301,58 @@ export default function StudentsPage() {
       {/* Student List */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <CardTitle>Student Roster</CardTitle>
               <CardDescription>
                 All students who have purchased from your store
               </CardDescription>
             </div>
-            <div className="relative w-64">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-zinc-400" />
-              <Input
-                placeholder="Search students..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8"
-              />
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              {/* Product Filter */}
+              <div className="flex items-center gap-2">
+                <Select value={productFilter} onValueChange={setProductFilter}>
+                  <SelectTrigger className="w-[200px]">
+                    <Filter className="mr-2 h-4 w-4 text-zinc-400" />
+                    <SelectValue placeholder="Filter by product" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Products</SelectItem>
+                    {allProducts.map((product) => (
+                      <SelectItem key={product.id} value={product.id}>
+                        <div className="flex items-center gap-2">
+                          {product.type === "course" ? (
+                            <BookOpen className="h-3 w-3 text-blue-500" />
+                          ) : (
+                            <Package className="h-3 w-3 text-purple-500" />
+                          )}
+                          <span className="truncate">{product.title}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {productFilter !== "all" && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setProductFilter("all")}
+                    className="h-8 w-8 p-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+              {/* Search */}
+              <div className="relative w-64">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-zinc-400" />
+                <Input
+                  placeholder="Search students..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -283,8 +368,8 @@ export default function StudentsPage() {
                   <TableRow>
                     <TableHead className="w-8"></TableHead>
                     <TableHead>Student</TableHead>
+                    <TableHead>Products</TableHead>
                     <TableHead>Progress</TableHead>
-                    <TableHead>Courses</TableHead>
                     <TableHead>Last Active</TableHead>
                     <TableHead>Total Spent</TableHead>
                   </TableRow>
@@ -331,6 +416,37 @@ export default function StudentsPage() {
                             </div>
                           </TableCell>
                           <TableCell>
+                            <div className="flex flex-wrap gap-1 max-w-[200px]">
+                              {student.products?.slice(0, 3).map((product) => (
+                                <Badge
+                                  key={product.productId}
+                                  variant="secondary"
+                                  className={cn(
+                                    "text-xs truncate max-w-[100px]",
+                                    product.productType === "course"
+                                      ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                                      : "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+                                  )}
+                                >
+                                  {product.productType === "course" ? (
+                                    <BookOpen className="mr-1 h-3 w-3" />
+                                  ) : (
+                                    <Package className="mr-1 h-3 w-3" />
+                                  )}
+                                  <span className="truncate">{product.productTitle}</span>
+                                </Badge>
+                              ))}
+                              {(student.products?.length || 0) > 3 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{(student.products?.length || 0) - 3} more
+                                </Badge>
+                              )}
+                              {(!student.products || student.products.length === 0) && (
+                                <span className="text-sm text-zinc-400">-</span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
                             <div className="flex items-center gap-3">
                               <div className="w-24">
                                 <Progress
@@ -347,14 +463,6 @@ export default function StudentsPage() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <div className="flex items-center gap-1">
-                              <BookOpen className="h-4 w-4 text-blue-500" />
-                              <span>
-                                {student.coursesCompleted}/{student.coursesEnrolled}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
                             <div className="flex items-center gap-1 text-zinc-500">
                               <Clock className="h-3 w-3" />
                               <span className="text-sm">
@@ -368,63 +476,101 @@ export default function StudentsPage() {
                             </Badge>
                           </TableCell>
                         </TableRow>
-                        {/* Expanded Row - Course Progress Details */}
-                        {isExpanded && student.courseProgress.length > 0 && (
+                        {/* Expanded Row - Products & Course Progress Details */}
+                        {isExpanded && (student.products?.length > 0 || student.courseProgress.length > 0) && (
                           <TableRow key={`${student.clerkId}-expanded`}>
                             <TableCell colSpan={6} className="bg-muted/20 p-0">
-                              <div className="px-6 py-4">
-                                <h4 className="mb-3 text-sm font-semibold text-zinc-700 dark:text-zinc-300">
-                                  Course Progress
-                                </h4>
-                                <div className="space-y-3">
-                                  {student.courseProgress.map((course) => (
-                                    <div
-                                      key={course.courseId}
-                                      className="flex items-center gap-4 rounded-lg border bg-background p-3"
-                                    >
-                                      <div className="flex-1 min-w-0">
-                                        <p className="font-medium text-sm truncate">
-                                          {course.courseTitle}
-                                        </p>
-                                        <p className="text-xs text-zinc-500">
-                                          {course.chaptersCompleted} of {course.totalChapters}{" "}
-                                          chapters completed
-                                        </p>
-                                      </div>
-                                      <div className="flex items-center gap-3">
-                                        <div className="w-32">
-                                          <Progress value={course.progress} className="h-2" />
-                                        </div>
-                                        <span
+                              <div className="px-6 py-4 space-y-4">
+                                {/* All Products Section */}
+                                {student.products && student.products.length > 0 && (
+                                  <div>
+                                    <h4 className="mb-3 text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                                      All Products ({student.products.length})
+                                    </h4>
+                                    <div className="flex flex-wrap gap-2">
+                                      {student.products.map((product) => (
+                                        <Badge
+                                          key={product.productId}
+                                          variant="secondary"
                                           className={cn(
-                                            "text-sm font-medium tabular-nums w-12 text-right",
-                                            course.progress === 100 && "text-green-600"
+                                            "text-sm py-1.5 px-3",
+                                            product.productType === "course"
+                                              ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                                              : "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
                                           )}
                                         >
-                                          {course.progress}%
-                                        </span>
-                                        {course.progress === 100 ? (
-                                          <CheckCircle2 className="h-4 w-4 text-green-500" />
-                                        ) : (
-                                          <div className="h-4 w-4" />
-                                        )}
-                                      </div>
-                                      <div className="text-xs text-zinc-500 w-20 text-right">
-                                        {formatRelativeTime(course.lastAccessedAt)}
-                                      </div>
+                                          {product.productType === "course" ? (
+                                            <BookOpen className="mr-1.5 h-3.5 w-3.5" />
+                                          ) : (
+                                            <Package className="mr-1.5 h-3.5 w-3.5" />
+                                          )}
+                                          {product.productTitle}
+                                          <span className="ml-2 text-xs opacity-60">
+                                            {formatDate(product.purchasedAt)}
+                                          </span>
+                                        </Badge>
+                                      ))}
                                     </div>
-                                  ))}
-                                </div>
-                                <div className="mt-3 flex items-center gap-4 text-xs text-zinc-500">
-                                  <span>
-                                    Enrolled {formatDate(student.firstPurchaseDate)}
-                                  </span>
-                                  <span>•</span>
-                                  <span>
-                                    {student.chaptersCompleted} of {student.totalChapters} total
-                                    chapters completed
-                                  </span>
-                                </div>
+                                  </div>
+                                )}
+
+                                {/* Course Progress Section */}
+                                {student.courseProgress.length > 0 && (
+                                  <div>
+                                    <h4 className="mb-3 text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                                      Course Progress
+                                    </h4>
+                                    <div className="space-y-3">
+                                      {student.courseProgress.map((course) => (
+                                        <div
+                                          key={course.courseId}
+                                          className="flex items-center gap-4 rounded-lg border bg-background p-3"
+                                        >
+                                          <div className="flex-1 min-w-0">
+                                            <p className="font-medium text-sm truncate">
+                                              {course.courseTitle}
+                                            </p>
+                                            <p className="text-xs text-zinc-500">
+                                              {course.chaptersCompleted} of {course.totalChapters}{" "}
+                                              chapters completed
+                                            </p>
+                                          </div>
+                                          <div className="flex items-center gap-3">
+                                            <div className="w-32">
+                                              <Progress value={course.progress} className="h-2" />
+                                            </div>
+                                            <span
+                                              className={cn(
+                                                "text-sm font-medium tabular-nums w-12 text-right",
+                                                course.progress === 100 && "text-green-600"
+                                              )}
+                                            >
+                                              {course.progress}%
+                                            </span>
+                                            {course.progress === 100 ? (
+                                              <CheckCircle2 className="h-4 w-4 text-green-500" />
+                                            ) : (
+                                              <div className="h-4 w-4" />
+                                            )}
+                                          </div>
+                                          <div className="text-xs text-zinc-500 w-20 text-right">
+                                            {formatRelativeTime(course.lastAccessedAt)}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                    <div className="mt-3 flex items-center gap-4 text-xs text-zinc-500">
+                                      <span>
+                                        Enrolled {formatDate(student.firstPurchaseDate)}
+                                      </span>
+                                      <span>•</span>
+                                      <span>
+                                        {student.chaptersCompleted} of {student.totalChapters} total
+                                        chapters completed
+                                      </span>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             </TableCell>
                           </TableRow>
@@ -440,11 +586,11 @@ export default function StudentsPage() {
               <div className="text-center">
                 <Users className="mx-auto h-12 w-12 text-zinc-300 dark:text-zinc-700" />
                 <h3 className="mt-4 text-lg font-medium text-zinc-900 dark:text-white">
-                  {searchQuery ? "No students found" : "No students yet"}
+                  {searchQuery || productFilter !== "all" ? "No students found" : "No students yet"}
                 </h3>
                 <p className="mt-2 text-zinc-500 dark:text-zinc-400">
-                  {searchQuery
-                    ? "Try a different search term"
+                  {searchQuery || productFilter !== "all"
+                    ? "Try a different search term or filter"
                     : "Students will appear here once they purchase your products"}
                 </p>
               </div>
