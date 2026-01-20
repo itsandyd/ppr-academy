@@ -658,6 +658,273 @@ export const getCreatorsForEmail = query({
   },
 });
 
+// ============================================================================
+// REVENUE METRICS - MRR, LTV, Churn, Product Type Breakdown
+// ============================================================================
+
+/**
+ * Get advanced revenue metrics (MRR, LTV, Churn, etc.)
+ */
+export const getAdvancedRevenueMetrics = query({
+  args: {
+    clerkId: v.optional(v.string()),
+  },
+  returns: v.object({
+    // Monthly metrics
+    mrr: v.number(),
+    mrrGrowth: v.number(),
+    previousMrr: v.number(),
+    // LTV metrics
+    averageLtv: v.number(),
+    highestLtv: v.number(),
+    // Churn metrics
+    churnRate: v.number(),
+    activeCustomers: v.number(),
+    churnedCustomers: v.number(),
+    // Revenue breakdown
+    revenueByType: v.array(
+      v.object({
+        type: v.string(),
+        revenue: v.number(),
+        count: v.number(),
+        percentage: v.number(),
+      })
+    ),
+    // Goal tracking
+    revenueGoal: v.number(),
+    currentRevenue: v.number(),
+    goalProgress: v.number(),
+    projectedMonthlyRevenue: v.number(),
+    monthsToGoal: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    await verifyAdmin(ctx, args.clerkId);
+
+    const purchases = await ctx.db.query("purchases").collect();
+    const completedPurchases = purchases.filter((p) => p.status === "completed");
+    const enrollments = await ctx.db.query("enrollments").collect();
+    const users = await ctx.db.query("users").collect();
+
+    // Time boundaries
+    const now = Date.now();
+    const thirtyDaysAgo = now - 30 * 24 * 60 * 60 * 1000;
+    const sixtyDaysAgo = now - 60 * 24 * 60 * 60 * 1000;
+    const ninetyDaysAgo = now - 90 * 24 * 60 * 60 * 1000;
+
+    // MRR Calculation (revenue this month)
+    const thisMonthPurchases = completedPurchases.filter(
+      (p) => p._creationTime > thirtyDaysAgo
+    );
+    const mrr = thisMonthPurchases.reduce((sum, p) => sum + (p.amount || 0), 0) / 100;
+
+    // Previous month MRR
+    const prevMonthPurchases = completedPurchases.filter(
+      (p) => p._creationTime > sixtyDaysAgo && p._creationTime <= thirtyDaysAgo
+    );
+    const previousMrr = prevMonthPurchases.reduce((sum, p) => sum + (p.amount || 0), 0) / 100;
+
+    // MRR Growth
+    const mrrGrowth = previousMrr > 0 ? ((mrr - previousMrr) / previousMrr) * 100 : 0;
+
+    // LTV Calculation (average revenue per customer)
+    const customerRevenue = new Map<string, number>();
+    for (const purchase of completedPurchases) {
+      const current = customerRevenue.get(purchase.userId) || 0;
+      customerRevenue.set(purchase.userId, current + (purchase.amount || 0));
+    }
+
+    const ltvValues = Array.from(customerRevenue.values()).map((v) => v / 100);
+    const averageLtv = ltvValues.length > 0
+      ? ltvValues.reduce((a, b) => a + b, 0) / ltvValues.length
+      : 0;
+    const highestLtv = ltvValues.length > 0 ? Math.max(...ltvValues) : 0;
+
+    // Churn Calculation
+    // Active = users with activity in last 30 days
+    // Churned = users with activity 30-90 days ago but none in last 30 days
+    const recentActiveUsers = new Set<string>();
+    const olderActiveUsers = new Set<string>();
+
+    for (const purchase of completedPurchases) {
+      if (purchase._creationTime > thirtyDaysAgo) {
+        recentActiveUsers.add(purchase.userId);
+      } else if (purchase._creationTime > ninetyDaysAgo) {
+        olderActiveUsers.add(purchase.userId);
+      }
+    }
+
+    for (const enrollment of enrollments) {
+      if (enrollment._creationTime > thirtyDaysAgo) {
+        recentActiveUsers.add(enrollment.userId);
+      } else if (enrollment._creationTime > ninetyDaysAgo) {
+        olderActiveUsers.add(enrollment.userId);
+      }
+    }
+
+    // Churned = was active before but not recently
+    const churnedUsers = Array.from(olderActiveUsers).filter(
+      (userId) => !recentActiveUsers.has(userId)
+    );
+
+    const activeCustomers = recentActiveUsers.size;
+    const churnedCustomers = churnedUsers.length;
+    const totalPreviousActive = olderActiveUsers.size;
+    const churnRate = totalPreviousActive > 0
+      ? (churnedCustomers / totalPreviousActive) * 100
+      : 0;
+
+    // Revenue by product type
+    const courseRevenue = completedPurchases
+      .filter((p) => p.courseId)
+      .reduce((sum, p) => sum + (p.amount || 0), 0) / 100;
+    const productRevenue = completedPurchases
+      .filter((p) => p.productId && !p.courseId)
+      .reduce((sum, p) => sum + (p.amount || 0), 0) / 100;
+    const bundleRevenue = completedPurchases
+      .filter((p) => p.bundleId)
+      .reduce((sum, p) => sum + (p.amount || 0), 0) / 100;
+    const otherRevenue = completedPurchases
+      .filter((p) => !p.courseId && !p.productId && !p.bundleId)
+      .reduce((sum, p) => sum + (p.amount || 0), 0) / 100;
+
+    const totalRevenue = courseRevenue + productRevenue + bundleRevenue + otherRevenue;
+
+    const revenueByType = [
+      {
+        type: "Courses",
+        revenue: courseRevenue,
+        count: completedPurchases.filter((p) => p.courseId).length,
+        percentage: totalRevenue > 0 ? (courseRevenue / totalRevenue) * 100 : 0,
+      },
+      {
+        type: "Digital Products",
+        revenue: productRevenue,
+        count: completedPurchases.filter((p) => p.productId && !p.courseId).length,
+        percentage: totalRevenue > 0 ? (productRevenue / totalRevenue) * 100 : 0,
+      },
+      {
+        type: "Bundles",
+        revenue: bundleRevenue,
+        count: completedPurchases.filter((p) => p.bundleId).length,
+        percentage: totalRevenue > 0 ? (bundleRevenue / totalRevenue) * 100 : 0,
+      },
+      {
+        type: "Other",
+        revenue: otherRevenue,
+        count: completedPurchases.filter((p) => !p.courseId && !p.productId && !p.bundleId).length,
+        percentage: totalRevenue > 0 ? (otherRevenue / totalRevenue) * 100 : 0,
+      },
+    ].filter((r) => r.revenue > 0);
+
+    // Goal tracking ($1M = 1,000,000)
+    const revenueGoal = 1000000;
+    const currentRevenue = totalRevenue;
+    const goalProgress = (currentRevenue / revenueGoal) * 100;
+
+    // Projected monthly revenue (based on last 3 months average)
+    const threeMonthsAgo = now - 90 * 24 * 60 * 60 * 1000;
+    const last3MonthsRevenue = completedPurchases
+      .filter((p) => p._creationTime > threeMonthsAgo)
+      .reduce((sum, p) => sum + (p.amount || 0), 0) / 100;
+    const projectedMonthlyRevenue = last3MonthsRevenue / 3;
+
+    // Months to goal
+    const remainingToGoal = revenueGoal - currentRevenue;
+    const monthsToGoal = projectedMonthlyRevenue > 0
+      ? Math.ceil(remainingToGoal / projectedMonthlyRevenue)
+      : 999;
+
+    return {
+      mrr,
+      mrrGrowth,
+      previousMrr,
+      averageLtv,
+      highestLtv,
+      churnRate,
+      activeCustomers,
+      churnedCustomers,
+      revenueByType,
+      revenueGoal,
+      currentRevenue,
+      goalProgress,
+      projectedMonthlyRevenue,
+      monthsToGoal: Math.max(0, monthsToGoal),
+    };
+  },
+});
+
+/**
+ * Get revenue data for CSV export
+ */
+export const getRevenueExportData = query({
+  args: {
+    clerkId: v.optional(v.string()),
+    startDate: v.optional(v.number()),
+    endDate: v.optional(v.number()),
+  },
+  returns: v.array(
+    v.object({
+      date: v.string(),
+      transactionId: v.string(),
+      type: v.string(),
+      productName: v.string(),
+      amount: v.number(),
+      customerEmail: v.optional(v.string()),
+      status: v.string(),
+    })
+  ),
+  handler: async (ctx, args) => {
+    await verifyAdmin(ctx, args.clerkId);
+
+    const purchases = await ctx.db.query("purchases").collect();
+    const startDate = args.startDate || Date.now() - 90 * 24 * 60 * 60 * 1000;
+    const endDate = args.endDate || Date.now();
+
+    const filteredPurchases = purchases.filter(
+      (p) => p._creationTime >= startDate && p._creationTime <= endDate
+    );
+
+    const exportData = [];
+
+    for (const purchase of filteredPurchases) {
+      let productName = "Unknown";
+      let type = "Other";
+
+      if (purchase.courseId) {
+        type = "Course";
+        const course = await ctx.db.get(purchase.courseId);
+        productName = course?.title || "Unknown Course";
+      } else if (purchase.productId) {
+        type = "Digital Product";
+        const product = await ctx.db.get(purchase.productId);
+        productName = product?.title || "Unknown Product";
+      } else if (purchase.bundleId) {
+        type = "Bundle";
+        const bundle = await ctx.db.get(purchase.bundleId);
+        productName = bundle?.name || "Unknown Bundle";
+      }
+
+      // Get customer email
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", purchase.userId))
+        .first();
+
+      exportData.push({
+        date: new Date(purchase._creationTime).toISOString(),
+        transactionId: purchase._id,
+        type,
+        productName,
+        amount: (purchase.amount || 0) / 100,
+        customerEmail: user?.email,
+        status: purchase.status || "unknown",
+      });
+    }
+
+    return exportData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  },
+});
+
 /**
  * Get creator email stats for admin dashboard
  */
