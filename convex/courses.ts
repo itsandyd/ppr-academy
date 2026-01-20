@@ -133,10 +133,10 @@ export const getCourseBySlug = query({
       return null;
     }
 
-    // Fetch course modules if they exist
+    // Fetch course modules if they exist (using index instead of filter)
     const modules = await ctx.db
       .query("courseModules")
-      .filter(q => q.eq(q.field("courseId"), course._id))
+      .withIndex("by_courseId", q => q.eq("courseId", course._id))
       .order("asc")
       .collect();
 
@@ -145,7 +145,7 @@ export const getCourseBySlug = query({
       modules.map(async (module) => {
         const lessons = await ctx.db
           .query("courseLessons")
-          .filter(q => q.eq(q.field("moduleId"), module._id))
+          .withIndex("by_moduleId", q => q.eq("moduleId", module._id))
           .order("asc")
           .collect();
 

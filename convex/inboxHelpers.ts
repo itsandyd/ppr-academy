@@ -31,10 +31,10 @@ export const findEmailByMessageId = internalMutation({
     campaignId: v.optional(v.id("resendCampaigns")),
   })),
   handler: async (ctx, args) => {
-    // Search in resendLogs for original email
+    // Search in resendLogs for original email (using index for faster lookup)
     const log = await ctx.db
       .query("resendLogs")
-      .filter(q => q.eq(q.field("resendEmailId"), args.messageId))
+      .withIndex("by_resend_id", q => q.eq("resendEmailId", args.messageId))
       .first();
     
     if (log && log.connectionId) {
@@ -57,10 +57,10 @@ export const findCustomerByEmail = internalMutation({
     storeId: v.optional(v.id("stores")),
   })),
   handler: async (ctx, args) => {
-    // Find customer in customers table
+    // Find customer in customers table (using index for faster lookup)
     const customer = await ctx.db
       .query("customers")
-      .filter(q => q.eq(q.field("email"), args.email))
+      .withIndex("by_email", q => q.eq("email", args.email))
       .first();
     
     if (customer) {

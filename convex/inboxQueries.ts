@@ -75,17 +75,17 @@ export const getCreatorInbox = query({
     readAt: v.optional(v.number()),
   })),
   handler: async (ctx, args) => {
-    let query = ctx.db
+    // Use index for storeId lookup - much faster than filter
+    const allReplies = await ctx.db
       .query("emailReplies")
-      .filter(q => q.eq(q.field("storeId"), args.storeId));
-    
-    if (args.status) {
-      query = query.filter(q => q.eq(q.field("status"), args.status));
-    }
-    
-    const replies = await query
+      .withIndex("by_storeId", q => q.eq("storeId", args.storeId))
       .order("desc")
-      .take(100);
+      .collect();
+
+    // Apply status filter in memory if needed (secondary filter)
+    const replies = args.status
+      ? allReplies.filter(r => r.status === args.status).slice(0, 100)
+      : allReplies.slice(0, 100);
     
     return replies.map(r => ({
       _id: r._id,
