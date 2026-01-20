@@ -20,6 +20,7 @@ import {
   BarChart3,
   Filter,
   Search,
+  FileDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -111,6 +112,36 @@ export default function AdminActivityPage() {
       hour: "2-digit",
       minute: "2-digit",
     });
+  };
+
+  // Export activity to CSV
+  const exportActivityToCSV = () => {
+    const headers = ["Date", "Time", "Admin", "Action Type", "Action", "Resource Type", "Resource Name", "Details"];
+    const rows = filteredActivity.map((activity) => {
+      const date = new Date(activity.timestamp);
+      return [
+        date.toLocaleDateString(),
+        date.toLocaleTimeString(),
+        activity.adminName || "Admin",
+        activity.actionType,
+        activity.action,
+        activity.resourceType,
+        activity.resourceName || "",
+        activity.details || "",
+      ];
+    });
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `admin-activity-${new Date().toISOString().split("T")[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
   };
 
   return (
@@ -247,6 +278,16 @@ export default function AdminActivityPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={exportActivityToCSV}
+                    disabled={filteredActivity.length === 0}
+                    className="gap-1"
+                  >
+                    <FileDown className="h-4 w-4" />
+                    <span className="hidden sm:inline">Export</span>
+                  </Button>
                 </div>
               </div>
             </CardHeader>

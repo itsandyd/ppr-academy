@@ -24,6 +24,7 @@ import {
   Circle,
   Send,
   Filter,
+  FileDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -94,6 +95,36 @@ export default function AdminCreatorsPage() {
       currency: "USD",
       minimumFractionDigits: 0,
     }).format(amount);
+
+  // Export creators to CSV
+  const exportCreatorsToCSV = () => {
+    const headers = ["Rank", "Name", "Store", "Health Score", "Health Status", "Revenue", "Enrollments", "Courses", "Products", "Rating", "Onboarding %"];
+    const rows = leaderboard.map((creator) => [
+      creator.rank,
+      creator.userName,
+      creator.storeName || "No store",
+      creator.healthScore,
+      creator.healthStatus,
+      creator.totalRevenue,
+      creator.totalEnrollments,
+      creator.courseCount,
+      creator.productCount,
+      creator.avgRating.toFixed(1),
+      creator.onboardingProgress,
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `creator-leaderboard-${new Date().toISOString().split("T")[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
 
   const toggleCreatorSelection = (userId: string) => {
     setSelectedCreators((prev) =>
@@ -213,20 +244,32 @@ export default function AdminCreatorsPage() {
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-xl font-bold">Creator Leaderboard</CardTitle>
-                <Select
-                  value={leaderboardSort}
-                  onValueChange={(v) => setLeaderboardSort(v as typeof leaderboardSort)}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Sort by" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="revenue">Revenue</SelectItem>
-                    <SelectItem value="healthScore">Health Score</SelectItem>
-                    <SelectItem value="products">Products</SelectItem>
-                    <SelectItem value="enrollments">Enrollments</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={leaderboardSort}
+                    onValueChange={(v) => setLeaderboardSort(v as typeof leaderboardSort)}
+                  >
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Sort by" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="revenue">Revenue</SelectItem>
+                      <SelectItem value="healthScore">Health Score</SelectItem>
+                      <SelectItem value="products">Products</SelectItem>
+                      <SelectItem value="enrollments">Enrollments</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={exportCreatorsToCSV}
+                    disabled={leaderboard.length === 0}
+                    className="gap-1"
+                  >
+                    <FileDown className="h-4 w-4" />
+                    <span className="hidden sm:inline">Export</span>
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
