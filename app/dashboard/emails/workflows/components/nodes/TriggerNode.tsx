@@ -8,6 +8,7 @@ const triggerLabels: Record<string, string> = {
   lead_signup: "Lead Signs Up",
   product_purchase: "Product Purchased",
   tag_added: "Tag Added to Contact",
+  segment_member: "Segment Membership",
   manual: "Manual Enrollment",
   time_delay: "Time Delay",
   date_time: "Date/Time",
@@ -36,6 +37,14 @@ function TriggerNode({ data, selected }: NodeProps) {
       subtitle = "Specific tag";
     } else {
       subtitle = "Any tag";
+    }
+  } else if (data.triggerType === "segment_member") {
+    if (data.segmentName) {
+      subtitle = `${data.segmentName} (${data.segmentMemberCount || 0})`;
+    } else if (data.segmentId) {
+      subtitle = "Specific segment";
+    } else {
+      subtitle = "Select a segment";
     }
   }
 

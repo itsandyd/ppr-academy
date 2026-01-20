@@ -432,6 +432,7 @@ export default defineSchema({
         v.literal("lead_signup"),
         v.literal("product_purchase"),
         v.literal("tag_added"),
+        v.literal("segment_member"),
         v.literal("manual"),
         v.literal("time_delay"),
         v.literal("date_time"),
@@ -580,6 +581,78 @@ export default defineSchema({
   })
     .index("by_storeId", ["storeId"])
     .index("by_name", ["storeId", "name"]),
+
+  // Email Deliverability Events (bounces, complaints, blocks)
+  emailDeliverabilityEvents: defineTable({
+    storeId: v.string(),
+    contactId: v.optional(v.id("emailContacts")),
+    email: v.string(),
+    eventType: v.union(
+      v.literal("hard_bounce"),
+      v.literal("soft_bounce"),
+      v.literal("spam_complaint"),
+      v.literal("blocked"),
+      v.literal("unsubscribe"),
+      v.literal("delivery_delay")
+    ),
+    reason: v.optional(v.string()), // Bounce reason code/message
+    sourceIp: v.optional(v.string()),
+    emailId: v.optional(v.string()), // Reference to the sent email
+    workflowId: v.optional(v.id("emailWorkflows")),
+    broadcastId: v.optional(v.string()),
+    timestamp: v.number(),
+    processed: v.boolean(), // Whether the event has been processed
+  })
+    .index("by_storeId", ["storeId"])
+    .index("by_storeId_timestamp", ["storeId", "timestamp"])
+    .index("by_email", ["email"])
+    .index("by_eventType", ["storeId", "eventType"])
+    .index("by_contactId", ["contactId"]),
+
+  // Email Deliverability Stats (aggregated per store)
+  emailDeliverabilityStats: defineTable({
+    storeId: v.string(),
+    period: v.union(v.literal("daily"), v.literal("weekly"), v.literal("monthly")),
+    periodStart: v.number(), // Start timestamp of the period
+    totalSent: v.number(),
+    delivered: v.number(),
+    hardBounces: v.number(),
+    softBounces: v.number(),
+    spamComplaints: v.number(),
+    blocks: v.number(),
+    unsubscribes: v.number(),
+    deliveryRate: v.number(), // Percentage
+    bounceRate: v.number(),
+    spamRate: v.number(),
+    healthScore: v.number(), // 0-100 overall health score
+    updatedAt: v.number(),
+  })
+    .index("by_storeId", ["storeId"])
+    .index("by_storeId_period", ["storeId", "period"])
+    .index("by_storeId_periodStart", ["storeId", "periodStart"]),
+
+  // Domain Reputation Tracking
+  emailDomainReputation: defineTable({
+    storeId: v.string(),
+    domain: v.string(), // Sending domain
+    reputationScore: v.number(), // 0-100
+    authenticationStatus: v.object({
+      spf: v.union(v.literal("pass"), v.literal("fail"), v.literal("unknown")),
+      dkim: v.union(v.literal("pass"), v.literal("fail"), v.literal("unknown")),
+      dmarc: v.union(v.literal("pass"), v.literal("fail"), v.literal("unknown")),
+    }),
+    blacklistStatus: v.array(
+      v.object({
+        list: v.string(),
+        listed: v.boolean(),
+        lastChecked: v.number(),
+      })
+    ),
+    lastChecked: v.number(),
+    recommendations: v.array(v.string()),
+  })
+    .index("by_storeId", ["storeId"])
+    .index("by_domain", ["domain"]),
 
   digitalProducts: defineTable({
     title: v.string(),

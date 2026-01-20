@@ -9518,6 +9518,90 @@ export declare const api: {
       { success: boolean }
     >;
   };
+  emailDeliverability: {
+    cleanBouncedContacts: FunctionReference<
+      "mutation",
+      "public",
+      { hardBouncesOnly?: boolean; storeId: string },
+      any
+    >;
+    getBounceRateByDomain: FunctionReference<
+      "query",
+      "public",
+      { storeId: string },
+      any
+    >;
+    getDeliverabilityEvents: FunctionReference<
+      "query",
+      "public",
+      {
+        eventType?:
+          | "hard_bounce"
+          | "soft_bounce"
+          | "spam_complaint"
+          | "blocked"
+          | "unsubscribe"
+          | "delivery_delay";
+        limit?: number;
+        storeId: string;
+      },
+      any
+    >;
+    getDeliverabilityHealth: FunctionReference<
+      "query",
+      "public",
+      { storeId: string },
+      any
+    >;
+    getDeliverabilityTrends: FunctionReference<
+      "query",
+      "public",
+      {
+        limit?: number;
+        period: "daily" | "weekly" | "monthly";
+        storeId: string;
+      },
+      any
+    >;
+    getDomainReputation: FunctionReference<
+      "query",
+      "public",
+      { storeId: string },
+      any
+    >;
+    getProblematicContacts: FunctionReference<
+      "query",
+      "public",
+      { limit?: number; storeId: string },
+      any
+    >;
+    markEventProcessed: FunctionReference<
+      "mutation",
+      "public",
+      { eventId: Id<"emailDeliverabilityEvents"> },
+      any
+    >;
+    recordDeliverabilityEvent: FunctionReference<
+      "mutation",
+      "public",
+      {
+        broadcastId?: string;
+        email: string;
+        emailId?: string;
+        eventType:
+          | "hard_bounce"
+          | "soft_bounce"
+          | "spam_complaint"
+          | "blocked"
+          | "unsubscribe"
+          | "delivery_delay";
+        reason?: string;
+        storeId: string;
+        workflowId?: Id<"emailWorkflows">;
+      },
+      any
+    >;
+  };
   emailHealthMonitoring: {
     getEmailHealthHistory: FunctionReference<
       "query",
@@ -10523,6 +10607,7 @@ export declare const api: {
             | "lead_signup"
             | "product_purchase"
             | "tag_added"
+            | "segment_member"
             | "manual"
             | "time_delay"
             | "date_time"
@@ -10646,6 +10731,7 @@ export declare const api: {
             | "lead_signup"
             | "product_purchase"
             | "tag_added"
+            | "segment_member"
             | "manual"
             | "time_delay"
             | "date_time"
@@ -20271,6 +20357,14 @@ export declare const internal: {
         created: boolean;
         tagsAdded: Array<string>;
       }
+    >;
+  };
+  emailDeliverability: {
+    updateDeliverabilityStats: FunctionReference<
+      "mutation",
+      "internal",
+      { period: "daily" | "weekly" | "monthly"; storeId: string },
+      any
     >;
   };
   emailHealthMonitoring: {

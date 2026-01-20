@@ -48,6 +48,7 @@ import {
   X,
   Trophy,
   RotateCcw,
+  Filter,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
@@ -139,12 +140,14 @@ type TriggerType =
   | "manual"
   | "time_delay"
   | "date_time"
-  | "customer_action";
+  | "customer_action"
+  | "segment_member";
 
 const triggerOptions: { value: TriggerType; label: string }[] = [
   { value: "lead_signup", label: "Lead Signs Up" },
   { value: "product_purchase", label: "Product Purchased" },
   { value: "tag_added", label: "Tag Added to Contact" },
+  { value: "segment_member", label: "Segment Membership" },
   { value: "manual", label: "Manual Enrollment" },
   { value: "time_delay", label: "Time Delay" },
   { value: "date_time", label: "Specific Date/Time" },
@@ -311,6 +314,12 @@ export default function WorkflowBuilderPage() {
   );
 
   const tags = useQuery(api.emailTags.listTags, storeId ? { storeId } : "skip");
+
+  // Get segments for segment-based triggers
+  const segments = useQuery(
+    api.emailCreatorSegments.getCreatorSegments,
+    storeId ? { storeId } : "skip"
+  );
 
   // Get products and courses for trigger configuration
   const products = useQuery(
@@ -723,10 +732,13 @@ export default function WorkflowBuilderPage() {
                         onValueChange={(v) =>
                           updateNodeData(selectedNode.id, {
                             triggerType: v,
-                            // Reset product/course/tag selection when changing trigger type
+                            // Reset product/course/tag/segment selection when changing trigger type
                             productId: undefined,
                             courseId: undefined,
                             tagId: undefined,
+                            segmentId: undefined,
+                            segmentName: undefined,
+                            segmentMemberCount: undefined,
                           })
                         }
                       >
@@ -863,6 +875,55 @@ export default function WorkflowBuilderPage() {
                         <p className="text-xs text-muted-foreground">
                           Trigger when this tag is added to a contact
                         </p>
+                      </div>
+                    )}
+
+                    {/* Segment Member - show segment selector */}
+                    {selectedNode.data.triggerType === "segment_member" && (
+                      <div className="space-y-2">
+                        <Label>Which Segment?</Label>
+                        <Select
+                          value={selectedNode.data.segmentId || ""}
+                          onValueChange={(v) => {
+                            const segment = segments?.find((s: any) => s._id === v);
+                            updateNodeData(selectedNode.id, {
+                              segmentId: v,
+                              segmentName: segment?.name,
+                              segmentMemberCount: segment?.memberCount,
+                            });
+                          }}
+                        >
+                          <SelectTrigger className="bg-white dark:bg-black">
+                            <SelectValue placeholder="Select a segment..." />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white dark:bg-black">
+                            {segments && segments.length > 0 ? (
+                              segments.map((segment) => (
+                                <SelectItem key={segment._id} value={segment._id}>
+                                  <div className="flex items-center gap-2">
+                                    <Filter className="h-3 w-3 text-purple-500" />
+                                    <span>{segment.name}</span>
+                                    <span className="text-xs text-muted-foreground">
+                                      ({segment.memberCount} contacts)
+                                    </span>
+                                  </div>
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="" disabled>
+                                No segments available
+                              </SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">
+                          Trigger for all contacts in this segment
+                        </p>
+                        {selectedNode.data.segmentId && selectedNode.data.segmentMemberCount && (
+                          <p className="text-xs text-purple-600 dark:text-purple-400">
+                            {selectedNode.data.segmentMemberCount} contacts will be enrolled
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>

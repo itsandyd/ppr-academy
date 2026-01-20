@@ -4265,6 +4265,102 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  emailDeliverabilityEvents: {
+    document: {
+      broadcastId?: string;
+      contactId?: Id<"emailContacts">;
+      email: string;
+      emailId?: string;
+      eventType:
+        | "hard_bounce"
+        | "soft_bounce"
+        | "spam_complaint"
+        | "blocked"
+        | "unsubscribe"
+        | "delivery_delay";
+      processed: boolean;
+      reason?: string;
+      sourceIp?: string;
+      storeId: string;
+      timestamp: number;
+      workflowId?: Id<"emailWorkflows">;
+      _id: Id<"emailDeliverabilityEvents">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "broadcastId"
+      | "contactId"
+      | "email"
+      | "emailId"
+      | "eventType"
+      | "processed"
+      | "reason"
+      | "sourceIp"
+      | "storeId"
+      | "timestamp"
+      | "workflowId";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_contactId: ["contactId", "_creationTime"];
+      by_email: ["email", "_creationTime"];
+      by_eventType: ["storeId", "eventType", "_creationTime"];
+      by_storeId: ["storeId", "_creationTime"];
+      by_storeId_timestamp: ["storeId", "timestamp", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
+  emailDeliverabilityStats: {
+    document: {
+      blocks: number;
+      bounceRate: number;
+      delivered: number;
+      deliveryRate: number;
+      hardBounces: number;
+      healthScore: number;
+      period: "daily" | "weekly" | "monthly";
+      periodStart: number;
+      softBounces: number;
+      spamComplaints: number;
+      spamRate: number;
+      storeId: string;
+      totalSent: number;
+      unsubscribes: number;
+      updatedAt: number;
+      _id: Id<"emailDeliverabilityStats">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "blocks"
+      | "bounceRate"
+      | "delivered"
+      | "deliveryRate"
+      | "hardBounces"
+      | "healthScore"
+      | "period"
+      | "periodStart"
+      | "softBounces"
+      | "spamComplaints"
+      | "spamRate"
+      | "storeId"
+      | "totalSent"
+      | "unsubscribes"
+      | "updatedAt";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_storeId: ["storeId", "_creationTime"];
+      by_storeId_period: ["storeId", "period", "_creationTime"];
+      by_storeId_periodStart: ["storeId", "periodStart", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   emailDomainAlerts: {
     document: {
       createdAt: number;
@@ -4368,6 +4464,48 @@ export type DataModel = {
       by_date: ["date", "_creationTime"];
       by_domainId: ["domainId", "_creationTime"];
       by_domainId_and_date: ["domainId", "date", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
+  emailDomainReputation: {
+    document: {
+      authenticationStatus: {
+        dkim: "pass" | "fail" | "unknown";
+        dmarc: "pass" | "fail" | "unknown";
+        spf: "pass" | "fail" | "unknown";
+      };
+      blacklistStatus: Array<{
+        lastChecked: number;
+        list: string;
+        listed: boolean;
+      }>;
+      domain: string;
+      lastChecked: number;
+      recommendations: Array<string>;
+      reputationScore: number;
+      storeId: string;
+      _id: Id<"emailDomainReputation">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "authenticationStatus"
+      | "authenticationStatus.dkim"
+      | "authenticationStatus.dmarc"
+      | "authenticationStatus.spf"
+      | "blacklistStatus"
+      | "domain"
+      | "lastChecked"
+      | "recommendations"
+      | "reputationScore"
+      | "storeId";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_domain: ["domain", "_creationTime"];
+      by_storeId: ["storeId", "_creationTime"];
     };
     searchIndexes: {};
     vectorIndexes: {};
@@ -4807,6 +4945,7 @@ export type DataModel = {
           | "lead_signup"
           | "product_purchase"
           | "tag_added"
+          | "segment_member"
           | "manual"
           | "time_delay"
           | "date_time"

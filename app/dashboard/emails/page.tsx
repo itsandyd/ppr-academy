@@ -52,6 +52,7 @@ import {
   Loader2,
   BarChart3,
   Filter,
+  Shield,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -242,7 +243,23 @@ export default function EmailCampaignsPage() {
   );
   const [isSendingBroadcast, setIsSendingBroadcast] = useState(false);
   const [broadcastSearchQuery, setBroadcastSearchQuery] = useState("");
+  const [broadcastRecipientMode, setBroadcastRecipientMode] = useState<"manual" | "segment">("manual");
+  const [selectedSegmentId, setSelectedSegmentId] = useState<string | null>(null);
   const sendBroadcastEmail = useAction(api.emails.sendBroadcastEmail);
+
+  // Query segments for broadcast
+  const segments = useQuery(
+    api.emailCreatorSegments.getCreatorSegments,
+    storeId ? { storeId } : "skip"
+  );
+
+  // Get segment contact IDs when segment is selected
+  const segmentContactIds = useQuery(
+    api.emailCreatorSegments.getSegmentContactIds,
+    selectedSegmentId
+      ? { segmentId: selectedSegmentId as Id<"creatorEmailSegments"> }
+      : "skip"
+  );
 
   // Debounce broadcast search for server-side search
   useEffect(() => {
@@ -895,8 +912,18 @@ export default function EmailCampaignsPage() {
       toast({ title: "Email content required", variant: "destructive" });
       return;
     }
-    if (selectedBroadcastContacts.size === 0) {
-      toast({ title: "Select at least one recipient", variant: "destructive" });
+
+    // Determine contact IDs based on mode
+    const contactIds =
+      broadcastRecipientMode === "segment" && segmentContactIds
+        ? segmentContactIds
+        : Array.from(selectedBroadcastContacts);
+
+    if (contactIds.length === 0) {
+      toast({
+        title: broadcastRecipientMode === "segment" ? "Segment has no contacts" : "Select at least one recipient",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -906,7 +933,7 @@ export default function EmailCampaignsPage() {
         storeId,
         subject: broadcastSubject,
         htmlContent: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">${broadcastContent.replace(/\n/g, "<br>")}<br><br><p style="color: #6b7280; font-size: 12px; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb;"><a href="{{unsubscribeLink}}" style="color: #6b7280;">Unsubscribe</a></p></div>`,
-        contactIds: Array.from(selectedBroadcastContacts) as any[],
+        contactIds: contactIds as any[],
       });
 
       if (result.success) {
@@ -914,6 +941,7 @@ export default function EmailCampaignsPage() {
         setBroadcastSubject("");
         setBroadcastContent("");
         setSelectedBroadcastContacts(new Set());
+        setSelectedSegmentId(null);
       } else {
         toast({ title: "Failed to send", description: result.message, variant: "destructive" });
       }
@@ -940,7 +968,7 @@ export default function EmailCampaignsPage() {
             Manage contacts, send broadcasts, and create automated workflows
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
             onClick={() => router.push("/dashboard/emails/segments?mode=create")}
@@ -948,6 +976,14 @@ export default function EmailCampaignsPage() {
           >
             <Filter className="h-4 w-4" />
             Segments
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => router.push("/dashboard/emails/deliverability?mode=create")}
+            className="gap-2"
+          >
+            <Shield className="h-4 w-4" />
+            Health
           </Button>
           <Button
             variant="outline"
@@ -1040,14 +1076,25 @@ The unsubscribe link will be added automatically."
 
                   <div className="flex items-center justify-between rounded-lg border border-border bg-muted/50 p-3">
                     <div className="text-sm">
-                      <span className="font-medium">{selectedBroadcastContacts.size}</span>{" "}
-                      recipient{selectedBroadcastContacts.size !== 1 ? "s" : ""} selected
+                      <span className="font-medium">
+                        {broadcastRecipientMode === "segment"
+                          ? segmentContactIds?.length || 0
+                          : selectedBroadcastContacts.size}
+                      </span>{" "}
+                      recipient
+                      {(broadcastRecipientMode === "segment"
+                        ? segmentContactIds?.length || 0
+                        : selectedBroadcastContacts.size) !== 1
+                        ? "s"
+                        : ""}{" "}
+                      {broadcastRecipientMode === "segment" ? "in segment" : "selected"}
                     </div>
                     <Button
                       onClick={handleSendBroadcast}
                       disabled={
                         isSendingBroadcast ||
-                        selectedBroadcastContacts.size === 0 ||
+                        (broadcastRecipientMode === "manual" && selectedBroadcastContacts.size === 0) ||
+                        (broadcastRecipientMode === "segment" && (!segmentContactIds || segmentContactIds.length === 0)) ||
                         !broadcastSubject.trim() ||
                         !broadcastContent.trim()
                       }
@@ -1078,41 +1125,116 @@ The unsubscribe link will be added automatically."
                     <div>
                       <h3 className="font-semibold">Select Recipients</h3>
                       <p className="text-sm text-muted-foreground">
-                        {filteredBroadcastContacts?.length || 0} loaded
-                        {broadcastContactsResult?.hasMore && (
-                          <span className="text-blue-600 dark:text-blue-400">
-                            {" "}(more available)
-                          </span>
-                        )}
-                        {" / "}
-                        {broadcastTagFilter
-                          ? tags?.find((t: any) => t._id === broadcastTagFilter)?.contactCount || 0
-                          : contactStats?.subscribed || 0}{" "}
-                        total subscribed
+                        {broadcastRecipientMode === "segment"
+                          ? `${segmentContactIds?.length || 0} contacts in segment`
+                          : `${selectedBroadcastContacts.size} selected`}
                       </p>
                     </div>
+                    {broadcastRecipientMode === "manual" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={toggleAllBroadcastContacts}
+                        disabled={!filteredBroadcastContacts?.length}
+                      >
+                        {selectedBroadcastContacts.size === filteredBroadcastContacts?.length &&
+                        filteredBroadcastContacts?.length > 0
+                          ? "Deselect All"
+                          : "Select Loaded"}
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Recipient Mode Toggle */}
+                  <div className="flex gap-2">
                     <Button
-                      variant="outline"
+                      variant={broadcastRecipientMode === "manual" ? "default" : "outline"}
                       size="sm"
-                      onClick={toggleAllBroadcastContacts}
-                      disabled={!filteredBroadcastContacts?.length}
+                      onClick={() => {
+                        setBroadcastRecipientMode("manual");
+                        setSelectedSegmentId(null);
+                      }}
+                      className="flex-1"
                     >
-                      {selectedBroadcastContacts.size === filteredBroadcastContacts?.length &&
-                      filteredBroadcastContacts?.length > 0
-                        ? "Deselect All"
-                        : "Select Loaded"}
+                      <Users className="mr-2 h-4 w-4" />
+                      Manual Selection
+                    </Button>
+                    <Button
+                      variant={broadcastRecipientMode === "segment" ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        setBroadcastRecipientMode("segment");
+                        setSelectedBroadcastContacts(new Set());
+                      }}
+                      className="flex-1"
+                      disabled={!segments || segments.length === 0}
+                    >
+                      <Filter className="mr-2 h-4 w-4" />
+                      Use Segment
                     </Button>
                   </div>
 
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      placeholder="Search contacts..."
-                      className="pl-10"
-                      value={broadcastSearchQuery}
-                      onChange={(e) => setBroadcastSearchQuery(e.target.value)}
-                    />
-                  </div>
+                  {/* Segment Selector */}
+                  {broadcastRecipientMode === "segment" && (
+                    <div className="space-y-2">
+                      <Label>Select Segment</Label>
+                      <Select
+                        value={selectedSegmentId || ""}
+                        onValueChange={(v) => setSelectedSegmentId(v || null)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choose a segment..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {segments?.map((segment) => (
+                            <SelectItem key={segment._id} value={segment._id}>
+                              <div className="flex items-center gap-2">
+                                <span>{segment.name}</span>
+                                <Badge variant="secondary" className="text-xs">
+                                  {segment.memberCount} contacts
+                                </Badge>
+                                {segment.isDynamic && (
+                                  <Badge variant="outline" className="text-xs">
+                                    <Zap className="mr-1 h-3 w-3" />
+                                    Dynamic
+                                  </Badge>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {selectedSegmentId && segmentContactIds && (
+                        <p className="text-sm text-muted-foreground">
+                          This segment contains {segmentContactIds.length} contacts
+                        </p>
+                      )}
+                      {!segments || segments.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          No segments yet.{" "}
+                          <button
+                            onClick={() => router.push("/dashboard/emails/segments?mode=create")}
+                            className="text-primary underline"
+                          >
+                            Create one
+                          </button>
+                        </p>
+                      ) : null}
+                    </div>
+                  )}
+
+                  {/* Manual Selection UI */}
+                  {broadcastRecipientMode === "manual" && (
+                    <>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          placeholder="Search contacts..."
+                          className="pl-10"
+                          value={broadcastSearchQuery}
+                          onChange={(e) => setBroadcastSearchQuery(e.target.value)}
+                        />
+                      </div>
 
                   {/* Tag filter chips */}
                   <div className="flex max-h-[200px] flex-wrap gap-2 overflow-y-auto">
@@ -1224,6 +1346,8 @@ The unsubscribe link will be added automatically."
                       </>
                     )}
                   </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </div>

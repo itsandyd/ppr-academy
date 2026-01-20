@@ -103,6 +103,7 @@ const triggerValidator = v.object({
     v.literal("lead_signup"),
     v.literal("product_purchase"),
     v.literal("tag_added"),
+    v.literal("segment_member"),
     v.literal("manual"),
     v.literal("time_delay"),
     v.literal("date_time"),
