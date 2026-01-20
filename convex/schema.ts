@@ -543,6 +543,44 @@ export default defineSchema({
     .index("by_workflowId", ["workflowId"])
     .index("by_workflowId_nodeId", ["workflowId", "nodeId"]),
 
+  // Creator Email Segments (for targeting contacts in broadcasts/workflows)
+  creatorEmailSegments: defineTable({
+    storeId: v.string(),
+    name: v.string(),
+    description: v.string(),
+    conditions: v.array(
+      v.object({
+        id: v.string(),
+        field: v.string(),
+        operator: v.union(
+          v.literal("equals"),
+          v.literal("not_equals"),
+          v.literal("greater_than"),
+          v.literal("less_than"),
+          v.literal("contains"),
+          v.literal("not_contains"),
+          v.literal("is_empty"),
+          v.literal("is_not_empty"),
+          v.literal("in_list"),
+          v.literal("not_in_list"),
+          v.literal("before"),
+          v.literal("after"),
+          v.literal("between")
+        ),
+        value: v.any(),
+        logic: v.optional(v.union(v.literal("AND"), v.literal("OR"))),
+      })
+    ),
+    isDynamic: v.boolean(), // Auto-update vs static snapshot
+    memberCount: v.number(),
+    cachedContactIds: v.optional(v.array(v.id("emailContacts"))),
+    lastUpdated: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_storeId", ["storeId"])
+    .index("by_name", ["storeId", "name"]),
+
   digitalProducts: defineTable({
     title: v.string(),
     slug: v.optional(v.string()),

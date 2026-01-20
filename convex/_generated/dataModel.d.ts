@@ -2692,6 +2692,62 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  creatorEmailSegments: {
+    document: {
+      cachedContactIds?: Array<Id<"emailContacts">>;
+      conditions: Array<{
+        field: string;
+        id: string;
+        logic?: "AND" | "OR";
+        operator:
+          | "equals"
+          | "not_equals"
+          | "greater_than"
+          | "less_than"
+          | "contains"
+          | "not_contains"
+          | "is_empty"
+          | "is_not_empty"
+          | "in_list"
+          | "not_in_list"
+          | "before"
+          | "after"
+          | "between";
+        value: any;
+      }>;
+      createdAt: number;
+      description: string;
+      isDynamic: boolean;
+      lastUpdated: number;
+      memberCount: number;
+      name: string;
+      storeId: string;
+      updatedAt: number;
+      _id: Id<"creatorEmailSegments">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "cachedContactIds"
+      | "conditions"
+      | "createdAt"
+      | "description"
+      | "isDynamic"
+      | "lastUpdated"
+      | "memberCount"
+      | "name"
+      | "storeId"
+      | "updatedAt";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_name: ["storeId", "name", "_creationTime"];
+      by_storeId: ["storeId", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   creatorPayouts: {
     document: {
       amount: number;

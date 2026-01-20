@@ -9370,6 +9370,154 @@ export declare const api: {
       }>
     >;
   };
+  emailCreatorSegments: {
+    createSegment: FunctionReference<
+      "mutation",
+      "public",
+      {
+        conditions: Array<{
+          field: string;
+          id: string;
+          logic?: "AND" | "OR";
+          operator:
+            | "equals"
+            | "not_equals"
+            | "greater_than"
+            | "less_than"
+            | "contains"
+            | "not_contains"
+            | "is_empty"
+            | "is_not_empty"
+            | "in_list"
+            | "not_in_list"
+            | "before"
+            | "after"
+            | "between";
+          value: any;
+        }>;
+        description?: string;
+        isDynamic: boolean;
+        name: string;
+        storeId: string;
+      },
+      Id<"creatorEmailSegments">
+    >;
+    deleteSegment: FunctionReference<
+      "mutation",
+      "public",
+      { segmentId: Id<"creatorEmailSegments"> },
+      { success: boolean }
+    >;
+    duplicateSegment: FunctionReference<
+      "mutation",
+      "public",
+      { segmentId: Id<"creatorEmailSegments"> },
+      Id<"creatorEmailSegments">
+    >;
+    getCreatorSegments: FunctionReference<
+      "query",
+      "public",
+      { storeId: string },
+      Array<any>
+    >;
+    getSegmentById: FunctionReference<
+      "query",
+      "public",
+      { segmentId: Id<"creatorEmailSegments"> },
+      any | null
+    >;
+    getSegmentContactIds: FunctionReference<
+      "query",
+      "public",
+      { segmentId: Id<"creatorEmailSegments"> },
+      Array<Id<"emailContacts">>
+    >;
+    getSegmentContacts: FunctionReference<
+      "query",
+      "public",
+      {
+        limit?: number;
+        offset?: number;
+        segmentId: Id<"creatorEmailSegments">;
+      },
+      { contacts: Array<any>; total: number }
+    >;
+    previewSegment: FunctionReference<
+      "query",
+      "public",
+      {
+        conditions: Array<{
+          field: string;
+          id: string;
+          logic?: "AND" | "OR";
+          operator:
+            | "equals"
+            | "not_equals"
+            | "greater_than"
+            | "less_than"
+            | "contains"
+            | "not_contains"
+            | "is_empty"
+            | "is_not_empty"
+            | "in_list"
+            | "not_in_list"
+            | "before"
+            | "after"
+            | "between";
+          value: any;
+        }>;
+        limit?: number;
+        storeId: string;
+      },
+      {
+        contacts: Array<{
+          _id: Id<"emailContacts">;
+          email: string;
+          firstName?: string;
+          lastName?: string;
+          tags: Array<string>;
+        }>;
+        count: number;
+      }
+    >;
+    refreshSegment: FunctionReference<
+      "mutation",
+      "public",
+      { segmentId: Id<"creatorEmailSegments"> },
+      { memberCount: number; success: boolean }
+    >;
+    updateSegment: FunctionReference<
+      "mutation",
+      "public",
+      {
+        conditions?: Array<{
+          field: string;
+          id: string;
+          logic?: "AND" | "OR";
+          operator:
+            | "equals"
+            | "not_equals"
+            | "greater_than"
+            | "less_than"
+            | "contains"
+            | "not_contains"
+            | "is_empty"
+            | "is_not_empty"
+            | "in_list"
+            | "not_in_list"
+            | "before"
+            | "after"
+            | "between";
+          value: any;
+        }>;
+        description?: string;
+        isDynamic?: boolean;
+        name?: string;
+        segmentId: Id<"creatorEmailSegments">;
+      },
+      { success: boolean }
+    >;
+  };
   emailHealthMonitoring: {
     getEmailHealthHistory: FunctionReference<
       "query",
