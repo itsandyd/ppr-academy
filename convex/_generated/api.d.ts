@@ -446,7 +446,115 @@ export declare const api: {
       >;
     };
   };
+  adminActivityLogs: {
+    getActivitySummary: FunctionReference<
+      "query",
+      "public",
+      { clerkId?: string; days?: number },
+      {
+        byActionType: Array<{ count: number; type: string }>;
+        byAdmin: Array<{ adminId: string; adminName?: string; count: number }>;
+        byResourceType: Array<{ count: number; type: string }>;
+        recentActivity: Array<{ count: number; date: string }>;
+        totalActions: number;
+      }
+    >;
+    getRecentActivity: FunctionReference<
+      "query",
+      "public",
+      {
+        actionType?:
+          | "create"
+          | "update"
+          | "delete"
+          | "approve"
+          | "reject"
+          | "export"
+          | "view";
+        clerkId?: string;
+        limit?: number;
+        resourceType?: string;
+      },
+      Array<{
+        _id: Id<"adminActivityLogs">;
+        action: string;
+        actionType: string;
+        adminEmail?: string;
+        adminId: string;
+        adminName?: string;
+        details?: string;
+        resourceId?: string;
+        resourceName?: string;
+        resourceType: string;
+        timeAgo: string;
+        timestamp: number;
+      }>
+    >;
+    getResourceActivity: FunctionReference<
+      "query",
+      "public",
+      { clerkId?: string; resourceId: string; resourceType: string },
+      Array<{
+        _id: Id<"adminActivityLogs">;
+        action: string;
+        actionType: string;
+        adminName?: string;
+        details?: string;
+        timeAgo: string;
+        timestamp: number;
+      }>
+    >;
+    logActivity: FunctionReference<
+      "mutation",
+      "public",
+      {
+        action: string;
+        actionType:
+          | "create"
+          | "update"
+          | "delete"
+          | "approve"
+          | "reject"
+          | "export"
+          | "view";
+        adminClerkId: string;
+        details?: string;
+        newValue?: string;
+        previousValue?: string;
+        resourceId?: string;
+        resourceName?: string;
+        resourceType: string;
+      },
+      Id<"adminActivityLogs">
+    >;
+  };
   adminAnalytics: {
+    getAdvancedRevenueMetrics: FunctionReference<
+      "query",
+      "public",
+      { clerkId?: string },
+      {
+        activeCustomers: number;
+        averageLtv: number;
+        churnRate: number;
+        churnedCustomers: number;
+        currentRevenue: number;
+        goalProgress: number;
+        highestLtv: number;
+        monthsToGoal: number;
+        mrr: number;
+        mrrGrowth: number;
+        previousMrr: number;
+        projectedMonthlyRevenue: number;
+        revenueByType: Array<{
+          count: number;
+          percentage: number;
+          revenue: number;
+          type: string;
+        }>;
+        revenueGoal: number;
+      }
+    >;
     getAllCreatorsWithProducts: FunctionReference<
       "query",
       "public",
@@ -546,6 +654,20 @@ export declare const api: {
         userId?: string;
       }>
     >;
+    getRevenueExportData: FunctionReference<
+      "query",
+      "public",
+      { clerkId?: string; endDate?: number; startDate?: number },
+      Array<{
+        amount: number;
+        customerEmail?: string;
+        date: string;
+        productName: string;
+        status: string;
+        transactionId: string;
+        type: string;
+      }>
+    >;
     getRevenueOverTime: FunctionReference<
       "query",
       "public",
@@ -582,6 +704,167 @@ export declare const api: {
       "public",
       { clerkId?: string },
       Array<{ date: string; newUsers: number; totalUsers: number }>
+    >;
+  };
+  adminCoach: {
+    approveCoachProfile: FunctionReference<
+      "mutation",
+      "public",
+      { clerkId: string; profileId: Id<"coachProfiles"> },
+      { message: string; success: boolean }
+    >;
+    cleanupOrphanedProfiles: FunctionReference<
+      "mutation",
+      "public",
+      { clerkId: string; dryRun?: boolean },
+      {
+        deletedIds: Array<string>;
+        message: string;
+        orphanedCount: number;
+        success: boolean;
+      }
+    >;
+    deleteCoachProfile: FunctionReference<
+      "mutation",
+      "public",
+      { clerkId: string; profileId: Id<"coachProfiles"> },
+      { message: string; success: boolean }
+    >;
+    getAllCoachProfiles: FunctionReference<
+      "query",
+      "public",
+      { clerkId: string },
+      Array<{
+        _creationTime: number;
+        _id: Id<"coachProfiles">;
+        alternativeContact?: string;
+        availableDays: string;
+        availableHours?: string;
+        basePrice: number;
+        category: string;
+        certifications?: string;
+        description: string;
+        discordId?: string;
+        discordUsername: string;
+        imageSrc: string;
+        isActive?: boolean;
+        location: string;
+        notableProjects?: string;
+        professionalBackground?: string;
+        stripeAccountId?: string;
+        stripeAccountStatus?: string;
+        stripeConnectComplete?: boolean;
+        timezone: string;
+        title: string;
+        userEmail?: string;
+        userId: string;
+        userName?: string;
+      }>
+    >;
+    getCoachProfilesDebug: FunctionReference<
+      "query",
+      "public",
+      { clerkId: string },
+      Array<{
+        _creationTime: number;
+        _id: Id<"coachProfiles">;
+        hasUser: boolean;
+        isActive?: boolean;
+        stripeAccountStatus?: string;
+        stripeConnectComplete?: boolean;
+        title: string;
+        userId: string;
+        userIsAdmin?: boolean;
+      }>
+    >;
+    rejectCoachProfile: FunctionReference<
+      "mutation",
+      "public",
+      { clerkId: string; profileId: Id<"coachProfiles"> },
+      { message: string; success: boolean }
+    >;
+  };
+  adminConversion: {
+    getAbandonedCarts: FunctionReference<
+      "query",
+      "public",
+      { clerkId?: string; days?: number },
+      Array<{
+        abandonedAt: number;
+        amount: number;
+        daysSinceAbandoned: number;
+        productName: string;
+        productType: string;
+        userEmail?: string;
+        userId: string;
+        userName?: string;
+      }>
+    >;
+    getConversionBySource: FunctionReference<
+      "query",
+      "public",
+      { clerkId?: string; days?: number },
+      Array<{
+        conversionRate: number;
+        purchases: number;
+        revenue: number;
+        signups: number;
+        source: string;
+        visitors: number;
+      }>
+    >;
+    getConversionMetrics: FunctionReference<
+      "query",
+      "public",
+      { clerkId?: string },
+      {
+        averageOrderValue: number;
+        cartAbandonmentRate: number;
+        enrollToPurchase: number;
+        overallConversion: number;
+        repeatPurchaseRate: number;
+        signupToEnroll: number;
+        visitToSignup: number;
+      }
+    >;
+    getCouponPerformance: FunctionReference<
+      "query",
+      "public",
+      { clerkId?: string },
+      {
+        activeCoupons: number;
+        recentUsages: Array<{
+          code: string;
+          discountApplied: number;
+          usedAt: number;
+          userName?: string;
+        }>;
+        topCoupons: Array<{
+          code: string;
+          conversionRate: number;
+          discountGiven: number;
+          isActive: boolean;
+          usageCount: number;
+        }>;
+        totalCoupons: number;
+        totalDiscountGiven: number;
+        totalUsages: number;
+      }
+    >;
+    getPurchaseFunnel: FunctionReference<
+      "query",
+      "public",
+      { clerkId?: string; days?: number },
+      {
+        averageTimeToConvert: number;
+        overallConversion: number;
+        steps: Array<{
+          conversionRate: number;
+          count: number;
+          dropOffRate: number;
+          name: string;
+        }>;
+      }
     >;
   };
   adminEmailMonitoring: {
@@ -3069,6 +3352,52 @@ export declare const api: {
         },
         null
       >;
+      getCreatorLeaderboard: FunctionReference<
+        "query",
+        "public",
+        {
+          limit?: number;
+          sortBy?: "revenue" | "healthScore" | "products" | "enrollments";
+        },
+        Array<{
+          _id?: Id<"creatorPipeline">;
+          avgRating: number;
+          courseCount: number;
+          daysSinceLastSale?: number;
+          healthScore: number;
+          healthStatus: string;
+          lastActiveAt?: number;
+          onboardingProgress: number;
+          productCount: number;
+          rank: number;
+          revenueThisMonth: number;
+          storeName?: string;
+          storeSlug?: string;
+          totalEnrollments: number;
+          totalRevenue: number;
+          userAvatar?: string;
+          userEmail?: string;
+          userId: string;
+          userName: string;
+        }>
+      >;
+      getCreatorOnboardingStatus: FunctionReference<
+        "query",
+        "public",
+        { userId: string },
+        {
+          overallProgress: number;
+          steps: Array<{
+            completed: boolean;
+            completedAt?: number;
+            description: string;
+            id: string;
+            title: string;
+          }>;
+          userId: string;
+          userName?: string;
+        }
+      >;
       getCreatorsByStage: FunctionReference<
         "query",
         "public",
@@ -3102,6 +3431,43 @@ export declare const api: {
           userEmail?: string;
           userId: string;
           userName?: string;
+        }>
+      >;
+      getCreatorsForBulkEmail: FunctionReference<
+        "query",
+        "public",
+        {
+          filter?:
+            | "all"
+            | "no_sales_30d"
+            | "low_health"
+            | "new_creators"
+            | "top_performers";
+        },
+        Array<{
+          email: string;
+          lastSaleAt?: number;
+          productCount: number;
+          storeName?: string;
+          totalRevenue: number;
+          userId: string;
+          userName: string;
+        }>
+      >;
+      getCreatorsNeedingAttention: FunctionReference<
+        "query",
+        "public",
+        {},
+        Array<{
+          daysSinceLastSale?: number;
+          healthScore: number;
+          issue: string;
+          severity: string;
+          storeName?: string;
+          suggestedAction: string;
+          userEmail?: string;
+          userId: string;
+          userName: string;
         }>
       >;
       getPipelineStats: FunctionReference<
@@ -8912,6 +9278,96 @@ export declare const api: {
         tone?: string;
       },
       { body: string; previewText: string; subject: string }
+    >;
+  };
+  emailCreatorAnalytics: {
+    getBestSendTimes: FunctionReference<
+      "query",
+      "public",
+      { storeId: string },
+      Array<{
+        clickRate: number;
+        dayOfWeek: number;
+        hour: number;
+        openRate: number;
+        totalOpens: number;
+      }>
+    >;
+    getCreatorEmailMetrics: FunctionReference<
+      "query",
+      "public",
+      { days?: number; storeId: string },
+      {
+        bounceRate: number;
+        clickRate: number;
+        openRate: number;
+        totalBounced: number;
+        totalClicked: number;
+        totalDelivered: number;
+        totalOpened: number;
+        totalSent: number;
+        totalUnsubscribed: number;
+        unsubscribeRate: number;
+      }
+    >;
+    getDailyEmailActivity: FunctionReference<
+      "query",
+      "public",
+      { days?: number; storeId: string },
+      Array<{ clicked: number; date: string; opened: number; sent: number }>
+    >;
+    getEngagementBreakdown: FunctionReference<
+      "query",
+      "public",
+      { storeId: string },
+      {
+        engaged: number;
+        highlyEngaged: number;
+        inactive: number;
+        lowEngagement: number;
+        total: number;
+      }
+    >;
+    getRecentActivity: FunctionReference<
+      "query",
+      "public",
+      { limit?: number; storeId: string },
+      Array<{
+        contactEmail: string;
+        contactName?: string;
+        id: string;
+        metadata?: any;
+        timestamp: number;
+        type: string;
+      }>
+    >;
+    getTopPerformingEmails: FunctionReference<
+      "query",
+      "public",
+      { limit?: number; storeId: string },
+      Array<{
+        clickRate: number;
+        clicked: number;
+        emailSubject: string;
+        openRate: number;
+        opened: number;
+        sent: number;
+        workflowName?: string;
+      }>
+    >;
+    getWorkflowAnalytics: FunctionReference<
+      "query",
+      "public",
+      { storeId: string },
+      Array<{
+        completionRate: number;
+        isActive: boolean;
+        totalActive: number;
+        totalCompleted: number;
+        totalEnrolled: number;
+        workflowId: string;
+        workflowName: string;
+      }>
     >;
   };
   emailHealthMonitoring: {
@@ -17435,6 +17891,16 @@ export declare const api: {
         youtube?: string;
       },
       null
+    >;
+    updateUserRole: FunctionReference<
+      "mutation",
+      "public",
+      {
+        adminClerkId: string;
+        role: "admin" | "user" | "creator";
+        targetUserId: Id<"users">;
+      },
+      { message: string; success: boolean }
     >;
   };
   vercelDomainManager: {

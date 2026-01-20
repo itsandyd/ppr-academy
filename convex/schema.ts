@@ -5449,4 +5449,35 @@ export default defineSchema({
     .index("by_version", ["version"])
     .index("by_publishedAt", ["publishedAt"])
     .index("by_isPublished", ["isPublished"]),
+
+  // Admin Activity Logs (for audit trail)
+  adminActivityLogs: defineTable({
+    adminId: v.string(), // Clerk ID of the admin
+    adminEmail: v.optional(v.string()),
+    adminName: v.optional(v.string()),
+    action: v.string(), // e.g., "user_role_change", "coach_approval", "content_moderation"
+    actionType: v.union(
+      v.literal("create"),
+      v.literal("update"),
+      v.literal("delete"),
+      v.literal("approve"),
+      v.literal("reject"),
+      v.literal("export"),
+      v.literal("view")
+    ),
+    resourceType: v.string(), // e.g., "user", "course", "product", "coach"
+    resourceId: v.optional(v.string()), // ID of the affected resource
+    resourceName: v.optional(v.string()), // Name/title of the affected resource
+    details: v.optional(v.string()), // JSON string with additional details
+    previousValue: v.optional(v.string()), // JSON string of previous state
+    newValue: v.optional(v.string()), // JSON string of new state
+    ipAddress: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+    timestamp: v.number(),
+  })
+    .index("by_adminId", ["adminId"])
+    .index("by_action", ["action"])
+    .index("by_actionType", ["actionType"])
+    .index("by_resourceType", ["resourceType"])
+    .index("by_timestamp", ["timestamp"]),
 });

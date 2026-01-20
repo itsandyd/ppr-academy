@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/select";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { AdminLoading } from "../components/admin-loading";
 
 export default function AdminCreatorsPage() {
   const { user } = useUser();
@@ -58,14 +59,7 @@ export default function AdminCreatorsPage() {
   const pipelineStats = useQuery(api.analytics.creatorPipeline.getPipelineStats, {});
 
   if (!leaderboard || !needsAttention || !bulkEmailList || !pipelineStats) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-center">
-          <Activity className="mx-auto mb-4 h-12 w-12 animate-spin text-purple-600" />
-          <p className="text-muted-foreground">Loading creator data...</p>
-        </div>
-      </div>
-    );
+    return <AdminLoading variant="dashboard" />;
   }
 
   const healthStatusColors: Record<string, string> = {

@@ -27,6 +27,61 @@ import type { GenericId } from "convex/values";
  */
 
 export type DataModel = {
+  adminActivityLogs: {
+    document: {
+      action: string;
+      actionType:
+        | "create"
+        | "update"
+        | "delete"
+        | "approve"
+        | "reject"
+        | "export"
+        | "view";
+      adminEmail?: string;
+      adminId: string;
+      adminName?: string;
+      details?: string;
+      ipAddress?: string;
+      newValue?: string;
+      previousValue?: string;
+      resourceId?: string;
+      resourceName?: string;
+      resourceType: string;
+      timestamp: number;
+      userAgent?: string;
+      _id: Id<"adminActivityLogs">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "action"
+      | "actionType"
+      | "adminEmail"
+      | "adminId"
+      | "adminName"
+      | "details"
+      | "ipAddress"
+      | "newValue"
+      | "previousValue"
+      | "resourceId"
+      | "resourceName"
+      | "resourceType"
+      | "timestamp"
+      | "userAgent";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_action: ["action", "_creationTime"];
+      by_actionType: ["actionType", "_creationTime"];
+      by_adminId: ["adminId", "_creationTime"];
+      by_resourceType: ["resourceType", "_creationTime"];
+      by_timestamp: ["timestamp", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   affiliateClicks: {
     document: {
       affiliateCode: string;

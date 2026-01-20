@@ -37,6 +37,7 @@ import {
   Cell,
 } from "recharts";
 import { cn } from "@/lib/utils";
+import { AdminLoading } from "../components/admin-loading";
 
 const FUNNEL_COLORS = ["#8b5cf6", "#a78bfa", "#c4b5fd", "#ddd6fe", "#ede9fe"];
 
@@ -66,14 +67,7 @@ export default function AdminConversionsPage() {
   );
 
   if (!purchaseFunnel || !conversionMetrics || !abandonedCarts || !couponPerformance) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-center">
-          <Activity className="mx-auto mb-4 h-12 w-12 animate-spin text-purple-600" />
-          <p className="text-muted-foreground">Loading conversion data...</p>
-        </div>
-      </div>
-    );
+    return <AdminLoading variant="dashboard" />;
   }
 
   const formatCurrency = (amount: number) =>

@@ -42,6 +42,7 @@ import {
   Cell,
 } from "recharts";
 import { useState } from "react";
+import { AdminLoading } from "../components/admin-loading";
 
 const COLORS = ["#8b5cf6", "#06b6d4", "#f59e0b", "#10b981", "#ef4444"];
 
@@ -76,14 +77,7 @@ export default function AdminRevenuePage() {
   );
 
   if (!overview || !revenueData || !topCourses || !topCreators || !advancedMetrics) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-center">
-          <Activity className="mx-auto mb-4 h-12 w-12 animate-spin text-purple-600" />
-          <p className="text-muted-foreground">Loading revenue data...</p>
-        </div>
-      </div>
-    );
+    return <AdminLoading variant="dashboard" />;
   }
 
   // Calculate some metrics
