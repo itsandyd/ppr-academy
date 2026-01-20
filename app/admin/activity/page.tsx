@@ -82,23 +82,25 @@ export default function AdminActivityPage() {
     user?.id ? { clerkId: user.id, days: 30 } : "skip"
   );
 
+  // Filter by search query - use empty array if data not loaded
+  const filteredActivity = !recentActivity
+    ? []
+    : searchQuery
+      ? recentActivity.filter(
+          (activity) =>
+            activity.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            activity.resourceType.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            activity.resourceName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            activity.adminName?.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      : recentActivity;
+
+  // Pagination for activity feed - must be called before any early returns
+  const activityPagination = usePagination(filteredActivity, 15);
+
   if (!recentActivity || !activitySummary) {
     return <AdminLoading variant="dashboard" />;
   }
-
-  // Filter by search query
-  const filteredActivity = searchQuery
-    ? recentActivity.filter(
-        (activity) =>
-          activity.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          activity.resourceType.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          activity.resourceName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          activity.adminName?.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : recentActivity;
-
-  // Pagination for activity feed
-  const activityPagination = usePagination(filteredActivity, 15);
 
   // Get unique resource types for filter
   const resourceTypes = Array.from(

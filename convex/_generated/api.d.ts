@@ -10197,6 +10197,108 @@ export declare const api: {
       { message: string; success: boolean }
     >;
   };
+  emailWorkflowABTesting: {
+    assignVariant: FunctionReference<
+      "query",
+      "public",
+      {
+        contactId: Id<"emailContacts">;
+        nodeId: string;
+        workflowId: Id<"emailWorkflows">;
+      },
+      null | {
+        body?: string;
+        subject: string;
+        variantId: string;
+        variantName: string;
+      }
+    >;
+    deleteNodeABTest: FunctionReference<
+      "mutation",
+      "public",
+      { nodeId: string; workflowId: Id<"emailWorkflows"> },
+      boolean
+    >;
+    getNodeABTest: FunctionReference<
+      "query",
+      "public",
+      { nodeId: string; workflowId: Id<"emailWorkflows"> },
+      null | any
+    >;
+    getVariantStats: FunctionReference<
+      "query",
+      "public",
+      { nodeId: string; workflowId: Id<"emailWorkflows"> },
+      null | {
+        isComplete: boolean;
+        isEnabled: boolean;
+        sampleSize: number;
+        totalSent: number;
+        variants: Array<{
+          clickRate: number;
+          clicked: number;
+          id: string;
+          name: string;
+          openRate: number;
+          opened: number;
+          percentage: number;
+          sent: number;
+          subject: string;
+        }>;
+        winner: null | string;
+      }
+    >;
+    getWorkflowABTests: FunctionReference<
+      "query",
+      "public",
+      { workflowId: Id<"emailWorkflows"> },
+      Array<any>
+    >;
+    recordVariantEvent: FunctionReference<
+      "mutation",
+      "public",
+      {
+        eventType: "sent" | "delivered" | "opened" | "clicked";
+        nodeId: string;
+        variantId: string;
+        workflowId: Id<"emailWorkflows">;
+      },
+      { success: boolean }
+    >;
+    resetTestStats: FunctionReference<
+      "mutation",
+      "public",
+      { nodeId: string; workflowId: Id<"emailWorkflows"> },
+      { success: boolean }
+    >;
+    saveNodeABTest: FunctionReference<
+      "mutation",
+      "public",
+      {
+        autoSelectWinner: boolean;
+        isEnabled: boolean;
+        nodeId: string;
+        sampleSize: number;
+        variants: Array<{
+          body?: string;
+          id: string;
+          name: string;
+          percentage: number;
+          subject: string;
+        }>;
+        winnerMetric: "open_rate" | "click_rate";
+        winnerThreshold?: number;
+        workflowId: Id<"emailWorkflows">;
+      },
+      Id<"workflowNodeABTests">
+    >;
+    selectWinner: FunctionReference<
+      "mutation",
+      "public",
+      { nodeId: string; variantId: string; workflowId: Id<"emailWorkflows"> },
+      { success: boolean }
+    >;
+  };
   emailWorkflows: {
     bulkEnrollAllContactsByFilter: FunctionReference<
       "action",
@@ -20318,6 +20420,14 @@ export declare const internal: {
       "internal",
       { email: string },
       null
+    >;
+  };
+  emailWorkflowABTesting: {
+    calculateWinner: FunctionReference<
+      "mutation",
+      "internal",
+      { testId: Id<"workflowNodeABTests"> },
+      { confidence: number; winner: null | string }
     >;
   };
   emailWorkflowActions: {

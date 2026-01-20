@@ -10313,6 +10313,61 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  workflowNodeABTests: {
+    document: {
+      autoSelectWinner: boolean;
+      completedAt?: number;
+      confidence?: number;
+      createdAt: number;
+      isEnabled: boolean;
+      nodeId: string;
+      sampleSize: number;
+      status: "active" | "completed";
+      updatedAt: number;
+      variants: Array<{
+        body?: string;
+        clicked: number;
+        delivered: number;
+        id: string;
+        name: string;
+        opened: number;
+        percentage: number;
+        sent: number;
+        subject: string;
+      }>;
+      winner?: string;
+      winnerMetric: "open_rate" | "click_rate";
+      winnerThreshold?: number;
+      workflowId: Id<"emailWorkflows">;
+      _id: Id<"workflowNodeABTests">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "autoSelectWinner"
+      | "completedAt"
+      | "confidence"
+      | "createdAt"
+      | "isEnabled"
+      | "nodeId"
+      | "sampleSize"
+      | "status"
+      | "updatedAt"
+      | "variants"
+      | "winner"
+      | "winnerMetric"
+      | "winnerThreshold"
+      | "workflowId";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_workflowId: ["workflowId", "_creationTime"];
+      by_workflowId_nodeId: ["workflowId", "nodeId", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
 };
 
 /**
