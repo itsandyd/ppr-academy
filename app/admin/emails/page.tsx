@@ -502,7 +502,7 @@ export default function AdminEmailsPage() {
 
         {/* Tabs */}
         <Tabs defaultValue="creators" className="space-y-6">
-          <TabsList className="grid h-12 w-full grid-cols-4 p-1">
+          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 p-1 md:h-12 md:grid-cols-4">
             <TabsTrigger value="creators" className="text-base">
               <Store className="mr-2 h-4 w-4" />
               Creators
@@ -1194,7 +1194,7 @@ export default function AdminEmailsPage() {
                           </div>
 
                           {/* Stats Grid */}
-                          <div className="grid grid-cols-4 gap-4 pt-2">
+                          <div className="grid grid-cols-2 gap-4 pt-2 md:grid-cols-4">
                             <div className="space-y-1">
                               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                                 Sent

@@ -141,11 +141,18 @@ export const getTopStudents = query({
           .withIndex("by_clerkId", (q) => q.eq("clerkId", xp.userId))
           .unique();
 
+        // Calculate completed courses from enrollments (progress >= 100)
+        const completedEnrollments = await ctx.db
+          .query("enrollments")
+          .withIndex("by_userId", (q) => q.eq("userId", xp.userId))
+          .filter((q) => q.gte(q.field("progress"), 100))
+          .collect();
+
         return {
           userId: xp.userId,
           rank: index + 1,
           totalXP: xp.totalXP,
-          coursesCompleted: 0, // TODO: Calculate from enrollments
+          coursesCompleted: completedEnrollments.length,
           name: user?.firstName || user?.email || "Student",
           avatar: user?.imageUrl,
           badge: index === 0 ? "Scholar" : undefined
