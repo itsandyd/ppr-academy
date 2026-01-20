@@ -13,6 +13,16 @@ const triggerLabels: Record<string, string> = {
   time_delay: "Time Delay",
   date_time: "Date/Time",
   customer_action: "Customer Action",
+  // Phase 8: Expanded triggers
+  webhook: "Webhook Received",
+  page_visit: "Page Visit",
+  cart_abandon: "Cart Abandoned",
+  birthday: "Contact Birthday",
+  anniversary: "Subscription Anniversary",
+  custom_event: "Custom Event",
+  api_call: "API Call",
+  form_submit: "Form Submitted",
+  email_reply: "Email Reply",
 };
 
 function TriggerNode({ data, selected }: NodeProps) {
@@ -45,6 +55,36 @@ function TriggerNode({ data, selected }: NodeProps) {
       subtitle = "Specific segment";
     } else {
       subtitle = "Select a segment";
+    }
+  } else if (data.triggerType === "webhook") {
+    if (data.webhookName) {
+      subtitle = data.webhookName;
+    } else {
+      subtitle = "External webhook";
+    }
+  } else if (data.triggerType === "page_visit") {
+    if (data.pagePath) {
+      subtitle = data.pagePath;
+    } else {
+      subtitle = "Any page";
+    }
+  } else if (data.triggerType === "cart_abandon") {
+    subtitle = data.minCartValue ? `Min value: $${data.minCartValue}` : "Any cart";
+  } else if (data.triggerType === "custom_event") {
+    if (data.eventName) {
+      subtitle = data.eventName;
+    } else {
+      subtitle = "Select an event";
+    }
+  } else if (data.triggerType === "birthday") {
+    subtitle = data.daysBefore ? `${data.daysBefore} days before` : "On birthday";
+  } else if (data.triggerType === "anniversary") {
+    subtitle = data.yearsAfter ? `${data.yearsAfter} year(s)` : "Each year";
+  } else if (data.triggerType === "form_submit") {
+    if (data.formName) {
+      subtitle = data.formName;
+    } else {
+      subtitle = "Any form";
     }
   }
 

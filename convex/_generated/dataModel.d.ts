@@ -1766,6 +1766,56 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  cartAbandonEvents: {
+    document: {
+      abandonedAt: number;
+      cartId?: string;
+      cartItems?: Array<{
+        price: number;
+        productId: string;
+        productName: string;
+        quantity: number;
+      }>;
+      cartValue?: number;
+      contactEmail: string;
+      contactId?: Id<"emailContacts">;
+      executionId?: Id<"workflowExecutions">;
+      recovered: boolean;
+      recoveredAt?: number;
+      recoveryEmailSent: boolean;
+      recoveryEmailSentAt?: number;
+      storeId: string;
+      workflowTriggered?: boolean;
+      _id: Id<"cartAbandonEvents">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "abandonedAt"
+      | "cartId"
+      | "cartItems"
+      | "cartValue"
+      | "contactEmail"
+      | "contactId"
+      | "executionId"
+      | "recovered"
+      | "recoveredAt"
+      | "recoveryEmailSent"
+      | "recoveryEmailSentAt"
+      | "storeId"
+      | "workflowTriggered";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_contactEmail: ["storeId", "contactEmail", "_creationTime"];
+      by_contactId: ["contactId", "_creationTime"];
+      by_recovered: ["storeId", "recovered", "_creationTime"];
+      by_storeId: ["storeId", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   certificates: {
     document: {
       certificateId: string;
@@ -3258,6 +3308,73 @@ export type DataModel = {
       by_email_and_store: ["email", "storeId", "_creationTime"];
       by_storeId: ["storeId", "_creationTime"];
       by_type: ["type", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
+  customEventLogs: {
+    document: {
+      contactEmail?: string;
+      contactId?: Id<"emailContacts">;
+      customEventId: Id<"customEvents">;
+      eventData?: any;
+      source?: string;
+      storeId: string;
+      timestamp: number;
+      workflowsTriggered: number;
+      _id: Id<"customEventLogs">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "contactEmail"
+      | "contactId"
+      | "customEventId"
+      | "eventData"
+      | "source"
+      | "storeId"
+      | "timestamp"
+      | "workflowsTriggered";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_contactId: ["contactId", "_creationTime"];
+      by_customEventId: ["customEventId", "_creationTime"];
+      by_storeId_timestamp: ["storeId", "timestamp", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
+  customEvents: {
+    document: {
+      createdAt: number;
+      description?: string;
+      eventName: string;
+      isActive: boolean;
+      lastFiredAt?: number;
+      storeId: string;
+      totalFires: number;
+      workflowCount: number;
+      _id: Id<"customEvents">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "createdAt"
+      | "description"
+      | "eventName"
+      | "isActive"
+      | "lastFiredAt"
+      | "storeId"
+      | "totalFires"
+      | "workflowCount";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_storeId: ["storeId", "_creationTime"];
+      by_storeId_eventName: ["storeId", "eventName", "_creationTime"];
     };
     searchIndexes: {};
     vectorIndexes: {};
@@ -4906,6 +5023,34 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  emailTestHistory: {
+    document: {
+      recipient: string;
+      sentAt: number;
+      storeId: string;
+      subject: string;
+      templateId?: string;
+      userId: string;
+      _id: Id<"emailTestHistory">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "recipient"
+      | "sentAt"
+      | "storeId"
+      | "subject"
+      | "templateId"
+      | "userId";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_storeId: ["storeId", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   emailWorkflows: {
     document: {
       avgClickRate?: number;
@@ -4949,7 +5094,16 @@ export type DataModel = {
           | "manual"
           | "time_delay"
           | "date_time"
-          | "customer_action";
+          | "customer_action"
+          | "webhook"
+          | "page_visit"
+          | "cart_abandon"
+          | "birthday"
+          | "anniversary"
+          | "custom_event"
+          | "api_call"
+          | "form_submit"
+          | "email_reply";
       };
       userId: string;
       _id: Id<"emailWorkflows">;
@@ -5580,6 +5734,37 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  leadScoreHistory: {
+    document: {
+      changeReason: string;
+      contactId: Id<"emailContacts">;
+      newScore: number;
+      previousScore: number;
+      ruleId?: string;
+      storeId: string;
+      timestamp: number;
+      _id: Id<"leadScoreHistory">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "changeReason"
+      | "contactId"
+      | "newScore"
+      | "previousScore"
+      | "ruleId"
+      | "storeId"
+      | "timestamp";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_contactId: ["contactId", "_creationTime"];
+      by_storeId_timestamp: ["storeId", "timestamp", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   leadScores: {
     document: {
       courseEngagement: number;
@@ -5624,6 +5809,50 @@ export type DataModel = {
       by_grade: ["grade", "_creationTime"];
       by_score: ["score", "_creationTime"];
       by_userId: ["userId", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
+  leadScoringRules: {
+    document: {
+      createdAt: number;
+      description?: string;
+      isActive: boolean;
+      name: string;
+      rules: Array<{
+        category: "engagement" | "demographic" | "behavior" | "recency";
+        field: string;
+        id: string;
+        isNegative?: boolean;
+        operator:
+          | "equals"
+          | "greater_than"
+          | "less_than"
+          | "between"
+          | "contains";
+        points: number;
+        value: any;
+      }>;
+      storeId: string;
+      updatedAt: number;
+      _id: Id<"leadScoringRules">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "createdAt"
+      | "description"
+      | "isActive"
+      | "name"
+      | "rules"
+      | "storeId"
+      | "updatedAt";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_active: ["storeId", "isActive", "_creationTime"];
+      by_storeId: ["storeId", "_creationTime"];
     };
     searchIndexes: {};
     vectorIndexes: {};
@@ -6464,6 +6693,47 @@ export type DataModel = {
       by_creation_time: ["_creationTime"];
       by_createdAt: ["createdAt", "_creationTime"];
       by_userId: ["userId", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
+  pageVisitEvents: {
+    document: {
+      contactEmail?: string;
+      contactId?: Id<"emailContacts">;
+      pagePath: string;
+      pageTitle?: string;
+      pageUrl: string;
+      referrer?: string;
+      sessionId?: string;
+      storeId: string;
+      timestamp: number;
+      userAgent?: string;
+      workflowTriggered?: boolean;
+      _id: Id<"pageVisitEvents">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "contactEmail"
+      | "contactId"
+      | "pagePath"
+      | "pageTitle"
+      | "pageUrl"
+      | "referrer"
+      | "sessionId"
+      | "storeId"
+      | "timestamp"
+      | "userAgent"
+      | "workflowTriggered";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_contactId: ["contactId", "_creationTime"];
+      by_storeId: ["storeId", "_creationTime"];
+      by_storeId_pagePath: ["storeId", "pagePath", "_creationTime"];
+      by_storeId_timestamp: ["storeId", "timestamp", "_creationTime"];
     };
     searchIndexes: {};
     vectorIndexes: {};
@@ -10382,6 +10652,83 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  webhookCallLogs: {
+    document: {
+      errorMessage?: string;
+      executionId?: Id<"workflowExecutions">;
+      ipAddress?: string;
+      payload: any;
+      status: "success" | "error" | "rate_limited";
+      storeId: string;
+      timestamp: number;
+      userAgent?: string;
+      webhookEndpointId: Id<"webhookEndpoints">;
+      workflowTriggered?: boolean;
+      _id: Id<"webhookCallLogs">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "errorMessage"
+      | "executionId"
+      | "ipAddress"
+      | "payload"
+      | "status"
+      | "storeId"
+      | "timestamp"
+      | "userAgent"
+      | "webhookEndpointId"
+      | "workflowTriggered";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_storeId_timestamp: ["storeId", "timestamp", "_creationTime"];
+      by_webhookEndpointId: ["webhookEndpointId", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
+  webhookEndpoints: {
+    document: {
+      createdAt: number;
+      description?: string;
+      endpointKey: string;
+      isActive: boolean;
+      lastCalledAt?: number;
+      name: string;
+      rateLimitPerMinute?: number;
+      secretKey: string;
+      storeId: string;
+      totalCalls: number;
+      workflowId?: Id<"emailWorkflows">;
+      _id: Id<"webhookEndpoints">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "createdAt"
+      | "description"
+      | "endpointKey"
+      | "isActive"
+      | "lastCalledAt"
+      | "name"
+      | "rateLimitPerMinute"
+      | "secretKey"
+      | "storeId"
+      | "totalCalls"
+      | "workflowId";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_active: ["storeId", "isActive", "_creationTime"];
+      by_endpointKey: ["endpointKey", "_creationTime"];
+      by_storeId: ["storeId", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   webResearch: {
     document: {
       addedToEmbeddings: boolean;
@@ -10508,6 +10855,43 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  workflowGoalCompletions: {
+    document: {
+      completedAt: number;
+      contactId: Id<"emailContacts">;
+      executionId: Id<"workflowExecutions">;
+      goalNodeId: string;
+      goalType: string;
+      goalValue?: any;
+      storeId: string;
+      timeToComplete: number;
+      workflowId: Id<"emailWorkflows">;
+      _id: Id<"workflowGoalCompletions">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "completedAt"
+      | "contactId"
+      | "executionId"
+      | "goalNodeId"
+      | "goalType"
+      | "goalValue"
+      | "storeId"
+      | "timeToComplete"
+      | "workflowId";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_contactId: ["contactId", "_creationTime"];
+      by_goalType: ["workflowId", "goalType", "_creationTime"];
+      by_storeId: ["storeId", "_creationTime"];
+      by_workflowId: ["workflowId", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   workflowNodeABTests: {
     document: {
       autoSelectWinner: boolean;
@@ -10559,6 +10943,54 @@ export type DataModel = {
       by_creation_time: ["_creationTime"];
       by_workflowId: ["workflowId", "_creationTime"];
       by_workflowId_nodeId: ["workflowId", "nodeId", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
+  workflowTemplates: {
+    document: {
+      category:
+        | "welcome"
+        | "nurture"
+        | "sales"
+        | "re_engagement"
+        | "onboarding"
+        | "custom";
+      createdAt: number;
+      creatorId?: string;
+      description: string;
+      edges: Array<any>;
+      isPublic: boolean;
+      name: string;
+      nodes: Array<any>;
+      thumbnail?: string;
+      trigger: { config: any; type: string };
+      usageCount: number;
+      _id: Id<"workflowTemplates">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "category"
+      | "createdAt"
+      | "creatorId"
+      | "description"
+      | "edges"
+      | "isPublic"
+      | "name"
+      | "nodes"
+      | "thumbnail"
+      | "trigger"
+      | "trigger.config"
+      | "trigger.type"
+      | "usageCount";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_category: ["category", "_creationTime"];
+      by_creatorId: ["creatorId", "_creationTime"];
+      by_public: ["isPublic", "_creationTime"];
     };
     searchIndexes: {};
     vectorIndexes: {};

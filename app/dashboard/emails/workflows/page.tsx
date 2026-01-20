@@ -141,17 +141,40 @@ type TriggerType =
   | "time_delay"
   | "date_time"
   | "customer_action"
-  | "segment_member";
+  | "segment_member"
+  // Phase 8: Expanded triggers
+  | "webhook"
+  | "page_visit"
+  | "cart_abandon"
+  | "birthday"
+  | "anniversary"
+  | "custom_event"
+  | "api_call"
+  | "form_submit"
+  | "email_reply";
 
-const triggerOptions: { value: TriggerType; label: string }[] = [
-  { value: "lead_signup", label: "Lead Signs Up" },
-  { value: "product_purchase", label: "Product Purchased" },
-  { value: "tag_added", label: "Tag Added to Contact" },
-  { value: "segment_member", label: "Segment Membership" },
-  { value: "manual", label: "Manual Enrollment" },
-  { value: "time_delay", label: "Time Delay" },
-  { value: "date_time", label: "Specific Date/Time" },
-  { value: "customer_action", label: "Customer Action" },
+const triggerOptions: { value: TriggerType; label: string; category?: string }[] = [
+  // Core triggers
+  { value: "lead_signup", label: "Lead Signs Up", category: "core" },
+  { value: "product_purchase", label: "Product Purchased", category: "core" },
+  { value: "tag_added", label: "Tag Added to Contact", category: "core" },
+  { value: "segment_member", label: "Segment Membership", category: "core" },
+  { value: "manual", label: "Manual Enrollment", category: "core" },
+  // Time-based triggers
+  { value: "time_delay", label: "Time Delay", category: "time" },
+  { value: "date_time", label: "Specific Date/Time", category: "time" },
+  { value: "birthday", label: "Contact Birthday", category: "time" },
+  { value: "anniversary", label: "Subscription Anniversary", category: "time" },
+  // Behavior triggers
+  { value: "customer_action", label: "Customer Action", category: "behavior" },
+  { value: "page_visit", label: "Page Visit", category: "behavior" },
+  { value: "cart_abandon", label: "Cart Abandoned", category: "behavior" },
+  { value: "email_reply", label: "Email Reply", category: "behavior" },
+  { value: "form_submit", label: "Form Submitted", category: "behavior" },
+  // Integration triggers
+  { value: "webhook", label: "Webhook Received", category: "integration" },
+  { value: "custom_event", label: "Custom Event", category: "integration" },
+  { value: "api_call", label: "API Call", category: "integration" },
 ];
 
 const conditionOptions = [

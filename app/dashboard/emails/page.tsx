@@ -53,6 +53,8 @@ import {
   BarChart3,
   Filter,
   Shield,
+  Target,
+  Eye,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -979,6 +981,14 @@ export default function EmailCampaignsPage() {
           </Button>
           <Button
             variant="outline"
+            onClick={() => router.push("/dashboard/emails/leads?mode=create")}
+            className="gap-2"
+          >
+            <Target className="h-4 w-4" />
+            Leads
+          </Button>
+          <Button
+            variant="outline"
             onClick={() => router.push("/dashboard/emails/deliverability?mode=create")}
             className="gap-2"
           >
@@ -992,6 +1002,14 @@ export default function EmailCampaignsPage() {
           >
             <BarChart3 className="h-4 w-4" />
             Analytics
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => router.push("/dashboard/emails/preview")}
+            className="gap-2"
+          >
+            <Eye className="h-4 w-4" />
+            Preview
           </Button>
         </div>
       </div>

@@ -436,7 +436,17 @@ export default defineSchema({
         v.literal("manual"),
         v.literal("time_delay"),
         v.literal("date_time"),
-        v.literal("customer_action")
+        v.literal("customer_action"),
+        // Phase 8: Expanded triggers
+        v.literal("webhook"),
+        v.literal("page_visit"),
+        v.literal("cart_abandon"),
+        v.literal("birthday"),
+        v.literal("anniversary"),
+        v.literal("custom_event"),
+        v.literal("api_call"),
+        v.literal("form_submit"),
+        v.literal("email_reply")
       ),
       config: v.any(), // Flexible config for different trigger types
     }),
@@ -481,6 +491,51 @@ export default defineSchema({
     .index("by_storeId", ["storeId"])
     .index("by_userId", ["userId"])
     .index("by_active", ["isActive"]),
+
+  // Workflow Templates (pre-built workflow templates)
+  workflowTemplates: defineTable({
+    name: v.string(),
+    description: v.string(),
+    category: v.union(
+      v.literal("welcome"),
+      v.literal("nurture"),
+      v.literal("sales"),
+      v.literal("re_engagement"),
+      v.literal("onboarding"),
+      v.literal("custom")
+    ),
+    thumbnail: v.optional(v.string()),
+    trigger: v.object({
+      type: v.string(),
+      config: v.any(),
+    }),
+    nodes: v.array(v.any()),
+    edges: v.array(v.any()),
+    isPublic: v.boolean(), // System templates vs user-created
+    creatorId: v.optional(v.string()), // For user-created templates
+    usageCount: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_category", ["category"])
+    .index("by_public", ["isPublic"])
+    .index("by_creatorId", ["creatorId"]),
+
+  // Workflow Goal Completions (track when contacts complete workflow goals)
+  workflowGoalCompletions: defineTable({
+    workflowId: v.id("emailWorkflows"),
+    executionId: v.id("workflowExecutions"),
+    contactId: v.id("emailContacts"),
+    storeId: v.string(),
+    goalNodeId: v.string(),
+    goalType: v.string(), // e.g., "purchase", "signup", "link_click"
+    goalValue: v.optional(v.any()), // e.g., product ID, link URL
+    completedAt: v.number(),
+    timeToComplete: v.number(), // Time from workflow start to goal completion (ms)
+  })
+    .index("by_workflowId", ["workflowId"])
+    .index("by_storeId", ["storeId"])
+    .index("by_contactId", ["contactId"])
+    .index("by_goalType", ["workflowId", "goalType"]),
 
   // Workflow Executions (tracking individual workflow runs)
   workflowExecutions: defineTable({
@@ -653,6 +708,176 @@ export default defineSchema({
   })
     .index("by_storeId", ["storeId"])
     .index("by_domain", ["domain"]),
+
+  // Lead Scoring Rules (customizable scoring criteria)
+  leadScoringRules: defineTable({
+    storeId: v.string(),
+    name: v.string(),
+    description: v.optional(v.string()),
+    isActive: v.boolean(),
+    rules: v.array(
+      v.object({
+        id: v.string(),
+        category: v.union(
+          v.literal("engagement"),
+          v.literal("demographic"),
+          v.literal("behavior"),
+          v.literal("recency")
+        ),
+        field: v.string(), // e.g., "emailsOpened", "daysSinceSignup", "purchaseCount"
+        operator: v.union(
+          v.literal("equals"),
+          v.literal("greater_than"),
+          v.literal("less_than"),
+          v.literal("between"),
+          v.literal("contains")
+        ),
+        value: v.any(),
+        points: v.number(), // Points to add/subtract
+        isNegative: v.optional(v.boolean()), // Whether to subtract points
+      })
+    ),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_storeId", ["storeId"])
+    .index("by_active", ["storeId", "isActive"]),
+
+  // Lead Score History (track score changes over time)
+  leadScoreHistory: defineTable({
+    storeId: v.string(),
+    contactId: v.id("emailContacts"),
+    previousScore: v.number(),
+    newScore: v.number(),
+    changeReason: v.string(), // e.g., "Email opened", "Purchase made"
+    ruleId: v.optional(v.string()),
+    timestamp: v.number(),
+  })
+    .index("by_contactId", ["contactId"])
+    .index("by_storeId_timestamp", ["storeId", "timestamp"]),
+
+  // Email Test History (Phase 7)
+  emailTestHistory: defineTable({
+    storeId: v.string(),
+    userId: v.string(),
+    subject: v.string(),
+    recipient: v.string(),
+    templateId: v.optional(v.string()),
+    sentAt: v.number(),
+  }).index("by_storeId", ["storeId"]),
+
+  // Phase 8: Webhook Endpoints (for external automation triggers)
+  webhookEndpoints: defineTable({
+    storeId: v.string(),
+    name: v.string(),
+    description: v.optional(v.string()),
+    endpointKey: v.string(), // Unique key for the webhook URL
+    secretKey: v.string(), // For webhook signature validation
+    isActive: v.boolean(),
+    // Optional: Link to specific workflow
+    workflowId: v.optional(v.id("emailWorkflows")),
+    // Rate limiting
+    rateLimitPerMinute: v.optional(v.number()),
+    // Stats
+    totalCalls: v.number(),
+    lastCalledAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_storeId", ["storeId"])
+    .index("by_endpointKey", ["endpointKey"])
+    .index("by_active", ["storeId", "isActive"]),
+
+  // Phase 8: Webhook Call Logs
+  webhookCallLogs: defineTable({
+    webhookEndpointId: v.id("webhookEndpoints"),
+    storeId: v.string(),
+    payload: v.any(),
+    ipAddress: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+    status: v.union(v.literal("success"), v.literal("error"), v.literal("rate_limited")),
+    errorMessage: v.optional(v.string()),
+    workflowTriggered: v.optional(v.boolean()),
+    executionId: v.optional(v.id("workflowExecutions")),
+    timestamp: v.number(),
+  })
+    .index("by_webhookEndpointId", ["webhookEndpointId"])
+    .index("by_storeId_timestamp", ["storeId", "timestamp"]),
+
+  // Phase 8: Custom Events (for custom_event trigger)
+  customEvents: defineTable({
+    storeId: v.string(),
+    eventName: v.string(),
+    description: v.optional(v.string()),
+    isActive: v.boolean(),
+    // Track how many workflows use this event
+    workflowCount: v.number(),
+    // Stats
+    totalFires: v.number(),
+    lastFiredAt: v.optional(v.number()),
+    createdAt: v.number(),
+  })
+    .index("by_storeId", ["storeId"])
+    .index("by_storeId_eventName", ["storeId", "eventName"]),
+
+  // Phase 8: Custom Event Logs
+  customEventLogs: defineTable({
+    customEventId: v.id("customEvents"),
+    storeId: v.string(),
+    contactId: v.optional(v.id("emailContacts")),
+    contactEmail: v.optional(v.string()),
+    eventData: v.optional(v.any()),
+    source: v.optional(v.string()), // "api", "webhook", "internal"
+    workflowsTriggered: v.number(),
+    timestamp: v.number(),
+  })
+    .index("by_customEventId", ["customEventId"])
+    .index("by_storeId_timestamp", ["storeId", "timestamp"])
+    .index("by_contactId", ["contactId"]),
+
+  // Phase 8: Page Visit Tracking (for page_visit trigger)
+  pageVisitEvents: defineTable({
+    storeId: v.string(),
+    contactId: v.optional(v.id("emailContacts")),
+    contactEmail: v.optional(v.string()),
+    pageUrl: v.string(),
+    pagePath: v.string(),
+    pageTitle: v.optional(v.string()),
+    referrer: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+    sessionId: v.optional(v.string()),
+    workflowTriggered: v.optional(v.boolean()),
+    timestamp: v.number(),
+  })
+    .index("by_storeId", ["storeId"])
+    .index("by_contactId", ["contactId"])
+    .index("by_storeId_pagePath", ["storeId", "pagePath"])
+    .index("by_storeId_timestamp", ["storeId", "timestamp"]),
+
+  // Phase 8: Cart Abandon Events (for cart_abandon trigger)
+  cartAbandonEvents: defineTable({
+    storeId: v.string(),
+    contactId: v.optional(v.id("emailContacts")),
+    contactEmail: v.string(),
+    cartId: v.optional(v.string()),
+    cartValue: v.optional(v.number()),
+    cartItems: v.optional(v.array(v.object({
+      productId: v.string(),
+      productName: v.string(),
+      quantity: v.number(),
+      price: v.number(),
+    }))),
+    abandonedAt: v.number(),
+    recoveryEmailSent: v.boolean(),
+    recoveryEmailSentAt: v.optional(v.number()),
+    recovered: v.boolean(),
+    recoveredAt: v.optional(v.number()),
+    workflowTriggered: v.optional(v.boolean()),
+    executionId: v.optional(v.id("workflowExecutions")),
+  })
+    .index("by_storeId", ["storeId"])
+    .index("by_contactId", ["contactId"])
+    .index("by_contactEmail", ["storeId", "contactEmail"])
+    .index("by_recovered", ["storeId", "recovered"]),
 
   digitalProducts: defineTable({
     title: v.string(),

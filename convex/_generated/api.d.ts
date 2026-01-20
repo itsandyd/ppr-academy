@@ -4506,6 +4506,169 @@ export declare const api: {
       { message: string; status: number }
     >;
   };
+  automationTriggers: {
+    createCustomEvent: FunctionReference<
+      "mutation",
+      "public",
+      { description?: string; eventName: string; storeId: string },
+      any
+    >;
+    createWebhookEndpoint: FunctionReference<
+      "mutation",
+      "public",
+      {
+        description?: string;
+        name: string;
+        rateLimitPerMinute?: number;
+        storeId: string;
+        workflowId?: Id<"emailWorkflows">;
+      },
+      any
+    >;
+    deleteCustomEvent: FunctionReference<
+      "mutation",
+      "public",
+      { eventId: Id<"customEvents"> },
+      any
+    >;
+    deleteWebhookEndpoint: FunctionReference<
+      "mutation",
+      "public",
+      { webhookId: Id<"webhookEndpoints"> },
+      any
+    >;
+    fireCustomEvent: FunctionReference<
+      "mutation",
+      "public",
+      {
+        contactEmail?: string;
+        contactId?: Id<"emailContacts">;
+        eventData?: any;
+        eventName: string;
+        source?: string;
+        storeId: string;
+      },
+      any
+    >;
+    getAbandonedCarts: FunctionReference<
+      "query",
+      "public",
+      { limit?: number; recoveredOnly?: boolean; storeId: string },
+      any
+    >;
+    getCartAbandonStats: FunctionReference<
+      "query",
+      "public",
+      { daysBack?: number; storeId: string },
+      any
+    >;
+    getCustomEventLogs: FunctionReference<
+      "query",
+      "public",
+      { eventId: Id<"customEvents">; limit?: number },
+      any
+    >;
+    getCustomEvents: FunctionReference<
+      "query",
+      "public",
+      { storeId: string },
+      any
+    >;
+    getPageVisitAnalytics: FunctionReference<
+      "query",
+      "public",
+      { daysBack?: number; storeId: string },
+      any
+    >;
+    getTriggerOverview: FunctionReference<
+      "query",
+      "public",
+      { storeId: string },
+      any
+    >;
+    getWebhookByKey: FunctionReference<
+      "query",
+      "public",
+      { endpointKey: string },
+      any
+    >;
+    getWebhookCallLogs: FunctionReference<
+      "query",
+      "public",
+      { limit?: number; webhookEndpointId: Id<"webhookEndpoints"> },
+      any
+    >;
+    getWebhookEndpoints: FunctionReference<
+      "query",
+      "public",
+      { storeId: string },
+      any
+    >;
+    markCartRecovered: FunctionReference<
+      "mutation",
+      "public",
+      { cartId: Id<"cartAbandonEvents"> },
+      any
+    >;
+    regenerateWebhookSecret: FunctionReference<
+      "mutation",
+      "public",
+      { webhookId: Id<"webhookEndpoints"> },
+      any
+    >;
+    trackCartAbandon: FunctionReference<
+      "mutation",
+      "public",
+      {
+        cartId?: string;
+        cartItems?: Array<{
+          price: number;
+          productId: string;
+          productName: string;
+          quantity: number;
+        }>;
+        cartValue?: number;
+        contactEmail: string;
+        storeId: string;
+      },
+      any
+    >;
+    trackPageVisit: FunctionReference<
+      "mutation",
+      "public",
+      {
+        contactEmail?: string;
+        contactId?: Id<"emailContacts">;
+        pagePath: string;
+        pageTitle?: string;
+        pageUrl: string;
+        referrer?: string;
+        sessionId?: string;
+        storeId: string;
+        userAgent?: string;
+      },
+      any
+    >;
+    updateCustomEvent: FunctionReference<
+      "mutation",
+      "public",
+      { description?: string; eventId: Id<"customEvents">; isActive?: boolean },
+      any
+    >;
+    updateWebhookEndpoint: FunctionReference<
+      "mutation",
+      "public",
+      {
+        description?: string;
+        isActive?: boolean;
+        name?: string;
+        rateLimitPerMinute?: number;
+        webhookId: Id<"webhookEndpoints">;
+        workflowId?: Id<"emailWorkflows">;
+      },
+      any
+    >;
+  };
   beatLeases: {
     checkUserBeatLicense: FunctionReference<
       "query",
@@ -9711,6 +9874,68 @@ export declare const api: {
       { newGrade: "A" | "B" | "C" | "D"; newScore: number; pointsAdded: number }
     >;
   };
+  emailPreview: {
+    analyzeReadability: FunctionReference<
+      "query",
+      "public",
+      { body: string },
+      any
+    >;
+    analyzeSpamScore: FunctionReference<
+      "query",
+      "public",
+      { body: string; subject: string },
+      any
+    >;
+    getFullAnalysis: FunctionReference<
+      "query",
+      "public",
+      { body: string; subject: string },
+      any
+    >;
+    getTestEmailHistory: FunctionReference<
+      "query",
+      "public",
+      { limit?: number; storeId: string },
+      any
+    >;
+    previewWithData: FunctionReference<
+      "query",
+      "public",
+      {
+        body: string;
+        previewData?: {
+          courseUrl?: string;
+          creatorName?: string;
+          downloadUrl?: string;
+          email?: string;
+          firstName?: string;
+          lastName?: string;
+          libraryUrl?: string;
+          productName?: string;
+          productUrl?: string;
+          reviewUrl?: string;
+          storeName?: string;
+          storeUrl?: string;
+        };
+        subject: string;
+      },
+      any
+    >;
+    recordTestEmail: FunctionReference<
+      "mutation",
+      "public",
+      {
+        recipient: string;
+        storeId: string;
+        subject: string;
+        templateId?: string;
+        userId: string;
+      },
+      any
+    >;
+    validateLinks: FunctionReference<"query", "public", { body: string }, any>;
+  };
   emailQueries: {
     cancelImport: FunctionReference<
       "mutation",
@@ -10611,7 +10836,16 @@ export declare const api: {
             | "manual"
             | "time_delay"
             | "date_time"
-            | "customer_action";
+            | "customer_action"
+            | "webhook"
+            | "page_visit"
+            | "cart_abandon"
+            | "birthday"
+            | "anniversary"
+            | "custom_event"
+            | "api_call"
+            | "form_submit"
+            | "email_reply";
         };
         userId: string;
       },
@@ -10735,7 +10969,16 @@ export declare const api: {
             | "manual"
             | "time_delay"
             | "date_time"
-            | "customer_action";
+            | "customer_action"
+            | "webhook"
+            | "page_visit"
+            | "cart_abandon"
+            | "birthday"
+            | "anniversary"
+            | "custom_event"
+            | "api_call"
+            | "form_submit"
+            | "email_reply";
         };
         workflowId: Id<"emailWorkflows">;
       },
@@ -11906,6 +12149,94 @@ export declare const api: {
       "public",
       { analysisId: Id<"leadMagnetAnalyses">; name: string },
       null
+    >;
+  };
+  leadScoring: {
+    calculateContactScore: FunctionReference<
+      "query",
+      "public",
+      { contactId: Id<"emailContacts">; storeId: string },
+      any
+    >;
+    deleteScoringRules: FunctionReference<
+      "mutation",
+      "public",
+      { ruleSetId: Id<"leadScoringRules"> },
+      any
+    >;
+    getActiveScoringRules: FunctionReference<
+      "query",
+      "public",
+      { storeId: string },
+      any
+    >;
+    getContactScoreHistory: FunctionReference<
+      "query",
+      "public",
+      { contactId: Id<"emailContacts">; limit?: number },
+      any
+    >;
+    getLeadScoringSummary: FunctionReference<
+      "query",
+      "public",
+      { storeId: string },
+      any
+    >;
+    getLeadsNeedingAttention: FunctionReference<
+      "query",
+      "public",
+      { limit?: number; storeId: string },
+      any
+    >;
+    getScoreDistribution: FunctionReference<
+      "query",
+      "public",
+      { storeId: string },
+      any
+    >;
+    getScoringRules: FunctionReference<
+      "query",
+      "public",
+      { storeId: string },
+      any
+    >;
+    getTopLeads: FunctionReference<
+      "query",
+      "public",
+      { limit?: number; storeId: string },
+      any
+    >;
+    recalculateAllScores: FunctionReference<
+      "mutation",
+      "public",
+      { storeId: string },
+      any
+    >;
+    saveScoringRules: FunctionReference<
+      "mutation",
+      "public",
+      {
+        description?: string;
+        isActive: boolean;
+        name: string;
+        ruleSetId?: Id<"leadScoringRules">;
+        rules: Array<{
+          category: "engagement" | "demographic" | "behavior" | "recency";
+          field: string;
+          id: string;
+          isNegative?: boolean;
+          operator:
+            | "equals"
+            | "greater_than"
+            | "less_than"
+            | "between"
+            | "contains";
+          points: number;
+          value: any;
+        }>;
+        storeId: string;
+      },
+      any
     >;
   };
   leadSubmissions: {
@@ -18362,6 +18693,69 @@ export declare const api: {
       null
     >;
   };
+  workflowTemplates: {
+    deleteTemplate: FunctionReference<
+      "mutation",
+      "public",
+      { templateId: Id<"workflowTemplates"> },
+      any
+    >;
+    getGoalCompletions: FunctionReference<
+      "query",
+      "public",
+      { limit?: number; workflowId: Id<"emailWorkflows"> },
+      any
+    >;
+    getGoalStats: FunctionReference<
+      "query",
+      "public",
+      { workflowId: Id<"emailWorkflows"> },
+      any
+    >;
+    getSystemTemplates: FunctionReference<"query", "public", {}, any>;
+    getTemplates: FunctionReference<
+      "query",
+      "public",
+      {
+        category?:
+          | "welcome"
+          | "nurture"
+          | "sales"
+          | "re_engagement"
+          | "onboarding"
+          | "custom";
+      },
+      any
+    >;
+    saveAsTemplate: FunctionReference<
+      "mutation",
+      "public",
+      {
+        category:
+          | "welcome"
+          | "nurture"
+          | "sales"
+          | "re_engagement"
+          | "onboarding"
+          | "custom";
+        description: string;
+        name: string;
+        workflowId: Id<"emailWorkflows">;
+      },
+      any
+    >;
+    useTemplate: FunctionReference<
+      "mutation",
+      "public",
+      {
+        storeId: string;
+        templateId: string;
+        userId: string;
+        workflowName: string;
+      },
+      any
+    >;
+  };
 };
 
 /**
@@ -19453,6 +19847,24 @@ export declare const internal: {
       "internal",
       { automationId: Id<"automations">; type: "COMMENT" | "DM" },
       null
+    >;
+  };
+  automationTriggers: {
+    logWebhookCall: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        errorMessage?: string;
+        executionId?: Id<"workflowExecutions">;
+        ipAddress?: string;
+        payload: any;
+        status: "success" | "error" | "rate_limited";
+        storeId: string;
+        userAgent?: string;
+        webhookEndpointId: Id<"webhookEndpoints">;
+        workflowTriggered?: boolean;
+      },
+      any
     >;
   };
   beatLeases: {
@@ -21391,6 +21803,14 @@ export declare const internal: {
       "internal",
       { sourceId: Id<"noteSources">; videoUrl: string },
       null
+    >;
+  };
+  leadScoring: {
+    updateContactScore: FunctionReference<
+      "mutation",
+      "internal",
+      { contactId: Id<"emailContacts">; pointsDelta: number; reason: string },
+      any
     >;
   };
   lib: {

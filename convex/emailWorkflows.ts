@@ -107,7 +107,17 @@ const triggerValidator = v.object({
     v.literal("manual"),
     v.literal("time_delay"),
     v.literal("date_time"),
-    v.literal("customer_action")
+    v.literal("customer_action"),
+    // Phase 8: Expanded triggers
+    v.literal("webhook"),
+    v.literal("page_visit"),
+    v.literal("cart_abandon"),
+    v.literal("birthday"),
+    v.literal("anniversary"),
+    v.literal("custom_event"),
+    v.literal("api_call"),
+    v.literal("form_submit"),
+    v.literal("email_reply")
   ),
   config: v.any(),
 });
