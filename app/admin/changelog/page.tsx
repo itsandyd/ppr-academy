@@ -354,7 +354,7 @@ export default function AdminChangelogPage() {
       const improvements = selected.filter((e: ChangelogEntry) => e.category === "improvement");
       const fixes = selected.filter((e: ChangelogEntry) => e.category === "fix");
 
-      let title = "New Updates Available";
+      const title = "New Updates Available";
       let message = "We've made some updates to improve your experience:\n\n";
 
       if (features.length > 0) {

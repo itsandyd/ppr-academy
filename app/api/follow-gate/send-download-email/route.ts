@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Build download URL - ensure we have a valid URL
-    let downloadUrl = product.downloadUrl || "";
+    const downloadUrl = product.downloadUrl || "";
 
     // If no direct download URL, we could build one from storage
     // For now, just use what's available

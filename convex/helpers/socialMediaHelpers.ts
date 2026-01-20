@@ -53,9 +53,19 @@ export async function updatePostStatusHelper(
     platformPostUrl?: string;
   }
 ): Promise<void> {
-  // For now, just log the status update
-  console.log("📊 Post status update:", args.postId, args.status, args.errorMessage);
-  
-  // TODO: Implement actual scheduledPosts table updates when needed
-  // This functionality isn't critical for the Instagram automation
+  const post = await ctx.db.get(args.postId as Id<"scheduledPosts">);
+  if (!post) {
+    console.log("📊 Post not found:", args.postId);
+    return;
+  }
+
+  await ctx.db.patch(args.postId as Id<"scheduledPosts">, {
+    status: args.status as "draft" | "scheduled" | "publishing" | "published" | "failed" | "cancelled",
+    ...(args.errorMessage && { errorMessage: args.errorMessage }),
+    ...(args.platformPostId && { platformPostId: args.platformPostId }),
+    ...(args.platformPostUrl && { platformPostUrl: args.platformPostUrl }),
+    ...(args.status === "published" && { publishedAt: Date.now() }),
+  });
+
+  console.log("📊 Post status updated:", args.postId, args.status);
 }

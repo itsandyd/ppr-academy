@@ -41,7 +41,7 @@ function splitTextIntoChunks(text: string, maxChunkLength: number): string[] {
   let currentPosition = 0;
 
   while (currentPosition < text.length) {
-    let chunkEnd = currentPosition + maxChunkLength;
+    const chunkEnd = currentPosition + maxChunkLength;
     if (chunkEnd >= text.length) {
       chunks.push(text.substring(currentPosition));
       break;

@@ -207,13 +207,26 @@ export const getStoreStats = query({
       ...coursePurchases.map(p => p.userId)
     ]);
 
+    // Calculate average rating from product reviews
+    const allReviews = await Promise.all(
+      productIds.map(productId =>
+        ctx.db.query("productReviews")
+          .withIndex("by_productId", q => q.eq("productId", productId))
+          .collect()
+      )
+    );
+    const flatReviews = allReviews.flat().filter(r => r.rating !== undefined);
+    const averageRating = flatReviews.length > 0
+      ? flatReviews.reduce((sum, r) => sum + (r.rating || 0), 0) / flatReviews.length
+      : 0;
+
     return {
       totalProducts: products.length,
       totalCourses: courses.length,
       totalEnrollments: coursePurchases.length,
       totalDownloads: productPurchases.length,
       totalRevenue: productRevenue + courseRevenue,
-      averageRating: 4.8, // TODO: Calculate from actual reviews when available
+      averageRating: Math.round(averageRating * 10) / 10,
       followerCount: uniqueCustomers.size,
       freeProducts: freeProducts + freeCourses,
       paidProducts: paidProducts + paidCourses,

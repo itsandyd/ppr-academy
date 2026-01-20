@@ -1404,9 +1404,10 @@ export const checkGoalAchieved = internalQuery({
         return clicks.length > 0;
 
       case "tag_applied":
-        // TODO: Implement when contact tagging system is added
-        // For now, always return false as tags aren't implemented yet
-        return false;
+        // Check if contact has the specified tag applied
+        if (!args.goalValue) return false;
+        const tagId = args.goalValue as string;
+        return contact.tagIds.some(t => t === tagId);
 
       default:
         return false;

@@ -195,7 +195,7 @@ export default function CoursePlayerPage() {
   let currentChapter: any = null;
   let currentModule: any = null;
   let currentLesson: any = null;
-  let allChapters: any[] = [];
+  const allChapters: any[] = [];
 
   courseData.modules?.forEach((module: any) => {
     module.lessons?.forEach((lesson: any) => {
