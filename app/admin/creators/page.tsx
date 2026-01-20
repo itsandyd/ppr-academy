@@ -176,23 +176,24 @@ export default function AdminCreatorsPage() {
 
       {/* Main Content Tabs */}
       <Tabs defaultValue="leaderboard" className="space-y-6">
-        <TabsList className="grid h-12 w-full grid-cols-3 p-1">
-          <TabsTrigger value="leaderboard" className="gap-2 text-base">
-            <Trophy className="h-4 w-4" />
-            Leaderboard
+        <TabsList className="flex h-auto w-full flex-wrap gap-1 p-1 sm:grid sm:h-12 sm:grid-cols-3">
+          <TabsTrigger value="leaderboard" className="flex-1 gap-1 text-xs sm:gap-2 sm:text-base">
+            <Trophy className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline">Leaderboard</span>
+            <span className="xs:hidden">Top</span>
           </TabsTrigger>
-          <TabsTrigger value="attention" className="gap-2 text-base">
-            <AlertTriangle className="h-4 w-4" />
-            Needs Attention
+          <TabsTrigger value="attention" className="flex-1 gap-1 text-xs sm:gap-2 sm:text-base">
+            <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Needs</span> Attention
             {atRiskCreators > 0 && (
               <Badge variant="destructive" className="ml-1">
                 {atRiskCreators}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="outreach" className="gap-2 text-base">
-            <Mail className="h-4 w-4" />
-            Bulk Outreach
+          <TabsTrigger value="outreach" className="flex-1 gap-1 text-xs sm:gap-2 sm:text-base">
+            <Mail className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Bulk</span> Outreach
           </TabsTrigger>
         </TabsList>
 
@@ -223,78 +224,137 @@ export default function AdminCreatorsPage() {
                 {leaderboard.map((creator) => (
                   <div
                     key={creator.userId}
-                    className="flex items-center gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50"
+                    className="rounded-lg border p-4 transition-colors hover:bg-muted/50"
                   >
-                    {/* Rank */}
-                    <div
-                      className={cn(
-                        "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-lg font-bold",
-                        creator.rank === 1
-                          ? "bg-yellow-500 text-white"
-                          : creator.rank === 2
-                            ? "bg-gray-400 text-white"
-                            : creator.rank === 3
-                              ? "bg-amber-600 text-white"
-                              : "bg-muted text-muted-foreground"
-                      )}
-                    >
-                      {creator.rank}
-                    </div>
-
-                    {/* Creator Info */}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="truncate font-semibold">{creator.userName}</p>
-                        <Badge className={healthStatusBadgeColors[creator.healthStatus]}>
-                          {creator.healthScore}
-                        </Badge>
+                    {/* Mobile layout */}
+                    <div className="lg:hidden space-y-3">
+                      {/* Top row: Rank + Name + Score */}
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={cn(
+                            "flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full font-bold",
+                            creator.rank === 1
+                              ? "bg-yellow-500 text-white"
+                              : creator.rank === 2
+                                ? "bg-gray-400 text-white"
+                                : creator.rank === 3
+                                  ? "bg-amber-600 text-white"
+                                  : "bg-muted text-muted-foreground"
+                          )}
+                        >
+                          {creator.rank}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="truncate font-semibold">{creator.userName}</p>
+                            <Badge className={cn("text-xs", healthStatusBadgeColors[creator.healthStatus])}>
+                              {creator.healthScore}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {creator.storeName || "No store"} • {creator.courseCount} courses
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-green-600 text-sm">
+                            {formatCurrency(creator.totalRevenue)}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        {creator.storeName || "No store"} • {creator.courseCount} courses •{" "}
-                        {creator.productCount} products
-                      </p>
-                    </div>
 
-                    {/* Health Bar */}
-                    <div className="w-32">
-                      <div className="mb-1 flex justify-between text-xs">
-                        <span>Health</span>
-                        <span>{creator.healthScore}%</span>
+                      {/* Stats row */}
+                      <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                        <div className="rounded bg-muted/50 p-2">
+                          <p className="font-bold">{creator.totalEnrollments}</p>
+                          <p className="text-muted-foreground">Enrollments</p>
+                        </div>
+                        <div className="rounded bg-muted/50 p-2">
+                          <p className="font-bold flex items-center justify-center gap-1">
+                            <Star className="h-3 w-3 text-yellow-500" />
+                            {creator.avgRating.toFixed(1)}
+                          </p>
+                          <p className="text-muted-foreground">Rating</p>
+                        </div>
+                        <div className="rounded bg-muted/50 p-2">
+                          <p className="font-bold">{creator.onboardingProgress}%</p>
+                          <p className="text-muted-foreground">Setup</p>
+                        </div>
                       </div>
-                      <Progress
-                        value={creator.healthScore}
-                        className={cn("h-2", healthStatusColors[creator.healthStatus])}
-                      />
                     </div>
 
-                    {/* Stats */}
-                    <div className="flex gap-6 text-sm">
-                      <div className="text-center">
-                        <p className="font-bold text-green-600">
-                          {formatCurrency(creator.totalRevenue)}
+                    {/* Desktop layout */}
+                    <div className="hidden lg:flex items-center gap-4">
+                      {/* Rank */}
+                      <div
+                        className={cn(
+                          "flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full text-lg font-bold",
+                          creator.rank === 1
+                            ? "bg-yellow-500 text-white"
+                            : creator.rank === 2
+                              ? "bg-gray-400 text-white"
+                              : creator.rank === 3
+                                ? "bg-amber-600 text-white"
+                                : "bg-muted text-muted-foreground"
+                        )}
+                      >
+                        {creator.rank}
+                      </div>
+
+                      {/* Creator Info */}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="truncate font-semibold">{creator.userName}</p>
+                          <Badge className={healthStatusBadgeColors[creator.healthStatus]}>
+                            {creator.healthScore}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {creator.storeName || "No store"} • {creator.courseCount} courses •{" "}
+                          {creator.productCount} products
                         </p>
-                        <p className="text-xs text-muted-foreground">Revenue</p>
                       </div>
-                      <div className="text-center">
-                        <p className="font-bold">{creator.totalEnrollments}</p>
-                        <p className="text-xs text-muted-foreground">Enrollments</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="font-bold flex items-center gap-1">
-                          <Star className="h-3 w-3 text-yellow-500" />
-                          {creator.avgRating.toFixed(1)}
-                        </p>
-                        <p className="text-xs text-muted-foreground">Rating</p>
-                      </div>
-                    </div>
 
-                    {/* Onboarding Progress */}
-                    <div className="w-24">
-                      <div className="mb-1 flex justify-between text-xs">
-                        <span>Setup</span>
-                        <span>{creator.onboardingProgress}%</span>
+                      {/* Health Bar */}
+                      <div className="w-32">
+                        <div className="mb-1 flex justify-between text-xs">
+                          <span>Health</span>
+                          <span>{creator.healthScore}%</span>
+                        </div>
+                        <Progress
+                          value={creator.healthScore}
+                          className={cn("h-2", healthStatusColors[creator.healthStatus])}
+                        />
                       </div>
-                      <Progress value={creator.onboardingProgress} className="h-2" />
+
+                      {/* Stats */}
+                      <div className="flex gap-6 text-sm">
+                        <div className="text-center">
+                          <p className="font-bold text-green-600">
+                            {formatCurrency(creator.totalRevenue)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Revenue</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="font-bold">{creator.totalEnrollments}</p>
+                          <p className="text-xs text-muted-foreground">Enrollments</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="font-bold flex items-center gap-1">
+                            <Star className="h-3 w-3 text-yellow-500" />
+                            {creator.avgRating.toFixed(1)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Rating</p>
+                        </div>
+                      </div>
+
+                      {/* Onboarding Progress */}
+                      <div className="w-24">
+                        <div className="mb-1 flex justify-between text-xs">
+                          <span>Setup</span>
+                          <span>{creator.onboardingProgress}%</span>
+                        </div>
+                        <Progress value={creator.onboardingProgress} className="h-2" />
+                      </div>
                     </div>
                   </div>
                 ))}

@@ -163,7 +163,8 @@ export default function AdminConversionsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between gap-4">
+          {/* Desktop horizontal funnel */}
+          <div className="hidden lg:flex items-center justify-between gap-4">
             {purchaseFunnel.steps.map((step, index) => (
               <div key={step.name} className="flex flex-1 items-center">
                 {/* Step */}
@@ -213,6 +214,51 @@ export default function AdminConversionsPage() {
             ))}
           </div>
 
+          {/* Mobile vertical funnel */}
+          <div className="lg:hidden space-y-3">
+            {purchaseFunnel.steps.map((step, index) => (
+              <div key={step.name}>
+                <div className="flex items-center gap-3">
+                  <div
+                    className={cn(
+                      "flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg text-white font-bold",
+                      index === 0
+                        ? "bg-purple-600"
+                        : index === 1
+                          ? "bg-purple-500"
+                          : index === 2
+                            ? "bg-purple-400"
+                            : index === 3
+                              ? "bg-purple-300 text-purple-900"
+                              : "bg-purple-200 text-purple-900"
+                    )}
+                  >
+                    {index + 1}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <p className="font-medium">{step.name}</p>
+                      <p className="text-lg font-bold">{step.count.toLocaleString()}</p>
+                    </div>
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                      <span>{step.conversionRate.toFixed(1)}% rate</span>
+                      {index < purchaseFunnel.steps.length - 1 && (
+                        <span className="text-red-500">
+                          -{purchaseFunnel.steps[index + 1].dropOffRate.toFixed(0)}% drop
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                {index < purchaseFunnel.steps.length - 1 && (
+                  <div className="ml-6 flex items-center justify-center py-1">
+                    <ArrowDown className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
           <div className="mt-6 rounded-lg bg-muted/50 p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -231,23 +277,24 @@ export default function AdminConversionsPage() {
 
       {/* Tabs */}
       <Tabs defaultValue="abandoned" className="space-y-6">
-        <TabsList className="grid h-12 w-full grid-cols-3 p-1">
-          <TabsTrigger value="abandoned" className="gap-2 text-base">
-            <ShoppingCart className="h-4 w-4" />
-            Abandoned Carts
+        <TabsList className="flex h-auto w-full flex-wrap gap-1 p-1 sm:grid sm:h-12 sm:grid-cols-3">
+          <TabsTrigger value="abandoned" className="flex-1 gap-1 text-xs sm:gap-2 sm:text-base">
+            <ShoppingCart className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline">Abandoned</span>
+            <span className="xs:hidden">Cart</span>
             {abandonedCarts.length > 0 && (
               <Badge variant="destructive" className="ml-1">
                 {abandonedCarts.length}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="coupons" className="gap-2 text-base">
-            <Tag className="h-4 w-4" />
-            Coupon Performance
+          <TabsTrigger value="coupons" className="flex-1 gap-1 text-xs sm:gap-2 sm:text-base">
+            <Tag className="h-3 w-3 sm:h-4 sm:w-4" />
+            Coupons
           </TabsTrigger>
-          <TabsTrigger value="sources" className="gap-2 text-base">
-            <PieChart className="h-4 w-4" />
-            Traffic Sources
+          <TabsTrigger value="sources" className="flex-1 gap-1 text-xs sm:gap-2 sm:text-base">
+            <PieChart className="h-3 w-3 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Traffic</span> Sources
           </TabsTrigger>
         </TabsList>
 
@@ -275,7 +322,7 @@ export default function AdminConversionsPage() {
                   {abandonedCarts.slice(0, 10).map((cart, index) => (
                     <div
                       key={index}
-                      className="flex items-center justify-between rounded-lg border p-4"
+                      className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between"
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
@@ -285,19 +332,19 @@ export default function AdminConversionsPage() {
                           </Badge>
                         </div>
                         <p className="text-sm text-muted-foreground">{cart.userEmail || "No email"}</p>
-                        <p className="mt-1 text-sm">{cart.productName}</p>
+                        <p className="mt-1 text-sm truncate">{cart.productName}</p>
                       </div>
-                      <div className="ml-4 text-right">
-                        <p className="text-lg font-bold text-orange-600">{formatCurrency(cart.amount)}</p>
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Clock className="h-3 w-3" />
-                          {cart.daysSinceAbandoned}d ago
+                      <div className="flex items-center justify-between gap-4 sm:flex-col sm:items-end sm:gap-1">
+                        <div className="text-left sm:text-right">
+                          <p className="text-lg font-bold text-orange-600">{formatCurrency(cart.amount)}</p>
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Clock className="h-3 w-3" />
+                            {cart.daysSinceAbandoned}d ago
+                          </div>
                         </div>
-                      </div>
-                      <div className="ml-4">
-                        <Button size="sm" variant="outline" className="gap-1">
+                        <Button size="sm" variant="outline" className="gap-1 flex-shrink-0">
                           <Mail className="h-4 w-4" />
-                          Recover
+                          <span className="hidden xs:inline">Recover</span>
                         </Button>
                       </div>
                     </div>
