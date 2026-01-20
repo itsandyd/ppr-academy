@@ -113,10 +113,25 @@ const operatorsByType: Record<string, Array<{ value: string; label: string }>> =
   ],
 };
 
+type ConditionOperator =
+  | "equals"
+  | "not_equals"
+  | "greater_than"
+  | "less_than"
+  | "contains"
+  | "not_contains"
+  | "is_empty"
+  | "is_not_empty"
+  | "in_list"
+  | "not_in_list"
+  | "before"
+  | "after"
+  | "between";
+
 interface Condition {
   id: string;
   field: string;
-  operator: string;
+  operator: ConditionOperator;
   value: any;
   logic?: "AND" | "OR";
 }
@@ -207,7 +222,7 @@ function ConditionBuilder({
             onValueChange={(v) =>
               onUpdate({
                 ...condition,
-                operator: v,
+                operator: v as ConditionOperator,
                 value: v === "between" ? [0, 100] : "",
               })
             }
