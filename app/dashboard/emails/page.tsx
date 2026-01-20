@@ -51,6 +51,7 @@ import {
   Megaphone,
   Loader2,
   BarChart3,
+  Filter,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -940,6 +941,14 @@ export default function EmailCampaignsPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => router.push("/dashboard/emails/segments?mode=create")}
+            className="gap-2"
+          >
+            <Filter className="h-4 w-4" />
+            Segments
+          </Button>
           <Button
             variant="outline"
             onClick={() => router.push("/dashboard/emails/analytics?mode=create")}
