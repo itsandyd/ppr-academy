@@ -21812,6 +21812,42 @@ export declare const internal: {
     >;
   };
   leadScoring: {
+    _rebuildSummaryBatch: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        coldCount: number;
+        cursor: string | null;
+        hotCount: number;
+        inactiveCount: number;
+        needsAttentionCount: number;
+        scoreBuckets: Array<number>;
+        storeId: string;
+        totalScore: number;
+        totalSubscribed: number;
+        warmCount: number;
+      },
+      any
+    >;
+    _recalculateScoresBatch: FunctionReference<
+      "mutation",
+      "internal",
+      {
+        coldCount: number;
+        cursor: string | null;
+        hotCount: number;
+        inactiveCount: number;
+        needsAttentionCount: number;
+        scoreBuckets: Array<number>;
+        storeId: string;
+        total: number;
+        totalScore: number;
+        totalSubscribed: number;
+        updated: number;
+        warmCount: number;
+      },
+      any
+    >;
     updateContactScore: FunctionReference<
       "mutation",
       "internal",

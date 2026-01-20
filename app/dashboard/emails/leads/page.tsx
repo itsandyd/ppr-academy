@@ -157,13 +157,13 @@ export default function LeadScoringPage() {
     try {
       const result = await recalculateScores({ storeId });
       toast({
-        title: "Scores recalculated",
-        description: `Updated ${result.updated} of ${result.total} contacts`,
+        title: "Recalculation started",
+        description: result.message || "Score recalculation is processing in the background",
       });
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to recalculate scores",
+        description: "Failed to start score recalculation",
         variant: "destructive",
       });
     } finally {
