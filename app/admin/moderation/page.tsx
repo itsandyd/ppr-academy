@@ -31,9 +31,12 @@ import {
   Shield,
   Music,
   Ban,
+  FileDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Id } from "@/convex/_generated/dataModel";
+import { AdminLoading } from "../components/admin-loading";
+import { AdminPagination, usePagination } from "../components/admin-pagination";
 
 type ReportStatus = "pending" | "reviewed" | "resolved" | "dismissed" | "counter_notice";
 type ReportType = "course" | "comment" | "user" | "product" | "sample" | "copyright";
@@ -73,6 +76,9 @@ export default function ContentModerationPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const takedownContent = useMutation((api as any).copyright.takedownContent);
 
+  // Loading state
+  const isLoading = !reports || stats.total === undefined;
+
   const filteredReports = reports.filter((report: any) => {
     const matchesSearch =
       report.contentTitle?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -86,6 +92,39 @@ export default function ContentModerationPage() {
 
     return matchesSearch && matchesType;
   });
+
+  // Pagination
+  const reportsPagination = usePagination(filteredReports, 10);
+
+  // Export reports to CSV
+  const exportReportsToCSV = () => {
+    const headers = ["Date", "Type", "Status", "Content Title", "Reason", "Reporter", "Reported User"];
+    const rows = filteredReports.map((report: any) => [
+      new Date(report.reportedAt).toLocaleDateString(),
+      report.type,
+      report.status,
+      report.contentTitle,
+      report.reason,
+      report.reporterName,
+      report.reportedUserName || "",
+    ]);
+
+    const csvContent = [
+      headers.join(","),
+      ...rows.map((row: string[]) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `moderation-reports-${activeTab}-${new Date().toISOString().split("T")[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
+
+  if (isLoading) {
+    return <AdminLoading variant="dashboard" />;
+  }
 
   const handleApprove = async (reportId: Id<"reports">) => {
     if (!user?.id) {
@@ -252,6 +291,16 @@ export default function ContentModerationPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={exportReportsToCSV}
+            disabled={filteredReports.length === 0}
+            className="gap-1"
+          >
+            <FileDown className="h-4 w-4" />
+            <span className="hidden sm:inline">Export</span>
+          </Button>
           <Badge variant="outline" className="px-3 py-1.5">
             <AlertTriangle className="mr-1.5 h-3.5 w-3.5" />
             {stats.pending} pending
@@ -395,7 +444,7 @@ export default function ContentModerationPage() {
             <CardContent className="p-0">
               <div className="divide-y">
                 {filteredReports.length > 0 ? (
-                  filteredReports.map((report: any) => (
+                  reportsPagination.paginatedItems.map((report: any) => (
                     <div key={report._id} className="p-6 transition-colors hover:bg-muted/30">
                       <div className="flex items-start justify-between gap-6">
                         <div className="flex-1 space-y-4">
@@ -588,6 +637,18 @@ export default function ContentModerationPage() {
                   </div>
                 )}
               </div>
+              {filteredReports.length > 10 && (
+                <div className="border-t p-4">
+                  <AdminPagination
+                    currentPage={reportsPagination.currentPage}
+                    totalPages={reportsPagination.totalPages}
+                    totalItems={reportsPagination.totalItems}
+                    itemsPerPage={reportsPagination.itemsPerPage}
+                    onPageChange={reportsPagination.handlePageChange}
+                    onItemsPerPageChange={reportsPagination.handleItemsPerPageChange}
+                  />
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
