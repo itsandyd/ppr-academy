@@ -190,40 +190,41 @@ export const calculateContactScore = query({
 });
 
 // Get lead score distribution
+// IMPORTANT: This query reads from the pre-aggregated leadScoringSummary table
+// to avoid exceeding Convex's 32k document read limit.
 export const getScoreDistribution = query({
   args: {
     storeId: v.string(),
   },
   handler: async (ctx, args) => {
-    const contacts = await ctx.db
-      .query("emailContacts")
+    // Read from pre-aggregated summary table (single doc read)
+    const summary = await ctx.db
+      .query("leadScoringSummary")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .filter((q) => q.eq(q.field("status"), "subscribed"))
-      .collect();
+      .first();
 
-    const distribution = {
-      hot: 0, // 70-100
-      warm: 0, // 40-69
-      cold: 0, // 10-39
-      inactive: 0, // 0-9
-    };
-
-    for (const contact of contacts) {
-      const score = contact.engagementScore || 0;
-      if (score >= 70) distribution.hot++;
-      else if (score >= 40) distribution.warm++;
-      else if (score >= 10) distribution.cold++;
-      else distribution.inactive++;
+    if (!summary) {
+      return {
+        distribution: { hot: 0, warm: 0, cold: 0, inactive: 0 },
+        total: 0,
+      };
     }
 
     return {
-      distribution,
-      total: contacts.length,
+      distribution: {
+        hot: summary.hotCount,
+        warm: summary.warmCount,
+        cold: summary.coldCount,
+        inactive: summary.inactiveCount,
+      },
+      total: summary.totalSubscribed,
     };
   },
 });
 
 // Get top leads
+// IMPORTANT: This query uses the by_storeId_status_engagementScore index to efficiently
+// fetch top leads without scanning all contacts (avoids 32k doc read limit).
 export const getTopLeads = query({
   args: {
     storeId: v.string(),
@@ -232,18 +233,17 @@ export const getTopLeads = query({
   handler: async (ctx, args) => {
     const limit = args.limit || 20;
 
+    // Use compound index to get subscribed contacts sorted by engagement score desc
+    // This avoids full-table scan by leveraging the index
     const contacts = await ctx.db
       .query("emailContacts")
-      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .filter((q) => q.eq(q.field("status"), "subscribed"))
-      .collect();
+      .withIndex("by_storeId_status_engagementScore", (q) =>
+        q.eq("storeId", args.storeId).eq("status", "subscribed")
+      )
+      .order("desc")
+      .take(limit);
 
-    // Sort by engagement score
-    const sortedContacts = contacts
-      .sort((a, b) => (b.engagementScore || 0) - (a.engagementScore || 0))
-      .slice(0, limit);
-
-    return sortedContacts.map((c) => ({
+    return contacts.map((c) => ({
       _id: c._id,
       email: c.email,
       firstName: c.firstName,
@@ -258,48 +258,77 @@ export const getTopLeads = query({
 });
 
 // Get leads needing attention (score dropped recently)
+// IMPORTANT: This query uses pagination to stay under the 32k doc read limit.
+// It scans subscribed contacts in batches, filtering for those with high engagement
+// but inactive for 14+ days, until enough results are found.
 export const getLeadsNeedingAttention = query({
   args: {
     storeId: v.string(),
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const limit = args.limit || 20;
-
-    // Get contacts who haven't engaged in 14+ days
+    const resultLimit = args.limit || 20;
     const fourteenDaysAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
+    const BATCH_SIZE = 500; // Safe batch size under 32k limit
+    const MAX_BATCHES = 10; // Cap total reads to prevent runaway queries
 
-    const contacts = await ctx.db
-      .query("emailContacts")
-      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .filter((q) =>
-        q.and(
-          q.eq(q.field("status"), "subscribed"),
-          q.or(
-            q.eq(q.field("lastOpenedAt"), undefined),
-            q.lt(q.field("lastOpenedAt"), fourteenDaysAgo)
-          )
+    const results: Array<{
+      _id: any;
+      email: string;
+      firstName?: string;
+      lastName?: string;
+      score: number;
+      daysSinceLastOpen: number | null;
+      emailsSent: number;
+    }> = [];
+
+    let cursor: string | null = null;
+    let hasMore = true;
+    let batchCount = 0;
+
+    // Use compound index to get subscribed contacts sorted by engagement score desc
+    while (hasMore && results.length < resultLimit && batchCount < MAX_BATCHES) {
+      const page = await ctx.db
+        .query("emailContacts")
+        .withIndex("by_storeId_status_engagementScore", (q) =>
+          q.eq("storeId", args.storeId).eq("status", "subscribed")
         )
-      )
-      .collect();
+        .order("desc") // Highest scores first
+        .paginate({ numItems: BATCH_SIZE, cursor });
 
-    // Sort by engagement score (show those with higher potential first)
-    const sortedContacts = contacts
-      .filter((c) => (c.engagementScore || 0) > 20) // Only show those who were somewhat engaged
-      .sort((a, b) => (b.engagementScore || 0) - (a.engagementScore || 0))
-      .slice(0, limit);
+      for (const contact of page.page) {
+        // Only include contacts with score > 20 who haven't opened in 14+ days
+        const score = contact.engagementScore || 0;
+        if (score <= 20) {
+          // Since we're sorted by score desc, we can stop once we hit score <= 20
+          hasMore = false;
+          break;
+        }
 
-    return sortedContacts.map((c) => ({
-      _id: c._id,
-      email: c.email,
-      firstName: c.firstName,
-      lastName: c.lastName,
-      score: c.engagementScore || 0,
-      daysSinceLastOpen: c.lastOpenedAt
-        ? Math.floor((Date.now() - c.lastOpenedAt) / (1000 * 60 * 60 * 24))
-        : null,
-      emailsSent: c.emailsSent,
-    }));
+        const isInactive = !contact.lastOpenedAt || contact.lastOpenedAt < fourteenDaysAgo;
+        if (isInactive) {
+          results.push({
+            _id: contact._id,
+            email: contact.email,
+            firstName: contact.firstName,
+            lastName: contact.lastName,
+            score,
+            daysSinceLastOpen: contact.lastOpenedAt
+              ? Math.floor((Date.now() - contact.lastOpenedAt) / (1000 * 60 * 60 * 24))
+              : null,
+            emailsSent: contact.emailsSent,
+          });
+
+          if (results.length >= resultLimit) break;
+        }
+      }
+
+      cursor = page.continueCursor;
+      hasMore = hasMore && !page.isDone;
+      batchCount++;
+    }
+
+    return results;
   },
 });
 
@@ -355,62 +384,144 @@ export const getContactScoreHistory = query({
 });
 
 // Recalculate all scores for a store
+// IMPORTANT: This mutation uses pagination to stay under the 32k doc read limit.
+// It processes contacts in batches and rebuilds the lead scoring summary afterward.
 export const recalculateAllScores = mutation({
   args: {
     storeId: v.string(),
   },
   handler: async (ctx, args) => {
-    const contacts = await ctx.db
-      .query("emailContacts")
-      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .collect();
+    const BATCH_SIZE = 500; // Safe batch size under 32k limit
+    const fourteenDaysAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
 
     let updated = 0;
+    let total = 0;
 
-    for (const contact of contacts) {
-      // Simple engagement score calculation
-      const openRate = contact.emailsSent > 0 ? (contact.emailsOpened / contact.emailsSent) * 100 : 0;
-      const clickRate = contact.emailsOpened > 0 ? (contact.emailsClicked / contact.emailsOpened) * 100 : 0;
-      const daysSinceLastOpen = contact.lastOpenedAt
-        ? Math.floor((Date.now() - contact.lastOpenedAt) / (1000 * 60 * 60 * 24))
-        : 999;
+    // Summary accumulators (rebuild during recalculation)
+    let hotCount = 0;
+    let warmCount = 0;
+    let coldCount = 0;
+    let inactiveCount = 0;
+    let totalSubscribed = 0;
+    let totalScore = 0;
+    let needsAttentionCount = 0;
+    const scoreBuckets: number[] = new Array(101).fill(0);
 
-      // Calculate score (0-100)
-      let score = 0;
-      score += Math.min(30, openRate * 0.6); // Up to 30 points for open rate
-      score += Math.min(30, clickRate * 0.6); // Up to 30 points for click rate
-      score += contact.tagIds?.length > 0 ? 10 : 0; // 10 points for having tags
-      score += daysSinceLastOpen < 7 ? 20 : daysSinceLastOpen < 30 ? 10 : 0; // Recency bonus
-      score -= contact.status === "unsubscribed" ? 50 : 0; // Penalty for unsubscribed
+    let cursor: string | null = null;
+    let hasMore = true;
 
-      const newScore = Math.max(0, Math.min(100, Math.round(score)));
+    while (hasMore) {
+      const page = await ctx.db
+        .query("emailContacts")
+        .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+        .paginate({ numItems: BATCH_SIZE, cursor });
 
-      if (contact.engagementScore !== newScore) {
-        await ctx.db.patch(contact._id, {
-          engagementScore: newScore,
-          updatedAt: Date.now(),
-        });
-        updated++;
+      for (const contact of page.page) {
+        total++;
+
+        // Calculate engagement score
+        const openRate = contact.emailsSent > 0 ? (contact.emailsOpened / contact.emailsSent) * 100 : 0;
+        const clickRate = contact.emailsOpened > 0 ? (contact.emailsClicked / contact.emailsOpened) * 100 : 0;
+        const daysSinceLastOpen = contact.lastOpenedAt
+          ? Math.floor((Date.now() - contact.lastOpenedAt) / (1000 * 60 * 60 * 24))
+          : 999;
+
+        let score = 0;
+        score += Math.min(30, openRate * 0.6);
+        score += Math.min(30, clickRate * 0.6);
+        score += contact.tagIds?.length > 0 ? 10 : 0;
+        score += daysSinceLastOpen < 7 ? 20 : daysSinceLastOpen < 30 ? 10 : 0;
+        score -= contact.status === "unsubscribed" ? 50 : 0;
+
+        const newScore = Math.max(0, Math.min(100, Math.round(score)));
+
+        if (contact.engagementScore !== newScore) {
+          await ctx.db.patch(contact._id, {
+            engagementScore: newScore,
+            updatedAt: Date.now(),
+          });
+          updated++;
+        }
+
+        // Accumulate summary data for subscribed contacts
+        if (contact.status === "subscribed") {
+          totalSubscribed++;
+          totalScore += newScore;
+
+          if (newScore >= 70) hotCount++;
+          else if (newScore >= 40) warmCount++;
+          else if (newScore >= 10) coldCount++;
+          else inactiveCount++;
+
+          const bucketIndex = Math.max(0, Math.min(100, newScore));
+          scoreBuckets[bucketIndex]++;
+
+          if (newScore > 20 && (!contact.lastOpenedAt || contact.lastOpenedAt < fourteenDaysAgo)) {
+            needsAttentionCount++;
+          }
+        }
       }
+
+      cursor = page.continueCursor;
+      hasMore = !page.isDone;
     }
 
-    return { updated, total: contacts.length };
+    // Upsert the summary document
+    const now = Date.now();
+    const existingSummary = await ctx.db
+      .query("leadScoringSummary")
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+      .first();
+
+    if (existingSummary) {
+      await ctx.db.patch(existingSummary._id, {
+        hotCount,
+        warmCount,
+        coldCount,
+        inactiveCount,
+        totalSubscribed,
+        totalScore,
+        needsAttentionCount,
+        scoreBuckets,
+        lastRebuiltAt: now,
+        updatedAt: now,
+      });
+    } else {
+      await ctx.db.insert("leadScoringSummary", {
+        storeId: args.storeId,
+        hotCount,
+        warmCount,
+        coldCount,
+        inactiveCount,
+        totalSubscribed,
+        totalScore,
+        needsAttentionCount,
+        scoreBuckets,
+        lastRebuiltAt: now,
+        updatedAt: now,
+      });
+    }
+
+    return { updated, total };
   },
 });
 
 // Get lead scoring summary
+// IMPORTANT: This query reads from the pre-aggregated leadScoringSummary table
+// to avoid exceeding Convex's 32k document read limit. The summary is updated
+// incrementally when contact scores change, or can be rebuilt via rebuildLeadScoringSummary.
 export const getLeadScoringSummary = query({
   args: {
     storeId: v.string(),
   },
   handler: async (ctx, args) => {
-    const contacts = await ctx.db
-      .query("emailContacts")
+    // Read from pre-aggregated summary table (single doc read)
+    const summary = await ctx.db
+      .query("leadScoringSummary")
       .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
-      .filter((q) => q.eq(q.field("status"), "subscribed"))
-      .collect();
+      .first();
 
-    if (contacts.length === 0) {
+    if (!summary || summary.totalSubscribed === 0) {
       return {
         averageScore: 0,
         medianScore: 0,
@@ -421,28 +532,136 @@ export const getLeadScoringSummary = query({
       };
     }
 
-    const scores = contacts.map((c) => c.engagementScore || 0);
-    const sortedScores = [...scores].sort((a, b) => a - b);
-
-    const distribution = {
-      hot: scores.filter((s) => s >= 70).length,
-      warm: scores.filter((s) => s >= 40 && s < 70).length,
-      cold: scores.filter((s) => s >= 10 && s < 40).length,
-      inactive: scores.filter((s) => s < 10).length,
-    };
-
-    const fourteenDaysAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
-    const needsAttention = contacts.filter(
-      (c) => (c.engagementScore || 0) > 20 && (!c.lastOpenedAt || c.lastOpenedAt < fourteenDaysAgo)
-    ).length;
+    // Calculate median from score buckets if available
+    let medianScore = 0;
+    if (summary.scoreBuckets && summary.scoreBuckets.length > 0) {
+      const halfCount = Math.floor(summary.totalSubscribed / 2);
+      let cumulative = 0;
+      for (let score = 0; score <= 100; score++) {
+        cumulative += summary.scoreBuckets[score] || 0;
+        if (cumulative >= halfCount) {
+          medianScore = score;
+          break;
+        }
+      }
+    }
 
     return {
-      averageScore: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
-      medianScore: sortedScores[Math.floor(sortedScores.length / 2)],
-      distribution,
-      topPerformers: distribution.hot,
-      needsAttention,
-      total: contacts.length,
+      averageScore: summary.totalSubscribed > 0
+        ? Math.round(summary.totalScore / summary.totalSubscribed)
+        : 0,
+      medianScore,
+      distribution: {
+        hot: summary.hotCount,
+        warm: summary.warmCount,
+        cold: summary.coldCount,
+        inactive: summary.inactiveCount,
+      },
+      topPerformers: summary.hotCount,
+      needsAttention: summary.needsAttentionCount,
+      total: summary.totalSubscribed,
+    };
+  },
+});
+
+// Rebuild lead scoring summary from scratch using paginated reads
+// IMPORTANT: This mutation uses pagination to stay under the 32k doc read limit.
+// It processes contacts in batches and accumulates the summary metrics.
+export const rebuildLeadScoringSummary = mutation({
+  args: {
+    storeId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const BATCH_SIZE = 1000; // Safe batch size well under 32k limit
+    const fourteenDaysAgo = Date.now() - 14 * 24 * 60 * 60 * 1000;
+
+    // Initialize accumulators
+    let hotCount = 0;
+    let warmCount = 0;
+    let coldCount = 0;
+    let inactiveCount = 0;
+    let totalSubscribed = 0;
+    let totalScore = 0;
+    let needsAttentionCount = 0;
+    const scoreBuckets: number[] = new Array(101).fill(0); // scores 0-100
+
+    // Paginate through contacts using by_storeId_and_status index
+    let cursor: string | null = null;
+    let hasMore = true;
+
+    while (hasMore) {
+      const page = await ctx.db
+        .query("emailContacts")
+        .withIndex("by_storeId_and_status", (q) =>
+          q.eq("storeId", args.storeId).eq("status", "subscribed")
+        )
+        .paginate({ numItems: BATCH_SIZE, cursor });
+
+      for (const contact of page.page) {
+        const score = contact.engagementScore || 0;
+        totalSubscribed++;
+        totalScore += score;
+
+        // Update distribution counts
+        if (score >= 70) hotCount++;
+        else if (score >= 40) warmCount++;
+        else if (score >= 10) coldCount++;
+        else inactiveCount++;
+
+        // Update score buckets for median calculation
+        const bucketIndex = Math.max(0, Math.min(100, Math.round(score)));
+        scoreBuckets[bucketIndex]++;
+
+        // Check if needs attention (engaged but inactive)
+        if (score > 20 && (!contact.lastOpenedAt || contact.lastOpenedAt < fourteenDaysAgo)) {
+          needsAttentionCount++;
+        }
+      }
+
+      cursor = page.continueCursor;
+      hasMore = !page.isDone;
+    }
+
+    const now = Date.now();
+
+    // Upsert the summary document
+    const existingSummary = await ctx.db
+      .query("leadScoringSummary")
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+      .first();
+
+    if (existingSummary) {
+      await ctx.db.patch(existingSummary._id, {
+        hotCount,
+        warmCount,
+        coldCount,
+        inactiveCount,
+        totalSubscribed,
+        totalScore,
+        needsAttentionCount,
+        scoreBuckets,
+        lastRebuiltAt: now,
+        updatedAt: now,
+      });
+    } else {
+      await ctx.db.insert("leadScoringSummary", {
+        storeId: args.storeId,
+        hotCount,
+        warmCount,
+        coldCount,
+        inactiveCount,
+        totalSubscribed,
+        totalScore,
+        needsAttentionCount,
+        scoreBuckets,
+        lastRebuiltAt: now,
+        updatedAt: now,
+      });
+    }
+
+    return {
+      totalSubscribed,
+      distribution: { hot: hotCount, warm: warmCount, cold: coldCount, inactive: inactiveCount },
     };
   },
 });

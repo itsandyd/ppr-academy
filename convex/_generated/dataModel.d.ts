@@ -4255,6 +4255,12 @@ export type DataModel = {
       by_storeId: ["storeId", "_creationTime"];
       by_storeId_and_email: ["storeId", "email", "_creationTime"];
       by_storeId_and_status: ["storeId", "status", "_creationTime"];
+      by_storeId_status_engagementScore: [
+        "storeId",
+        "status",
+        "engagementScore",
+        "_creationTime",
+      ];
       by_subscribedAt: ["subscribedAt", "_creationTime"];
     };
     searchIndexes: {
@@ -5852,6 +5858,44 @@ export type DataModel = {
       by_id: ["_id"];
       by_creation_time: ["_creationTime"];
       by_active: ["storeId", "isActive", "_creationTime"];
+      by_storeId: ["storeId", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
+  leadScoringSummary: {
+    document: {
+      coldCount: number;
+      hotCount: number;
+      inactiveCount: number;
+      lastRebuiltAt: number;
+      needsAttentionCount: number;
+      scoreBuckets?: Array<number>;
+      storeId: string;
+      totalScore: number;
+      totalSubscribed: number;
+      updatedAt: number;
+      warmCount: number;
+      _id: Id<"leadScoringSummary">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "coldCount"
+      | "hotCount"
+      | "inactiveCount"
+      | "lastRebuiltAt"
+      | "needsAttentionCount"
+      | "scoreBuckets"
+      | "storeId"
+      | "totalScore"
+      | "totalSubscribed"
+      | "updatedAt"
+      | "warmCount";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
       by_storeId: ["storeId", "_creationTime"];
     };
     searchIndexes: {};

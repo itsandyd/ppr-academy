@@ -12206,6 +12206,12 @@ export declare const api: {
       { limit?: number; storeId: string },
       any
     >;
+    rebuildLeadScoringSummary: FunctionReference<
+      "mutation",
+      "public",
+      { storeId: string },
+      any
+    >;
     recalculateAllScores: FunctionReference<
       "mutation",
       "public",

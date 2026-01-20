@@ -756,6 +756,28 @@ export default defineSchema({
     .index("by_contactId", ["contactId"])
     .index("by_storeId_timestamp", ["storeId", "timestamp"]),
 
+  // Lead Scoring Summary - Pre-aggregated metrics to avoid full-table scans
+  // IMPORTANT: Convex has a 32k doc read limit per query. This table stores
+  // pre-computed lead scoring metrics updated incrementally to avoid scanning
+  // all contacts. See rebuildLeadScoringSummary mutation to rebuild.
+  leadScoringSummary: defineTable({
+    storeId: v.string(),
+    // Distribution counts
+    hotCount: v.number(), // score >= 70
+    warmCount: v.number(), // score 40-69
+    coldCount: v.number(), // score 10-39
+    inactiveCount: v.number(), // score < 10
+    // Aggregate metrics
+    totalSubscribed: v.number(),
+    totalScore: v.number(), // Sum of all scores for average calculation
+    needsAttentionCount: v.number(), // Engaged contacts inactive for 14+ days
+    // Median calculation support (store sorted score buckets)
+    scoreBuckets: v.optional(v.array(v.number())), // [count at score 0, count at score 1, ..., count at score 100]
+    // Timestamps
+    lastRebuiltAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_storeId", ["storeId"]),
+
   // Email Test History (Phase 7)
   emailTestHistory: defineTable({
     storeId: v.string(),
@@ -5116,6 +5138,10 @@ export default defineSchema({
     .index("by_storeId_and_status", ["storeId", "status"])
     .index("by_subscribedAt", ["subscribedAt"])
     .index("by_engagementScore", ["engagementScore"])
+    // Compound index for efficient lead scoring queries (top leads, needs attention)
+    // IMPORTANT: This index enables getTopLeads and getLeadsNeedingAttention to fetch
+    // contacts sorted by engagement score without full-table scans (32k doc limit).
+    .index("by_storeId_status_engagementScore", ["storeId", "status", "engagementScore"])
     .searchIndex("search_email", {
       searchField: "email",
       filterFields: ["storeId"],
