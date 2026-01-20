@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState } from "react";
 import { toast } from "sonner";
-import { FileUploader, FileList } from "../components/FileUploader";
+import { FileUploader, FileList } from "../../shared/FileUploader";
 
 export function PDFFilesForm() {
   const { state, updateData, createPDF } = usePDFCreation();

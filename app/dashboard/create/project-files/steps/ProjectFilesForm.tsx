@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileUploader, FileList } from "../../chain/components/FileUploader";
+import { FileUploader, FileList } from "../../shared/FileUploader";
 import { DAW_TYPES } from "../../types";
 
 export function ProjectFilesForm() {

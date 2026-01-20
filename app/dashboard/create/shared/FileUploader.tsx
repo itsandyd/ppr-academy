@@ -9,29 +9,40 @@ import { Progress } from "@/components/ui/progress";
 import { Upload, File, X, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
+export interface UploadedFileData {
+  name: string;
+  storageId: string;
+  size: number;
+  type: string;
+}
+
 interface FileUploaderProps {
-  onFilesUploaded: (files: Array<{ name: string; storageId: string; size: number; type: string }>) => void;
+  onFilesUploaded: (files: UploadedFileData[]) => void;
   accept?: string;
   multiple?: boolean;
   maxSize?: number; // in MB
+  buttonText?: string;
+  className?: string;
 }
 
-export function FileUploader({ 
-  onFilesUploaded, 
-  accept = "*", 
+export function FileUploader({
+  onFilesUploaded,
+  accept = "*",
   multiple = true,
-  maxSize = 100 
+  maxSize = 100,
+  buttonText = "Select Files",
+  className = ""
 }: FileUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
-  
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const generateUploadUrl: any = useMutation(api.files.generateUploadUrl as any);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || []);
-    
+
     if (selectedFiles.length === 0) return;
 
     // Validate file sizes
@@ -42,7 +53,7 @@ export function FileUploader({
     }
 
     setUploading(true);
-    const uploadedFiles: Array<{ name: string; storageId: string; size: number; type: string }> = [];
+    const uploadedFiles: UploadedFileData[] = [];
 
     try {
       for (const file of selectedFiles) {
@@ -78,9 +89,9 @@ export function FileUploader({
 
       // Call callback with uploaded files
       onFilesUploaded(uploadedFiles);
-      
+
       toast.success(`Successfully uploaded ${uploadedFiles.length} file(s)`);
-      
+
       // Reset input
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
@@ -95,7 +106,7 @@ export function FileUploader({
   };
 
   return (
-    <div className="space-y-4">
+    <div className={`space-y-4 ${className}`}>
       <input
         ref={fileInputRef}
         type="file"
@@ -120,7 +131,7 @@ export function FileUploader({
         ) : (
           <>
             <Upload className="w-4 h-4 mr-2" />
-            Select Files
+            {buttonText}
           </>
         )}
       </Button>
@@ -143,7 +154,7 @@ export function FileUploader({
   );
 }
 
-interface UploadedFile {
+export interface UploadedFile {
   id: string;
   name: string;
   storageId: string;
@@ -160,7 +171,7 @@ interface FileListProps {
 export function FileList({ files, onRemove }: FileListProps) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const getFileUrl: any = useMutation(api.files.getUrl as any);
-  
+
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -220,5 +231,3 @@ export function FileList({ files, onRemove }: FileListProps) {
     </div>
   );
 }
-
-
