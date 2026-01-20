@@ -38,6 +38,7 @@ import {
 } from "recharts";
 import { cn } from "@/lib/utils";
 import { AdminLoading } from "../components/admin-loading";
+import { AdminPagination, usePagination } from "../components/admin-pagination";
 
 const FUNNEL_COLORS = ["#8b5cf6", "#a78bfa", "#c4b5fd", "#ddd6fe", "#ede9fe"];
 
@@ -65,6 +66,9 @@ export default function AdminConversionsPage() {
     api.adminConversion.getConversionBySource,
     user?.id ? { clerkId: user.id, days: 30 } : "skip"
   );
+
+  // Pagination for abandoned carts
+  const cartsPagination = usePagination(abandonedCarts || [], 10);
 
   if (!purchaseFunnel || !conversionMetrics || !abandonedCarts || !couponPerformance) {
     return <AdminLoading variant="dashboard" />;
@@ -319,7 +323,7 @@ export default function AdminConversionsPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {abandonedCarts.slice(0, 10).map((cart, index) => (
+                  {cartsPagination.paginatedItems.map((cart, index) => (
                     <div
                       key={index}
                       className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between"
@@ -349,6 +353,17 @@ export default function AdminConversionsPage() {
                       </div>
                     </div>
                   ))}
+                  {abandonedCarts.length > 10 && (
+                    <AdminPagination
+                      currentPage={cartsPagination.currentPage}
+                      totalPages={cartsPagination.totalPages}
+                      totalItems={cartsPagination.totalItems}
+                      itemsPerPage={cartsPagination.itemsPerPage}
+                      onPageChange={cartsPagination.handlePageChange}
+                      onItemsPerPageChange={cartsPagination.handleItemsPerPageChange}
+                      className="mt-4 border-t pt-4"
+                    />
+                  )}
                 </div>
               )}
             </CardContent>

@@ -33,6 +33,7 @@ import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { AdminLoading } from "../components/admin-loading";
+import { AdminPagination, usePagination } from "../components/admin-pagination";
 
 // Action type icons
 const actionTypeIcons: Record<string, React.ReactNode> = {
@@ -94,6 +95,9 @@ export default function AdminActivityPage() {
           activity.adminName?.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : recentActivity;
+
+  // Pagination for activity feed
+  const activityPagination = usePagination(filteredActivity, 15);
 
   // Get unique resource types for filter
   const resourceTypes = Array.from(
@@ -259,7 +263,7 @@ export default function AdminActivityPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {filteredActivity.map((activity) => (
+                  {activityPagination.paginatedItems.map((activity) => (
                     <div
                       key={activity._id}
                       className="flex items-start gap-4 rounded-lg border p-4 transition-colors hover:bg-muted/50"
@@ -314,6 +318,18 @@ export default function AdminActivityPage() {
                       </div>
                     </div>
                   ))}
+                  {filteredActivity.length > 15 && (
+                    <AdminPagination
+                      currentPage={activityPagination.currentPage}
+                      totalPages={activityPagination.totalPages}
+                      totalItems={activityPagination.totalItems}
+                      itemsPerPage={activityPagination.itemsPerPage}
+                      onPageChange={activityPagination.handlePageChange}
+                      onItemsPerPageChange={activityPagination.handleItemsPerPageChange}
+                      itemsPerPageOptions={[15, 25, 50]}
+                      className="mt-4 border-t pt-4"
+                    />
+                  )}
                 </div>
               )}
             </CardContent>

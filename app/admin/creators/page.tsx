@@ -36,6 +36,7 @@ import {
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { AdminLoading } from "../components/admin-loading";
+import { AdminPagination, usePagination } from "../components/admin-pagination";
 
 export default function AdminCreatorsPage() {
   const { user } = useUser();
@@ -57,6 +58,15 @@ export default function AdminCreatorsPage() {
     filter: emailFilter,
   });
   const pipelineStats = useQuery(api.analytics.creatorPipeline.getPipelineStats, {});
+
+  // Pagination for leaderboard
+  const leaderboardPagination = usePagination(leaderboard || [], 10);
+
+  // Pagination for needs attention list
+  const attentionPagination = usePagination(needsAttention || [], 10);
+
+  // Pagination for bulk email list
+  const emailPagination = usePagination(bulkEmailList || [], 10);
 
   if (!leaderboard || !needsAttention || !bulkEmailList || !pipelineStats) {
     return <AdminLoading variant="dashboard" />;
@@ -221,7 +231,7 @@ export default function AdminCreatorsPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {leaderboard.map((creator) => (
+                {leaderboardPagination.paginatedItems.map((creator) => (
                   <div
                     key={creator.userId}
                     className="rounded-lg border p-4 transition-colors hover:bg-muted/50"
@@ -359,6 +369,17 @@ export default function AdminCreatorsPage() {
                   </div>
                 ))}
               </div>
+              {leaderboard.length > 10 && (
+                <AdminPagination
+                  currentPage={leaderboardPagination.currentPage}
+                  totalPages={leaderboardPagination.totalPages}
+                  totalItems={leaderboardPagination.totalItems}
+                  itemsPerPage={leaderboardPagination.itemsPerPage}
+                  onPageChange={leaderboardPagination.handlePageChange}
+                  onItemsPerPageChange={leaderboardPagination.handleItemsPerPageChange}
+                  className="mt-4 border-t pt-4"
+                />
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -383,7 +404,7 @@ export default function AdminCreatorsPage() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {needsAttention.map((creator) => (
+                  {attentionPagination.paginatedItems.map((creator) => (
                     <div
                       key={creator.userId}
                       className={cn(
@@ -418,6 +439,17 @@ export default function AdminCreatorsPage() {
                       </div>
                     </div>
                   ))}
+                  {needsAttention.length > 10 && (
+                    <AdminPagination
+                      currentPage={attentionPagination.currentPage}
+                      totalPages={attentionPagination.totalPages}
+                      totalItems={attentionPagination.totalItems}
+                      itemsPerPage={attentionPagination.itemsPerPage}
+                      onPageChange={attentionPagination.handlePageChange}
+                      onItemsPerPageChange={attentionPagination.handleItemsPerPageChange}
+                      className="mt-4 border-t pt-4"
+                    />
+                  )}
                 </div>
               )}
             </CardContent>
@@ -474,7 +506,7 @@ export default function AdminCreatorsPage() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {bulkEmailList.map((creator) => (
+                  {emailPagination.paginatedItems.map((creator) => (
                     <div
                       key={creator.userId}
                       onClick={() => toggleCreatorSelection(creator.userId)}
@@ -511,6 +543,17 @@ export default function AdminCreatorsPage() {
                       </div>
                     </div>
                   ))}
+                  {bulkEmailList.length > 10 && (
+                    <AdminPagination
+                      currentPage={emailPagination.currentPage}
+                      totalPages={emailPagination.totalPages}
+                      totalItems={emailPagination.totalItems}
+                      itemsPerPage={emailPagination.itemsPerPage}
+                      onPageChange={emailPagination.handlePageChange}
+                      onItemsPerPageChange={emailPagination.handleItemsPerPageChange}
+                      className="mt-4 border-t pt-4"
+                    />
+                  )}
                 </div>
               )}
             </CardContent>
