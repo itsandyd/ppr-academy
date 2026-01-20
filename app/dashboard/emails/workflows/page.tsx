@@ -43,6 +43,11 @@ import {
   Mail,
   Grid3X3,
   FileText,
+  FlaskConical,
+  Plus,
+  X,
+  Trophy,
+  RotateCcw,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
@@ -259,6 +264,20 @@ export default function WorkflowBuilderPage() {
   const [isTemplateBrowserOpen, setIsTemplateBrowserOpen] = useState(false);
   const [templateCategoryFilter, setTemplateCategoryFilter] = useState<string | null>(null);
 
+  // A/B Testing State
+  const [abTestEnabled, setAbTestEnabled] = useState(false);
+  const [abVariants, setAbVariants] = useState<Array<{
+    id: string;
+    name: string;
+    subject: string;
+    body?: string;
+    percentage: number;
+  }>>([]);
+  const [abSampleSize, setAbSampleSize] = useState(100);
+  const [abWinnerMetric, setAbWinnerMetric] = useState<"open_rate" | "click_rate">("open_rate");
+  const [abAutoSelectWinner, setAbAutoSelectWinner] = useState(true);
+  const [abWinnerThreshold, setAbWinnerThreshold] = useState(5);
+
   // Get user's store
   const store = useQuery(
     // @ts-ignore - Convex type instantiation is excessively deep
@@ -314,6 +333,20 @@ export default function WorkflowBuilderPage() {
   const bulkEnrollContacts = useMutation(api.emailWorkflows.bulkEnrollContactsInWorkflow);
   const toggleActive = useMutation(api.emailWorkflows.toggleWorkflowActive);
   const createEmailTemplate = useMutation(api.emailWorkflows.createEmailTemplate);
+  const saveABTest = useMutation(api.emailWorkflowABTesting.saveNodeABTest);
+  const selectABWinner = useMutation(api.emailWorkflowABTesting.selectWinner);
+  const resetABTest = useMutation(api.emailWorkflowABTesting.resetTestStats);
+
+  // Query A/B test for selected email node
+  const abTestData = useQuery(
+    api.emailWorkflowABTesting.getVariantStats,
+    workflowId && selectedNode?.type === "email"
+      ? {
+          workflowId: workflowId as Id<"emailWorkflows">,
+          nodeId: selectedNode.id,
+        }
+      : "skip"
+  );
 
   useEffect(() => {
     if (existingWorkflow) {
@@ -1453,13 +1486,17 @@ export default function WorkflowBuilderPage() {
                 <Tabs
                   value={selectedNode.data.mode || "custom"}
                   onValueChange={(v) =>
-                    updateNodeData(selectedNode.id, { mode: v as "template" | "custom" })
+                    updateNodeData(selectedNode.id, { mode: v as "template" | "custom" | "abtest" })
                   }
                   className="w-full"
                 >
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="template">Use Template</TabsTrigger>
-                    <TabsTrigger value="custom">Custom Email</TabsTrigger>
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="template">Template</TabsTrigger>
+                    <TabsTrigger value="custom">Custom</TabsTrigger>
+                    <TabsTrigger value="abtest" className="gap-1">
+                      <FlaskConical className="h-3 w-3" />
+                      A/B Test
+                    </TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="template" className="mt-4 space-y-4">
@@ -1560,6 +1597,318 @@ export default function WorkflowBuilderPage() {
                         </Button>
                       </div>
                     </div>
+                  </TabsContent>
+
+                  {/* A/B Test Tab */}
+                  <TabsContent value="abtest" className="mt-4 space-y-4">
+                    <div className="rounded-lg border border-purple-200 bg-purple-50 p-4 dark:border-purple-900 dark:bg-purple-950/30">
+                      <div className="flex items-center gap-2">
+                        <FlaskConical className="h-5 w-5 text-purple-600" />
+                        <div>
+                          <p className="text-sm font-medium text-purple-800 dark:text-purple-200">
+                            A/B Test Your Emails
+                          </p>
+                          <p className="text-xs text-purple-600 dark:text-purple-400">
+                            Test different subject lines to see which performs better
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Enable A/B Testing Toggle */}
+                    <div className="flex items-center justify-between rounded-lg border p-4">
+                      <div>
+                        <Label className="font-medium">Enable A/B Testing</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Split test subject lines with your contacts
+                        </p>
+                      </div>
+                      <Switch
+                        checked={selectedNode.data.abTestEnabled || false}
+                        onCheckedChange={(checked) => {
+                          updateNodeData(selectedNode.id, { abTestEnabled: checked });
+                          if (checked && (!selectedNode.data.abVariants || selectedNode.data.abVariants.length < 2)) {
+                            // Initialize with 2 variants
+                            const variants = [
+                              { id: "variant_a", name: "Variant A", subject: selectedNode.data.subject || "", percentage: 50 },
+                              { id: "variant_b", name: "Variant B", subject: "", percentage: 50 },
+                            ];
+                            updateNodeData(selectedNode.id, { abVariants: variants });
+                          }
+                        }}
+                      />
+                    </div>
+
+                    {selectedNode.data.abTestEnabled && (
+                      <div className="space-y-4">
+                        {/* Variants */}
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <Label className="font-medium">Subject Line Variants</Label>
+                            {(selectedNode.data.abVariants?.length || 0) < 3 && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  const variants = selectedNode.data.abVariants || [];
+                                  const newVariant = {
+                                    id: `variant_${String.fromCharCode(97 + variants.length)}`,
+                                    name: `Variant ${String.fromCharCode(65 + variants.length)}`,
+                                    subject: "",
+                                    percentage: Math.floor(100 / (variants.length + 1)),
+                                  };
+                                  // Redistribute percentages
+                                  const newPercentage = Math.floor(100 / (variants.length + 1));
+                                  const updatedVariants = variants.map((v: any) => ({
+                                    ...v,
+                                    percentage: newPercentage,
+                                  }));
+                                  updatedVariants.push({ ...newVariant, percentage: 100 - (newPercentage * variants.length) });
+                                  updateNodeData(selectedNode.id, { abVariants: updatedVariants });
+                                }}
+                                className="gap-1"
+                              >
+                                <Plus className="h-3 w-3" />
+                                Add Variant
+                              </Button>
+                            )}
+                          </div>
+
+                          {(selectedNode.data.abVariants || []).map((variant: any, idx: number) => (
+                            <div
+                              key={variant.id}
+                              className="rounded-lg border bg-white p-4 dark:bg-zinc-900"
+                            >
+                              <div className="mb-3 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-purple-100 text-xs font-medium text-purple-700 dark:bg-purple-900 dark:text-purple-300">
+                                    {String.fromCharCode(65 + idx)}
+                                  </span>
+                                  <Input
+                                    value={variant.name}
+                                    onChange={(e) => {
+                                      const variants = [...(selectedNode.data.abVariants || [])];
+                                      variants[idx] = { ...variants[idx], name: e.target.value };
+                                      updateNodeData(selectedNode.id, { abVariants: variants });
+                                    }}
+                                    className="h-8 w-32"
+                                  />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-muted-foreground">
+                                    {variant.percentage}%
+                                  </span>
+                                  {(selectedNode.data.abVariants?.length || 0) > 2 && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => {
+                                        const variants = selectedNode.data.abVariants.filter(
+                                          (_: any, i: number) => i !== idx
+                                        );
+                                        // Redistribute percentages
+                                        const newPercentage = Math.floor(100 / variants.length);
+                                        const updatedVariants = variants.map((v: any, i: number) => ({
+                                          ...v,
+                                          percentage: i === variants.length - 1
+                                            ? 100 - (newPercentage * (variants.length - 1))
+                                            : newPercentage,
+                                        }));
+                                        updateNodeData(selectedNode.id, { abVariants: updatedVariants });
+                                      }}
+                                      className="h-6 w-6 p-0 text-zinc-400 hover:text-red-500"
+                                    >
+                                      <X className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                              <Input
+                                value={variant.subject}
+                                onChange={(e) => {
+                                  const variants = [...(selectedNode.data.abVariants || [])];
+                                  variants[idx] = { ...variants[idx], subject: e.target.value };
+                                  updateNodeData(selectedNode.id, { abVariants: variants });
+                                  // Also update main subject if this is first variant
+                                  if (idx === 0) {
+                                    updateNodeData(selectedNode.id, { subject: e.target.value });
+                                  }
+                                }}
+                                placeholder="Enter subject line..."
+                              />
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Test Settings */}
+                        <div className="space-y-4 rounded-lg border p-4">
+                          <Label className="font-medium">Test Settings</Label>
+
+                          <div className="grid gap-4 md:grid-cols-2">
+                            <div className="space-y-2">
+                              <Label className="text-xs text-muted-foreground">
+                                Sample Size (contacts)
+                              </Label>
+                              <Input
+                                type="number"
+                                value={selectedNode.data.abSampleSize || 100}
+                                onChange={(e) =>
+                                  updateNodeData(selectedNode.id, {
+                                    abSampleSize: parseInt(e.target.value) || 100,
+                                  })
+                                }
+                                min={10}
+                                max={10000}
+                              />
+                              <p className="text-[10px] text-muted-foreground">
+                                Test with this many contacts before selecting winner
+                              </p>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label className="text-xs text-muted-foreground">
+                                Winner Metric
+                              </Label>
+                              <Select
+                                value={selectedNode.data.abWinnerMetric || "open_rate"}
+                                onValueChange={(v) =>
+                                  updateNodeData(selectedNode.id, {
+                                    abWinnerMetric: v as "open_rate" | "click_rate",
+                                  })
+                                }
+                              >
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="open_rate">Open Rate</SelectItem>
+                                  <SelectItem value="click_rate">Click Rate</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <Label className="text-xs">Auto-select Winner</Label>
+                              <p className="text-[10px] text-muted-foreground">
+                                Automatically pick the best variant after sample
+                              </p>
+                            </div>
+                            <Switch
+                              checked={selectedNode.data.abAutoSelectWinner !== false}
+                              onCheckedChange={(checked) =>
+                                updateNodeData(selectedNode.id, { abAutoSelectWinner: checked })
+                              }
+                            />
+                          </div>
+                        </div>
+
+                        {/* Live Stats (if test is running) */}
+                        {abTestData && abTestData.variants.length > 0 && (
+                          <div className="space-y-3 rounded-lg border border-purple-200 bg-purple-50 p-4 dark:border-purple-900 dark:bg-purple-950/30">
+                            <div className="flex items-center justify-between">
+                              <Label className="font-medium text-purple-800 dark:text-purple-200">
+                                Live Test Results
+                              </Label>
+                              {abTestData.isComplete && abTestData.winner && (
+                                <span className="flex items-center gap-1 text-xs font-medium text-green-600">
+                                  <Trophy className="h-3 w-3" />
+                                  Test Complete
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="space-y-2">
+                              {abTestData.variants.map((v: any) => (
+                                <div
+                                  key={v.id}
+                                  className={`flex items-center justify-between rounded p-2 ${
+                                    abTestData.winner === v.id
+                                      ? "bg-green-100 dark:bg-green-900/30"
+                                      : "bg-white dark:bg-zinc-800"
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    {abTestData.winner === v.id && (
+                                      <Trophy className="h-4 w-4 text-green-600" />
+                                    )}
+                                    <span className="text-sm font-medium">{v.name}</span>
+                                  </div>
+                                  <div className="flex gap-4 text-xs">
+                                    <span>Sent: {v.sent}</span>
+                                    <span className="font-medium text-purple-600">
+                                      {v.openRate}% opens
+                                    </span>
+                                    <span>{v.clickRate}% clicks</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+
+                            <div className="flex items-center justify-between pt-2 text-xs text-purple-600 dark:text-purple-400">
+                              <span>
+                                Progress: {abTestData.totalSent}/{abTestData.sampleSize} contacts
+                              </span>
+                              {!abTestData.isComplete && workflowId && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={async () => {
+                                    await resetABTest({
+                                      workflowId: workflowId as Id<"emailWorkflows">,
+                                      nodeId: selectedNode.id,
+                                    });
+                                    toast({ title: "Test stats reset" });
+                                  }}
+                                  className="h-6 gap-1 text-xs"
+                                >
+                                  <RotateCcw className="h-3 w-3" />
+                                  Reset
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Save A/B Test Config */}
+                        {workflowId && (
+                          <Button
+                            onClick={async () => {
+                              try {
+                                await saveABTest({
+                                  workflowId: workflowId as Id<"emailWorkflows">,
+                                  nodeId: selectedNode.id,
+                                  isEnabled: selectedNode.data.abTestEnabled || false,
+                                  variants: (selectedNode.data.abVariants || []).map((v: any) => ({
+                                    id: v.id,
+                                    name: v.name,
+                                    subject: v.subject,
+                                    body: v.body,
+                                    percentage: v.percentage,
+                                  })),
+                                  sampleSize: selectedNode.data.abSampleSize || 100,
+                                  winnerMetric: selectedNode.data.abWinnerMetric || "open_rate",
+                                  autoSelectWinner: selectedNode.data.abAutoSelectWinner !== false,
+                                  winnerThreshold: 5,
+                                });
+                                toast({ title: "A/B test configuration saved" });
+                              } catch (error: any) {
+                                toast({
+                                  title: "Error",
+                                  description: error.message,
+                                  variant: "destructive",
+                                });
+                              }
+                            }}
+                            className="w-full gap-2 bg-purple-600 hover:bg-purple-700"
+                          >
+                            <FlaskConical className="h-4 w-4" />
+                            Save A/B Test Configuration
+                          </Button>
+                        )}
+                      </div>
+                    )}
                   </TabsContent>
                 </Tabs>
               </div>

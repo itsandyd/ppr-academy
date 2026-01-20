@@ -511,6 +511,38 @@ export default defineSchema({
     .index("by_workflowId_status", ["workflowId", "status"])
     .index("by_status_scheduledFor", ["status", "scheduledFor"]),
 
+  // Workflow Node A/B Tests (for testing email variants within workflows)
+  workflowNodeABTests: defineTable({
+    workflowId: v.id("emailWorkflows"),
+    nodeId: v.string(), // The email node ID within the workflow
+    isEnabled: v.boolean(),
+    variants: v.array(
+      v.object({
+        id: v.string(),
+        name: v.string(),
+        subject: v.string(),
+        body: v.optional(v.string()),
+        percentage: v.number(), // % of contacts to receive this variant
+        sent: v.number(),
+        delivered: v.number(),
+        opened: v.number(),
+        clicked: v.number(),
+      })
+    ),
+    sampleSize: v.number(), // Min contacts before selecting winner
+    winnerMetric: v.union(v.literal("open_rate"), v.literal("click_rate")),
+    autoSelectWinner: v.boolean(),
+    winnerThreshold: v.optional(v.number()), // Min % diff to declare winner
+    status: v.union(v.literal("active"), v.literal("completed")),
+    winner: v.optional(v.string()), // Winning variant ID
+    confidence: v.optional(v.number()), // Statistical confidence level
+    completedAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_workflowId", ["workflowId"])
+    .index("by_workflowId_nodeId", ["workflowId", "nodeId"]),
+
   digitalProducts: defineTable({
     title: v.string(),
     slug: v.optional(v.string()),
