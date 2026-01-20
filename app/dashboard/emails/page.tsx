@@ -50,6 +50,7 @@ import {
   Power,
   Megaphone,
   Loader2,
+  BarChart3,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -937,6 +938,16 @@ export default function EmailCampaignsPage() {
           <p className="mt-1 text-xs text-muted-foreground md:text-sm">
             Manage contacts, send broadcasts, and create automated workflows
           </p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => router.push("/dashboard/emails/analytics?mode=create")}
+            className="gap-2"
+          >
+            <BarChart3 className="h-4 w-4" />
+            Analytics
+          </Button>
         </div>
       </div>
 

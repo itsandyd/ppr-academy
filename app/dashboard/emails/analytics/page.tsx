@@ -33,6 +33,7 @@ import {
   CheckCircle2,
   XCircle,
   CalendarDays,
+  FileDown,
 } from "lucide-react";
 
 function cn(...classes: (string | boolean | undefined)[]) {
@@ -353,6 +354,49 @@ export default function EmailAnalyticsPage() {
   const bestHour = bestSendTimes?.[0];
   const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+  // Export analytics to CSV
+  const exportAnalyticsToCSV = () => {
+    if (!metrics || !dailyActivity) return;
+
+    const headers = ["Metric", "Value"];
+    const metricsData = [
+      ["Total Emails Sent", metrics.totalSent],
+      ["Total Delivered", metrics.totalDelivered],
+      ["Total Opened", metrics.totalOpened],
+      ["Total Clicked", metrics.totalClicked],
+      ["Open Rate", `${((metrics.openRate || 0) * 100).toFixed(1)}%`],
+      ["Click Rate", `${((metrics.clickRate || 0) * 100).toFixed(1)}%`],
+      ["Bounce Rate", `${((metrics.bounceRate || 0) * 100).toFixed(1)}%`],
+      ["Unsubscribe Rate", `${((metrics.unsubscribeRate || 0) * 100).toFixed(1)}%`],
+    ];
+
+    // Add daily activity
+    const dailyHeaders = ["Date", "Sent", "Opened", "Clicked"];
+    const dailyData = dailyActivity.map((day) => [
+      day.date,
+      day.sent,
+      day.opened,
+      day.clicked,
+    ]);
+
+    const csvContent = [
+      "=== Email Performance Summary ===",
+      headers.join(","),
+      ...metricsData.map((row) => row.join(",")),
+      "",
+      "=== Daily Activity ===",
+      dailyHeaders.join(","),
+      ...dailyData.map((row) => row.join(",")),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `email-analytics-${new Date().toISOString().split("T")[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
+
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950">
       {/* Header */}
@@ -373,16 +417,28 @@ export default function EmailAnalyticsPage() {
               </p>
             </div>
           </div>
-          <Select value={dateRange} onValueChange={setDateRange}>
-            <SelectTrigger className="w-36">
-              <SelectValue />
-            </SelectTrigger>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportAnalyticsToCSV}
+              disabled={!metrics || !dailyActivity}
+              className="gap-1"
+            >
+              <FileDown className="h-4 w-4" />
+              <span className="hidden sm:inline">Export</span>
+            </Button>
+            <Select value={dateRange} onValueChange={setDateRange}>
+              <SelectTrigger className="w-36">
+                <SelectValue />
+              </SelectTrigger>
             <SelectContent>
               <SelectItem value="7">Last 7 days</SelectItem>
               <SelectItem value="30">Last 30 days</SelectItem>
               <SelectItem value="90">Last 90 days</SelectItem>
             </SelectContent>
           </Select>
+          </div>
         </div>
       </header>
 
