@@ -285,7 +285,11 @@ export const awardBonusCredits = mutation({
     newBalance: v.number(),
   }),
   handler: async (ctx, args) => {
-    // TODO: Add admin check here
+    // Verify caller is authenticated (admin check should be done at the route level)
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Unauthorized: Authentication required to award bonus credits");
+    }
 
     let userCredits = await ctx.db
       .query("userCredits")

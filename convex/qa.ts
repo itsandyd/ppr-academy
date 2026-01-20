@@ -466,8 +466,11 @@ export const deleteQuestion = mutation({
         return { success: false, error: "Question not found" };
       }
 
-      // TODO: Add instructor check
-      if (question.authorId !== args.userId) {
+      // Check if user is author or course instructor
+      const course = await ctx.db.get(question.courseId);
+      const isAuthor = question.authorId === args.userId;
+      const isInstructor = course?.userId === args.userId || course?.instructorId === args.userId;
+      if (!isAuthor && !isInstructor) {
         return { success: false, error: "Unauthorized" };
       }
 

@@ -442,16 +442,19 @@ export const addEmailDomain = mutation({
   },
   returns: v.id("emailDomains"),
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    const createdBy = identity?.subject || "system";
+
     // Check if domain already exists
     const existing = await ctx.db
       .query("emailDomains")
       .filter(q => q.eq(q.field("domain"), args.domain))
       .first();
-    
+
     if (existing) {
       throw new Error("Domain already exists");
     }
-    
+
     const domainId = await ctx.db.insert("emailDomains", {
       domain: args.domain,
       type: args.type,
@@ -473,7 +476,7 @@ export const addEmailDomain = mutation({
         currentHourlyUsage: 0,
         resetAt: Date.now() + 24 * 60 * 60 * 1000,
       },
-      createdBy: "admin", // TODO: Get from auth
+      createdBy,
       createdAt: Date.now(),
     });
     
@@ -573,10 +576,13 @@ export const resolveAlert = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    const resolvedBy = identity?.subject || "system";
+
     await ctx.db.patch(args.alertId, {
       resolved: true,
       resolvedAt: Date.now(),
-      resolvedBy: "admin", // TODO: Get from auth
+      resolvedBy,
     });
     return null;
   },

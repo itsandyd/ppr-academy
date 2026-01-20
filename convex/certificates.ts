@@ -339,7 +339,13 @@ export const revokeCertificate = mutation({
         return { success: false, error: "Certificate not found" };
       }
 
-      // TODO: Add authorization check (instructor or admin only)
+      // Authorization check: only certificate owner, course instructor, or revoker can revoke
+      const course = await ctx.db.get(certificate.courseId);
+      const isOwner = certificate.userId === args.revokedBy;
+      const isInstructor = course?.userId === args.revokedBy || course?.instructorId === args.revokedBy;
+      if (!isOwner && !isInstructor) {
+        return { success: false, error: "Unauthorized: Only certificate owner or course instructor can revoke" };
+      }
 
       await ctx.db.patch(certificate._id, {
         isValid: false,
