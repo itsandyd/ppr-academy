@@ -399,7 +399,7 @@ Generate the COMPLETE outline with ALL ${params.targetModules + 1} modules, ${pa
   } catch (parseError) {
     console.error("Failed to parse outline JSON:", parseError);
     console.error("Raw response:", content.substring(0, 1000));
-    throw new Error("Failed to parse course outline from AI response");
+    throw new Error("Unable to generate course outline. The AI response was incomplete. Please try again with a clearer topic description.");
   }
 }
 
@@ -843,7 +843,7 @@ export const createCourseFromOutline = action({
         };
       }
       
-      throw new Error("Failed to create course");
+      throw new Error("Unable to create your course. Please try again or contact support if the problem persists.");
       
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";

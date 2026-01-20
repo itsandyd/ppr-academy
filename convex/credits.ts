@@ -237,7 +237,7 @@ export const purchaseCredits = mutation({
         lastUpdated: Date.now(),
       });
       userCredits = await ctx.db.get(creditsId);
-      if (!userCredits) throw new Error("Failed to create credits");
+      if (!userCredits) throw new Error("Unable to initialize your credit balance. Please try again or contact support.");
     }
 
     // Update balance
@@ -305,7 +305,7 @@ export const awardBonusCredits = mutation({
         lastUpdated: Date.now(),
       });
       userCredits = await ctx.db.get(creditsId);
-      if (!userCredits) throw new Error("Failed to create credits");
+      if (!userCredits) throw new Error("Unable to initialize your credit balance. Please try again or contact support.");
     }
 
     const newBalance = userCredits.balance + args.amount;
@@ -421,7 +421,7 @@ export const earnCredits = mutation({
         lastUpdated: Date.now(),
       });
       userCredits = await ctx.db.get(creditsId);
-      if (!userCredits) throw new Error("Failed to create credits");
+      if (!userCredits) throw new Error("Unable to initialize your credit balance. Please try again or contact support.");
     }
 
     const newBalance = userCredits.balance + args.amount;
@@ -496,7 +496,7 @@ export const addCredits = internalMutation({
         lastUpdated: Date.now(),
       });
       userCredits = await ctx.db.get(creditsId);
-      if (!userCredits) throw new Error("Failed to create credits");
+      if (!userCredits) throw new Error("Unable to initialize your credit balance. Please try again or contact support.");
     }
 
     // Update balance
