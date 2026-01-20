@@ -77,6 +77,14 @@ const navSections = [
         description: "All products",
       },
       {
+        title: "Creators",
+        href: "/admin/creators",
+        icon: TrendingUp,
+        description: "Creator success",
+        badge: "NEW",
+        badgeColor: "bg-green-500",
+      },
+      {
         title: "Moderation",
         href: "/admin/moderation",
         icon: Shield,
