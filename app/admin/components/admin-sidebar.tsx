@@ -115,6 +115,14 @@ const navSections = [
         icon: Activity,
         description: "Transaction logs",
       },
+      {
+        title: "Conversions",
+        href: "/admin/conversions",
+        icon: TrendingUp,
+        description: "Funnel optimization",
+        badge: "NEW",
+        badgeColor: "bg-green-500",
+      },
     ],
   },
   {
