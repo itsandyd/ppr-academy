@@ -143,7 +143,10 @@ export default function AdminDashboard({
   const [isTestingApiKey, setIsTestingApiKey] = useState(false);
   const [isCleaningLegacyAudio, setIsCleaningLegacyAudio] = useState(false);
 
-  const handleUpdateUserRole = async (userId: string, role: string) => {
+  const handleUpdateUserRole = async (
+    userId: string,
+    role: "admin" | "user" | "creator"
+  ) => {
     setIsLoading(true);
     const result = await updateUserRole(userId, role);
     setIsLoading(false);
@@ -936,9 +939,9 @@ export default function AdminDashboard({
                     
                     <div>
                       <label className="block text-sm font-medium mb-2">Role</label>
-                      <Select 
-                        defaultValue={selectedUser.role} 
-                        onValueChange={(role) => {
+                      <Select
+                        defaultValue={selectedUser.role}
+                        onValueChange={(role: "admin" | "user" | "creator") => {
                           handleUpdateUserRole(selectedUser.id, role);
                         }}
                       >
@@ -946,9 +949,9 @@ export default function AdminDashboard({
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="SUBACCOUNT_USER">Student</SelectItem>
-                          <SelectItem value="AGENCY_ADMIN">Instructor</SelectItem>
-                          <SelectItem value="AGENCY_OWNER">Admin</SelectItem>
+                          <SelectItem value="user">Student</SelectItem>
+                          <SelectItem value="creator">Creator</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

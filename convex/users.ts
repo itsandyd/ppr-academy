@@ -399,6 +399,65 @@ export const setUserAsAdmin = mutation({
   },
 });
 
+// Update user role (admin management)
+export const updateUserRole = mutation({
+  args: {
+    adminClerkId: v.string(),
+    targetUserId: v.id("users"),
+    role: v.union(v.literal("admin"), v.literal("user"), v.literal("creator")),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    message: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    // Verify the caller is an admin
+    const adminUser = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.adminClerkId))
+      .unique();
+
+    if (!adminUser || !adminUser.admin) {
+      throw new Error("Unauthorized - Admin access required");
+    }
+
+    // Get the target user
+    const targetUser = await ctx.db.get(args.targetUserId);
+    if (!targetUser) {
+      return {
+        success: false,
+        message: "User not found",
+      };
+    }
+
+    // Update based on role
+    const updates: { admin?: boolean; isCreator?: boolean } = {};
+
+    switch (args.role) {
+      case "admin":
+        updates.admin = true;
+        break;
+      case "creator":
+        updates.admin = false;
+        updates.isCreator = true;
+        break;
+      case "user":
+        updates.admin = false;
+        updates.isCreator = false;
+        break;
+    }
+
+    await ctx.db.patch(args.targetUserId, updates);
+
+    console.log(`✅ User ${targetUser.email} role updated to ${args.role}`);
+
+    return {
+      success: true,
+      message: `User ${targetUser.email || targetUser.name} role updated to ${args.role}`,
+    };
+  },
+});
+
 // Set user's dashboard preference (learn or create mode)
 export const setDashboardPreference = mutation({
   args: {

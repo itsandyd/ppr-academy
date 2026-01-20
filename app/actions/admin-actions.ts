@@ -26,16 +26,27 @@ async function checkAdminAuth() {
   return user;
 }
 
-export async function updateUserRole(userId: string, role: string) {
+export async function updateUserRole(
+  userId: string,
+  role: "admin" | "user" | "creator"
+) {
   await checkAdminAuth();
 
   try {
-    // Note: updateUserRole mutation needs to be added to Convex if not present
-    // For now, this functionality would need a Convex mutation
-    console.log(`[Admin] updateUserRole called for ${userId} with role ${role}`);
+    const { userId: clerkId } = await auth();
+    const result = await convex.mutation(api.users.updateUserRole, {
+      adminClerkId: clerkId!,
+      targetUserId: userId as Id<"users">,
+      role,
+    });
+
+    if (!result.success) {
+      return { success: false, error: result.message };
+    }
 
     revalidatePath("/admin");
-    return { success: true };
+    revalidatePath("/admin/users");
+    return { success: true, message: result.message };
   } catch (error) {
     console.error("Error updating user role:", error);
     return { success: false, error: "Failed to update user role" };
@@ -103,12 +114,19 @@ export async function approveCoach(profileId: string) {
   await checkAdminAuth();
 
   try {
-    // TODO: Add Convex mutation for coach profile approval
-    console.log(`[Admin] approveCoach called for profile ${profileId}`);
+    const { userId: clerkId } = await auth();
+    const result = await convex.mutation(api.adminCoach.approveCoachProfile, {
+      clerkId: clerkId!,
+      profileId: profileId as Id<"coachProfiles">,
+    });
+
+    if (!result.success) {
+      return { success: false, error: result.message };
+    }
 
     revalidatePath("/admin");
     revalidatePath("/coaching");
-    return { success: true };
+    return { success: true, message: result.message };
   } catch (error) {
     console.error("Error approving coach:", error);
     return {
@@ -122,11 +140,19 @@ export async function rejectCoach(profileId: string) {
   await checkAdminAuth();
 
   try {
-    // TODO: Add Convex mutation for coach profile rejection/deletion
-    console.log(`[Admin] rejectCoach called for profile ${profileId}`);
+    const { userId: clerkId } = await auth();
+    const result = await convex.mutation(api.adminCoach.rejectCoachProfile, {
+      clerkId: clerkId!,
+      profileId: profileId as Id<"coachProfiles">,
+    });
+
+    if (!result.success) {
+      return { success: false, error: result.message };
+    }
 
     revalidatePath("/admin");
-    return { success: true };
+    revalidatePath("/coaching");
+    return { success: true, message: result.message };
   } catch (error) {
     console.error("Error rejecting coach:", error);
     return { success: false, error: "Failed to reject coach" };
@@ -137,22 +163,36 @@ export async function debugCoachProfiles() {
   await checkAdminAuth();
 
   try {
-    // TODO: Add Convex query for debugging coach profiles
-    console.log(`[Admin] debugCoachProfiles called`);
-    return { success: true, profiles: [] };
+    const { userId: clerkId } = await auth();
+    const profiles = await convex.query(api.adminCoach.getCoachProfilesDebug, {
+      clerkId: clerkId!,
+    });
+
+    console.log(`[Admin] debugCoachProfiles: Found ${profiles.length} profiles`);
+    return { success: true, profiles };
   } catch (error) {
     console.error("Error debugging coach profiles:", error);
     return { success: false, error: "Failed to debug coach profiles" };
   }
 }
 
-export async function cleanupOrphanedCoachProfiles() {
+export async function cleanupOrphanedCoachProfiles(dryRun: boolean = true) {
   await checkAdminAuth();
 
   try {
-    // TODO: Add Convex mutation for cleanup
-    console.log(`[Admin] cleanupOrphanedCoachProfiles called`);
-    return { success: true, message: "No orphaned coach profiles found" };
+    const { userId: clerkId } = await auth();
+    const result = await convex.mutation(api.adminCoach.cleanupOrphanedProfiles, {
+      clerkId: clerkId!,
+      dryRun,
+    });
+
+    console.log(`[Admin] cleanupOrphanedCoachProfiles: ${result.message}`);
+    return {
+      success: result.success,
+      message: result.message,
+      orphanedCount: result.orphanedCount,
+      deletedIds: result.deletedIds,
+    };
   } catch (error) {
     console.error("Error cleaning up orphaned coach profiles:", error);
     return { success: false, error: "Failed to cleanup orphaned profiles" };
