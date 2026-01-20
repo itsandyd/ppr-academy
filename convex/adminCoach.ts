@@ -106,6 +106,25 @@ export const approveCoachProfile = mutation({
       isActive: true,
     });
 
+    // Log admin activity
+    const admin = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .unique();
+
+    await ctx.db.insert("adminActivityLogs", {
+      adminId: args.clerkId,
+      adminEmail: admin?.email,
+      adminName: admin?.name || admin?.firstName || "Admin",
+      action: "coach_profile_approved",
+      actionType: "approve",
+      resourceType: "coach",
+      resourceId: args.profileId,
+      resourceName: profile.title,
+      details: `Approved coach profile for ${profile.title}`,
+      timestamp: Date.now(),
+    });
+
     console.log(`✅ Coach profile ${args.profileId} approved`);
 
     return {
@@ -142,6 +161,25 @@ export const rejectCoachProfile = mutation({
       isActive: false,
     });
 
+    // Log admin activity
+    const admin = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .unique();
+
+    await ctx.db.insert("adminActivityLogs", {
+      adminId: args.clerkId,
+      adminEmail: admin?.email,
+      adminName: admin?.name || admin?.firstName || "Admin",
+      action: "coach_profile_rejected",
+      actionType: "reject",
+      resourceType: "coach",
+      resourceId: args.profileId,
+      resourceName: profile.title,
+      details: `Rejected/deactivated coach profile for ${profile.title}`,
+      timestamp: Date.now(),
+    });
+
     console.log(`❌ Coach profile ${args.profileId} rejected/deactivated`);
 
     return {
@@ -174,13 +212,33 @@ export const deleteCoachProfile = mutation({
       };
     }
 
+    const profileTitle = profile.title;
     await ctx.db.delete(args.profileId);
+
+    // Log admin activity
+    const admin = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .unique();
+
+    await ctx.db.insert("adminActivityLogs", {
+      adminId: args.clerkId,
+      adminEmail: admin?.email,
+      adminName: admin?.name || admin?.firstName || "Admin",
+      action: "coach_profile_deleted",
+      actionType: "delete",
+      resourceType: "coach",
+      resourceId: args.profileId,
+      resourceName: profileTitle,
+      details: `Permanently deleted coach profile "${profileTitle}"`,
+      timestamp: Date.now(),
+    });
 
     console.log(`🗑️ Coach profile ${args.profileId} deleted`);
 
     return {
       success: true,
-      message: `Coach profile "${profile.title}" has been permanently deleted`,
+      message: `Coach profile "${profileTitle}" has been permanently deleted`,
     };
   },
 });

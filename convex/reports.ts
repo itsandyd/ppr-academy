@@ -136,13 +136,30 @@ export const markAsReviewed = mutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     // Verify admin access
-    await verifyAdmin(ctx, args.clerkId);
+    const admin = await verifyAdmin(ctx, args.clerkId);
+
+    const report = await ctx.db.get(args.reportId);
 
     await ctx.db.patch(args.reportId, {
       status: "reviewed",
       reviewedBy: args.reviewedBy,
       reviewedAt: Date.now(),
     });
+
+    // Log admin activity
+    await ctx.db.insert("adminActivityLogs", {
+      adminId: args.clerkId,
+      adminEmail: admin?.email,
+      adminName: admin?.name || admin?.firstName || "Admin",
+      action: "report_reviewed",
+      actionType: "update",
+      resourceType: "report",
+      resourceId: args.reportId,
+      resourceName: report?.contentTitle || "Report",
+      details: `Marked ${report?.type} report as reviewed`,
+      timestamp: Date.now(),
+    });
+
     return null;
   },
 });
@@ -158,14 +175,32 @@ export const markAsResolved = mutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     // Verify admin access
-    await verifyAdmin(ctx, args.clerkId);
+    const admin = await verifyAdmin(ctx, args.clerkId);
+
+    const report = await ctx.db.get(args.reportId);
+    const resolutionText = args.resolution || "Content removed";
 
     await ctx.db.patch(args.reportId, {
       status: "resolved",
       reviewedBy: args.reviewedBy,
       reviewedAt: Date.now(),
-      resolution: args.resolution || "Content removed",
+      resolution: resolutionText,
     });
+
+    // Log admin activity
+    await ctx.db.insert("adminActivityLogs", {
+      adminId: args.clerkId,
+      adminEmail: admin?.email,
+      adminName: admin?.name || admin?.firstName || "Admin",
+      action: "report_resolved",
+      actionType: "approve",
+      resourceType: "report",
+      resourceId: args.reportId,
+      resourceName: report?.contentTitle || "Report",
+      details: `Resolved ${report?.type} report: ${resolutionText}`,
+      timestamp: Date.now(),
+    });
+
     return null;
   },
 });
@@ -181,14 +216,32 @@ export const markAsDismissed = mutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     // Verify admin access
-    await verifyAdmin(ctx, args.clerkId);
+    const admin = await verifyAdmin(ctx, args.clerkId);
+
+    const report = await ctx.db.get(args.reportId);
+    const resolutionText = args.resolution || "Report dismissed";
 
     await ctx.db.patch(args.reportId, {
       status: "dismissed",
       reviewedBy: args.reviewedBy,
       reviewedAt: Date.now(),
-      resolution: args.resolution || "Report dismissed",
+      resolution: resolutionText,
     });
+
+    // Log admin activity
+    await ctx.db.insert("adminActivityLogs", {
+      adminId: args.clerkId,
+      adminEmail: admin?.email,
+      adminName: admin?.name || admin?.firstName || "Admin",
+      action: "report_dismissed",
+      actionType: "reject",
+      resourceType: "report",
+      resourceId: args.reportId,
+      resourceName: report?.contentTitle || "Report",
+      details: `Dismissed ${report?.type} report: ${resolutionText}`,
+      timestamp: Date.now(),
+    });
+
     return null;
   },
 });
@@ -202,9 +255,28 @@ export const deleteReport = mutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     // Verify admin access
-    await verifyAdmin(ctx, args.clerkId);
+    const admin = await verifyAdmin(ctx, args.clerkId);
+
+    const report = await ctx.db.get(args.reportId);
+    const reportTitle = report?.contentTitle || "Report";
+    const reportType = report?.type || "unknown";
 
     await ctx.db.delete(args.reportId);
+
+    // Log admin activity
+    await ctx.db.insert("adminActivityLogs", {
+      adminId: args.clerkId,
+      adminEmail: admin?.email,
+      adminName: admin?.name || admin?.firstName || "Admin",
+      action: "report_deleted",
+      actionType: "delete",
+      resourceType: "report",
+      resourceId: args.reportId,
+      resourceName: reportTitle,
+      details: `Permanently deleted ${reportType} report: ${reportTitle}`,
+      timestamp: Date.now(),
+    });
+
     return null;
   },
 });

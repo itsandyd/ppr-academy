@@ -449,6 +449,20 @@ export const updateUserRole = mutation({
 
     await ctx.db.patch(args.targetUserId, updates);
 
+    // Log admin activity
+    await ctx.db.insert("adminActivityLogs", {
+      adminId: args.adminClerkId,
+      adminEmail: adminUser?.email,
+      adminName: adminUser?.name || adminUser?.firstName || "Admin",
+      action: "user_role_changed",
+      actionType: "update",
+      resourceType: "user",
+      resourceId: args.targetUserId,
+      resourceName: targetUser.email || targetUser.name || "Unknown User",
+      details: `Changed user role to ${args.role}`,
+      timestamp: Date.now(),
+    });
+
     console.log(`✅ User ${targetUser.email} role updated to ${args.role}`);
 
     return {
