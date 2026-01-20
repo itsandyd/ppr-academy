@@ -113,7 +113,9 @@ const navSections = [
         title: "Activity",
         href: "/admin/activity",
         icon: Activity,
-        description: "Transaction logs",
+        description: "Admin audit log",
+        badge: "NEW",
+        badgeColor: "bg-blue-500",
       },
       {
         title: "Conversions",
