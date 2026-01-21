@@ -1117,11 +1117,14 @@ export type DataModel = {
       fileUrl: string;
       format: string;
       genre: string;
+      individualPrice?: number;
       isFree?: boolean;
+      isIndividuallySellable?: boolean;
       isPublished: boolean;
       key?: string;
       licenseTerms?: string;
       licenseType: "royalty-free" | "exclusive" | "commercial";
+      packIds?: Array<Id<"digitalProducts">>;
       peakAmplitude?: number;
       plays: number;
       storageId: Id<"_storage">;
@@ -1149,11 +1152,14 @@ export type DataModel = {
       | "fileUrl"
       | "format"
       | "genre"
+      | "individualPrice"
       | "isFree"
+      | "isIndividuallySellable"
       | "isPublished"
       | "key"
       | "licenseTerms"
       | "licenseType"
+      | "packIds"
       | "peakAmplitude"
       | "plays"
       | "storageId"
@@ -3511,6 +3517,8 @@ export type DataModel = {
         | "playlistCuration";
       rackType?: "audioEffect" | "instrument" | "midiEffect" | "drumRack";
       requiresMaxForLive?: boolean;
+      sampleCategories?: Array<string>;
+      sampleIds?: Array<Id<"audioSamples">>;
       sessionType?: string;
       slug?: string;
       stemsUrl?: string;
@@ -3631,6 +3639,8 @@ export type DataModel = {
       | "productType"
       | "rackType"
       | "requiresMaxForLive"
+      | "sampleCategories"
+      | "sampleIds"
       | "sessionType"
       | "slug"
       | "stemsUrl"

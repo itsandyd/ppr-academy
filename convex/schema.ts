@@ -1154,6 +1154,10 @@ export default defineSchema({
     exclusiveSoldAt: v.optional(v.number()),
     exclusiveSoldTo: v.optional(v.string()), // userId who bought exclusive
     exclusivePurchaseId: v.optional(v.id("purchases")),
+
+    // Linked Samples (unified samples system)
+    sampleIds: v.optional(v.array(v.id("audioSamples"))), // Individual samples included in this pack
+    sampleCategories: v.optional(v.array(v.string())), // Sample categories: drums, bass, melodic, etc.
   })
     .index("by_storeId", ["storeId"])
     .index("by_userId", ["userId"])
@@ -2548,6 +2552,11 @@ export default defineSchema({
       v.literal("commercial")
     ),
     licenseTerms: v.optional(v.string()),
+
+    // Pack membership (unified samples system)
+    packIds: v.optional(v.array(v.id("digitalProducts"))), // Packs this sample belongs to
+    individualPrice: v.optional(v.number()), // Price when sold separately (if different from creditPrice)
+    isIndividuallySellable: v.optional(v.boolean()), // Can be purchased alone (default true)
   })
     .index("by_userId", ["userId"])
     .index("by_storeId", ["storeId"])

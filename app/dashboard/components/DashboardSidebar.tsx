@@ -390,8 +390,19 @@ export function DashboardSidebar({ mode, onModeChange }: DashboardSidebarProps) 
                       size="sm"
                       className="h-8 w-full justify-start text-xs"
                     >
-                      <Link href="/dashboard/create/pack?type=sample-pack">
+                      <Link href="/dashboard/create/sample">
                         <Music className="mr-2 h-3 w-3" />
+                        Individual Sample
+                      </Link>
+                    </Button>
+                    <Button
+                      asChild
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-full justify-start text-xs"
+                    >
+                      <Link href="/dashboard/create/pack?type=sample-pack">
+                        <Package className="mr-2 h-3 w-3" />
                         Sample Pack
                       </Link>
                     </Button>

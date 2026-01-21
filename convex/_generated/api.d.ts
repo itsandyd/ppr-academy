@@ -16184,6 +16184,24 @@ export declare const api: {
     >;
   };
   samples: {
+    addSamplesToPack: FunctionReference<
+      "mutation",
+      "public",
+      { packId: Id<"digitalProducts">; sampleIds: Array<Id<"audioSamples">> },
+      any
+    >;
+    addSampleToPack: FunctionReference<
+      "mutation",
+      "public",
+      { packId: Id<"digitalProducts">; sampleId: Id<"audioSamples"> },
+      any
+    >;
+    checkFullSampleOwnership: FunctionReference<
+      "query",
+      "public",
+      { sampleId: Id<"audioSamples">; userId: string },
+      any
+    >;
     checkSampleOwnership: FunctionReference<
       "query",
       "public",
@@ -16230,6 +16248,12 @@ export declare const api: {
       { sampleId: Id<"audioSamples"> },
       any
     >;
+    getCreatorSamplesForPacks: FunctionReference<
+      "query",
+      "public",
+      { storeId: string },
+      any
+    >;
     getFavoriteSamples: FunctionReference<"query", "public", {}, any>;
     getPublishedSamples: FunctionReference<
       "query",
@@ -16243,10 +16267,22 @@ export declare const api: {
       },
       any
     >;
+    getPublishedSamplesWithPackInfo: FunctionReference<
+      "query",
+      "public",
+      { category?: string; genre?: string; limit?: number },
+      any
+    >;
     getSample: FunctionReference<
       "query",
       "public",
       { sampleId: Id<"audioSamples"> },
+      any
+    >;
+    getSamplesByPackId: FunctionReference<
+      "query",
+      "public",
+      { packId: Id<"digitalProducts"> },
       any
     >;
     getSampleStats: FunctionReference<"query", "public", {}, any>;
@@ -16267,6 +16303,12 @@ export declare const api: {
       "mutation",
       "public",
       { sampleId: Id<"audioSamples"> },
+      any
+    >;
+    removeSampleFromPack: FunctionReference<
+      "mutation",
+      "public",
+      { packId: Id<"digitalProducts">; sampleId: Id<"audioSamples"> },
       any
     >;
     toggleFavorite: FunctionReference<

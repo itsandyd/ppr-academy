@@ -24,6 +24,7 @@ import {
   Folder,
   FileAudio,
 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -51,6 +52,130 @@ interface SamplePack {
   genre?: string;
   storeName?: string;
   storeSlug?: string;
+}
+
+interface IndividualSample {
+  _id: string;
+  title: string;
+  description?: string;
+  fileUrl: string;
+  fileName?: string;
+  duration: number;
+  bpm?: number;
+  key?: string;
+  genre: string;
+  category: string;
+  format?: string;
+  creditPrice: number;
+  purchaseDate: number;
+  ownershipSource: "individual" | "pack";
+  packTitle?: string;
+}
+
+function IndividualSampleCard({
+  sample,
+  isPlaying,
+  onPlay,
+  onPause,
+}: {
+  sample: IndividualSample;
+  isPlaying: boolean;
+  onPlay: () => void;
+  onPause: () => void;
+}) {
+  const handleDownload = async () => {
+    try {
+      const response = await fetch(sample.fileUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = sample.fileName || `${sample.title}.${sample.format || "wav"}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Download failed:", error);
+    }
+  };
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  return (
+    <Card className="transition-all hover:shadow-md">
+      <CardContent className="flex items-center gap-4 p-4">
+        <Button
+          size="sm"
+          variant={isPlaying ? "default" : "outline"}
+          className="h-10 w-10 flex-shrink-0 rounded-full p-0"
+          onClick={isPlaying ? onPause : onPlay}
+        >
+          {isPlaying ? (
+            <Pause className="h-4 w-4" />
+          ) : (
+            <Play className="h-4 w-4" />
+          )}
+        </Button>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <h3 className="truncate font-semibold">{sample.title}</h3>
+            {sample.ownershipSource === "pack" && sample.packTitle && (
+              <Badge
+                variant="outline"
+                className="border-chart-1/30 bg-chart-1/10 text-chart-1"
+              >
+                <Package className="mr-1 h-3 w-3" />
+                From Pack
+              </Badge>
+            )}
+            {sample.ownershipSource === "individual" && (
+              <Badge
+                variant="outline"
+                className="border-green-500/30 bg-green-500/10 text-green-600"
+              >
+                <FileAudio className="mr-1 h-3 w-3" />
+                Individual
+              </Badge>
+            )}
+          </div>
+          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+            <span>{sample.genre}</span>
+            <span>•</span>
+            <span className="capitalize">{sample.category}</span>
+            {sample.bpm && (
+              <>
+                <span>•</span>
+                <span>{sample.bpm} BPM</span>
+              </>
+            )}
+            {sample.key && (
+              <>
+                <span>•</span>
+                <span>{sample.key}</span>
+              </>
+            )}
+            <span>•</span>
+            <span>{formatDuration(sample.duration)}</span>
+          </div>
+        </div>
+
+        <Button
+          size="sm"
+          className="bg-green-600 hover:bg-green-700"
+          onClick={handleDownload}
+        >
+          <Download className="mr-2 h-4 w-4" />
+          Download
+        </Button>
+      </CardContent>
+    </Card>
+  );
 }
 
 function SampleFileRow({
@@ -337,6 +462,9 @@ export default function SamplesPage() {
     convexUser?.clerkId ? { userId: convexUser.clerkId } : "skip"
   );
 
+  // Get individual samples from user library
+  const individualSamplesRaw = useQuery(api.samples.getUserLibrary) as any[] | undefined;
+
   // Filter to sample/midi/preset packs only
   const samplePacks: SamplePack[] =
     userPurchases
@@ -371,6 +499,36 @@ export default function SamplesPage() {
           storeSlug: purchase.storeSlug,
         };
       }) || [];
+
+  // Transform individual samples
+  const individualSamples: IndividualSample[] = (individualSamplesRaw || []).map((sample: any) => ({
+    _id: sample._id,
+    title: sample.title,
+    description: sample.description,
+    fileUrl: sample.fileUrl,
+    fileName: sample.fileName,
+    duration: sample.duration || 0,
+    bpm: sample.bpm,
+    key: sample.key,
+    genre: sample.genre || "Unknown",
+    category: sample.category || "Unknown",
+    format: sample.format,
+    creditPrice: sample.creditPrice || 0,
+    purchaseDate: sample.downloadInfo?.downloadedAt || sample._creationTime,
+    ownershipSource: "individual" as const,
+  }));
+
+  // Filter individual samples by search
+  const filteredIndividualSamples = individualSamples.filter((sample) => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      sample.title.toLowerCase().includes(query) ||
+      sample.description?.toLowerCase().includes(query) ||
+      sample.genre.toLowerCase().includes(query) ||
+      sample.category.toLowerCase().includes(query)
+    );
+  });
 
   // Filter by search query
   const filteredPacks = samplePacks.filter((pack) => {
@@ -426,7 +584,8 @@ export default function SamplesPage() {
   const isLoading =
     !isUserLoaded ||
     (user && convexUser === undefined) ||
-    userPurchases === undefined;
+    userPurchases === undefined ||
+    individualSamplesRaw === undefined;
 
   if (isLoading) {
     return (
@@ -456,6 +615,7 @@ export default function SamplesPage() {
     (acc, pack) => acc + pack.packFiles.length,
     0
   );
+  const totalIndividualSamples = individualSamples.length;
 
   return (
     <div className="space-y-6">
@@ -468,7 +628,7 @@ export default function SamplesPage() {
           <div>
             <h1 className="text-2xl font-bold">My Samples</h1>
             <p className="text-muted-foreground">
-              {samplePacks.length} packs &bull; {totalFiles} files
+              {samplePacks.length} packs &bull; {totalFiles} files &bull; {totalIndividualSamples} individual samples
             </p>
           </div>
         </div>
@@ -481,11 +641,11 @@ export default function SamplesPage() {
       </div>
 
       {/* Search */}
-      {samplePacks.length > 0 && (
+      {(samplePacks.length > 0 || individualSamples.length > 0) && (
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search packs and files..."
+            placeholder="Search packs and samples..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
@@ -493,41 +653,106 @@ export default function SamplesPage() {
         </div>
       )}
 
-      {/* Pack List */}
-      {filteredPacks.length > 0 ? (
-        <div className="space-y-4">
-          {filteredPacks.map((pack) => (
-            <SamplePackCard
-              key={pack._id}
-              pack={pack}
-              isExpanded={expandedPacks.has(pack._id)}
-              onToggle={() => togglePack(pack._id)}
-              playingFileId={playingFileId}
-              onPlayFile={handlePlayFile}
-              onPauseFile={handlePauseFile}
-            />
-          ))}
-        </div>
-      ) : searchQuery ? (
-        <Card className="p-8 text-center">
-          <Search className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-          <h3 className="mb-2 text-lg font-semibold">No results found</h3>
-          <p className="text-muted-foreground">
-            Try searching with different keywords
-          </p>
-        </Card>
+      {/* Tabs for Packs vs Individual Samples */}
+      {(samplePacks.length > 0 || individualSamples.length > 0) ? (
+        <Tabs defaultValue="packs" className="w-full">
+          <TabsList className="mb-4">
+            <TabsTrigger value="packs" className="gap-2">
+              <Package className="h-4 w-4" />
+              Sample Packs ({samplePacks.length})
+            </TabsTrigger>
+            <TabsTrigger value="individual" className="gap-2">
+              <FileAudio className="h-4 w-4" />
+              Individual Samples ({individualSamples.length})
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="packs" className="space-y-4">
+            {filteredPacks.length > 0 ? (
+              filteredPacks.map((pack) => (
+                <SamplePackCard
+                  key={pack._id}
+                  pack={pack}
+                  isExpanded={expandedPacks.has(pack._id)}
+                  onToggle={() => togglePack(pack._id)}
+                  playingFileId={playingFileId}
+                  onPlayFile={handlePlayFile}
+                  onPauseFile={handlePauseFile}
+                />
+              ))
+            ) : searchQuery ? (
+              <Card className="p-8 text-center">
+                <Search className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+                <h3 className="mb-2 text-lg font-semibold">No packs found</h3>
+                <p className="text-muted-foreground">
+                  Try searching with different keywords
+                </p>
+              </Card>
+            ) : (
+              <Card className="p-8 text-center">
+                <Package className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+                <h3 className="mb-2 text-lg font-semibold">No Sample Packs Yet</h3>
+                <p className="mb-4 text-muted-foreground">
+                  Purchase packs from the marketplace to see them here.
+                </p>
+                <Link href="/marketplace/samples">
+                  <Button variant="outline">
+                    <Package className="mr-2 h-4 w-4" />
+                    Browse Sample Packs
+                  </Button>
+                </Link>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="individual" className="space-y-3">
+            {filteredIndividualSamples.length > 0 ? (
+              filteredIndividualSamples.map((sample) => (
+                <IndividualSampleCard
+                  key={sample._id}
+                  sample={sample}
+                  isPlaying={playingFileId === sample._id}
+                  onPlay={() => handlePlayFile(sample._id, sample.fileUrl)}
+                  onPause={handlePauseFile}
+                />
+              ))
+            ) : searchQuery ? (
+              <Card className="p-8 text-center">
+                <Search className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+                <h3 className="mb-2 text-lg font-semibold">No samples found</h3>
+                <p className="text-muted-foreground">
+                  Try searching with different keywords
+                </p>
+              </Card>
+            ) : (
+              <Card className="p-8 text-center">
+                <FileAudio className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+                <h3 className="mb-2 text-lg font-semibold">No Individual Samples Yet</h3>
+                <p className="mb-4 text-muted-foreground">
+                  Purchase individual samples from the marketplace to see them here.
+                </p>
+                <Link href="/marketplace/samples">
+                  <Button variant="outline">
+                    <Music className="mr-2 h-4 w-4" />
+                    Browse Samples
+                  </Button>
+                </Link>
+              </Card>
+            )}
+          </TabsContent>
+        </Tabs>
       ) : (
         <Card className="p-12 text-center">
           <Package className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
-          <h3 className="mb-2 text-xl font-semibold">No Sample Packs Yet</h3>
+          <h3 className="mb-2 text-xl font-semibold">No Samples Yet</h3>
           <p className="mb-6 text-muted-foreground">
-            Purchase sample packs, MIDI packs, or preset packs from the
+            Purchase sample packs or individual samples from the
             marketplace to build your library.
           </p>
           <Link href="/marketplace/samples">
             <Button className="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600">
               <Package className="mr-2 h-4 w-4" />
-              Browse Sample Packs
+              Browse Samples
             </Button>
           </Link>
         </Card>

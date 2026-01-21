@@ -600,3 +600,330 @@ export const toggleFavorite = mutation({
   },
 });
 
+// ============================================================================
+// UNIFIED SAMPLES SYSTEM - Pack-Sample Linking
+// ============================================================================
+
+/**
+ * Get samples that belong to a specific pack
+ */
+export const getSamplesByPackId = query({
+  args: {
+    packId: v.id("digitalProducts"),
+  },
+  handler: async (ctx, args) => {
+    // Get the pack to verify it exists and get sampleIds
+    const pack = await ctx.db.get(args.packId);
+    if (!pack) {
+      return [];
+    }
+
+    // If pack has sampleIds array, use that (new system)
+    if (pack.sampleIds && pack.sampleIds.length > 0) {
+      const samples = await Promise.all(
+        pack.sampleIds.map((sampleId) => ctx.db.get(sampleId))
+      );
+      return samples.filter((s) => s !== null);
+    }
+
+    // Fallback: query samples that have this packId in their packIds array
+    const allSamples = await ctx.db.query("audioSamples").collect();
+    return allSamples.filter(
+      (sample) => sample.packIds && sample.packIds.includes(args.packId)
+    );
+  },
+});
+
+/**
+ * Get all samples for a creator that can be added to packs
+ */
+export const getCreatorSamplesForPacks = query({
+  args: {
+    storeId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const samples = await ctx.db
+      .query("audioSamples")
+      .withIndex("by_storeId", (q) => q.eq("storeId", args.storeId))
+      .collect();
+
+    // Return with pack membership info
+    return samples.map((sample) => ({
+      ...sample,
+      packCount: sample.packIds?.length || 0,
+    }));
+  },
+});
+
+/**
+ * Add a sample to a pack (bidirectional linking)
+ */
+export const addSampleToPack = mutation({
+  args: {
+    sampleId: v.id("audioSamples"),
+    packId: v.id("digitalProducts"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    const userId = identity.subject;
+
+    // Verify sample exists and user owns it
+    const sample = await ctx.db.get(args.sampleId);
+    if (!sample) {
+      throw new Error("Sample not found");
+    }
+    if (sample.userId !== userId) {
+      throw new Error("Unauthorized: You don't own this sample");
+    }
+
+    // Verify pack exists and user owns it
+    const pack = await ctx.db.get(args.packId);
+    if (!pack) {
+      throw new Error("Pack not found");
+    }
+    if (pack.userId !== userId) {
+      throw new Error("Unauthorized: You don't own this pack");
+    }
+
+    // Check if sample is already in pack
+    const currentPackIds = sample.packIds || [];
+    if (currentPackIds.includes(args.packId)) {
+      return { success: true, message: "Sample already in pack" };
+    }
+
+    // Update sample's packIds
+    await ctx.db.patch(args.sampleId, {
+      packIds: [...currentPackIds, args.packId],
+    });
+
+    // Update pack's sampleIds
+    const currentSampleIds = pack.sampleIds || [];
+    if (!currentSampleIds.includes(args.sampleId)) {
+      await ctx.db.patch(args.packId, {
+        sampleIds: [...currentSampleIds, args.sampleId],
+      });
+    }
+
+    return { success: true, message: "Sample added to pack" };
+  },
+});
+
+/**
+ * Remove a sample from a pack (bidirectional unlinking)
+ */
+export const removeSampleFromPack = mutation({
+  args: {
+    sampleId: v.id("audioSamples"),
+    packId: v.id("digitalProducts"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    const userId = identity.subject;
+
+    // Verify sample exists and user owns it
+    const sample = await ctx.db.get(args.sampleId);
+    if (!sample) {
+      throw new Error("Sample not found");
+    }
+    if (sample.userId !== userId) {
+      throw new Error("Unauthorized: You don't own this sample");
+    }
+
+    // Verify pack exists and user owns it
+    const pack = await ctx.db.get(args.packId);
+    if (!pack) {
+      throw new Error("Pack not found");
+    }
+    if (pack.userId !== userId) {
+      throw new Error("Unauthorized: You don't own this pack");
+    }
+
+    // Remove pack from sample's packIds
+    const currentPackIds = sample.packIds || [];
+    await ctx.db.patch(args.sampleId, {
+      packIds: currentPackIds.filter((id) => id !== args.packId),
+    });
+
+    // Remove sample from pack's sampleIds
+    const currentSampleIds = pack.sampleIds || [];
+    await ctx.db.patch(args.packId, {
+      sampleIds: currentSampleIds.filter((id) => id !== args.sampleId),
+    });
+
+    return { success: true, message: "Sample removed from pack" };
+  },
+});
+
+/**
+ * Add multiple samples to a pack at once
+ */
+export const addSamplesToPack = mutation({
+  args: {
+    sampleIds: v.array(v.id("audioSamples")),
+    packId: v.id("digitalProducts"),
+  },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new Error("Not authenticated");
+    }
+    const userId = identity.subject;
+
+    // Verify pack exists and user owns it
+    const pack = await ctx.db.get(args.packId);
+    if (!pack) {
+      throw new Error("Pack not found");
+    }
+    if (pack.userId !== userId) {
+      throw new Error("Unauthorized: You don't own this pack");
+    }
+
+    let addedCount = 0;
+    const currentSampleIds = pack.sampleIds || [];
+    const newSampleIds = [...currentSampleIds];
+
+    for (const sampleId of args.sampleIds) {
+      const sample = await ctx.db.get(sampleId);
+      if (!sample || sample.userId !== userId) {
+        continue; // Skip samples user doesn't own
+      }
+
+      // Update sample's packIds if not already included
+      const currentPackIds = sample.packIds || [];
+      if (!currentPackIds.includes(args.packId)) {
+        await ctx.db.patch(sampleId, {
+          packIds: [...currentPackIds, args.packId],
+        });
+      }
+
+      // Add to pack's sampleIds if not already included
+      if (!newSampleIds.includes(sampleId)) {
+        newSampleIds.push(sampleId);
+        addedCount++;
+      }
+    }
+
+    // Update pack with all new sampleIds
+    await ctx.db.patch(args.packId, {
+      sampleIds: newSampleIds,
+    });
+
+    return { success: true, addedCount, totalSamples: newSampleIds.length };
+  },
+});
+
+/**
+ * Check if user owns a sample (individually OR via pack ownership)
+ */
+export const checkFullSampleOwnership = query({
+  args: {
+    sampleId: v.id("audioSamples"),
+    userId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Check for individual purchase
+    const individualPurchase = await ctx.db
+      .query("sampleDownloads")
+      .withIndex("by_user_sample", (q) =>
+        q.eq("userId", args.userId).eq("sampleId", args.sampleId)
+      )
+      .first();
+
+    if (individualPurchase) {
+      return {
+        owned: true,
+        source: "individual" as const,
+        purchaseId: individualPurchase._id,
+      };
+    }
+
+    // Check if user owns any pack containing this sample
+    const sample = await ctx.db.get(args.sampleId);
+    if (!sample || !sample.packIds || sample.packIds.length === 0) {
+      return { owned: false, source: null };
+    }
+
+    // Check purchases for any of the packs this sample belongs to
+    const purchases = await ctx.db
+      .query("purchases")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .filter((q) => q.eq(q.field("status"), "completed"))
+      .collect();
+
+    for (const purchase of purchases) {
+      if (purchase.productId && sample.packIds.includes(purchase.productId)) {
+        return {
+          owned: true,
+          source: "pack" as const,
+          packId: purchase.productId,
+          purchaseId: purchase._id,
+        };
+      }
+    }
+
+    return { owned: false, source: null };
+  },
+});
+
+/**
+ * Get samples with their pack info for marketplace display
+ */
+export const getPublishedSamplesWithPackInfo = query({
+  args: {
+    limit: v.optional(v.number()),
+    genre: v.optional(v.string()),
+    category: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const limit = args.limit || 50;
+
+    let samplesQuery = ctx.db
+      .query("audioSamples")
+      .withIndex("by_published", (q) => q.eq("isPublished", true));
+
+    if (args.genre) {
+      samplesQuery = ctx.db
+        .query("audioSamples")
+        .withIndex("by_genre_published", (q) =>
+          q.eq("genre", args.genre as string).eq("isPublished", true)
+        );
+    }
+
+    const samples = await samplesQuery.take(limit);
+
+    // Enrich with pack info
+    const enrichedSamples = await Promise.all(
+      samples.map(async (sample) => {
+        let packInfo: Array<{ packId: string; packTitle: string; packPrice: number }> = [];
+
+        if (sample.packIds && sample.packIds.length > 0) {
+          const packs = await Promise.all(
+            sample.packIds.map((packId) => ctx.db.get(packId))
+          );
+          packInfo = packs
+            .filter((p) => p !== null && p.isPublished)
+            .map((p) => ({
+              packId: p!._id,
+              packTitle: p!.title,
+              packPrice: p!.price,
+            }));
+        }
+
+        return {
+          ...sample,
+          inPacks: packInfo,
+          packCount: packInfo.length,
+        };
+      })
+    );
+
+    return enrichedSamples;
+  },
+});
+

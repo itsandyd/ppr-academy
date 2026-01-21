@@ -13,6 +13,7 @@ export interface PackData {
   files?: Array<{ id: string; name: string; url: string; storageId?: string; size?: number; type?: string; }>;
   genre?: string; bpm?: number; key?: string; downloadUrl?: string; targetPlugin?: string; dawType?: string; targetPluginVersion?: string;
   sampleCategories?: string[];
+  selectedSampleIds?: string[]; // IDs of existing samples to include in this pack
 }
 
 export interface StepCompletion { basics: boolean; pricing: boolean; followGate: boolean; files: boolean; }
@@ -37,7 +38,7 @@ const packConfig: ProductConfig<PackData, PackSteps> = {
       followGateConfig: data.pricingModel === "free_with_gate" && data.followGateRequirements ? { requireEmail: data.followGateRequirements.requireEmail || false, requireInstagram: data.followGateRequirements.requireInstagram || false, requireTiktok: data.followGateRequirements.requireTiktok || false, requireYoutube: data.followGateRequirements.requireYoutube || false, requireSpotify: data.followGateRequirements.requireSpotify || false, minFollowsRequired: data.followGateRequirements.minFollowsRequired || 0, socialLinks: data.followGateSocialLinks || {}, customMessage: data.followGateMessage } : undefined };
   },
   mapToUpdateParams: (data, productId) => {
-    const updateData: Record<string, unknown> = { id: productId as Id<"digitalProducts">, title: data.title, description: data.description, imageUrl: data.thumbnail, price: data.price ? parseFloat(data.price) : undefined, tags: data.tags, downloadUrl: data.downloadUrl, genre: data.genre ? [data.genre] : undefined, bpm: data.bpm, musicalKey: data.key, packFiles: data.files ? JSON.stringify(data.files) : undefined, targetPlugin: data.targetPlugin, dawType: data.dawType, targetPluginVersion: data.targetPluginVersion, sampleCategories: data.sampleCategories };
+    const updateData: Record<string, unknown> = { id: productId as Id<"digitalProducts">, title: data.title, description: data.description, imageUrl: data.thumbnail, price: data.price ? parseFloat(data.price) : undefined, tags: data.tags, downloadUrl: data.downloadUrl, genre: data.genre ? [data.genre] : undefined, bpm: data.bpm, musicalKey: data.key, packFiles: data.files ? JSON.stringify(data.files) : undefined, targetPlugin: data.targetPlugin, dawType: data.dawType, targetPluginVersion: data.targetPluginVersion, sampleCategories: data.sampleCategories, sampleIds: data.selectedSampleIds };
     if (data.pricingModel === "free_with_gate" && data.followGateRequirements) { updateData.price = 0; updateData.followGateEnabled = true; updateData.followGateRequirements = data.followGateRequirements; updateData.followGateSocialLinks = data.followGateSocialLinks; updateData.followGateMessage = data.followGateMessage; }
     return updateData;
   },
@@ -45,7 +46,7 @@ const packConfig: ProductConfig<PackData, PackSteps> = {
 
 function mapFromExisting(existing: unknown): PackData {
   const product = existing as DigitalProduct;
-  return { title: product.title || "", description: product.description || "", packType: (product.productCategory as PackData["packType"]) || "sample-pack", tags: product.tags || [], thumbnail: product.imageUrl || "", price: product.price?.toString() || "9.99", pricingModel: product.followGateEnabled ? "free_with_gate" : "paid", downloadUrl: product.downloadUrl || "", genre: product.genre?.[0] || "", bpm: product.bpm, key: product.musicalKey, followGateEnabled: product.followGateEnabled, followGateRequirements: product.followGateRequirements, followGateSocialLinks: product.followGateSocialLinks, followGateMessage: product.followGateMessage, files: product.packFiles ? JSON.parse(product.packFiles as string) : [], targetPlugin: product.targetPlugin, dawType: product.dawType, targetPluginVersion: product.targetPluginVersion, sampleCategories: (product as any).sampleCategories || [] };
+  return { title: product.title || "", description: product.description || "", packType: (product.productCategory as PackData["packType"]) || "sample-pack", tags: product.tags || [], thumbnail: product.imageUrl || "", price: product.price?.toString() || "9.99", pricingModel: product.followGateEnabled ? "free_with_gate" : "paid", downloadUrl: product.downloadUrl || "", genre: product.genre?.[0] || "", bpm: product.bpm, key: product.musicalKey, followGateEnabled: product.followGateEnabled, followGateRequirements: product.followGateRequirements, followGateSocialLinks: product.followGateSocialLinks, followGateMessage: product.followGateMessage, files: product.packFiles ? JSON.parse(product.packFiles as string) : [], targetPlugin: product.targetPlugin, dawType: product.dawType, targetPluginVersion: product.targetPluginVersion, sampleCategories: (product as any).sampleCategories || [], selectedSampleIds: (product as any).sampleIds || [] };
 }
 
 const { Context: PackCreationContext, useCreationContext } = createProductCreationContext<PackData, PackSteps>("PackCreation");

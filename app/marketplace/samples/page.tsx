@@ -96,13 +96,12 @@ export default function SamplesMarketplacePage() {
   const [selectedForPurchase, setSelectedForPurchase] = useState<any | null>(null);
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
 
-  // Queries
+  // Queries - Use enriched query with pack info
   const legacySamples =
-    useQuery(api.samples.getPublishedSamples, {
+    useQuery(api.samples.getPublishedSamplesWithPackInfo, {
       limit: 50,
       genre: selectedGenre,
       category: selectedCategory,
-      searchQuery: searchTerm,
     }) || [];
 
   // Get samples from packs (new system)
@@ -624,6 +623,7 @@ export default function SamplesMarketplacePage() {
                         onPurchase={() => openPurchaseModal(sample, "sample")}
                         onToggleFavorite={() => handleToggleFavorite(sample._id)}
                         isOwned={userOwnsSample(sample)}
+                        onViewPackOption={(s: any) => openPurchaseModal(s, "sample")}
                       />
                     ))}
                   </div>
@@ -638,6 +638,7 @@ export default function SamplesMarketplacePage() {
                         onPlayPause={handlePlayPause}
                         onPurchase={() => openPurchaseModal(sample, "sample")}
                         isOwned={userOwnsSample(sample)}
+                        onViewPackOption={(s: any) => openPurchaseModal(s, "sample")}
                       />
                     ))}
                   </div>
@@ -680,9 +681,9 @@ export default function SamplesMarketplacePage() {
         </Tabs>
       </div>
 
-      {/* Purchase Modal */}
+      {/* Purchase Modal - Enhanced with pack options */}
       <Dialog open={purchaseModalOpen} onOpenChange={setPurchaseModalOpen}>
-        <DialogContent className="bg-white dark:bg-black">
+        <DialogContent className="bg-white dark:bg-black sm:max-w-lg">
           {selectedForPurchase && (
             <>
               <DialogHeader>
@@ -695,6 +696,56 @@ export default function SamplesMarketplacePage() {
               </DialogHeader>
 
               <div className="space-y-4">
+                {/* Show pack options if sample is in packs */}
+                {selectedForPurchase.type === "sample" &&
+                  selectedForPurchase.inPacks &&
+                  selectedForPurchase.inPacks.length > 0 && (
+                    <div className="space-y-3">
+                      <p className="text-sm font-medium">This sample is also available in packs:</p>
+                      {selectedForPurchase.inPacks.map((pack: any) => (
+                        <div
+                          key={pack.packId}
+                          className="flex items-center justify-between rounded-lg border border-chart-1/20 bg-chart-1/5 p-3"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Package className="h-4 w-4 text-chart-1" />
+                            <span className="font-medium">{pack.packTitle}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground">
+                              {pack.packPrice} credits
+                            </span>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedForPurchase({
+                                  _id: pack.packId,
+                                  title: pack.packTitle,
+                                  price: pack.packPrice,
+                                  creditPrice: pack.packPrice,
+                                  type: "pack",
+                                });
+                              }}
+                            >
+                              Buy Pack
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                      <div className="relative">
+                        <div className="absolute inset-0 flex items-center">
+                          <span className="w-full border-t" />
+                        </div>
+                        <div className="relative flex justify-center text-xs uppercase">
+                          <span className="bg-white px-2 text-muted-foreground dark:bg-black">
+                            Or buy individually
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                 <div className="rounded-lg bg-muted/50 p-4">
                   <div className="mb-2 flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Price</span>
@@ -729,7 +780,7 @@ export default function SamplesMarketplacePage() {
                 ) : (
                   <Button className="w-full" size="lg" onClick={handlePurchase}>
                     <ShoppingCart className="mr-2 h-5 w-5" />
-                    Purchase Now
+                    {selectedForPurchase.type === "pack" ? "Purchase Pack" : "Purchase Sample"}
                   </Button>
                 )}
               </div>
@@ -750,6 +801,7 @@ function SampleCard({
   onPurchase,
   onToggleFavorite,
   isOwned,
+  onViewPackOption,
 }: any) {
   const handleDownload = async () => {
     try {
@@ -805,7 +857,19 @@ function SampleCard({
 
             {/* Sample Info */}
             <div className="min-w-0 flex-1">
-              <h3 className="truncate font-semibold">{sample.title}</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="truncate font-semibold">{sample.title}</h3>
+                {sample.inPacks && sample.inPacks.length > 0 && (
+                  <Badge
+                    variant="outline"
+                    className="cursor-pointer border-chart-1/30 bg-chart-1/10 text-chart-1 hover:bg-chart-1/20"
+                    onClick={() => onViewPackOption && onViewPackOption(sample)}
+                  >
+                    <Package className="mr-1 h-3 w-3" />
+                    In {sample.inPacks.length} pack{sample.inPacks.length > 1 ? "s" : ""}
+                  </Badge>
+                )}
+              </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span>{sample.genre}</span>
                 <span>•</span>
@@ -861,7 +925,7 @@ function SampleCard({
 }
 
 // Sample List Item Component
-function SampleListItem({ sample, index, isPlaying, onPlayPause, onPurchase, isOwned }: any) {
+function SampleListItem({ sample, index, isPlaying, onPlayPause, onPurchase, isOwned, onViewPackOption }: any) {
   const handleDownload = async () => {
     try {
       // Fetch the file from Convex storage
@@ -918,6 +982,16 @@ function SampleListItem({ sample, index, isPlaying, onPlayPause, onPurchase, isO
             <Badge variant="secondary">{sample.genre}</Badge>
             <Badge variant="outline">{sample.category}</Badge>
             {sample.bpm && <Badge variant="outline">{sample.bpm} BPM</Badge>}
+            {sample.inPacks && sample.inPacks.length > 0 && (
+              <Badge
+                variant="outline"
+                className="cursor-pointer border-chart-1/30 bg-chart-1/10 text-chart-1 hover:bg-chart-1/20"
+                onClick={() => onViewPackOption && onViewPackOption(sample)}
+              >
+                <Package className="mr-1 h-3 w-3" />
+                {sample.inPacks.length} pack{sample.inPacks.length > 1 ? "s" : ""}
+              </Badge>
+            )}
             {isOwned ? (
               <Button
                 size="sm"
