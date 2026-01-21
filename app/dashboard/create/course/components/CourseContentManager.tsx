@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, memo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -49,91 +49,120 @@ export function CourseContentManager({ modules, onModulesChange }: CourseContent
   const [expandedModules, setExpandedModules] = useState<Set<number>>(new Set());
   const [expandedLessons, setExpandedLessons] = useState<Set<string>>(new Set());
 
-  const toggleModule = (moduleIndex: number) => {
-    const newExpanded = new Set(expandedModules);
-    if (newExpanded.has(moduleIndex)) {
-      newExpanded.delete(moduleIndex);
-    } else {
-      newExpanded.add(moduleIndex);
-    }
-    setExpandedModules(newExpanded);
-  };
+  const toggleModule = useCallback((moduleIndex: number) => {
+    setExpandedModules(prev => {
+      const newExpanded = new Set(prev);
+      if (newExpanded.has(moduleIndex)) {
+        newExpanded.delete(moduleIndex);
+      } else {
+        newExpanded.add(moduleIndex);
+      }
+      return newExpanded;
+    });
+  }, []);
 
-  const toggleLesson = (moduleIndex: number, lessonIndex: number) => {
+  const toggleLesson = useCallback((moduleIndex: number, lessonIndex: number) => {
     const key = `${moduleIndex}-${lessonIndex}`;
-    const newExpanded = new Set(expandedLessons);
-    if (newExpanded.has(key)) {
-      newExpanded.delete(key);
-    } else {
-      newExpanded.add(key);
-    }
-    setExpandedLessons(newExpanded);
-  };
+    setExpandedLessons(prev => {
+      const newExpanded = new Set(prev);
+      if (newExpanded.has(key)) {
+        newExpanded.delete(key);
+      } else {
+        newExpanded.add(key);
+      }
+      return newExpanded;
+    });
+  }, []);
 
-  const addModule = (moduleData: Omit<Module, 'lessons'>) => {
+  const addModule = useCallback((moduleData: Omit<Module, 'lessons'>) => {
     const newModule = { ...moduleData, lessons: [] };
-    const updatedModules = [...modules, newModule];
-    onModulesChange(updatedModules);
-  };
+    onModulesChange([...modules, newModule]);
+  }, [modules, onModulesChange]);
 
-  const addLesson = (moduleIndex: number, lessonData: Omit<Lesson, 'chapters'>) => {
+  const addLesson = useCallback((moduleIndex: number, lessonData: Omit<Lesson, 'chapters'>) => {
     const newLesson = { ...lessonData, chapters: [] };
     const updatedModules = [...modules];
-    updatedModules[moduleIndex].lessons.push(newLesson);
+    updatedModules[moduleIndex] = {
+      ...updatedModules[moduleIndex],
+      lessons: [...updatedModules[moduleIndex].lessons, newLesson]
+    };
     onModulesChange(updatedModules);
-  };
+  }, [modules, onModulesChange]);
 
-  const addChapter = (moduleIndex: number, lessonIndex: number, chapterData: Chapter) => {
+  const addChapter = useCallback((moduleIndex: number, lessonIndex: number, chapterData: Chapter) => {
     const updatedModules = [...modules];
-    updatedModules[moduleIndex].lessons[lessonIndex].chapters.push(chapterData);
+    updatedModules[moduleIndex] = {
+      ...updatedModules[moduleIndex],
+      lessons: updatedModules[moduleIndex].lessons.map((lesson, idx) =>
+        idx === lessonIndex
+          ? { ...lesson, chapters: [...lesson.chapters, chapterData] }
+          : lesson
+      )
+    };
     onModulesChange(updatedModules);
-  };
+  }, [modules, onModulesChange]);
 
-  const removeModule = (moduleIndex: number) => {
+  const removeModule = useCallback((moduleIndex: number) => {
     if (confirm("Are you sure you want to remove this module and all its content?")) {
-      const updatedModules = modules.filter((_, index) => index !== moduleIndex);
-      onModulesChange(updatedModules);
+      onModulesChange(modules.filter((_, index) => index !== moduleIndex));
     }
-  };
+  }, [modules, onModulesChange]);
 
-  const removeLesson = (moduleIndex: number, lessonIndex: number) => {
+  const removeLesson = useCallback((moduleIndex: number, lessonIndex: number) => {
     if (confirm("Are you sure you want to remove this lesson and all its chapters?")) {
       const updatedModules = [...modules];
-      updatedModules[moduleIndex].lessons = updatedModules[moduleIndex].lessons.filter((_, index) => index !== lessonIndex);
+      updatedModules[moduleIndex] = {
+        ...updatedModules[moduleIndex],
+        lessons: updatedModules[moduleIndex].lessons.filter((_, index) => index !== lessonIndex)
+      };
       onModulesChange(updatedModules);
     }
-  };
+  }, [modules, onModulesChange]);
 
-  const removeChapter = (moduleIndex: number, lessonIndex: number, chapterIndex: number) => {
+  const removeChapter = useCallback((moduleIndex: number, lessonIndex: number, chapterIndex: number) => {
     if (confirm("Are you sure you want to remove this chapter?")) {
       const updatedModules = [...modules];
-      updatedModules[moduleIndex].lessons[lessonIndex].chapters = 
-        updatedModules[moduleIndex].lessons[lessonIndex].chapters.filter((_, index) => index !== chapterIndex);
+      updatedModules[moduleIndex] = {
+        ...updatedModules[moduleIndex],
+        lessons: updatedModules[moduleIndex].lessons.map((lesson, idx) =>
+          idx === lessonIndex
+            ? { ...lesson, chapters: lesson.chapters.filter((_, cIdx) => cIdx !== chapterIndex) }
+            : lesson
+        )
+      };
       onModulesChange(updatedModules);
     }
-  };
+  }, [modules, onModulesChange]);
 
-  // Edit functions
-  const editModule = (moduleIndex: number, moduleData: Omit<Module, 'lessons'>) => {
+  const editModule = useCallback((moduleIndex: number, moduleData: Omit<Module, 'lessons'>) => {
     const updatedModules = [...modules];
     updatedModules[moduleIndex] = { ...updatedModules[moduleIndex], ...moduleData };
     onModulesChange(updatedModules);
-  };
+  }, [modules, onModulesChange]);
 
-  const editLesson = (moduleIndex: number, lessonIndex: number, lessonData: Omit<Lesson, 'chapters'>) => {
+  const editLesson = useCallback((moduleIndex: number, lessonIndex: number, lessonData: Omit<Lesson, 'chapters'>) => {
     const updatedModules = [...modules];
-    updatedModules[moduleIndex].lessons[lessonIndex] = { 
-      ...updatedModules[moduleIndex].lessons[lessonIndex], 
-      ...lessonData 
+    updatedModules[moduleIndex] = {
+      ...updatedModules[moduleIndex],
+      lessons: updatedModules[moduleIndex].lessons.map((lesson, idx) =>
+        idx === lessonIndex ? { ...lesson, ...lessonData } : lesson
+      )
     };
     onModulesChange(updatedModules);
-  };
+  }, [modules, onModulesChange]);
 
-  const editChapter = (moduleIndex: number, lessonIndex: number, chapterIndex: number, chapterData: Chapter) => {
+  const editChapter = useCallback((moduleIndex: number, lessonIndex: number, chapterIndex: number, chapterData: Chapter) => {
     const updatedModules = [...modules];
-    updatedModules[moduleIndex].lessons[lessonIndex].chapters[chapterIndex] = chapterData;
+    updatedModules[moduleIndex] = {
+      ...updatedModules[moduleIndex],
+      lessons: updatedModules[moduleIndex].lessons.map((lesson, idx) =>
+        idx === lessonIndex
+          ? { ...lesson, chapters: lesson.chapters.map((ch, cIdx) => cIdx === chapterIndex ? chapterData : ch) }
+          : lesson
+      )
+    };
     onModulesChange(updatedModules);
-  };
+  }, [modules, onModulesChange]);
 
   return (
     <Card>
