@@ -1,0 +1,72 @@
+appId: com.ppr-academy.samples
+productName: PPR Samples
+copyright: Copyright (c) 2024 PPR Academy
+
+directories:
+  buildResources: resources
+  output: dist
+
+files:
+  - "!**/.vscode/*"
+  - "!src/*"
+  - "!electron.vite.config.*"
+  - "!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}"
+  - "!{tsconfig.json,tsconfig.node.json}"
+
+asarUnpack:
+  - resources/**
+
+mac:
+  category: public.app-category.music
+  target:
+    - dmg
+    - zip
+  artifactName: ${productName}-${version}-${arch}.${ext}
+  entitlements: entitlements.mac.plist
+  entitlementsInherit: entitlements.mac.plist
+  icon: resources/icon.icns
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  # Set to null to skip code signing during development
+  identity: null
+
+dmg:
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+  window:
+    width: 540
+    height: 380
+
+win:
+  target:
+    - nsis
+    - portable
+  artifactName: ${productName}-${version}-${arch}.${ext}
+  icon: resources/icon.ico
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+  installerIcon: resources/icon.ico
+  uninstallerIcon: resources/icon.ico
+  installerHeaderIcon: resources/icon.ico
+
+linux:
+  target:
+    - AppImage
+    - deb
+  category: Audio
+  icon: resources/icon.png
+
+publish:
+  provider: github
+  owner: ppr-academy
+  repo: ppr-samples-desktop
+  releaseType: release

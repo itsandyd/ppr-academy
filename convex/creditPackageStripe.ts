@@ -6,15 +6,13 @@ import { internal } from "./_generated/api";
 import Stripe from "stripe";
 import { Id } from "./_generated/dataModel";
 
-// Initialize Stripe
+// Initialize Stripe (using SDK default API version)
 function getStripe(): Stripe {
   const secretKey = process.env.STRIPE_SECRET_KEY;
   if (!secretKey) {
     throw new Error("STRIPE_SECRET_KEY not set");
   }
-  return new Stripe(secretKey, {
-    apiVersion: "2025-08-27.basil",
-  });
+  return new Stripe(secretKey);
 }
 
 /**
