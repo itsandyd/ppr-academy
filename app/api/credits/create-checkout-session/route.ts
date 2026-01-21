@@ -2,14 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { requireAuth } from "@/lib/auth-helpers";
 import { checkRateLimit, getRateLimitIdentifier, rateLimiters } from "@/lib/rate-limit";
-import { ConvexHttpClient } from "convex/browser";
-import { api } from "@/convex/_generated/api";
 
 // Initialize Stripe (using SDK default API version)
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-
-// Initialize Convex client
-const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,7 +18,7 @@ export async function POST(request: NextRequest) {
       return rateCheck;
     }
 
-    const { packageId, packageName, credits, bonusCredits, priceUsd, customerEmail, userId, stripePriceId } =
+    const { packageId, packageName, credits, bonusCredits, priceUsd, customerEmail, userId } =
       await request.json();
 
     // ✅ SECURITY: Verify user matches
@@ -37,68 +32,9 @@ export async function POST(request: NextRequest) {
 
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
-    // Check if package has a valid stored Stripe price ID
-    let priceId = stripePriceId;
-
-    // Validate the price ID looks real (not a placeholder like "price_starter")
-    const isValidPriceId = priceId && priceId.startsWith("price_") && priceId.length > 20;
-
-    if (!isValidPriceId) {
-      // Try to get from Convex action
-      try {
-        const storedPriceId = await convex.action(api.creditPackageStripe.getPackageStripePriceId, {
-          packageId,
-        });
-        if (storedPriceId) {
-          priceId = storedPriceId;
-        }
-      } catch (error) {
-        console.log("Could not fetch stored price ID, will create on-the-fly");
-      }
-    }
-
-    // If we have a valid stored price ID, use it directly
-    if (priceId && priceId.startsWith("price_") && priceId.length > 20) {
-      console.log(`✅ Using stored Stripe price ID: ${priceId}`);
-
-      const session = await stripe.checkout.sessions.create({
-        payment_method_types: ["card"],
-        line_items: [
-          {
-            price: priceId,
-            quantity: 1,
-          },
-        ],
-        mode: "payment",
-        success_url: `${baseUrl}/dashboard?mode=learn&purchase=success&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${baseUrl}/credits/purchase`,
-        customer_email: customerEmail,
-        metadata: {
-          productType: "credit_package",
-          packageId,
-          packageName,
-          credits: credits.toString(),
-          bonusCredits: bonusCredits?.toString() || "0",
-          userId,
-          priceUsd: priceUsd.toString(),
-        },
-      });
-
-      console.log("✅ Credit checkout session created with stored price:", {
-        sessionId: session.id,
-        packageName,
-        priceId,
-      });
-
-      return NextResponse.json({
-        success: true,
-        checkoutUrl: session.url,
-        sessionId: session.id,
-      });
-    }
-
-    // Fallback: Create Stripe product/price on the fly
-    console.log(`⚠️ No valid stored price ID, creating on-the-fly for ${packageName}`);
+    // Create Stripe product/price on the fly for credit packages
+    // (Credit packages are hardcoded, not stored in DB with Stripe IDs)
+    console.log(`Creating checkout session for ${packageName}`);
 
     const priceInCents = Math.round(priceUsd * 100);
 
@@ -162,11 +98,17 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("❌ Credit checkout session creation failed:", error);
 
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorStack = error instanceof Error ? error.stack : undefined;
+
+    // Log full error for debugging
+    console.error("Full error details:", { message: errorMessage, stack: errorStack });
+
     return NextResponse.json(
       {
         success: false,
-        error: "Failed to create checkout session",
-        details: error instanceof Error ? error.message : "Unknown error",
+        error: errorMessage, // Return the actual error message
+        details: errorStack,
       },
       { status: 500 }
     );
