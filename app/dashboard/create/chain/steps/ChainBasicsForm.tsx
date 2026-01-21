@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DAW_TYPES } from "../../types";
+import { AIContentAssistant } from "../../shared/AIContentAssistant";
 
 export function ChainBasicsForm() {
   const { state, updateData, saveChain } = useEffectChainCreation();
@@ -105,8 +106,18 @@ export function ChainBasicsForm() {
       {/* Description */}
       <Card>
         <CardHeader>
-          <CardTitle>Description *</CardTitle>
-          <CardDescription>Describe what this effect chain does</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Description *</CardTitle>
+              <CardDescription>Describe what this effect chain does</CardDescription>
+            </div>
+            <AIContentAssistant
+              productType="effect-chain"
+              title={state.data.title}
+              description={state.data.description}
+              onDescriptionGenerated={(desc) => updateData("basics", { description: desc })}
+            />
+          </div>
         </CardHeader>
         <CardContent>
           <Textarea

@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { List, Eye, EyeOff, ImageIcon, Link as LinkIcon } from "lucide-react";
 import { usePlaylistCuration } from "../context";
 import { GENRE_OPTIONS } from "../types";
+import { AIContentAssistant } from "../../shared/AIContentAssistant";
 
 export function BasicsForm() {
   const { state, updateData, validateStep } = usePlaylistCuration();
@@ -59,9 +60,17 @@ export function BasicsForm() {
 
           {/* Description */}
           <div className="space-y-2">
-            <Label htmlFor="description">
-              Description <span className="text-red-500">*</span>
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="description">
+                Description <span className="text-red-500">*</span>
+              </Label>
+              <AIContentAssistant
+                productType="playlist-curation"
+                title={state.data.name}
+                description={state.data.description}
+                onDescriptionGenerated={(desc) => updateData("basics", { description: desc })}
+              />
+            </div>
             <Textarea
               id="description"
               value={state.data.description || ""}

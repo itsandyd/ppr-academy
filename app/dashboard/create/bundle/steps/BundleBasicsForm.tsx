@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { X, Plus, Upload, Sparkles, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { AIContentAssistant } from "../../shared/AIContentAssistant";
 
 export function BundleBasicsForm() {
   const { state, updateData, saveBundle } = useBundleCreation();
@@ -100,7 +101,17 @@ export function BundleBasicsForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Description *</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="description">Description *</Label>
+              <AIContentAssistant
+                productType="bundle"
+                title={state.data.title}
+                description={state.data.description}
+                existingTags={state.data.tags}
+                onDescriptionGenerated={(desc) => updateData("basics", { description: desc })}
+                onTagsGenerated={(tags) => updateData("basics", { tags })}
+              />
+            </div>
             <Textarea
               id="description"
               placeholder="Describe what's included in this bundle and the value customers get..."

@@ -10,6 +10,7 @@ import { DollarSign, Lock, Upload, Sliders } from "lucide-react";
 import { StepProgress, Step } from "@/app/dashboard/create/shared/StepProgress";
 import { ActionBar } from "@/app/dashboard/create/shared/ActionBar";
 import { StorefrontPreview } from "@/app/dashboard/create/shared/StorefrontPreview";
+import { AutoSaveProvider, SaveStatusIndicator, useAutoSaveOnChange } from "@/app/dashboard/create/shared/AutoSaveProvider";
 import { Badge } from "@/components/ui/badge";
 
 export const dynamic = "force-dynamic";
@@ -50,13 +51,16 @@ const steps: Step[] = [
   },
 ];
 
-function LayoutContent({ children }: MixingTemplateCreateLayoutProps) {
+function LayoutContentInner({ children }: MixingTemplateCreateLayoutProps) {
   const { user } = useUser();
   const searchParams = useSearchParams();
   const router = useRouter();
   const currentStep = searchParams.get("step") || "basics";
 
   const { state, canPublish, createTemplate, saveTemplate } = useMixingTemplateCreation();
+
+  // Trigger auto-save when data changes
+  useAutoSaveOnChange(state.data);
 
   // @ts-ignore - Type instantiation depth issue
   const stores = useQuery(api.stores.getStoresByUser, user?.id ? { userId: user.id } : "skip");
@@ -134,6 +138,7 @@ function LayoutContent({ children }: MixingTemplateCreateLayoutProps) {
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold">Create Mixing Template</h1>
               <Badge variant="secondary">{dawLabel}</Badge>
+              <SaveStatusIndicator className="ml-2" />
             </div>
             {visibleSteps.find((s) => s.id === currentStep) && (
               <p className="text-sm text-muted-foreground">
@@ -219,6 +224,16 @@ function LayoutContent({ children }: MixingTemplateCreateLayoutProps) {
         progress={progressPercentage}
       />
     </div>
+  );
+}
+
+function LayoutContent({ children }: MixingTemplateCreateLayoutProps) {
+  const { saveTemplate } = useMixingTemplateCreation();
+
+  return (
+    <AutoSaveProvider onSave={saveTemplate} debounceMs={1500}>
+      <LayoutContentInner>{children}</LayoutContentInner>
+    </AutoSaveProvider>
   );
 }
 

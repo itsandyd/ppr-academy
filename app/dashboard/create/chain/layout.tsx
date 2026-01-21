@@ -10,6 +10,7 @@ import { Package, DollarSign, Lock, Upload, Zap } from "lucide-react";
 import { StepProgress, Step } from "@/app/dashboard/create/shared/StepProgress";
 import { ActionBar } from "@/app/dashboard/create/shared/ActionBar";
 import { StorefrontPreview } from "@/app/dashboard/create/shared/StorefrontPreview";
+import { AutoSaveProvider, SaveStatusIndicator, useAutoSaveOnChange } from "@/app/dashboard/create/shared/AutoSaveProvider";
 import { Badge } from "@/components/ui/badge";
 
 export const dynamic = "force-dynamic";
@@ -50,13 +51,16 @@ const steps: Step[] = [
   },
 ];
 
-function LayoutContent({ children }: ChainCreateLayoutProps) {
+function LayoutContentInner({ children }: ChainCreateLayoutProps) {
   const { user } = useUser();
   const searchParams = useSearchParams();
   const router = useRouter();
   const currentStep = searchParams.get("step") || "basics";
 
   const { state, canPublish, createChain, saveChain } = useEffectChainCreation();
+
+  // Trigger auto-save when data changes
+  useAutoSaveOnChange(state.data);
 
   // @ts-ignore - Type instantiation depth issue
   const stores = useQuery(api.stores.getStoresByUser, user?.id ? { userId: user.id } : "skip");
@@ -128,6 +132,7 @@ function LayoutContent({ children }: ChainCreateLayoutProps) {
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold">Create Effect Chain</h1>
               <Badge variant="secondary">{dawLabel}</Badge>
+              <SaveStatusIndicator className="ml-2" />
             </div>
             {visibleSteps.find((s) => s.id === currentStep) && (
               <p className="text-sm text-muted-foreground">
@@ -213,6 +218,16 @@ function LayoutContent({ children }: ChainCreateLayoutProps) {
         progress={progressPercentage}
       />
     </div>
+  );
+}
+
+function LayoutContent({ children }: ChainCreateLayoutProps) {
+  const { saveChain } = useEffectChainCreation();
+
+  return (
+    <AutoSaveProvider onSave={saveChain} debounceMs={1500}>
+      <LayoutContentInner>{children}</LayoutContentInner>
+    </AutoSaveProvider>
   );
 }
 

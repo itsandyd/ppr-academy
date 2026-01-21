@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DAW_TYPES } from "../../types";
+import { AIContentAssistant } from "../../shared/AIContentAssistant";
 
 const TEMPLATE_TYPES = [
   {
@@ -166,8 +167,18 @@ export function TemplateBasicsForm() {
       {/* Description */}
       <Card>
         <CardHeader>
-          <CardTitle>Description *</CardTitle>
-          <CardDescription>Describe what this template includes</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Description *</CardTitle>
+              <CardDescription>Describe what this template includes</CardDescription>
+            </div>
+            <AIContentAssistant
+              productType="mixing-template"
+              title={state.data.title}
+              description={state.data.description}
+              onDescriptionGenerated={(desc) => updateData("basics", { description: desc })}
+            />
+          </div>
         </CardHeader>
         <CardContent>
           <Textarea

@@ -10,6 +10,7 @@ import { Package, DollarSign, Lock, Upload } from "lucide-react";
 import { StepProgress, Step } from "@/app/dashboard/create/shared/StepProgress";
 import { ActionBar } from "@/app/dashboard/create/shared/ActionBar";
 import { StorefrontPreview } from "@/app/dashboard/create/shared/StorefrontPreview";
+import { AutoSaveProvider, SaveStatusIndicator, useAutoSaveOnChange } from "@/app/dashboard/create/shared/AutoSaveProvider";
 import { Badge } from "@/components/ui/badge";
 
 export const dynamic = "force-dynamic";
@@ -54,13 +55,16 @@ const steps: Step[] = [
   },
 ];
 
-function LayoutContent({ children }: PackCreateLayoutProps) {
+function LayoutContentInner({ children }: PackCreateLayoutProps) {
   const { user } = useUser();
   const searchParams = useSearchParams();
   const router = useRouter();
   const currentStep = searchParams.get("step") || "basics";
 
   const { state, canPublish, createPack, savePack } = usePackCreation();
+
+  // Trigger auto-save when data changes
+  useAutoSaveOnChange(state.data);
 
   // @ts-ignore - Type instantiation depth issue
   const stores = useQuery(api.stores.getStoresByUser, user?.id ? { userId: user.id } : "skip");
@@ -132,6 +136,7 @@ function LayoutContent({ children }: PackCreateLayoutProps) {
                 Create {packTypeLabel.charAt(0).toUpperCase() + packTypeLabel.slice(1)}
               </h1>
               <Badge variant="secondary">Music Production</Badge>
+              <SaveStatusIndicator className="ml-2" />
             </div>
             {visibleSteps.find((s) => s.id === currentStep) && (
               <p className="text-sm text-muted-foreground">
@@ -216,6 +221,16 @@ function LayoutContent({ children }: PackCreateLayoutProps) {
         progress={progressPercentage}
       />
     </div>
+  );
+}
+
+function LayoutContent({ children }: PackCreateLayoutProps) {
+  const { savePack } = usePackCreation();
+
+  return (
+    <AutoSaveProvider onSave={savePack} debounceMs={1500}>
+      <LayoutContentInner>{children}</LayoutContentInner>
+    </AutoSaveProvider>
   );
 }
 

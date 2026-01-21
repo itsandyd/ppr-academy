@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AIContentAssistant } from "../../shared/AIContentAssistant";
 
 export function BasicsForm() {
   const { state, updateData, saveCoaching } = useCoachingCreation();
@@ -112,8 +113,18 @@ export function BasicsForm() {
       {/* Description */}
       <Card>
         <CardHeader>
-          <CardTitle>Description *</CardTitle>
-          <CardDescription>What will students get from this session?</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Description *</CardTitle>
+              <CardDescription>What will students get from this session?</CardDescription>
+            </div>
+            <AIContentAssistant
+              productType="coaching"
+              title={state.data.title}
+              description={state.data.description}
+              onDescriptionGenerated={(desc) => updateData("basics", { description: desc })}
+            />
+          </div>
         </CardHeader>
         <CardContent>
           <Textarea

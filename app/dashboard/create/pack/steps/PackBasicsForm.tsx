@@ -14,6 +14,7 @@ import { useState, useRef } from "react";
 import { toast } from "sonner";
 import { useMutation } from "convex/react";
 import { api } from "@/lib/convex-api";
+import { AIContentAssistant } from "../../shared/AIContentAssistant";
 
 export function PackBasicsForm() {
   const { state, updateData, savePack } = usePackCreation();
@@ -199,7 +200,17 @@ export function PackBasicsForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Description *</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="description">Description *</Label>
+              <AIContentAssistant
+                productType={state.data.packType || "sample-pack"}
+                title={state.data.title}
+                description={state.data.description}
+                existingTags={state.data.tags}
+                onDescriptionGenerated={(desc) => updateData("basics", { description: desc })}
+                onTagsGenerated={(tags) => updateData("basics", { tags })}
+              />
+            </div>
             <Textarea
               id="description"
               placeholder="Describe what's included in your pack, the vibe, use cases, etc..."

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AIContentAssistant } from "../../shared/AIContentAssistant";
 
 export function PDFBasicsForm() {
   const { state, updateData, savePDF } = usePDFCreation();
@@ -81,8 +82,18 @@ export function PDFBasicsForm() {
       {/* Description */}
       <Card>
         <CardHeader>
-          <CardTitle>Description *</CardTitle>
-          <CardDescription>Describe what's inside this PDF</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Description *</CardTitle>
+              <CardDescription>Describe what's inside this PDF</CardDescription>
+            </div>
+            <AIContentAssistant
+              productType="pdf"
+              title={state.data.title}
+              description={state.data.description}
+              onDescriptionGenerated={(desc) => updateData("basics", { description: desc })}
+            />
+          </div>
         </CardHeader>
         <CardContent>
           <Textarea

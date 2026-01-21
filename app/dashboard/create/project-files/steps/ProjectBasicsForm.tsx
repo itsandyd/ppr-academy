@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DAW_TYPES } from "../../types";
+import { AIContentAssistant } from "../../shared/AIContentAssistant";
 
 const GENRES = [
   "Hip Hop",
@@ -122,8 +123,18 @@ export function ProjectBasicsForm() {
       {/* Description */}
       <Card>
         <CardHeader>
-          <CardTitle>Description *</CardTitle>
-          <CardDescription>Describe what learners will find in this project</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Description *</CardTitle>
+              <CardDescription>Describe what learners will find in this project</CardDescription>
+            </div>
+            <AIContentAssistant
+              productType="project-files"
+              title={state.data.title}
+              description={state.data.description}
+              onDescriptionGenerated={(desc) => updateData("basics", { description: desc })}
+            />
+          </div>
         </CardHeader>
         <CardContent>
           <Textarea

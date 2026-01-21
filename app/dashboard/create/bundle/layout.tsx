@@ -10,6 +10,7 @@ import { Package, Layers, DollarSign } from "lucide-react";
 import { StepProgress, Step } from "@/app/dashboard/create/shared/StepProgress";
 import { ActionBar } from "@/app/dashboard/create/shared/ActionBar";
 import { StorefrontPreview } from "@/app/dashboard/create/shared/StorefrontPreview";
+import { AutoSaveProvider, SaveStatusIndicator, useAutoSaveOnChange } from "@/app/dashboard/create/shared/AutoSaveProvider";
 import { Badge } from "@/components/ui/badge";
 
 export const dynamic = "force-dynamic";
@@ -45,13 +46,16 @@ const steps: Step[] = [
   },
 ];
 
-function LayoutContent({ children }: BundleCreateLayoutProps) {
+function LayoutContentInner({ children }: BundleCreateLayoutProps) {
   const { user } = useUser();
   const searchParams = useSearchParams();
   const router = useRouter();
   const currentStep = searchParams.get("step") || "basics";
 
   const { state, canPublish, createBundle, saveBundle } = useBundleCreation();
+
+  // Trigger auto-save when data changes
+  useAutoSaveOnChange(state.data);
 
   // @ts-ignore
   const stores = useQuery(api.stores.getStoresByUser, user?.id ? { userId: user.id } : "skip");
@@ -103,6 +107,7 @@ function LayoutContent({ children }: BundleCreateLayoutProps) {
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold">Create Bundle</h1>
               <Badge variant="secondary">Multi-Product</Badge>
+              <SaveStatusIndicator className="ml-2" />
             </div>
             {steps.find((s) => s.id === currentStep) && (
               <p className="text-sm text-muted-foreground">
@@ -175,6 +180,16 @@ function LayoutContent({ children }: BundleCreateLayoutProps) {
         progress={progressPercentage}
       />
     </div>
+  );
+}
+
+function LayoutContent({ children }: BundleCreateLayoutProps) {
+  const { saveBundle } = useBundleCreation();
+
+  return (
+    <AutoSaveProvider onSave={saveBundle} debounceMs={1500}>
+      <LayoutContentInner>{children}</LayoutContentInner>
+    </AutoSaveProvider>
   );
 }
 

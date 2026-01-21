@@ -10,6 +10,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useServiceCreation } from "../context";
 import { SERVICE_TYPES, ServiceType } from "../types";
 import { Settings } from "lucide-react";
+import { AIContentAssistant } from "../../shared/AIContentAssistant";
 
 export function BasicsForm() {
   const searchParams = useSearchParams();
@@ -76,7 +77,17 @@ export function BasicsForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Description *</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="description">Description *</Label>
+              <AIContentAssistant
+                productType={state.data.serviceType === "mastering" ? "mastering-service" : "mixing-service"}
+                title={state.data.title}
+                description={state.data.description}
+                existingTags={state.data.tags}
+                onDescriptionGenerated={(desc) => handleChange("description", desc)}
+                onTagsGenerated={(tags) => updateData("basics", { tags })}
+              />
+            </div>
             <Textarea
               id="description"
               placeholder="Describe your service, your experience, what makes you unique, and what clients can expect..."

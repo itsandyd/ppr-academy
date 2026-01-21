@@ -7,6 +7,7 @@ import { PlaylistCurationProvider, usePlaylistCuration } from "./context";
 import { List, Settings, DollarSign, Share2 } from "lucide-react";
 import { StepProgress, Step } from "@/app/dashboard/create/shared/StepProgress";
 import { ActionBar } from "@/app/dashboard/create/shared/ActionBar";
+import { AutoSaveProvider, SaveStatusIndicator, useAutoSaveOnChange } from "@/app/dashboard/create/shared/AutoSaveProvider";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -40,13 +41,16 @@ const steps: Step[] = [
   },
 ];
 
-function LayoutContent({ children }: PlaylistCurationLayoutProps) {
+function LayoutContentInner({ children }: PlaylistCurationLayoutProps) {
   const { user } = useUser();
   const searchParams = useSearchParams();
   const router = useRouter();
   const currentStep = searchParams.get("step") || "basics";
 
   const { state, canPublish, publishPlaylist, savePlaylist } = usePlaylistCuration();
+
+  // Trigger auto-save when data changes
+  useAutoSaveOnChange(state.data);
 
   const navigateToStep = (step: string) => {
     router.push(
@@ -97,6 +101,7 @@ function LayoutContent({ children }: PlaylistCurationLayoutProps) {
               {state.data.pricingModel === "paid" && (
                 <Badge variant="secondary">Paid Submissions</Badge>
               )}
+              <SaveStatusIndicator className="ml-2" />
             </div>
             {steps.find((s) => s.id === currentStep) && (
               <p className="text-sm text-muted-foreground">
@@ -229,6 +234,16 @@ function LayoutContent({ children }: PlaylistCurationLayoutProps) {
         progress={progressPercentage}
       />
     </div>
+  );
+}
+
+function LayoutContent({ children }: PlaylistCurationLayoutProps) {
+  const { savePlaylist } = usePlaylistCuration();
+
+  return (
+    <AutoSaveProvider onSave={savePlaylist} debounceMs={1500}>
+      <LayoutContentInner>{children}</LayoutContentInner>
+    </AutoSaveProvider>
   );
 }
 

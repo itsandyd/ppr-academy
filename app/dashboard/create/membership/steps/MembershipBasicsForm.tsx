@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { X, Plus, ArrowRight, Save } from "lucide-react";
 import { useMembershipCreation } from "../context";
+import { AIContentAssistant } from "../../shared/AIContentAssistant";
 
 export function MembershipBasicsForm() {
   const router = useRouter();
@@ -59,7 +60,15 @@ export function MembershipBasicsForm() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Description *</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="description">Description *</Label>
+              <AIContentAssistant
+                productType="membership"
+                title={state.data.tierName}
+                description={state.data.description}
+                onDescriptionGenerated={(desc) => updateData("basics", { description: desc })}
+              />
+            </div>
             <Textarea
               id="description"
               placeholder="Describe what members get with this tier..."

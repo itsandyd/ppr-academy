@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BEAT_GENRES } from "../types";
+import { AIContentAssistant } from "../../shared/AIContentAssistant";
 
 export function BasicsForm() {
   const { state, updateData, saveBeat } = useBeatLeaseCreation();
@@ -49,8 +50,18 @@ export function BasicsForm() {
       {/* Description */}
       <Card>
         <CardHeader>
-          <CardTitle>Description *</CardTitle>
-          <CardDescription>Describe the vibe, style, and what artists can expect</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Description *</CardTitle>
+              <CardDescription>Describe the vibe, style, and what artists can expect</CardDescription>
+            </div>
+            <AIContentAssistant
+              productType="beat-lease"
+              title={state.data.title}
+              description={state.data.description}
+              onDescriptionGenerated={(desc) => updateData("basics", { description: desc })}
+            />
+          </div>
         </CardHeader>
         <CardContent>
           <Textarea

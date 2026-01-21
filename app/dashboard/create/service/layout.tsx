@@ -10,6 +10,7 @@ import { Settings, DollarSign, FileCheck, Send } from "lucide-react";
 import { StepProgress, Step } from "@/app/dashboard/create/shared/StepProgress";
 import { ActionBar } from "@/app/dashboard/create/shared/ActionBar";
 import { StorefrontPreview } from "@/app/dashboard/create/shared/StorefrontPreview";
+import { AutoSaveProvider, SaveStatusIndicator, useAutoSaveOnChange } from "@/app/dashboard/create/shared/AutoSaveProvider";
 import { Badge } from "@/components/ui/badge";
 import { SERVICE_TYPES } from "./types";
 
@@ -50,7 +51,7 @@ const steps: Step[] = [
   },
 ];
 
-function LayoutContent({ children }: ServiceCreateLayoutProps) {
+function LayoutContentInner({ children }: ServiceCreateLayoutProps) {
   const { user } = useUser();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -58,6 +59,9 @@ function LayoutContent({ children }: ServiceCreateLayoutProps) {
   const serviceType = searchParams.get("type") || "mixing";
 
   const { state, canPublish, publishService, saveService } = useServiceCreation();
+
+  // Trigger auto-save when data changes
+  useAutoSaveOnChange(state.data);
 
   // @ts-ignore - Type instantiation depth issue
   const stores = useQuery(api.stores.getStoresByUser, user?.id ? { userId: user.id } : "skip");
@@ -115,6 +119,7 @@ function LayoutContent({ children }: ServiceCreateLayoutProps) {
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold">Create {serviceLabel} Service</h1>
               <Badge variant="secondary">{serviceLabel}</Badge>
+              <SaveStatusIndicator className="ml-2" />
             </div>
             {steps.find((s) => s.id === currentStep) && (
               <p className="text-sm text-muted-foreground">
@@ -186,6 +191,16 @@ function LayoutContent({ children }: ServiceCreateLayoutProps) {
         progress={progressPercentage}
       />
     </div>
+  );
+}
+
+function LayoutContent({ children }: ServiceCreateLayoutProps) {
+  const { saveService } = useServiceCreation();
+
+  return (
+    <AutoSaveProvider onSave={saveService} debounceMs={1500}>
+      <LayoutContentInner>{children}</LayoutContentInner>
+    </AutoSaveProvider>
   );
 }
 
