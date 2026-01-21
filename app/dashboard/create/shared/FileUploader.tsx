@@ -4,15 +4,17 @@ import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Upload, File, X, Check, Loader2 } from "lucide-react";
+import { Upload, File, X, Check, Loader2, Music } from "lucide-react";
 import { toast } from "sonner";
 import { useGenerateUploadUrl, useGetFileUrl } from "@/lib/convex-typed-hooks";
+import { detectMetadata, isAudioFile, AudioMetadata, DetectionProgress } from "@/lib/audio-analyzer";
 
 export interface UploadedFileData {
   name: string;
   storageId: string;
   size: number;
   type: string;
+  audioMetadata?: AudioMetadata;
 }
 
 interface FileUploaderProps {
@@ -22,6 +24,8 @@ interface FileUploaderProps {
   maxSize?: number; // in MB
   buttonText?: string;
   className?: string;
+  analyzeAudio?: boolean; // Enable BPM/key detection for audio files
+  onAudioMetadata?: (metadata: AudioMetadata) => void;
 }
 
 export function FileUploader({
@@ -30,11 +34,15 @@ export function FileUploader({
   multiple = true,
   maxSize = 100,
   buttonText = "Select Files",
-  className = ""
+  className = "",
+  analyzeAudio = false,
+  onAudioMetadata
 }: FileUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+  const [analyzingAudio, setAnalyzingAudio] = useState(false);
+  const [audioAnalysisProgress, setAudioAnalysisProgress] = useState<DetectionProgress | null>(null);
 
   const generateUploadUrl = useGenerateUploadUrl();
 
@@ -77,12 +85,33 @@ export function FileUploader({
         // Update progress to complete
         setUploadProgress(prev => ({ ...prev, [file.name]: 100 }));
 
-        uploadedFiles.push({
+        const uploadedFile: UploadedFileData = {
           name: file.name,
           storageId,
           size: file.size,
           type: file.type,
-        });
+        };
+
+        // Analyze audio if enabled and file is audio
+        if (analyzeAudio && isAudioFile(file)) {
+          try {
+            setAnalyzingAudio(true);
+            const metadata = await detectMetadata(file, (progress) => {
+              setAudioAnalysisProgress(progress);
+            });
+            uploadedFile.audioMetadata = metadata;
+            onAudioMetadata?.(metadata);
+            toast.success(`Detected: ${metadata.bpm ? `${metadata.bpm} BPM` : "Unknown BPM"} | ${metadata.key || "Unknown key"}`);
+          } catch (error) {
+            console.error("Audio analysis failed:", error);
+            // Continue without metadata - not a fatal error
+          } finally {
+            setAnalyzingAudio(false);
+            setAudioAnalysisProgress(null);
+          }
+        }
+
+        uploadedFiles.push(uploadedFile);
       }
 
       // Call callback with uploaded files
@@ -148,6 +177,17 @@ export function FileUploader({
           ))}
         </div>
       )}
+
+      {/* Audio Analysis Progress */}
+      {analyzingAudio && audioAnalysisProgress && (
+        <div className="p-3 bg-muted/50 rounded-lg space-y-2">
+          <div className="flex items-center gap-2 text-sm">
+            <Music className="w-4 h-4 animate-pulse text-primary" />
+            <span>{audioAnalysisProgress.message}</span>
+          </div>
+          <Progress value={audioAnalysisProgress.progress * 100} className="h-1" />
+        </div>
+      )}
     </div>
   );
 }
@@ -159,6 +199,7 @@ export interface UploadedFile {
   size: number;
   type: string;
   url?: string;
+  audioMetadata?: AudioMetadata;
 }
 
 interface FileListProps {
@@ -203,6 +244,13 @@ export function FileList({ files, onRemove }: FileListProps) {
                 <p className="font-medium truncate">{file.name}</p>
                 <p className="text-xs text-muted-foreground">
                   {formatFileSize(file.size)} • {file.type || "Unknown type"}
+                  {file.audioMetadata && (
+                    <span className="ml-2 text-primary">
+                      {file.audioMetadata.bpm && `${file.audioMetadata.bpm} BPM`}
+                      {file.audioMetadata.bpm && file.audioMetadata.key && " • "}
+                      {file.audioMetadata.key}
+                    </span>
+                  )}
                 </p>
               </div>
             </div>
