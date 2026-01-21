@@ -91,7 +91,8 @@ export type CreationFlow =
   | "mixing-template"
   | "project-files"
   | "playlist-curation"
-  | "tip-jar";
+  | "tip-jar"
+  | "community";
 
 // Map product categories to their creation flow
 export const CATEGORY_TO_FLOW: Record<ProductCategory, CreationFlow> = {
@@ -106,7 +107,7 @@ export const CATEGORY_TO_FLOW: Record<ProductCategory, CreationFlow> = {
   "cheat-sheet": "digital", // Quick reference guides
   template: "digital", // Design templates & assets
   "blog-post": "digital",
-  community: "digital",
+  community: "community",
   "tip-jar": "tip-jar",
   donation: "tip-jar", // Legacy - use tip-jar instead
   "effect-chain": "chain", // New dedicated flow
@@ -312,7 +313,7 @@ export const PRODUCT_CATEGORIES = [
     description: "Discord or exclusive community",
     category: "Community",
     icon: "👥",
-    flow: "digital" as CreationFlow,
+    flow: "community" as CreationFlow,
   },
 
   // Support
