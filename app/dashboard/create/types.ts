@@ -50,6 +50,8 @@ export type ProductCategory =
   | "masterclass"
   // Digital Content
   | "pdf" // Consolidated: PDF guides, cheat sheets, ebooks, workbooks
+  | "cheat-sheet" // Quick reference guides
+  | "template" // Design templates & assets
   | "blog-post"
   // Membership
   | "membership"
@@ -100,6 +102,8 @@ export const CATEGORY_TO_FLOW: Record<ProductCategory, CreationFlow> = {
   "project-files": "project-files",
   "mixing-template": "mixing-template",
   pdf: "digital", // Consolidated PDF category
+  "cheat-sheet": "digital", // Quick reference guides
+  template: "digital", // Design templates & assets
   "blog-post": "digital",
   community: "digital",
   "tip-jar": "digital",
