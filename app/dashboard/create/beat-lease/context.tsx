@@ -1,336 +1,106 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useToast } from "@/hooks/use-toast";
 import { Id } from "@/convex/_generated/dataModel";
 import { BeatLeaseData, StepCompletion, DEFAULT_LEASE_OPTIONS, LeaseOption } from "./types";
-import {
-  useStoresByUser,
-  useCreateUniversalProduct,
-  useUpdateDigitalProduct,
-} from "@/lib/convex-typed-hooks";
+import { useStoresByUser, useCreateUniversalProduct, useUpdateDigitalProduct } from "@/lib/convex-typed-hooks";
 
-// Helper to convert leaseOptions to beatLeaseConfig format for the database
-function convertToBeatlLeaseConfig(
-  leaseOptions: LeaseOption[] | undefined,
-  metadata: BeatLeaseData["metadata"]
-) {
+function convertToBeatlLeaseConfig(leaseOptions: LeaseOption[] | undefined, metadata: BeatLeaseData["metadata"]) {
   if (!leaseOptions) return undefined;
-
-  const tiers = leaseOptions
-    .filter((opt) => opt.enabled && opt.type !== "free") // Filter out free tier and disabled tiers
-    .map((opt) => {
-      // Map lease type to tier type
-      const tierType = opt.type === "basic" ? "basic" : opt.type === "premium" ? "premium" : "exclusive";
-
-      return {
-        type: tierType as "basic" | "premium" | "exclusive" | "unlimited",
-        enabled: opt.enabled,
-        price: opt.price,
-        name:
-          opt.type === "basic"
-            ? "Basic Lease"
-            : opt.type === "premium"
-              ? "Premium Lease"
-              : "Exclusive Rights",
-        distributionLimit: opt.distributionLimit,
-        streamingLimit: undefined, // Not in current LeaseOption type, can add later
-        commercialUse: opt.commercialUse,
-        musicVideoUse: opt.commercialUse, // Assume same as commercial use
-        radioBroadcasting: opt.commercialUse, // Assume same as commercial use
-        stemsIncluded: opt.stemsIncluded,
-        creditRequired: true, // Default to requiring credit
-      };
-    });
-
-  return {
-    tiers,
-    bpm: metadata?.bpm,
-    key: metadata?.key,
-    genre: metadata?.genre,
-  };
+  const tiers = leaseOptions.filter(opt => opt.enabled && opt.type !== "free").map(opt => ({
+    type: (opt.type === "basic" ? "basic" : opt.type === "premium" ? "premium" : "exclusive") as "basic" | "premium" | "exclusive" | "unlimited",
+    enabled: opt.enabled, price: opt.price, name: opt.type === "basic" ? "Basic Lease" : opt.type === "premium" ? "Premium Lease" : "Exclusive Rights",
+    distributionLimit: opt.distributionLimit, commercialUse: opt.commercialUse, musicVideoUse: opt.commercialUse, radioBroadcasting: opt.commercialUse, stemsIncluded: opt.stemsIncluded, creditRequired: true,
+  }));
+  return { tiers, bpm: metadata?.bpm, key: metadata?.key, genre: metadata?.genre };
 }
 
-interface BeatLeaseCreationState {
-  data: BeatLeaseData;
-  stepCompletion: StepCompletion;
-  isLoading: boolean;
-  isSaving: boolean;
-  beatId?: Id<"digitalProducts">;
-  lastSaved?: Date;
-}
+interface BeatLeaseState { data: BeatLeaseData; stepCompletion: StepCompletion; isLoading: boolean; isSaving: boolean; beatId?: string; lastSaved?: Date; }
+interface BeatLeaseContextType { state: BeatLeaseState; updateData: (step: string, data: Partial<BeatLeaseData>) => void; saveBeat: () => Promise<void>; validateStep: (step: keyof StepCompletion) => boolean; canPublish: () => boolean; createBeat: () => Promise<{ success: boolean; error?: string; beatId?: string }>; }
 
-interface BeatLeaseCreationContextType {
-  state: BeatLeaseCreationState;
-  updateData: (step: string, data: Partial<BeatLeaseData>) => void;
-  saveBeat: () => Promise<void>;
-  validateStep: (step: keyof StepCompletion) => boolean;
-  canPublish: () => boolean;
-  createBeat: () => Promise<{ success: boolean; error?: string; beatId?: Id<"digitalProducts"> }>;
-}
+const BeatLeaseCreationContext = createContext<BeatLeaseContextType | undefined>(undefined);
 
-const BeatLeaseCreationContext = createContext<BeatLeaseCreationContextType | undefined>(undefined);
+const validateStep = (step: keyof StepCompletion, data: BeatLeaseData): boolean => {
+  switch (step) {
+    case "basics": return !!(data.title && data.description);
+    case "metadata": return !!(data.metadata?.bpm && data.metadata?.key && data.metadata?.genre);
+    case "files": return !!(data.files?.mp3Url || data.files?.wavUrl);
+    case "licensing": return !!(data.leaseOptions?.some(opt => opt.enabled));
+    default: return false;
+  }
+};
 
 export function BeatLeaseCreationProvider({ children }: { children: React.ReactNode }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user } = useUser();
   const { toast } = useToast();
-  const beatId = searchParams.get("beatId") as Id<"digitalProducts"> | undefined;
+  const beatId = searchParams.get("beatId") || undefined;
 
-  // Get user's stores
   const stores = useStoresByUser(user?.id);
-
   const storeId = stores?.[0]?._id;
+  const createBeatMutation = useCreateUniversalProduct();
+  const updateBeatMutation = useUpdateDigitalProduct();
 
-  // Redirect if no store
+  const [state, setState] = useState<BeatLeaseState>(() => {
+    const initialData: BeatLeaseData = { leaseOptions: DEFAULT_LEASE_OPTIONS, metadata: { bpm: 140, key: "C minor", genre: "trap", tagged: true, duration: 180 }, producerTag: `Prod. by ${user?.firstName || 'Producer'}` };
+    return { data: initialData, stepCompletion: { basics: false, metadata: !!(initialData.metadata?.bpm && initialData.metadata?.key && initialData.metadata?.genre), files: false, licensing: !!(initialData.leaseOptions?.some(opt => opt.enabled)) }, isLoading: false, isSaving: false, beatId };
+  });
+
   useEffect(() => {
     if (user?.id && stores !== undefined && (!stores || stores.length === 0)) {
-      toast({
-        title: "Store Required",
-        description: "You need to set up a store before creating beat leases.",
-        variant: "destructive",
-      });
+      toast({ title: "Store Required", description: "Set up a store first.", variant: "destructive" });
       router.push('/dashboard?mode=create');
     }
   }, [user, stores, router, toast]);
 
-  const createBeatMutation = useCreateUniversalProduct();
-  const updateBeatMutation = useUpdateDigitalProduct();
-
-  const [state, setState] = useState<BeatLeaseCreationState>(() => {
-    const initialData: BeatLeaseData = {
-      leaseOptions: DEFAULT_LEASE_OPTIONS,
-      metadata: {
-        bpm: 140,
-        key: "C minor",
-        genre: "trap",
-        tagged: true,
-        duration: 180, // 3 minutes default
-      },
-      producerTag: `Prod. by ${user?.firstName || 'Producer'}`,
-    };
-
-    // Calculate initial step completion based on default data
-    const initialStepCompletion: StepCompletion = {
-      basics: !!(initialData.title && initialData.description),
-      metadata: !!(initialData.metadata?.bpm && initialData.metadata?.key && initialData.metadata?.genre),
-      files: !!(initialData.files?.mp3Url || initialData.files?.wavUrl),
-      licensing: !!(initialData.leaseOptions?.some(opt => opt.enabled)),
-    };
-
-    return {
-      data: initialData,
-      stepCompletion: initialStepCompletion,
-      isLoading: false,
-      isSaving: false,
-    };
-  });
-
-  // Helper to validate a step against specific data (not state)
-  const validateStepWithData = (step: keyof StepCompletion, data: BeatLeaseData): boolean => {
-    switch (step) {
-      case "basics":
-        return !!(data.title && data.description);
-      case "metadata":
-        return !!(data.metadata?.bpm && data.metadata?.key && data.metadata?.genre);
-      case "files":
-        return !!(data.files?.mp3Url || data.files?.wavUrl);
-      case "licensing":
-        return !!(data.leaseOptions?.some(opt => opt.enabled));
-      default:
-        return false;
-    }
-  };
-
-  // Public validateStep uses current state (for external checks)
-  const validateStep = (step: keyof StepCompletion): boolean => {
-    return validateStepWithData(step, state.data);
-  };
-
-  const updateData = (step: string, newData: Partial<BeatLeaseData>) => {
+  const updateData = useCallback((step: string, newData: Partial<BeatLeaseData>) => {
     setState(prev => {
       const updatedData = { ...prev.data, ...newData };
-
-      // Validate ALL steps against the new data to keep completion status accurate
-      const stepCompletion: StepCompletion = {
-        basics: validateStepWithData("basics", updatedData),
-        metadata: validateStepWithData("metadata", updatedData),
-        files: validateStepWithData("files", updatedData),
-        licensing: validateStepWithData("licensing", updatedData),
-      };
-
-      return {
-        ...prev,
-        data: updatedData,
-        stepCompletion,
-      };
+      return { ...prev, data: updatedData, stepCompletion: { basics: validateStep("basics", updatedData), metadata: validateStep("metadata", updatedData), files: validateStep("files", updatedData), licensing: validateStep("licensing", updatedData) } };
     });
-  };
+  }, []);
 
-  const saveBeat = async () => {
+  const saveBeat = useCallback(async () => {
     if (state.isSaving || !user?.id || !storeId) return;
-
     setState(prev => ({ ...prev, isSaving: true }));
-
     try {
-      // Convert lease options to beatLeaseConfig format
-      const beatLeaseConfig = convertToBeatlLeaseConfig(
-        state.data.leaseOptions,
-        state.data.metadata
-      );
-
+      const beatLeaseConfig = convertToBeatlLeaseConfig(state.data.leaseOptions, state.data.metadata);
       if (state.beatId) {
-        // Update existing beat with all data including beatLeaseConfig and file URLs
-        await updateBeatMutation({
-          id: state.beatId,
-          title: state.data.title,
-          description: state.data.description,
-          imageUrl: state.data.thumbnail,
-          tags: state.data.tags,
-          bpm: state.data.metadata?.bpm,
-          musicalKey: state.data.metadata?.key,
-          genre: state.data.metadata?.genre ? [state.data.metadata.genre] : undefined,
-          // Beat lease config with tiers
-          beatLeaseConfig,
-          // File URLs - mp3 goes to downloadUrl (main file), wav/stems/trackouts to their own fields
-          downloadUrl: state.data.files?.mp3Url,
-          demoAudioUrl: state.data.files?.mp3Url, // Use mp3 as preview audio
-          wavUrl: state.data.files?.wavUrl,
-          stemsUrl: state.data.files?.stemsUrl,
-          trackoutsUrl: state.data.files?.trackoutsUrl,
-        });
+        await updateBeatMutation({ id: state.beatId as Id<"digitalProducts">, title: state.data.title, description: state.data.description, imageUrl: state.data.thumbnail, tags: state.data.tags, bpm: state.data.metadata?.bpm, musicalKey: state.data.metadata?.key, genre: state.data.metadata?.genre ? [state.data.metadata.genre] : undefined, beatLeaseConfig, downloadUrl: state.data.files?.mp3Url, demoAudioUrl: state.data.files?.mp3Url, wavUrl: state.data.files?.wavUrl, stemsUrl: state.data.files?.stemsUrl, trackoutsUrl: state.data.files?.trackoutsUrl });
       } else {
-        // Create new beat with all data including beatLeaseConfig
-        const result = await createBeatMutation({
-          title: state.data.title || "Untitled Beat",
-          description: state.data.description,
-          storeId,
-          userId: user.id,
-          productType: "digital",
-          productCategory: "beat-lease",
-          pricingModel: "paid",
-          price: state.data.leaseOptions?.find(opt => opt.enabled)?.price || 25,
-          imageUrl: state.data.thumbnail,
-          tags: state.data.tags,
-          // Beat lease config with tiers
-          beatLeaseConfig,
-          // File URLs
-          downloadUrl: state.data.files?.mp3Url,
-        });
-
-        if (result) {
-          setState(prev => ({ ...prev, beatId: result }));
-          const currentStep = searchParams.get("step") || "basics";
-          router.replace(`/dashboard/create/beat-lease?beatId=${result}&step=${currentStep}`);
-        }
+        const result = await createBeatMutation({ title: state.data.title || "Untitled Beat", description: state.data.description, storeId, userId: user.id, productType: "digital", productCategory: "beat-lease", pricingModel: "paid", price: state.data.leaseOptions?.find(opt => opt.enabled)?.price || 25, imageUrl: state.data.thumbnail, tags: state.data.tags, beatLeaseConfig, downloadUrl: state.data.files?.mp3Url });
+        if (result) { setState(prev => ({ ...prev, beatId: result as string })); router.replace(`/dashboard/create/beat-lease?beatId=${result}&step=${searchParams.get("step") || "basics"}`); }
       }
+      setState(prev => ({ ...prev, isSaving: false, lastSaved: new Date() }));
+      toast({ title: "Beat Saved" });
+    } catch { setState(prev => ({ ...prev, isSaving: false })); toast({ title: "Save Failed", variant: "destructive" }); }
+  }, [state, user?.id, storeId, createBeatMutation, updateBeatMutation, router, searchParams, toast]);
 
-      setState(prev => ({
-        ...prev,
-        isSaving: false,
-        lastSaved: new Date()
-      }));
+  const canPublish = useCallback(() => state.stepCompletion.basics && state.stepCompletion.metadata && state.stepCompletion.files && state.stepCompletion.licensing, [state.stepCompletion]);
 
-      toast({
-        title: "Beat Saved",
-        description: "Your beat has been saved as a draft.",
-        className: "bg-white dark:bg-black",
-      });
-    } catch (error) {
-      console.error("Failed to save beat:", error);
-      setState(prev => ({ ...prev, isSaving: false }));
-      toast({
-        title: "Save Failed",
-        description: "Failed to save your beat. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const canPublish = (): boolean => {
-    return state.stepCompletion.basics && 
-           state.stepCompletion.metadata && 
-           state.stepCompletion.files &&
-           state.stepCompletion.licensing;
-  };
-
-  const createBeat = async () => {
-    if (!user?.id || !storeId) {
-      return { success: false, error: "User not found or invalid store." };
-    }
-
-    if (!canPublish()) {
-      return { success: false, error: "Please complete required steps before publishing." };
-    }
-
+  const createBeat = useCallback(async () => {
+    if (!user?.id || !storeId) return { success: false, error: "Invalid user/store." };
+    if (!canPublish()) return { success: false, error: "Complete all steps." };
     try {
+      const beatLeaseConfig = convertToBeatlLeaseConfig(state.data.leaseOptions, state.data.metadata);
       if (state.beatId) {
-        // Convert lease options to beatLeaseConfig format
-        const beatLeaseConfig = convertToBeatlLeaseConfig(
-          state.data.leaseOptions,
-          state.data.metadata
-        );
-
-        // Save all data and publish in one update
-        await updateBeatMutation({
-          id: state.beatId,
-          isPublished: true,
-          title: state.data.title,
-          description: state.data.description,
-          imageUrl: state.data.thumbnail,
-          tags: state.data.tags,
-          bpm: state.data.metadata?.bpm,
-          musicalKey: state.data.metadata?.key,
-          genre: state.data.metadata?.genre ? [state.data.metadata.genre] : undefined,
-          // Beat lease config with tiers
-          beatLeaseConfig,
-          // File URLs
-          downloadUrl: state.data.files?.mp3Url,
-          demoAudioUrl: state.data.files?.mp3Url,
-          wavUrl: state.data.files?.wavUrl,
-          stemsUrl: state.data.files?.stemsUrl,
-          trackoutsUrl: state.data.files?.trackoutsUrl,
-        });
-
-        toast({
-          title: "Beat Lease Published!",
-          description: "Your beat is now live and available for lease.",
-          className: "bg-white dark:bg-black",
-        });
-
+        await updateBeatMutation({ id: state.beatId as Id<"digitalProducts">, isPublished: true, title: state.data.title, description: state.data.description, imageUrl: state.data.thumbnail, tags: state.data.tags, bpm: state.data.metadata?.bpm, musicalKey: state.data.metadata?.key, genre: state.data.metadata?.genre ? [state.data.metadata.genre] : undefined, beatLeaseConfig, downloadUrl: state.data.files?.mp3Url, demoAudioUrl: state.data.files?.mp3Url, wavUrl: state.data.files?.wavUrl, stemsUrl: state.data.files?.stemsUrl, trackoutsUrl: state.data.files?.trackoutsUrl });
+        toast({ title: "Beat Published!" });
         return { success: true, beatId: state.beatId };
       }
-
       return { success: false, error: "Beat ID not found" };
-    } catch (error) {
-      console.error("Failed to publish beat lease:", error);
-      return { success: false, error: "Failed to publish beat lease." };
-    }
-  };
+    } catch { return { success: false, error: "Failed to publish." }; }
+  }, [user?.id, storeId, state, canPublish, updateBeatMutation, toast]);
 
-  return (
-    <BeatLeaseCreationContext.Provider
-      value={{
-        state,
-        updateData,
-        saveBeat,
-        validateStep,
-        canPublish,
-        createBeat,
-      }}
-    >
-      {children}
-    </BeatLeaseCreationContext.Provider>
-  );
+  return <BeatLeaseCreationContext.Provider value={{ state, updateData, saveBeat, validateStep: (s) => validateStep(s, state.data), canPublish, createBeat }}>{children}</BeatLeaseCreationContext.Provider>;
 }
 
 export function useBeatLeaseCreation() {
-  const context = useContext(BeatLeaseCreationContext);
-  if (context === undefined) {
-    throw new Error("useBeatLeaseCreation must be used within a BeatLeaseCreationProvider");
-  }
-  return context;
+  const ctx = useContext(BeatLeaseCreationContext);
+  if (!ctx) throw new Error("useBeatLeaseCreation must be used within BeatLeaseCreationProvider");
+  return ctx;
 }

@@ -1,364 +1,108 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useToast } from "@/hooks/use-toast";
 import { Id } from "@/convex/_generated/dataModel";
 import { DAWType } from "../types";
-import {
-  useStoresByUser,
-  useDigitalProductById,
-  useCreateUniversalProduct,
-  useUpdateDigitalProduct,
-} from "@/lib/convex-typed-hooks";
+import { useStoresByUser, useDigitalProductById, useCreateUniversalProduct, useUpdateDigitalProduct } from "@/lib/convex-typed-hooks";
 
-// Types for project file data
 export interface ProjectFileData {
-  // Basic info
-  title?: string;
-  description?: string;
-  dawType?: DAWType;
-  dawVersion?: string;
-  tags?: string[];
-  thumbnail?: string;
-
-  // Pricing
-  price?: string;
-  pricingModel?: "free_with_gate" | "paid";
-
-  // Follow Gate (if free)
-  followGateEnabled?: boolean;
-  followGateRequirements?: {
-    requireEmail?: boolean;
-    requireInstagram?: boolean;
-    requireTiktok?: boolean;
-    requireYoutube?: boolean;
-    requireSpotify?: boolean;
-    minFollowsRequired?: number;
-  };
-  followGateSocialLinks?: {
-    instagram?: string;
-    tiktok?: string;
-    youtube?: string;
-    spotify?: string;
-  };
-  followGateMessage?: string;
-
-  // Files
-  files?: Array<{
-    id: string;
-    name: string;
-    url: string;
-    storageId?: string;
-    size?: number;
-    type?: string;
-  }>;
-
-  // Project specific
+  title?: string; description?: string; dawType?: DAWType; dawVersion?: string; tags?: string[]; thumbnail?: string;
+  price?: string; pricingModel?: "free_with_gate" | "paid";
+  followGateEnabled?: boolean; followGateMessage?: string;
+  followGateRequirements?: { requireEmail?: boolean; requireInstagram?: boolean; requireTiktok?: boolean; requireYoutube?: boolean; requireSpotify?: boolean; minFollowsRequired?: number; };
+  followGateSocialLinks?: { instagram?: string; tiktok?: string; youtube?: string; spotify?: string; };
+  files?: Array<{ id: string; name: string; storageId: string; size: number; type: string; }>;
+  downloadUrl?: string;
   genre?: string[];
   bpm?: number;
   musicalKey?: string;
   installationNotes?: string;
   thirdPartyPlugins?: string[];
-  includedContent?: string[]; // e.g., ["MIDI files", "Audio stems", "Mixer settings"]
-
-  // Metadata
-  downloadUrl?: string;
 }
 
-export interface StepCompletion {
-  basics: boolean;
-  files: boolean;
-  pricing: boolean;
-  followGate: boolean;
-}
+export interface StepCompletion { basics: boolean; files: boolean; pricing: boolean; }
+interface ProjectFileState { data: ProjectFileData; stepCompletion: StepCompletion; isLoading: boolean; isSaving: boolean; projectId?: string; lastSaved?: Date; }
+interface ProjectFileContextType { state: ProjectFileState; updateData: (step: string, data: Partial<ProjectFileData>) => void; saveProject: () => Promise<void>; validateStep: (step: keyof StepCompletion) => boolean; canPublish: () => boolean; createProject: () => Promise<{ success: boolean; error?: string; projectId?: string }>; }
 
-interface ProjectFileCreationState {
-  data: ProjectFileData;
-  stepCompletion: StepCompletion;
-  isLoading: boolean;
-  isSaving: boolean;
-  projectId?: Id<"digitalProducts">;
-  lastSaved?: Date;
-}
+const ProjectFileCreationContext = createContext<ProjectFileContextType | undefined>(undefined);
 
-interface ProjectFileCreationContextType {
-  state: ProjectFileCreationState;
-  updateData: (step: string, data: Partial<ProjectFileData>) => void;
-  saveProject: () => Promise<void>;
-  validateStep: (step: keyof StepCompletion) => boolean;
-  canPublish: () => boolean;
-  createProject: () => Promise<{ success: boolean; error?: string; projectId?: Id<"digitalProducts"> }>;
-}
-
-const ProjectFileCreationContext = createContext<ProjectFileCreationContextType | undefined>(undefined);
+const validateStep = (step: keyof StepCompletion, data: ProjectFileData): boolean => {
+  switch (step) {
+    case "basics": return !!(data.title && data.description && data.dawType);
+    case "files": return !!(data.files && data.files.length > 0);
+    case "pricing": return data.pricingModel === "free_with_gate" || !!(data.pricingModel === "paid" && data.price && parseFloat(data.price) > 0);
+    default: return false;
+  }
+};
 
 export function ProjectFileCreationProvider({ children }: { children: React.ReactNode }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user } = useUser();
   const { toast } = useToast();
-  const projectId = searchParams.get("projectId") as Id<"digitalProducts"> | undefined;
-  const initialDAW = searchParams.get("daw") as DAWType | undefined;
+  const projectId = searchParams.get("projectId") || undefined;
 
-  // Fetch user's stores
   const stores = useStoresByUser(user?.id);
-
   const storeId = stores?.[0]?._id;
+  const existingProject = useDigitalProductById(projectId as Id<"digitalProducts"> | undefined);
+  const createMutation = useCreateUniversalProduct();
+  const updateMutation = useUpdateDigitalProduct();
 
-  // Redirect if no store found
+  const [state, setState] = useState<ProjectFileState>({ data: { pricingModel: "paid" }, stepCompletion: { basics: false, files: false, pricing: false }, isLoading: false, isSaving: false, projectId });
+
   useEffect(() => {
     if (user?.id && stores !== undefined && (!stores || stores.length === 0)) {
-      console.error('No store found for project file creation');
-      toast({
-        title: "Store Required",
-        description: "You need to set up a store before creating products.",
-        variant: "destructive",
-      });
-      router.push('/dashboard?mode=create');
+      toast({ title: "Store Required", variant: "destructive" }); router.push('/dashboard?mode=create');
     }
   }, [user, stores, router, toast]);
 
-  const createProjectMutation = useCreateUniversalProduct();
-  const updateProjectMutation = useUpdateDigitalProduct();
-
-  // Get existing project if editing
-  const existingProject = useDigitalProductById(projectId);
-
-  const [state, setState] = useState<ProjectFileCreationState>({
-    data: {
-      pricingModel: "paid",
-      dawType: initialDAW || "ableton",
-      price: "24.99",
-      includedContent: ["Complete DAW project", "All MIDI patterns", "Audio samples used", "Mixer settings"],
-    },
-    stepCompletion: {
-      basics: false,
-      files: false,
-      pricing: false,
-      followGate: false,
-    },
-    isLoading: false,
-    isSaving: false,
-  });
-
-  // Load existing project if editing
   useEffect(() => {
-    if (existingProject && existingProject._id === projectId) {
-      const newData: ProjectFileData = {
-        title: existingProject.title || "",
-        description: existingProject.description || "",
-        dawType: (existingProject.dawType as DAWType) || "ableton",
-        dawVersion: existingProject.dawVersion as string | undefined,
-        tags: existingProject.tags || [],
-        thumbnail: existingProject.imageUrl || "",
-        price: existingProject.price?.toString() || "24.99",
-        pricingModel: existingProject.followGateEnabled ? "free_with_gate" : "paid",
-        downloadUrl: existingProject.downloadUrl || "",
-        genre: existingProject.genre as string[] | undefined,
-        bpm: existingProject.bpm,
-        musicalKey: existingProject.musicalKey,
-        installationNotes: existingProject.installationNotes as string | undefined,
-        thirdPartyPlugins: existingProject.thirdPartyPlugins as string[] | undefined,
-        followGateEnabled: existingProject.followGateEnabled,
-        followGateRequirements: existingProject.followGateRequirements,
-        followGateSocialLinks: existingProject.followGateSocialLinks,
-        followGateMessage: existingProject.followGateMessage,
-        files: existingProject.packFiles ? JSON.parse(existingProject.packFiles as string) : [],
-      };
-
-      const stepCompletion = {
-        basics: !!(newData.title && newData.description && newData.dawType),
-        files: true,
-        pricing: !!newData.pricingModel,
-        followGate: newData.pricingModel === "free_with_gate" ? !!newData.followGateRequirements : true,
-      };
-
-      setState(prev => ({
-        ...prev,
-        projectId: existingProject._id,
-        data: newData,
-        stepCompletion,
-      }));
+    if (existingProject && projectId) {
+      const newData: ProjectFileData = { title: existingProject.title, description: existingProject.description, dawType: existingProject.dawType as DAWType, dawVersion: existingProject.dawVersion as string | undefined, thumbnail: existingProject.imageUrl, price: existingProject.price?.toString(), pricingModel: (existingProject.pricingModel || "paid") as "free_with_gate" | "paid", tags: existingProject.tags, genre: (existingProject as any).genre as string[] | undefined };
+      setState(prev => ({ ...prev, projectId, data: newData, stepCompletion: { basics: validateStep("basics", newData), files: validateStep("files", newData), pricing: validateStep("pricing", newData) } }));
     }
   }, [existingProject, projectId]);
 
-  const validateStep = (step: keyof StepCompletion): boolean => {
-    switch (step) {
-      case "basics":
-        return !!(state.data.title && state.data.description && state.data.dawType);
-      case "pricing":
-        return !!state.data.pricingModel;
-      case "followGate":
-        if (state.data.pricingModel === "free_with_gate") {
-          return !!(state.data.followGateEnabled && state.data.followGateRequirements);
-        }
-        return true;
-      case "files":
-        return true; // Files are optional
-      default:
-        return false;
-    }
-  };
-
-  const updateData = (step: string, newData: Partial<ProjectFileData>) => {
+  const updateData = useCallback((step: string, newData: Partial<ProjectFileData>) => {
     setState(prev => {
       const updatedData = { ...prev.data, ...newData };
-      const stepCompletion = {
-        ...prev.stepCompletion,
-        [step]: validateStep(step as keyof StepCompletion),
-      };
-      return {
-        ...prev,
-        data: updatedData,
-        stepCompletion,
-      };
+      return { ...prev, data: updatedData, stepCompletion: { ...prev.stepCompletion, [step]: validateStep(step as keyof StepCompletion, updatedData) } };
     });
-  };
+  }, []);
 
-  const saveProject = async () => {
+  const saveProject = useCallback(async () => {
     if (state.isSaving || !user?.id || !storeId) return;
-
     setState(prev => ({ ...prev, isSaving: true }));
-
     try {
-      if (state.projectId) {
-        // Update existing
-        const updateData = {
-          id: state.projectId,
-          title: state.data.title,
-          description: state.data.description,
-          imageUrl: state.data.thumbnail,
-          price: state.data.price ? parseFloat(state.data.price) : undefined,
-          tags: state.data.tags,
-          downloadUrl: state.data.downloadUrl,
-          dawType: state.data.dawType,
-          dawVersion: state.data.dawVersion,
-          genre: state.data.genre,
-          bpm: state.data.bpm,
-          musicalKey: state.data.musicalKey,
-          installationNotes: state.data.installationNotes,
-          thirdPartyPlugins: state.data.thirdPartyPlugins,
-          packFiles: state.data.files ? JSON.stringify(state.data.files) : undefined,
-        };
-
-        await updateProjectMutation(updateData);
-      } else {
-        // Create new
-        const createData = {
-          title: state.data.title || "Untitled Project File",
-          description: state.data.description,
-          storeId,
-          userId: user.id,
-          productType: "digital" as const,
-          productCategory: "project-files" as const,
-          pricingModel: (state.data.pricingModel || "paid") as "free_with_gate" | "paid",
-          price: state.data.pricingModel === "free_with_gate" ? 0 : parseFloat(state.data.price || "24.99"),
-          imageUrl: state.data.thumbnail || undefined,
-          downloadUrl: state.data.downloadUrl || undefined,
-          tags: state.data.tags || undefined,
-          dawType: state.data.dawType || "ableton",
-          dawVersion: state.data.dawVersion || undefined,
-          genre: state.data.genre || undefined,
-        };
-
-        const result = await createProjectMutation(createData);
-
-        if (result) {
-          setState(prev => ({ ...prev, projectId: result }));
-          const currentStep = searchParams.get("step") || "basics";
-          const dawType = state.data.dawType || "ableton";
-          router.replace(`/dashboard/create/project-files?daw=${dawType}&projectId=${result}&step=${currentStep}`);
-        }
+      const params = { title: state.data.title, description: state.data.description, imageUrl: state.data.thumbnail, price: state.data.price ? parseFloat(state.data.price) : undefined, pricingModel: state.data.pricingModel, dawType: state.data.dawType, dawVersion: state.data.dawVersion, tags: state.data.tags, genre: state.data.genre ? [state.data.genre] : undefined };
+      if (state.projectId) { await updateMutation({ id: state.projectId as Id<"digitalProducts">, ...params }); }
+      else {
+        const result = await createMutation({ ...params, title: state.data.title || "Untitled Project", storeId, userId: user.id, productType: "digital", productCategory: "project-file", price: state.data.price ? parseFloat(state.data.price) : 0 });
+        if (result) { setState(prev => ({ ...prev, projectId: result as string })); router.replace(`/dashboard/create/project-files?projectId=${result}&step=${searchParams.get("step") || "basics"}`); }
       }
+      setState(prev => ({ ...prev, isSaving: false, lastSaved: new Date() })); toast({ title: "Project Saved" });
+    } catch { setState(prev => ({ ...prev, isSaving: false })); toast({ title: "Save Failed", variant: "destructive" }); }
+  }, [state, user?.id, storeId, createMutation, updateMutation, router, searchParams, toast]);
 
-      setState(prev => ({
-        ...prev,
-        isSaving: false,
-        lastSaved: new Date()
-      }));
+  const canPublish = useCallback(() => state.stepCompletion.basics && state.stepCompletion.files && state.stepCompletion.pricing, [state.stepCompletion]);
 
-      toast({
-        title: "Project File Saved",
-        description: "Your project file has been saved as a draft.",
-        className: "bg-white dark:bg-black",
-      });
-    } catch (error) {
-      console.error("Failed to save project:", error);
-      setState(prev => ({ ...prev, isSaving: false }));
-      toast({
-        title: "Save Failed",
-        description: "Failed to save your project file. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const canPublish = (): boolean => {
-    return state.stepCompletion.basics && state.stepCompletion.pricing;
-  };
-
-  const createProject = async () => {
-    if (!user?.id || !storeId) {
-      return {
-        success: false,
-        error: "User not found or invalid store.",
-      };
-    }
-
-    if (!canPublish()) {
-      return {
-        success: false,
-        error: "Please complete required steps before publishing."
-      };
-    }
-
+  const createProject = useCallback(async () => {
+    if (!user?.id || !storeId) return { success: false, error: "Invalid user/store." };
+    if (!canPublish()) return { success: false, error: "Complete all steps." };
     try {
-      if (state.projectId) {
-        await updateProjectMutation({
-          id: state.projectId,
-          isPublished: true,
-        });
-
-        toast({
-          title: "Project File Published!",
-          description: "Your project file is now live.",
-          className: "bg-white dark:bg-black",
-        });
-
-        return { success: true, projectId: state.projectId };
-      }
-
+      if (state.projectId) { await updateMutation({ id: state.projectId as Id<"digitalProducts">, isPublished: true }); toast({ title: "Project Published!" }); return { success: true, projectId: state.projectId }; }
       return { success: false, error: "Project ID not found" };
-    } catch (error) {
-      return {
-        success: false,
-        error: "Failed to publish project file."
-      };
-    }
-  };
+    } catch { return { success: false, error: "Failed to publish." }; }
+  }, [user?.id, storeId, state.projectId, canPublish, updateMutation, toast]);
 
-  return (
-    <ProjectFileCreationContext.Provider
-      value={{
-        state,
-        updateData,
-        saveProject,
-        validateStep,
-        canPublish,
-        createProject,
-      }}
-    >
-      {children}
-    </ProjectFileCreationContext.Provider>
-  );
+  return <ProjectFileCreationContext.Provider value={{ state, updateData, saveProject, validateStep: (s) => validateStep(s, state.data), canPublish, createProject }}>{children}</ProjectFileCreationContext.Provider>;
 }
 
 export function useProjectFileCreation() {
-  const context = useContext(ProjectFileCreationContext);
-  if (context === undefined) {
-    throw new Error("useProjectFileCreation must be used within a ProjectFileCreationProvider");
-  }
-  return context;
+  const ctx = useContext(ProjectFileCreationContext);
+  if (!ctx) throw new Error("useProjectFileCreation must be used within ProjectFileCreationProvider");
+  return ctx;
 }

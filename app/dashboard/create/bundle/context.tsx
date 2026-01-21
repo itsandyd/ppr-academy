@@ -1,18 +1,13 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "convex/react";
 import { api } from "@/lib/convex-api";
 import { Id } from "@/convex/_generated/dataModel";
-import {
-  useStoresByUser,
-  useCreateBundle,
-  useUpdateBundle,
-  usePublishBundle,
-} from "@/lib/convex-typed-hooks";
+import { useStoresByUser, useCreateBundle, useUpdateBundle, usePublishBundle } from "@/lib/convex-typed-hooks";
 
 export interface BundleProduct {
   id: Id<"digitalProducts"> | Id<"courses">;
@@ -35,316 +30,122 @@ export interface BundleData {
   showSavings?: boolean;
 }
 
-export interface StepCompletion {
-  basics: boolean;
-  products: boolean;
-  pricing: boolean;
-}
+export interface StepCompletion { basics: boolean; products: boolean; pricing: boolean; }
 
-interface BundleCreationState {
+interface BundleState {
   data: BundleData;
   stepCompletion: StepCompletion;
   isLoading: boolean;
   isSaving: boolean;
-  bundleId?: Id<"bundles">;
+  bundleId?: string;
   lastSaved?: Date;
 }
 
-interface BundleCreationContextType {
-  state: BundleCreationState;
+interface BundleContextType {
+  state: BundleState;
   updateData: (step: string, data: Partial<BundleData>) => void;
   saveBundle: () => Promise<void>;
   validateStep: (step: keyof StepCompletion) => boolean;
   canPublish: () => boolean;
-  createBundle: () => Promise<{
-    success: boolean;
-    error?: string;
-    bundleId?: Id<"bundles">;
-  }>;
+  createBundle: () => Promise<{ success: boolean; error?: string; bundleId?: string }>;
 }
 
-const BundleCreationContext = createContext<BundleCreationContextType | undefined>(undefined);
+const BundleCreationContext = createContext<BundleContextType | undefined>(undefined);
+
+const validateStep = (step: keyof StepCompletion, data: BundleData): boolean => {
+  switch (step) {
+    case "basics": return !!(data.title && data.description);
+    case "products": return !!(data.products && data.products.length >= 2);
+    case "pricing": return !!(data.price && parseFloat(data.price) > 0);
+    default: return false;
+  }
+};
 
 export function BundleCreationProvider({ children }: { children: React.ReactNode }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user } = useUser();
   const { toast } = useToast();
-  const bundleId = searchParams.get("bundleId") as Id<"bundles"> | undefined;
+  const bundleId = searchParams.get("bundleId") || undefined;
 
   const stores = useStoresByUser(user?.id);
   const storeId = stores?.[0]?._id;
-
-  useEffect(() => {
-    if (user?.id && stores !== undefined && (!stores || stores.length === 0)) {
-      toast({
-        title: "Store Required",
-        description: "You need to set up a store before creating bundles.",
-        variant: "destructive",
-        className: "bg-white dark:bg-black",
-      });
-      router.push("/dashboard?mode=create");
-    }
-  }, [user, stores, router, toast]);
-
   const createBundleMutation = useCreateBundle();
   const updateBundleMutation = useUpdateBundle();
   const publishBundleMutation = usePublishBundle();
 
-  const existingBundle = useQuery(
-    api.bundles.getBundleDetails,
-    bundleId ? { bundleId } : "skip"
-  ) as { _id: Id<"bundles">; courses?: unknown[]; products?: unknown[]; title?: string; name?: string; description?: string; price?: number; bundlePrice?: number; originalPrice?: number; discountPercentage?: number; imageUrl?: string } | null | undefined;
+  const existingBundle = useQuery(api.bundles.getBundleDetails, bundleId ? { bundleId: bundleId as Id<"bundles"> } : "skip") as any;
 
-  const [state, setState] = useState<BundleCreationState>({
-    data: {
-      products: [],
-      showSavings: true,
-    },
-    stepCompletion: {
-      basics: false,
-      products: false,
-      pricing: false,
-    },
-    isLoading: false,
-    isSaving: false,
+  const [state, setState] = useState<BundleState>({
+    data: { products: [], showSavings: true },
+    stepCompletion: { basics: false, products: false, pricing: false },
+    isLoading: false, isSaving: false, bundleId,
   });
+
+  useEffect(() => {
+    if (user?.id && stores !== undefined && (!stores || stores.length === 0)) {
+      toast({ title: "Store Required", description: "Set up a store first.", variant: "destructive" });
+      router.push("/dashboard?mode=create");
+    }
+  }, [user, stores, router, toast]);
 
   useEffect(() => {
     if (existingBundle && existingBundle._id === bundleId) {
       const bundleProducts: BundleProduct[] = [];
-
-      existingBundle.courses?.forEach((c: any) => {
-        if (c) {
-          bundleProducts.push({
-            id: c._id,
-            type: "course",
-            title: c.title,
-            price: c.price || 0,
-            imageUrl: c.imageUrl,
-            productCategory: "course",
-          });
-        }
-      });
-
-      existingBundle.products?.forEach((p: any) => {
-        if (p) {
-          bundleProducts.push({
-            id: p._id,
-            type: "digital",
-            title: p.title,
-            price: p.price || 0,
-            imageUrl: p.imageUrl,
-            productCategory: p.productCategory,
-          });
-        }
-      });
-
-      const newData: BundleData = {
-        title: existingBundle.name || "",
-        description: existingBundle.description || "",
-        thumbnail: existingBundle.imageUrl || "",
-        products: bundleProducts,
-        price: existingBundle.bundlePrice?.toString() || "",
-        originalPrice: existingBundle.originalPrice?.toString() || "",
-        discountPercentage: existingBundle.discountPercentage,
-        showSavings: true,
-      };
-
-      const stepCompletion = {
-        basics: validateStepWithData("basics", newData),
-        products: validateStepWithData("products", newData),
-        pricing: validateStepWithData("pricing", newData),
-      };
-
-      setState((prev) => ({
-        ...prev,
-        bundleId: existingBundle._id,
-        data: newData,
-        stepCompletion,
-      }));
+      existingBundle.courses?.forEach((c: any) => c && bundleProducts.push({ id: c._id, type: "course", title: c.title, price: c.price || 0, imageUrl: c.imageUrl, productCategory: "course" }));
+      existingBundle.products?.forEach((p: any) => p && bundleProducts.push({ id: p._id, type: "digital", title: p.title, price: p.price || 0, imageUrl: p.imageUrl, productCategory: p.productCategory }));
+      const newData: BundleData = { title: existingBundle.name || "", description: existingBundle.description || "", thumbnail: existingBundle.imageUrl || "", products: bundleProducts, price: existingBundle.bundlePrice?.toString() || "", originalPrice: existingBundle.originalPrice?.toString() || "", discountPercentage: existingBundle.discountPercentage, showSavings: true };
+      setState(prev => ({ ...prev, bundleId: existingBundle._id, data: newData, stepCompletion: { basics: validateStep("basics", newData), products: validateStep("products", newData), pricing: validateStep("pricing", newData) } }));
     }
   }, [existingBundle, bundleId]);
 
-  const validateStepWithData = (step: keyof StepCompletion, data: BundleData): boolean => {
-    switch (step) {
-      case "basics":
-        return !!(data.title && data.description);
-      case "products":
-        return !!(data.products && data.products.length >= 2);
-      case "pricing":
-        return !!(data.price && parseFloat(data.price) > 0);
-      default:
-        return false;
-    }
-  };
-
-  const validateStep = (step: keyof StepCompletion): boolean => {
-    return validateStepWithData(step, state.data);
-  };
-
-  const updateData = (step: string, newData: Partial<BundleData>) => {
-    setState((prev) => {
+  const updateData = useCallback((step: string, newData: Partial<BundleData>) => {
+    setState(prev => {
       const updatedData = { ...prev.data, ...newData };
-
       if (newData.products) {
-        const totalOriginalPrice = newData.products.reduce((sum, p) => sum + p.price, 0);
-        updatedData.originalPrice = totalOriginalPrice.toFixed(2);
-
-        if (updatedData.price) {
-          const bundlePrice = parseFloat(updatedData.price);
-          const discount = ((totalOriginalPrice - bundlePrice) / totalOriginalPrice) * 100;
-          updatedData.discountPercentage = Math.round(discount);
-        }
+        const total = newData.products.reduce((sum, p) => sum + p.price, 0);
+        updatedData.originalPrice = total.toFixed(2);
+        if (updatedData.price) updatedData.discountPercentage = Math.round(((total - parseFloat(updatedData.price)) / total) * 100);
       }
-
-      const stepCompletion = {
-        ...prev.stepCompletion,
-        [step]: validateStepWithData(step as keyof StepCompletion, updatedData),
-      };
-
-      return {
-        ...prev,
-        data: updatedData,
-        stepCompletion,
-      };
+      return { ...prev, data: updatedData, stepCompletion: { ...prev.stepCompletion, [step]: validateStep(step as keyof StepCompletion, updatedData) } };
     });
-  };
+  }, []);
 
-  const saveBundle = async () => {
+  const saveBundle = useCallback(async () => {
     if (state.isSaving || !user?.id || !storeId) return;
-
-    setState((prev) => ({ ...prev, isSaving: true }));
-
+    setState(prev => ({ ...prev, isSaving: true }));
     try {
-      const courseIds =
-        (state.data.products
-          ?.filter((p) => p.type === "course")
-          .map((p) => p.id) as Id<"courses">[]) || [];
-
-      const productIds =
-        (state.data.products
-          ?.filter((p) => p.type === "digital")
-          .map((p) => p.id) as Id<"digitalProducts">[]) || [];
-
-      const bundleType =
-        courseIds.length > 0 && productIds.length > 0
-          ? "mixed"
-          : courseIds.length > 0
-            ? "course_bundle"
-            : "product_bundle";
-
+      const courseIds = (state.data.products?.filter(p => p.type === "course").map(p => p.id) as Id<"courses">[]) || [];
+      const productIds = (state.data.products?.filter(p => p.type === "digital").map(p => p.id) as Id<"digitalProducts">[]) || [];
+      const bundleType = courseIds.length > 0 && productIds.length > 0 ? "mixed" : courseIds.length > 0 ? "course_bundle" : "product_bundle";
       if (state.bundleId) {
-        await updateBundleMutation({
-          bundleId: state.bundleId,
-          name: state.data.title,
-          description: state.data.description,
-          imageUrl: state.data.thumbnail,
-          bundlePrice: state.data.price ? parseFloat(state.data.price) : undefined,
-          courseIds: courseIds.length > 0 ? courseIds : undefined,
-          productIds: productIds.length > 0 ? productIds : undefined,
-        });
+        await updateBundleMutation({ bundleId: state.bundleId as Id<"bundles">, name: state.data.title, description: state.data.description, imageUrl: state.data.thumbnail, bundlePrice: state.data.price ? parseFloat(state.data.price) : undefined, courseIds: courseIds.length > 0 ? courseIds : undefined, productIds: productIds.length > 0 ? productIds : undefined });
       } else {
-        const result = await createBundleMutation({
-          storeId,
-          creatorId: user.id,
-          name: state.data.title || "Untitled Bundle",
-          description: state.data.description || "",
-          bundleType,
-          courseIds: courseIds.length > 0 ? courseIds : undefined,
-          productIds: productIds.length > 0 ? productIds : undefined,
-          bundlePrice: state.data.price ? parseFloat(state.data.price) : 0,
-          imageUrl: state.data.thumbnail,
-        });
-
-        if (result) {
-          setState((prev) => ({ ...prev, bundleId: result }));
-          const currentStep = searchParams.get("step") || "basics";
-          router.replace(
-            `/dashboard/create/bundle?bundleId=${result}&step=${currentStep}`
-          );
-        }
+        const result = await createBundleMutation({ storeId, creatorId: user.id, name: state.data.title || "Untitled Bundle", description: state.data.description || "", bundleType, courseIds: courseIds.length > 0 ? courseIds : undefined, productIds: productIds.length > 0 ? productIds : undefined, bundlePrice: state.data.price ? parseFloat(state.data.price) : 0, imageUrl: state.data.thumbnail });
+        if (result) { setState(prev => ({ ...prev, bundleId: result as string })); router.replace(`/dashboard/create/bundle?bundleId=${result}&step=${searchParams.get("step") || "basics"}`); }
       }
+      setState(prev => ({ ...prev, isSaving: false, lastSaved: new Date() }));
+      toast({ title: "Bundle Saved", description: "Saved as draft." });
+    } catch { setState(prev => ({ ...prev, isSaving: false })); toast({ title: "Save Failed", variant: "destructive" }); }
+  }, [state, user?.id, storeId, createBundleMutation, updateBundleMutation, router, searchParams, toast]);
 
-      setState((prev) => ({
-        ...prev,
-        isSaving: false,
-        lastSaved: new Date(),
-      }));
+  const canPublish = useCallback(() => state.stepCompletion.basics && state.stepCompletion.products && state.stepCompletion.pricing, [state.stepCompletion]);
 
-      toast({
-        title: "Bundle Saved",
-        description: "Your bundle has been saved as a draft.",
-        className: "bg-white dark:bg-black",
-      });
-    } catch (error) {
-      console.error("Failed to save bundle:", error);
-      setState((prev) => ({ ...prev, isSaving: false }));
-      toast({
-        title: "Save Failed",
-        description: "Failed to save. Please try again.",
-        variant: "destructive",
-        className: "bg-white dark:bg-black",
-      });
-    }
-  };
-
-  const canPublish = (): boolean => {
-    return (
-      state.stepCompletion.basics && state.stepCompletion.products && state.stepCompletion.pricing
-    );
-  };
-
-  const createBundle = async () => {
-    if (!user?.id || !storeId) {
-      return { success: false, error: "User not found or invalid store." };
-    }
-
-    if (!canPublish()) {
-      return { success: false, error: "Please complete all required steps before publishing." };
-    }
-
+  const createBundle = useCallback(async () => {
+    if (!user?.id || !storeId) return { success: false, error: "Invalid user/store." };
+    if (!canPublish()) return { success: false, error: "Complete all steps." };
     try {
       await saveBundle();
-
-      if (state.bundleId) {
-        await publishBundleMutation({ bundleId: state.bundleId });
-
-        toast({
-          title: "Bundle Published!",
-          description: "Your bundle is now live.",
-          className: "bg-white dark:bg-black",
-        });
-
-        return { success: true, bundleId: state.bundleId };
-      }
-
+      if (state.bundleId) { await publishBundleMutation({ bundleId: state.bundleId as Id<"bundles"> }); toast({ title: "Bundle Published!" }); return { success: true, bundleId: state.bundleId }; }
       return { success: false, error: "Bundle ID not found" };
-    } catch (error) {
-      return { success: false, error: "Failed to publish bundle." };
-    }
-  };
+    } catch { return { success: false, error: "Failed to publish." }; }
+  }, [user?.id, storeId, state.bundleId, canPublish, saveBundle, publishBundleMutation, toast]);
 
-  return (
-    <BundleCreationContext.Provider
-      value={{
-        state,
-        updateData,
-        saveBundle,
-        validateStep,
-        canPublish,
-        createBundle,
-      }}
-    >
-      {children}
-    </BundleCreationContext.Provider>
-  );
+  return <BundleCreationContext.Provider value={{ state, updateData, saveBundle, validateStep: (s) => validateStep(s, state.data), canPublish, createBundle }}>{children}</BundleCreationContext.Provider>;
 }
 
 export function useBundleCreation() {
-  const context = useContext(BundleCreationContext);
-  if (context === undefined) {
-    throw new Error("useBundleCreation must be used within a BundleCreationProvider");
-  }
-  return context;
+  const ctx = useContext(BundleCreationContext);
+  if (!ctx) throw new Error("useBundleCreation must be used within BundleCreationProvider");
+  return ctx;
 }

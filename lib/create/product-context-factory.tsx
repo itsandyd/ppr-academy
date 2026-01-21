@@ -13,7 +13,7 @@ export interface ProductCreationState<TData, TSteps extends string> {
   stepCompletion: Record<TSteps, boolean>;
   isLoading: boolean;
   isSaving: boolean;
-  productId?: Id<"digitalProducts"> | Id<"bundles"> | Id<"courses">;
+  productId?: string;
   lastSaved?: Date;
 }
 
@@ -53,7 +53,7 @@ export function useProductCreationBase<TData, TSteps extends string>(
   const { user } = useUser();
   const { toast } = useToast();
 
-  const productId = searchParams.get(config.idParamName) as Id<"digitalProducts"> | Id<"bundles"> | Id<"courses"> | undefined;
+  const productId = searchParams.get(config.idParamName) || undefined;
 
   // Store management
   const stores = useStoresByUser(user?.id);
@@ -132,7 +132,7 @@ export function useProductCreationBase<TData, TSteps extends string>(
       } else {
         const result = await createMutation(
           config.mapToCreateParams(state.data, storeId, user.id)
-        ) as Id<"digitalProducts"> | Id<"bundles"> | Id<"courses">;
+        ) as string;
 
         if (result) {
           setState(prev => ({ ...prev, productId: result }));
