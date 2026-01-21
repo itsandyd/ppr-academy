@@ -96,6 +96,12 @@ export default function ProductTypeSelectorPage() {
       return;
     }
 
+    // Tip jars go to tip jar creator
+    if (categoryId === "tip-jar" || categoryId === "donation") {
+      router.push(`/dashboard/create/tip-jar`);
+      return;
+    }
+
     // Everything else goes to digital creator
     const flow = getFlowForCategory(categoryId);
     router.push(`/dashboard/create/${flow}?category=${categoryId}`);
@@ -191,6 +197,7 @@ export default function ProductTypeSelectorPage() {
                           {product.flow === "chain" && "4-step wizard"}
                           {product.flow === "mixing-template" && "4-step wizard"}
                           {product.flow === "playlist-curation" && "3-step wizard"}
+                          {product.flow === "tip-jar" && "2-step wizard"}
                         </Badge>
                       </CardContent>
                     </Card>

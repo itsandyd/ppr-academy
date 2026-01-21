@@ -90,7 +90,8 @@ export type CreationFlow =
   | "membership"
   | "mixing-template"
   | "project-files"
-  | "playlist-curation";
+  | "playlist-curation"
+  | "tip-jar";
 
 // Map product categories to their creation flow
 export const CATEGORY_TO_FLOW: Record<ProductCategory, CreationFlow> = {
@@ -106,8 +107,8 @@ export const CATEGORY_TO_FLOW: Record<ProductCategory, CreationFlow> = {
   template: "digital", // Design templates & assets
   "blog-post": "digital",
   community: "digital",
-  "tip-jar": "digital",
-  donation: "digital", // Legacy - use tip-jar instead
+  "tip-jar": "tip-jar",
+  donation: "tip-jar", // Legacy - use tip-jar instead
   "effect-chain": "chain", // New dedicated flow
   masterclass: "digital",
 
@@ -321,7 +322,7 @@ export const PRODUCT_CATEGORIES = [
     description: "Let fans support your work with pay-what-you-want tips",
     category: "Support",
     icon: "☕",
-    flow: "digital" as CreationFlow,
+    flow: "tip-jar" as CreationFlow,
   },
   // NOTE: "donation" removed - use "tip-jar" instead (they were redundant)
 ] as const;
