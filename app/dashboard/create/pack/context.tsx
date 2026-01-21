@@ -1,31 +1,28 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
-import { useSearchParams, useRouter, useParams } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
-import { useToast } from "@/hooks/use-toast";
+import React from "react";
 import { Id } from "@/convex/_generated/dataModel";
 import {
-  useStoresByUser,
+  useProductCreationBase,
+  createProductCreationContext,
+  ProductConfig,
+} from "@/lib/create/product-context-factory";
+import {
   useDigitalProductById,
   useCreateUniversalProduct,
   useUpdateDigitalProduct,
+  DigitalProduct,
 } from "@/lib/convex-typed-hooks";
+import { useSearchParams } from "next/navigation";
 
-// Types for pack data
 export interface PackData {
-  // Basic info
   title?: string;
   description?: string;
   packType?: "sample-pack" | "midi-pack" | "preset-pack";
   tags?: string[];
   thumbnail?: string;
-  
-  // Pricing
   price?: string;
   pricingModel?: "free_with_gate" | "paid";
-  
-  // Follow Gate (if free)
   followGateEnabled?: boolean;
   followGateRequirements?: {
     requireEmail?: boolean;
@@ -42,24 +39,18 @@ export interface PackData {
     spotify?: string;
   };
   followGateMessage?: string;
-  
-  // Files
   files?: Array<{
     id: string;
     name: string;
     url: string;
-    storageId?: string; // Convex storage ID
+    storageId?: string;
     size?: number;
     type?: string;
   }>;
-  
-  // Metadata
   genre?: string;
   bpm?: number;
   key?: string;
   downloadUrl?: string;
-
-  // Preset Pack specific
   targetPlugin?: string;
   dawType?: string;
   targetPluginVersion?: string;
@@ -72,336 +63,171 @@ export interface StepCompletion {
   files: boolean;
 }
 
-interface PackCreationState {
-  data: PackData;
-  stepCompletion: StepCompletion;
-  isLoading: boolean;
-  isSaving: boolean;
-  packId?: Id<"digitalProducts">;
-  lastSaved?: Date;
-}
+type PackSteps = keyof StepCompletion;
 
-interface PackCreationContextType {
-  state: PackCreationState;
-  updateData: (step: string, data: Partial<PackData>) => void;
-  savePack: () => Promise<void>;
-  validateStep: (step: keyof StepCompletion) => boolean;
-  canPublish: () => boolean;
-  createPack: () => Promise<{ success: boolean; error?: string; packId?: Id<"digitalProducts"> }>;
-}
+const packConfig: ProductConfig<PackData, PackSteps> = {
+  productName: "Pack",
+  idParamName: "packId",
+  routeBase: "/dashboard/create/pack",
+  steps: ["basics", "pricing", "followGate", "files"] as const,
 
-const PackCreationContext = createContext<PackCreationContextType | undefined>(undefined);
+  getDefaultData: (searchParams) => ({
+    pricingModel: "paid",
+    packType: (searchParams.get("type") as PackData["packType"]) || "sample-pack",
+    price: "9.99",
+  }),
 
-export function PackCreationProvider({ children }: { children: React.ReactNode }) {
-  const params = useParams();
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const { user } = useUser();
-  const { toast } = useToast();
-  const packId = searchParams.get("packId") as Id<"digitalProducts"> | undefined;
-  const packType = searchParams.get("type") as "sample-pack" | "midi-pack" | "preset-pack" | undefined;
-
-  // Fetch user's stores (since we're not in /store/[storeId] route anymore)
-  const stores = useStoresByUser(user?.id);
-
-  const storeId = stores?.[0]?._id;
-
-  // Redirect if no store found
-  useEffect(() => {
-    if (user?.id && stores !== undefined && (!stores || stores.length === 0)) {
-      console.error('No store found for pack creation');
-      toast({
-        title: "Store Required",
-        description: "You need to set up a store before creating products.",
-        variant: "destructive",
-      });
-      router.push('/dashboard?mode=create');
-    }
-  }, [user, stores, router, toast]);
-
-  const createPackMutation = useCreateUniversalProduct();
-  const updatePackMutation = useUpdateDigitalProduct();
-
-  // Get existing pack if editing
-  const existingPack = useDigitalProductById(packId);
-
-  const [state, setState] = useState<PackCreationState>({
-    data: {
-      pricingModel: "paid",
-      packType: packType || "sample-pack", // Get from URL or default
-      price: "9.99", // Default price
-    },
-    stepCompletion: {
-      basics: false,
-      pricing: false,
-      followGate: false,
-      files: false,
-    },
-    isLoading: false,
-    isSaving: false,
-  });
-
-  // Load existing pack data if editing
-  useEffect(() => {
-    if (existingPack && existingPack._id === packId) {
-      const newData: PackData = {
-        title: existingPack.title || "",
-        description: existingPack.description || "",
-        packType: existingPack.productCategory as any || "sample-pack",
-        tags: existingPack.tags || [],
-        thumbnail: existingPack.imageUrl || "",
-        price: existingPack.price?.toString() || "9.99",
-        pricingModel: existingPack.followGateEnabled ? "free_with_gate" : "paid",
-        downloadUrl: existingPack.downloadUrl || "",
-        // Load metadata
-        genre: existingPack.genre?.[0] || "",
-        bpm: existingPack.bpm,
-        key: existingPack.musicalKey,
-        // Load follow gate config
-        followGateEnabled: existingPack.followGateEnabled,
-        followGateRequirements: existingPack.followGateRequirements,
-        followGateSocialLinks: existingPack.followGateSocialLinks,
-        followGateMessage: existingPack.followGateMessage,
-        // Load files
-        files: existingPack.packFiles ? JSON.parse(existingPack.packFiles) : [],
-        // Load preset pack specific fields
-        targetPlugin: existingPack.targetPlugin,
-        dawType: existingPack.dawType,
-        targetPluginVersion: existingPack.targetPluginVersion,
-      };
-
-      // Calculate step completion based on loaded data
-      const stepCompletion = {
-        basics: validateStepWithData("basics", newData),
-        pricing: validateStepWithData("pricing", newData),
-        followGate: validateStepWithData("followGate", newData),
-        files: validateStepWithData("files", newData),
-      };
-      
-      setState(prev => ({
-        ...prev,
-        packId: existingPack._id,
-        data: newData,
-        stepCompletion,
-      }));
-    }
-  }, [existingPack, packId]);
-
-  const validateStepWithData = (step: keyof StepCompletion, data: PackData): boolean => {
+  validateStep: (step, data) => {
     switch (step) {
       case "basics":
         return !!(data.title && data.description && data.packType);
       case "pricing":
-        return !!(data.pricingModel);
+        return !!data.pricingModel;
       case "followGate":
         if (data.pricingModel === "free_with_gate") {
           return !!(data.followGateEnabled && data.followGateRequirements);
         }
         return true;
       case "files":
-        return true; // Files are optional
+        return true;
       default:
         return false;
     }
-  };
+  },
 
-  const validateStep = (step: keyof StepCompletion): boolean => {
-    return validateStepWithData(step, state.data);
-  };
+  mapToCreateParams: (data, storeId, userId) => {
+    const effectivePricingModel =
+      data.pricingModel === "free_with_gate" && !data.followGateRequirements
+        ? "paid"
+        : data.pricingModel || "paid";
 
-  const updateData = (step: string, newData: Partial<PackData>) => {
-    setState(prev => {
-      const updatedData = { ...prev.data, ...newData };
-      const stepCompletion = {
-        ...prev.stepCompletion,
-        [step]: validateStepWithData(step as keyof StepCompletion, updatedData),
-      };
-      return {
-        ...prev,
-        data: updatedData,
-        stepCompletion,
-      };
-    });
-  };
+    const packPrice =
+      effectivePricingModel === "free_with_gate"
+        ? 0
+        : data.price
+          ? parseFloat(data.price)
+          : 9.99;
 
-  const savePack = async () => {
-    if (state.isSaving || !user?.id || !storeId) return;
-    
-    setState(prev => ({ ...prev, isSaving: true }));
-    
-    try {
-      if (state.packId) {
-        // Update existing pack
-        const updateData: any = {
-          id: state.packId,
-          title: state.data.title,
-          description: state.data.description,
-          imageUrl: state.data.thumbnail,
-          price: state.data.price ? parseFloat(state.data.price) : undefined,
-          tags: state.data.tags,
-          downloadUrl: state.data.downloadUrl,
-          // Save metadata
-          genre: state.data.genre ? [state.data.genre] : undefined,
-          bpm: state.data.bpm,
-          musicalKey: state.data.key,
-          // Save files metadata (storage IDs, names, sizes)
-          packFiles: state.data.files ? JSON.stringify(state.data.files) : undefined,
-          // Save preset pack specific fields
-          targetPlugin: state.data.targetPlugin,
-          dawType: state.data.dawType,
-          targetPluginVersion: state.data.targetPluginVersion,
-        };
+    return {
+      title: data.title || "Untitled Pack",
+      description: data.description,
+      storeId,
+      userId,
+      productType: "digital",
+      productCategory: data.packType || "sample-pack",
+      pricingModel: effectivePricingModel,
+      price: packPrice,
+      imageUrl: data.thumbnail,
+      downloadUrl: data.downloadUrl,
+      tags: data.tags,
+      followGateConfig:
+        data.pricingModel === "free_with_gate" && data.followGateRequirements
+          ? {
+              requireEmail: data.followGateRequirements.requireEmail || false,
+              requireInstagram: data.followGateRequirements.requireInstagram || false,
+              requireTiktok: data.followGateRequirements.requireTiktok || false,
+              requireYoutube: data.followGateRequirements.requireYoutube || false,
+              requireSpotify: data.followGateRequirements.requireSpotify || false,
+              minFollowsRequired: data.followGateRequirements.minFollowsRequired || 0,
+              socialLinks: data.followGateSocialLinks || {},
+              customMessage: data.followGateMessage,
+            }
+          : undefined,
+    };
+  },
 
-        // Update pricing model and follow gate if needed
-        if (state.data.pricingModel === "free_with_gate" && state.data.followGateRequirements) {
-          updateData.price = 0;
-          updateData.followGateEnabled = true;
-          updateData.followGateRequirements = state.data.followGateRequirements;
-          updateData.followGateSocialLinks = state.data.followGateSocialLinks;
-          updateData.followGateMessage = state.data.followGateMessage;
-        }
+  mapToUpdateParams: (data, productId) => {
+    const updateData: Record<string, unknown> = {
+      id: productId as Id<"digitalProducts">,
+      title: data.title,
+      description: data.description,
+      imageUrl: data.thumbnail,
+      price: data.price ? parseFloat(data.price) : undefined,
+      tags: data.tags,
+      downloadUrl: data.downloadUrl,
+      genre: data.genre ? [data.genre] : undefined,
+      bpm: data.bpm,
+      musicalKey: data.key,
+      packFiles: data.files ? JSON.stringify(data.files) : undefined,
+      targetPlugin: data.targetPlugin,
+      dawType: data.dawType,
+      targetPluginVersion: data.targetPluginVersion,
+    };
 
-        await updatePackMutation(updateData);
-      } else {
-        // Create new pack (draft)
-        // If free with gate but no follow gate config yet, save as paid temporarily
-        const effectivePricingModel = 
-          state.data.pricingModel === "free_with_gate" && !state.data.followGateRequirements
-            ? "paid"
-            : state.data.pricingModel || "paid";
-        
-        const packPrice = effectivePricingModel === "free_with_gate" 
-          ? 0 
-          : (state.data.price ? parseFloat(state.data.price) : 9.99); // Default to $9.99 for paid packs
-        
-        const result = await createPackMutation({
-          title: state.data.title || "Untitled Pack",
-          description: state.data.description,
-          storeId,
-          userId: user.id,
-          productType: "digital",
-          productCategory: state.data.packType || "sample-pack",
-          pricingModel: effectivePricingModel,
-          price: packPrice,
-          imageUrl: state.data.thumbnail,
-          downloadUrl: state.data.downloadUrl,
-          tags: state.data.tags,
-          followGateConfig: state.data.pricingModel === "free_with_gate" && state.data.followGateRequirements
-            ? {
-                requireEmail: state.data.followGateRequirements.requireEmail || false,
-                requireInstagram: state.data.followGateRequirements.requireInstagram || false,
-                requireTiktok: state.data.followGateRequirements.requireTiktok || false,
-                requireYoutube: state.data.followGateRequirements.requireYoutube || false,
-                requireSpotify: state.data.followGateRequirements.requireSpotify || false,
-                minFollowsRequired: state.data.followGateRequirements.minFollowsRequired || 0,
-                socialLinks: state.data.followGateSocialLinks || {},
-                customMessage: state.data.followGateMessage,
-              }
-            : undefined,
-        });
-
-        if (result) {
-          setState(prev => ({ ...prev, packId: result }));
-          const currentStep = searchParams.get("step") || "basics";
-          const currentPackType = searchParams.get("type") || state.data.packType || "sample-pack";
-          router.replace(`/dashboard/create/pack?type=${currentPackType}&packId=${result}&step=${currentStep}`);
-        }
-      }
-
-      setState(prev => ({ 
-        ...prev, 
-        isSaving: false, 
-        lastSaved: new Date() 
-      }));
-
-      toast({
-        title: "Pack Saved",
-        description: "Your pack has been saved as a draft.",
-      });
-    } catch (error) {
-      console.error("Failed to save pack:", error);
-      setState(prev => ({ ...prev, isSaving: false }));
-      toast({
-        title: "Save Failed",
-        description: "Failed to save your pack. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const canPublish = (): boolean => {
-    return state.stepCompletion.basics && state.stepCompletion.pricing;
-  };
-
-  const createPack = async () => {
-    if (!user?.id || !storeId) {
-      return {
-        success: false,
-        error: "User not found or invalid store.",
-      };
+    if (data.pricingModel === "free_with_gate" && data.followGateRequirements) {
+      updateData.price = 0;
+      updateData.followGateEnabled = true;
+      updateData.followGateRequirements = data.followGateRequirements;
+      updateData.followGateSocialLinks = data.followGateSocialLinks;
+      updateData.followGateMessage = data.followGateMessage;
     }
 
-    if (!canPublish()) {
-      return { 
-        success: false, 
-        error: "Please complete required steps before publishing." 
-      };
-    }
+    return updateData;
+  },
+};
 
-    try {
-      // Publish the pack
-      if (state.packId) {
-        // If pricing model is free with gate, ensure we have follow gate config
-        const updateData: any = {
-          id: state.packId,
-          isPublished: true,
-        };
-
-        // Update pricing model to free_with_gate if configured
-        if (state.data.pricingModel === "free_with_gate" && state.data.followGateRequirements) {
-          // The pricing model was already set during save, just publish
-        }
-
-        await updatePackMutation(updateData);
-        
-        toast({
-          title: "Pack Published!",
-          description: "Your pack is now live.",
-        });
-
-        return { success: true, packId: state.packId };
-      }
-
-      return { success: false, error: "Pack ID not found" };
-    } catch (error) {
-      return { 
-        success: false, 
-        error: "Failed to publish pack." 
-      };
-    }
+function mapFromExisting(existing: unknown): PackData {
+  const product = existing as DigitalProduct;
+  return {
+    title: product.title || "",
+    description: product.description || "",
+    packType: (product.productCategory as PackData["packType"]) || "sample-pack",
+    tags: product.tags || [],
+    thumbnail: product.imageUrl || "",
+    price: product.price?.toString() || "9.99",
+    pricingModel: product.followGateEnabled ? "free_with_gate" : "paid",
+    downloadUrl: product.downloadUrl || "",
+    genre: product.genre?.[0] || "",
+    bpm: product.bpm,
+    key: product.musicalKey,
+    followGateEnabled: product.followGateEnabled,
+    followGateRequirements: product.followGateRequirements,
+    followGateSocialLinks: product.followGateSocialLinks,
+    followGateMessage: product.followGateMessage,
+    files: product.packFiles ? JSON.parse(product.packFiles as string) : [],
+    targetPlugin: product.targetPlugin,
+    dawType: product.dawType,
+    targetPluginVersion: product.targetPluginVersion,
   };
+}
+
+const { Context: PackCreationContext, useCreationContext } =
+  createProductCreationContext<PackData, PackSteps>("PackCreation");
+
+export function PackCreationProvider({ children }: { children: React.ReactNode }) {
+  const searchParams = useSearchParams();
+  const packId = searchParams.get("packId") as Id<"digitalProducts"> | undefined;
+
+  const createMutation = useCreateUniversalProduct();
+  const updateMutation = useUpdateDigitalProduct();
+  const existingPack = useDigitalProductById(packId);
+
+  const contextValue = useProductCreationBase(
+    packConfig,
+    createMutation as (args: Record<string, unknown>) => Promise<unknown>,
+    updateMutation as (args: Record<string, unknown>) => Promise<unknown>,
+    existingPack,
+    mapFromExisting
+  );
 
   return (
-    <PackCreationContext.Provider
-      value={{
-        state,
-        updateData,
-        savePack,
-        validateStep,
-        canPublish,
-        createPack,
-      }}
-    >
+    <PackCreationContext.Provider value={contextValue}>
       {children}
     </PackCreationContext.Provider>
   );
 }
 
 export function usePackCreation() {
-  const context = useContext(PackCreationContext);
-  if (context === undefined) {
-    throw new Error("usePackCreation must be used within a PackCreationProvider");
-  }
-  return context;
+  const context = useCreationContext();
+  return {
+    state: {
+      ...context.state,
+      packId: context.state.productId as Id<"digitalProducts"> | undefined,
+    },
+    updateData: context.updateData,
+    savePack: context.saveProduct,
+    validateStep: context.validateStep,
+    canPublish: context.canPublish,
+    createPack: context.publishProduct,
+  };
 }
-

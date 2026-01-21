@@ -1,258 +1,125 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
-import { useToast } from "@/hooks/use-toast";
+import React from "react";
 import { Id } from "@/convex/_generated/dataModel";
 import { ServiceData, StepCompletion, DEFAULT_PRICING_TIERS } from "./types";
 import {
-  useStoresByUser,
+  useProductCreationBase,
+  createProductCreationContext,
+  ProductConfig,
+} from "@/lib/create/product-context-factory";
+import {
   useCreateUniversalProduct,
   useUpdateDigitalProduct,
 } from "@/lib/convex-typed-hooks";
 
-interface ServiceCreationState {
-  data: ServiceData;
-  stepCompletion: StepCompletion;
-  isLoading: boolean;
-  isSaving: boolean;
-  serviceId?: Id<"digitalProducts">;
-  lastSaved?: Date;
-}
+type ServiceSteps = keyof StepCompletion;
 
-interface ServiceCreationContextType {
-  state: ServiceCreationState;
-  updateData: (step: string, data: Partial<ServiceData>) => void;
-  saveService: () => Promise<void>;
-  validateStep: (step: keyof StepCompletion) => boolean;
-  canPublish: () => boolean;
-  publishService: () => Promise<{
-    success: boolean;
-    error?: string;
-    serviceId?: Id<"digitalProducts">;
-  }>;
-}
+const serviceConfig: ProductConfig<ServiceData, ServiceSteps> = {
+  productName: "Service",
+  idParamName: "serviceId",
+  routeBase: "/dashboard/create/service",
+  steps: ["basics", "pricing", "requirements", "delivery"] as const,
 
-const ServiceCreationContext = createContext<ServiceCreationContextType | undefined>(undefined);
-
-export function ServiceCreationProvider({ children }: { children: React.ReactNode }) {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const { user } = useUser();
-  const { toast } = useToast();
-  const serviceId = searchParams.get("serviceId") as Id<"digitalProducts"> | undefined;
-  const serviceType = searchParams.get("type") || "mixing";
-
-  const stores = useStoresByUser(user?.id);
-
-  const storeId = stores?.[0]?._id;
-
-  useEffect(() => {
-    if (user?.id && stores !== undefined && (!stores || stores.length === 0)) {
-      toast({
-        title: "Store Required",
-        description: "You need to set up a store before offering services.",
-        variant: "destructive",
-      });
-      router.push("/dashboard?mode=create");
-    }
-  }, [user, stores, router, toast]);
-
-  const createServiceMutation = useCreateUniversalProduct();
-  const updateServiceMutation = useUpdateDigitalProduct();
-
-  const [state, setState] = useState<ServiceCreationState>({
-    data: {
-      serviceType: serviceType as ServiceData["serviceType"],
-      pricingTiers: DEFAULT_PRICING_TIERS,
-      rushAvailable: true,
-      rushMultiplier: 1.5,
-      requirements: {
-        acceptedFormats: ["wav", "aiff", "flac"],
-        requireDryVocals: true,
-        requireReferenceTrack: true,
-        requireProjectNotes: false,
-        maxFileSize: 500,
-      },
-      delivery: {
-        formats: ["wav-24bit", "mp3-320"],
-        includeProjectFile: false,
-        includeStemBounces: false,
-        deliveryMethod: "download",
-        standardTurnaround: 7,
-        rushTurnaround: 3,
-      },
+  getDefaultData: (searchParams) => ({
+    serviceType: (searchParams.get("type") || "mixing") as ServiceData["serviceType"],
+    pricingTiers: DEFAULT_PRICING_TIERS,
+    rushAvailable: true,
+    rushMultiplier: 1.5,
+    requirements: {
+      acceptedFormats: ["wav", "aiff", "flac"],
+      requireDryVocals: true,
+      requireReferenceTrack: true,
+      requireProjectNotes: false,
+      maxFileSize: 500,
     },
-    stepCompletion: {
-      basics: false,
-      pricing: false,
-      requirements: false,
-      delivery: false,
+    delivery: {
+      formats: ["wav-24bit", "mp3-320"],
+      includeProjectFile: false,
+      includeStemBounces: false,
+      deliveryMethod: "download",
+      standardTurnaround: 7,
+      rushTurnaround: 3,
     },
-    isLoading: false,
-    isSaving: false,
-  });
+  }),
 
-  const validateStep = (step: keyof StepCompletion): boolean => {
+  validateStep: (step, data) => {
     switch (step) {
       case "basics":
-        return !!(state.data.title && state.data.description && state.data.serviceType);
+        return !!(data.title && data.description && data.serviceType);
       case "pricing":
-        return !!(state.data.pricingTiers && state.data.pricingTiers.length > 0);
+        return !!(data.pricingTiers && data.pricingTiers.length > 0);
       case "requirements":
-        return !!state.data.requirements?.acceptedFormats?.length;
+        return !!data.requirements?.acceptedFormats?.length;
       case "delivery":
-        return !!(state.data.delivery?.formats?.length && state.data.delivery?.standardTurnaround);
+        return !!(data.delivery?.formats?.length && data.delivery?.standardTurnaround);
       default:
         return false;
     }
-  };
+  },
 
-  const updateData = (step: string, newData: Partial<ServiceData>) => {
-    setState((prev) => {
-      const updatedData = { ...prev.data, ...newData };
-      const stepCompletion = {
-        ...prev.stepCompletion,
-        [step]: validateStep(step as keyof StepCompletion),
-      };
-      return {
-        ...prev,
-        data: updatedData,
-        stepCompletion,
-      };
-    });
-  };
+  mapToCreateParams: (data, storeId, userId) => ({
+    title: data.title || `Untitled ${data.serviceType} Service`,
+    description: data.description,
+    storeId,
+    userId,
+    productType: "digital",
+    productCategory: `${data.serviceType}-service`,
+    pricingModel: "paid",
+    price: data.pricingTiers?.[0]?.price || 100,
+    imageUrl: data.thumbnail,
+    tags: data.tags,
+    metadata: {
+      serviceType: data.serviceType,
+      pricingTiers: data.pricingTiers,
+      requirements: data.requirements,
+      delivery: data.delivery,
+      rushAvailable: data.rushAvailable,
+      rushMultiplier: data.rushMultiplier,
+    },
+  }),
 
-  const saveService = async () => {
-    if (state.isSaving || !user?.id || !storeId) return;
+  mapToUpdateParams: (data, productId) => ({
+    id: productId as Id<"digitalProducts">,
+    title: data.title,
+    description: data.description,
+    imageUrl: data.thumbnail,
+    price: data.pricingTiers?.[0]?.price || 100,
+  }),
+};
 
-    setState((prev) => ({ ...prev, isSaving: true }));
+const { Context: ServiceCreationContext, useCreationContext } =
+  createProductCreationContext<ServiceData, ServiceSteps>("ServiceCreation");
 
-    try {
-      const basePrice = state.data.pricingTiers?.[0]?.price || 100;
+export function ServiceCreationProvider({ children }: { children: React.ReactNode }) {
+  const createMutation = useCreateUniversalProduct();
+  const updateMutation = useUpdateDigitalProduct();
 
-      if (state.serviceId) {
-        await updateServiceMutation({
-          id: state.serviceId,
-          title: state.data.title,
-          description: state.data.description,
-          imageUrl: state.data.thumbnail,
-          price: basePrice,
-        });
-      } else {
-        const result = await createServiceMutation({
-          title: state.data.title || `Untitled ${state.data.serviceType} Service`,
-          description: state.data.description,
-          storeId,
-          userId: user.id,
-          productType: "digital",
-          productCategory: `${state.data.serviceType}-service`,
-          pricingModel: "paid",
-          price: basePrice,
-          imageUrl: state.data.thumbnail,
-          tags: state.data.tags,
-          metadata: {
-            serviceType: state.data.serviceType,
-            pricingTiers: state.data.pricingTiers,
-            requirements: state.data.requirements,
-            delivery: state.data.delivery,
-            rushAvailable: state.data.rushAvailable,
-            rushMultiplier: state.data.rushMultiplier,
-          },
-        });
-
-        if (result) {
-          setState((prev) => ({ ...prev, serviceId: result }));
-          const currentStep = searchParams.get("step") || "basics";
-          router.replace(
-            `/dashboard/create/service?serviceId=${result}&step=${currentStep}&type=${state.data.serviceType}`
-          );
-        }
-      }
-
-      setState((prev) => ({
-        ...prev,
-        isSaving: false,
-        lastSaved: new Date(),
-      }));
-
-      toast({
-        title: "Service Saved",
-        description: "Your service has been saved as a draft.",
-        className: "bg-white dark:bg-black",
-      });
-    } catch (error) {
-      console.error("Failed to save service:", error);
-      setState((prev) => ({ ...prev, isSaving: false }));
-      toast({
-        title: "Save Failed",
-        description: "Failed to save. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const canPublish = (): boolean => {
-    return (
-      state.stepCompletion.basics &&
-      state.stepCompletion.pricing &&
-      state.stepCompletion.requirements &&
-      state.stepCompletion.delivery
-    );
-  };
-
-  const publishService = async () => {
-    if (!user?.id || !storeId) {
-      return { success: false, error: "User not found or invalid store." };
-    }
-
-    if (!canPublish()) {
-      return { success: false, error: "Please complete all steps before publishing." };
-    }
-
-    try {
-      if (state.serviceId) {
-        await updateServiceMutation({
-          id: state.serviceId,
-          isPublished: true,
-        });
-
-        toast({
-          title: "Service Published!",
-          description: "Your service is now live and accepting orders.",
-          className: "bg-white dark:bg-black",
-        });
-
-        return { success: true, serviceId: state.serviceId };
-      }
-
-      return { success: false, error: "Service ID not found" };
-    } catch (error) {
-      return { success: false, error: "Failed to publish service." };
-    }
-  };
+  const contextValue = useProductCreationBase(
+    serviceConfig,
+    createMutation as (args: Record<string, unknown>) => Promise<unknown>,
+    updateMutation as (args: Record<string, unknown>) => Promise<unknown>
+  );
 
   return (
-    <ServiceCreationContext.Provider
-      value={{
-        state,
-        updateData,
-        saveService,
-        validateStep,
-        canPublish,
-        publishService,
-      }}
-    >
+    <ServiceCreationContext.Provider value={contextValue}>
       {children}
     </ServiceCreationContext.Provider>
   );
 }
 
+// Keep the same export name for backward compatibility
 export function useServiceCreation() {
-  const context = useContext(ServiceCreationContext);
-  if (context === undefined) {
-    throw new Error("useServiceCreation must be used within a ServiceCreationProvider");
-  }
-  return context;
+  const context = useCreationContext();
+  return {
+    state: {
+      ...context.state,
+      serviceId: context.state.productId as Id<"digitalProducts"> | undefined,
+    },
+    updateData: context.updateData,
+    saveService: context.saveProduct,
+    validateStep: context.validateStep,
+    canPublish: context.canPublish,
+    publishService: context.publishProduct,
+  };
 }
