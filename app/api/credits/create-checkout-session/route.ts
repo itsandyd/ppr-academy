@@ -3,11 +3,27 @@ import Stripe from "stripe";
 import { requireAuth } from "@/lib/auth-helpers";
 import { checkRateLimit, getRateLimitIdentifier, rateLimiters } from "@/lib/rate-limit";
 
-// Initialize Stripe (using SDK default API version)
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+// Check for Stripe key at module load
+if (!process.env.STRIPE_SECRET_KEY) {
+  console.error("❌ STRIPE_SECRET_KEY environment variable is not set!");
+}
+
+// Initialize Stripe
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY)
+  : null;
 
 export async function POST(request: NextRequest) {
   try {
+    // Check Stripe is initialized
+    if (!stripe) {
+      console.error("Stripe not initialized - missing STRIPE_SECRET_KEY");
+      return NextResponse.json(
+        { error: "Payment system not configured" },
+        { status: 500 }
+      );
+    }
+
     // ✅ SECURITY: Require authentication
     const user = await requireAuth();
 

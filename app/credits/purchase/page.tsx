@@ -28,7 +28,8 @@ export default function PurchaseCreditsPage() {
   const { user } = useUser();
   const [purchasingPackage, setPurchasingPackage] = useState<string | null>(null);
 
-  const packages = useQuery(api.credits.getCreditPackages) || [];
+  const packagesQuery = useQuery(api.credits.getCreditPackages);
+  const packages = Array.isArray(packagesQuery) ? packagesQuery : [];
   const userCredits = useQuery(api.credits.getUserCredits);
 
   const handlePurchase = async (pkg: {
@@ -59,6 +60,14 @@ export default function PurchaseCreditsPage() {
         }),
       });
 
+      // Handle non-JSON responses (e.g., HTML error pages)
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await response.text();
+        console.error("Non-JSON response:", text.substring(0, 500));
+        throw new Error("Server error - please try again");
+      }
+
       const data = await response.json();
 
       if (!response.ok) {
@@ -67,6 +76,8 @@ export default function PurchaseCreditsPage() {
 
       if (data.checkoutUrl) {
         window.location.href = data.checkoutUrl;
+      } else {
+        throw new Error("No checkout URL returned");
       }
     } catch (error) {
       console.error("Checkout error:", error);
