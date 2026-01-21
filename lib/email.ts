@@ -327,6 +327,115 @@ export async function sendPaymentFailureEmail(data: PaymentFailureEmailData) {
   }
 }
 
+// Course Enrollment Confirmation Email
+export interface CourseEnrollmentEmailData {
+  customerEmail: string;
+  customerName: string;
+  courseTitle: string;
+  courseSlug?: string;
+  amount: number;
+  currency: string;
+  creatorName?: string;
+  storeName?: string;
+}
+
+const getCourseEnrollmentEmailTemplate = (data: CourseEnrollmentEmailData) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to ${data.courseTitle}!</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+  <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+    <h1 style="color: white; margin: 0; font-size: 28px;">🎓 You're Enrolled!</h1>
+  </div>
+
+  <div style="background: #f0fdf4; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #bbf7d0;">
+    <h2 style="color: #1e293b; margin-top: 0;">Hi ${data.customerName},</h2>
+
+    <p style="font-size: 16px; margin-bottom: 25px;">
+      Thank you for enrolling in <strong>${data.courseTitle}</strong>! Your purchase has been confirmed and you now have lifetime access to the course.
+    </p>
+
+    <div style="background: white; padding: 20px; border-radius: 8px; border-left: 4px solid #10b981; margin: 25px 0;">
+      <h3 style="margin-top: 0; color: #1e293b;">📋 Order Details:</h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Course:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.courseTitle}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Amount:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.amount > 0 ? `$${data.amount.toFixed(2)} ${data.currency.toUpperCase()}` : 'FREE'}</td>
+        </tr>
+        ${data.creatorName ? `
+        <tr>
+          <td style="padding: 8px 0; font-weight: bold; color: #374151;">Instructor:</td>
+          <td style="padding: 8px 0; color: #1f2937;">${data.creatorName}</td>
+        </tr>
+        ` : ''}
+      </table>
+    </div>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://ppracademy.com'}/dashboard?mode=learn"
+         style="background: #10b981; color: white; text-decoration: none; padding: 15px 30px; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
+        🚀 Start Learning Now
+      </a>
+    </div>
+
+    <div style="background: white; padding: 20px; border-radius: 8px; margin: 25px 0;">
+      <h3 style="margin-top: 0; color: #1e293b;">💡 What's Next:</h3>
+      <ul style="margin-bottom: 0; padding-left: 20px;">
+        <li style="margin-bottom: 8px;">Access your course anytime from your dashboard</li>
+        <li style="margin-bottom: 8px;">Track your progress as you complete lessons</li>
+        <li style="margin-bottom: 8px;">Earn a certificate when you complete the course</li>
+      </ul>
+    </div>
+
+    <hr style="border: none; border-top: 1px solid #bbf7d0; margin: 30px 0;">
+
+    <p style="font-size: 14px; color: #64748b; margin-bottom: 10px;">
+      Best regards,<br>
+      <strong>${data.storeName || 'PPR Academy'}</strong>
+    </p>
+
+    <p style="font-size: 12px; color: #94a3b8; margin-top: 30px;">
+      You received this email because you enrolled in ${data.courseTitle}.
+      If you have any questions, simply reply to this email.
+    </p>
+  </div>
+</body>
+</html>
+`;
+
+export async function sendCourseEnrollmentEmail(data: CourseEnrollmentEmailData) {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn('⚠️ RESEND_API_KEY not configured. Email simulation mode.');
+    console.log('📧 Would send course enrollment email to:', data.customerEmail);
+    return { success: true, simulation: true };
+  }
+
+  try {
+    const resend = getResendClient();
+    const result = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: data.customerEmail,
+      replyTo: DEFAULT_REPLY_TO,
+      subject: `🎓 Welcome to ${data.courseTitle} - You're Enrolled!`,
+      html: getCourseEnrollmentEmailTemplate(data),
+    });
+
+    console.log('✅ Course enrollment email sent successfully:', result.data?.id);
+    return { success: true, messageId: result.data?.id };
+  } catch (error) {
+    console.error('❌ Failed to send course enrollment email:', error);
+    throw new Error(`Course enrollment email failed: ${error}`);
+  }
+}
+
 // Utility to verify email configuration
 export async function verifyEmailConfig() {
   if (!process.env.RESEND_API_KEY) {

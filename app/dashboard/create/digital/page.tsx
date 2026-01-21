@@ -147,9 +147,90 @@ export default function DigitalProductCreator() {
     }
   };
 
+  const [draftId, setDraftId] = useState<string | null>(productId || null);
+
   const handleSaveDraft = async () => {
-    console.log('Saving draft:', formData);
-    // TODO: Implement save draft mutation
+    if (!storeId || !user?.id) {
+      toast({
+        title: "Error",
+        description: "Missing store or user information. Please try again.",
+        variant: "destructive",
+        className: "bg-white dark:bg-black",
+      });
+      return;
+    }
+
+    try {
+      if (isEditing && productId) {
+        // Update existing product as draft
+        const updateData: any = {
+          id: productId,
+          title: formData.title || 'Untitled Product',
+          description: formData.description || '',
+          price: formData.price || 0,
+          imageUrl: formData.imageUrl || undefined,
+          isPublished: false,
+        };
+
+        await updateProduct(updateData);
+
+        toast({
+          title: "Draft saved!",
+          description: "Your changes have been saved.",
+          className: "bg-white dark:bg-black",
+        });
+      } else if (draftId) {
+        // Update existing draft
+        const updateData: any = {
+          id: draftId,
+          title: formData.title || 'Untitled Product',
+          description: formData.description || '',
+          price: formData.price || 0,
+          imageUrl: formData.imageUrl || undefined,
+          isPublished: false,
+        };
+
+        await updateProduct(updateData);
+
+        toast({
+          title: "Draft saved!",
+          description: "Your changes have been saved.",
+          className: "bg-white dark:bg-black",
+        });
+      } else {
+        // Create new draft
+        const productData: any = {
+          title: formData.title || 'Untitled Product',
+          description: formData.description || '',
+          storeId: storeId,
+          userId: user.id,
+          productType: "digital",
+          productCategory: formData.productCategory || category,
+          pricingModel: formData.pricingModel || 'paid',
+          price: formData.price || 0,
+          imageUrl: formData.imageUrl || undefined,
+          tags: formData.tags || [],
+          isPublished: false,
+        };
+
+        const newProductId = await createProduct(productData);
+        setDraftId(newProductId);
+
+        toast({
+          title: "Draft created!",
+          description: "Your product has been saved as a draft.",
+          className: "bg-white dark:bg-black",
+        });
+      }
+    } catch (error: any) {
+      console.error('Failed to save draft:', error);
+      toast({
+        title: "Error saving draft",
+        description: error.message || "Something went wrong. Please try again.",
+        variant: "destructive",
+        className: "bg-white dark:bg-black",
+      });
+    }
   };
 
   const handlePublish = async () => {

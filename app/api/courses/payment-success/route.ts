@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { requireAuth } from "@/lib/auth-helpers";
+import { sendCourseEnrollmentEmail } from "@/lib/email";
 
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -52,9 +53,25 @@ export async function POST(request: NextRequest) {
           // Continue anyway - don't fail the payment confirmation
         }
       }
-      
-      // TODO: Send confirmation email
-      
+
+      // Send confirmation email
+      if (metadata.customerEmail) {
+        try {
+          await sendCourseEnrollmentEmail({
+            customerEmail: metadata.customerEmail,
+            customerName: metadata.customerName || "Student",
+            courseTitle: metadata.courseTitle || "Course",
+            courseSlug: metadata.courseSlug,
+            amount: paymentIntent.amount / 100,
+            currency: paymentIntent.currency,
+          });
+          console.log("✅ Enrollment confirmation email sent");
+        } catch (emailError) {
+          console.error("⚠️ Failed to send confirmation email:", emailError);
+          // Don't fail the response for email errors
+        }
+      }
+
       return NextResponse.json({ 
         success: true, 
         message: "Payment successful",

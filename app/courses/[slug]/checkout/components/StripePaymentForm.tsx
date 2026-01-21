@@ -16,15 +16,17 @@ interface StripePaymentFormProps {
     name: string;
     email: string;
   };
+  creatorStripeAccountId?: string | null;
   onPaymentSuccess: () => void;
   onPaymentError: (error: string) => void;
 }
 
-export function StripePaymentForm({ 
-  course, 
-  customerData, 
-  onPaymentSuccess, 
-  onPaymentError 
+export function StripePaymentForm({
+  course,
+  customerData,
+  creatorStripeAccountId,
+  onPaymentSuccess,
+  onPaymentError
 }: StripePaymentFormProps) {
   const stripe = useStripe();
   const elements = useElements();
@@ -53,8 +55,7 @@ export function StripePaymentForm({
           customerName: customerData.name,
           coursePrice: course.price,
           courseTitle: course.title,
-          // TODO: Add creator's Stripe Connect account ID
-          // creatorStripeAccountId: "acct_...",
+          creatorStripeAccountId: creatorStripeAccountId || null,
         }),
       });
 

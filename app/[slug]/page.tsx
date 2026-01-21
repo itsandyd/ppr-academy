@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { use } from "react";
 import { notFound } from "next/navigation";
@@ -147,6 +147,9 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
   //   api.coachProfiles.getProfilesByStore,
   //   store ? { storeId: store._id } : "skip"
   // );
+
+  // Mutation for creating lead contacts
+  const createContact = useMutation(api.emailContacts.createContact);
 
   // Combine all product types into unified list with enhanced metadata
   const allProducts = useMemo(
@@ -296,14 +299,6 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
       setEmail("");
       setName("");
       setHasSubmittedEmail(false);
-      // Debug: Log product to check URL fields
-      console.log("🔍 Product clicked:", product.title);
-      console.log("📦 Full product data:", product);
-      console.log("📥 downloadUrl:", product.downloadUrl);
-      console.log("🔗 url:", product.url);
-      console.log("✅ Has downloadUrl:", !!product.downloadUrl);
-      console.log("✅ Has url:", !!product.url);
-      console.log("🔑 All product keys:", Object.keys(product));
       // Open modal for digital products
       setSelectedProduct(product);
       setProductModalOpen(true);
@@ -312,25 +307,34 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !selectedProduct) return;
+    if (!email || !selectedProduct || !store) return;
 
     setIsSubmitting(true);
     try {
-      // TODO: Submit to Convex to store lead/contact
-      console.log("Capturing lead:", {
-        email,
-        name,
-        productId: selectedProduct._id,
-        storeId: store?._id,
+      // Parse name into first/last
+      const nameParts = name.trim().split(" ");
+      const firstName = nameParts[0] || undefined;
+      const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : undefined;
+
+      // Save lead to Convex emailContacts
+      await createContact({
+        storeId: store._id,
+        email: email.toLowerCase(),
+        firstName,
+        lastName,
+        source: "lead_magnet",
+        sourceProductId: selectedProduct._id,
       });
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
       setHasSubmittedEmail(true);
-    } catch (error) {
-      console.error("Failed to capture email:", error);
-      alert("Something went wrong. Please try again.");
+    } catch (error: any) {
+      // Handle duplicate contact gracefully
+      if (error?.message?.includes("already exists")) {
+        setHasSubmittedEmail(true); // Still show success - they're already subscribed
+      } else {
+        console.error("Failed to capture email:", error);
+        alert("Something went wrong. Please try again.");
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -1568,9 +1572,6 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
                         </>
                       ) : (
                         <>
-                          <p className="mb-2 text-xs text-muted-foreground">
-                            ⚠️ Debug: No URL found for this product
-                          </p>
                           <Button
                             className="h-9 flex-1 text-sm"
                             onClick={() => {

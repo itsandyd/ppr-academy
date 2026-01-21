@@ -464,11 +464,14 @@ export function ChapterDialog({
 
     try {
       setIsGeneratingVideo(true);
-      
-      // First, we need to generate audio if it doesn't exist
-      // For now, we'll simulate having an audio URL
-      const simulatedAudioUrl = "https://placeholder-audio.com/chapter-audio.mp3";
-      
+
+      // Check if audio has been generated
+      if (!generatedAudioData) {
+        toast.error("Please generate audio first before creating a video");
+        setIsGeneratingVideo(false);
+        return;
+      }
+
       toast.success("Video generation started! This may take a few minutes...");
 
       const response = await fetch('/api/generate-video', {
@@ -478,9 +481,9 @@ export function ChapterDialog({
         },
         body: JSON.stringify({
           htmlContent: chapterData.content,
-          audioUrl: simulatedAudioUrl,
+          audioData: generatedAudioData, // Use the generated audio data
           title: chapterData.title,
-          chapterId: 'temp-id', // In real scenario, this would be the actual chapter ID
+          chapterId: actualChapterId || 'temp-id',
         }),
       });
 

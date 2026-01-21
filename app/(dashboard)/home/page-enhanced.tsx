@@ -3,141 +3,107 @@
 import { DashboardLayoutEnhanced } from "@/components/ui/dashboard-layout-enhanced";
 import { CourseCardEnhanced } from "@/components/ui/course-card-enhanced";
 import { useUser } from "@clerk/nextjs";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Loader2 } from "lucide-react";
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
 
 export default function DashboardHomeEnhanced() {
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
 
-  // Mock data - replace with real data from your Convex queries
+  // Fetch enrolled courses from Convex
+  const enrolledCourses = useQuery(
+    api.library.getUserCourses,
+    user?.id ? { userId: user.id } : "skip"
+  );
+
+  // Fetch user certificates
+  const certificates = useQuery(
+    api.certificates.getUserCertificates,
+    user?.id ? { userId: user.id } : "skip"
+  );
+
+  // Calculate real stats from data
+  const coursesEnrolled = enrolledCourses?.length || 0;
+  const coursesCompleted = enrolledCourses?.filter(c => c.progress === 100).length || 0;
+  const certificatesEarned = certificates?.length || 0;
+
+  // Build user data from Clerk
   const userData = {
     name: user?.firstName || "Student",
     email: user?.primaryEmailAddress?.emailAddress || "",
     avatar: user?.imageUrl,
-    level: "Music Producer Level 3",
-    xp: 2450,
-    nextLevelXp: 3000,
+    level: `Level ${Math.floor(coursesCompleted / 2) + 1}`,
+    xp: coursesCompleted * 500 + (coursesEnrolled * 100),
+    nextLevelXp: (Math.floor(coursesCompleted / 2) + 2) * 1000,
   };
 
   const stats = {
-    coursesEnrolled: 8,
-    coursesCompleted: 3,
-    totalHoursLearned: 47,
-    currentStreak: 12,
-    certificatesEarned: 3,
+    coursesEnrolled,
+    coursesCompleted,
+    totalHoursLearned: coursesEnrolled * 6, // Estimate 6 hours per course
+    currentStreak: 1, // Would need activity tracking for real streaks
+    certificatesEarned,
     nextMilestone: {
-      title: "Complete 5 Courses",
-      progress: 3,
-      target: 5,
+      title: `Complete ${coursesCompleted + 2} Courses`,
+      progress: coursesCompleted,
+      target: coursesCompleted + 2,
     },
   };
 
-  const recentActivity = [
-    {
-      id: "1",
-      type: "completed_lesson" as const,
-      title: "Finished 'Advanced EQ Techniques'",
-      courseName: "Mixing Masterclass",
-      timestamp: "2 hours ago",
-    },
-    {
-      id: "2", 
-      type: "started_course" as const,
-      title: "Started new course",
-      courseName: "Beat Making Fundamentals",
-      timestamp: "1 day ago",
-    },
-    {
-      id: "3",
-      type: "earned_certificate" as const,
-      title: "Earned certificate",
-      courseName: "Music Theory Basics",
-      timestamp: "3 days ago",
-    },
-  ];
+  // Build recent activity from courses
+  const recentActivity = (enrolledCourses || [])
+    .slice(0, 3)
+    .map((course) => ({
+      id: course._id,
+      type: (course.progress ?? 0) === 100 ? "earned_certificate" as const :
+            (course.progress ?? 0) > 0 ? "completed_lesson" as const : "started_course" as const,
+      title: (course.progress ?? 0) === 100 ? "Completed course" :
+             (course.progress ?? 0) > 0 ? `${course.progress}% complete` : "Started course",
+      courseName: course.title,
+      timestamp: course.lastAccessedAt
+        ? new Date(course.lastAccessedAt).toLocaleDateString()
+        : new Date(course.purchaseDate).toLocaleDateString(),
+    }));
 
-  // Mock course data for the "Continue Learning" section
-  const continueLearningCourses = [
-    {
-      id: "1",
-      title: "Advanced Mixing Techniques",
-      description: "Master the art of professional mixing with industry-standard techniques and tools.",
-      imageUrl: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=225&fit=crop",
-      price: 99,
-      category: "Mixing",
-      skillLevel: "Intermediate" as const,
-      slug: "advanced-mixing-techniques",
-      instructor: {
-        name: "Alex Johnson",
-        avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop&crop=face",
-        verified: true,
-      },
-      stats: {
-        students: 1250,
-        lessons: 24,
-        duration: "8h 30m",
-        rating: 4.8,
-        reviews: 156,
-      },
-      progress: 65,
-      isEnrolled: true,
-      isNew: false,
-      isTrending: true,
+  // Transform enrolled courses for display
+  const continueLearningCourses = (enrolledCourses || []).map(course => ({
+    id: course._id,
+    title: course.title,
+    description: course.description || "Continue your learning journey",
+    imageUrl: course.imageUrl || "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=225&fit=crop",
+    price: 0,
+    category: course.category || "Course",
+    skillLevel: (course.skillLevel || "Beginner") as "Beginner" | "Intermediate" | "Advanced",
+    slug: course.slug || course._id,
+    instructor: {
+      name: course.storeName || "Instructor",
+      avatar: undefined,
+      verified: true,
     },
-    {
-      id: "2",
-      title: "Beat Making Fundamentals",
-      description: "Learn the basics of creating beats from scratch using modern production techniques.",
-      imageUrl: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&h=225&fit=crop",
-      price: 79,
-      category: "Beat Making",
-      skillLevel: "Beginner" as const,
-      slug: "beat-making-fundamentals",
-      instructor: {
-        name: "Sarah Chen",
-        avatar: "https://images.unsplash.com/photo-1494790108755-2616b612b639?w=32&h=32&fit=crop&crop=face",
-        verified: true,
-      },
-      stats: {
-        students: 2100,
-        lessons: 18,
-        duration: "6h 45m",
-        rating: 4.9,
-        reviews: 203,
-      },
-      progress: 25,
-      isEnrolled: true,
-      isNew: true,
-      isTrending: false,
+    stats: {
+      students: 0,
+      lessons: 0,
+      duration: "Self-paced",
+      rating: 0,
+      reviews: 0,
     },
-    {
-      id: "3",
-      title: "Vocal Production Masterclass",
-      description: "Professional vocal recording, editing, and production techniques for modern music.",
-      imageUrl: "https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=400&h=225&fit=crop",
-      price: 129,
-      category: "Vocal Production",
-      skillLevel: "Advanced" as const,
-      slug: "vocal-production-masterclass",
-      instructor: {
-        name: "Mike Rodriguez",
-        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=32&h=32&fit=crop&crop=face",
-        verified: true,
-      },
-      stats: {
-        students: 890,
-        lessons: 32,
-        duration: "12h 15m",
-        rating: 4.7,
-        reviews: 98,
-      },
-      progress: 0,
-      isEnrolled: true,
-      isNew: false,
-      isTrending: false,
-    },
-  ];
+    progress: course.progress || 0,
+    isEnrolled: true,
+    isNew: course._creationTime > Date.now() - 7 * 24 * 60 * 60 * 1000,
+    isTrending: false,
+  }));
+
+  // Show loading state
+  if (!isLoaded || enrolledCourses === undefined) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <DashboardLayoutEnhanced

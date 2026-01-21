@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
+import { sendCourseEnrollmentEmail } from "@/lib/email";
 
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -62,8 +63,21 @@ export async function POST(request: NextRequest) {
 
           console.log("✅ Course enrollment created:", enrollmentId);
 
-          // TODO: Send confirmation email
-          // TODO: Trigger any post-purchase workflows
+          // Send confirmation email
+          try {
+            await sendCourseEnrollmentEmail({
+              customerEmail: metadata.customerEmail,
+              customerName: metadata.customerName || "Student",
+              courseTitle: metadata.courseTitle || "Course",
+              courseSlug: metadata.courseSlug,
+              amount: (session.amount_total || 0) / 100,
+              currency: session.currency || "usd",
+            });
+            console.log("✅ Enrollment confirmation email sent");
+          } catch (emailError) {
+            console.error("⚠️ Failed to send confirmation email:", emailError);
+            // Don't fail the webhook for email errors
+          }
 
         } catch (error) {
           console.error("❌ Failed to create course enrollment:", error);

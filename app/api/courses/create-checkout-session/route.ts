@@ -69,6 +69,7 @@ export async function POST(request: NextRequest) {
       metadata: {
         courseId,
         courseSlug,
+        courseTitle,
         customerEmail,
         customerName,
         userId, // Include userId in metadata for webhook

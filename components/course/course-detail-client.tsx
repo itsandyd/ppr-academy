@@ -147,17 +147,7 @@ export function CourseDetailClient({
 
   // Audio player functions
   const playAudio = (chapterId: string, audioUrl: string) => {
-    console.log(`🎵 ===== AUDIO PLAYBACK DEBUG =====`);
-    console.log(`🎵 Function called with:`);
-    console.log(`   - chapterId: ${chapterId}`);
-    console.log(`   - audioUrl: ${audioUrl}`);
-    console.log(`   - audioUrl type: ${typeof audioUrl}`);
-    console.log(`   - audioUrl length: ${audioUrl?.length}`);
-    console.log(`   - current URL: ${window.location.href}`);
-    console.log(`   - current pathname: ${window.location.pathname}`);
-    
     if (!audioUrl) {
-      console.error('❌ No audio URL provided');
       toast({
         title: "Audio Error",
         description: "No audio URL available",
@@ -273,8 +263,6 @@ export function CourseDetailClient({
       });
       setAudioPlaying(null);
     });
-    
-    console.log(`🎵 ===== END AUDIO PLAYBACK DEBUG =====`);
   };
 
   // Cleanup audio on unmount

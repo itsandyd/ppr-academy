@@ -74,31 +74,12 @@ export function CreatorDashboardContent() {
     convexUserId ? { userId: convexUserId } : "skip"
   );
 
-  // Debug logging
-  React.useEffect(() => {
-    console.log("🔍 Dashboard Debug Info:", {
-      clerkUserId: user?.id,
-      convexUser: convexUser,
-      convexUserId: convexUserId,
-      stores: stores?.length,
-      storeId,
-      allCourses: allCourses?.length,
-      userCourses: userCourses?.length,
-      digitalProducts: digitalProducts?.length,
-    });
-  }, [user, convexUser, convexUserId, stores, allCourses, userCourses, digitalProducts, storeId]);
-
   // Combine products for unified display
   const products = useMemo(() => {
     // Use userCourses if available, otherwise show all courses for testing
     const coursesToUse = userCourses || allCourses || [];
     const digitalProductsToUse = digitalProducts || [];
-    
-    console.log("🎯 Products Debug:", {
-      coursesToUse: coursesToUse.length,
-      digitalProductsToUse: digitalProductsToUse.length
-    });
-    
+
     const courseProducts = coursesToUse.map((course: any) => ({
       ...course,
       type: 'course' as const,

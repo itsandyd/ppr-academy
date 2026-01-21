@@ -107,17 +107,6 @@ export default function PluginsMarketplacePage() {
   const pluginCategories: PluginCategory[] = pluginCategoriesData ?? [];
   const specificCategories: SpecificCategory[] = specificCategoriesData ?? []; // Effect/Instrument/Studio Tool categories
   
-  // Debug: Log first plugin to see structure (can remove later)
-  if (plugins.length > 0 && typeof window !== 'undefined' && false) {
-    console.log('=== PLUGIN DEBUG ===');
-    console.log('Total plugins:', plugins.length);
-    console.log('Sample plugin:', plugins[0]);
-    console.log('categoryId:', plugins[0].categoryId);
-    console.log('categoryName:', plugins[0].categoryName);
-    console.log('Available categories:', pluginCategories);
-    console.log('Selected category:', selectedCategory);
-  }
-
   // Filter plugins
   const filteredPlugins = useMemo(() => {
     let filtered = plugins;
