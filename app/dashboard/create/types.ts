@@ -92,7 +92,8 @@ export type CreationFlow =
   | "project-files"
   | "playlist-curation"
   | "tip-jar"
-  | "community";
+  | "community"
+  | "cheat-sheet";
 
 // Map product categories to their creation flow
 export const CATEGORY_TO_FLOW: Record<ProductCategory, CreationFlow> = {
@@ -104,7 +105,7 @@ export const CATEGORY_TO_FLOW: Record<ProductCategory, CreationFlow> = {
   "project-files": "project-files",
   "mixing-template": "mixing-template",
   pdf: "digital", // Consolidated PDF category
-  "cheat-sheet": "digital", // Quick reference guides
+  "cheat-sheet": "cheat-sheet", // Standalone cheat sheet flow
   template: "digital", // Design templates & assets
   "blog-post": "digital",
   community: "community",
@@ -277,7 +278,7 @@ export const PRODUCT_CATEGORIES = [
     description: "Quick reference guides",
     category: "Digital Content",
     icon: "📋",
-    flow: "digital" as CreationFlow,
+    flow: "cheat-sheet" as CreationFlow,
   },
   {
     id: "template",
