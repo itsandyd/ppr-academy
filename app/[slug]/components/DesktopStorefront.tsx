@@ -29,7 +29,7 @@ import {
   Facebook,
 } from "lucide-react";
 import { LeadMagnetPreview } from "./LeadMagnetPreview";
-import { FollowGateModal } from "@/components/follow-gates/FollowGateModal";
+import { FollowGateModal, FollowGateProduct } from "@/components/follow-gates/FollowGateModal";
 import Link from "next/link";
 import Image from "next/image";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
@@ -142,7 +142,7 @@ export function DesktopStorefront({
 }: DesktopStorefrontProps) {
   const { toast } = useToast();
   const [showFollowGate, setShowFollowGate] = React.useState(false);
-  const [selectedProduct, setSelectedProduct] = React.useState<Product | null>(null);
+  const [selectedProduct, setSelectedProduct] = React.useState<FollowGateProduct | null>(null);
 
   return (
     <div>
@@ -208,10 +208,26 @@ export function DesktopStorefront({
                   p.isPublished &&
                   !p.url
               )
-              .map((leadMagnet) => (
-                <Dialog key={leadMagnet._id}>
-                  <DialogTrigger asChild>
-                    <Card className="group cursor-pointer border border-primary/20 bg-primary/5 p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl">
+              .map((leadMagnet) => {
+                // If follow gate is enabled, use FollowGateModal instead
+                if (leadMagnet.followGateEnabled) {
+                  return (
+                    <Card
+                      key={leadMagnet._id}
+                      className="group cursor-pointer border border-primary/20 bg-primary/5 p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl"
+                      onClick={() => {
+                        setSelectedProduct({
+                          _id: leadMagnet._id,
+                          title: leadMagnet.title,
+                          followGateEnabled: leadMagnet.followGateEnabled,
+                          followGateRequirements: leadMagnet.followGateRequirements,
+                          followGateSocialLinks: leadMagnet.followGateSocialLinks,
+                          followGateMessage: leadMagnet.followGateMessage,
+                          downloadUrl: leadMagnet.downloadUrl,
+                        });
+                        setShowFollowGate(true);
+                      }}
+                    >
                       {/* Image */}
                       <div className="mb-4 flex h-48 w-full items-center justify-center overflow-hidden rounded-lg bg-primary/10">
                         {leadMagnet.imageUrl ? (
@@ -230,7 +246,6 @@ export function DesktopStorefront({
                           </div>
                         )}
                       </div>
-
                       {/* Content */}
                       <div className="space-y-3">
                         <div className="flex items-center gap-2">
@@ -253,33 +268,83 @@ export function DesktopStorefront({
                         </div>
                       </div>
                     </Card>
-                  </DialogTrigger>
-                  <CustomDialogContent className="mx-auto max-h-[90vh] w-[95vw] max-w-md overflow-y-auto">
-                    <DialogHeader className="pb-4">
-                      <DialogTitle className="text-xl font-bold text-primary">
-                        {leadMagnet.title}
-                      </DialogTitle>
-                      <DialogDescription className="text-sm text-primary/80">
-                        Enter your details below to get instant access to your free resource
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="relative z-0 rounded-lg bg-background">
-                      <LeadMagnetPreview
-                        leadMagnet={{
-                          title: leadMagnet.title,
-                          subtitle: leadMagnet.description || "",
-                          imageUrl: leadMagnet.imageUrl,
-                          ctaText: leadMagnet.buttonLabel || "Get Free Resource",
-                          downloadUrl: leadMagnet.downloadUrl,
-                          productId: leadMagnet._id,
-                        }}
-                        storeData={{ store, user }}
-                        isFullScreen={false}
-                      />
-                    </div>
-                  </CustomDialogContent>
-                </Dialog>
-              ))}
+                  );
+                }
+
+                // Default behavior - use LeadMagnetPreview Dialog
+                return (
+                  <Dialog key={leadMagnet._id}>
+                    <DialogTrigger asChild>
+                      <Card className="group cursor-pointer border border-primary/20 bg-primary/5 p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl">
+                        {/* Image */}
+                        <div className="mb-4 flex h-48 w-full items-center justify-center overflow-hidden rounded-lg bg-primary/10">
+                          {leadMagnet.imageUrl ? (
+                            <Image
+                              src={leadMagnet.imageUrl}
+                              alt={leadMagnet.title}
+                              width={640}
+                              height={192}
+                              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                            />
+                          ) : (
+                            <div className="text-center">
+                              <Gift className="mx-auto mb-2 h-16 w-16 text-primary" />
+                              <span className="text-sm font-medium text-primary">Free Resource</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Content */}
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2">
+                            <Badge className="border-primary/20 bg-primary/10 text-xs font-semibold text-primary">
+                              FREE
+                            </Badge>
+                          </div>
+                          <h3 className="line-clamp-2 text-lg font-bold text-primary">
+                            {leadMagnet.title}
+                          </h3>
+                          <p className="line-clamp-3 text-sm leading-relaxed text-primary/80">
+                            {leadMagnet.description ||
+                              "Get instant access to this valuable free resource"}
+                          </p>
+                          <div className="flex items-center justify-between pt-2">
+                            <span className="text-xs font-medium text-primary">
+                              Click to get access
+                            </span>
+                            <ArrowRight className="h-4 w-4 text-primary transition-transform duration-200 group-hover:translate-x-1" />
+                          </div>
+                        </div>
+                      </Card>
+                    </DialogTrigger>
+                    <CustomDialogContent className="mx-auto max-h-[90vh] w-[95vw] max-w-md overflow-y-auto">
+                      <DialogHeader className="pb-4">
+                        <DialogTitle className="text-xl font-bold text-primary">
+                          {leadMagnet.title}
+                        </DialogTitle>
+                        <DialogDescription className="text-sm text-primary/80">
+                          Enter your details below to get instant access to your free resource
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="relative z-0 rounded-lg bg-background">
+                        <LeadMagnetPreview
+                          leadMagnet={{
+                            title: leadMagnet.title,
+                            subtitle: leadMagnet.description || "",
+                            imageUrl: leadMagnet.imageUrl,
+                            ctaText: leadMagnet.buttonLabel || "Get Free Resource",
+                            downloadUrl: leadMagnet.downloadUrl,
+                            productId: leadMagnet._id,
+                          }}
+                          storeData={{ store, user }}
+                          isFullScreen={false}
+                        />
+                      </div>
+                    </CustomDialogContent>
+                  </Dialog>
+                );
+              })}
 
             {/* Free Courses */}
             {products
@@ -539,7 +604,15 @@ export function DesktopStorefront({
                         key={product._id}
                         className="group cursor-pointer border-primary/20 bg-primary/5 p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl"
                         onClick={() => {
-                          setSelectedProduct(product);
+                          setSelectedProduct({
+                            _id: product._id,
+                            title: product.title,
+                            followGateEnabled: product.followGateEnabled,
+                            followGateRequirements: product.followGateRequirements,
+                            followGateSocialLinks: product.followGateSocialLinks,
+                            followGateMessage: product.followGateMessage,
+                            downloadUrl: product.downloadUrl,
+                          });
                           setShowFollowGate(true);
                         }}
                       >
@@ -905,12 +978,14 @@ export function DesktopStorefront({
         <FollowGateModal
           open={showFollowGate}
           onOpenChange={setShowFollowGate}
-          product={selectedProduct as any}
+          product={selectedProduct}
           onSuccess={(submissionId) => {
             console.log(`Follow gate completed for ${selectedProduct.title}`, submissionId);
             toast({
-              title: "🎉 Success!",
-              description: "Check your email for the download link!",
+              title: "Success!",
+              description: selectedProduct.downloadUrl
+                ? "Your download is ready!"
+                : "Check your email for the download link!",
               className: "bg-white dark:bg-black",
             });
           }}

@@ -10,6 +10,10 @@ import { internal } from "./_generated/api";
  * Allows creators to gate downloads behind email + social follows.
  */
 
+// Rate limiting constants
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+const MAX_SUBMISSIONS_PER_WINDOW = 5; // Max 5 submissions per email per hour
+
 // Submit a follow gate (user completes requirements)
 export const submitFollowGate = mutation({
   args: {
@@ -31,17 +35,32 @@ export const submitFollowGate = mutation({
     alreadySubmitted: v.boolean(),
   }),
   handler: async (ctx, args) => {
+    // Normalize email
+    const normalizedEmail = args.email.toLowerCase().trim();
+
     // Get product to find store and creator
     const product = await ctx.db.get(args.productId);
     if (!product) {
       throw new Error("Product not found");
     }
 
+    // Rate limiting: Check recent submissions from this email
+    const oneHourAgo = Date.now() - RATE_LIMIT_WINDOW_MS;
+    const recentSubmissions = await ctx.db
+      .query("followGateSubmissions")
+      .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
+      .filter((q) => q.gte(q.field("submittedAt"), oneHourAgo))
+      .collect();
+
+    if (recentSubmissions.length >= MAX_SUBMISSIONS_PER_WINDOW) {
+      throw new Error("Too many requests. Please try again later.");
+    }
+
     // Check if user already submitted for this product
     const existing = await ctx.db
       .query("followGateSubmissions")
       .withIndex("by_email_product", (q) =>
-        q.eq("email", args.email).eq("productId", args.productId)
+        q.eq("email", normalizedEmail).eq("productId", args.productId)
       )
       .first();
 
@@ -64,7 +83,7 @@ export const submitFollowGate = mutation({
       productId: args.productId,
       storeId: product.storeId,
       creatorId: product.userId,
-      email: args.email,
+      email: normalizedEmail,
       name: args.name,
       followedPlatforms: args.followedPlatforms,
       submittedAt: Date.now(),
@@ -76,7 +95,7 @@ export const submitFollowGate = mutation({
 
     await ctx.scheduler.runAfter(0, internal.emailContactSync.syncContactFromFollowGate, {
       storeId: product.storeId,
-      email: args.email,
+      email: normalizedEmail,
       name: args.name,
       productId: args.productId,
     });
