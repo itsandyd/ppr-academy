@@ -709,7 +709,7 @@ export class OrchestratorAgent implements Agent {
 
     try {
       // Phase 1: Run Research and Image agents in parallel (independent operations)
-      console.log(`\n🚀 Phase 1: Parallel Research & Image Search`);
+      // console.log(...);
       const phase1Start = Date.now();
       
       const [researchResult, imageResult] = await Promise.all([
@@ -734,7 +734,7 @@ export class OrchestratorAgent implements Agent {
       );
 
       // Phase 2: Structure generation (depends on research)
-      console.log(`\n🏗️ Phase 2: Course Structure Generation`);
+      // console.log(...);
       const structureStart = Date.now();
       
       const structureResult = await this.agents[1].execute(currentContext); // Structure Agent
@@ -757,7 +757,7 @@ export class OrchestratorAgent implements Agent {
       console.log(`✅ Phase 2 completed in ${structureTime}ms`);
 
       // Phase 3: Parallel Content Generation & Quality Assessment
-      console.log(`\n⚡ Phase 3: Parallel Content Generation & Quality Assessment`);
+      // console.log(...);
       const phase3Start = Date.now();
       
       const [contentResult, qualityResult] = await Promise.all([

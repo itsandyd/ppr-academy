@@ -26,8 +26,6 @@ export async function generateLessonIllustrations({
   courseId?: string;
   lessonTitle?: string;
 }) {
-  console.log(`📸 Generating illustrations for lesson: ${lessonTitle || lessonId}`);
-
   try {
     const result = await convexClient.action(
       api.scriptIllustrations.generateScriptIllustrations,
@@ -71,8 +69,6 @@ export async function generateCourseIllustrations({
     content: string;
   }>;
 }) {
-  console.log(`📚 Generating illustrations for ${lessons.length} lessons in course ${courseId}`);
-
   const results = [];
 
   for (const lesson of lessons) {

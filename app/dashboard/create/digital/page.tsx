@@ -256,8 +256,6 @@ export default function DigitalProductCreator() {
           isPublished: true,
         };
 
-        console.log('Updating product:', updateData);
-        
         await updateProduct(updateData);
         
         toast({
@@ -296,8 +294,6 @@ export default function DigitalProductCreator() {
           };
         }
 
-        console.log('Creating product:', productData);
-        
         await createProduct(productData);
         
         toast({

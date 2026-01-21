@@ -97,9 +97,9 @@ export default function CreateCourseForm({
 
   // Load initial data from props
   useEffect(() => {
-    console.log("🔥 CreateCourseForm useEffect triggered - initialData:", initialData);
+    // console.log(...);
     if (initialData) {
-      console.log("📥 CreateCourseForm loading initial data:", initialData);
+      // console.log(...);
       
       if (initialData.title !== undefined) setTitle(initialData.title);
       if (initialData.description !== undefined) setDescription(initialData.description);
@@ -108,9 +108,9 @@ export default function CreateCourseForm({
       if (initialData.thumbnail !== undefined) setThumbnail(initialData.thumbnail);
       if (initialData.price !== undefined) setPrice(initialData.price);
       if (initialData.modules !== undefined) {
-        console.log("🔥 Loading modules from initialData:", initialData.modules);
+        // console.log(...);
         setModules(initialData.modules);
-        console.log("🔥 Modules state updated to:", initialData.modules);
+        // console.log(...);
         
         // Auto-expand modules that should be expanded
         if (initialData.modules.length > 0) {
@@ -139,8 +139,8 @@ export default function CreateCourseForm({
   const notifyDataChange = () => {
     if (onDataChange) {
       const currentData = getCurrentFormData();
-      console.log("🔄 CreateCourseForm notifying data change:", currentData);
-      console.log("🔥 Current modules in notifyDataChange:", currentData.modules);
+      // console.log(...);
+      // console.log(...);
       onDataChange(currentData);
     }
   };
@@ -176,8 +176,8 @@ export default function CreateCourseForm({
   ];
 
   const addModule = () => {
-    console.log("🔥 BEFORE addModule - current modules:", modules);
-    console.log("🔥 BEFORE addModule - current expandedModules:", expandedModules);
+    // console.log(...);
+    // console.log(...);
     const newModule: Module = {
       title: "",
       description: "",
@@ -186,8 +186,8 @@ export default function CreateCourseForm({
     };
     const newModules = [...modules, newModule];
     const newModuleIndex = modules.length;
-    console.log("🔥 AFTER addModule - new modules:", newModules);
-    console.log("🔥 Setting module", newModuleIndex, "as expanded");
+    // console.log(...);
+    // console.log(...);
     setModules(newModules);
     
     // Auto-expand the newly added module
@@ -196,12 +196,12 @@ export default function CreateCourseForm({
         ...prev,
         [newModuleIndex]: true
       };
-      console.log("🔥 New expandedModules state:", newExpanded);
+      // console.log(...);
       return newExpanded;
     });
     
     // Fix timing issue - use the newModules array directly instead of stale state
-    console.log("🔥 Calling notifyDataChange with new modules:", newModules);
+    // console.log(...);
     if (onDataChange) {
       const currentData = {
         title,
@@ -212,17 +212,15 @@ export default function CreateCourseForm({
         price,
         modules: newModules  // Use the fresh array instead of stale state
       };
-      console.log("🔄 CreateCourseForm notifying data change (direct):", currentData);
+      // console.log(...);
       onDataChange(currentData);
     }
   };
 
   const updateModule = (index: number, field: keyof Module, value: any) => {
-    console.log("🔥 updateModule called:", { index, field, value });
-    console.log("🔥 Current modules before update:", modules);
     const updatedModules = [...modules];
     updatedModules[index] = { ...updatedModules[index], [field]: value };
-    console.log("🔥 Updated modules array:", updatedModules);
+    // console.log(...);
     setModules(updatedModules);
     
     // Use direct onDataChange call with the updated data instead of notifyDataChange
@@ -236,7 +234,7 @@ export default function CreateCourseForm({
         price,
         modules: updatedModules  // Use the updated array directly
       };
-      console.log("🔥 updateModule calling onDataChange with:", currentData);
+      // console.log(...);
       onDataChange(currentData);
     }
   };
@@ -248,7 +246,7 @@ export default function CreateCourseForm({
   };
 
   const addLesson = (moduleIndex: number) => {
-    console.log("🔥 Adding lesson to module", moduleIndex);
+    // console.log(...);
     const newLesson: Lesson = {
       title: "",
       description: "",
@@ -279,13 +277,12 @@ export default function CreateCourseForm({
         price,
         modules: updatedModules
       };
-      console.log("🔥 addLesson calling onDataChange with:", currentData);
+      // console.log(...);
       onDataChange(currentData);
     }
   };
 
   const updateLesson = (moduleIndex: number, lessonIndex: number, field: keyof Lesson, value: any) => {
-    console.log("🔥 updateLesson called:", { moduleIndex, lessonIndex, field, value });
     const updatedModules = [...modules];
     updatedModules[moduleIndex].lessons[lessonIndex] = {
       ...updatedModules[moduleIndex].lessons[lessonIndex],
@@ -304,13 +301,12 @@ export default function CreateCourseForm({
         price,
         modules: updatedModules
       };
-      console.log("🔥 updateLesson calling onDataChange with:", currentData);
+      // console.log(...);
       onDataChange(currentData);
     }
   };
 
   const deleteLesson = (moduleIndex: number, lessonIndex: number) => {
-    console.log("🔥 Deleting lesson:", { moduleIndex, lessonIndex });
     const updatedModules = [...modules];
     updatedModules[moduleIndex].lessons = updatedModules[moduleIndex].lessons.filter((_, i) => i !== lessonIndex);
     setModules(updatedModules);
@@ -326,13 +322,13 @@ export default function CreateCourseForm({
         price,
         modules: updatedModules
       };
-      console.log("🔥 deleteLesson calling onDataChange with:", currentData);
+      // console.log(...);
       onDataChange(currentData);
     }
   };
 
   const addChapter = (moduleIndex: number, lessonIndex: number) => {
-    console.log("🔥 Adding chapter to module", moduleIndex, "lesson", lessonIndex);
+    // console.log(...);
     const newChapter: Chapter = {
       title: "",
       content: "",
@@ -356,13 +352,12 @@ export default function CreateCourseForm({
         price,
         modules: updatedModules
       };
-      console.log("🔥 addChapter calling onDataChange with:", currentData);
+      // console.log(...);
       onDataChange(currentData);
     }
   };
 
   const updateChapter = (moduleIndex: number, lessonIndex: number, chapterIndex: number, field: keyof Chapter, value: any) => {
-    console.log("🔥 updateChapter called:", { moduleIndex, lessonIndex, chapterIndex, field, value });
     const updatedModules = [...modules];
     updatedModules[moduleIndex].lessons[lessonIndex].chapters[chapterIndex] = {
       ...updatedModules[moduleIndex].lessons[lessonIndex].chapters[chapterIndex],
@@ -381,13 +376,12 @@ export default function CreateCourseForm({
         price,
         modules: updatedModules
       };
-      console.log("🔥 updateChapter calling onDataChange with:", currentData);
+      // console.log(...);
       onDataChange(currentData);
     }
   };
 
   const deleteChapter = (moduleIndex: number, lessonIndex: number, chapterIndex: number) => {
-    console.log("🔥 Deleting chapter:", { moduleIndex, lessonIndex, chapterIndex });
     const updatedModules = [...modules];
     updatedModules[moduleIndex].lessons[lessonIndex].chapters = 
       updatedModules[moduleIndex].lessons[lessonIndex].chapters.filter((_, i) => i !== chapterIndex);
@@ -404,7 +398,7 @@ export default function CreateCourseForm({
         price,
         modules: updatedModules
       };
-      console.log("🔥 deleteChapter calling onDataChange with:", currentData);
+      // console.log(...);
       onDataChange(currentData);
     }
   };
@@ -459,21 +453,6 @@ export default function CreateCourseForm({
     }
 
     try {
-      console.log("🚀 Creating course with data:", {
-        userId: user.id,
-        storeId: storeId,
-        data: {
-          title,
-          description,
-          price,
-          category,
-          skillLevel,
-          thumbnail,
-          modules,
-          checkoutHeadline: `Learn ${title}`,
-        }
-      });
-
       const result = await createCourseWithData({
         userId: user.id, // Clerk user ID
         storeId: storeId, // Use actual store ID from URL
@@ -489,7 +468,7 @@ export default function CreateCourseForm({
         }
       });
       
-      console.log("✅ Course creation result:", result);
+      // console.log(...);
       
       setIsSubmitting(false);
 
@@ -639,7 +618,7 @@ export default function CreateCourseForm({
                     <Button 
                       type="button" 
                       onClick={() => {
-                        console.log("🔥 Add Module button clicked!");
+                        // console.log(...);
                         addModule();
                       }} 
                       variant="outline"
@@ -652,7 +631,7 @@ export default function CreateCourseForm({
                 </CardHeader>
                 <CardContent>
                   {(() => {
-                    console.log("🔥 Modules render check - modules.length:", modules.length, "modules:", modules);
+                    // console.log(...);
                     return modules.length === 0 ? (
                       <div className="text-center py-8 text-muted-foreground">
                         <p>No modules yet. Add your first module to get started.</p>
@@ -660,7 +639,6 @@ export default function CreateCourseForm({
                     ) : (
                       <div className="space-y-4">
                         {modules.map((module, moduleIndex) => {
-                          console.log("🔥 Rendering module:", { moduleIndex, module, isExpanded: expandedModules[moduleIndex] });
                           return (
                           <div key={moduleIndex} className="border border-border rounded-lg shadow-sm">
                             {/* Module Header */}
@@ -692,19 +670,13 @@ export default function CreateCourseForm({
                               <div className="mt-3 space-y-3">
                                 <Input
                                   value={module.title}
-                                  onChange={(e) => {
-                                    console.log("🔥 Input onChange triggered:", { moduleIndex, field: "title", value: e.target.value });
-                                    updateModule(moduleIndex, "title", e.target.value);
-                                  }}
+                                  onChange={(e) => updateModule(moduleIndex, "title", e.target.value)}
                                   placeholder="Module title"
                                   className="min-h-[44px]"
                                 />
                                 <Textarea
                                   value={module.description}
-                                  onChange={(e) => {
-                                    console.log("🔥 Textarea onChange triggered:", { moduleIndex, field: "description", value: e.target.value });
-                                    updateModule(moduleIndex, "description", e.target.value);
-                                  }}
+                                  onChange={(e) => updateModule(moduleIndex, "description", e.target.value)}
                                   placeholder="Module description"
                                   rows={2}
                                   className="min-h-[44px]"

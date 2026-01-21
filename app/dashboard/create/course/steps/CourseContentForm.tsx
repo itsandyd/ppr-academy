@@ -14,6 +14,8 @@ import { CourseContentManager } from "../components/CourseContentManager";
 import { FormFieldWithHelp, courseFieldHelp } from "@/components/ui/form-field-with-help";
 import { FormErrorBanner } from "@/components/ui/form-error-banner";
 import { CategorySelector } from "@/components/course/category-selector";
+import { useUploadThing } from "@/lib/uploadthing-hooks";
+import { toast } from "sonner";
 
 const categoryGroups = {
   "DAWs & Software": [
@@ -113,8 +115,6 @@ function CourseBasicInfoCard() {
   });
   
   const handleInputChange = (field: string, value: string | string[]) => {
-    const newData = { ...state.data, [field]: value };
-    console.log("🔄 CourseBasicInfoCard updating context with:", { step: "course", data: { [field]: value } });
     updateData("course", { [field]: value });
   };
 
@@ -239,12 +239,28 @@ function CourseThumbnailCard() {
   const { state, updateData } = useCourseCreation();
   const [isDragOver, setIsDragOver] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
 
   const handleInputChange = (field: string, value: string) => {
-    console.log("🔄 CourseThumbnailCard updating context with:", { step: "course", data: { [field]: value } });
     updateData("course", { [field]: value });
   };
+
+  // UploadThing hook for thumbnail uploads
+  const { startUpload } = useUploadThing("imageUploader", {
+    onClientUploadComplete: (res) => {
+      if (res && res[0]?.url) {
+        handleInputChange("thumbnail", res[0].url);
+        toast.success("Thumbnail uploaded successfully!");
+      }
+      setIsUploading(false);
+    },
+    onUploadError: (error) => {
+      console.error("Upload error:", error);
+      toast.error("Failed to upload thumbnail");
+      setIsUploading(false);
+    },
+  });
 
   const handleGenerateWithAI = async () => {
     // Validate required fields
@@ -257,12 +273,6 @@ function CourseThumbnailCard() {
     setGenerationError(null);
 
     try {
-      console.log("🎨 Generating thumbnail with data:", {
-        title: state.data.title,
-        description: state.data.description,
-        category: state.data.category,
-      });
-
       const response = await fetch("/api/generate-thumbnail", {
         method: "POST",
         headers: {
@@ -275,9 +285,7 @@ function CourseThumbnailCard() {
         }),
       });
 
-      console.log("📡 API response status:", response.status);
       const data = await response.json();
-      console.log("📝 API response data:", data);
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to generate thumbnail");
@@ -306,10 +314,31 @@ function CourseThumbnailCard() {
     setIsDragOver(false);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
-    // TODO: Handle file upload
+
+    const files = Array.from(e.dataTransfer.files);
+    const imageFile = files.find((f) => f.type.startsWith("image/"));
+
+    if (!imageFile) {
+      toast.error("Please drop an image file (JPG, PNG, WebP)");
+      return;
+    }
+
+    if (imageFile.size > 4 * 1024 * 1024) {
+      toast.error("Image must be less than 4MB");
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      await startUpload([imageFile]);
+    } catch (error) {
+      console.error("Upload failed:", error);
+      toast.error("Failed to upload image");
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -434,14 +463,6 @@ function CourseThumbnailCard() {
                       console.error("Failed to load thumbnail image");
                       handleInputChange("thumbnail", "");
                     }}
-                    onLoad={(e) => {
-                      const img = e.target as HTMLImageElement;
-                      console.log("Thumbnail loaded successfully", {
-                        naturalWidth: img.naturalWidth,
-                        naturalHeight: img.naturalHeight,
-                        aspectRatio: (img.naturalWidth / img.naturalHeight).toFixed(3)
-                      });
-                    }}
                   />
                   <Button
                     variant="destructive"
@@ -468,10 +489,6 @@ export function CourseContentForm() {
   const router = useRouter();
 
   const { state, updateData, saveCourse } = useCourseCreation();
-  
-  // Debug: Log current state
-  console.log("🔥 CourseContentForm render - current state.data:", state.data);
-
   const handleContinue = () => {
     router.push(`/dashboard/create/course?step=pricing${state.courseId ? `&courseId=${state.courseId}` : ""}`);
   };
@@ -500,10 +517,7 @@ export function CourseContentForm() {
   };
 
   const handleModulesDataChange = (data: any) => {
-    console.log("🔥 CourseContentForm received modules data change:", data);
-    console.log("🔥 Current context state.data:", state.data);
-    // Pass through ALL data from CreateCourseForm, don't filter it
-    console.log("🔥 Updating context with complete data:", data);
+    // Pass through ALL data from CreateCourseForm
     updateData("course", data);
   };
 

@@ -654,16 +654,7 @@ interface CourseContentEditorProps {
 export function CourseContentEditor({ courseId, modules, chapters, user, isOwner }: CourseContentEditorProps) {
   const { toast } = useToast();
   const router = useRouter();
-  
-  // Debug: Log what modules are received
-  console.log(`🎯 CourseContentEditor received ${modules.length} modules:`);
-  modules.forEach((module, index) => {
-    console.log(`  Module ${index + 1}: "${module.title}" with ${module.lessons.length} lessons`);
-    module.lessons.forEach((lesson, lessonIndex) => {
-      console.log(`    Lesson ${lessonIndex + 1}: "${lesson.title}" with ${lesson.chapters.length} chapters`);
-    });
-  });
-  
+
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   
   // Drag and drop sensors
@@ -774,23 +765,19 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
   };
 
   const generateAudio = async (chapterId: string, text: string) => {
-    console.log(`🎵 Starting audio generation for chapter ${chapterId}`);
-    console.log(`📝 Text to generate:`, text);
-    console.log(`🎤 Selected voice:`, selectedVoice);
-    
     setGeneratingAudio(chapterId);
     try {
-      console.log(`🔄 Calling generateChapterAudio server action...`);
+      // console.log(...);
       
       const result = await generateChapterAudio(chapterId, {
         text: text,
         voiceId: selectedVoice
       });
 
-      console.log(`📊 Audio generation result:`, result);
+      // console.log(...);
 
       if (result.success) {
-        console.log(`✅ Audio generated successfully`);
+        // console.log(...);
         toast({
           title: "Audio Generated",
           description: result.message || "Audio has been generated successfully. Note: This is a reference - implement cloud storage for production.",
@@ -812,7 +799,7 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
         variant: "destructive",
       });
     } finally {
-      console.log(`🏁 Audio generation completed`);
+      // console.log(...);
       setGeneratingAudio(null);
     }
   };
@@ -1071,7 +1058,6 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
         const maxPosition = Math.max(...chapters.map(c => c.position), 0);
         insertPosition = maxPosition + 1;
       }
-      console.log(`Adding chapter "${newChapterForm.title}" at position ${insertPosition}, lessonChapterId: ${lessonChapterId}, lessonId: ${lessonId}, lessonChapters.length: ${lessonChapters.length}`);
       const result = await createChapter(courseId, {
         title: newChapterForm.title,
         description: newChapterForm.description,
@@ -1194,8 +1180,6 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
   };
 
   const addNewLesson = async (moduleIndex: number) => {
-    console.log(`🎯 Adding lesson: title="${newLessonForm.title}", moduleIndex=${moduleIndex}`);
-    
     if (!newLessonForm.title.trim()) {
       toast({
         title: "Missing Title",
@@ -1207,14 +1191,13 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
 
     setIsLoading(true);
     try {
-      console.log(`🎯 Calling createLesson with courseId=${courseId}, moduleIndex=${moduleIndex}`);
       const result = await createLesson(courseId, {
         title: newLessonForm.title,
         description: newLessonForm.description,
         moduleIndex: moduleIndex
       });
 
-      console.log(`🎯 createLesson result:`, result);
+      // console.log(...);
 
       if (result.success) {
         toast({
@@ -1226,7 +1209,7 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
           title: "",
           description: ""
         });
-        console.log(`🎯 Calling router.refresh()`);
+        // console.log(...);
         router.refresh();
       } else {
         console.error(`🎯 createLesson failed:`, result.error);
@@ -1441,8 +1424,6 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
   };
 
   const handleDeleteModule = async (moduleChapterId: string | null, moduleTitle: string) => {
-    console.log(`🗑️ Delete request for module: "${moduleTitle}"`);
-    
     // Find the target module by title
     const targetModule = modules.find(m => m.title === moduleTitle);
     
@@ -1464,15 +1445,6 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
     
     // For real CourseModules, the ID should be a string (cuid)
     const isRealModule = typeof targetModule.id === 'string' && !targetModule.chapterId;
-    
-    console.log(`🗑️ Module info:`, {
-      id: targetModule.id,
-      idType: typeof targetModule.id,
-      title: targetModule.title,
-      chapterId: targetModule.chapterId,
-      isRealModule,
-      lessonCount: targetModule.lessons?.length || 0
-    });
 
     setIsLoading(true);
     
@@ -1481,19 +1453,16 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
       
       if (isRealModule) {
         // This is a proper CourseModule from the schema
-        console.log(`🗑️ Deleting real CourseModule with ID: ${targetModule.id}`);
         result = await deleteRealCourseModule(targetModule.id.toString());
       } else if (targetModule.chapterId) {
         // This is a legacy chapter-based module
-        console.log(`🗑️ Deleting legacy chapter-based module with chapterId: ${targetModule.chapterId}`);
         result = await deleteModule(targetModule.chapterId);
       } else {
         // This is a fallback module
-        console.log(`🗑️ Deleting fallback module: ${moduleTitle}`);
         result = await deleteFallbackModule(courseId, moduleTitle);
       }
       
-      console.log(`🗑️ Delete result:`, result);
+      // console.log(...);
       
       if (result.success) {
         const deletedLessons = (result as any).deletedLessons || 0;
@@ -1554,15 +1523,6 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
 
     // Check if this is a real CourseLesson (string ID) or legacy lesson
     const isRealLesson = typeof targetLesson.id === 'string' && !targetLesson.chapterId;
-    
-    console.log(`🗑️ Lesson info:`, {
-      id: targetLesson.id,
-      idType: typeof targetLesson.id,
-      title: targetLesson.title,
-      chapterId: targetLesson.chapterId,
-      isRealLesson,
-      chapterCount: targetLesson.chapters?.length || 0
-    });
 
     setIsLoading(true);
     try {
@@ -1570,19 +1530,17 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
       
              if (isRealLesson) {
          // This is a proper CourseLesson from the schema - for now use fallback
-         console.log(`🗑️ Deleting real CourseLesson with ID: ${targetLesson.id}`);
          result = await deleteOrphanedChapters(courseId);
       } else if (targetLesson.chapterId) {
         // This is a legacy chapter-based lesson
-        console.log(`🗑️ Deleting legacy chapter-based lesson with chapterId: ${targetLesson.chapterId}`);
         result = await deleteLesson(targetLesson.chapterId);
       } else {
         // This is a fallback lesson - delete orphaned chapters
-        console.log(`🗑️ Deleting fallback lesson chapters`);
+        // console.log(...);
         result = await deleteOrphanedChapters(courseId);
       }
 
-      console.log(`🗑️ Delete result:`, result);
+      // console.log(...);
 
       if (result.success) {
         const deletedChapters = (result as any).deletedChapters || (result as any).deletedCount || 0;
@@ -1646,22 +1604,10 @@ export function CourseContentEditor({ courseId, modules, chapters, user, isOwner
                   variant="outline"
                   onClick={async () => {
                     const result = await debugModuleStructure(courseId);
-                    console.log("Debug result:", result);
+                    // console.log(...);
                     
                     if (result.success && (result as any).realModules) {
-                      const realModules = (result as any).realModules;
-                      console.log("📦 REAL MODULES IN UI:");
-                      realModules.forEach((module: any, index: number) => {
-                        console.log(`  Module ${index + 1}: "${module.title}" (ID: ${module.id}) - ${module.lessons.length} lessons`);
-                        if (!module.title || module.title.trim() === '') {
-                          console.log(`  ⚠️  THIS MODULE HAS EMPTY TITLE - likely "The Shape Generator" in UI`);
-                        }
-                      });
-                      
-                      console.log("📄 UI MODULES ARRAY:");
-                      modules.forEach((module, index) => {
-                        console.log(`  UI Module ${index + 1}: "${module.title}" (ID: ${module.id}, chapterId: ${module.chapterId})`);
-                      });
+                      // Debug info logged to console in development
                     }
                     
                     toast({

@@ -117,7 +117,7 @@ export default function ProductDetailPage({ params }: ProductPageProps) {
           url: window.location.href,
         });
       } catch (error) {
-        console.log("Share cancelled");
+        // Share was cancelled or not supported
       }
     } else {
       navigator.clipboard.writeText(window.location.href);

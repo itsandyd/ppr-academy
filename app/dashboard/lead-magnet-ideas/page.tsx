@@ -692,7 +692,6 @@ export default function LeadMagnetIdeasPage() {
           },
         });
         setLoadedAnalysisId(analysisId);
-        console.log('✅ Analysis auto-saved:', analysisId);
       } catch (saveError) {
         console.error('Failed to auto-save analysis:', saveError);
         // Don't fail the whole operation if save fails
@@ -856,7 +855,7 @@ export default function LeadMagnetIdeasPage() {
             }
           }
         } catch (e) {
-          console.log("No saved illustrations to load:", e);
+          // No saved illustrations to load
         }
         
         setGeneratedImages(imageMap);

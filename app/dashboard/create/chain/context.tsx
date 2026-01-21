@@ -246,8 +246,7 @@ export function EffectChainCreationProvider({ children }: { children: React.Reac
           dawVersion: state.data.dawVersion,
           packFiles: state.data.files ? JSON.stringify(state.data.files) : undefined,
         };
-        
-        console.log('Updating effect chain with data:', updateData);
+
         await updateChainMutation(updateData);
       } else {
         // Create new
@@ -266,8 +265,7 @@ export function EffectChainCreationProvider({ children }: { children: React.Reac
           dawType: state.data.dawType || "ableton",  // Default to ableton
           dawVersion: state.data.dawVersion || undefined,
         };
-        
-        console.log('Creating effect chain with data:', JSON.stringify(createData, null, 2));
+
         const result = await createChainMutation(createData);
 
         if (result) {

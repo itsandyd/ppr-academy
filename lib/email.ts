@@ -148,7 +148,7 @@ const getAdminNotificationTemplate = (data: AdminNotificationData) => `
 export async function sendLeadMagnetEmail(data: LeadMagnetEmailData) {
   if (!process.env.RESEND_API_KEY) {
     console.warn('⚠️ RESEND_API_KEY not configured. Email simulation mode.');
-    console.log('📧 Would send lead magnet email to:', data.customerEmail);
+    // console.log(...);
     return { success: true, simulation: true };
   }
 
@@ -162,7 +162,7 @@ export async function sendLeadMagnetEmail(data: LeadMagnetEmailData) {
       html: getLeadMagnetEmailTemplate(data),
     });
 
-    console.log('✅ Lead magnet email sent successfully:', result.data?.id);
+    // console.log(...);
     return { success: true, messageId: result.data?.id };
   } catch (error) {
     console.error('❌ Failed to send lead magnet email:', error);
@@ -173,7 +173,7 @@ export async function sendLeadMagnetEmail(data: LeadMagnetEmailData) {
 export async function sendAdminNotification(data: AdminNotificationData) {
   if (!process.env.RESEND_API_KEY) {
     console.warn('⚠️ RESEND_API_KEY not configured. Email simulation mode.');
-    console.log('📧 Would send admin notification for new lead:', data.customerName);
+    // console.log(...);
     return { success: true, simulation: true };
   }
 
@@ -187,7 +187,7 @@ export async function sendAdminNotification(data: AdminNotificationData) {
       html: getAdminNotificationTemplate(data),
     });
 
-    console.log('✅ Admin notification sent successfully:', result.data?.id);
+    // console.log(...);
     return { success: true, messageId: result.data?.id };
   } catch (error) {
     console.error('❌ Failed to send admin notification:', error);
@@ -305,7 +305,7 @@ const getPaymentFailureEmailTemplate = (data: PaymentFailureEmailData) => `
 export async function sendPaymentFailureEmail(data: PaymentFailureEmailData) {
   if (!process.env.RESEND_API_KEY) {
     console.warn('⚠️ RESEND_API_KEY not configured. Email simulation mode.');
-    console.log('📧 Would send payment failure email to:', data.customerEmail);
+    // console.log(...);
     return { success: true, simulation: true };
   }
 
@@ -319,7 +319,7 @@ export async function sendPaymentFailureEmail(data: PaymentFailureEmailData) {
       html: getPaymentFailureEmailTemplate(data),
     });
 
-    console.log('✅ Payment failure email sent successfully:', result.data?.id);
+    // console.log(...);
     return { success: true, messageId: result.data?.id };
   } catch (error) {
     console.error('❌ Failed to send payment failure email:', error);
@@ -414,7 +414,7 @@ const getCourseEnrollmentEmailTemplate = (data: CourseEnrollmentEmailData) => `
 export async function sendCourseEnrollmentEmail(data: CourseEnrollmentEmailData) {
   if (!process.env.RESEND_API_KEY) {
     console.warn('⚠️ RESEND_API_KEY not configured. Email simulation mode.');
-    console.log('📧 Would send course enrollment email to:', data.customerEmail);
+    // console.log(...);
     return { success: true, simulation: true };
   }
 
@@ -428,7 +428,7 @@ export async function sendCourseEnrollmentEmail(data: CourseEnrollmentEmailData)
       html: getCourseEnrollmentEmailTemplate(data),
     });
 
-    console.log('✅ Course enrollment email sent successfully:', result.data?.id);
+    // console.log(...);
     return { success: true, messageId: result.data?.id };
   } catch (error) {
     console.error('❌ Failed to send course enrollment email:', error);

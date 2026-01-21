@@ -151,8 +151,6 @@ export function PackCreationProvider({ children }: { children: React.ReactNode }
   // Load existing pack data if editing
   useEffect(() => {
     if (existingPack && existingPack._id === packId) {
-      console.log("Loading existing pack data:", existingPack);
-      
       const newData: PackData = {
         title: existingPack.title || "",
         description: existingPack.description || "",
@@ -179,8 +177,6 @@ export function PackCreationProvider({ children }: { children: React.ReactNode }
         targetPluginVersion: existingPack.targetPluginVersion,
       };
 
-      console.log("Loaded pack data:", newData);
-      
       // Calculate step completion based on loaded data
       const stepCompletion = {
         basics: validateStepWithData("basics", newData),

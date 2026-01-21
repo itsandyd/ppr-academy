@@ -57,17 +57,6 @@ export const DashboardPreferenceSwitcher: FC = () => {
   // (regardless of enrollment status)
   const shouldShowBecomeCreatorButton = convexUser && !hasStore;
 
-  // Debug logging
-  console.log('Dashboard Switcher Debug:', {
-    hasStore,
-    hasEnrollments,
-    isHybrid,
-    shouldShowBecomeCreatorButton,
-    enrolledCourses: enrolledCourses?.length,
-    userStore: !!userStore,
-    convexUser: !!convexUser
-  });
-
   // Load saved preference on mount
   useEffect(() => {
     const savedPreference = localStorage.getItem('dashboard-preference');

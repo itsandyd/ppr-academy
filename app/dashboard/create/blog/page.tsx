@@ -125,8 +125,6 @@ export default function BlogEditorPage() {
     setImageError(null);
 
     try {
-      console.log("🎨 Generating cover image with:", { title, excerpt });
-
       const response = await fetch("/api/generate-thumbnail", {
         method: "POST",
         headers: {

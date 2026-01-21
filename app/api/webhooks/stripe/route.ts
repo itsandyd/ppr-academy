@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
-  console.log("✅ Stripe webhook received:", event.type, event.id);
+  // console.log(...);
 
   try {
     switch (event.type) {
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
               onboardingComplete: account.details_submitted,
             });
           } else {
-            console.log("⚠️ No user found with Stripe account ID:", account.id);
+            // console.log(...);
           }
         } catch (error) {
           console.error("❌ Failed to update user Stripe status:", error);
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
       case "account.application.authorized":
         // When a user completes Connect onboarding
         const application = event.data.object as any;
-        console.log("🎉 Account application authorized:", application.account);
+        // console.log(...);
         break;
 
       case "payment_intent.succeeded":
@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
               trialEndsAt: subscription.trial_end ? subscription.trial_end * 1000 : undefined,
             });
 
-            console.log("✅ Creator plan subscription created successfully");
+            // console.log(...);
           }
           // Handle membership subscriptions
           else if (productType === "membership" && userId) {
@@ -172,7 +172,7 @@ export async function POST(request: NextRequest) {
                 }
               );
 
-              console.log("✅ Membership subscription created successfully");
+              // console.log(...);
             } catch (error) {
               console.error("❌ Failed to create membership subscription:", error);
             }
@@ -196,7 +196,7 @@ export async function POST(request: NextRequest) {
               stripeSubscriptionId: session.subscription as string,
             });
 
-            console.log("✅ Content subscription created successfully");
+            // console.log(...);
           }
         }
 
@@ -589,14 +589,14 @@ export async function POST(request: NextRequest) {
               | "canceled"
               | "incomplete",
           });
-          console.log("✅ Creator plan subscription status updated");
+          // console.log(...);
         } else {
           // Handle content subscriptions (existing)
           await fetchMutationUpdate(apiUpdate.subscriptions.updateSubscriptionStatus, {
             stripeSubscriptionId: updatedSubscription.id,
             status: updatedSubscription.status as "active" | "canceled" | "past_due" | "expired",
           });
-          console.log("✅ Content subscription status updated in Convex");
+          // console.log(...);
         }
         break;
 
@@ -618,14 +618,14 @@ export async function POST(request: NextRequest) {
             subscriptionStatus: "canceled",
             downgradeToPlan: "free",
           });
-          console.log("✅ Creator plan subscription canceled, downgraded to free");
+          // console.log(...);
         } else {
           // Handle content subscriptions (existing)
           await fetchMutationDelete(apiDelete.subscriptions.updateSubscriptionStatus, {
             stripeSubscriptionId: deletedSubscription.id,
             status: "canceled",
           });
-          console.log("✅ Content subscription marked as canceled in Convex");
+          // console.log(...);
         }
         break;
 
@@ -680,7 +680,7 @@ export async function POST(request: NextRequest) {
               currency: failedPayment.currency || "usd",
               failureReason: failedPayment.last_payment_error?.message || "Payment declined",
             });
-            console.log("📧 Payment failure email sent to:", customerEmail);
+            // console.log(...);
           }
         } catch (error) {
           console.error("❌ Failed to send payment failure notification:", error);
@@ -703,9 +703,9 @@ export async function POST(request: NextRequest) {
         if ((event.type as string) === "transfer.paid") {
           // When transfer is completed
           const paidTransfer = event.data.object as Stripe.Transfer;
-          console.log("✅ Transfer completed:", paidTransfer.id);
+          // console.log(...);
         } else {
-          console.log("ℹ️ Unhandled event type:", event.type);
+          // console.log(...);
         }
     }
 

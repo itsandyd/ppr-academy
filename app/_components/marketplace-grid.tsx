@@ -111,9 +111,6 @@ export const MarketplaceGrid: FC<MarketplaceGridProps> = ({
     setIsSubmitting(true);
     try {
       // TODO: Submit to Convex to store lead/contact
-      // await mutation to save email and name
-      console.log("Capturing lead:", { email, name, productId: selectedProduct._id });
-
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 500));
 
@@ -334,9 +331,6 @@ export const MarketplaceGrid: FC<MarketplaceGridProps> = ({
                             size="lg"
                             className="flex-1"
                             onClick={() => {
-                              console.log("Download button clicked for:", selectedProduct.title);
-                              console.log("downloadUrl:", selectedProduct.downloadUrl);
-                              console.log("url:", selectedProduct.url);
                               handleDownload(selectedProduct);
                             }}
                           >

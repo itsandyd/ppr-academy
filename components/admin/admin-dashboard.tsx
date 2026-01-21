@@ -227,10 +227,9 @@ export default function AdminDashboard({
     setIsLoading(false);
     
     if (result.success) {
-      console.log("Coach profiles debug results:", result.profiles);
       toast({
         title: "Debug Complete",
-        description: `Found ${result.profiles?.length || 0} coach profiles. Check console for details.`,
+        description: `Found ${result.profiles?.length || 0} coach profiles.`,
       });
     } else {
       toast({
@@ -591,10 +590,9 @@ export default function AdminDashboard({
       // Test with a sample chapter ID - you can modify this
       const result = await testAudioUrl("sample-chapter-id");
       if (result.success) {
-        console.log("Audio URL test result:", result);
         toast({
           title: "Audio Test Complete",
-          description: "Check console for detailed audio URL information",
+          description: "Audio URL test completed successfully.",
         });
       } else {
         toast({

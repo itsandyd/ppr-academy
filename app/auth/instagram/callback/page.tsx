@@ -45,21 +45,17 @@ export default function InstagramCallbackPage() {
 
       // Wait for user data
       if (!convexUser) {
-        console.log("⏳ Waiting for user data...");
         return;
       }
 
       try {
-        console.log("🔄 Processing Instagram OAuth callback...");
-        
         // Exchange code for access token
-        await handleOAuthCallback({ 
+        await handleOAuthCallback({
           code,
           userId: convexUser._id,
         });
-        
+
         setStatus("success");
-        console.log("✅ Instagram connected successfully!");
         
         // Redirect after 2 seconds
         setTimeout(() => {

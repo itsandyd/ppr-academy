@@ -139,26 +139,26 @@ export default function DashboardHomeEnhanced() {
       {/* Quick Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
         <div className="bg-gradient-to-r from-purple-500 to-blue-600 rounded-xl p-6 text-white">
-          <h3 className="text-sm font-medium opacity-90">This Week</h3>
-          <p className="text-2xl font-bold">12.5 hours</p>
-          <p className="text-sm opacity-75">Learning time</p>
+          <h3 className="text-sm font-medium opacity-90">Total Learning</h3>
+          <p className="text-2xl font-bold">{stats.totalHoursLearned} hours</p>
+          <p className="text-sm opacity-75">Estimated time</p>
         </div>
-        
+
         <div className="bg-gradient-to-r from-green-500 to-teal-600 rounded-xl p-6 text-white">
-          <h3 className="text-sm font-medium opacity-90">Completed</h3>
-          <p className="text-2xl font-bold">8 lessons</p>
-          <p className="text-sm opacity-75">This month</p>
+          <h3 className="text-sm font-medium opacity-90">Courses</h3>
+          <p className="text-2xl font-bold">{coursesCompleted} / {coursesEnrolled}</p>
+          <p className="text-sm opacity-75">Completed</p>
         </div>
-        
+
         <div className="bg-gradient-to-r from-orange-500 to-red-600 rounded-xl p-6 text-white">
-          <h3 className="text-sm font-medium opacity-90">Streak</h3>
-          <p className="text-2xl font-bold">{stats.currentStreak} days</p>
-          <p className="text-sm opacity-75">Keep it up!</p>
+          <h3 className="text-sm font-medium opacity-90">Certificates</h3>
+          <p className="text-2xl font-bold">{certificatesEarned}</p>
+          <p className="text-sm opacity-75">Earned</p>
         </div>
-        
+
         <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-6 text-white">
           <h3 className="text-sm font-medium opacity-90">Next Goal</h3>
-          <p className="text-2xl font-bold">Level 4</p>
+          <p className="text-2xl font-bold">{userData.level}</p>
           <p className="text-sm opacity-75">{userData.nextLevelXp - userData.xp} XP to go</p>
         </div>
       </div>

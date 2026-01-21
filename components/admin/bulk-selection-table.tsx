@@ -213,20 +213,20 @@ export const userBulkActions: BulkAction[] = [
     id: "email",
     label: "Email Selected",
     icon: Mail,
-    action: (ids) => console.log("Email users:", ids)
+    action: (_ids) => { /* TODO: Implement email users */ }
   },
   {
     id: "promote",
     label: "Promote to Creator",
     icon: Crown,
-    action: (ids) => console.log("Promote users:", ids)
+    action: (_ids) => { /* TODO: Implement promote users */ }
   },
   {
     id: "suspend",
     label: "Suspend",
     icon: XCircle,
     variant: "destructive",
-    action: (ids) => console.log("Suspend users:", ids)
+    action: (_ids) => { /* TODO: Implement suspend users */ }
   }
 ];
 
@@ -235,26 +235,26 @@ export const productBulkActions: BulkAction[] = [
     id: "publish",
     label: "Publish",
     icon: CheckCircle2,
-    action: (ids) => console.log("Publish products:", ids)
+    action: (_ids) => { /* TODO: Implement publish products */ }
   },
   {
     id: "unpublish",
     label: "Unpublish",
     icon: XCircle,
-    action: (ids) => console.log("Unpublish products:", ids)
+    action: (_ids) => { /* TODO: Implement unpublish products */ }
   },
   {
     id: "export",
     label: "Export Data",
     icon: Download,
-    action: (ids) => console.log("Export products:", ids)
+    action: (_ids) => { /* TODO: Implement export products */ }
   },
   {
     id: "delete",
     label: "Delete",
     icon: Trash2,
     variant: "destructive",
-    action: (ids) => console.log("Delete products:", ids)
+    action: (_ids) => { /* TODO: Implement delete products */ }
   }
 ];
 

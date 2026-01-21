@@ -76,10 +76,10 @@ export function AdminCommandPalette({ className }: AdminCommandPaletteProps) {
     {
       group: "Quick Actions",
       items: [
-        { icon: Users, label: "Find User by Email...", action: () => console.log("Search users"), color: "text-violet-500" },
-        { icon: BookOpen, label: "Find Course by Title...", action: () => console.log("Search courses"), color: "text-emerald-500" },
-        { icon: Package, label: "Find Product by Name...", action: () => console.log("Search products"), color: "text-pink-500" },
-        { icon: Crown, label: "Promote User to Creator", action: () => console.log("Promote user"), color: "text-amber-500" },
+        { icon: Users, label: "Find User by Email...", action: () => router.push("/admin/users"), color: "text-violet-500" },
+        { icon: BookOpen, label: "Find Course by Title...", action: () => router.push("/admin/courses"), color: "text-emerald-500" },
+        { icon: Package, label: "Find Product by Name...", action: () => router.push("/admin/products"), color: "text-pink-500" },
+        { icon: Crown, label: "Promote User to Creator", action: () => router.push("/admin/users"), color: "text-amber-500" },
         { icon: Zap, label: "Send Platform Announcement", action: () => router.push("/admin/emails?action=broadcast"), color: "text-orange-500" },
       ]
     },

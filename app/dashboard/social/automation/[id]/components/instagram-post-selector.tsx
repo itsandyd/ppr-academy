@@ -73,7 +73,6 @@ export function InstagramPostSelector({
   const loadPosts = async () => {
     setLoading(true);
     try {
-      console.log("📡 Fetching Instagram posts for user:", userId, "account:", selectedInstagramAccount);
       const result = await fetchPosts({ 
         userId,
         instagramAccountId: selectedInstagramAccount || undefined,

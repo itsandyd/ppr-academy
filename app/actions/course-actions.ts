@@ -230,10 +230,7 @@ export async function publishCourse(courseId: string) {
 
 export async function enrollInCourse(courseId: string) {
   try {
-    const user = await checkAuth();
-
-    console.log(`[Course] Enrollment requested for course ${courseId} by user ${user._id}`);
-
+    await checkAuth();
     revalidatePath(`/courses/*`);
     return { success: true };
   } catch (error) {
@@ -247,12 +244,7 @@ export async function enrollInCourse(courseId: string) {
 
 export async function submitCourseReview(courseId: string, rating: number, comment: string) {
   try {
-    const user = await checkAuth();
-
-    console.log(
-      `[Course] Review submitted: ${rating}/5 - ${comment} for course ${courseId} by user ${user._id}`
-    );
-
+    await checkAuth();
     revalidatePath(`/courses/*`);
     return { success: true };
   } catch (error) {
@@ -266,10 +258,7 @@ export async function submitCourseReview(courseId: string, rating: number, comme
 
 export async function markChapterComplete(chapterId: string) {
   try {
-    const user = await checkAuth();
-
-    console.log(`[Course] Chapter ${chapterId} marked complete by user ${user._id}`);
-
+    await checkAuth();
     revalidatePath(`/courses/*`);
     return { success: true };
   } catch (error) {
@@ -441,13 +430,9 @@ export async function createChapter(courseId: string, chapterData: CreateChapter
 
 export async function deleteChapter(chapterId: string) {
   try {
-    const user = await checkAuth();
-
-    console.log(`[Course] Deleting chapter ${chapterId}`);
-
+    await checkAuth();
     revalidatePath(`/courses/*`);
     revalidatePath("/dashboard");
-
     return { success: true };
   } catch (error) {
     console.error("Error deleting chapter:", error);
@@ -462,13 +447,9 @@ interface CreateModuleData {
 
 export async function createModule(courseId: string, moduleData: CreateModuleData) {
   try {
-    const user = await checkAuth();
-
-    console.log(`[Course] Creating module "${moduleData.title}" for course ${courseId}`);
-
+    await checkAuth();
     revalidatePath(`/courses/*`);
     revalidatePath("/dashboard");
-
     return { success: true, moduleId: `module_${Date.now()}` };
   } catch (error) {
     console.error("Error creating module:", error);
@@ -484,13 +465,9 @@ interface CreateLessonData {
 
 export async function createLesson(courseId: string, lessonData: CreateLessonData) {
   try {
-    const user = await checkAuth();
-
-    console.log(`[Course] Creating lesson "${lessonData.title}" for course ${courseId}`);
-
+    await checkAuth();
     revalidatePath(`/courses/*`);
     revalidatePath("/dashboard");
-
     return { success: true, lessonId: `lesson_${Date.now()}` };
   } catch (error) {
     console.error("Error creating lesson:", error);
@@ -505,13 +482,9 @@ interface UpdateModuleData {
 
 export async function updateModule(moduleChapterId: string, moduleData: UpdateModuleData) {
   try {
-    const user = await checkAuth();
-
-    console.log(`[Course] Updating module ${moduleChapterId}`);
-
+    await checkAuth();
     revalidatePath(`/courses/*`);
     revalidatePath("/dashboard");
-
     return { success: true };
   } catch (error) {
     console.error("Error updating module:", error);
@@ -527,13 +500,9 @@ interface UpdateLessonData {
 
 export async function updateLesson(lessonChapterId: string, lessonData: UpdateLessonData) {
   try {
-    const user = await checkAuth();
-
-    console.log(`[Course] Updating lesson ${lessonChapterId}`);
-
+    await checkAuth();
     revalidatePath(`/courses/*`);
     revalidatePath("/dashboard");
-
     return { success: true };
   } catch (error) {
     console.error("Error updating lesson:", error);
@@ -547,15 +516,9 @@ interface ReorderChaptersData {
 
 export async function reorderChapters(courseId: string, reorderData: ReorderChaptersData) {
   try {
-    const user = await checkAuth();
-
-    console.log(
-      `[Course] Reordering ${reorderData.chapterIds.length} chapters for course ${courseId}`
-    );
-
+    await checkAuth();
     revalidatePath(`/courses/*`);
     revalidatePath("/dashboard");
-
     return { success: true };
   } catch (error) {
     console.error("Error reordering chapters:", error);
@@ -569,15 +532,9 @@ interface ReorderModulesData {
 
 export async function reorderModules(courseId: string, reorderData: ReorderModulesData) {
   try {
-    const user = await checkAuth();
-
-    console.log(
-      `[Course] Reordering ${reorderData.moduleChapterIds.length} modules for course ${courseId}`
-    );
-
+    await checkAuth();
     revalidatePath(`/courses/*`);
     revalidatePath("/dashboard");
-
     return { success: true };
   } catch (error) {
     console.error("Error reordering modules:", error);
@@ -592,15 +549,9 @@ interface ReorderLessonsData {
 
 export async function reorderLessons(courseId: string, reorderData: ReorderLessonsData) {
   try {
-    const user = await checkAuth();
-
-    console.log(
-      `[Course] Reordering ${reorderData.lessonChapterIds.length} lessons in module ${reorderData.moduleChapterId}`
-    );
-
+    await checkAuth();
     revalidatePath(`/courses/*`);
     revalidatePath("/dashboard");
-
     return { success: true };
   } catch (error) {
     console.error("Error reordering lessons:", error);
@@ -610,13 +561,9 @@ export async function reorderLessons(courseId: string, reorderData: ReorderLesso
 
 export async function deleteModule(moduleChapterId: string) {
   try {
-    const user = await checkAuth();
-
-    console.log(`[Course] Deleting module ${moduleChapterId}`);
-
+    await checkAuth();
     revalidatePath(`/courses/*`);
     revalidatePath("/dashboard");
-
     return { success: true };
   } catch (error) {
     console.error("Error deleting module:", error);
@@ -626,13 +573,9 @@ export async function deleteModule(moduleChapterId: string) {
 
 export async function deleteLesson(lessonChapterId: string) {
   try {
-    const user = await checkAuth();
-
-    console.log(`[Course] Deleting lesson ${lessonChapterId}`);
-
+    await checkAuth();
     revalidatePath(`/courses/*`);
     revalidatePath("/dashboard");
-
     return { success: true };
   } catch (error) {
     console.error("Error deleting lesson:", error);
@@ -642,13 +585,9 @@ export async function deleteLesson(lessonChapterId: string) {
 
 export async function deleteOrphanedChapters(courseId: string) {
   try {
-    const user = await checkAuth();
-
-    console.log(`[Course] Cleaning up orphaned chapters for course ${courseId}`);
-
+    await checkAuth();
     revalidatePath(`/courses/*`);
     revalidatePath("/dashboard");
-
     return { success: true, deletedCount: 0 };
   } catch (error) {
     console.error("Error deleting orphaned chapters:", error);
@@ -658,13 +597,9 @@ export async function deleteOrphanedChapters(courseId: string) {
 
 export async function deleteFallbackModule(courseId: string, moduleTitle: string) {
   try {
-    const user = await checkAuth();
-
-    console.log(`[Course] Deleting fallback module "${moduleTitle}" from course ${courseId}`);
-
+    await checkAuth();
     revalidatePath(`/courses/*`);
     revalidatePath("/dashboard");
-
     return {
       success: true,
       deletedCount: 0,
@@ -681,13 +616,9 @@ export async function updateCourseModule(
   data: { title: string; description?: string }
 ) {
   try {
-    const user = await checkAuth();
-
-    console.log(`[Course] Updating module ${moduleId}`);
-
+    await checkAuth();
     revalidatePath(`/courses/*`);
     revalidatePath("/dashboard");
-
     return { success: true };
   } catch (error) {
     console.error("Error updating course module:", error);
@@ -700,13 +631,9 @@ export async function updateCourseLesson(
   data: { title: string; description?: string }
 ) {
   try {
-    const user = await checkAuth();
-
-    console.log(`[Course] Updating lesson ${lessonId}`);
-
+    await checkAuth();
     revalidatePath(`/courses/*`);
     revalidatePath("/dashboard");
-
     return { success: true };
   } catch (error) {
     console.error("Error updating course lesson:", error);
@@ -736,13 +663,9 @@ export async function debugModuleStructure(courseId: string) {
 
 export async function deleteRealCourseModule(moduleId: string) {
   try {
-    const user = await checkAuth();
-
-    console.log(`[Course] Deleting real module ${moduleId}`);
-
+    await checkAuth();
     revalidatePath(`/courses/*`);
     revalidatePath("/dashboard");
-
     return { success: true };
   } catch (error) {
     console.error("Error deleting real course module:", error);
@@ -917,7 +840,7 @@ export async function clearNonPlayableAudio() {
     const user = await checkAuth();
     if (!user.admin) return { success: false, error: "Unauthorized" };
 
-    console.log("[Admin] clearNonPlayableAudio called");
+    // console.log(...);
 
     revalidatePath("/courses");
     revalidatePath("/admin");
@@ -971,7 +894,7 @@ export async function cleanupLegacyAudioReferences() {
     const user = await checkAuth();
     if (!user.admin) return { success: false, error: "Unauthorized" };
 
-    console.log("[Admin] cleanupLegacyAudioReferences called");
+    // console.log(...);
 
     revalidatePath("/courses");
     revalidatePath("/admin");

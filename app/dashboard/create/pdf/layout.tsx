@@ -78,9 +78,7 @@ function LayoutContent({ children }: PDFCreateLayoutProps) {
   };
 
   const handlePublishPDF = async () => {
-    console.log("Publishing PDF, can publish:", canPublish());
     const result = await createPDF();
-    console.log("Publish result:", result);
     if (result.success) {
       router.push(`/dashboard?mode=create`);
     } else {

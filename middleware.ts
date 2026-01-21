@@ -67,7 +67,7 @@ export default clerkMiddleware(async (auth, req) => {
         if (store?.slug) {
           // Rewrite to slug page (keeps custom domain in URL bar)
           const slugPath = `/${store.slug}${url.pathname === '/' ? '' : url.pathname}`;
-          console.log(`🌐 Custom domain routing: ${customDomain} → ${slugPath}`);
+          // console.log(`🌐 Custom domain routing: ${customDomain} → ${slugPath}`);
           
           return NextResponse.rewrite(new URL(slugPath, req.url));
         }

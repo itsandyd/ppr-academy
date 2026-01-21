@@ -78,7 +78,6 @@ function LayoutContent({ children }: CourseCreateLayoutProps) {
     if (isUserIdInsteadOfStoreId && correctStoreId && correctStoreId !== rawStoreId) {
       const currentSearch = searchParams.toString();
       const newUrl = `/store/${correctStoreId}/course/create${currentSearch ? `?${currentSearch}` : ''}`;
-      console.log('🔄 Redirecting from invalid store ID to correct one:', { rawStoreId, correctStoreId, newUrl });
       router.replace(newUrl);
       return;
     }

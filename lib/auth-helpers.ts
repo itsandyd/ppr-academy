@@ -76,20 +76,33 @@ export function withAuth<T extends any[]>(
 
 /**
  * Check if user is admin
- * Add admin role checking logic here
+ * Checks multiple sources: environment variable, Clerk metadata, and role
  */
 export async function requireAdmin() {
   const user = await requireAuth();
-  
-  // TODO: Add actual admin role checking
-  // For now, check if user has admin email or role
-  const adminEmails = process.env.ADMIN_EMAILS?.split(',') || [];
-  const isAdmin = adminEmails.includes(user.emailAddresses[0]?.emailAddress || '');
-  
+  const userEmail = user.emailAddresses[0]?.emailAddress || '';
+
+  // Check 1: Environment variable list of admin emails
+  const adminEmails = (process.env.ADMIN_EMAILS?.split(',') || []).map(e => e.trim().toLowerCase());
+  const isAdminByEmail = adminEmails.includes(userEmail.toLowerCase());
+
+  // Check 2: Clerk public metadata (can be set in Clerk dashboard)
+  const clerkMetadata = user.publicMetadata as { role?: string; isAdmin?: boolean } | undefined;
+  const isAdminByMetadata = clerkMetadata?.isAdmin === true ||
+    clerkMetadata?.role === 'admin' ||
+    clerkMetadata?.role === 'AGENCY_OWNER' ||
+    clerkMetadata?.role === 'AGENCY_ADMIN';
+
+  // Check 3: Clerk private metadata (more secure)
+  const privateMetadata = user.privateMetadata as { role?: string; isAdmin?: boolean } | undefined;
+  const isAdminByPrivate = privateMetadata?.isAdmin === true || privateMetadata?.role === 'admin';
+
+  const isAdmin = isAdminByEmail || isAdminByMetadata || isAdminByPrivate;
+
   if (!isAdmin) {
     throw new Error("Forbidden: Admin access required");
   }
-  
+
   return user;
 }
 

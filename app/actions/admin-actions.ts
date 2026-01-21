@@ -168,7 +168,6 @@ export async function debugCoachProfiles() {
       clerkId: clerkId!,
     });
 
-    console.log(`[Admin] debugCoachProfiles: Found ${profiles.length} profiles`);
     return { success: true, profiles };
   } catch (error) {
     console.error("Error debugging coach profiles:", error);
@@ -186,7 +185,6 @@ export async function cleanupOrphanedCoachProfiles(dryRun: boolean = true) {
       dryRun,
     });
 
-    console.log(`[Admin] cleanupOrphanedCoachProfiles: ${result.message}`);
     return {
       success: result.success,
       message: result.message,
@@ -275,10 +273,6 @@ export async function generateAICourse(courseData: {
     const createCourseWithDataRef = api.courses.createCourseWithData as any;
     const courseId = await convex.mutation(createCourseWithDataRef, createCourseData);
 
-    console.log(
-      `[AI Course] Created course: "${generatedCourse.course.title}" with ID: ${courseId}`
-    );
-
     revalidatePath("/admin");
     revalidatePath("/courses");
 
@@ -313,7 +307,6 @@ export async function searchImages(topic: string, skillLevel: string) {
 
   try {
     const images = await searchTopicImages(topic, skillLevel);
-    console.log(`[Admin] Image search: Found ${images.length} images for "${topic}"`);
     return { success: true, images };
   } catch (error) {
     console.error("Error searching images:", error);
@@ -335,8 +328,6 @@ export async function searchCourseImages(courseId: string, customTopic?: string)
 
     const searchTopic = customTopic || course.title;
     const images = await searchTopicImages(searchTopic, "intermediate");
-
-    console.log(`[Admin] Course image search: Found ${images.length} images for "${course.title}"`);
 
     return {
       success: true,
@@ -364,8 +355,6 @@ export async function updateCourseImage(courseId: string, imageUrl: string) {
 
     revalidatePath("/courses");
     revalidatePath("/admin");
-
-    console.log(`[Admin] Updated course image for: ${courseId}`);
 
     return { success: true };
   } catch (error) {
@@ -416,10 +405,6 @@ export async function enhancedImageSearch(
 
     // Remove duplicates and limit results
     const uniqueImages = [...new Set(allImages)].slice(0, maxResults);
-
-    console.log(
-      `[Admin] Enhanced image search: Found ${uniqueImages.length} images for "${query}"`
-    );
 
     return {
       success: true,
@@ -521,10 +506,6 @@ export async function enhancedSearchContent(query: string, includeYoutube: boole
   try {
     const searchResults: string[] = [];
 
-    if (includeYoutube) {
-      console.log(`Enhanced search for: ${query} (YouTube: ${includeYoutube})`);
-    }
-
     return {
       success: true,
       results: searchResults,
@@ -575,8 +556,6 @@ export async function updateCourse(
     revalidatePath("/courses");
     revalidatePath("/admin");
 
-    console.log(`[Admin] Updated course: ${courseId}`);
-
     return { success: true };
   } catch (error) {
     console.error("Error updating course:", error);
@@ -603,8 +582,6 @@ export async function deleteCourse(courseId: string) {
 
     revalidatePath("/courses");
     revalidatePath("/admin");
-
-    console.log(`[Admin] Deleted course: ${courseId}`);
 
     return { success: true };
   } catch (error) {
@@ -639,7 +616,6 @@ export async function bulkUpdateCourses(
           });
           count++;
         }
-        console.log(`[Admin] Published ${count} courses`);
         break;
 
       case "unpublish":
@@ -650,7 +626,6 @@ export async function bulkUpdateCourses(
           });
           count++;
         }
-        console.log(`[Admin] Unpublished ${count} courses`);
         break;
 
       case "delete":
@@ -661,7 +636,6 @@ export async function bulkUpdateCourses(
           });
           count++;
         }
-        console.log(`[Admin] Deleted ${count} courses`);
         break;
 
       default:

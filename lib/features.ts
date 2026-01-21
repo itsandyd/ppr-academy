@@ -89,7 +89,3 @@ export function useFeatureFlag(featureName: keyof typeof features): boolean {
 export const isDevelopment = process.env.NODE_ENV === 'development';
 export const isProduction = process.env.NODE_ENV === 'production';
 
-// Log feature flags in development
-if (isDevelopment) {
-  console.log('🚩 Feature Flags:', features);
-}

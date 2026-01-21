@@ -248,7 +248,6 @@ export function MixingTemplateCreationProvider({ children }: { children: React.R
           packFiles: state.data.files ? JSON.stringify(state.data.files) : undefined,
         };
 
-        console.log('Updating mixing template with data:', updateData);
         await updateTemplateMutation(updateData);
       } else {
         // Create new
@@ -268,7 +267,6 @@ export function MixingTemplateCreationProvider({ children }: { children: React.R
           dawVersion: state.data.dawVersion || undefined,
         };
 
-        console.log('Creating mixing template with data:', JSON.stringify(createData, null, 2));
         const result = await createTemplateMutation(createData);
 
         if (result) {

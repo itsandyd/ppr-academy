@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { Upload, X, ArrowRight, Save, Sparkles, Loader2 } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import { useCourseCreation } from "../context";
+import { useUploadThing } from "@/lib/uploadthing-hooks";
+import { toast } from "sonner";
 
 const categoryGroups = {
   "DAWs & Software": [
@@ -115,7 +117,24 @@ export function ThumbnailForm() {
 
   const [isDragOver, setIsDragOver] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [generationError, setGenerationError] = useState<string | null>(null);
+
+  // UploadThing hook for thumbnail uploads
+  const { startUpload } = useUploadThing("imageUploader", {
+    onClientUploadComplete: (res) => {
+      if (res && res[0]?.url) {
+        handleInputChange("thumbnail", res[0].url);
+        toast.success("Thumbnail uploaded successfully!");
+      }
+      setIsUploading(false);
+    },
+    onUploadError: (error) => {
+      console.error("Upload error:", error);
+      toast.error("Failed to upload thumbnail");
+      setIsUploading(false);
+    },
+  });
 
   // Load data from context when available
   useEffect(() => {
@@ -133,9 +152,6 @@ export function ThumbnailForm() {
   const handleInputChange = (field: string, value: string) => {
     const newData = { ...formData, [field]: value };
     setFormData(newData);
-    
-    console.log("🔄 ThumbnailForm updating context with:", { step: "thumbnail", data: newData });
-    // Update context with new data
     updateData("thumbnail", newData);
   };
 
@@ -150,12 +166,6 @@ export function ThumbnailForm() {
     setGenerationError(null);
 
     try {
-      console.log("🎨 Generating thumbnail with data:", {
-        title: formData.title,
-        description: formData.description,
-        category: formData.category,
-      });
-
       const response = await fetch("/api/generate-thumbnail", {
         method: "POST",
         headers: {
@@ -168,9 +178,7 @@ export function ThumbnailForm() {
         }),
       });
 
-      console.log("📡 API response status:", response.status);
       const data = await response.json();
-      console.log("📝 API response data:", data);
 
       if (!response.ok) {
         throw new Error(data.error || "Failed to generate thumbnail");
@@ -190,7 +198,7 @@ export function ThumbnailForm() {
   };
 
   const handleNext = () => {
-    // TODO: Save form data to context or storage
+    // Form data is already saved to context via handleInputChange
     router.push(`/dashboard/create/course?step=checkout`);
   };
 
@@ -204,10 +212,31 @@ export function ThumbnailForm() {
     setIsDragOver(false);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
-    // TODO: Handle file upload
+
+    const files = Array.from(e.dataTransfer.files);
+    const imageFile = files.find((f) => f.type.startsWith("image/"));
+
+    if (!imageFile) {
+      toast.error("Please drop an image file (JPG, PNG, WebP)");
+      return;
+    }
+
+    if (imageFile.size > 4 * 1024 * 1024) {
+      toast.error("Image must be less than 4MB");
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      await startUpload([imageFile]);
+    } catch (error) {
+      console.error("Upload failed:", error);
+      toast.error("Failed to upload image");
+      setIsUploading(false);
+    }
   };
 
   const isValid = formData.title && formData.description && formData.category && formData.skillLevel;
@@ -398,14 +427,6 @@ export function ThumbnailForm() {
                       onError={() => {
                         console.error("Failed to load thumbnail image");
                         handleInputChange("thumbnail", "");
-                      }}
-                      onLoad={(e) => {
-                        const img = e.target as HTMLImageElement;
-                        console.log("Thumbnail loaded successfully", {
-                          naturalWidth: img.naturalWidth,
-                          naturalHeight: img.naturalHeight,
-                          aspectRatio: (img.naturalWidth / img.naturalHeight).toFixed(3)
-                        });
                       }}
                     />
                     <Button

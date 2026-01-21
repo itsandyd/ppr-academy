@@ -41,8 +41,6 @@ export default function SeedCreditsPage() {
       } else {
         toast.error(result.message);
       }
-      // Log individual results
-      console.log("Stripe sync results:", result.results);
     } catch (error) {
       toast.error("Failed to sync to Stripe");
       console.error(error);

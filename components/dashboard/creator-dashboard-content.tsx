@@ -204,9 +204,9 @@ export function CreatorDashboardContent() {
   return (
     <div className="space-y-8">
       {/* Getting Started Modal for Brand New Users */}
-      <GettingStartedModal 
+      <GettingStartedModal
         userType="creator"
-        onComplete={() => console.log("Onboarding completed")}
+        onComplete={() => {}}
       />
 
       {/* Welcome Header */}

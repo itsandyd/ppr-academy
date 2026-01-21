@@ -139,9 +139,6 @@ export default function FeatureDiscoveryPage() {
         toast.success(`Found ${results.suggestions.length} feature suggestions!`);
       }
       
-      if (results.tokensUsed) {
-        console.log(`Analysis used ~${results.tokensUsed.toLocaleString()} tokens`);
-      }
     } catch (e) {
       toast.dismiss(loadingToast);
       const errorMsg = e instanceof Error ? e.message : "Analysis failed";

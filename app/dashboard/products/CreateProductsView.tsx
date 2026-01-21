@@ -61,8 +61,6 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
     const product = allProducts.find(p => p._id === productId);
     if (!product) return;
 
-    console.log('Editing product:', product); // Debug log
-
     // Check for courses first (by type field)
     if (product.type === 'course') {
       router.push(`/dashboard/create/course?courseId=${productId}&step=course`);
@@ -189,13 +187,6 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
   const beats = digitalProducts?.filter((p: any) => 
     p.productCategory === 'beat-lease'
   ) || [];
-  
-  // Debug logging
-  console.log('Products debug:', {
-    totalProducts: digitalProducts?.length,
-    beats: beats.length,
-    beatProducts: beats.map((b: any) => ({ title: b.title, category: b.productCategory }))
-  });
   
   // Count by DAW for filtering
   const dawCounts = effectChains.reduce((acc: any, chain: any) => {

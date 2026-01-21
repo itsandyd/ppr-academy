@@ -250,7 +250,6 @@ export function ProjectFileCreationProvider({ children }: { children: React.Reac
           packFiles: state.data.files ? JSON.stringify(state.data.files) : undefined,
         };
 
-        console.log('Updating project file with data:', updateData);
         await updateProjectMutation(updateData);
       } else {
         // Create new
@@ -271,7 +270,6 @@ export function ProjectFileCreationProvider({ children }: { children: React.Reac
           genre: state.data.genre || undefined,
         };
 
-        console.log('Creating project file with data:', JSON.stringify(createData, null, 2));
         const result = await createProjectMutation(createData);
 
         if (result) {

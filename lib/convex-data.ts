@@ -8,7 +8,6 @@ export async function getAuthenticatedUser() {
   const { userId: clerkId } = await auth();
   
   if (!clerkId) {
-    console.log('⚠️ No authenticated user found');
     return null;
   }
 

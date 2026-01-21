@@ -63,7 +63,6 @@ export function ChapterDialog({
   // Load existing generated audio data when editing
   useEffect(() => {
     if (editData?.generatedAudioData) {
-      console.log(`🎵 Loading audio from editData: ${editData.generatedAudioData.substring(0, 100)}...`);
       setGeneratedAudioData(editData.generatedAudioData);
       setShowAudioPreview(true);
       // Set some basic metadata for existing audio
@@ -106,46 +105,14 @@ export function ChapterDialog({
   const titleForKey = editData?.title || chapterData.title;
   const chapterKey = `${state.courseId}_${titleForKey.replace(/\s+/g, '_').toLowerCase()}_${moduleTitle.replace(/\s+/g, '_').toLowerCase()}_${lessonTitle.replace(/\s+/g, '_').toLowerCase()}`;
 
-  // Debug dialog open state
-  useEffect(() => {
-    if (isOpen) {
-      console.log(`🚪 ChapterDialog opened:`, {
-        isEditing,
-        chapterKey,
-        actualChapterId,
-        hasEditData: !!editData,
-        hasEditDataWithAudio: !!(editData?.generatedAudioData),
-        showAudioPreview,
-        hasGeneratedAudioData: !!generatedAudioData,
-      });
-    }
-  }, [isOpen, isEditing, chapterKey, actualChapterId, editData, showAudioPreview, generatedAudioData]);
-  
-  // Debug: Log the chapter key components
-  console.log(`🔑 Chapter key components:`, {
-    courseId: state.courseId,
-    chapterTitle: editData?.title || chapterData.title,
-    moduleTitle: moduleTitle,
-    lessonTitle: lessonTitle,
-    finalKey: chapterKey
-  });
-  
   // Try to get existing chapter ID from localStorage for this specific chapter
   useEffect(() => {
     if (!actualChapterId && typeof window !== 'undefined' && chapterKey) {
       const storageKey = `chapter_${chapterKey}_id`;
       const storedChapterId = localStorage.getItem(storageKey);
-      console.log(`🔍 Looking for stored chapter ID with key: ${storageKey}`);
-      
+
       if (storedChapterId) {
         setActualChapterId(storedChapterId);
-        console.log(`🔄 Restored chapter ID from storage: ${storedChapterId} for key: ${chapterKey}`);
-      } else {
-        console.log(`🔍 No stored chapter ID found for key: ${chapterKey}`);
-        
-        // Debug: Show all localStorage keys that contain 'chapter'
-        const allKeys = Object.keys(localStorage).filter(key => key.includes('chapter'));
-        console.log(`🔍 All chapter keys in localStorage:`, allKeys);
       }
     }
   }, [chapterKey, actualChapterId]);
@@ -166,23 +133,10 @@ export function ChapterDialog({
     } : "skip"
   );
 
-  // Debug the query state
-  console.log(`🔍 Query state:`, {
-    actualChapterId,
-    hasEditData: !!editData,
-    hasEditDataWithAudio: !!(editData?.generatedAudioData),
-    hasUserId: !!user?.id,
-    showAudioPreview,
-    hasGeneratedAudioData: !!generatedAudioData,
-    shouldQuery: shouldFetchChapterData,
-    existingChapterData: existingChapterData ? 'loaded' : 'not loaded',
-    queryResult: existingChapterData
-  });
-
   // Load existing chapter data when it's fetched
   useEffect(() => {
     if (existingChapterData) {
-      console.log(`🔄 Loading existing chapter data:`, existingChapterData);
+      // console.log(...);
       
       // Only update chapter data if we don't have editData (avoid overwriting form data)
       if (!editData) {
@@ -196,7 +150,6 @@ export function ChapterDialog({
       
       // Always load existing audio if available and not already loaded
       if (existingChapterData.generatedAudioUrl && !generatedAudioData) {
-        console.log(`🎵 Restoring audio from database: ${existingChapterData.generatedAudioUrl.substring(0, 100)}...`);
         setGeneratedAudioData(existingChapterData.generatedAudioUrl);
         setShowAudioPreview(true);
         
@@ -210,9 +163,6 @@ export function ChapterDialog({
       }
     } else if (shouldFetchChapterData && actualChapterId) {
       // Query returned null - chapter might not exist or permission issue
-      console.log(`❌ Failed to load chapter data for ID: ${actualChapterId}`);
-      console.log(`🧹 Clearing invalid chapter ID from localStorage`);
-      
       // Clear the invalid chapter ID from localStorage
       const storageKey = `chapter_${chapterKey}_id`;
       localStorage.removeItem(storageKey);
@@ -244,13 +194,6 @@ export function ChapterDialog({
         return;
       }
 
-      console.log(`💾 ${actualChapterId ? 'Updating' : 'Creating'} chapter:`, {
-        chapterId: actualChapterId,
-        title: chapterData.title,
-        chapterKey: chapterKey,
-        hasAudioData: !!audioToSave
-      });
-
       const result = await createOrUpdateChapter({
         courseId: state.courseId as Id<"courses">,
         lessonId: lessonId as Id<"courseLessons"> | undefined,
@@ -274,17 +217,17 @@ export function ChapterDialog({
           setActualChapterId(result.chapterId);
           // Store in localStorage for future sessions
           localStorage.setItem(`chapter_${chapterKey}_id`, result.chapterId);
-          console.log("✅ Chapter auto-saved with ID:", result.chapterId, "stored with key:", chapterKey);
+          // console.log(...);
           toast.success("Chapter saved to Convex!");
         } else if (idChanged) {
           // The function found an existing chapter with a different ID
           // This can happen when the localStorage had a stale ID and the function found the real chapter
           setActualChapterId(result.chapterId);
           localStorage.setItem(`chapter_${chapterKey}_id`, result.chapterId);
-          console.log("🔄 Chapter ID corrected:", result.chapterId, "stored with key:", chapterKey);
+          // console.log(...);
           toast.success("Chapter updated!");
         } else {
-          console.log("✅ Chapter auto-updated with ID:", result.chapterId, "key:", chapterKey);
+          // console.log(...);
           toast.success("Chapter updated!");
         }
       } else {
@@ -382,12 +325,7 @@ export function ChapterDialog({
       
       // Use the actual chapter ID if we have one, otherwise create a temporary one
       const chapterIdForAudio = actualChapterId || `temp-${Date.now()}`;
-      console.log(`🎵 Generating audio for chapter ID: ${chapterIdForAudio}`, {
-        hasExistingId: !!actualChapterId,
-        chapterTitle: chapterData.title,
-        chapterKey: chapterKey
-      });
-      
+
       const response = await fetch('/api/generate-audio', {
         method: 'POST',
         headers: {
@@ -415,17 +353,7 @@ export function ChapterDialog({
       
       // Store the generated audio URL or fallback data
       const audioToStore = result.audioUrl || result.audioData;
-      const isUrl = result.audioUrl && !result.audioUrl.startsWith('data:');
-      
-      console.log(`🎵 Audio generation result:`, {
-        hasUrl: !!result.audioUrl,
-        hasData: !!result.audioData,
-        isRealUrl: isUrl,
-        isSimulated: result.metadata?.isSimulated,
-        isBase64Fallback: result.metadata?.isBase64Fallback,
-        audioLength: audioToStore?.length || 0
-      });
-      
+
       setGeneratedAudioData(audioToStore);
       setAudioMetadata(result.metadata);
       setShowAudioPreview(true);
@@ -494,7 +422,7 @@ export function ChapterDialog({
       const result = await response.json();
       
       toast.success(`Video generated successfully! Duration: ${result.duration}s`);
-      console.log('Video generation result:', result);
+      // console.log(...);
       
     } catch (error) {
       console.error("Video generation error:", error);

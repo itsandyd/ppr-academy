@@ -304,12 +304,6 @@ export function CreatorDashboardEnhanced({ legacyDashboardStats }: CreatorDashbo
       // If the storeId looks like a user ID (starts with "ks" - Convex user ID pattern),
       // use the user's actual store ID instead
       if (courseStoreId && courseStoreId.startsWith("ks7")) {
-        console.log(
-          "⚠️ Course has invalid storeId (user ID):",
-          courseStoreId,
-          "using user store:",
-          storeId
-        );
         courseStoreId = storeId; // Use the user's actual store ID
       }
 
@@ -317,7 +311,6 @@ export function CreatorDashboardEnhanced({ legacyDashboardStats }: CreatorDashbo
       courseStoreId = courseStoreId || storeId || "setup";
 
       const editUrl = `/store/${courseStoreId}/course/create?edit=${product._id}`;
-      console.log("🔗 Editing course with URL:", editUrl);
       window.location.href = editUrl;
     } else {
       // Route to digital product editing

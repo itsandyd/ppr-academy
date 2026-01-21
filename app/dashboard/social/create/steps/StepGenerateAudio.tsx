@@ -83,13 +83,10 @@ export function StepGenerateAudio() {
     setError(null);
 
     try {
-      console.log("Starting audio generation...");
       const result = await generateAudio({
         script: audioScript,
         voiceId: ANDREW_1_VOICE_ID,
       });
-
-      console.log("Audio generation result:", result);
 
       if (result.success && result.storageId && result.audioUrl) {
         setAudioUrl(result.audioUrl);

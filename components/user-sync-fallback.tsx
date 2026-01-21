@@ -81,8 +81,7 @@ export function UserErrorFallback({ clerkId }: UserSyncFallbackProps) {
       });
       
       const debugInfo = await response.json();
-      console.log('🔍 Debug Info:', debugInfo);
-      
+
       // Show debug info in an alert for now
       const steps = debugInfo.steps?.join('\n') || 'No steps recorded';
       const errors = debugInfo.errors?.join('\n') || 'No errors recorded';

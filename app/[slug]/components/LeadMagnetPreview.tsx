@@ -43,8 +43,6 @@ export function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData 
   const hasLeadSubmissionsAPI = !!(api as any).leadSubmissions?.submitLead;
 
   const handleSubmit = async () => {
-    console.log("🎯 handleSubmit called!", { formData, isSubmitting });
-    
     if (!formData.name?.trim() || !formData.email?.trim()) {
       alert("Please fill in both name and email");
       return;
@@ -62,23 +60,12 @@ export function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData 
       return;
     }
 
-    console.log("🚀 Starting lead submission with data:", {
-      name: formData.name.trim(),
-      email: formData.email.trim(),
-      productId: leadMagnet.productId,
-      storeId: storeData.store._id,
-      adminUserId: storeData.store.userId,
-      hasSubmitFunction: !!submitLead,
-      hasAPI: hasLeadSubmissionsAPI
-    });
-
     setIsSubmitting(true);
     try {
       let result;
 
       if (submitLead && hasLeadSubmissionsAPI) {
         // Use real API if available
-        console.log("📡 Calling submitLead mutation...");
         result = await submitLead({
           name: formData.name.trim(),
           email: formData.email.trim(),
@@ -89,13 +76,6 @@ export function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData 
           userAgent: navigator.userAgent,
           source: "storefront",
         });
-
-        console.log("✅ Lead successfully submitted to database:", {
-          submissionId: result.submissionId,
-          customerCreated: true,
-          downloadAvailable: result.hasAccess,
-          result
-        });
       } else {
         // Fallback simulation (until API is regenerated)
         result = {
@@ -103,23 +83,6 @@ export function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData 
           hasAccess: true,
           downloadUrl: leadMagnet?.downloadUrl,
         };
-
-        console.log("⚠️ Using simulated submission (run 'npx convex dev' to enable real database):", {
-          leadData: {
-            name: formData.name.trim(),
-            email: formData.email.trim(),
-            productId: leadMagnet.productId,
-            storeId: storeData.store._id,
-            adminUserId: storeData.store.userId,
-            source: "storefront",
-          },
-          customerRecord: {
-            name: formData.name.trim(),
-            email: formData.email.trim(),
-            type: "lead",
-            source: leadMagnet?.title || "Lead Magnet",
-          }
-        });
       }
 
       setSubmissionResult({
@@ -136,8 +99,6 @@ export function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData 
   };
 
   const handleDownload = async () => {
-    console.log("📥 handleDownload called!", { submissionResult });
-    
     if (submissionResult?.downloadUrl && submissionResult?.submissionId) {
       try {
         // Track download if API is available
@@ -145,9 +106,6 @@ export function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData 
           await trackDownload({
             submissionId: submissionResult.submissionId,
           });
-          console.log("✅ Download tracked in database:", submissionResult.submissionId);
-        } else {
-          console.log("⚠️ Download tracking simulated:", submissionResult.submissionId);
         }
 
         // Create a temporary link and trigger download
@@ -206,7 +164,6 @@ export function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData 
             className="w-full mt-3 bg-primary hover:bg-primary/90 text-primary-foreground text-sm relative z-10 pointer-events-auto touch-manipulation min-h-[44px]"
             onClick={(e) => {
               e.preventDefault();
-              console.log("💾 Download button clicked!");
               handleDownload();
             }}
             disabled={!submissionResult?.downloadUrl}
@@ -297,7 +254,6 @@ export function LeadMagnetPreview({ leadMagnet, isFullScreen = false, storeData 
           type="button"
           onClick={(e) => {
             e.preventDefault();
-            console.log("🔥 Button clicked!");
             handleSubmit();
           }}
           disabled={isSubmitting}

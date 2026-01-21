@@ -855,7 +855,7 @@ class OrchestratorAgent implements Agent {
 // Keep existing functions for backward compatibility
 export async function searchTavily(query: string, includeImages = false, searchType = 'web'): Promise<any[]> {
   if (!process.env.TAVILY_API_KEY) {
-    console.log('⚠️ Tavily API key not available. Please add TAVILY_API_KEY to your .env file');
+    // console.log(...);
     return [];
   }
 
@@ -1122,13 +1122,13 @@ export async function generateAICourse(request: CourseGenerationRequest): Promis
 
   const courseData = result.data.course;
   
-  console.log(`✅ Multi-agent course generation completed!`);
+  // console.log(...);
   console.log(`📊 Quality Score: ${result.data.qualityScore?.toFixed(1) || 'N/A'}/100`);
   console.log(`📈 Generated: ${courseData.stats.modules} modules, ${courseData.stats.lessons} lessons, ${courseData.stats.chapters} chapters`);
   
   // Log execution summary
   if (result.data.executionLog) {
-    console.log(`\n📋 Agent Execution Summary:`);
+    // console.log(...);
     result.data.executionLog.forEach((log: any) => {
       const status = log.success ? '✅' : '❌';
       console.log(`  ${status} ${log.agent}: ${log.executionTime}ms ${log.error ? `(${log.error})` : ''}`);
@@ -1165,7 +1165,7 @@ export async function generateAICourseLegacy(request: CourseGenerationRequest): 
   try {
     searchResults = await searchTavily(searchQuery);
   } catch (error) {
-    console.log('Tavily search unavailable, proceeding with AI knowledge base');
+    // console.log(...);
   }
   
   // Step 2: Generate course structure
@@ -1186,7 +1186,7 @@ export async function generateAICourseLegacy(request: CourseGenerationRequest): 
     : '';
 
   try {
-    console.log('Generating course structure...');
+    // console.log(...);
     const completion = await getOpenAIClient().chat.completions.create({
       model: "gpt-4o",
       messages: [
@@ -1405,7 +1405,7 @@ export async function generateAICourseFast(request: CourseGenerationRequest): Pr
         courseThumbnail = quickImages[0];
       }
     } catch (error) {
-      console.log('⚠️ Quick image search failed, using fallback');
+      // console.log(...);
     }
 
     // Calculate stats
@@ -1554,7 +1554,7 @@ ${request.learningObjectives?.length ? `Objectives: ${request.learningObjectives
 
 // Generate outline content for all chapters (fast, short summaries)
 async function generateCourseOutlines(structure: any, request: CourseGenerationRequest) {
-  console.log('📝 Generating course outlines...');
+  // console.log(...);
   
   // Process all chapters but generate SHORT outline content only
   for (const module of structure.modules) {

@@ -15,14 +15,10 @@ import { fetchQuery } from "convex/nextjs";
  * @deprecated Use convex/users.ts getUserFromClerk query directly
  */
 export async function getUserFromClerk(clerkId: string) {
-  console.log(`🔍 Looking up user with clerkId: ${clerkId} (via Convex)`);
-
   try {
     const user = await fetchQuery(api.users.getUserFromClerk, { clerkId });
 
     if (user) {
-      console.log(`✅ Found user in Convex: ${user.email}`);
-
       // Transform Convex user to match expected Prisma format
       // (for backward compatibility with existing code)
       return {
@@ -31,13 +27,11 @@ export async function getUserFromClerk(clerkId: string) {
         createdAt: new Date(user._creationTime),
         updatedAt: new Date(user._creationTime),
       };
-    } else {
-      console.log(`⚠️ User not found in Convex: ${clerkId}`);
     }
 
     return user;
   } catch (error) {
-    console.error("💥 Error fetching user from Convex:", error);
+    console.error("Error fetching user from Convex:", error);
     return null;
   }
 }
@@ -48,7 +42,7 @@ export async function getUserFromClerk(clerkId: string) {
  */
 export async function getFeaturedCourses() {
   try {
-    console.log("📚 Fetching featured courses from Convex...");
+    // console.log(...);
     const courses = await fetchQuery(api.courses.getCourses, {});
 
     // Return first 6 courses as "featured"
@@ -65,7 +59,7 @@ export async function getFeaturedCourses() {
  */
 export async function getPopularCourses() {
   try {
-    console.log("📚 Fetching popular courses from Convex...");
+    // console.log(...);
     const courses = await fetchQuery(api.courses.getCourses, {});
 
     // Return first 10 courses as "popular" (can be enhanced with enrollment stats later)
@@ -82,9 +76,7 @@ export async function getPopularCourses() {
  */
 export async function getUserEnrollments(userId: string) {
   try {
-    console.log(`📚 Fetching enrollments for user ${userId} from Convex...`);
     const enrollments = await fetchQuery(api.library.getUserCourses, { userId });
-
     return enrollments || [];
   } catch (error) {
     console.error("Error fetching user enrollments:", error);
@@ -98,9 +90,7 @@ export async function getUserEnrollments(userId: string) {
  */
 export async function getUserCourses(userId: string) {
   try {
-    console.log(`📚 Fetching courses created by user ${userId} from Convex...`);
     const courses = await fetchQuery(api.courses.getCoursesByUser, { userId });
-
     return courses || [];
   } catch (error) {
     console.error("Error fetching user courses:", error);
@@ -164,7 +154,7 @@ export async function getCourses(filters?: {
   includeUnpublished?: boolean;
 }) {
   try {
-    console.log(`📚 Fetching courses from Convex with filters:`, filters);
+    // console.log(...);
 
     // For now, just fetch all courses
     // You can add filtering logic in the Convex query later
@@ -182,7 +172,6 @@ export async function getCourses(filters?: {
       );
     }
 
-    console.log(`📚 Fetched ${filteredCourses.length} courses from Convex`);
     return filteredCourses;
   } catch (error) {
     console.error("Error fetching courses:", error);
@@ -196,9 +185,7 @@ export async function getCourses(filters?: {
  */
 export async function getCourseBySlug(slug: string) {
   try {
-    console.log(`📚 Fetching course by slug: ${slug} from Convex...`);
     const course = await fetchQuery(api.courses.getCourseBySlug, { slug });
-
     return course;
   } catch (error) {
     console.error(`Error fetching course by slug (${slug}):`, error);

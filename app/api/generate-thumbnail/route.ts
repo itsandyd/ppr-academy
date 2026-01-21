@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("🎨 Starting thumbnail generation...");
+    // console.log(...);
     
     // Check if OpenAI API key is available
     if (!process.env.OPENAI_API_KEY) {
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    console.log("✅ User authenticated:", userId);
+    // console.log(...);
     
     // Get Clerk JWT token for Convex authentication
     const token = await getToken({ template: "convex" });
@@ -59,9 +59,9 @@ export async function POST(request: NextRequest) {
     const prompt = type === "pack" 
       ? createPackThumbnailPrompt(title, description, category)
       : createThumbnailPrompt(title, description, category);
-    console.log("🎯 Generated prompt:", prompt);
+    // console.log(...);
 
-    console.log("🤖 Calling OpenAI GPT-Image API...");
+    // console.log(...);
     // Generate image with gpt-image-1 (new state-of-the-art model)
     const response = await openai.images.generate({
       model: "gpt-image-1",
@@ -71,9 +71,9 @@ export async function POST(request: NextRequest) {
       quality: "medium" // low, medium, or high for gpt-image-1
     });
     
-    console.log("📏 Generated image size: 1024x1024");
+    // console.log(...);
 
-    console.log("✅ OpenAI response received:", response);
+    // console.log(...);
     
     // Handle both URL and base64 responses
     const imageData = response.data?.[0];
@@ -87,13 +87,13 @@ export async function POST(request: NextRequest) {
     const imageUrl = imageData.url;
     const imageB64 = imageData.b64_json;
     
-    console.log("🖼️ Image format:", imageUrl ? "URL" : "Base64");
+    // console.log(...);
 
     let imageFile: File;
 
     if (imageUrl) {
       // Download the image from OpenAI URL
-      console.log("📥 Downloading image from OpenAI URL...");
+      // console.log(...);
       const imageResponse = await fetch(imageUrl);
       if (!imageResponse.ok) {
         throw new Error("Failed to download generated image");
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
       });
     } else if (imageB64) {
       // Convert base64 to file
-      console.log("🔄 Converting base64 image to file...");
+      // console.log(...);
       const binaryString = atob(imageB64);
       const bytes = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Upload to Convex storage
-    console.log("☁️ Uploading to Convex storage...");
+    // console.log(...);
     
     // First, get the upload URL from Convex
     const uploadUrl = await convex.mutation(filesApi.generateUploadUrl, {});
@@ -149,9 +149,9 @@ export async function POST(request: NextRequest) {
       throw new Error("Failed to get storage URL from Convex");
     }
     
-    console.log("✅ Image uploaded successfully to Convex:", permanentUrl);
+    // console.log(...);
 
-    console.log("🎉 Thumbnail generation successful!");
+    // console.log(...);
     return NextResponse.json({
       success: true,
       imageUrl: permanentUrl, // Use the permanent Convex storage URL

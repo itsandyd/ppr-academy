@@ -158,7 +158,7 @@ export function PostComposer({
   // Load existing media when editing
   useEffect(() => {
     if (existingMediaUrls && existingMediaUrls.length > 0) {
-      console.log("📂 Loading existing media for edit:", existingMediaUrls);
+      // console.log(...);
 
       const existingFiles: MediaFile[] = existingMediaUrls
         .filter((item: any) => item.url !== null)
@@ -172,7 +172,7 @@ export function PostComposer({
         }));
 
       if (existingFiles.length > 0) {
-        console.log("📂 Loaded", existingFiles.length, "existing media files");
+        // console.log(...);
         setMediaFiles(existingFiles);
       }
     }
@@ -193,11 +193,11 @@ export function PostComposer({
 
   // Debug
   useEffect(() => {
-    console.log("🎬 PostComposer mounted, dialog open:", open);
+    // console.log(...);
   }, []);
 
   useEffect(() => {
-    console.log("📅 scheduledDate changed:", scheduledDate);
+    // console.log(...);
   }, [scheduledDate]);
 
   // Get selected account details
@@ -327,22 +327,16 @@ export function PostComposer({
   // Upload media files to Convex storage
   const uploadMediaFiles = async (): Promise<Id<"_storage">[]> => {
     const storageIds: Id<"_storage">[] = [];
-    console.log("🔼 Starting media upload for", mediaFiles.length, "files");
+    // console.log(...);
 
     for (let i = 0; i < mediaFiles.length; i++) {
       const mediaFile = mediaFiles[i];
 
       // Skip if already uploaded (existing media)
       if (mediaFile.storageId) {
-        console.log(
-          `🔼 File ${i + 1}/${mediaFiles.length} already uploaded, using existing storageId:`,
-          mediaFile.storageId
-        );
         storageIds.push(mediaFile.storageId);
         continue;
       }
-
-      console.log(`🔼 Uploading file ${i + 1}/${mediaFiles.length}:`, mediaFile.file.name);
 
       try {
         // Update uploading state
@@ -353,12 +347,12 @@ export function PostComposer({
         });
 
         // Get upload URL
-        console.log("  - Requesting upload URL...");
+        // console.log(...);
         const uploadUrl = await generateUploadUrl();
-        console.log("  - Upload URL received:", uploadUrl);
+        // console.log(...);
 
         // Upload file with progress tracking
-        console.log("  - Uploading to Convex storage...");
+        // console.log(...);
         const result = await uploadWithProgress(uploadUrl, mediaFile.file, (progress) => {
           // Update progress state in real-time
           setMediaFiles((prev) => {
@@ -368,7 +362,7 @@ export function PostComposer({
           });
         });
 
-        console.log("  - Upload response status:", result.status);
+        // console.log(...);
 
         if (!result.ok) {
           const errorText = await result.text();
@@ -377,14 +371,14 @@ export function PostComposer({
         }
 
         const responseData = await result.json();
-        console.log("  - Upload response:", responseData);
+        // console.log(...);
 
         const { storageId } = responseData;
         if (!storageId) {
           throw new Error("No storageId in response");
         }
 
-        console.log("  - ✅ File uploaded, storageId:", storageId);
+        // console.log(...);
         storageIds.push(storageId);
 
         // Update success state
@@ -414,7 +408,7 @@ export function PostComposer({
       }
     }
 
-    console.log("🔼 All uploads complete. Storage IDs:", storageIds);
+    // console.log(...);
     return storageIds;
   };
 
@@ -852,7 +846,7 @@ export function PostComposer({
                       mode="single"
                       selected={scheduledDate}
                       onSelect={(date) => {
-                        console.log("✅ Date selected:", date);
+                        // console.log(...);
                         setScheduledDate(date);
                       }}
                       disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}

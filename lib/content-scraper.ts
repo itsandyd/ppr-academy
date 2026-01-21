@@ -30,7 +30,6 @@ ${content}`;
       .replace(/^Cleaned text:\s*[-—]*\s*/i, '')
       .trim();
 
-    console.log(`YouTube transcript corrected: ${correctedContent.length} characters`);
     return correctedContent;
   } catch (error) {
     console.error('Error fixing YouTube transcript:', error);
@@ -96,17 +95,14 @@ export async function scrapeContent(url: string, fixErrors: boolean = false): Pr
     
     // Determine content type and scrape
     if (isYouTubeUrl(url)) {
-      console.log(`Processing YouTube URL: ${url}`);
       result = await scrapeYouTubeVideo(url);
-      console.log(`Raw YouTube transcript length: ${result.content.length} characters`);
-      console.log(`Raw transcript preview: "${result.content.substring(0, 500)}"`);
-      
+
       if (fixErrors) {
-        console.log(`Fixing transcription errors while preserving all original content...`);
+        // console.log(...);
         result.content = await processContentWithAI(result.content, 'youtube', result.title);
-        console.log(`YouTube transcript corrected with errors fixed`);
+        // console.log(...);
       } else {
-        console.log(`YouTube content returned RAW without any processing`);
+        // console.log(...);
       }
       
       const textSplitter = new RecursiveCharacterTextSplitter({
@@ -171,8 +167,6 @@ async function scrapeYouTubeVideo(url: string): Promise<ScrapedContent> {
         throw new Error('Empty transcript received');
       } catch (error) {
         attempts++;
-        console.log(`YouTube transcript attempt ${attempts}/${maxAttempts} failed:`, error);
-        
         if (attempts >= maxAttempts) {
           throw new Error(`No transcript available for this video. The video may not have captions enabled, or captions may be auto-generated and unavailable for extraction.`);
         }
@@ -188,9 +182,6 @@ async function scrapeYouTubeVideo(url: string): Promise<ScrapedContent> {
     
     // Preserve natural speech flow with line breaks for better readability
     const content = transcript.map(item => item.text.trim()).join('\n');
-    
-    console.log(`YouTube transcript retrieved: ${transcript.length} segments`);
-    console.log(`Raw transcript first 300 chars: "${content.substring(0, 300)}"`);
 
     // Get video metadata
     const metadata = await getYouTubeMetadata(videoId);
@@ -390,7 +381,6 @@ export async function searchAndScrapeContent(query: string, maxResults: number =
   try {
     // This could be enhanced with actual search APIs like Google Custom Search
     // For now, return empty array - in production you'd integrate with search APIs
-    console.log(`Searching for content: ${query}`);
     return [];
   } catch (error) {
     console.error('Error searching and scraping content:', error);

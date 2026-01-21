@@ -52,13 +52,6 @@ export function PlanSettings({ storeId }: PlanSettingsProps) {
   // Get isPublic from actual store data, not from plan status
   const isPublicFromDb = storeData?.isPublic ?? false;
   const [isUpgrading, setIsUpgrading] = useState(false);
-  
-  console.log('Store data:', { 
-    storeId, 
-    isPublic: storeData?.isPublic, 
-    isPublishedProfile: storeData?.isPublishedProfile,
-    plan: storeData?.plan 
-  });
 
   if (!planData || !usageStats || !storeData) {
     return (
@@ -73,20 +66,17 @@ export function PlanSettings({ storeId }: PlanSettingsProps) {
 
   const handleVisibilityToggle = async (checked: boolean) => {
     try {
-      console.log('Updating visibility to:', checked);
       const result = await updateVisibility({
         storeId,
         isPublic: checked,
         isPublishedProfile: checked,
         clerkId: user?.id,
       });
-      
-      console.log('Update result:', result);
-      
+
       if (!result.success) {
         throw new Error(result.message);
       }
-      
+
       toast.success(result.message);
     } catch (error: any) {
       console.error('Visibility toggle error:', error);

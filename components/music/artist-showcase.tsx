@@ -163,14 +163,12 @@ export function ArtistShowcase({ artistProfileId, isOwner = false }: ArtistShowc
     );
   }
 
-  const handlePlayTrack = (track: any) => {
-    // Track play analytics
-    console.log("Playing track:", track.title);
+  const handlePlayTrack = (_track: any) => {
+    // TODO: Track play analytics
   };
 
-  const handleLikeTrack = (track: any) => {
-    // Handle like functionality
-    console.log("Liking track:", track.title);
+  const handleLikeTrack = (_track: any) => {
+    // TODO: Handle like functionality
   };
 
   const handleShareTrack = (track: any) => {

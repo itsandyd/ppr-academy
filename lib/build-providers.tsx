@@ -38,11 +38,6 @@ interface BuildProvidersProps {
 export function BuildProviders({ children }: BuildProvidersProps) {
   const clerkKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
   
-  // Log for debugging in production
-  if (typeof window !== 'undefined') {
-    console.log('🔑 Clerk key available:', !!clerkKey);
-  }
-  
   // During build time, if no Clerk key is available, render without Clerk provider
   if (!clerkKey) {
     console.warn('⚠️ NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY not found - SignUpButton will not work');

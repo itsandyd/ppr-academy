@@ -144,12 +144,6 @@ export function CourseCheckout({ course, store, creator, user }: CourseCheckoutP
         }
       } else {
         // Free course - direct enrollment
-        console.log("Free course enrollment:", {
-          courseId: course._id,
-          customerData,
-          userId: user?.id,
-        });
-        
         if (!user?.id) {
           setPaymentError("User authentication required for enrollment");
           return;
@@ -165,7 +159,6 @@ export function CourseCheckout({ course, store, creator, user }: CourseCheckoutP
           transactionId: `free_${Date.now()}_${user.id}`,
         });
         
-        console.log("Free enrollment created:", purchaseId);
         setPaymentSuccess(true);
         
         // Redirect to dashboard learn mode with success message

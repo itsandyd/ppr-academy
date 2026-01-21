@@ -63,7 +63,7 @@ class MigrationMonitor {
   startMonitoring(intervalMs = 30000) {
     if (this.isMonitoring) return;
 
-    console.log('🔍 Starting migration monitoring...');
+    // console.log(...);
     this.isMonitoring = true;
 
     this.monitoringInterval = setInterval(async () => {
@@ -85,7 +85,7 @@ class MigrationMonitor {
       this.monitoringInterval = undefined;
     }
     this.isMonitoring = false;
-    console.log('🛑 Stopped migration monitoring');
+    // console.log(...);
   }
 
   // Collect system metrics
@@ -243,7 +243,7 @@ class MigrationMonitor {
           description: 'Disable marketplace feature flags',
           action: async () => {
             // In production, this would update environment variables or database
-            console.log('Disabling marketplace feature flags...');
+            // console.log(...);
           },
           validation: async () => {
             return !features.useNewMarketplace;
@@ -255,7 +255,7 @@ class MigrationMonitor {
           description: 'Clear application cache',
           action: async () => {
             // Clear Redis cache, CDN cache, etc.
-            console.log('Clearing application cache...');
+            // console.log(...);
           },
           validation: async () => true,
           critical: false,
@@ -286,7 +286,7 @@ class MigrationMonitor {
           id: 'pause-migration-jobs',
           description: 'Pause migration background jobs',
           action: async () => {
-            console.log('Pausing migration jobs...');
+            // console.log(...);
           },
           validation: async () => true,
           critical: true,
@@ -295,7 +295,7 @@ class MigrationMonitor {
           id: 'notify-admins',
           description: 'Notify administrators of pause',
           action: async () => {
-            console.log('Notifying administrators...');
+            // console.log(...);
           },
           validation: async () => true,
           critical: false,
@@ -315,7 +315,7 @@ class MigrationMonitor {
           id: 'backup-current-state',
           description: 'Create backup of current state',
           action: async () => {
-            console.log('Creating system backup...');
+            // console.log(...);
           },
           validation: async () => true,
           critical: true,
@@ -324,7 +324,7 @@ class MigrationMonitor {
           id: 'disable-all-new-features',
           description: 'Disable all new marketplace features',
           action: async () => {
-            console.log('Disabling all new features...');
+            // console.log(...);
           },
           validation: async () => true,
           critical: true,
@@ -333,10 +333,10 @@ class MigrationMonitor {
           id: 'restore-database',
           description: 'Restore database to pre-migration state',
           action: async () => {
-            console.log('Restoring database...');
+            // console.log(...);
           },
           rollbackAction: async () => {
-            console.log('Re-applying latest changes...');
+            // console.log(...);
           },
           validation: async () => true,
           critical: true,
@@ -345,7 +345,7 @@ class MigrationMonitor {
           id: 'clear-all-caches',
           description: 'Clear all application caches',
           action: async () => {
-            console.log('Clearing all caches...');
+            // console.log(...);
           },
           validation: async () => true,
           critical: false,
@@ -372,7 +372,6 @@ class MigrationMonitor {
       throw new Error(`Rollback plan '${planId}' not found`);
     }
 
-    console.log(`🔄 Executing rollback plan: ${plan.name}`);
     this.createAlert('info', `Starting rollback: ${plan.name}`);
 
     const errors: string[] = [];
@@ -380,8 +379,6 @@ class MigrationMonitor {
 
     try {
       for (const step of plan.steps) {
-        console.log(`Executing step: ${step.description}`);
-        
         try {
           await step.action();
           executedSteps.push(step.id);
@@ -416,7 +413,7 @@ class MigrationMonitor {
 
   // Rollback executed steps if critical step fails
   private async rollbackExecutedSteps(steps: RollbackStep[], executedStepIds: string[]) {
-    console.log('Rolling back executed steps...');
+    // console.log(...);
     
     for (const stepId of executedStepIds.reverse()) {
       const step = steps.find(s => s.id === stepId);

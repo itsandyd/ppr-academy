@@ -278,16 +278,9 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
   };
 
   const updateData = (step: string, newData: Partial<CourseData>) => {
-    console.log("📊 Context updateData called:", { step, newData });
     setState(prev => {
       const updatedData = { ...prev.data, ...newData };
-      
-      console.log("📊 Context data updated:", { 
-        previous: prev.data, 
-        new: newData, 
-        merged: updatedData 
-      });
-      
+
       // Only recalculate completion for the current step
       const stepCompletion = {
         ...prev.stepCompletion,
@@ -310,7 +303,6 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
     try {
       if (state.courseId) {
         // Update existing course with modules
-        console.log("🔥 Saving existing course with modules:", state.data.modules);
         await updateCourseWithModulesMutation({
           courseId: state.courseId,
           courseData: {

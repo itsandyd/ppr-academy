@@ -151,6 +151,9 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
   // Mutation for creating lead contacts
   const createContact = useMutation(api.emailContacts.createContact);
 
+  // Mutation for lead magnet submissions (handles emails, workflows, customer creation)
+  const submitLead = useMutation(api.leadSubmissions.submitLead);
+
   // Combine all product types into unified list with enhanced metadata
   const allProducts = useMemo(
     () => [
@@ -326,14 +329,25 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
         sourceProductId: selectedProduct._id,
       });
 
+      // Also submit to leadSubmissions for lead magnets (handles confirmation emails, workflows, customer creation)
+      if (selectedProduct.isLeadMagnet || selectedProduct.price === 0) {
+        await submitLead({
+          name: name.trim() || email.split("@")[0],
+          email: email.toLowerCase(),
+          productId: selectedProduct._id,
+          storeId: store._id,
+          adminUserId: store.userId,
+          source: "storefront",
+        });
+      }
+
       setHasSubmittedEmail(true);
     } catch (error: any) {
       // Handle duplicate contact gracefully
       if (error?.message?.includes("already exists")) {
         setHasSubmittedEmail(true); // Still show success - they're already subscribed
       } else {
-        console.error("Failed to capture email:", error);
-        alert("Something went wrong. Please try again.");
+        toast.error("Something went wrong. Please try again.");
       }
     } finally {
       setIsSubmitting(false);
@@ -1532,9 +1546,6 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
                           <Button
                             className="h-9 flex-1 text-sm"
                             onClick={() => {
-                              console.log("Download button clicked for:", selectedProduct.title);
-                              console.log("downloadUrl:", selectedProduct.downloadUrl);
-                              console.log("url:", selectedProduct.url);
                               handleDownload(selectedProduct);
                             }}
                           >

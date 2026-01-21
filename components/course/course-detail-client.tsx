@@ -124,12 +124,11 @@ export function CourseDetailClient({
   useEffect(() => {
     const loadVoices = async () => {
       try {
-        console.log('🔊 Loading ElevenLabs voices...');
+        // console.log(...);
         const result = await getElevenLabsVoices();
-        console.log('🔊 Voice loading result:', result);
+        // console.log(...);
         
         if (result.success && result.voices) {
-          console.log(`🔊 Loaded ${result.voices.length} voices successfully`);
           setAvailableVoices(result.voices);
         } else {
           console.warn('🔊 Failed to load voices:', result.error);
@@ -157,7 +156,6 @@ export function CourseDetailClient({
     }
 
     if (audioPlaying === chapterId) {
-      console.log(`🛑 Stopping current audio for chapter ${chapterId}`);
       // Stop current audio
       if (audioRefs[chapterId]) {
         audioRefs[chapterId]?.pause();
@@ -187,25 +185,25 @@ export function CourseDetailClient({
       return;
     }
 
-    console.log('🎵 Creating Audio object...');
+    // console.log(...);
     
     // Play new audio
     const audio = new Audio(audioUrl);
     
     audio.onloadstart = () => {
-      console.log('🔄 Audio loading started');
+      // console.log(...);
     };
     
     audio.oncanplay = () => {
-      console.log('✅ Audio can play');
+      // console.log(...);
     };
     
     audio.oncanplaythrough = () => {
-      console.log('✅ Audio can play through');
+      // console.log(...);
     };
     
     audio.onended = () => {
-      console.log('🏁 Audio ended');
+      // console.log(...);
       setAudioPlaying(null);
     };
     
@@ -245,11 +243,11 @@ export function CourseDetailClient({
     
     setAudioRefs(prev => ({ ...prev, [chapterId]: audio }));
     
-    console.log('🎵 Attempting to play audio...');
+    // console.log(...);
     
     // Try to play the audio
     audio.play().then(() => {
-      console.log('✅ Audio play started successfully');
+      // console.log(...);
       setAudioPlaying(chapterId);
     }).catch((error) => {
       console.error('❌ Audio play failed:', error);

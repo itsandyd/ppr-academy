@@ -29,17 +29,14 @@ export async function ensureUserExists() {
       return { success: false, error: "Not authenticated" };
     }
 
-    console.log(`🔄 Ensuring user exists for clerkId: ${clerkId}`);
-    
     // This will automatically create the user if they don't exist
     const user = await getUserFromClerk(clerkId);
-    
+
     if (!user) {
-      console.error(`❌ Failed to create/find user for clerkId: ${clerkId}`);
+      console.error(`Failed to create/find user for clerkId: ${clerkId}`);
       return { success: false, error: "Failed to create user" };
     }
 
-    console.log(`✅ User exists/created: ${user.email}`);
     return { 
       success: true, 
       user: {

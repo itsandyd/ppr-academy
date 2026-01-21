@@ -626,7 +626,6 @@ export default function AIAssistantPage() {
 
       // Check if this request is still relevant (conversation hasn't changed)
       if (activeConversationRef.current !== conversationId) {
-        console.log("Ignoring response - conversation changed");
         return;
       }
 
@@ -703,13 +702,11 @@ export default function AIAssistantPage() {
     } catch (error) {
       // Check if request was aborted (user switched conversations)
       if (error instanceof Error && error.name === "AbortError") {
-        console.log("Request cancelled - user switched conversations");
         return; // Don't show error, just exit
       }
 
       // Check if conversation changed during request
       if (activeConversationRef.current !== conversationId) {
-        console.log("Ignoring error - conversation changed");
         return;
       }
 
@@ -1077,7 +1074,6 @@ export default function AIAssistantPage() {
           userId: user.id,
           vote,
         });
-        console.log(`Feedback ${vote} submitted for message ${messageId}`);
       } catch (error) {
         console.error("Failed to submit feedback:", error);
       }

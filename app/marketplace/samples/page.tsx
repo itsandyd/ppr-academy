@@ -122,13 +122,6 @@ export default function SamplesMarketplacePage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const allPublishedProducts: any = useQuery(api.digitalProducts.getAllPublishedProducts) || [];
 
-  // Debug logging
-  console.log("All published products:", allPublishedProducts.length);
-  console.log(
-    "Product categories:",
-    allPublishedProducts.map((p: any) => p.productCategory)
-  );
-
   // Filter for pack products only (sample-pack, midi-pack, preset-pack)
   const packs = allPublishedProducts.filter(
     (p: any) =>
@@ -136,8 +129,6 @@ export default function SamplesMarketplacePage() {
       p.productCategory === "midi-pack" ||
       p.productCategory === "preset-pack"
   );
-
-  console.log("Filtered packs:", packs.length, packs);
 
   const userCredits = useQuery(api.credits.getUserCredits);
 
