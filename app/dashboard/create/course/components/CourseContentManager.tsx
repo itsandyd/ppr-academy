@@ -45,6 +45,89 @@ interface CourseContentManagerProps {
   onModulesChange: (modules: Module[]) => void;
 }
 
+// Memoized Chapter Item component
+interface ChapterItemProps {
+  chapter: Chapter;
+  chapterIndex: number;
+  moduleTitle: string;
+  lessonTitle: string;
+  moduleIndex: number;
+  lessonIndex: number;
+  existingChapters: Chapter[];
+  onChapterAdd: (chapterData: Chapter) => void;
+  onChapterEdit: (chapterData: Chapter) => void;
+  onChapterRemove: () => void;
+}
+
+const ChapterItem = memo(function ChapterItem({
+  chapter,
+  chapterIndex,
+  moduleTitle,
+  lessonTitle,
+  existingChapters,
+  onChapterAdd,
+  onChapterEdit,
+  onChapterRemove,
+}: ChapterItemProps) {
+  return (
+    <div className="ml-0 sm:ml-2 p-3 rounded-lg border border-border bg-background hover:bg-muted/20 transition-colors group">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0"></div>
+          <h6 className="font-medium text-sm text-foreground truncate">
+            Ch {chapterIndex + 1}: {chapter.title}
+          </h6>
+        </div>
+        <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+          <ChapterDialog
+            moduleTitle={moduleTitle}
+            lessonTitle={lessonTitle}
+            onChapterAdd={onChapterAdd}
+            onChapterEdit={onChapterEdit}
+            existingChapters={existingChapters}
+            editData={chapter}
+            trigger={
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 p-0"
+              >
+                <Edit className="w-3.5 h-3.5" />
+              </Button>
+            }
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onChapterRemove}
+            className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+      </div>
+      <p className="text-xs text-muted-foreground line-clamp-1 ml-3.5 mt-1">
+        {chapter.content.replace(/<[^>]*>/g, '').substring(0, 80)}...
+      </p>
+      {(chapter.videoUrl || chapter.duration > 0) && (
+        <div className="flex flex-wrap items-center gap-2 mt-2 ml-3.5">
+          {chapter.videoUrl && (
+            <Badge variant="outline" className="text-xs h-5 px-1.5">
+              <Play className="w-2.5 h-2.5 mr-1" />
+              Video
+            </Badge>
+          )}
+          {chapter.duration > 0 && (
+            <span className="text-xs text-muted-foreground">
+              {chapter.duration} min
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+});
+
 export function CourseContentManager({ modules, onModulesChange }: CourseContentManagerProps) {
   const [expandedModules, setExpandedModules] = useState<Set<number>>(new Set());
   const [expandedLessons, setExpandedLessons] = useState<Set<string>>(new Set());
@@ -336,61 +419,19 @@ export function CourseContentManager({ modules, onModulesChange }: CourseContent
 
                                 {/* Chapters */}
                                 {lesson.chapters.map((chapter, chapterIndex) => (
-                                  <div key={chapterIndex} className="ml-0 sm:ml-2 p-3 rounded-lg border border-border bg-background hover:bg-muted/20 transition-colors group">
-                                    <div className="flex items-center justify-between gap-3">
-                                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0"></div>
-                                        <h6 className="font-medium text-sm text-foreground truncate">
-                                          Ch {chapterIndex + 1}: {chapter.title}
-                                        </h6>
-                                      </div>
-                                      <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <ChapterDialog
-                                          moduleTitle={module.title}
-                                          lessonTitle={lesson.title}
-                                          onChapterAdd={(chapterData) => addChapter(moduleIndex, lessonIndex, chapterData)}
-                                          onChapterEdit={(chapterData) => editChapter(moduleIndex, lessonIndex, chapterIndex, chapterData)}
-                                          existingChapters={lesson.chapters}
-                                          editData={chapter}
-                                          trigger={
-                                            <Button
-                                              variant="ghost"
-                                              size="sm"
-                                              className="h-7 w-7 p-0"
-                                            >
-                                              <Edit className="w-3.5 h-3.5" />
-                                            </Button>
-                                          }
-                                        />
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          onClick={() => removeChapter(moduleIndex, lessonIndex, chapterIndex)}
-                                          className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                                        >
-                                          <Trash2 className="w-3.5 h-3.5" />
-                                        </Button>
-                                      </div>
-                                    </div>
-                                    <p className="text-xs text-muted-foreground line-clamp-1 ml-3.5 mt-1">
-                                      {chapter.content.replace(/<[^>]*>/g, '').substring(0, 80)}...
-                                    </p>
-                                    {(chapter.videoUrl || chapter.duration > 0) && (
-                                      <div className="flex flex-wrap items-center gap-2 mt-2 ml-3.5">
-                                        {chapter.videoUrl && (
-                                          <Badge variant="outline" className="text-xs h-5 px-1.5">
-                                            <Play className="w-2.5 h-2.5 mr-1" />
-                                            Video
-                                          </Badge>
-                                        )}
-                                        {chapter.duration > 0 && (
-                                          <span className="text-xs text-muted-foreground">
-                                            {chapter.duration} min
-                                          </span>
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
+                                  <ChapterItem
+                                    key={chapterIndex}
+                                    chapter={chapter}
+                                    chapterIndex={chapterIndex}
+                                    moduleTitle={module.title}
+                                    lessonTitle={lesson.title}
+                                    moduleIndex={moduleIndex}
+                                    lessonIndex={lessonIndex}
+                                    existingChapters={lesson.chapters}
+                                    onChapterAdd={(chapterData) => addChapter(moduleIndex, lessonIndex, chapterData)}
+                                    onChapterEdit={(chapterData) => editChapter(moduleIndex, lessonIndex, chapterIndex, chapterData)}
+                                    onChapterRemove={() => removeChapter(moduleIndex, lessonIndex, chapterIndex)}
+                                  />
                                 ))}
 
                                 {lesson.chapters.length === 0 && (
