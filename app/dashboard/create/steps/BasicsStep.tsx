@@ -4,6 +4,8 @@ import { useState, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ValidatedField } from "@/shared/components/ValidatedField";
+import { validationRules } from "@/hooks/useFieldValidation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -165,35 +167,34 @@ export function BasicsStep({
       </div>
 
       {/* Title */}
-      <div className="space-y-2">
-        <Label htmlFor="title">
-          Product Title <span className="text-destructive">*</span>
-        </Label>
-        <Input
-          id="title"
-          placeholder={placeholders.title}
-          value={title}
-          onChange={(e) => onTitleChange(e.target.value)}
-          className={cn("text-lg", title.trim().length === 0 && "border-destructive")}
-        />
-        <p className="text-xs text-muted-foreground">Make it catchy and descriptive</p>
-      </div>
+      <ValidatedField
+        id="title"
+        label="Product Title"
+        value={title}
+        onChange={onTitleChange}
+        required
+        rules={[validationRules.minLength(3, "Title must be at least 3 characters")]}
+        placeholder={placeholders.title}
+        description="Make it catchy and descriptive"
+        className="text-lg"
+      />
 
       {/* Description */}
       <div className="space-y-2">
-        <Label htmlFor="description">
-          Description <span className="text-destructive">*</span>
-        </Label>
-        <Textarea
+        <ValidatedField
           id="description"
-          placeholder={placeholders.description}
+          label="Description"
+          type="textarea"
           value={description}
-          onChange={(e) => onDescriptionChange(e.target.value)}
+          onChange={onDescriptionChange}
+          required
+          rules={[validationRules.minLength(10, "Description must be at least 10 characters")]}
+          placeholder={placeholders.description}
           rows={6}
-          className={cn(description.trim().length === 0 && "border-destructive")}
+          maxLength={1000}
+          showCharCount
         />
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-muted-foreground">{description.length}/1000 characters</p>
+        <div className="flex justify-end">
           <ProductAIAssistant
             title={title}
             description={description}

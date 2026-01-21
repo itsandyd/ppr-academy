@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ValidatedField } from "@/shared/components/ValidatedField";
+import { validationRules } from "@/hooks/useFieldValidation";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -185,20 +187,20 @@ export function PackBasicsForm() {
           <CardTitle>Pack Information</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="title">Title *</Label>
-            <Input
-              id="title"
-              placeholder="e.g., Lo-Fi Drum Kit Vol. 1"
-              value={state.data.title || ""}
-              onChange={(e) => updateData("basics", { title: e.target.value })}
-              className="bg-background"
-            />
-          </div>
+          <ValidatedField
+            id="title"
+            label="Title"
+            value={state.data.title || ""}
+            onChange={(value) => updateData("basics", { title: value })}
+            required
+            rules={[validationRules.minLength(3, "Title must be at least 3 characters")]}
+            placeholder="e.g., Lo-Fi Drum Kit Vol. 1"
+            className="bg-background"
+          />
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="description">Description *</Label>
+              <Label htmlFor="description">Description <span className="text-destructive">*</span></Label>
               <AIContentAssistant
                 productType={state.data.packType || "sample-pack"}
                 title={state.data.title}

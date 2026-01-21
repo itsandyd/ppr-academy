@@ -11,6 +11,8 @@ import { useServiceCreation } from "../context";
 import { SERVICE_TYPES, ServiceType } from "../types";
 import { Settings } from "lucide-react";
 import { AIContentAssistant } from "../../shared/AIContentAssistant";
+import { ValidatedField } from "@/shared/components/ValidatedField";
+import { validationRules } from "@/hooks/useFieldValidation";
 
 export function BasicsForm() {
   const searchParams = useSearchParams();
@@ -66,15 +68,15 @@ export function BasicsForm() {
           <CardTitle>Service Details</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="title">Service Title *</Label>
-            <Input
-              id="title"
-              placeholder="e.g., Professional Mixing by [Your Name]"
-              value={state.data.title || ""}
-              onChange={(e) => handleChange("title", e.target.value)}
-            />
-          </div>
+          <ValidatedField
+            id="title"
+            label="Service Title"
+            value={state.data.title || ""}
+            onChange={(value) => handleChange("title", value)}
+            required
+            rules={[validationRules.minLength(5, "Title must be at least 5 characters")]}
+            placeholder="e.g., Professional Mixing by [Your Name]"
+          />
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">

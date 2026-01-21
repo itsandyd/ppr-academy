@@ -9,6 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AIContentAssistant } from "../../shared/AIContentAssistant";
+import { ValidatedField } from "@/shared/components/ValidatedField";
+import { validationRules } from "@/hooks/useFieldValidation";
 
 export function BasicsForm() {
   const { state, updateData, saveCoaching } = useCoachingCreation();
@@ -97,14 +99,18 @@ export function BasicsForm() {
       {/* Title */}
       <Card>
         <CardHeader>
-          <CardTitle>Session Title *</CardTitle>
+          <CardTitle>Session Title</CardTitle>
           <CardDescription>Give your coaching session a clear name</CardDescription>
         </CardHeader>
         <CardContent>
-          <Input
-            placeholder="e.g., 1-on-1 Production Coaching"
+          <ValidatedField
+            id="coaching-title"
+            label="Title"
             value={state.data.title || ""}
-            onChange={(e) => updateData("basics", { title: e.target.value })}
+            onChange={(value) => updateData("basics", { title: value })}
+            required
+            rules={[validationRules.minLength(5, "Title must be at least 5 characters")]}
+            placeholder="e.g., 1-on-1 Production Coaching"
             className="bg-background"
           />
         </CardContent>
