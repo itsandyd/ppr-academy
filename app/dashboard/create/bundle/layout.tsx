@@ -3,9 +3,8 @@
 import React from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
-import { useQuery } from "convex/react";
-import { api } from "@/lib/convex-api";
 import { BundleCreationProvider, useBundleCreation } from "./context";
+import { useStoresByUser } from "@/lib/convex-typed-hooks";
 import { Package, Layers, DollarSign } from "lucide-react";
 import { StepProgress, Step } from "@/app/dashboard/create/shared/StepProgress";
 import { ActionBar } from "@/app/dashboard/create/shared/ActionBar";
@@ -57,8 +56,7 @@ function LayoutContentInner({ children }: BundleCreateLayoutProps) {
   // Trigger auto-save when data changes
   useAutoSaveOnChange(state.data);
 
-  // @ts-ignore
-  const stores = useQuery(api.stores.getStoresByUser, user?.id ? { userId: user.id } : "skip");
+  const stores = useStoresByUser(user?.id);
   const store = stores?.[0];
 
   const navigateToStep = (step: string) => {

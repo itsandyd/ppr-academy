@@ -12,9 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { X, Plus, Upload, Sparkles, Loader2 } from "lucide-react";
 import { useState, useRef } from "react";
 import { toast } from "sonner";
-import { useMutation } from "convex/react";
-import { api } from "@/lib/convex-api";
 import { AIContentAssistant } from "../../shared/AIContentAssistant";
+import { useGenerateUploadUrl, useGetFileUrl } from "@/lib/convex-typed-hooks";
 
 export function PackBasicsForm() {
   const { state, updateData, savePack } = usePackCreation();
@@ -25,10 +24,8 @@ export function PackBasicsForm() {
   const thumbnailInputRef = useRef<HTMLInputElement>(null);
 
   // Convex mutation for generating upload URL
-  // @ts-ignore - Type instantiation depth issue with Convex
-  const generateUploadUrl = useMutation(api.files.generateUploadUrl);
-  // @ts-ignore - Type instantiation depth issue with Convex
-  const getFileUrl = useMutation(api.files.getUrl);
+  const generateUploadUrl = useGenerateUploadUrl();
+  const getFileUrl = useGetFileUrl();
 
   const handleNext = async () => {
     await savePack();

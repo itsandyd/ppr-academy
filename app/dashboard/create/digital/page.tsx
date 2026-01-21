@@ -3,16 +3,16 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useUser } from '@clerk/nextjs';
-import { useMutation, useQuery } from 'convex/react';
-import { api } from '@/convex/_generated/api';
 import { CreationShell } from '../components/CreationShell';
 import { BasicsStep } from '../steps/BasicsStep';
 import { PricingStep } from '../steps/PricingStep';
 import { PublishStep } from '../steps/PublishStep';
-import { ProductCategory, getProductInfo, BaseProductFormData } from '../types';
+import { ProductCategory, ProductType, getProductInfo, BaseProductFormData } from '../types';
 import { Package, DollarSign, Sparkles } from 'lucide-react';
 import { useValidStoreId } from '@/hooks/useStoreId';
 import { useToast } from '@/hooks/use-toast';
+import { useDigitalProductById, useCreateUniversalProduct, useUpdateDigitalProduct } from '@/lib/convex-typed-hooks';
+import { Id } from '@/convex/_generated/dataModel';
 
 export default function DigitalProductCreator() {
   const router = useRouter();
@@ -22,25 +22,19 @@ export default function DigitalProductCreator() {
   const { toast } = useToast();
 
   // Mutation to create/update the product
-  // @ts-ignore - Type instantiation depth issue
-  const createProduct = useMutation(api.universalProducts.createUniversalProduct as any);
-  // @ts-ignore - Type instantiation depth issue
-  const updateProduct = useMutation(api.digitalProducts.updateProduct as any);
+  const createProduct = useCreateUniversalProduct();
+  const updateProduct = useUpdateDigitalProduct();
 
   // Get category and productId from URL
   const category = searchParams.get('category') as ProductCategory || 'sample-pack';
-  const productId = searchParams.get('productId');
+  const productId = searchParams.get('productId') as Id<"digitalProducts"> | null;
   const step = searchParams.get('step') || 'basics';
   const isEditing = !!productId;
-  
+
   const productInfo = getProductInfo(category);
 
   // Fetch existing product if editing
-  // @ts-ignore - Type instantiation depth issue
-  const existingProduct: any = useQuery(
-    api.digitalProducts.getProductById,
-    productId ? { productId: productId as any } : "skip"
-  );
+  const existingProduct = useDigitalProductById(productId ?? undefined);
 
   // Form state
   const [formData, setFormData] = useState<Partial<BaseProductFormData>>({
@@ -64,8 +58,8 @@ export default function DigitalProductCreator() {
   useEffect(() => {
     if (existingProduct && !isInitialized) {
       setFormData({
-        productCategory: existingProduct.productCategory || category,
-        productType: existingProduct.productType || 'digital',
+        productCategory: (existingProduct.productCategory as ProductCategory) || category,
+        productType: (existingProduct.productType as ProductType) || 'digital',
         title: existingProduct.title || '',
         description: existingProduct.description || '',
         imageUrl: existingProduct.imageUrl || '',

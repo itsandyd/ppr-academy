@@ -3,8 +3,6 @@
 import React from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
-import { useQuery } from "convex/react";
-import { api } from "@/lib/convex-api";
 import { PackCreationProvider, usePackCreation } from "./context";
 import { Package, DollarSign, Lock, Upload } from "lucide-react";
 import { StepProgress, Step } from "@/app/dashboard/create/shared/StepProgress";
@@ -12,6 +10,7 @@ import { ActionBar } from "@/app/dashboard/create/shared/ActionBar";
 import { StorefrontPreview } from "@/app/dashboard/create/shared/StorefrontPreview";
 import { AutoSaveProvider, SaveStatusIndicator, useAutoSaveOnChange } from "@/app/dashboard/create/shared/AutoSaveProvider";
 import { Badge } from "@/components/ui/badge";
+import { useStoresByUser } from "@/lib/convex-typed-hooks";
 
 export const dynamic = "force-dynamic";
 
@@ -66,8 +65,7 @@ function LayoutContentInner({ children }: PackCreateLayoutProps) {
   // Trigger auto-save when data changes
   useAutoSaveOnChange(state.data);
 
-  // @ts-ignore - Type instantiation depth issue
-  const stores = useQuery(api.stores.getStoresByUser, user?.id ? { userId: user.id } : "skip");
+  const stores = useStoresByUser(user?.id);
   const store = stores?.[0];
 
   const navigateToStep = (step: string) => {

@@ -4,10 +4,13 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQuery } from "convex/react";
-import { api } from "@/lib/convex-api";
 import { Id } from "@/convex/_generated/dataModel";
 import { BeatLeaseData, StepCompletion, DEFAULT_LEASE_OPTIONS, LeaseOption } from "./types";
+import {
+  useStoresByUser,
+  useCreateUniversalProduct,
+  useUpdateDigitalProduct,
+} from "@/lib/convex-typed-hooks";
 
 // Helper to convert leaseOptions to beatLeaseConfig format for the database
 function convertToBeatlLeaseConfig(
@@ -77,19 +80,9 @@ export function BeatLeaseCreationProvider({ children }: { children: React.ReactN
   const { toast } = useToast();
   const beatId = searchParams.get("beatId") as Id<"digitalProducts"> | undefined;
 
-  // Get user's stores (using helper to avoid TS2589)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const getStoresByUserFn: any = (() => {
-    // @ts-ignore TS2589 - Type instantiation is excessively deep
-    return api.stores.getStoresByUser as any;
-  })();
-  
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const stores: any = useQuery(
-    getStoresByUserFn,
-    user?.id ? { userId: user.id } : "skip"
-  );
-  
+  // Get user's stores
+  const stores = useStoresByUser(user?.id);
+
   const storeId = stores?.[0]?._id;
 
   // Redirect if no store
@@ -104,10 +97,8 @@ export function BeatLeaseCreationProvider({ children }: { children: React.ReactN
     }
   }, [user, stores, router, toast]);
 
-  // @ts-ignore - Type instantiation depth issue
-  const createBeatMutation: any = useMutation(api.universalProducts.createUniversalProduct as any);
-  // @ts-ignore - Type instantiation depth issue
-  const updateBeatMutation: any = useMutation(api.digitalProducts.updateProduct as any);
+  const createBeatMutation = useCreateUniversalProduct();
+  const updateBeatMutation = useUpdateDigitalProduct();
 
   const [state, setState] = useState<BeatLeaseCreationState>(() => {
     const initialData: BeatLeaseData = {

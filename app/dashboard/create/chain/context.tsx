@@ -4,10 +4,14 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQuery } from "convex/react";
-import { api } from "@/lib/convex-api";
 import { Id } from "@/convex/_generated/dataModel";
 import { DAWType } from "../types";
+import {
+  useStoresByUser,
+  useDigitalProductById,
+  useCreateUniversalProduct,
+  useUpdateDigitalProduct,
+} from "@/lib/convex-typed-hooks";
 
 // Types for effect chain data
 export interface EffectChainData {
@@ -101,12 +105,8 @@ export function EffectChainCreationProvider({ children }: { children: React.Reac
   const initialDAW = searchParams.get("daw") as DAWType | undefined;
 
   // Fetch user's stores
-  // @ts-ignore - Type instantiation depth issue
-  const stores = useQuery(
-    api.stores.getStoresByUser,
-    user?.id ? { userId: user.id } : "skip"
-  );
-  
+  const stores = useStoresByUser(user?.id);
+
   const storeId = stores?.[0]?._id;
 
   // Redirect if no store found
@@ -122,18 +122,11 @@ export function EffectChainCreationProvider({ children }: { children: React.Reac
     }
   }, [user, stores, router, toast]);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const createChainMutation: any = useMutation(api.universalProducts.createUniversalProduct as any);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const updateChainMutation: any = useMutation(api.digitalProducts.updateProduct as any);
-  
+  const createChainMutation = useCreateUniversalProduct();
+  const updateChainMutation = useUpdateDigitalProduct();
+
   // Get existing chain if editing
-  // @ts-ignore TS2589
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const existingChain: any = useQuery(
-    api.digitalProducts.getProductById,
-    chainId ? { productId: chainId } : "skip"
-  );
+  const existingChain = useDigitalProductById(chainId);
 
   const [state, setState] = useState<EffectChainCreationState>({
     data: {
@@ -157,24 +150,24 @@ export function EffectChainCreationProvider({ children }: { children: React.Reac
       const newData: EffectChainData = {
         title: existingChain.title || "",
         description: existingChain.description || "",
-        dawType: existingChain.dawType || "ableton",
-        dawVersion: existingChain.dawVersion,
+        dawType: (existingChain.dawType as DAWType) || "ableton",
+        dawVersion: existingChain.dawVersion as string | undefined,
         tags: existingChain.tags || [],
         thumbnail: existingChain.imageUrl || "",
         price: existingChain.price?.toString() || "9.99",
         pricingModel: existingChain.followGateEnabled ? "free_with_gate" : "paid",
         downloadUrl: existingChain.downloadUrl || "",
-        chainType: existingChain.rackType,
-        effectType: existingChain.effectType,
-        cpuLoad: existingChain.cpuLoad,
-        requiresPlugins: existingChain.thirdPartyPlugins,
-        demoAudioUrl: existingChain.demoAudioUrl,
-        installationNotes: existingChain.installationNotes,
+        chainType: existingChain.rackType as EffectChainData["chainType"],
+        effectType: existingChain.effectType as string[] | undefined,
+        cpuLoad: existingChain.cpuLoad as EffectChainData["cpuLoad"],
+        requiresPlugins: existingChain.thirdPartyPlugins as string[] | undefined,
+        demoAudioUrl: existingChain.demoAudioUrl as string | undefined,
+        installationNotes: existingChain.installationNotes as string | undefined,
         followGateEnabled: existingChain.followGateEnabled,
         followGateRequirements: existingChain.followGateRequirements,
         followGateSocialLinks: existingChain.followGateSocialLinks,
         followGateMessage: existingChain.followGateMessage,
-        files: existingChain.packFiles ? JSON.parse(existingChain.packFiles) : [],
+        files: existingChain.packFiles ? JSON.parse(existingChain.packFiles as string) : [],
       };
       
       const stepCompletion = {

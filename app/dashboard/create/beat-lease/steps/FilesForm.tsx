@@ -7,9 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Upload, Music, CheckCircle, X, Play } from "lucide-react";
 import { useState, useRef } from "react";
-import { useMutation } from "convex/react";
-import { api } from "@/lib/convex-api";
 import { toast } from "sonner";
+import { useGenerateUploadUrl } from "@/lib/convex-typed-hooks";
 
 export function FilesForm() {
   const { state, updateData, saveBeat } = useBeatLeaseCreation();
@@ -22,8 +21,7 @@ export function FilesForm() {
   const stemsInputRef = useRef<HTMLInputElement>(null);
   const trackoutsInputRef = useRef<HTMLInputElement>(null);
 
-  // @ts-ignore
-  const generateUploadUrl: any = useMutation(api.files.generateUploadUrl as any);
+  const generateUploadUrl = useGenerateUploadUrl();
 
   const handleNext = async () => {
     await saveBeat();

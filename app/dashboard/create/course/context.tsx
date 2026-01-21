@@ -1,12 +1,18 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { useParams, useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams, useRouter, useParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
+import {
+  useStoresByUser,
+  useUserFromClerk,
+  useCourseForEdit,
+  useCreateCourseWithData,
+  useUpdateCourseWithModules,
+  useToggleCoursePublished,
+} from "@/lib/convex-typed-hooks";
 
 // Types for course data
 export interface CourseData {
@@ -129,14 +135,9 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
   const courseId = (searchParams.get("courseId") || searchParams.get("edit")) as Id<"courses"> | undefined;
 
   // Fetch user's stores (since we're not in /store/[storeId] route anymore)
-  // @ts-ignore
-  const stores = useQuery(
-    api.stores.getStoresByUser,
-    user?.id ? { userId: user.id } : "skip"
-  );
-  
+  const stores = useStoresByUser(user?.id);
+
   const storeId = stores?.[0]?._id;
-  
 
   // Redirect if no store found
   useEffect(() => {
@@ -151,23 +152,15 @@ export function CourseCreationProvider({ children }: { children: React.ReactNode
   }, [user, stores, router, toast]);
 
   // Get user from Convex
-  const convexUser = useQuery(
-    api.users.getUserFromClerk,
-    user?.id ? { clerkId: user.id } : "skip"
-  );
-
+  const convexUser = useUserFromClerk(user?.id);
 
   // Get existing course if editing (using clerkId since courses.userId stores clerkId)
-  const existingCourse = useQuery(
-    api.courses.getCourseForEdit,
-    courseId && convexUser?.clerkId ? { courseId, userId: convexUser.clerkId } : "skip"
-  );
-
+  const existingCourse = useCourseForEdit(courseId, convexUser?.clerkId);
 
   // Convex mutations
-  const updateCourseWithModulesMutation = useMutation(api.courses.updateCourseWithModules);
-  const createCourseMutation = useMutation(api.courses.createCourseWithData);
-  const togglePublishedMutation = useMutation(api.courses.togglePublished);
+  const updateCourseWithModulesMutation = useUpdateCourseWithModules();
+  const createCourseMutation = useCreateCourseWithData();
+  const togglePublishedMutation = useToggleCoursePublished();
 
   const [state, setState] = useState<CourseCreationState>({
     data: {

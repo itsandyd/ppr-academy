@@ -1,13 +1,12 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { useMutation } from "convex/react";
-import { api } from "@/lib/convex-api";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Upload, File, X, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useGenerateUploadUrl, useGetFileUrl } from "@/lib/convex-typed-hooks";
 
 export interface UploadedFileData {
   name: string;
@@ -37,8 +36,7 @@ export function FileUploader({
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const generateUploadUrl: any = useMutation(api.files.generateUploadUrl as any);
+  const generateUploadUrl = useGenerateUploadUrl();
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || []);
@@ -169,8 +167,7 @@ interface FileListProps {
 }
 
 export function FileList({ files, onRemove }: FileListProps) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const getFileUrl: any = useMutation(api.files.getUrl as any);
+  const getFileUrl = useGetFileUrl();
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;

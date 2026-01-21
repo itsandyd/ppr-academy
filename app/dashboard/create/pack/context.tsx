@@ -1,12 +1,16 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { useParams, useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams, useRouter, useParams } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQuery } from "convex/react";
-import { api } from "@/lib/convex-api";
 import { Id } from "@/convex/_generated/dataModel";
+import {
+  useStoresByUser,
+  useDigitalProductById,
+  useCreateUniversalProduct,
+  useUpdateDigitalProduct,
+} from "@/lib/convex-typed-hooks";
 
 // Types for pack data
 export interface PackData {
@@ -98,12 +102,8 @@ export function PackCreationProvider({ children }: { children: React.ReactNode }
   const packType = searchParams.get("type") as "sample-pack" | "midi-pack" | "preset-pack" | undefined;
 
   // Fetch user's stores (since we're not in /store/[storeId] route anymore)
-  // @ts-ignore - Type instantiation depth issue
-  const stores = useQuery(
-    api.stores.getStoresByUser,
-    user?.id ? { userId: user.id } : "skip"
-  );
-  
+  const stores = useStoresByUser(user?.id);
+
   const storeId = stores?.[0]?._id;
 
   // Redirect if no store found
@@ -119,18 +119,11 @@ export function PackCreationProvider({ children }: { children: React.ReactNode }
     }
   }, [user, stores, router, toast]);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const createPackMutation: any = useMutation(api.universalProducts.createUniversalProduct as any);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const updatePackMutation: any = useMutation(api.digitalProducts.updateProduct as any);
-  
+  const createPackMutation = useCreateUniversalProduct();
+  const updatePackMutation = useUpdateDigitalProduct();
+
   // Get existing pack if editing
-  // @ts-ignore TS2589 - Type instantiation is excessively deep
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const existingPack: any = useQuery(
-    api.digitalProducts.getProductById,
-    packId ? { productId: packId } : "skip"
-  );
+  const existingPack = useDigitalProductById(packId);
 
   const [state, setState] = useState<PackCreationState>({
     data: {

@@ -4,10 +4,13 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { ServiceData, StepCompletion, DEFAULT_PRICING_TIERS } from "./types";
+import {
+  useStoresByUser,
+  useCreateUniversalProduct,
+  useUpdateDigitalProduct,
+} from "@/lib/convex-typed-hooks";
 
 interface ServiceCreationState {
   data: ServiceData;
@@ -41,11 +44,7 @@ export function ServiceCreationProvider({ children }: { children: React.ReactNod
   const serviceId = searchParams.get("serviceId") as Id<"digitalProducts"> | undefined;
   const serviceType = searchParams.get("type") || "mixing";
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const stores = useQuery(
-    (api as any).stores.getStoresByUser,
-    user?.id ? { userId: user.id } : "skip"
-  );
+  const stores = useStoresByUser(user?.id);
 
   const storeId = stores?.[0]?._id;
 
@@ -60,10 +59,8 @@ export function ServiceCreationProvider({ children }: { children: React.ReactNod
     }
   }, [user, stores, router, toast]);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const createServiceMutation = useMutation((api as any).universalProducts.createUniversalProduct);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const updateServiceMutation = useMutation((api as any).digitalProducts.updateProduct);
+  const createServiceMutation = useCreateUniversalProduct();
+  const updateServiceMutation = useUpdateDigitalProduct();
 
   const [state, setState] = useState<ServiceCreationState>({
     data: {

@@ -11,9 +11,8 @@ import { Upload, Image as ImageIcon, Sparkles, Loader2 } from "lucide-react";
 import { ProductCategory, getProductInfo } from "../types";
 import { ProductAIAssistant } from "@/components/ai/ProductAIAssistant";
 import { useRouter } from "next/navigation";
-import { useMutation } from "convex/react";
-import { api } from "@/lib/convex-api";
 import { toast } from "sonner";
+import { useGenerateUploadUrl, useGetFileUrl } from "@/lib/convex-typed-hooks";
 
 // Category-specific placeholder text for better UX
 const CATEGORY_PLACEHOLDERS: Record<string, { title: string; description: string }> = {
@@ -82,10 +81,8 @@ export function BasicsStep({
   const placeholders = CATEGORY_PLACEHOLDERS[productCategory] || CATEGORY_PLACEHOLDERS["default"];
 
   // Convex mutation for generating upload URL
-  // @ts-ignore - Type instantiation depth issue with Convex
-  const generateUploadUrl = useMutation(api.files.generateUploadUrl);
-  // @ts-ignore - Type instantiation depth issue with Convex
-  const getFileUrl = useMutation(api.files.getUrl);
+  const generateUploadUrl = useGenerateUploadUrl();
+  const getFileUrl = useGetFileUrl();
 
   // Handle image upload
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {

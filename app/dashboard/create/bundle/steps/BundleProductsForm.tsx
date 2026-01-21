@@ -3,8 +3,6 @@
 import { useBundleCreation, BundleProduct } from "../context";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
-import { useQuery } from "convex/react";
-import { api } from "@/lib/convex-api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Search, Package, BookOpen, X, DollarSign } from "lucide-react";
 import { useState, useMemo } from "react";
+import { useStoresByUser, useDigitalProductsByStore, useCoursesByStore } from "@/lib/convex-typed-hooks";
 
 export function BundleProductsForm() {
   const { state, updateData, saveBundle } = useBundleCreation();
@@ -19,17 +18,12 @@ export function BundleProductsForm() {
   const { user } = useUser();
   const [searchQuery, setSearchQuery] = useState("");
 
-  // @ts-ignore
-  const stores = useQuery(api.stores.getStoresByUser, user?.id ? { userId: user.id } : "skip");
+  const stores = useStoresByUser(user?.id);
   const storeId = stores?.[0]?._id;
 
-  // @ts-ignore
-  const digitalProducts: any[] =
-    useQuery(api.digitalProducts.getProductsByStore, storeId ? { storeId } : "skip") || [];
+  const digitalProducts = useDigitalProductsByStore(storeId) || [];
 
-  // @ts-ignore
-  const courses: any[] =
-    useQuery(api.courses.getCoursesByStore, storeId ? { storeId } : "skip") || [];
+  const courses = useCoursesByStore(storeId) || [];
 
   const allProducts = useMemo(() => {
     const products: Array<{

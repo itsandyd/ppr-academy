@@ -4,10 +4,14 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQuery } from "convex/react";
-import { api } from "@/lib/convex-api";
 import { Id } from "@/convex/_generated/dataModel";
 import { DAWType } from "../types";
+import {
+  useStoresByUser,
+  useDigitalProductById,
+  useCreateUniversalProduct,
+  useUpdateDigitalProduct,
+} from "@/lib/convex-typed-hooks";
 
 // Types for mixing template data
 export interface MixingTemplateData {
@@ -100,11 +104,7 @@ export function MixingTemplateCreationProvider({ children }: { children: React.R
   const initialDAW = searchParams.get("daw") as DAWType | undefined;
 
   // Fetch user's stores
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const stores: any = useQuery(
-    api.stores.getStoresByUser,
-    user?.id ? { userId: user.id } : "skip"
-  );
+  const stores = useStoresByUser(user?.id);
 
   const storeId = stores?.[0]?._id;
 
@@ -121,18 +121,11 @@ export function MixingTemplateCreationProvider({ children }: { children: React.R
     }
   }, [user, stores, router, toast]);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const createTemplateMutation: any = useMutation(api.universalProducts.createUniversalProduct as any);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const updateTemplateMutation: any = useMutation(api.digitalProducts.updateProduct as any);
+  const createTemplateMutation = useCreateUniversalProduct();
+  const updateTemplateMutation = useUpdateDigitalProduct();
 
   // Get existing template if editing
-  // @ts-ignore TS2589
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const existingTemplate: any = useQuery(
-    api.digitalProducts.getProductById,
-    templateId ? { productId: templateId } : "skip"
-  );
+  const existingTemplate = useDigitalProductById(templateId);
 
   const [state, setState] = useState<MixingTemplateCreationState>({
     data: {
@@ -157,25 +150,25 @@ export function MixingTemplateCreationProvider({ children }: { children: React.R
       const newData: MixingTemplateData = {
         title: existingTemplate.title || "",
         description: existingTemplate.description || "",
-        dawType: existingTemplate.dawType || "ableton",
-        dawVersion: existingTemplate.dawVersion,
+        dawType: (existingTemplate.dawType as DAWType) || "ableton",
+        dawVersion: existingTemplate.dawVersion as string | undefined,
         tags: existingTemplate.tags || [],
         thumbnail: existingTemplate.imageUrl || "",
         price: existingTemplate.price?.toString() || "14.99",
         pricingModel: existingTemplate.followGateEnabled ? "free_with_gate" : "paid",
         downloadUrl: existingTemplate.downloadUrl || "",
-        templateType: existingTemplate.templateType || "mixing",
-        channelCount: existingTemplate.channelCount,
-        busTypes: existingTemplate.busTypes,
-        includesPlugins: existingTemplate.includesPlugins,
-        thirdPartyPlugins: existingTemplate.thirdPartyPlugins,
-        genre: existingTemplate.genre,
-        installationNotes: existingTemplate.installationNotes,
+        templateType: (existingTemplate.templateType as MixingTemplateData["templateType"]) || "mixing",
+        channelCount: existingTemplate.channelCount as number | undefined,
+        busTypes: existingTemplate.busTypes as string[] | undefined,
+        includesPlugins: existingTemplate.includesPlugins as boolean | undefined,
+        thirdPartyPlugins: existingTemplate.thirdPartyPlugins as string[] | undefined,
+        genre: existingTemplate.genre as string[] | undefined,
+        installationNotes: existingTemplate.installationNotes as string | undefined,
         followGateEnabled: existingTemplate.followGateEnabled,
         followGateRequirements: existingTemplate.followGateRequirements,
         followGateSocialLinks: existingTemplate.followGateSocialLinks,
         followGateMessage: existingTemplate.followGateMessage,
-        files: existingTemplate.packFiles ? JSON.parse(existingTemplate.packFiles) : [],
+        files: existingTemplate.packFiles ? JSON.parse(existingTemplate.packFiles as string) : [],
       };
 
       const stepCompletion = {

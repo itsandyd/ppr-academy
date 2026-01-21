@@ -4,9 +4,15 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQuery } from "convex/react";
+import { useQuery } from "convex/react";
 import { api } from "@/lib/convex-api";
 import { Id } from "@/convex/_generated/dataModel";
+import {
+  useStoresByUser,
+  useCreateBundle,
+  useUpdateBundle,
+  usePublishBundle,
+} from "@/lib/convex-typed-hooks";
 
 export interface BundleProduct {
   id: Id<"digitalProducts"> | Id<"courses">;
@@ -66,8 +72,7 @@ export function BundleCreationProvider({ children }: { children: React.ReactNode
   const { toast } = useToast();
   const bundleId = searchParams.get("bundleId") as Id<"bundles"> | undefined;
 
-  // @ts-ignore
-  const stores = useQuery(api.stores.getStoresByUser, user?.id ? { userId: user.id } : "skip");
+  const stores = useStoresByUser(user?.id);
   const storeId = stores?.[0]?._id;
 
   useEffect(() => {
@@ -82,18 +87,14 @@ export function BundleCreationProvider({ children }: { children: React.ReactNode
     }
   }, [user, stores, router, toast]);
 
-  // @ts-ignore
-  const createBundleMutation: any = useMutation(api.bundles.createBundle as any);
-  // @ts-ignore
-  const updateBundleMutation: any = useMutation(api.bundles.updateBundle as any);
-  // @ts-ignore
-  const publishBundleMutation: any = useMutation(api.bundles.publishBundle as any);
+  const createBundleMutation = useCreateBundle();
+  const updateBundleMutation = useUpdateBundle();
+  const publishBundleMutation = usePublishBundle();
 
-  // @ts-ignore
-  const existingBundle: any = useQuery(
+  const existingBundle = useQuery(
     api.bundles.getBundleDetails,
     bundleId ? { bundleId } : "skip"
-  );
+  ) as { _id: Id<"bundles">; courses?: unknown[]; products?: unknown[]; title?: string; name?: string; description?: string; price?: number; bundlePrice?: number; originalPrice?: number; discountPercentage?: number; imageUrl?: string } | null | undefined;
 
   const [state, setState] = useState<BundleCreationState>({
     data: {
@@ -256,11 +257,11 @@ export function BundleCreationProvider({ children }: { children: React.ReactNode
           imageUrl: state.data.thumbnail,
         });
 
-        if (result?.bundleId) {
-          setState((prev) => ({ ...prev, bundleId: result.bundleId }));
+        if (result) {
+          setState((prev) => ({ ...prev, bundleId: result }));
           const currentStep = searchParams.get("step") || "basics";
           router.replace(
-            `/dashboard/create/bundle?bundleId=${result.bundleId}&step=${currentStep}`
+            `/dashboard/create/bundle?bundleId=${result}&step=${currentStep}`
           );
         }
       }

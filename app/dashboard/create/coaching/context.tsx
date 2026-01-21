@@ -4,10 +4,13 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQuery } from "convex/react";
-import { api } from "@/lib/convex-api";
 import { Id } from "@/convex/_generated/dataModel";
 import { CoachingData, StepCompletion } from "./types";
+import {
+  useStoresByUser,
+  useCreateUniversalProduct,
+  useUpdateDigitalProduct,
+} from "@/lib/convex-typed-hooks";
 
 interface CoachingCreationState {
   data: CoachingData;
@@ -41,8 +44,7 @@ export function CoachingCreationProvider({ children }: { children: React.ReactNo
   const coachingId = searchParams.get("coachingId") as Id<"digitalProducts"> | undefined;
 
   // Fetch user's stores
-  // @ts-ignore
-  const stores = useQuery(api.stores.getStoresByUser, user?.id ? { userId: user.id } : "skip");
+  const stores = useStoresByUser(user?.id);
 
   const storeId = stores?.[0]?._id;
 
@@ -58,12 +60,8 @@ export function CoachingCreationProvider({ children }: { children: React.ReactNo
     }
   }, [user, stores, router, toast]);
 
-  // @ts-ignore
-  const createCoachingMutation: any = useMutation(
-    api.universalProducts.createUniversalProduct as any
-  );
-  // @ts-ignore
-  const updateCoachingMutation: any = useMutation(api.digitalProducts.updateProduct as any);
+  const createCoachingMutation = useCreateUniversalProduct();
+  const updateCoachingMutation = useUpdateDigitalProduct();
 
   const [state, setState] = useState<CoachingCreationState>({
     data: {

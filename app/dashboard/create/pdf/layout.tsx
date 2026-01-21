@@ -3,9 +3,8 @@
 import React from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
-import { useQuery } from "convex/react";
-import { api } from "@/lib/convex-api";
 import { PDFCreationProvider, usePDFCreation } from "./context";
+import { useStoresByUser } from "@/lib/convex-typed-hooks";
 import { FileText, DollarSign, Lock, Upload } from "lucide-react";
 import { StepProgress, Step } from "@/app/dashboard/create/shared/StepProgress";
 import { ActionBar } from "@/app/dashboard/create/shared/ActionBar";
@@ -61,8 +60,7 @@ function LayoutContentInner({ children }: PDFCreateLayoutProps) {
   const router = useRouter();
   const currentStep = searchParams.get("step") || "basics";
 
-  // @ts-ignore - Type instantiation depth issue
-  const stores = useQuery(api.stores.getStoresByUser, user?.id ? { userId: user.id } : "skip");
+  const stores = useStoresByUser(user?.id);
   const store = stores?.[0];
 
   const { state, canPublish, createPDF, savePDF } = usePDFCreation();

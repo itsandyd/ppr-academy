@@ -4,10 +4,14 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQuery } from "convex/react";
-import { api } from "@/lib/convex-api";
 import { Id } from "@/convex/_generated/dataModel";
 import { DAWType } from "../types";
+import {
+  useStoresByUser,
+  useDigitalProductById,
+  useCreateUniversalProduct,
+  useUpdateDigitalProduct,
+} from "@/lib/convex-typed-hooks";
 
 // Types for project file data
 export interface ProjectFileData {
@@ -99,11 +103,7 @@ export function ProjectFileCreationProvider({ children }: { children: React.Reac
   const initialDAW = searchParams.get("daw") as DAWType | undefined;
 
   // Fetch user's stores
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const stores: any = useQuery(
-    api.stores.getStoresByUser,
-    user?.id ? { userId: user.id } : "skip"
-  );
+  const stores = useStoresByUser(user?.id);
 
   const storeId = stores?.[0]?._id;
 
@@ -120,18 +120,11 @@ export function ProjectFileCreationProvider({ children }: { children: React.Reac
     }
   }, [user, stores, router, toast]);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const createProjectMutation: any = useMutation(api.universalProducts.createUniversalProduct as any);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const updateProjectMutation: any = useMutation(api.digitalProducts.updateProduct as any);
+  const createProjectMutation = useCreateUniversalProduct();
+  const updateProjectMutation = useUpdateDigitalProduct();
 
   // Get existing project if editing
-  // @ts-ignore TS2589
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const existingProject: any = useQuery(
-    api.digitalProducts.getProductById,
-    projectId ? { productId: projectId } : "skip"
-  );
+  const existingProject = useDigitalProductById(projectId);
 
   const [state, setState] = useState<ProjectFileCreationState>({
     data: {
@@ -156,23 +149,23 @@ export function ProjectFileCreationProvider({ children }: { children: React.Reac
       const newData: ProjectFileData = {
         title: existingProject.title || "",
         description: existingProject.description || "",
-        dawType: existingProject.dawType || "ableton",
-        dawVersion: existingProject.dawVersion,
+        dawType: (existingProject.dawType as DAWType) || "ableton",
+        dawVersion: existingProject.dawVersion as string | undefined,
         tags: existingProject.tags || [],
         thumbnail: existingProject.imageUrl || "",
         price: existingProject.price?.toString() || "24.99",
         pricingModel: existingProject.followGateEnabled ? "free_with_gate" : "paid",
         downloadUrl: existingProject.downloadUrl || "",
-        genre: existingProject.genre,
+        genre: existingProject.genre as string[] | undefined,
         bpm: existingProject.bpm,
         musicalKey: existingProject.musicalKey,
-        installationNotes: existingProject.installationNotes,
-        thirdPartyPlugins: existingProject.thirdPartyPlugins,
+        installationNotes: existingProject.installationNotes as string | undefined,
+        thirdPartyPlugins: existingProject.thirdPartyPlugins as string[] | undefined,
         followGateEnabled: existingProject.followGateEnabled,
         followGateRequirements: existingProject.followGateRequirements,
         followGateSocialLinks: existingProject.followGateSocialLinks,
         followGateMessage: existingProject.followGateMessage,
-        files: existingProject.packFiles ? JSON.parse(existingProject.packFiles) : [],
+        files: existingProject.packFiles ? JSON.parse(existingProject.packFiles as string) : [],
       };
 
       const stepCompletion = {

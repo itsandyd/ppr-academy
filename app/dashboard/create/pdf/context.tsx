@@ -4,10 +4,14 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQuery } from "convex/react";
-import { api } from "@/lib/convex-api";
 import { Id } from "@/convex/_generated/dataModel";
 import { PDFType } from "../types";
+import {
+  useStoresByUser,
+  useDigitalProductById,
+  useCreateUniversalProduct,
+  useUpdateDigitalProduct,
+} from "@/lib/convex-typed-hooks";
 
 export interface PDFData {
   // Basic info
@@ -90,8 +94,7 @@ export function PDFCreationProvider({ children }: { children: React.ReactNode })
   const initialType = searchParams.get("type") as PDFType | undefined;
 
   // Fetch user's stores
-  // @ts-ignore
-  const stores = useQuery(api.stores.getStoresByUser, user?.id ? { userId: user.id } : "skip");
+  const stores = useStoresByUser(user?.id);
 
   const storeId = stores?.[0]?._id;
 
@@ -107,17 +110,11 @@ export function PDFCreationProvider({ children }: { children: React.ReactNode })
     }
   }, [user, stores, router, toast]);
 
-  // @ts-ignore
-  const createPDFMutation: any = useMutation(api.universalProducts.createUniversalProduct as any);
-  // @ts-ignore
-  const updatePDFMutation: any = useMutation(api.digitalProducts.updateProduct as any);
+  const createPDFMutation = useCreateUniversalProduct();
+  const updatePDFMutation = useUpdateDigitalProduct();
 
   // Get existing PDF if editing
-  // @ts-ignore
-  const existingPDF: any = useQuery(
-    api.digitalProducts.getProductById,
-    pdfId ? { productId: pdfId } : "skip"
-  );
+  const existingPDF = useDigitalProductById(pdfId);
 
   const [state, setState] = useState<PDFCreationState>({
     data: {
@@ -141,14 +138,14 @@ export function PDFCreationProvider({ children }: { children: React.ReactNode })
       const newData: PDFData = {
         title: existingPDF.title || "",
         description: existingPDF.description || "",
-        pdfType: existingPDF.pdfType || "guide",
+        pdfType: (existingPDF.pdfType as PDFType) || "guide",
         tags: existingPDF.tags || [],
         thumbnail: existingPDF.imageUrl || "",
         price: existingPDF.price?.toString() || "9.99",
         pricingModel: existingPDF.followGateEnabled ? "free_with_gate" : "paid",
         downloadUrl: existingPDF.downloadUrl || "",
-        pageCount: existingPDF.pageCount,
-        fileSize: existingPDF.fileSize,
+        pageCount: existingPDF.pageCount as number | undefined,
+        fileSize: existingPDF.fileSize as number | undefined,
         followGateEnabled: existingPDF.followGateEnabled,
         followGateRequirements: existingPDF.followGateRequirements,
         followGateSocialLinks: existingPDF.followGateSocialLinks,
