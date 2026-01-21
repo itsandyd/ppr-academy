@@ -18375,6 +18375,7 @@ export declare const api: {
         coursesCompleted: number;
         coursesEnrolled: number;
         currentStreak: number;
+        samplePacksOwned: number;
         totalHoursLearned: number;
       }
     >;

@@ -111,6 +111,7 @@ export const getUserLibraryStats = query({
     totalHoursLearned: v.number(),
     currentStreak: v.number(),
     certificatesEarned: v.number(),
+    samplePacksOwned: v.number(),
   }),
   handler: async (ctx, args) => {
     // Get enrollments
@@ -160,12 +161,41 @@ export const getUserLibraryStats = query({
       .withIndex("by_user", (q) => q.eq("userId", args.userId))
       .collect();
 
+    // Get sample/midi/preset pack purchases
+    const packPurchases = await ctx.db
+      .query("purchases")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .filter((q) =>
+        q.and(
+          q.eq(q.field("status"), "completed"),
+          q.eq(q.field("productType"), "digitalProduct")
+        )
+      )
+      .collect();
+
+    // Count packs by checking product category
+    let samplePacksOwned = 0;
+    for (const purchase of packPurchases) {
+      if (purchase.productId) {
+        const product = await ctx.db.get(purchase.productId);
+        if (
+          product &&
+          (product.productCategory === "sample-pack" ||
+            product.productCategory === "midi-pack" ||
+            product.productCategory === "preset-pack")
+        ) {
+          samplePacksOwned++;
+        }
+      }
+    }
+
     return {
       coursesEnrolled: enrollments.length,
       coursesCompleted: completedCourses,
       totalHoursLearned: totalHours,
       currentStreak,
       certificatesEarned: certificates.length,
+      samplePacksOwned,
     };
   },
 });

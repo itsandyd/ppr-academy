@@ -348,6 +348,58 @@ export function PackBasicsForm() {
         </CardContent>
       </Card>
 
+      {/* Sample Categories (for sample packs) */}
+      {state.data.packType === "sample-pack" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Sample Categories</CardTitle>
+            <CardDescription>Select the types of samples included in your pack</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              {[
+                { value: "drums", label: "Drums", icon: "🥁" },
+                { value: "bass", label: "Bass", icon: "🎸" },
+                { value: "melodic", label: "Melodic", icon: "🎹" },
+                { value: "vocals", label: "Vocals", icon: "🎤" },
+                { value: "fx", label: "FX", icon: "✨" },
+                { value: "one-shots", label: "One-shots", icon: "🔊" },
+                { value: "loops", label: "Loops", icon: "🔁" },
+                { value: "textures", label: "Textures", icon: "🌊" },
+              ].map((category) => {
+                const isSelected = (state.data.sampleCategories || []).includes(category.value);
+                return (
+                  <button
+                    key={category.value}
+                    type="button"
+                    onClick={() => {
+                      const current = state.data.sampleCategories || [];
+                      const updated = isSelected
+                        ? current.filter((c: string) => c !== category.value)
+                        : [...current, category.value];
+                      updateData("basics", { sampleCategories: updated });
+                    }}
+                    className={`p-3 rounded-lg border-2 transition-all text-left flex items-center gap-2 ${
+                      isSelected
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50"
+                    }`}
+                  >
+                    <span className="text-lg">{category.icon}</span>
+                    <span className="font-medium text-sm">{category.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {(state.data.sampleCategories || []).length > 0 && (
+              <p className="text-xs text-muted-foreground mt-3">
+                Selected: {(state.data.sampleCategories || []).join(", ")}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Preset Pack Specific Fields */}
       {state.data.packType === "preset-pack" && (
         <Card>

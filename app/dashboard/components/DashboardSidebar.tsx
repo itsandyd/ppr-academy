@@ -86,6 +86,12 @@ const learnLinks: SidebarLink[] = [
     color: "text-orange-500",
   },
   {
+    href: "/dashboard/samples?mode=learn",
+    label: "My Samples",
+    icon: Music,
+    color: "text-pink-500",
+  },
+  {
     href: "/dashboard/coaching?mode=learn",
     label: "My Sessions",
     icon: Video,
