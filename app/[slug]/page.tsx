@@ -13,33 +13,28 @@ import {
   Play,
   Users,
   Star,
-  X,
-  ExternalLink,
   Download,
   ShoppingCart,
   ArrowRight,
-  Package,
-  Waves,
+  ExternalLink,
 } from "lucide-react";
-import { DesktopStorefront } from "./components/DesktopStorefront";
-import { MobileStorefront } from "./components/MobileStorefront";
 import { SubscriptionSection } from "./components/SubscriptionSection";
-import { CreatorsPicks } from "@/components/storefront/creators-picks";
-import { FollowCreatorCTA } from "@/components/storefront/follow-creator-cta";
+import {
+  ProductSections,
+  TrustSignals,
+  SocialProof,
+  VerifiedCreatorBadge,
+} from "./components/";
+import { ProductGrid, BaseProduct, getCategoryLabel } from "./components/product-cards";
 import {
   StorefrontLayout,
   StorefrontSkeleton,
   StorefrontHero,
-  ProductFilters,
-  ProductShowcase,
 } from "@/components/storefront";
-import {
-  AnimatedFilterResults,
-  AnimatedGridItem,
-} from "@/components/ui/animated-filter-transitions";
+import { AnimatedFilterResults } from "@/components/ui/animated-filter-transitions";
 import { StorefrontStructuredDataWrapper } from "./components/StorefrontStructuredDataWrapper";
 import { ArtistShowcase } from "@/components/music/artist-showcase";
-import { useEffect, useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -52,7 +47,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -75,9 +69,6 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
   const { slug } = use(params);
   const router = useRouter();
 
-  // Track if we're on desktop or mobile
-  const [isDesktop, setIsDesktop] = useState(false);
-
   // Enhanced filtering and search state
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -91,17 +82,6 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
   const [name, setName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasSubmittedEmail, setHasSubmittedEmail] = useState(false);
-
-  useEffect(() => {
-    const checkIsDesktop = () => {
-      setIsDesktop(window.innerWidth >= 1024); // lg breakpoint
-    };
-
-    checkIsDesktop();
-    window.addEventListener("resize", checkIsDesktop);
-
-    return () => window.removeEventListener("resize", checkIsDesktop);
-  }, []);
 
   // Fetch store by slug
   const store = useQuery(api.stores.getStoreBySlug, { slug: slug });
@@ -154,43 +134,63 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
   // Mutation for lead magnet submissions (handles emails, workflows, customer creation)
   const submitLead = useMutation(api.leadSubmissions.submitLead);
 
-  // Combine all product types into unified list with enhanced metadata
-  const allProducts = useMemo(
+  // Combine all product types into unified list with BaseProduct shape
+  const allProducts: BaseProduct[] = useMemo(
     () => [
       // Digital Products (preserve existing productType or default to "digitalProduct")
-      ...(products || []).map((product: any) => ({
-        ...product,
-        slug: (product as any).slug || product._id,
+      ...(products || []).map((product: any): BaseProduct => ({
+        _id: product._id,
+        title: product.title,
+        description: product.description,
+        price: product.price || 0,
+        imageUrl: product.imageUrl,
+        buttonLabel: product.buttonLabel,
+        downloadUrl: product.downloadUrl,
+        url: product.url,
+        slug: product.slug || product._id,
+        category: product.category || "Digital Product",
         productType: product.productType || "digitalProduct",
-        category: (product as any).category || "Digital Product",
-        icon: Play,
-        badgeColor: "bg-blue-100 text-blue-800",
+        productCategory: product.productCategory,
+        _creationTime: product._creationTime,
+        isPublished: product.isPublished,
+        style: product.style,
+        followGateEnabled: product.followGateEnabled,
+        followGateRequirements: product.followGateRequirements,
+        followGateSocialLinks: product.followGateSocialLinks,
+        followGateMessage: product.followGateMessage,
+        beatLeaseConfig: product.beatLeaseConfig,
+        bpm: product.bpm,
+        musicalKey: product.musicalKey,
+        genre: product.genre,
+        demoAudioUrl: product.demoAudioUrl,
+        tierName: product.tierName,
+        priceMonthly: product.priceMonthly,
+        priceYearly: product.priceYearly,
+        benefits: product.benefits,
+        trialDays: product.trialDays,
+        acceptsSubmissions: product.acceptsSubmissions,
+        submissionFee: product.submissionFee,
+        genres: product.genres,
+        mediaType: product.mediaType,
       })),
 
       // Courses (add course-specific properties)
-      ...(courses || []).map((course: any) => ({
-        ...course,
+      ...(courses || []).map((course: any): BaseProduct => ({
+        _id: course._id,
+        title: course.title,
+        description: course.description,
+        price: course.price || 0,
+        imageUrl: course.imageUrl,
+        buttonLabel: "Enroll Now",
         slug: course.slug || course._id,
-        productType: "course",
         category: course.category || "Course",
-        style: undefined, // Courses don't have style
-        buttonLabel: "Enroll Now", // Default CTA for courses
-        icon: BookOpen,
-        badgeColor: "bg-green-100 text-green-800",
+        productType: "course",
+        _creationTime: course._creationTime,
+        isPublished: course.isPublished,
+        skillLevel: course.skillLevel,
+        duration: course.duration,
+        lessonsCount: course.lessonsCount,
       })),
-
-      // TODO: Add coaching profiles when available
-      // ...(coachProfiles || []).map(profile => ({
-      //   ...profile,
-      //   productType: "coaching",
-      //   category: "Coaching",
-      //   price: profile.basePrice,
-      //   title: profile.title,
-      //   description: profile.description,
-      //   buttonLabel: "Book Session",
-      //   icon: Users,
-      //   badgeColor: "bg-purple-100 text-purple-800",
-      // }))
     ],
     [products, courses]
   );
@@ -260,17 +260,10 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
 
   // Get unique categories for filter dropdown
   const categories = useMemo(() => {
-    const uniqueCategories = [...new Set(allProducts.map((p) => p.productType))];
+    const uniqueCategories = [...new Set(allProducts.map((p) => p.productType || "digitalProduct"))];
     return uniqueCategories.map((cat) => ({
       value: cat,
-      label:
-        cat === "digitalProduct"
-          ? "Digital Product"
-          : cat === "course"
-            ? "Course"
-            : cat === "coaching"
-              ? "Coaching"
-              : cat,
+      label: getCategoryLabel(cat),
     }));
   }, [allProducts]);
 
@@ -570,482 +563,29 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
 
             {/* Products Organized by Category */}
             {filteredProducts.length > 0 ? (
-              <AnimatedFilterResults
-                filterKey={`${selectedCategory}-${selectedPriceRange}-${searchTerm}-${sortBy}`}
-              >
-                {/* Group products by type when showing all categories */}
+              <>
+                {/* Show categorized sections when viewing all categories without search */}
                 {selectedCategory === "all" && !searchTerm ? (
-                  <div className="space-y-12">
-                    {/* Ableton Racks Section */}
-                    {(() => {
-                      const abletonRacks = filteredProducts.filter(
-                        (p) => p.productType === "abletonRack" || p.productType === "abletonPreset"
-                      );
-                      if (abletonRacks.length === 0) return null;
-                      return (
-                        <div>
-                          <div className="mb-6 flex items-center gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-chart-2/10">
-                              <Waves className="h-5 w-5 text-chart-2" />
-                            </div>
-                            <div>
-                              <h2 className="text-2xl font-bold">Ableton Racks</h2>
-                              <p className="text-sm text-muted-foreground">
-                                Professional audio effect racks and presets
-                              </p>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                            {abletonRacks.map((product) => {
-                              const IconComponent = product.icon;
-                              return (
-                                <Card
-                                  key={product._id}
-                                  className="group overflow-hidden transition-shadow duration-200 hover:shadow-lg"
-                                >
-                                  <div className="relative h-48 bg-gradient-to-br from-muted to-muted/80">
-                                    {product.imageUrl ? (
-                                      <Image
-                                        src={product.imageUrl}
-                                        alt={product.title}
-                                        width={640}
-                                        height={192}
-                                        className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
-                                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                                      />
-                                    ) : (
-                                      <div className="flex h-full w-full items-center justify-center">
-                                        <IconComponent className="h-12 w-12 text-muted-foreground" />
-                                      </div>
-                                    )}
-                                    <Badge
-                                      className={`absolute left-3 top-3 ${product.badgeColor}`}
-                                    >
-                                      <IconComponent className="mr-1 h-3 w-3" />
-                                      Ableton Rack
-                                    </Badge>
-                                    <Badge className="absolute right-3 top-3 border border-border bg-card font-semibold text-card-foreground">
-                                      {product.price === 0 ? "FREE" : `$${product.price}`}
-                                    </Badge>
-                                  </div>
-                                  <CardContent className="p-4">
-                                    <div className="space-y-3">
-                                      <div>
-                                        <h3 className="line-clamp-2 text-lg font-semibold transition-colors group-hover:text-primary">
-                                          {product.title}
-                                        </h3>
-                                        <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-                                          {product.description}
-                                        </p>
-                                      </div>
-                                      <Button
-                                        className="w-full"
-                                        onClick={() => handleProductClick(product)}
-                                      >
-                                        {product.buttonLabel || "View Details"}
-                                      </Button>
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })()}
-
-                    {/* Courses Section */}
-                    {(() => {
-                      const courses = filteredProducts.filter((p) => p.productType === "course");
-                      if (courses.length === 0) return null;
-                      return (
-                        <div>
-                          <div className="mb-6 flex items-center gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-chart-1/10">
-                              <BookOpen className="h-5 w-5 text-chart-1" />
-                            </div>
-                            <div>
-                              <h2 className="text-2xl font-bold">Courses</h2>
-                              <p className="text-sm text-muted-foreground">
-                                In-depth video courses and tutorials
-                              </p>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                            {courses.map((product) => {
-                              const IconComponent = product.icon;
-                              return (
-                                <Card
-                                  key={product._id}
-                                  className="group overflow-hidden transition-shadow duration-200 hover:shadow-lg"
-                                >
-                                  <div className="relative h-48 bg-gradient-to-br from-muted to-muted/80">
-                                    {product.imageUrl ? (
-                                      <Image
-                                        src={product.imageUrl}
-                                        alt={product.title}
-                                        width={640}
-                                        height={192}
-                                        className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
-                                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                                      />
-                                    ) : (
-                                      <div className="flex h-full w-full items-center justify-center">
-                                        <IconComponent className="h-12 w-12 text-muted-foreground" />
-                                      </div>
-                                    )}
-                                    <Badge
-                                      className={`absolute left-3 top-3 ${product.badgeColor}`}
-                                    >
-                                      <IconComponent className="mr-1 h-3 w-3" />
-                                      Course
-                                    </Badge>
-                                    <Badge className="absolute right-3 top-3 border border-border bg-card font-semibold text-card-foreground">
-                                      {product.price === 0 ? "FREE" : `$${product.price}`}
-                                    </Badge>
-                                  </div>
-                                  <CardContent className="p-4">
-                                    <div className="space-y-3">
-                                      <div>
-                                        <h3 className="line-clamp-2 text-lg font-semibold transition-colors group-hover:text-primary">
-                                          {product.title}
-                                        </h3>
-                                        <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-                                          {product.description}
-                                        </p>
-                                      </div>
-                                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                        <span>{product.category}</span>
-                                        {(product as any).skillLevel && (
-                                          <>
-                                            <span>•</span>
-                                            <span>{(product as any).skillLevel}</span>
-                                          </>
-                                        )}
-                                      </div>
-                                      <Button
-                                        className="w-full"
-                                        onClick={() => handleProductClick(product)}
-                                      >
-                                        {product.buttonLabel || "Enroll Now"}
-                                      </Button>
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })()}
-
-                    {/* Digital Products Section */}
-                    {(() => {
-                      const digitalProducts = filteredProducts.filter(
-                        (p) =>
-                          p.productType === "digital" ||
-                          p.productType === "digitalProduct" ||
-                          !p.productType
-                      );
-                      if (digitalProducts.length === 0) return null;
-                      return (
-                        <div>
-                          <div className="mb-6 flex items-center gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-chart-3/10">
-                              <Package className="h-5 w-5 text-chart-3" />
-                            </div>
-                            <div>
-                              <h2 className="text-2xl font-bold">Digital Products</h2>
-                              <p className="text-sm text-muted-foreground">
-                                Sample packs, templates, and downloadable content
-                              </p>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                            {digitalProducts.map((product) => {
-                              const IconComponent = product.icon;
-                              return (
-                                <Card
-                                  key={product._id}
-                                  className="group overflow-hidden transition-shadow duration-200 hover:shadow-lg"
-                                >
-                                  <div className="relative h-48 bg-gradient-to-br from-muted to-muted/80">
-                                    {product.imageUrl ? (
-                                      <Image
-                                        src={product.imageUrl}
-                                        alt={product.title}
-                                        width={640}
-                                        height={192}
-                                        className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
-                                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                                      />
-                                    ) : (
-                                      <div className="flex h-full w-full items-center justify-center">
-                                        <IconComponent className="h-12 w-12 text-muted-foreground" />
-                                      </div>
-                                    )}
-                                    <Badge
-                                      className={`absolute left-3 top-3 ${product.badgeColor}`}
-                                    >
-                                      <IconComponent className="mr-1 h-3 w-3" />
-                                      Digital
-                                    </Badge>
-                                    <Badge className="absolute right-3 top-3 border border-border bg-card font-semibold text-card-foreground">
-                                      {product.price === 0 ? "FREE" : `$${product.price}`}
-                                    </Badge>
-                                  </div>
-                                  <CardContent className="p-4">
-                                    <div className="space-y-3">
-                                      <div>
-                                        <h3 className="line-clamp-2 text-lg font-semibold transition-colors group-hover:text-primary">
-                                          {product.title}
-                                        </h3>
-                                        <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-                                          {product.description}
-                                        </p>
-                                      </div>
-                                      <Button
-                                        className="w-full"
-                                        onClick={() => handleProductClick(product)}
-                                      >
-                                        {product.buttonLabel || "Get Access"}
-                                      </Button>
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })()}
-
-                    {/* URL/Media Section */}
-                    {(() => {
-                      const urlMedia = filteredProducts.filter((p) => p.productType === "urlMedia");
-                      if (urlMedia.length === 0) return null;
-                      return (
-                        <div>
-                          <div className="mb-6 flex items-center gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-500/10">
-                              <ExternalLink className="h-5 w-5 text-purple-500" />
-                            </div>
-                            <div>
-                              <h2 className="text-2xl font-bold">Links & Media</h2>
-                              <p className="text-sm text-muted-foreground">
-                                External resources and curated content
-                              </p>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                            {urlMedia.map((product) => {
-                              const IconComponent = product.icon;
-                              return (
-                                <Card
-                                  key={product._id}
-                                  className="group overflow-hidden transition-shadow duration-200 hover:shadow-lg"
-                                >
-                                  <div className="relative h-48 bg-gradient-to-br from-muted to-muted/80">
-                                    {product.imageUrl ? (
-                                      <Image
-                                        src={product.imageUrl}
-                                        alt={product.title}
-                                        width={640}
-                                        height={192}
-                                        className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
-                                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                                      />
-                                    ) : (
-                                      <div className="flex h-full w-full items-center justify-center">
-                                        <ExternalLink className="h-12 w-12 text-muted-foreground" />
-                                      </div>
-                                    )}
-                                    <Badge className="absolute left-3 top-3 bg-purple-500/10 text-purple-500 dark:bg-purple-500/20 dark:text-purple-400">
-                                      <ExternalLink className="mr-1 h-3 w-3" />
-                                      Link
-                                    </Badge>
-                                    <Badge className="absolute right-3 top-3 border border-border bg-card font-semibold text-card-foreground">
-                                      {product.price === 0 ? "FREE" : `$${product.price}`}
-                                    </Badge>
-                                  </div>
-                                  <CardContent className="p-4">
-                                    <div className="space-y-3">
-                                      <div>
-                                        <h3 className="line-clamp-2 text-lg font-semibold transition-colors group-hover:text-primary">
-                                          {product.title}
-                                        </h3>
-                                        <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-                                          {product.description}
-                                        </p>
-                                      </div>
-                                      <Button
-                                        className="w-full"
-                                        onClick={() => handleProductClick(product)}
-                                      >
-                                        {product.buttonLabel || "Visit Link"}
-                                      </Button>
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })()}
-
-                    {/* Coaching Section */}
-                    {(() => {
-                      const coaching = filteredProducts.filter((p) => p.productType === "coaching");
-                      if (coaching.length === 0) return null;
-                      return (
-                        <div>
-                          <div className="mb-6 flex items-center gap-3">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-500/10">
-                              <Users className="h-5 w-5 text-indigo-500" />
-                            </div>
-                            <div>
-                              <h2 className="text-2xl font-bold">Coaching</h2>
-                              <p className="text-sm text-muted-foreground">
-                                One-on-one sessions and personalized guidance
-                              </p>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                            {coaching.map((product) => {
-                              return (
-                                <Card
-                                  key={product._id}
-                                  className="group overflow-hidden transition-shadow duration-200 hover:shadow-lg"
-                                >
-                                  <div className="relative h-48 bg-gradient-to-br from-muted to-muted/80">
-                                    {product.imageUrl ? (
-                                      <Image
-                                        src={product.imageUrl}
-                                        alt={product.title}
-                                        width={640}
-                                        height={192}
-                                        className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
-                                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                                      />
-                                    ) : (
-                                      <div className="flex h-full w-full items-center justify-center">
-                                        <Users className="h-12 w-12 text-muted-foreground" />
-                                      </div>
-                                    )}
-                                    <Badge className="absolute left-3 top-3 bg-indigo-500/10 text-indigo-500 dark:bg-indigo-500/20 dark:text-indigo-400">
-                                      <Users className="mr-1 h-3 w-3" />
-                                      Coaching
-                                    </Badge>
-                                    <Badge className="absolute right-3 top-3 border border-border bg-card font-semibold text-card-foreground">
-                                      {product.price === 0 ? "FREE" : `$${product.price}`}
-                                    </Badge>
-                                  </div>
-                                  <CardContent className="p-4">
-                                    <div className="space-y-3">
-                                      <div>
-                                        <h3 className="line-clamp-2 text-lg font-semibold transition-colors group-hover:text-primary">
-                                          {product.title}
-                                        </h3>
-                                        <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-                                          {product.description}
-                                        </p>
-                                      </div>
-                                      <Button
-                                        className="w-full"
-                                        onClick={() => handleProductClick(product)}
-                                      >
-                                        {product.buttonLabel || "Book Session"}
-                                      </Button>
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
+                  <ProductSections
+                    products={filteredProducts}
+                    onProductClick={handleProductClick}
+                    displayName={displayName}
+                    filterKey={`${selectedCategory}-${selectedPriceRange}-${searchTerm}-${sortBy}`}
+                  />
                 ) : (
                   /* Show flat grid when filtering or searching */
-                  <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    {filteredProducts.map((product) => {
-                      const IconComponent = product.icon;
-                      return (
-                        <Card
-                          key={product._id}
-                          className="group overflow-hidden transition-shadow duration-200 hover:shadow-lg"
-                        >
-                          {/* Product Image */}
-                          <div className="relative h-48 bg-gradient-to-br from-muted to-muted/80">
-                            {product.imageUrl ? (
-                              <Image
-                                src={product.imageUrl}
-                                alt={product.title}
-                                width={640}
-                                height={192}
-                                className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
-                                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                              />
-                            ) : (
-                              <div className="flex h-full w-full items-center justify-center">
-                                <IconComponent className="h-12 w-12 text-muted-foreground" />
-                              </div>
-                            )}
-                            {/* Product Type Badge */}
-                            <Badge className={`absolute left-3 top-3 ${product.badgeColor}`}>
-                              <IconComponent className="mr-1 h-3 w-3" />
-                              {product.productType === "digitalProduct"
-                                ? "Digital"
-                                : product.productType === "course"
-                                  ? "Course"
-                                  : product.productType}
-                            </Badge>
-                            {/* Price Badge */}
-                            <Badge className="absolute right-3 top-3 border border-border bg-card font-semibold text-card-foreground">
-                              {product.price === 0 ? "FREE" : `$${product.price}`}
-                            </Badge>
-                          </div>
-
-                          <CardContent className="p-4">
-                            <div className="space-y-3">
-                              <div>
-                                <h3 className="line-clamp-2 text-lg font-semibold transition-colors group-hover:text-primary">
-                                  {product.title}
-                                </h3>
-                                <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-                                  {product.description}
-                                </p>
-                              </div>
-
-                              {/* Category and Meta */}
-                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <span>{product.category}</span>
-                                {(product as any).skillLevel && (
-                                  <>
-                                    <span>•</span>
-                                    <span>{(product as any).skillLevel}</span>
-                                  </>
-                                )}
-                              </div>
-
-                              {/* Action Button */}
-                              <Button
-                                className="w-full"
-                                onClick={() => handleProductClick(product)}
-                              >
-                                {product.buttonLabel ||
-                                  (product.productType === "course" ? "Enroll Now" : "Get Access")}
-                              </Button>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
-                  </div>
+                  <AnimatedFilterResults
+                    filterKey={`${selectedCategory}-${selectedPriceRange}-${searchTerm}-${sortBy}`}
+                  >
+                    <ProductGrid
+                      products={filteredProducts}
+                      onProductClick={handleProductClick}
+                      displayName={displayName}
+                      autoSelectCard={true}
+                    />
+                  </AnimatedFilterResults>
                 )}
-              </AnimatedFilterResults>
+              </>
             ) : (
               /* No Results State */
               <div className="py-12 text-center">
@@ -1389,29 +929,9 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
       {/* Subscription Section */}
       <SubscriptionSection storeId={store._id} storeName={displayName} />
 
-      {/* Fallback to original components for specific mobile optimizations if needed */}
-      <div className="hidden">
-        {isDesktop ? (
-          <DesktopStorefront
-            store={store!}
-            user={user!}
-            products={(allProducts as any) || []}
-            displayName={displayName}
-            initials={initials}
-            avatarUrl={avatarUrl}
-            socialAccounts={socialAccounts || []}
-          />
-        ) : (
-          <MobileStorefront
-            store={store!}
-            user={user!}
-            products={(allProducts as any) || []}
-            displayName={displayName}
-            initials={initials}
-            avatarUrl={avatarUrl}
-            leadMagnetData={leadMagnetData}
-          />
-        )}
+      {/* Trust Signals */}
+      <div className="container mx-auto px-6 pb-8">
+        <TrustSignals variant="compact" className="justify-center" />
       </div>
 
       {/* Product Details Modal */}
