@@ -7005,6 +7005,24 @@ export declare const api: {
     >;
   };
   credits: {
+    addCreditsFromWebhook: FunctionReference<
+      "mutation",
+      "public",
+      {
+        amount: number;
+        description: string;
+        metadata?: { dollarAmount?: number; packageName?: string };
+        stripePaymentId: string;
+        type: "purchase" | "bonus" | "earn" | "refund";
+        userId: string;
+      },
+      {
+        alreadyProcessed?: boolean;
+        newBalance: number;
+        success: boolean;
+        transactionId?: Id<"creditTransactions">;
+      }
+    >;
     awardBonusCredits: FunctionReference<
       "mutation",
       "public",

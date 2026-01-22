@@ -1,9 +1,11 @@
 import { useState } from 'react'
-import { Play, Pause, Download, Heart, GripVertical, Coins, Check } from 'lucide-react'
+import { Play, Pause, Download, Heart, GripVertical, Coins, Loader2, HardDrive, FolderOpen } from 'lucide-react'
 import { useMutation, useQuery } from 'convex/react'
 import { api } from '@convex/_generated/api'
 import { usePlayerStore } from '../stores/playerStore'
 import { useDragToDAW } from '../hooks/useDragToDAW'
+import { useDownload } from '../hooks/useDownload'
+import { useDownloadStore } from '../stores/downloadStore'
 import { PurchaseModal } from './PurchaseModal'
 import { Id } from '@convex/_generated/dataModel'
 
@@ -27,12 +29,18 @@ export function SampleCard({ sample }: SampleCardProps) {
   const [isHovered, setIsHovered] = useState(false)
   const [showPurchaseModal, setShowPurchaseModal] = useState(false)
   const [isOwned, setIsOwned] = useState(sample.isOwned || false)
+  const [isDownloading, setIsDownloading] = useState(false)
 
   const { currentSample, isPlaying, playSample, setIsPlaying } = usePlayerStore()
-  const { getDragProps, isDragging, isDownloaded } = useDragToDAW()
+  const { getDragProps, isDragging, isDownloaded, needsDownload } = useDragToDAW()
+  const { downloadSample } = useDownload()
+  const { getDownloadBySampleId } = useDownloadStore()
 
   const isCurrentlyPlaying = currentSample?.id === sample._id && isPlaying
   const downloaded = isDownloaded(sample._id)
+  const showNeedsDownload = needsDownload === sample._id
+  const downloadItem = getDownloadBySampleId(sample._id)
+  const downloadProgress = downloadItem?.status === 'downloading' ? downloadItem.progress : 0
 
   const toggleFavorite = useMutation(api.samples.toggleFavorite)
 
@@ -77,6 +85,25 @@ export function SampleCard({ sample }: SampleCardProps) {
     setIsOwned(true)
   }
 
+  const handleDownload = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!isOwned || !sample.fileUrl || isDownloading) return
+
+    setIsDownloading(true)
+    try {
+      await downloadSample({
+        sampleId: sample._id,
+        title: sample.title,
+        url: sample.fileUrl,
+        genre: sample.genre
+      })
+    } catch (error) {
+      console.error('Download failed:', error)
+    } finally {
+      setIsDownloading(false)
+    }
+  }
+
   const formatDuration = (seconds?: number) => {
     if (!seconds) return '--:--'
     const mins = Math.floor(seconds / 60)
@@ -84,14 +111,24 @@ export function SampleCard({ sample }: SampleCardProps) {
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
+  const handleShowInFinder = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    const localPath = downloadItem?.localPath
+    if (localPath) {
+      window.electron.showItemInFolder(localPath)
+    }
+  }
+
   const dragProps = getDragProps({ ...sample, isOwned })
 
   return (
     <>
       <div
-        className={`group relative overflow-hidden rounded-lg border border-border bg-card transition-all ${
-          isHovered ? 'border-primary/50 shadow-lg' : ''
-        } ${isDragging ? 'opacity-50' : ''}`}
+        className={`group relative overflow-hidden rounded-lg border bg-card transition-all ${
+          downloaded && isOwned
+            ? 'border-green-500/50 ring-1 ring-green-500/20'
+            : 'border-border'
+        } ${isHovered ? 'border-primary/50 shadow-lg' : ''} ${isDragging ? 'opacity-50' : ''}`}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
         {...dragProps}
@@ -130,21 +167,59 @@ export function SampleCard({ sample }: SampleCardProps) {
             </button>
           </div>
 
-          {/* Drag handle for owned samples */}
-          {isOwned && (
+          {/* Downloaded badge - always visible when downloaded */}
+          {isOwned && downloaded && (
             <div
-              className={`absolute right-2 top-2 cursor-grab rounded bg-black/50 p-1 text-white transition-opacity ${
-                isHovered ? 'opacity-100' : 'opacity-0'
-              }`}
+              className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-green-500 px-2 py-1 text-xs font-medium text-white shadow-lg"
+              title="Ready to drag to DAW"
             >
-              <GripVertical className="h-4 w-4" />
+              <HardDrive className="h-3 w-3" />
+              <span>Ready</span>
             </div>
           )}
 
-          {/* Downloaded indicator */}
+          {/* Download progress bar */}
+          {isOwned && isDownloading && downloadProgress > 0 && (
+            <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/50">
+              <div
+                className="h-full bg-primary transition-all duration-300"
+                style={{ width: `${downloadProgress}%` }}
+              />
+            </div>
+          )}
+
+          {/* Action buttons for owned + downloaded samples */}
           {isOwned && downloaded && (
-            <div className="absolute left-2 top-2 rounded bg-green-500/80 p-1">
-              <Check className="h-3 w-3 text-white" />
+            <div
+              className={`absolute right-2 top-2 flex gap-1 transition-opacity ${
+                isHovered ? 'opacity-100' : 'opacity-0'
+              }`}
+            >
+              {/* Show in Finder - reliable way to drag to DAW */}
+              <button
+                onClick={handleShowInFinder}
+                className="rounded bg-white/90 p-1.5 text-gray-700 shadow-lg transition-all hover:scale-110 hover:bg-white"
+                title="Show in Finder (drag from there to DAW)"
+              >
+                <FolderOpen className="h-4 w-4" />
+              </button>
+              {/* Direct drag handle */}
+              <div
+                className="cursor-grab rounded bg-primary p-1.5 text-white shadow-lg transition-all hover:scale-110"
+                title="Drag to DAW"
+              >
+                <GripVertical className="h-4 w-4" />
+              </div>
+            </div>
+          )}
+
+          {/* Download first tooltip - shows when user tries to drag undownloaded sample */}
+          {showNeedsDownload && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+              <div className="flex flex-col items-center gap-2 rounded-lg bg-orange-500 px-4 py-3 text-white shadow-lg">
+                <Download className="h-6 w-6" />
+                <span className="text-sm font-medium">Download first to drag</span>
+              </div>
             </div>
           )}
         </div>
@@ -162,10 +237,35 @@ export function SampleCard({ sample }: SampleCardProps) {
           {/* Actions */}
           <div className="mt-2 flex items-center justify-between">
             {isOwned ? (
-              <span className="flex items-center gap-1 text-xs text-green-500">
-                <Check className="h-3 w-3" />
-                Owned
-              </span>
+              downloaded ? (
+                <button
+                  onClick={handleShowInFinder}
+                  className="flex items-center gap-1 rounded bg-green-500/10 px-2 py-1 text-xs font-medium text-green-600 transition-colors hover:bg-green-500/20"
+                  title="Open in Finder to drag to your DAW"
+                >
+                  <FolderOpen className="h-3 w-3" />
+                  Show in Finder
+                </button>
+              ) : (
+                <button
+                  onClick={handleDownload}
+                  disabled={isDownloading}
+                  className="flex items-center gap-1 rounded-md bg-primary px-2 py-1 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                  title="Download to enable drag to DAW"
+                >
+                  {isDownloading ? (
+                    <>
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <span>{downloadProgress > 0 ? `${downloadProgress}%` : 'Downloading...'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-3 w-3" />
+                      <span>Download</span>
+                    </>
+                  )}
+                </button>
+              )
             ) : (
               <button
                 onClick={handleBuyClick}
@@ -176,22 +276,15 @@ export function SampleCard({ sample }: SampleCardProps) {
               </button>
             )}
 
-            <div className="flex gap-1">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  toggleFavorite({ sampleId: sample._id as Id<"audioSamples"> })
-                }}
-                className="rounded p-1 text-muted-foreground transition-colors hover:text-red-500"
-              >
-                <Heart className="h-4 w-4" />
-              </button>
-              {isOwned && (
-                <button className="rounded p-1 text-muted-foreground transition-colors hover:text-foreground">
-                  <Download className="h-4 w-4" />
-                </button>
-              )}
-            </div>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                toggleFavorite({ sampleId: sample._id as Id<"audioSamples"> })
+              }}
+              className="rounded p-1 text-muted-foreground transition-colors hover:text-red-500"
+            >
+              <Heart className="h-4 w-4" />
+            </button>
           </div>
         </div>
       </div>

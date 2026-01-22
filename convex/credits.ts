@@ -449,12 +449,118 @@ export const earnCredits = mutation({
 });
 
 // ============================================================================
-// INTERNAL MUTATIONS (for webhook use)
+// WEBHOOK MUTATIONS (for Stripe webhook use)
 // ============================================================================
 
 /**
- * Add credits to a user account (internal - for webhook use)
- * This does not require authentication since it's called from Stripe webhook
+ * Add credits from webhook (public mutation for Stripe webhook)
+ * Includes idempotency check to prevent duplicate credit additions
+ */
+export const addCreditsFromWebhook = mutation({
+  args: {
+    userId: v.string(),
+    amount: v.number(),
+    type: v.union(
+      v.literal("purchase"),
+      v.literal("bonus"),
+      v.literal("earn"),
+      v.literal("refund")
+    ),
+    description: v.string(),
+    stripePaymentId: v.string(),
+    metadata: v.optional(
+      v.object({
+        dollarAmount: v.optional(v.number()),
+        packageName: v.optional(v.string()),
+      })
+    ),
+  },
+  returns: v.object({
+    success: v.boolean(),
+    newBalance: v.number(),
+    transactionId: v.optional(v.id("creditTransactions")),
+    alreadyProcessed: v.optional(v.boolean()),
+  }),
+  handler: async (ctx, args) => {
+    // Idempotency check - prevent duplicate credit additions
+    const existingTransaction = await ctx.db
+      .query("creditTransactions")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .filter((q) => q.eq(q.field("metadata.stripePaymentId"), args.stripePaymentId))
+      .first();
+
+    if (existingTransaction) {
+      console.log("⚠️ Credits already added for this payment:", args.stripePaymentId);
+      return {
+        success: true,
+        newBalance: existingTransaction.balance,
+        alreadyProcessed: true,
+      };
+    }
+
+    // Get or create user credits
+    let userCredits = await ctx.db
+      .query("userCredits")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .first();
+
+    if (!userCredits) {
+      const creditsId = await ctx.db.insert("userCredits", {
+        userId: args.userId,
+        balance: 0,
+        lifetimeEarned: 0,
+        lifetimeSpent: 0,
+        lastUpdated: Date.now(),
+      });
+      userCredits = await ctx.db.get(creditsId);
+      if (!userCredits) throw new Error("Unable to initialize credit balance");
+    }
+
+    // Update balance
+    const newBalance = userCredits.balance + args.amount;
+    const updates: {
+      balance: number;
+      lifetimeEarned?: number;
+      lastUpdated: number;
+    } = {
+      balance: newBalance,
+      lastUpdated: Date.now(),
+    };
+
+    if (args.type === "purchase" || args.type === "bonus" || args.type === "earn") {
+      updates.lifetimeEarned = userCredits.lifetimeEarned + args.amount;
+    }
+
+    await ctx.db.patch(userCredits._id, updates);
+
+    // Record transaction with stripePaymentId for idempotency
+    const transactionId = await ctx.db.insert("creditTransactions", {
+      userId: args.userId,
+      type: args.type,
+      amount: args.amount,
+      balance: newBalance,
+      description: args.description,
+      metadata: {
+        stripePaymentId: args.stripePaymentId,
+        ...args.metadata,
+      },
+    });
+
+    return {
+      success: true,
+      newBalance,
+      transactionId,
+    };
+  },
+});
+
+// ============================================================================
+// INTERNAL MUTATIONS (for internal Convex use only)
+// ============================================================================
+
+/**
+ * Add credits to a user account (internal - for Convex internal use)
+ * This does not require authentication since it's called internally
  */
 export const addCredits = internalMutation({
   args: {

@@ -1,5 +1,8 @@
-import { Play, Pause, Heart, Download, GripVertical, Coins } from 'lucide-react'
+import { useState } from 'react'
+import { Play, Pause, Heart, Download, GripVertical, Coins, Check, Loader2 } from 'lucide-react'
 import { usePlayerStore } from '../stores/playerStore'
+import { useDragToDAW } from '../hooks/useDragToDAW'
+import { useDownload } from '../hooks/useDownload'
 
 interface Sample {
   _id: string
@@ -21,6 +24,9 @@ interface SampleListProps {
 
 export function SampleList({ samples }: SampleListProps) {
   const { currentSample, isPlaying, setIsPlaying, setQueue } = usePlayerStore()
+  const { getDragProps, isDownloaded, needsDownload } = useDragToDAW()
+  const { downloadSample } = useDownload()
+  const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set())
 
   const handlePlay = (sample: Sample, index: number) => {
     if (currentSample?.id === sample._id && isPlaying) {
@@ -52,6 +58,28 @@ export function SampleList({ samples }: SampleListProps) {
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
+  const handleDownload = async (sample: Sample) => {
+    if (!sample.isOwned || !sample.fileUrl || downloadingIds.has(sample._id)) return
+
+    setDownloadingIds((prev) => new Set(prev).add(sample._id))
+    try {
+      await downloadSample({
+        sampleId: sample._id,
+        title: sample.title,
+        url: sample.fileUrl,
+        genre: sample.genre
+      })
+    } catch (error) {
+      console.error('Download failed:', error)
+    } finally {
+      setDownloadingIds((prev) => {
+        const next = new Set(prev)
+        next.delete(sample._id)
+        return next
+      })
+    }
+  }
+
   return (
     <div className="space-y-1">
       {/* Header */}
@@ -68,15 +96,27 @@ export function SampleList({ samples }: SampleListProps) {
       {/* Rows */}
       {samples.map((sample, index) => {
         const isCurrentlyPlaying = currentSample?.id === sample._id && isPlaying
+        const downloaded = isDownloaded(sample._id)
+        const isDownloading = downloadingIds.has(sample._id)
+        const showNeedsDownload = needsDownload === sample._id
+        const dragProps = getDragProps({ ...sample, isOwned: sample.isOwned })
 
         return (
           <div
             key={sample._id}
-            className={`group grid grid-cols-[auto_1fr_auto_auto_auto_auto_auto] items-center gap-4 rounded-lg px-4 py-2 transition-colors hover:bg-secondary/50 ${
+            className={`group relative grid grid-cols-[auto_1fr_auto_auto_auto_auto_auto] items-center gap-4 rounded-lg px-4 py-2 transition-colors hover:bg-secondary/50 ${
               isCurrentlyPlaying ? 'bg-primary/10' : ''
             }`}
-            draggable={sample.isOwned}
+            {...dragProps}
           >
+            {/* "Download first" tooltip */}
+            {showNeedsDownload && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-black/70">
+                <span className="rounded-md bg-orange-500 px-3 py-1 text-sm font-medium text-white">
+                  Download first to drag to DAW
+                </span>
+              </div>
+            )}
             {/* Index / Play button */}
             <div className="w-8">
               <button
@@ -161,12 +201,32 @@ export function SampleList({ samples }: SampleListProps) {
               </button>
               {sample.isOwned && (
                 <>
-                  <button className="rounded p-1.5 text-muted-foreground transition-colors hover:text-foreground">
-                    <Download className="h-4 w-4" />
-                  </button>
-                  <button className="cursor-grab rounded p-1.5 text-muted-foreground transition-colors hover:text-foreground">
+                  {downloaded ? (
+                    <span className="rounded p-1.5 text-green-500" title="Downloaded - ready to drag">
+                      <Check className="h-4 w-4" />
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => handleDownload(sample)}
+                      disabled={isDownloading}
+                      className="rounded p-1.5 text-muted-foreground transition-colors hover:text-primary disabled:opacity-50"
+                      title="Download to enable drag to DAW"
+                    >
+                      {isDownloading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Download className="h-4 w-4" />
+                      )}
+                    </button>
+                  )}
+                  <span
+                    className={`rounded p-1.5 text-muted-foreground ${
+                      downloaded ? 'cursor-grab hover:text-foreground' : 'cursor-not-allowed opacity-50'
+                    }`}
+                    title={downloaded ? 'Drag to DAW' : 'Download first to drag'}
+                  >
                     <GripVertical className="h-4 w-4" />
-                  </button>
+                  </span>
                 </>
               )}
             </div>

@@ -12,9 +12,17 @@ files:
   - "!electron.vite.config.*"
   - "!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}"
   - "!{tsconfig.json,tsconfig.node.json}"
+  - "!binding.gyp"
+  - "build/**/*.node"
 
 asarUnpack:
   - resources/**
+  - "**/*.node"
+  - "**/bindings/**"
+  - "build/**"
+
+# Rebuild native modules for the target platform
+npmRebuild: true
 
 mac:
   category: public.app-category.music

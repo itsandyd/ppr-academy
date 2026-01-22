@@ -1,5 +1,4 @@
 import { useCallback, useState } from 'react'
-import { useDownload } from './useDownload'
 import { useDownloadStore } from '../stores/downloadStore'
 
 interface Sample {
@@ -11,10 +10,10 @@ interface Sample {
 }
 
 export function useDragToDAW() {
-  const { downloadSample, getLocalPath } = useDownload()
   const { getDownloadBySampleId } = useDownloadStore()
   const [isDragging, setIsDragging] = useState(false)
   const [dragSampleId, setDragSampleId] = useState<string | null>(null)
+  const [needsDownload, setNeedsDownload] = useState<string | null>(null)
 
   // Check if sample is downloaded (sync check via store)
   const isDownloaded = useCallback((sampleId: string) => {
@@ -22,118 +21,132 @@ export function useDragToDAW() {
     return download?.status === 'completed'
   }, [getDownloadBySampleId])
 
-  const handleDragStart = useCallback(async (
+  // Get local path from the download store
+  const getLocalPath = useCallback((sampleId: string): string | undefined => {
+    const download = getDownloadBySampleId(sampleId)
+    return download?.localPath
+  }, [getDownloadBySampleId])
+
+  // Synchronous check and drag - MUST be sync for DAW drops to work
+  const handleDragStart = useCallback((
     e: React.DragEvent,
     sample: Sample
   ) => {
-    // Prevent default browser drag behavior
-    e.preventDefault()
-
     if (!sample.isOwned) {
-      console.log('Sample not owned, cannot drag')
+      e.preventDefault()
       return
     }
 
-    if (!sample.fileUrl) {
-      console.log('Sample has no file URL')
+    // Get local path synchronously from store
+    const localPath = getLocalPath(sample._id)
+    const downloaded = isDownloaded(sample._id)
+
+    // If not downloaded, prevent drag and show feedback
+    if (!downloaded || !localPath) {
+      e.preventDefault()
+      setNeedsDownload(sample._id)
+      setTimeout(() => setNeedsDownload(null), 2000)
       return
     }
+
+    // IMPORTANT: For native file drag to DAWs, we must:
+    // 1. NOT prevent default (let native drag behavior happen)
+    // 2. Call Electron's startDrag which sets up native pasteboard
+    // 3. NOT set conflicting dataTransfer data
 
     setIsDragging(true)
     setDragSampleId(sample._id)
 
-    try {
-      let localPath = getLocalPath(sample._id)
+    // Trigger native file drag via Electron - this sets up the macOS pasteboard
+    // with the file path in a format that DAWs understand
+    window.electron.startDrag(localPath)
+  }, [isDownloaded, getLocalPath])
 
-      // If not downloaded, download first
-      if (!isDownloaded(sample._id) || !localPath) {
-        localPath = await downloadSample({
-          sampleId: sample._id,
-          title: sample.title,
-          url: sample.fileUrl,
-          genre: sample.genre
-        })
-      }
+  const handleDragEnd = useCallback(() => {
+    setIsDragging(false)
+    setDragSampleId(null)
+  }, [])
 
-      if (localPath) {
-        // Check if file exists locally
-        const exists = await window.electron.fileExists(localPath)
-
-        if (exists) {
-          // Start native drag
-          window.electron.startDrag(localPath)
-        } else {
-          console.error('File not found locally:', localPath)
-        }
-      }
-    } catch (error) {
-      console.error('Drag failed:', error)
-    } finally {
-      setIsDragging(false)
-      setDragSampleId(null)
-    }
-  }, [downloadSample, isDownloaded, getLocalPath])
-
-  const handleDragMultiple = useCallback(async (
+  // For multiple files - check all are downloaded first
+  const handleDragMultiple = useCallback((
+    e: React.DragEvent,
     samples: Sample[]
   ) => {
     const ownedSamples = samples.filter(s => s.isOwned && s.fileUrl)
 
     if (ownedSamples.length === 0) {
-      console.log('No owned samples to drag')
+      e.preventDefault()
       return
     }
 
+    // Check all samples are downloaded
+    const localPaths: string[] = []
+    for (const sample of ownedSamples) {
+      const localPath = getLocalPath(sample._id)
+      if (isDownloaded(sample._id) && localPath) {
+        localPaths.push(localPath)
+      }
+    }
+
+    if (localPaths.length === 0) {
+      e.preventDefault()
+      setNeedsDownload('multiple')
+      setTimeout(() => setNeedsDownload(null), 2000)
+      return
+    }
+
+    // Set drag data
+    e.dataTransfer.setData('text/plain', localPaths.join('\n'))
+    e.dataTransfer.effectAllowed = 'copy'
+
     setIsDragging(true)
 
-    try {
-      const localPaths: string[] = []
+    // Electron only supports single file in startDrag, but we can drag multiple via the dataTransfer
+    window.electron.startDragMultiple(localPaths)
+  }, [isDownloaded, getLocalPath])
 
-      for (const sample of ownedSamples) {
-        let localPath = getLocalPath(sample._id)
+  // Helper to check if a sample can be dragged (owned + downloaded)
+  const canDrag = useCallback((sample: Sample) => {
+    if (!sample.isOwned) return false
+    return isDownloaded(sample._id) && !!getLocalPath(sample._id)
+  }, [isDownloaded, getLocalPath])
 
-        if (!isDownloaded(sample._id) || !localPath) {
-          localPath = await downloadSample({
-            sampleId: sample._id,
-            title: sample.title,
-            url: sample.fileUrl!,
-            genre: sample.genre
-          })
-        }
+  // Prepare drag on mouse down - this sets up native event monitors BEFORE drag starts
+  const handleMouseDown = useCallback((sample: Sample) => {
+    if (!sample.isOwned) return
 
-        if (localPath) {
-          const exists = await window.electron.fileExists(localPath)
-          if (exists) {
-            localPaths.push(localPath)
-          }
-        }
+    const localPath = getLocalPath(sample._id)
+    if (!localPath || !isDownloaded(sample._id)) return
+
+    // Prepare native drag on mouse down, before the drag gesture starts
+    window.electron.prepareDrag(localPath)
+  }, [getLocalPath, isDownloaded])
+
+  const getDragProps = useCallback((sample: Sample) => {
+    const downloaded = isDownloaded(sample._id) && !!getLocalPath(sample._id)
+    const canDragNow = sample.isOwned && downloaded
+
+    return {
+      draggable: sample.isOwned,
+      onMouseDown: () => handleMouseDown(sample),
+      onDragStart: (e: React.DragEvent) => handleDragStart(e, sample),
+      onDragEnd: handleDragEnd,
+      style: {
+        cursor: canDragNow ? 'grab' : sample.isOwned ? 'not-allowed' : 'default'
       }
-
-      if (localPaths.length > 0) {
-        window.electron.startDragMultiple(localPaths)
-      }
-    } catch (error) {
-      console.error('Multi-drag failed:', error)
-    } finally {
-      setIsDragging(false)
     }
-  }, [downloadSample, isDownloaded, getLocalPath])
-
-  const getDragProps = useCallback((sample: Sample) => ({
-    draggable: sample.isOwned,
-    onDragStart: (e: React.DragEvent) => handleDragStart(e, sample),
-    style: {
-      cursor: sample.isOwned ? 'grab' : 'default'
-    }
-  }), [handleDragStart])
+  }, [handleDragStart, handleDragEnd, handleMouseDown, isDownloaded, getLocalPath])
 
   return {
     isDragging,
     dragSampleId,
+    needsDownload,
     handleDragStart,
+    handleDragEnd,
     handleDragMultiple,
     getDragProps,
     isDownloaded,
+    canDrag,
     getLocalPath
   }
 }

@@ -17,6 +17,7 @@ export interface ElectronAPI {
   writeFile: (path: string, data: ArrayBuffer) => Promise<{ success: boolean; error?: string }>
 
   // Drag and drop
+  prepareDrag: (filePath: string) => void
   startDrag: (filePath: string) => void
   startDragMultiple: (filePaths: string[]) => void
 
@@ -61,6 +62,7 @@ const electronAPI: ElectronAPI = {
   writeFile: (path: string, data: ArrayBuffer) => ipcRenderer.invoke('write-file', path, data),
 
   // Drag and drop
+  prepareDrag: (filePath: string) => ipcRenderer.send('prepare-drag', filePath),
   startDrag: (filePath: string) => ipcRenderer.send('start-drag', filePath),
   startDragMultiple: (filePaths: string[]) => ipcRenderer.send('start-drag-multiple', filePaths),
 

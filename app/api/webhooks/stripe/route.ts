@@ -395,31 +395,31 @@ export async function POST(request: NextRequest) {
 
           if (userId && totalCredits > 0) {
             const { fetchMutation: fetchMutationCredits } = await import("convex/nextjs");
-            const { internal: internalCredits } = await import("@/convex/_generated/api");
+            const { api: apiCredits } = await import("@/convex/_generated/api");
 
             try {
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              await fetchMutationCredits(internalCredits.credits.addCredits as any, {
+              // Add purchased credits
+              await fetchMutationCredits(apiCredits.credits.addCreditsFromWebhook, {
                 userId,
                 amount: creditsAmount,
                 type: "purchase" as const,
                 description: `Purchased ${packageName || "Credit Package"}`,
+                stripePaymentId: session.payment_intent as string,
                 metadata: {
-                  stripePaymentId: session.payment_intent as string,
                   dollarAmount: session.amount_total ? session.amount_total / 100 : 0,
                   packageName: packageName || "Credit Package",
                 },
               });
 
+              // Add bonus credits if any
               if (bonusAmount > 0) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                await fetchMutationCredits(internalCredits.credits.addCredits as any, {
+                await fetchMutationCredits(apiCredits.credits.addCreditsFromWebhook, {
                   userId,
                   amount: bonusAmount,
                   type: "bonus" as const,
                   description: `Bonus credits from ${packageName || "Credit Package"}`,
+                  stripePaymentId: `${session.payment_intent}-bonus`,
                   metadata: {
-                    stripePaymentId: session.payment_intent as string,
                     packageName: packageName || "Credit Package",
                   },
                 });

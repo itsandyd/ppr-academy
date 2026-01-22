@@ -9,7 +9,7 @@ interface DownloadOptions {
 }
 
 export function useDownload() {
-  const { addDownload, updateProgress, setStatus, getDownloadBySampleId } = useDownloadStore()
+  const { addDownload, updateProgress, setStatus, updateLocalPath, getDownloadBySampleId } = useDownloadStore()
 
   // Listen for download progress from main process
   useEffect(() => {
@@ -46,7 +46,23 @@ export function useDownload() {
     const basePath = await window.electron.getDownloadPath()
     const folder = genre || 'Uncategorized'
     const safeName = title.replace(/[/\\?%*:|"<>]/g, '-')
-    const localPath = `${basePath}/${folder}/${safeName}.wav`
+
+    // Detect file extension from URL, default to mp3 (most common)
+    let extension = 'mp3'
+    const urlLower = url.toLowerCase()
+    if (urlLower.includes('.wav')) {
+      extension = 'wav'
+    } else if (urlLower.includes('.aif') || urlLower.includes('.aiff')) {
+      extension = 'aiff'
+    } else if (urlLower.includes('.flac')) {
+      extension = 'flac'
+    } else if (urlLower.includes('.ogg')) {
+      extension = 'ogg'
+    } else if (urlLower.includes('.mp3')) {
+      extension = 'mp3'
+    }
+
+    const localPath = `${basePath}/${folder}/${safeName}.${extension}`
 
     // Create download ID
     const id = `${sampleId}-${Date.now()}`
@@ -67,9 +83,18 @@ export function useDownload() {
       const result = await window.electron.downloadFile(url, localPath)
 
       if (result.success) {
+        // Use the final path returned (may have corrected extension based on content-type)
+        const finalPath = result.path || localPath
+
+        // Update the download item with the correct path if it changed
+        if (finalPath !== localPath) {
+          console.log('[Download] Path corrected to:', finalPath)
+          updateLocalPath(id, finalPath)
+        }
+
         setStatus(id, 'completed')
         updateProgress(id, 100, result.size)
-        return localPath
+        return finalPath
       } else {
         throw new Error(result.error || 'Download failed')
       }
@@ -78,7 +103,7 @@ export function useDownload() {
       setStatus(id, 'error', message)
       throw error
     }
-  }, [addDownload, updateProgress, setStatus, getDownloadBySampleId])
+  }, [addDownload, updateProgress, setStatus, updateLocalPath, getDownloadBySampleId])
 
   const isDownloaded = useCallback(async (sampleId: string) => {
     const download = getDownloadBySampleId(sampleId)
