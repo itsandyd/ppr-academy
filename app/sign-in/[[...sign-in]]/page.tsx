@@ -179,43 +179,36 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
                 </div>
               )}
 
-              {/* Sign In Card - More prominent styling */}
-              <div className="relative">
-                {/* Card glow effect */}
-                <div className="absolute -inset-1 bg-gradient-to-r from-chart-1/20 via-chart-2/20 to-chart-3/20 rounded-2xl blur-xl opacity-50" />
-
-                <div className="relative bg-card border border-border rounded-2xl p-6 shadow-2xl shadow-black/10">
-                  <SignIn
-                    fallbackRedirectUrl={params.redirect_url || "/home"}
-                    appearance={{
-                      elements: {
-                        rootBox: "w-full",
-                        card: "bg-transparent shadow-none w-full p-0",
-                        formButtonPrimary:
-                          "bg-gradient-to-r from-chart-1 to-chart-2 hover:opacity-90 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-lg shadow-chart-1/25 hover:shadow-xl hover:shadow-chart-1/30 min-h-[48px]",
-                        formFieldInput:
-                          "rounded-xl border border-border bg-muted/50 focus:border-chart-1 focus:ring-2 focus:ring-chart-1/20 transition-all py-3 min-h-[48px] text-base placeholder:text-muted-foreground/60",
-                        footerActionLink:
-                          "text-chart-1 hover:text-chart-2 font-semibold transition-colors",
-                        identityPreviewText: "text-foreground",
-                        formFieldLabel: "text-foreground font-medium mb-1.5 text-sm",
-                        headerTitle: "hidden",
-                        headerSubtitle: "hidden",
-                        socialButtonsBlockButton:
-                          "border border-border bg-muted/30 hover:bg-muted/50 hover:border-chart-1/30 transition-all duration-200 rounded-xl py-3 min-h-[48px]",
-                        socialButtonsBlockButtonText: "font-medium text-foreground",
-                        dividerLine: "bg-border",
-                        dividerText: "text-muted-foreground text-sm",
-                        formFieldInputShowPasswordButton: "text-muted-foreground hover:text-foreground",
-                        footer: "hidden",
-                        form: "gap-4",
-                        socialButtons: "gap-3",
-                      },
-                    }}
-                    signUpUrl="/sign-up"
-                  />
-                </div>
-              </div>
+              {/* Sign In Component - No wrapper card, let Clerk handle it */}
+              <SignIn
+                fallbackRedirectUrl={params.redirect_url || "/home"}
+                appearance={{
+                  elements: {
+                    rootBox: "w-full",
+                    card: "bg-card border border-border rounded-2xl p-6 shadow-xl w-full",
+                    formButtonPrimary:
+                      "bg-gradient-to-r from-chart-1 to-chart-2 hover:opacity-90 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-lg shadow-chart-1/25 hover:shadow-xl hover:shadow-chart-1/30 min-h-[48px]",
+                    formFieldInput:
+                      "rounded-xl border border-border bg-muted/50 focus:border-chart-1 focus:ring-2 focus:ring-chart-1/20 transition-all py-3 min-h-[48px] text-base placeholder:text-muted-foreground/60",
+                    footerActionLink:
+                      "text-chart-1 hover:text-chart-2 font-semibold transition-colors",
+                    identityPreviewText: "text-foreground",
+                    formFieldLabel: "text-foreground font-medium mb-1.5 text-sm",
+                    headerTitle: "hidden",
+                    headerSubtitle: "hidden",
+                    socialButtonsBlockButton:
+                      "border border-border bg-transparent hover:bg-muted/50 hover:border-chart-1/30 transition-all duration-200 rounded-xl py-3 min-h-[48px]",
+                    socialButtonsBlockButtonText: "font-medium text-foreground",
+                    dividerLine: "bg-border",
+                    dividerText: "text-muted-foreground text-sm",
+                    formFieldInputShowPasswordButton: "text-muted-foreground hover:text-foreground",
+                    footer: "hidden",
+                    form: "gap-4",
+                    socialButtons: "gap-3",
+                  },
+                }}
+                signUpUrl="/sign-up"
+              />
 
               {/* Footer Links */}
               <div className="mt-6 text-center space-y-3">
