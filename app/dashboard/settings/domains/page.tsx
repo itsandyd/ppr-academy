@@ -15,6 +15,7 @@ import {
   ArrowLeft,
   Plus,
   Sparkles,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -37,6 +38,9 @@ export default function DomainsSettingsPage() {
     api.stores.getUserStore,
     user?.id ? { userId: user.id } : "skip"
   );
+
+  // Get real domain health stats
+  const healthStats = useQuery(api.emailHealthMonitoring.getDomainHealthStats);
 
   return (
     <div className="container mx-auto max-w-5xl space-y-6 p-4 md:p-6">
@@ -77,7 +81,13 @@ export default function DomainsSettingsPage() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Email Domain</p>
-              <p className="font-semibold">mail.pauseplayrepeat.com</p>
+              <p className="font-semibold">
+                {healthStats === undefined ? (
+                  <Loader2 className="h-4 w-4 animate-spin inline" />
+                ) : (
+                  healthStats.domain
+                )}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -88,7 +98,24 @@ export default function DomainsSettingsPage() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Domain Health</p>
-              <Badge className="bg-green-500 mt-1">Excellent</Badge>
+              {healthStats === undefined ? (
+                <Loader2 className="h-4 w-4 animate-spin mt-1" />
+              ) : (
+                <Badge
+                  className={`mt-1 ${
+                    healthStats.reputationStatus === "excellent"
+                      ? "bg-green-500"
+                      : healthStats.reputationStatus === "good"
+                      ? "bg-blue-500"
+                      : healthStats.reputationStatus === "fair"
+                      ? "bg-yellow-500"
+                      : "bg-red-500"
+                  }`}
+                >
+                  {healthStats.reputationStatus.charAt(0).toUpperCase() +
+                    healthStats.reputationStatus.slice(1)}
+                </Badge>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -160,12 +187,34 @@ export default function DomainsSettingsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">Current Sending Domain</p>
-                    <p className="text-xl font-mono font-semibold mt-1">mail.pauseplayrepeat.com</p>
-                    <Badge className="mt-2 bg-green-500">Active - Shared Domain</Badge>
+                    <p className="text-xl font-mono font-semibold mt-1">
+                      {healthStats === undefined ? (
+                        <Loader2 className="h-5 w-5 animate-spin inline" />
+                      ) : (
+                        healthStats.domain
+                      )}
+                    </p>
+                    {healthStats === undefined ? (
+                      <Loader2 className="h-4 w-4 animate-spin mt-2" />
+                    ) : (
+                      <Badge
+                        className={`mt-2 ${
+                          healthStats.status === "active"
+                            ? "bg-green-500"
+                            : "bg-yellow-500"
+                        }`}
+                      >
+                        {healthStats.status === "active"
+                          ? "Active - Shared Domain"
+                          : "Pending Verification"}
+                      </Badge>
+                    )}
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-muted-foreground">Emails send as</p>
-                    <p className="font-mono text-sm mt-1">{store?.name || "Your Store"} &lt;hello@mail.pauseplayrepeat.com&gt;</p>
+                    <p className="font-mono text-sm mt-1">
+                      {store?.name || "Your Store"} &lt;hello@{healthStats?.domain || "..."}&gt;
+                    </p>
                   </div>
                 </div>
               </div>

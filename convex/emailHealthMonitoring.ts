@@ -12,6 +12,137 @@ import { Id } from "./_generated/dataModel";
 // ============================================================================
 
 /**
+ * Get domain health stats for the dashboard
+ * Returns delivery rate, open rate, bounce rate, spam rate, and sending volume
+ */
+export const getDomainHealthStats = query({
+  args: {},
+  returns: v.object({
+    // Performance metrics (percentages)
+    deliveryRate: v.number(),
+    openRate: v.number(),
+    bounceRate: v.number(),
+    spamRate: v.number(),
+    // Sending volume
+    sentToday: v.number(),
+    sentThisWeek: v.number(),
+    sentThisMonth: v.number(),
+    // Raw counts for context
+    totalSent: v.number(),
+    totalDelivered: v.number(),
+    totalOpened: v.number(),
+    totalBounced: v.number(),
+    totalComplained: v.number(),
+    // Domain info
+    domain: v.string(),
+    status: v.string(),
+    // Reputation
+    reputationScore: v.number(),
+    reputationStatus: v.string(),
+    reputationTrend: v.string(),
+  }),
+  handler: async (ctx) => {
+    const now = Date.now();
+    const startOfToday = getStartOfDay(now);
+    const oneWeekAgo = now - (7 * 24 * 60 * 60 * 1000);
+    const oneMonthAgo = now - (30 * 24 * 60 * 60 * 1000);
+
+    // Get all email logs from the last 30 days
+    const allLogs = await ctx.db.query("resendLogs").collect();
+    const recentLogs = allLogs.filter(log => log.createdAt >= oneMonthAgo);
+
+    // Count by status
+    const totalSent = recentLogs.length;
+    const delivered = recentLogs.filter(l =>
+      l.status === "delivered" || l.status === "opened" || l.status === "clicked"
+    ).length;
+    const opened = recentLogs.filter(l =>
+      l.status === "opened" || l.status === "clicked"
+    ).length;
+    const bounced = recentLogs.filter(l => l.status === "bounced").length;
+    const complained = recentLogs.filter(l => l.status === "complained").length;
+
+    // Calculate time-based volume
+    const sentToday = recentLogs.filter(l => l.createdAt >= startOfToday).length;
+    const sentThisWeek = recentLogs.filter(l => l.createdAt >= oneWeekAgo).length;
+    const sentThisMonth = totalSent;
+
+    // Calculate rates (as percentages)
+    const deliveryRate = totalSent > 0
+      ? Math.round((delivered / totalSent) * 1000) / 10
+      : 0;
+    const openRate = delivered > 0
+      ? Math.round((opened / delivered) * 1000) / 10
+      : 0;
+    const bounceRate = totalSent > 0
+      ? Math.round((bounced / totalSent) * 1000) / 10
+      : 0;
+    const spamRate = totalSent > 0
+      ? Math.round((complained / totalSent) * 10000) / 100
+      : 0;
+
+    // Calculate reputation score (0-100)
+    let reputationScore = 100;
+    // Penalize for bounces (each 1% bounce = -5 points)
+    reputationScore -= bounceRate * 5;
+    // Penalize heavily for spam complaints (each 0.1% = -10 points)
+    reputationScore -= spamRate * 100;
+    // Bonus for good open rates (>30% open = +5 points)
+    if (openRate > 30) reputationScore += 5;
+    // Ensure within bounds
+    reputationScore = Math.max(0, Math.min(100, Math.round(reputationScore)));
+
+    // Determine reputation status
+    let reputationStatus = "excellent";
+    if (reputationScore < 50) reputationStatus = "poor";
+    else if (reputationScore < 70) reputationStatus = "fair";
+    else if (reputationScore < 85) reputationStatus = "good";
+
+    // Get trend from previous metrics if available
+    const previousMetric = await ctx.db
+      .query("emailHealthMetrics")
+      .order("desc")
+      .first();
+
+    let reputationTrend = "stable";
+    if (previousMetric) {
+      const prevScore = previousMetric.deliverabilityScore || 0;
+      if (reputationScore > prevScore + 5) reputationTrend = "up";
+      else if (reputationScore < prevScore - 5) reputationTrend = "down";
+    }
+
+    // Get domain from admin connection
+    const adminConnection = await ctx.db
+      .query("resendConnections")
+      .withIndex("by_type", (q) => q.eq("type", "admin"))
+      .first();
+
+    const domain = adminConnection?.fromEmail?.split("@")[1] || "mail.pauseplayrepeat.com";
+    const status = adminConnection?.isActive ? "active" : "pending";
+
+    return {
+      deliveryRate,
+      openRate,
+      bounceRate,
+      spamRate,
+      sentToday,
+      sentThisWeek,
+      sentThisMonth,
+      totalSent,
+      totalDelivered: delivered,
+      totalOpened: opened,
+      totalBounced: bounced,
+      totalComplained: complained,
+      domain,
+      status,
+      reputationScore,
+      reputationStatus,
+      reputationTrend,
+    };
+  },
+});
+
+/**
  * Get current email health metrics
  */
 export const getEmailHealthMetrics = query({

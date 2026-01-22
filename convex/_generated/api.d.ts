@@ -9784,6 +9784,30 @@ export declare const api: {
     >;
   };
   emailHealthMonitoring: {
+    getDomainHealthStats: FunctionReference<
+      "query",
+      "public",
+      {},
+      {
+        bounceRate: number;
+        deliveryRate: number;
+        domain: string;
+        openRate: number;
+        reputationScore: number;
+        reputationStatus: string;
+        reputationTrend: string;
+        sentThisMonth: number;
+        sentThisWeek: number;
+        sentToday: number;
+        spamRate: number;
+        status: string;
+        totalBounced: number;
+        totalComplained: number;
+        totalDelivered: number;
+        totalOpened: number;
+        totalSent: number;
+      }
+    >;
     getEmailHealthHistory: FunctionReference<
       "query",
       "public",

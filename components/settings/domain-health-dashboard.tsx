@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useAction } from "convex/react";
+import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,6 @@ import {
   TrendingUp,
   TrendingDown,
   Info,
-  ExternalLink,
   Loader2,
   Clock,
   BarChart3,
@@ -61,40 +60,47 @@ interface DomainHealth {
 export function DomainHealthDashboard({ storeId }: DomainHealthDashboardProps) {
   const { toast } = useToast();
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
 
-  // In a real implementation, this would fetch from the API
-  // For now, using mock data structure
-  const domains: DomainHealth[] = [
+  // Fetch real domain health stats from Convex
+  const healthStats = useQuery(api.emailHealthMonitoring.getDomainHealthStats);
+
+  // Build domain data from real stats
+  const domains: DomainHealth[] = healthStats ? [
     {
-      domain: "mail.pauseplayrepeat.com",
-      status: "active",
+      domain: healthStats.domain,
+      status: healthStats.status as "active" | "pending",
       type: "shared",
       dnsStatus: {
-        spf: { verified: true, record: "v=spf1 include:amazonses.com ~all", lastChecked: Date.now() - 3600000 },
-        dkim: { verified: true, record: "v=DKIM1; k=rsa; p=MIGf...", lastChecked: Date.now() - 3600000 },
-        dmarc: { verified: true, record: "v=DMARC1; p=quarantine;", lastChecked: Date.now() - 3600000 },
-        mx: { verified: true, record: "10 feedback-smtp.us-east-1.amazonses.com", lastChecked: Date.now() - 3600000 },
+        // DNS status would need to be fetched separately from Resend API
+        // For now, show as verified if domain is active
+        spf: { verified: healthStats.status === "active", record: "v=spf1 include:resend.com ~all", lastChecked: Date.now() - 3600000 },
+        dkim: { verified: healthStats.status === "active", record: "v=DKIM1; k=rsa; p=...", lastChecked: Date.now() - 3600000 },
+        dmarc: { verified: healthStats.status === "active", record: "v=DMARC1; p=quarantine;", lastChecked: Date.now() - 3600000 },
+        mx: { verified: true, record: "10 feedback-smtp.resend.com", lastChecked: Date.now() - 3600000 },
       },
-      reputation: { score: 92, status: "excellent", trend: "stable" },
+      reputation: {
+        score: healthStats.reputationScore,
+        status: healthStats.reputationStatus as "excellent" | "good" | "fair" | "poor",
+        trend: healthStats.reputationTrend as "up" | "down" | "stable",
+      },
       stats: {
-        deliveryRate: 98.5,
-        bounceRate: 1.2,
-        openRate: 42.3,
-        spamRate: 0.01,
-        sentToday: 1234,
-        sentWeek: 8567,
+        deliveryRate: healthStats.deliveryRate,
+        bounceRate: healthStats.bounceRate,
+        openRate: healthStats.openRate,
+        spamRate: healthStats.spamRate,
+        sentToday: healthStats.sentToday,
+        sentWeek: healthStats.sentThisWeek,
       },
     },
-  ];
+  ] : [];
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // The query will automatically refetch
+    await new Promise(resolve => setTimeout(resolve, 1000));
     setIsRefreshing(false);
     toast({
-      title: "DNS Status Refreshed",
+      title: "Stats Refreshed",
       description: "Domain health data has been updated.",
     });
   };
@@ -163,7 +169,7 @@ export function DomainHealthDashboard({ storeId }: DomainHealthDashboardProps) {
         </div>
 
         {/* Domain Cards */}
-        {domains.map((domain) => (
+        {healthStats && healthStats.totalSent > 0 && domains.map((domain) => (
           <Card key={domain.domain} className="overflow-hidden">
             <CardHeader className="border-b bg-muted/30">
               <div className="flex items-center justify-between">
@@ -399,18 +405,31 @@ export function DomainHealthDashboard({ storeId }: DomainHealthDashboardProps) {
           </Card>
         ))}
 
-        {/* Empty State */}
-        {domains.length === 0 && (
+        {/* Loading State */}
+        {healthStats === undefined && (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <Loader2 className="mx-auto h-12 w-12 text-muted-foreground mb-4 animate-spin" />
+              <h3 className="text-lg font-semibold mb-2">Loading Domain Health</h3>
+              <p className="text-muted-foreground">
+                Fetching email statistics...
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Empty State - No emails sent yet */}
+        {healthStats && healthStats.totalSent === 0 && (
           <Card>
             <CardContent className="py-12 text-center">
               <Mail className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No Custom Domain Configured</h3>
+              <h3 className="text-lg font-semibold mb-2">No Emails Sent Yet</h3>
               <p className="text-muted-foreground mb-4">
-                Set up a custom email domain to improve deliverability and brand trust.
+                Send your first email to start tracking domain health metrics.
               </p>
               <Button>
                 <Server className="mr-2 h-4 w-4" />
-                Set Up Custom Domain
+                Create Campaign
               </Button>
             </CardContent>
           </Card>
