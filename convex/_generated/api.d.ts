@@ -12626,6 +12626,18 @@ export declare const api: {
       { linkId: Id<"linkInBioLinks"> },
       { message: string; success: boolean }
     >;
+    getLinkAnalytics: FunctionReference<
+      "query",
+      "public",
+      { days?: number; linkId: Id<"linkInBioLinks"> },
+      {
+        clicksByCountry: Array<{ clicks: number; country: string }>;
+        clicksByDevice: Array<{ clicks: number; device: string }>;
+        clicksBySource: Array<{ clicks: number; source: string }>;
+        clicksOverTime: Array<{ clicks: number; date: string }>;
+        totalClicks: number;
+      }
+    >;
     getPublicStoreLinks: FunctionReference<
       "query",
       "public",
@@ -12660,6 +12672,23 @@ export declare const api: {
         userId: string;
       }>
     >;
+    getStoreLinksAnalytics: FunctionReference<
+      "query",
+      "public",
+      { days?: number; storeId: Id<"stores"> },
+      {
+        deviceBreakdown: Array<{ clicks: number; device: string }>;
+        linkPerformance: Array<{
+          clicks: number;
+          linkId: Id<"linkInBioLinks">;
+          percentOfTotal: number;
+          title: string;
+          url: string;
+        }>;
+        topSources: Array<{ clicks: number; source: string }>;
+        totalClicks: number;
+      }
+    >;
     reorderLinks: FunctionReference<
       "mutation",
       "public",
@@ -12669,7 +12698,20 @@ export declare const api: {
     trackLinkClick: FunctionReference<
       "mutation",
       "public",
-      { linkId: Id<"linkInBioLinks"> },
+      {
+        browser?: string;
+        campaign?: string;
+        city?: string;
+        country?: string;
+        deviceType?: "desktop" | "mobile" | "tablet";
+        linkId: Id<"linkInBioLinks">;
+        medium?: string;
+        os?: string;
+        referrer?: string;
+        region?: string;
+        source?: string;
+        userAgent?: string;
+      },
       { success: boolean }
     >;
     updateLink: FunctionReference<
@@ -15978,6 +16020,131 @@ export declare const api: {
       "query",
       "public",
       { userId: string },
+      any
+    >;
+  };
+  releasePreSaves: {
+    checkPreSave: FunctionReference<
+      "query",
+      "public",
+      { email: string; releaseId: Id<"digitalProducts"> },
+      | {
+          hasPreSaved: true;
+          platforms: {
+            amazonMusic?: boolean;
+            appleMusic?: boolean;
+            deezer?: boolean;
+            spotify?: boolean;
+            tidal?: boolean;
+          };
+        }
+      | { hasPreSaved: false }
+    >;
+    createPreSave: FunctionReference<
+      "mutation",
+      "public",
+      {
+        appleMusicUserToken?: string;
+        email: string;
+        ipAddress?: string;
+        name?: string;
+        platforms: {
+          amazonMusic?: boolean;
+          appleMusic?: boolean;
+          deezer?: boolean;
+          spotify?: boolean;
+          tidal?: boolean;
+        };
+        releaseId: Id<"digitalProducts">;
+        source?: string;
+        spotifyAccessToken?: string;
+        spotifyRefreshToken?: string;
+        spotifyUserId?: string;
+        userAgent?: string;
+      },
+      Id<"releasePreSaves">
+    >;
+    getByCreator: FunctionReference<
+      "query",
+      "public",
+      { creatorId: string; limit?: number },
+      Array<{
+        _id: Id<"releasePreSaves">;
+        email: string;
+        name?: string;
+        platforms: {
+          amazonMusic?: boolean;
+          appleMusic?: boolean;
+          deezer?: boolean;
+          spotify?: boolean;
+          tidal?: boolean;
+        };
+        preSavedAt: number;
+        releaseId: Id<"digitalProducts">;
+      }>
+    >;
+    getByRelease: FunctionReference<
+      "query",
+      "public",
+      { releaseId: Id<"digitalProducts"> },
+      Array<{
+        _creationTime: number;
+        _id: Id<"releasePreSaves">;
+        email: string;
+        name?: string;
+        platforms: {
+          amazonMusic?: boolean;
+          appleMusic?: boolean;
+          deezer?: boolean;
+          spotify?: boolean;
+          tidal?: boolean;
+        };
+        preSavedAt: number;
+        source?: string;
+      }>
+    >;
+    getCount: FunctionReference<
+      "query",
+      "public",
+      { releaseId: Id<"digitalProducts"> },
+      { appleMusic: number; spotify: number; total: number }
+    >;
+    getPreSavesNeedingEmail: FunctionReference<
+      "query",
+      "public",
+      {
+        emailType:
+          | "preSaveConfirmation"
+          | "releaseDay"
+          | "followUp48h"
+          | "playlistPitch";
+        limit?: number;
+        releaseId: Id<"digitalProducts">;
+      },
+      Array<{
+        _id: Id<"releasePreSaves">;
+        email: string;
+        name?: string;
+        platforms: {
+          amazonMusic?: boolean;
+          appleMusic?: boolean;
+          deezer?: boolean;
+          spotify?: boolean;
+          tidal?: boolean;
+        };
+      }>
+    >;
+    updateEmailStatus: FunctionReference<
+      "mutation",
+      "public",
+      {
+        emailType:
+          | "preSaveConfirmation"
+          | "releaseDay"
+          | "followUp48h"
+          | "playlistPitch";
+        preSaveId: Id<"releasePreSaves">;
+      },
       any
     >;
   };

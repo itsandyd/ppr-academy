@@ -969,6 +969,8 @@ export default defineSchema({
         // Support & Donations
         v.literal("tip-jar"),
         v.literal("donation"),
+        // Music Releases (NEW: Release marketing module)
+        v.literal("release"),
         // Legacy (for backward compatibility)
         v.literal("lead-magnet")
       )
@@ -1158,6 +1160,63 @@ export default defineSchema({
     // Linked Samples (unified samples system)
     sampleIds: v.optional(v.array(v.id("audioSamples"))), // Individual samples included in this pack
     sampleCategories: v.optional(v.array(v.string())), // Sample categories: drums, bass, melodic, etc.
+
+    // Release Marketing Configuration (for productCategory: "release")
+    releaseConfig: v.optional(
+      v.object({
+        // Release Details
+        releaseDate: v.optional(v.number()), // Timestamp of release date
+        releaseTime: v.optional(v.string()), // Time of day for release (e.g., "00:00")
+        timezone: v.optional(v.string()), // Timezone for release
+        releaseType: v.optional(
+          v.union(
+            v.literal("single"),
+            v.literal("ep"),
+            v.literal("album"),
+            v.literal("mixtape"),
+            v.literal("remix")
+          )
+        ),
+        // Streaming Platform Links
+        spotifyUri: v.optional(v.string()), // Spotify URI for pre-save
+        spotifyAlbumId: v.optional(v.string()), // Spotify album/track ID
+        appleMusicUrl: v.optional(v.string()), // Apple Music pre-add URL
+        appleMusicAlbumId: v.optional(v.string()), // Apple Music album ID
+        soundcloudUrl: v.optional(v.string()),
+        youtubeUrl: v.optional(v.string()),
+        tidalUrl: v.optional(v.string()),
+        deezerUrl: v.optional(v.string()),
+        amazonMusicUrl: v.optional(v.string()),
+        bandcampUrl: v.optional(v.string()),
+        smartLinkUrl: v.optional(v.string()), // Consolidated smart link (e.g., linktr.ee, fanlink)
+        // Pre-save Campaign Settings
+        preSaveEnabled: v.optional(v.boolean()),
+        preSaveStartDate: v.optional(v.number()),
+        preSaveEndDate: v.optional(v.number()), // Usually the release date
+        // Drip Campaign Settings
+        dripCampaignEnabled: v.optional(v.boolean()),
+        dripCampaignId: v.optional(v.id("dripCampaigns")),
+        // Email Sequence Timing
+        preSaveEmailSent: v.optional(v.boolean()),
+        releaseDayEmailSent: v.optional(v.boolean()),
+        followUp48hEmailSent: v.optional(v.boolean()),
+        playlistPitchEmailSent: v.optional(v.boolean()),
+        // Track Metadata
+        trackTitle: v.optional(v.string()),
+        artistName: v.optional(v.string()),
+        featuredArtists: v.optional(v.array(v.string())),
+        label: v.optional(v.string()),
+        isrc: v.optional(v.string()), // International Standard Recording Code
+        upc: v.optional(v.string()), // Universal Product Code for albums
+        // Cover Art
+        coverArtUrl: v.optional(v.string()),
+        coverArtStorageId: v.optional(v.string()),
+        // Playlist Pitching
+        playlistPitchEnabled: v.optional(v.boolean()),
+        playlistPitchMessage: v.optional(v.string()),
+        targetPlaylistCurators: v.optional(v.array(v.string())), // Curator IDs to pitch to
+      })
+    ),
   })
     .index("by_storeId", ["storeId"])
     .index("by_userId", ["userId"])
@@ -1364,6 +1423,58 @@ export default defineSchema({
     .index("by_store", ["storeId"])
     .index("by_email_product", ["email", "productId"])
     .index("by_submitted_at", ["submittedAt"]),
+
+  // Release Pre-Saves (Track pre-save submissions for music releases)
+  releasePreSaves: defineTable({
+    releaseId: v.id("digitalProducts"), // The release product
+    storeId: v.string(),
+    creatorId: v.string(), // Creator who owns the release
+
+    // User Information
+    email: v.string(),
+    name: v.optional(v.string()),
+
+    // Pre-save Platform Confirmations
+    platforms: v.object({
+      spotify: v.optional(v.boolean()), // Pre-saved on Spotify
+      appleMusic: v.optional(v.boolean()), // Pre-added on Apple Music
+      deezer: v.optional(v.boolean()),
+      tidal: v.optional(v.boolean()),
+      amazonMusic: v.optional(v.boolean()),
+    }),
+
+    // OAuth tokens for automatic pre-save (optional)
+    spotifyAccessToken: v.optional(v.string()),
+    spotifyRefreshToken: v.optional(v.string()),
+    spotifyUserId: v.optional(v.string()),
+    appleMusicUserToken: v.optional(v.string()),
+
+    // Tracking
+    preSavedAt: v.number(),
+    source: v.optional(v.string()), // Where they came from (email, social, direct)
+    ipAddress: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+
+    // Drip Campaign Enrollment
+    enrolledInDripCampaign: v.optional(v.boolean()),
+    dripCampaignEnrollmentId: v.optional(v.id("dripCampaignEnrollments")),
+
+    // Email Sequence Tracking
+    preSaveConfirmationSent: v.optional(v.boolean()),
+    releaseDayEmailSent: v.optional(v.boolean()),
+    followUp48hEmailSent: v.optional(v.boolean()),
+    playlistPitchEmailSent: v.optional(v.boolean()),
+
+    // Engagement After Release
+    hasStreamed: v.optional(v.boolean()), // Did they actually listen after release
+    addedToPlaylist: v.optional(v.boolean()), // Did they add to a playlist
+  })
+    .index("by_release", ["releaseId"])
+    .index("by_email", ["email"])
+    .index("by_creator", ["creatorId"])
+    .index("by_store", ["storeId"])
+    .index("by_email_release", ["email", "releaseId"])
+    .index("by_presaved_at", ["preSavedAt"]),
 
   // Customer Management
   customers: defineTable({
@@ -4259,6 +4370,33 @@ export default defineSchema({
     .index("by_userId", ["userId"])
     .index("by_storeId_order", ["storeId", "order"])
     .index("by_isActive", ["isActive"]),
+
+  // Link Click Analytics - detailed tracking for each click
+  linkClickAnalytics: defineTable({
+    linkId: v.id("linkInBioLinks"),
+    storeId: v.id("stores"),
+    // Traffic source tracking
+    source: v.optional(v.string()), // utm_source or detected source
+    medium: v.optional(v.string()), // utm_medium
+    campaign: v.optional(v.string()), // utm_campaign
+    referrer: v.optional(v.string()), // HTTP referrer
+    // Device info
+    userAgent: v.optional(v.string()),
+    deviceType: v.optional(v.union(v.literal("desktop"), v.literal("mobile"), v.literal("tablet"))),
+    browser: v.optional(v.string()),
+    os: v.optional(v.string()),
+    // Location (from IP geolocation)
+    country: v.optional(v.string()),
+    region: v.optional(v.string()),
+    city: v.optional(v.string()),
+    // Timestamp
+    clickedAt: v.number(),
+  })
+    .index("by_linkId", ["linkId"])
+    .index("by_storeId", ["storeId"])
+    .index("by_clickedAt", ["clickedAt"])
+    .index("by_linkId_clickedAt", ["linkId", "clickedAt"])
+    .index("by_storeId_clickedAt", ["storeId", "clickedAt"]),
 
   // ============================================
   // EMAIL DOMAIN MONITORING TABLES

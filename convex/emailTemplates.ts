@@ -1578,7 +1578,328 @@ const AUTOMATION_TEMPLATES = [
     popular: true,
     conversionRate: "12-20%",
   },
+
+  // ========================================================================
+  // RELEASE MARKETING FUNNEL (NEW)
+  // ========================================================================
+
+  // TOFU - Release Pre-Save
+  {
+    id: "release-presave-capture",
+    name: "🎵 Pre-Save Capture Email",
+    description: "Capture pre-saves and grow your fanbase before release",
+    category: "releases",
+    funnelStage: "TOFU",
+    subject: "Pre-save {{trackTitle}} - drops {{releaseDate}}!",
+    previewText: "Be the first to hear it when it drops",
+    body: `What's up,
+
+My new {{releaseType}} **{{trackTitle}}** drops on {{releaseDate}}.
+
+**Pre-save it now** and it'll automatically appear in your library the moment it's live.
+
+[Pre-Save on Spotify →]({{spotifyUrl}})
+[Pre-Add on Apple Music →]({{appleMusicUrl}})
+
+**Why pre-save?**
+• It saves to your library automatically on release day
+• You get notified the second it drops
+• Early plays help the algorithm push it to more people
+
+Only {{daysUntilRelease}} days to go. Lock it in now.
+
+{{artistName}}
+
+P.S. - Everyone who pre-saves gets {{bonusDescription}}.`,
+    tags: ["release", "pre-save", "tofu", "capture"],
+    useCase: "Build pre-save list, grow fanbase before release",
+    estimatedOpenRate: "45-55%",
+    popular: true,
+  },
+
+  // Pre-Save Confirmation
+  {
+    id: "release-presave-confirmation",
+    name: "✅ Pre-Save Confirmation",
+    description: "Thank fans for pre-saving and build excitement",
+    category: "releases",
+    funnelStage: "MOFU",
+    subject: "You're locked in! {{trackTitle}} drops {{releaseDate}}",
+    previewText: "Thanks for pre-saving - you'll be first to hear it",
+    body: `{{firstName}},
+
+You're locked in. **{{trackTitle}}** will be waiting in your library on {{releaseDate}}.
+
+**What happens next:**
+• {{daysUntilRelease}} days until release
+• You'll get a notification the second it's live
+• First listeners get early access to {{bonusDescription}}
+
+**While you wait:**
+{{preReleaseContent}}
+
+Keep an ear out,
+{{artistName}}
+
+P.S. - Share this pre-save link with friends who'd vibe with it: {{preSaveLink}}`,
+    tags: ["release", "confirmation", "pre-save", "mofu"],
+    useCase: "Confirm pre-save, build anticipation, encourage sharing",
+    estimatedOpenRate: "65-75%",
+    popular: true,
+  },
+
+  // Release Day Announcement
+  {
+    id: "release-day-announcement",
+    name: "🚀 Release Day Announcement",
+    description: "Let fans know the music is live on all platforms",
+    category: "releases",
+    funnelStage: "BOFU",
+    subject: "IT'S HERE: {{trackTitle}} is out now!",
+    previewText: "Listen now on all platforms",
+    body: `{{firstName}},
+
+**{{trackTitle}} IS LIVE.**
+
+The wait is over. Go stream it right now:
+
+🟢 [Listen on Spotify →]({{spotifyUrl}})
+🍎 [Listen on Apple Music →]({{appleMusicUrl}})
+▶️ [Watch on YouTube →]({{youtubeUrl}})
+
+**If you're feeling it:**
+• Add it to your playlist
+• Share it with a friend who'd vibe
+• Drop a comment - I read every one
+
+**Behind the track:**
+{{trackStory}}
+
+This one's for you.
+
+{{artistName}}
+
+P.S. - Reply and let me know what you think. I want to hear from you.`,
+    tags: ["release", "announcement", "bofu", "launch"],
+    useCase: "Maximize day-one streams and engagement",
+    estimatedOpenRate: "50-60%",
+    popular: true,
+  },
+
+  // 48-Hour Follow-Up
+  {
+    id: "release-48h-followup",
+    name: "🔔 48-Hour Follow-Up",
+    description: "Remind fans and ask for shares/playlist adds",
+    category: "releases",
+    funnelStage: "BOFU",
+    subject: "{{firstName}}, did you catch {{trackTitle}}?",
+    previewText: "Quick follow-up + how you can help",
+    body: `Hey {{firstName}},
+
+**{{trackTitle}}** has been out for 48 hours.
+
+**The early reception:**
+• {{streamCount}} streams and counting
+• {{saveCount}} library saves
+• Featured on {{playlistCount}} user playlists
+
+**Did you get a chance to listen?**
+
+If you're vibing with it, here's how you can help it grow:
+
+1. **Add it to a playlist** - even a personal one helps the algorithm
+2. **Share with one friend** who'd dig it
+3. **Save it to your library** if you haven't yet
+
+Every stream and save helps it reach more ears.
+
+[Listen Again →]({{smartLink}})
+
+Thank you for being part of this,
+{{artistName}}
+
+P.S. - Drop a comment on the video or reply to this email. I'm reading everything.`,
+    tags: ["release", "followup", "engagement", "bofu"],
+    useCase: "Boost streams, encourage playlist adds and shares",
+    estimatedOpenRate: "40-50%",
+    popular: true,
+  },
+
+  // Playlist Pitch Sequence
+  {
+    id: "release-playlist-pitch",
+    name: "📝 Playlist Pitch Request",
+    description: "Ask superfans to add the track to their playlists",
+    category: "releases",
+    funnelStage: "POST-PURCHASE",
+    subject: "Can you add {{trackTitle}} to a playlist?",
+    previewText: "Your support means more than you know",
+    body: `{{firstName}},
+
+Quick favor to ask.
+
+**{{trackTitle}}** is doing well, but playlist placements are what really move the needle.
+
+**Do you have a playlist it would fit?**
+
+Here's why it matters:
+• User playlists help the algorithm discover the track
+• More playlist adds = more recommendations to new listeners
+• Even a 10-follower playlist helps
+
+**If you've got a playlist that fits:**
+1. Open [{{trackTitle}} on Spotify]({{spotifyUrl}})
+2. Click the "..." menu
+3. Add to Playlist → pick one that fits
+
+**No playlist? No worries.**
+A simple save to your library helps too.
+
+Your support means everything.
+
+{{artistName}}
+
+P.S. - Wanna see your playlist featured? Send it to me - I'm always looking for new playlists to follow.`,
+    tags: ["release", "playlist", "pitch", "superfan"],
+    useCase: "Increase playlist adds, leverage superfans",
+    estimatedOpenRate: "35-45%",
+    popular: true,
+  },
+
+  // 1-Week Milestone
+  {
+    id: "release-1week-milestone",
+    name: "📊 1-Week Milestone Update",
+    description: "Share results and thank fans for their support",
+    category: "releases",
+    funnelStage: "POST-PURCHASE",
+    subject: "{{trackTitle}} - Week 1 Results Inside",
+    previewText: "Here's how your support made a difference",
+    body: `{{firstName}},
+
+**{{trackTitle}}** just hit the 1-week mark.
+
+**Here's where we're at:**
+• {{totalStreams}} total streams
+• {{uniqueListeners}} unique listeners
+• {{playlistAdds}} playlist adds
+• {{topCountry}} is the top streaming country
+
+**Highlights:**
+{{weekOneHighlights}}
+
+**This is all because of you.**
+
+Every stream, every share, every playlist add - it all adds up. Thank you for being part of this.
+
+**What's next:**
+{{upcomingContent}}
+
+Stay tuned,
+{{artistName}}
+
+P.S. - More music is coming. Reply with what you want to hear next.`,
+    tags: ["release", "milestone", "update", "gratitude"],
+    useCase: "Share results, maintain engagement, tease upcoming content",
+    estimatedOpenRate: "38-48%",
+    popular: false,
+  },
 ];
+
+// ========================================================================
+// RELEASE AUTOMATION TEMPLATES
+// ========================================================================
+
+const RELEASE_AUTOMATION_TEMPLATES = [
+  {
+    id: "release-presave-to-superfan",
+    name: "🎵 Pre-Save → Release Day → Superfan (4 emails)",
+    description: "Complete release marketing sequence from pre-save to post-release",
+    category: "releases",
+    funnelStage: "FULL-FUNNEL",
+    trigger: "release_presave",
+    emails: [
+      {
+        delay: 0,
+        subject: "You're locked in! {{trackTitle}} drops {{releaseDate}}",
+        purpose: "Confirm pre-save + build anticipation",
+      },
+      {
+        delay: -1, // Release day (calculated from release date)
+        subject: "IT'S HERE: {{trackTitle}} is out now!",
+        purpose: "Announce release + drive streams",
+      },
+      {
+        delay: 2, // 2 days after release
+        subject: "Did you catch {{trackTitle}}?",
+        purpose: "Follow-up + ask for shares/playlist adds",
+      },
+      {
+        delay: 7, // 1 week after release
+        subject: "Can you add {{trackTitle}} to a playlist?",
+        purpose: "Playlist pitch to superfans",
+      },
+    ],
+    tags: ["release", "presave", "full-funnel", "automation"],
+    popular: true,
+    conversionRate: "N/A (engagement-focused)",
+  },
+  {
+    id: "release-day-engagement-boost",
+    name: "🚀 Release Day Engagement Boost (3 emails)",
+    description: "Maximize engagement in the first 48 hours after release",
+    category: "releases",
+    funnelStage: "BOFU",
+    trigger: "release_published",
+    emails: [
+      {
+        delay: 0,
+        subject: "{{trackTitle}} just dropped - listen first!",
+        purpose: "Immediate notification for non-presavers",
+      },
+      {
+        delay: 8, // 8 hours after release
+        subject: "Early reactions to {{trackTitle}} are 🔥",
+        purpose: "Social proof + FOMO",
+      },
+      {
+        delay: 48,
+        subject: "48 hours in: {{trackTitle}} update",
+        purpose: "Share milestones + ask for engagement",
+      },
+    ],
+    tags: ["release", "engagement", "day-one", "bofu"],
+    popular: true,
+    conversionRate: "N/A (stream-focused)",
+  },
+  {
+    id: "release-playlist-campaign",
+    name: "📝 Playlist Add Campaign (2 emails)",
+    description: "Get fans to add your track to their playlists",
+    category: "releases",
+    funnelStage: "POST-PURCHASE",
+    trigger: "track_streamed",
+    emails: [
+      {
+        delay: 3,
+        subject: "Thanks for streaming {{trackTitle}}!",
+        purpose: "Thank listener + introduce playlist ask",
+      },
+      {
+        delay: 7,
+        subject: "Quick favor: Add {{trackTitle}} to a playlist?",
+        purpose: "Direct playlist pitch",
+      },
+    ],
+    tags: ["release", "playlist", "campaign", "post-purchase"],
+    popular: false,
+    conversionRate: "15-25%",
+  },
+];
+
+// Merge release automation templates with main automation templates
+const ALL_AUTOMATION_TEMPLATES = [...AUTOMATION_TEMPLATES, ...RELEASE_AUTOMATION_TEMPLATES];
 
 // ============================================================================
 // QUERIES
@@ -1676,8 +1997,8 @@ export const getAutomationTemplates = query({
     conversionRate: v.string(),
   })),
   handler: async (ctx, args) => {
-    let templates = AUTOMATION_TEMPLATES;
-    
+    let templates = ALL_AUTOMATION_TEMPLATES;
+
     if (args.category) {
       templates = templates.filter(t => t.category === args.category);
     }
@@ -1685,7 +2006,7 @@ export const getAutomationTemplates = query({
     if (args.funnelStage) {
       templates = templates.filter(t => t.funnelStage === args.funnelStage);
     }
-    
+
     return templates as any;
   },
 });
@@ -1709,7 +2030,7 @@ export const getAutomationTemplateById = query({
     conversionRate: v.string(),
   }), v.null()),
   handler: async (ctx, args) => {
-    const template = AUTOMATION_TEMPLATES.find(t => t.id === args.templateId);
+    const template = ALL_AUTOMATION_TEMPLATES.find(t => t.id === args.templateId);
     return template as any || null;
   },
 });
@@ -1727,7 +2048,7 @@ export const getTemplateCategories = query({
       CAMPAIGN_TEMPLATES.forEach(t => {
         categories.set(t.category, (categories.get(t.category) || 0) + 1);
       });
-      
+
       return Array.from(categories.entries()).map(([value, count]) => ({
         value,
         label: value.charAt(0).toUpperCase() + value.slice(1).replace(/-/g, " "),
@@ -1735,10 +2056,10 @@ export const getTemplateCategories = query({
       }));
     } else {
       const categories = new Map<string, number>();
-      AUTOMATION_TEMPLATES.forEach(t => {
+      ALL_AUTOMATION_TEMPLATES.forEach(t => {
         categories.set(t.category, (categories.get(t.category) || 0) + 1);
       });
-      
+
       return Array.from(categories.entries()).map(([value, count]) => ({
         value,
         label: value.charAt(0).toUpperCase() + value.slice(1).replace(/-/g, " "),

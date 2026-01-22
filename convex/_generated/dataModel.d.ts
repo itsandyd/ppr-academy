@@ -3506,6 +3506,7 @@ export type DataModel = {
         | "community"
         | "tip-jar"
         | "donation"
+        | "release"
         | "lead-magnet";
       productType?:
         | "digital"
@@ -3516,6 +3517,43 @@ export type DataModel = {
         | "abletonPreset"
         | "playlistCuration";
       rackType?: "audioEffect" | "instrument" | "midiEffect" | "drumRack";
+      releaseConfig?: {
+        amazonMusicUrl?: string;
+        appleMusicAlbumId?: string;
+        appleMusicUrl?: string;
+        artistName?: string;
+        bandcampUrl?: string;
+        coverArtStorageId?: string;
+        coverArtUrl?: string;
+        deezerUrl?: string;
+        dripCampaignEnabled?: boolean;
+        dripCampaignId?: Id<"dripCampaigns">;
+        featuredArtists?: Array<string>;
+        followUp48hEmailSent?: boolean;
+        isrc?: string;
+        label?: string;
+        playlistPitchEmailSent?: boolean;
+        playlistPitchEnabled?: boolean;
+        playlistPitchMessage?: string;
+        preSaveEmailSent?: boolean;
+        preSaveEnabled?: boolean;
+        preSaveEndDate?: number;
+        preSaveStartDate?: number;
+        releaseDate?: number;
+        releaseDayEmailSent?: boolean;
+        releaseTime?: string;
+        releaseType?: "single" | "ep" | "album" | "mixtape" | "remix";
+        smartLinkUrl?: string;
+        soundcloudUrl?: string;
+        spotifyAlbumId?: string;
+        spotifyUri?: string;
+        targetPlaylistCurators?: Array<string>;
+        tidalUrl?: string;
+        timezone?: string;
+        trackTitle?: string;
+        upc?: string;
+        youtubeUrl?: string;
+      };
       requiresMaxForLive?: boolean;
       sampleCategories?: Array<string>;
       sampleIds?: Array<Id<"audioSamples">>;
@@ -3638,6 +3676,42 @@ export type DataModel = {
       | "productCategory"
       | "productType"
       | "rackType"
+      | "releaseConfig"
+      | "releaseConfig.amazonMusicUrl"
+      | "releaseConfig.appleMusicAlbumId"
+      | "releaseConfig.appleMusicUrl"
+      | "releaseConfig.artistName"
+      | "releaseConfig.bandcampUrl"
+      | "releaseConfig.coverArtStorageId"
+      | "releaseConfig.coverArtUrl"
+      | "releaseConfig.deezerUrl"
+      | "releaseConfig.dripCampaignEnabled"
+      | "releaseConfig.dripCampaignId"
+      | "releaseConfig.featuredArtists"
+      | "releaseConfig.followUp48hEmailSent"
+      | "releaseConfig.isrc"
+      | "releaseConfig.label"
+      | "releaseConfig.playlistPitchEmailSent"
+      | "releaseConfig.playlistPitchEnabled"
+      | "releaseConfig.playlistPitchMessage"
+      | "releaseConfig.preSaveEmailSent"
+      | "releaseConfig.preSaveEnabled"
+      | "releaseConfig.preSaveEndDate"
+      | "releaseConfig.preSaveStartDate"
+      | "releaseConfig.releaseDate"
+      | "releaseConfig.releaseDayEmailSent"
+      | "releaseConfig.releaseTime"
+      | "releaseConfig.releaseType"
+      | "releaseConfig.smartLinkUrl"
+      | "releaseConfig.soundcloudUrl"
+      | "releaseConfig.spotifyAlbumId"
+      | "releaseConfig.spotifyUri"
+      | "releaseConfig.targetPlaylistCurators"
+      | "releaseConfig.tidalUrl"
+      | "releaseConfig.timezone"
+      | "releaseConfig.trackTitle"
+      | "releaseConfig.upc"
+      | "releaseConfig.youtubeUrl"
       | "requiresMaxForLive"
       | "sampleCategories"
       | "sampleIds"
@@ -6050,6 +6124,54 @@ export type DataModel = {
     searchIndexes: {};
     vectorIndexes: {};
   };
+  linkClickAnalytics: {
+    document: {
+      browser?: string;
+      campaign?: string;
+      city?: string;
+      clickedAt: number;
+      country?: string;
+      deviceType?: "desktop" | "mobile" | "tablet";
+      linkId: Id<"linkInBioLinks">;
+      medium?: string;
+      os?: string;
+      referrer?: string;
+      region?: string;
+      source?: string;
+      storeId: Id<"stores">;
+      userAgent?: string;
+      _id: Id<"linkClickAnalytics">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "browser"
+      | "campaign"
+      | "city"
+      | "clickedAt"
+      | "country"
+      | "deviceType"
+      | "linkId"
+      | "medium"
+      | "os"
+      | "referrer"
+      | "region"
+      | "source"
+      | "storeId"
+      | "userAgent";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_clickedAt: ["clickedAt", "_creationTime"];
+      by_linkId: ["linkId", "_creationTime"];
+      by_linkId_clickedAt: ["linkId", "clickedAt", "_creationTime"];
+      by_storeId: ["storeId", "_creationTime"];
+      by_storeId_clickedAt: ["storeId", "clickedAt", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
   linkInBioLinks: {
     document: {
       clicks: number;
@@ -7809,6 +7931,82 @@ export type DataModel = {
       by_status: ["status", "requestedAt", "_creationTime"];
       by_store: ["storeId", "status", "_creationTime"];
       by_user: ["userId", "status", "_creationTime"];
+    };
+    searchIndexes: {};
+    vectorIndexes: {};
+  };
+  releasePreSaves: {
+    document: {
+      addedToPlaylist?: boolean;
+      appleMusicUserToken?: string;
+      creatorId: string;
+      dripCampaignEnrollmentId?: Id<"dripCampaignEnrollments">;
+      email: string;
+      enrolledInDripCampaign?: boolean;
+      followUp48hEmailSent?: boolean;
+      hasStreamed?: boolean;
+      ipAddress?: string;
+      name?: string;
+      platforms: {
+        amazonMusic?: boolean;
+        appleMusic?: boolean;
+        deezer?: boolean;
+        spotify?: boolean;
+        tidal?: boolean;
+      };
+      playlistPitchEmailSent?: boolean;
+      preSaveConfirmationSent?: boolean;
+      preSavedAt: number;
+      releaseDayEmailSent?: boolean;
+      releaseId: Id<"digitalProducts">;
+      source?: string;
+      spotifyAccessToken?: string;
+      spotifyRefreshToken?: string;
+      spotifyUserId?: string;
+      storeId: string;
+      userAgent?: string;
+      _id: Id<"releasePreSaves">;
+      _creationTime: number;
+    };
+    fieldPaths:
+      | "_creationTime"
+      | "_id"
+      | "addedToPlaylist"
+      | "appleMusicUserToken"
+      | "creatorId"
+      | "dripCampaignEnrollmentId"
+      | "email"
+      | "enrolledInDripCampaign"
+      | "followUp48hEmailSent"
+      | "hasStreamed"
+      | "ipAddress"
+      | "name"
+      | "platforms"
+      | "platforms.amazonMusic"
+      | "platforms.appleMusic"
+      | "platforms.deezer"
+      | "platforms.spotify"
+      | "platforms.tidal"
+      | "playlistPitchEmailSent"
+      | "preSaveConfirmationSent"
+      | "preSavedAt"
+      | "releaseDayEmailSent"
+      | "releaseId"
+      | "source"
+      | "spotifyAccessToken"
+      | "spotifyRefreshToken"
+      | "spotifyUserId"
+      | "storeId"
+      | "userAgent";
+    indexes: {
+      by_id: ["_id"];
+      by_creation_time: ["_creationTime"];
+      by_creator: ["creatorId", "_creationTime"];
+      by_email: ["email", "_creationTime"];
+      by_email_release: ["email", "releaseId", "_creationTime"];
+      by_presaved_at: ["preSavedAt", "_creationTime"];
+      by_release: ["releaseId", "_creationTime"];
+      by_store: ["storeId", "_creationTime"];
     };
     searchIndexes: {};
     vectorIndexes: {};

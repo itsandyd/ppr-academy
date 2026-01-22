@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { User, Bell, Shield, CreditCard, Palette, Save, Loader2 } from "lucide-react";
+import { User, Bell, Shield, CreditCard, Palette, Save, Loader2, Globe, ArrowRight, Mail, Link as LinkIcon } from "lucide-react";
+import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -13,11 +14,16 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { BioLinkEditor } from "@/components/settings/bio-link-editor";
 
 export default function SettingsPage() {
   const { user } = useUser();
   const profile = useQuery(api.users.getMyProfile);
   const updateProfile = useMutation(api.users.updateMyProfile);
+  const store = useQuery(
+    api.stores.getUserStore,
+    user?.id ? { userId: user.id } : "skip"
+  );
 
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [marketingEmails, setMarketingEmails] = useState(false);
@@ -79,10 +85,18 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 md:w-auto md:grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3 md:w-auto md:grid-cols-6">
           <TabsTrigger value="profile" className="gap-2">
             <User className="h-4 w-4" />
             <span className="hidden sm:inline">Profile</span>
+          </TabsTrigger>
+          <TabsTrigger value="links" className="gap-2">
+            <LinkIcon className="h-4 w-4" />
+            <span className="hidden sm:inline">Links</span>
+          </TabsTrigger>
+          <TabsTrigger value="domains" className="gap-2">
+            <Globe className="h-4 w-4" />
+            <span className="hidden sm:inline">Domains</span>
           </TabsTrigger>
           <TabsTrigger value="notifications" className="gap-2">
             <Bell className="h-4 w-4" />
@@ -207,6 +221,97 @@ export default function SettingsPage() {
                     <Save className="mr-2 h-4 w-4" />
                   )}
                   Save Changes
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="links">
+          {store && user?.id ? (
+            <BioLinkEditor storeId={store._id} userId={user.id} />
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>Bio Links</CardTitle>
+                <CardDescription>Manage your link-in-bio page</CardDescription>
+              </CardHeader>
+              <CardContent className="flex min-h-[200px] items-center justify-center">
+                <div className="text-center">
+                  <LinkIcon className="mx-auto h-12 w-12 text-zinc-300 dark:text-zinc-700" />
+                  <p className="mt-4 text-zinc-500 dark:text-zinc-400">
+                    {!store ? "Create a store to manage your bio links" : "Loading..."}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="domains">
+          <Card>
+            <CardHeader>
+              <CardTitle>Domain Settings</CardTitle>
+              <CardDescription>Configure custom domains for your storefront and email</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-lg border p-4 hover:border-blue-300 transition-colors">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/20">
+                      <Globe className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold">Storefront Domain</h4>
+                      <p className="text-xs text-muted-foreground">Use your own domain for your store</p>
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Connect a custom domain like store.yourdomain.com to your storefront.
+                  </p>
+                  <Button asChild variant="outline" size="sm" className="w-full">
+                    <Link href="/dashboard/settings/domains">
+                      Configure
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
+
+                <div className="rounded-lg border p-4 hover:border-green-300 transition-colors">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/20">
+                      <Mail className="h-5 w-5 text-green-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold">Email Domain</h4>
+                      <p className="text-xs text-muted-foreground">Send from your own domain</p>
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Configure SPF, DKIM, and DMARC for better email deliverability.
+                  </p>
+                  <Button asChild variant="outline" size="sm" className="w-full">
+                    <Link href="/dashboard/settings/domains?tab=email">
+                      Configure
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+
+              <div className="rounded-lg bg-muted/50 p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Shield className="h-4 w-4 text-purple-500" />
+                  <span className="text-sm font-semibold">Domain Health Dashboard</span>
+                </div>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Monitor SPF, DKIM, and DMARC status, track reputation scores, and ensure optimal deliverability.
+                </p>
+                <Button asChild size="sm">
+                  <Link href="/dashboard/settings/domains?tab=health">
+                    View Health Dashboard
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
                 </Button>
               </div>
             </CardContent>

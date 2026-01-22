@@ -24,7 +24,7 @@ export async function POST(
   try {
     const { platform } = await params;
     const body = await request.text();
-    const signature = request.headers.get('x-hub-signature-256') || 
+    const signature = request.headers.get('x-hub-signature-256') ||
                      request.headers.get('x-twitter-webhooks-signature') ||
                      request.headers.get('x-linkedin-signature');
 
@@ -56,7 +56,7 @@ export async function POST(
       case 'tiktok':
         await handleTikTokWebhook(payload);
         break;
-      
+
       default:
         console.error(`Unsupported platform: ${platform}`);
     }
@@ -149,7 +149,7 @@ function verifyWebhookSignature(platform: string, body: string, signature: strin
       
       case 'tiktok':
         return verifyTikTokSignature(body, signature);
-      
+
       default:
         return false;
     }
@@ -201,7 +201,7 @@ function verifyTikTokSignature(body: string, signature: string): boolean {
     .createHmac('sha256', process.env.TIKTOK_CLIENT_SECRET!)
     .update(body)
     .digest('hex');
-  
+
   return crypto.timingSafeEqual(
     Buffer.from(signature),
     Buffer.from(expectedSignature)
@@ -330,18 +330,15 @@ async function handleLinkedInWebhook(payload: any) {
 async function handleTikTokWebhook(payload: any) {
   console.log('TikTok webhook received:', JSON.stringify(payload, null, 2));
 
-  // Handle TikTok events
+  // TikTok webhooks are limited to video status updates only
+  // Comment/DM automation requires Creator Marketplace API approval
   if (payload.event === 'video.publish.completed') {
     console.log('Video published:', payload.video_id);
-    
-    // Update post status in database
-    // TODO: Call Convex mutation to update post status
+    // TODO: Update post status in database
   }
 
   if (payload.event === 'video.upload.failed') {
     console.log('Video upload failed:', payload.video_id);
-    
-    // Update post status to failed
-    // TODO: Call Convex mutation to update post status
+    // TODO: Update post status to failed
   }
 }
