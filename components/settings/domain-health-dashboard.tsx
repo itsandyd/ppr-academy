@@ -429,7 +429,7 @@ export function DomainHealthDashboard({ storeId }: DomainHealthDashboardProps) {
                 Send your first email to start tracking domain health metrics.
               </p>
               <Button asChild>
-                <Link href="/dashboard/emails">
+                <Link href="/dashboard/emails?mode=create">
                   <Send className="mr-2 h-4 w-4" />
                   Go to Email Dashboard
                 </Link>
