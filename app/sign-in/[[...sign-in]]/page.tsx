@@ -1,5 +1,5 @@
 import { SignIn } from "@clerk/nextjs";
-import { Music, Sparkles, TrendingUp, Users, Headphones, Zap, Shield, ChevronRight } from "lucide-react";
+import { Music, Sparkles, TrendingUp, Users, Headphones, Zap, Shield, ChevronRight, Play, Award } from "lucide-react";
 import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 
@@ -19,95 +19,99 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
-      {/* Background decorative elements - visible on all screen sizes */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-80 h-80 md:w-[500px] md:h-[500px] bg-gradient-to-br from-chart-1/20 via-chart-2/15 to-transparent rounded-full blur-3xl animate-float-slow" />
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 md:w-[500px] md:h-[500px] bg-gradient-to-tr from-chart-3/20 via-chart-4/15 to-transparent rounded-full blur-3xl animate-float" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] md:w-[600px] md:h-[600px] bg-gradient-radial from-chart-1/5 to-transparent rounded-full" />
+      {/* Global background - gradient bleed from left panel */}
+      <div className="fixed inset-0 pointer-events-none">
+        {/* Gradient that bleeds from left to right */}
+        <div className="absolute inset-y-0 left-0 w-[60%] bg-gradient-to-r from-chart-1/8 via-chart-2/5 to-transparent" />
+        {/* Subtle orbs on right side */}
+        <div className="absolute top-1/4 right-[10%] w-[400px] h-[400px] bg-chart-1/10 rounded-full blur-[120px]" />
+        <div className="absolute bottom-1/4 right-[20%] w-[300px] h-[300px] bg-chart-2/8 rounded-full blur-[100px]" />
       </div>
 
       <div className="relative z-10 flex min-h-screen">
         {/* Left Side - Branding & Features (Desktop) */}
-        <div className="hidden lg:flex lg:w-[45%] xl:w-1/2 relative">
-          {/* Gradient background with animated mesh */}
+        <div className="hidden lg:flex lg:w-[48%] xl:w-[45%] relative">
+          {/* Gradient background */}
           <div className="absolute inset-0 bg-gradient-to-br from-chart-1 via-chart-2 to-chart-3">
-            <div className="absolute inset-0 opacity-30">
-              <div className="absolute top-20 left-20 w-72 h-72 bg-white rounded-full blur-[100px] animate-pulse-soft" />
-              <div className="absolute bottom-40 right-20 w-96 h-96 bg-white/50 rounded-full blur-[120px] animate-float-slow" />
-              <div className="absolute top-1/2 left-1/3 w-64 h-64 bg-chart-4/30 rounded-full blur-[80px] animate-float" />
+            {/* Animated blobs */}
+            <div className="absolute inset-0 overflow-hidden">
+              <div className="absolute top-[10%] left-[10%] w-64 h-64 bg-white/20 rounded-full blur-[80px] animate-pulse-soft" />
+              <div className="absolute bottom-[20%] right-[5%] w-80 h-80 bg-white/15 rounded-full blur-[100px] animate-float-slow" />
+              <div className="absolute top-[50%] left-[40%] w-48 h-48 bg-chart-4/20 rounded-full blur-[60px] animate-float" />
             </div>
-            {/* Grid pattern overlay */}
-            <div className="absolute inset-0 opacity-[0.03]" style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+            {/* Subtle noise texture */}
+            <div className="absolute inset-0 opacity-[0.015]" style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
             }} />
           </div>
 
-          <div className="relative z-10 flex flex-col justify-between text-white p-10 xl:p-14 h-full w-full">
-            {/* Logo & Title */}
-            <div className="animate-slide-up" style={{ animationDelay: '0.1s' }}>
-              <a href="/" className="inline-flex items-center gap-3 mb-10 group">
-                <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-                  <Music className="w-7 h-7 text-white" />
-                </div>
-                <span className="text-2xl font-bold tracking-tight">PPR Academy</span>
-              </a>
+          <div className="relative z-10 flex flex-col text-white p-10 xl:p-12 h-full w-full">
+            {/* Logo */}
+            <a href="/" className="inline-flex items-center gap-3 group mb-auto">
+              <div className="w-11 h-11 bg-white/20 backdrop-blur-md rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
+                <Music className="w-6 h-6 text-white" />
+              </div>
+              <span className="text-xl font-bold tracking-tight">PPR Academy</span>
+            </a>
 
-              <h2 className="text-4xl xl:text-5xl font-bold mb-5 leading-[1.1] tracking-tight">
+            {/* Main Content - Centered */}
+            <div className="flex-1 flex flex-col justify-center max-w-lg py-8">
+              <h2 className="text-4xl xl:text-5xl font-bold mb-4 leading-[1.1] tracking-tight">
                 {isCreator
-                  ? <>Create.<br/><span className="text-white/90">Share. Earn.</span></>
-                  : <>Master Your<br/><span className="text-white/90">Sound</span></>}
+                  ? <>Create. Share.<br/>Earn.</>
+                  : <>Master Your<br/>Sound</>}
               </h2>
-              <p className="text-lg text-white/85 max-w-md leading-relaxed">
+              <p className="text-lg text-white/85 leading-relaxed mb-10">
                 {isCreator
                   ? 'Join thousands of creators sharing their music production knowledge and earning from their expertise.'
                   : 'Learn music production from industry professionals. Access courses, sample packs, and exclusive tools.'}
               </p>
-            </div>
 
-            {/* Features with improved design */}
-            <div className="space-y-5 animate-slide-up" style={{ animationDelay: '0.2s' }}>
-              {[
-                {
-                  icon: TrendingUp,
-                  title: 'Industry-Leading Content',
-                  desc: 'Premium courses, sample packs, and Ableton racks from top producers'
-                },
-                {
-                  icon: Users,
-                  title: 'Vibrant Community',
-                  desc: 'Connect with fellow producers and get feedback on your work'
-                },
-                {
-                  icon: Zap,
-                  title: 'Instant Access',
-                  desc: 'Download and start using content immediately after purchase'
-                }
-              ].map((feature, i) => (
-                <div key={i} className="flex items-start gap-4 group cursor-default">
-                  <div className="w-11 h-11 bg-white/15 backdrop-blur-sm rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-white/25 group-hover:scale-110 transition-all duration-300">
-                    <feature.icon className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold mb-0.5 group-hover:translate-x-1 transition-transform duration-300">{feature.title}</h3>
-                    <p className="text-sm text-white/75 leading-relaxed">{feature.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Stats with glowing cards */}
-            <div className="animate-slide-up" style={{ animationDelay: '0.3s' }}>
-              <div className="grid grid-cols-3 gap-3 pt-8 border-t border-white/20">
+              {/* Features */}
+              <div className="space-y-4">
                 {[
-                  { value: stats.totalUsers, label: 'Active Users' },
+                  {
+                    icon: TrendingUp,
+                    title: 'Industry-Leading Content',
+                    desc: 'Premium courses and sample packs from top producers'
+                  },
+                  {
+                    icon: Users,
+                    title: 'Vibrant Community',
+                    desc: 'Connect with fellow producers worldwide'
+                  },
+                  {
+                    icon: Zap,
+                    title: 'Instant Access',
+                    desc: 'Download and use content immediately'
+                  }
+                ].map((feature, i) => (
+                  <div key={i} className="flex items-center gap-4 group">
+                    <div className="w-10 h-10 bg-white/15 backdrop-blur-sm rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-white/25 transition-colors">
+                      <feature.icon className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-sm">{feature.title}</h3>
+                      <p className="text-xs text-white/70">{feature.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Stats - Bottom */}
+            <div className="mt-auto pt-6 border-t border-white/20">
+              <div className="flex items-center gap-8">
+                {[
+                  { value: stats.totalUsers, label: 'Users' },
                   { value: stats.totalCourses, label: 'Courses' },
                   { value: stats.totalCreators, label: 'Creators' }
                 ].map((stat, i) => (
-                  <div key={i} className="text-center p-3 rounded-xl bg-white/5 backdrop-blur-sm hover:bg-white/10 transition-colors duration-300">
-                    <div className="text-2xl xl:text-3xl font-bold tabular-nums">
+                  <div key={i}>
+                    <div className="text-2xl font-bold tabular-nums">
                       {stat.value > 0 ? stat.value.toLocaleString() : '—'}
                     </div>
-                    <div className="text-xs text-white/70 mt-1">{stat.label}</div>
+                    <div className="text-xs text-white/60">{stat.label}</div>
                   </div>
                 ))}
               </div>
@@ -117,8 +121,8 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
 
         {/* Right Side - Sign In Form */}
         <div className="flex-1 flex flex-col min-h-screen">
-          {/* Mobile Header with gradient */}
-          <div className="lg:hidden sticky top-0 z-20 backdrop-blur-xl bg-background/80 border-b border-border/50">
+          {/* Mobile Header */}
+          <div className="lg:hidden sticky top-0 z-20 backdrop-blur-xl bg-background/90 border-b border-border/50">
             <div className="flex items-center justify-between px-5 py-4">
               <a href="/" className="flex items-center gap-2.5">
                 <div className="w-9 h-9 bg-gradient-to-br from-chart-1 to-chart-2 rounded-xl flex items-center justify-center shadow-md">
@@ -137,8 +141,8 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
           </div>
 
           {/* Main content area */}
-          <div className="flex-1 flex items-center justify-center px-5 py-8 md:px-8 lg:px-12">
-            <div className="w-full max-w-[420px]">
+          <div className="flex-1 flex items-center justify-center px-5 py-8 md:px-8 lg:px-16 xl:px-24">
+            <div className="w-full max-w-[400px]">
               {/* Mobile Hero Section */}
               <div className="lg:hidden mb-8 text-center">
                 <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-chart-1/10 rounded-full mb-4">
@@ -156,11 +160,11 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
               </div>
 
               {/* Desktop Header */}
-              <div className="hidden lg:block mb-8 animate-slide-up">
-                <h1 className="text-3xl xl:text-4xl font-bold text-foreground mb-2 tracking-tight">
+              <div className="hidden lg:block mb-6">
+                <h1 className="text-3xl font-bold text-foreground mb-2 tracking-tight">
                   Welcome Back
                 </h1>
-                <p className="text-muted-foreground text-lg">
+                <p className="text-muted-foreground">
                   {isCreator
                     ? 'Sign in to your creator dashboard'
                     : 'Continue your music production journey'}
@@ -169,76 +173,115 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
 
               {/* Creator Badge */}
               {isCreator && (
-                <div className="mb-6 inline-flex items-center gap-2.5 px-4 py-2.5 bg-gradient-to-r from-chart-1/10 to-chart-2/10 border border-chart-1/20 rounded-full animate-scale-in">
+                <div className="mb-5 inline-flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-chart-1/10 to-chart-2/10 border border-chart-1/20 rounded-full">
                   <div className="w-2 h-2 bg-chart-1 rounded-full animate-pulse" />
                   <span className="text-sm font-semibold text-chart-1">Creator Account</span>
                 </div>
               )}
 
-              {/* Sign In Card */}
-              <div className="bg-card/80 backdrop-blur-sm border border-border/50 rounded-2xl p-6 md:p-8 shadow-xl animate-scale-in">
-                <SignIn
-                  fallbackRedirectUrl={params.redirect_url || "/home"}
-                  appearance={{
-                    elements: {
-                      rootBox: "w-full",
-                      card: "bg-transparent shadow-none w-full",
-                      formButtonPrimary:
-                        "bg-gradient-to-r from-chart-1 to-chart-2 hover:from-chart-1/90 hover:to-chart-2/90 text-white font-semibold py-3.5 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:shadow-chart-1/20 transform hover:scale-[1.02] active:scale-[0.98] min-h-[48px]",
-                      formFieldInput:
-                        "rounded-xl border-2 border-border bg-background/50 focus:border-chart-1 focus:ring-2 focus:ring-chart-1/20 transition-all py-3.5 min-h-[48px] text-base",
-                      footerActionLink:
-                        "text-chart-1 hover:text-chart-2 font-semibold transition-colors",
-                      identityPreviewText: "text-foreground",
-                      formFieldLabel: "text-foreground font-semibold mb-2 text-sm",
-                      headerTitle: "hidden",
-                      headerSubtitle: "hidden",
-                      socialButtonsBlockButton:
-                        "border-2 border-border hover:border-chart-1/40 hover:bg-muted/30 transition-all duration-300 rounded-xl py-3 min-h-[48px]",
-                      socialButtonsBlockButtonText: "font-semibold text-foreground",
-                      dividerLine: "bg-border/50",
-                      dividerText: "text-muted-foreground font-medium text-sm",
-                      formFieldInputShowPasswordButton: "text-muted-foreground hover:text-foreground",
-                      footer: "hidden",
-                    },
-                  }}
-                  signUpUrl="/sign-up"
-                />
+              {/* Sign In Card - More prominent styling */}
+              <div className="relative">
+                {/* Card glow effect */}
+                <div className="absolute -inset-1 bg-gradient-to-r from-chart-1/20 via-chart-2/20 to-chart-3/20 rounded-2xl blur-xl opacity-50" />
+
+                <div className="relative bg-card border border-border rounded-2xl p-6 shadow-2xl shadow-black/10">
+                  <SignIn
+                    fallbackRedirectUrl={params.redirect_url || "/home"}
+                    appearance={{
+                      elements: {
+                        rootBox: "w-full",
+                        card: "bg-transparent shadow-none w-full p-0",
+                        formButtonPrimary:
+                          "bg-gradient-to-r from-chart-1 to-chart-2 hover:opacity-90 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 shadow-lg shadow-chart-1/25 hover:shadow-xl hover:shadow-chart-1/30 min-h-[48px]",
+                        formFieldInput:
+                          "rounded-xl border border-border bg-muted/50 focus:border-chart-1 focus:ring-2 focus:ring-chart-1/20 transition-all py-3 min-h-[48px] text-base placeholder:text-muted-foreground/60",
+                        footerActionLink:
+                          "text-chart-1 hover:text-chart-2 font-semibold transition-colors",
+                        identityPreviewText: "text-foreground",
+                        formFieldLabel: "text-foreground font-medium mb-1.5 text-sm",
+                        headerTitle: "hidden",
+                        headerSubtitle: "hidden",
+                        socialButtonsBlockButton:
+                          "border border-border bg-muted/30 hover:bg-muted/50 hover:border-chart-1/30 transition-all duration-200 rounded-xl py-3 min-h-[48px]",
+                        socialButtonsBlockButtonText: "font-medium text-foreground",
+                        dividerLine: "bg-border",
+                        dividerText: "text-muted-foreground text-sm",
+                        formFieldInputShowPasswordButton: "text-muted-foreground hover:text-foreground",
+                        footer: "hidden",
+                        form: "gap-4",
+                        socialButtons: "gap-3",
+                      },
+                    }}
+                    signUpUrl="/sign-up"
+                  />
+                </div>
               </div>
 
-              {/* Custom Footer */}
-              <div className="mt-6 text-center space-y-4 animate-slide-up" style={{ animationDelay: '0.2s' }}>
+              {/* Footer Links */}
+              <div className="mt-6 text-center space-y-3">
                 <p className="text-sm text-muted-foreground">
                   Don't have an account?{' '}
                   <a
                     href={isCreator ? "/sign-up?intent=creator" : "/sign-up"}
-                    className="text-chart-1 hover:text-chart-2 font-semibold transition-colors inline-flex items-center gap-0.5"
+                    className="text-chart-1 hover:text-chart-2 font-semibold transition-colors"
                   >
                     {isCreator ? 'Become a Creator' : 'Sign up for free'}
-                    <ChevronRight className="w-4 h-4" />
                   </a>
                 </p>
 
-                {/* Quick Links */}
-                <div className="flex items-center justify-center gap-3 md:gap-4 text-xs text-muted-foreground flex-wrap">
-                  <a href="/marketplace" className="hover:text-foreground transition-colors py-1">
+                <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground">
+                  <a href="/marketplace" className="hover:text-foreground transition-colors">
                     Marketplace
                   </a>
                   <span className="text-border">•</span>
-                  <a href="/marketplace/creators" className="hover:text-foreground transition-colors py-1">
+                  <a href="/marketplace/creators" className="hover:text-foreground transition-colors">
                     Creators
                   </a>
                   <span className="text-border">•</span>
-                  <a href="/" className="hover:text-foreground transition-colors py-1">
+                  <a href="/" className="hover:text-foreground transition-colors">
                     Home
                   </a>
                 </div>
               </div>
 
-              {/* Trust Badge - Enhanced for mobile */}
-              <div className="mt-8 animate-slide-up" style={{ animationDelay: '0.3s' }}>
-                <div className="p-4 bg-muted/30 backdrop-blur-sm rounded-xl border border-border/50 hover:border-chart-1/20 transition-colors duration-300">
-                  <div className="flex items-center gap-4">
+              {/* Trust Section - Desktop */}
+              <div className="hidden lg:block mt-10 pt-8 border-t border-border/50">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex -space-x-2">
+                      {[
+                        'from-chart-1 to-chart-2',
+                        'from-chart-2 to-chart-3',
+                        'from-chart-3 to-chart-4'
+                      ].map((gradient, i) => (
+                        <div
+                          key={i}
+                          className={`w-8 h-8 rounded-full bg-gradient-to-br ${gradient} border-2 border-card`}
+                        />
+                      ))}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">
+                        {stats.totalUsers > 0
+                          ? `${stats.totalUsers.toLocaleString()}+ producers`
+                          : 'Growing community'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        trust PPR Academy
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Shield className="w-4 h-4" />
+                    <span>Secure sign-in</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Trust Badge - Mobile */}
+              <div className="lg:hidden mt-8">
+                <div className="p-4 bg-muted/30 rounded-xl border border-border/50">
+                  <div className="flex items-center gap-3">
                     <div className="flex -space-x-2 flex-shrink-0">
                       {[
                         'from-chart-1 to-chart-2',
@@ -247,12 +290,12 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
                       ].map((gradient, i) => (
                         <div
                           key={i}
-                          className={`w-9 h-9 rounded-full bg-gradient-to-br ${gradient} border-2 border-background shadow-md`}
+                          className={`w-8 h-8 rounded-full bg-gradient-to-br ${gradient} border-2 border-background`}
                         />
                       ))}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">
+                      <p className="text-sm font-medium text-foreground">
                         {stats.totalUsers > 0
                           ? `Trusted by ${stats.totalUsers.toLocaleString()}+ producers`
                           : 'Join our growing community'}
@@ -267,33 +310,26 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
                 </div>
               </div>
 
-              {/* Mobile Features Preview */}
-              <div className="lg:hidden mt-8 space-y-3 animate-slide-up" style={{ animationDelay: '0.4s' }}>
-                <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                  <div className="w-8 h-8 rounded-lg bg-chart-1/10 flex items-center justify-center flex-shrink-0">
-                    <Shield className="w-4 h-4 text-chart-1" />
+              {/* Mobile Features */}
+              <div className="lg:hidden mt-6 space-y-3">
+                {[
+                  { icon: Shield, text: 'Secure & encrypted', color: 'chart-1' },
+                  { icon: Zap, text: 'Instant access', color: 'chart-2' },
+                  { icon: Sparkles, text: 'Sync across devices', color: 'chart-3' }
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-3 text-sm text-muted-foreground">
+                    <div className={`w-8 h-8 rounded-lg bg-${item.color}/10 flex items-center justify-center flex-shrink-0`}>
+                      <item.icon className={`w-4 h-4 text-${item.color}`} />
+                    </div>
+                    <span>{item.text}</span>
                   </div>
-                  <span>Secure & encrypted sign-in</span>
-                </div>
-                <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                  <div className="w-8 h-8 rounded-lg bg-chart-2/10 flex items-center justify-center flex-shrink-0">
-                    <Zap className="w-4 h-4 text-chart-2" />
-                  </div>
-                  <span>Instant access to all your content</span>
-                </div>
-                <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                  <div className="w-8 h-8 rounded-lg bg-chart-3/10 flex items-center justify-center flex-shrink-0">
-                    <Sparkles className="w-4 h-4 text-chart-3" />
-                  </div>
-                  <span>Sync progress across all devices</span>
-                </div>
+                ))}
               </div>
             </div>
           </div>
 
-          {/* Mobile Bottom Navigation Area */}
+          {/* Mobile Bottom Stats */}
           <div className="lg:hidden sticky bottom-0 z-20 px-5 py-4 bg-gradient-to-t from-background via-background to-background/80">
-            {/* Mobile Stats */}
             <div className="flex justify-around py-3 px-4 bg-muted/50 backdrop-blur-sm rounded-xl border border-border/50">
               {[
                 { value: stats.totalUsers, label: 'Users' },
@@ -313,4 +349,4 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
       </div>
     </div>
   );
-} 
+}
