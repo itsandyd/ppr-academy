@@ -16,7 +16,6 @@ import {
   AlertTriangle,
   RefreshCw,
   Mail,
-  Server,
   TrendingUp,
   TrendingDown,
   Info,
@@ -24,7 +23,9 @@ import {
   Clock,
   BarChart3,
   Activity,
+  Send,
 } from "lucide-react";
+import Link from "next/link";
 
 interface DomainHealthDashboardProps {
   storeId?: string;
@@ -427,9 +428,11 @@ export function DomainHealthDashboard({ storeId }: DomainHealthDashboardProps) {
               <p className="text-muted-foreground mb-4">
                 Send your first email to start tracking domain health metrics.
               </p>
-              <Button>
-                <Server className="mr-2 h-4 w-4" />
-                Create Campaign
+              <Button asChild>
+                <Link href="/dashboard/emails">
+                  <Send className="mr-2 h-4 w-4" />
+                  Go to Email Dashboard
+                </Link>
               </Button>
             </CardContent>
           </Card>
