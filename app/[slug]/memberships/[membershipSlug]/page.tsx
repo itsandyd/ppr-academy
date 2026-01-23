@@ -26,6 +26,10 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { generateProductStructuredData } from "@/lib/seo/structured-data";
+import { StructuredData } from "@/lib/seo/structured-data-client";
+
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
 
 interface MembershipPageProps {
   params: Promise<{
@@ -85,6 +89,19 @@ export default function MembershipLandingPage({ params }: MembershipPageProps) {
   // Benefits list
   const benefits = (membership as any).benefits || [];
 
+  // Generate structured data for SEO
+  const membershipUrl = `${baseUrl}/${slug}/memberships/${membershipSlug}`;
+  const structuredData = generateProductStructuredData({
+    name: membership.title,
+    description: membership.description || `${(membership as any).tierName || "Membership"} - ${displayName}`,
+    price: monthlyPrice,
+    currency: "USD",
+    imageUrl: membership.imageUrl || undefined,
+    url: membershipUrl,
+    brand: store.name,
+    category: "Membership",
+  });
+
   // Handle share
   const handleShare = async () => {
     const url = window.location.href;
@@ -108,6 +125,9 @@ export default function MembershipLandingPage({ params }: MembershipPageProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-amber-50/20 dark:to-amber-950/10">
+      {/* JSON-LD Structured Data */}
+      <StructuredData data={structuredData} />
+
       {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-sm">
         <div className="container mx-auto flex items-center justify-between px-4 py-4">

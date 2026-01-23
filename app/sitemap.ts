@@ -85,6 +85,62 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.7,
     }));
 
+    // Fetch storefront products (digital products) - these go to /products/ path
+    const storefrontProductEntries: MetadataRoute.Sitemap = [];
+    for (const store of stores || []) {
+      try {
+        // Fetch digital products for this store
+        const storeProducts = await fetchQuery(api.digitalProducts.getProductsByStore, {
+          storeId: store._id,
+        });
+
+        for (const product of storeProducts || []) {
+          if (!product.isPublished) continue;
+
+          const productSlug = (product as any).slug || product._id;
+          let productPath = "products"; // Default path
+
+          // Map product type/category to specialized path
+          const productType = product.productType;
+          const productCategory = product.productCategory?.toLowerCase() || "";
+
+          if (productType === "coaching") {
+            productPath = "coaching";
+          } else if (productCategory.includes("beat") || productCategory.includes("instrumental")) {
+            productPath = "beats";
+          } else if (productCategory.includes("membership") || productCategory.includes("subscription")) {
+            productPath = "memberships";
+          } else if (productCategory.includes("tip") || productCategory.includes("donation")) {
+            productPath = "tips";
+          }
+
+          storefrontProductEntries.push({
+            url: `${baseUrl}/${store.slug}/${productPath}/${productSlug}`,
+            lastModified: new Date(product._creationTime),
+            changeFrequency: "monthly" as const,
+            priority: 0.6,
+          });
+        }
+
+        // Fetch courses for this store
+        const storeCourses = await fetchQuery(api.courses.getPublishedCoursesByStore, {
+          storeId: store._id,
+        });
+
+        for (const course of storeCourses || []) {
+          const courseSlug = (course as any).slug || course._id;
+          storefrontProductEntries.push({
+            url: `${baseUrl}/${store.slug}/courses/${courseSlug}`,
+            lastModified: new Date(course._creationTime),
+            changeFrequency: "monthly" as const,
+            priority: 0.7,
+          });
+        }
+      } catch {
+        // Skip if fetching products fails for a store
+      }
+    }
+
     // Fetch all published products (for marketplace)
     const products = await fetchQuery(api.digitalProducts.getAllPublishedProducts, {});
     const productSitemapEntries: MetadataRoute.Sitemap = (products || []).map((product: any) => ({
@@ -108,6 +164,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ...staticPages,
       ...courseSitemapEntries,
       ...storefrontSitemapEntries,
+      ...storefrontProductEntries,
       ...productSitemapEntries,
       ...blogSitemapEntries,
     ];

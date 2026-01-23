@@ -26,6 +26,10 @@ import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { generateCourseStructuredData } from "@/lib/seo/structured-data";
+import { StructuredData } from "@/lib/seo/structured-data-client";
+
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
 
 interface CoursePageProps {
   params: Promise<{
@@ -97,8 +101,28 @@ export default function CourseLandingPage({ params }: CoursePageProps) {
     router.push(`/courses/${course.slug}`);
   };
 
+  // Generate structured data for SEO
+  const courseUrl = `${baseUrl}/${slug}/courses/${courseSlug}`;
+  const structuredData = generateCourseStructuredData({
+    courseName: course.title,
+    description: course.description || `Learn from ${displayName} on PPR Academy`,
+    instructor: {
+      name: displayName,
+      url: `${baseUrl}/${slug}`,
+    },
+    price: price,
+    currency: "USD",
+    imageUrl: course.imageUrl || undefined,
+    category: course.category || undefined,
+    url: courseUrl,
+    duration: (course as any).duration || undefined,
+  });
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-blue-50/20 dark:to-blue-950/10">
+      {/* JSON-LD Structured Data */}
+      <StructuredData data={structuredData} />
+
       {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-sm">
         <div className="container mx-auto flex items-center justify-between px-4 py-4">

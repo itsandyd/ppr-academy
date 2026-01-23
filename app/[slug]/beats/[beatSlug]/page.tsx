@@ -29,6 +29,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { generateProductStructuredData } from "@/lib/seo/structured-data";
+import { StructuredData } from "@/lib/seo/structured-data-client";
+
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
 
 interface BeatPageProps {
   params: Promise<{
@@ -111,6 +115,19 @@ export default function BeatLandingPage({ params }: BeatPageProps) {
   const licenseTiers = (beat as any).beatLeaseConfig?.tiers || [];
   const selectedLicense = licenseTiers.find((t: any) => t.name === selectedTier);
 
+  // Generate structured data for SEO
+  const beatUrl = `${baseUrl}/${slug}/beats/${beatSlug}`;
+  const structuredData = generateProductStructuredData({
+    name: beat.title,
+    description: beat.description || `${beat.title} - Beat by ${displayName}`,
+    price: beat.price || 0,
+    currency: "USD",
+    imageUrl: beat.imageUrl || undefined,
+    url: beatUrl,
+    brand: store.name,
+    category: beat.genre || "Beat",
+  });
+
   // Audio controls
   const togglePlay = () => {
     const audio = audioRef.current;
@@ -185,6 +202,9 @@ export default function BeatLandingPage({ params }: BeatPageProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-purple-50/20 dark:to-purple-950/10">
+      {/* JSON-LD Structured Data */}
+      <StructuredData data={structuredData} />
+
       {/* Hidden audio element */}
       {beat.demoAudioUrl && (
         <audio ref={audioRef} src={beat.demoAudioUrl} preload="metadata" />

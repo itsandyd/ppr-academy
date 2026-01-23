@@ -63,15 +63,9 @@ export function AudioPlayer() {
     return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
-  // If no sample is loaded, show minimal player
+  // If no sample is loaded, hide the player completely
   if (!currentSample) {
-    return (
-      <div className="h-20 shrink-0 border-t border-border bg-card/50">
-        <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-          No sample selected
-        </div>
-      </div>
-    )
+    return null
   }
 
   return (

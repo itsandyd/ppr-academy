@@ -37,6 +37,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { generateProductStructuredData } from "@/lib/seo/structured-data";
+import { StructuredData } from "@/lib/seo/structured-data-client";
+
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://ppracademy.com";
 
 // TikTok and Spotify icons (not in lucide)
 const TikTokIcon = ({ className }: { className?: string }) => (
@@ -277,8 +281,24 @@ export default function ProductPage({ params }: ProductPageProps) {
 
   const ProductIcon = getProductIcon();
 
+  // Generate structured data for SEO
+  const productUrl = `${baseUrl}/${slug}/products/${productSlug}`;
+  const structuredData = generateProductStructuredData({
+    name: product.title,
+    description: product.description || `${product.title} by ${displayName}`,
+    price: price,
+    currency: "USD",
+    imageUrl: product.imageUrl || undefined,
+    url: productUrl,
+    brand: store.name,
+    category: product.category || product.productCategory || "Digital Product",
+  });
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+      {/* JSON-LD Structured Data */}
+      <StructuredData data={structuredData} />
+
       {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-sm">
         <div className="container mx-auto flex items-center justify-between px-4 py-4">
