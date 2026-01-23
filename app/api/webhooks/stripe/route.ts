@@ -562,6 +562,86 @@ export async function POST(request: NextRequest) {
           }
         }
 
+        // Handle coaching session purchases
+        if (session.metadata?.productType === "coaching") {
+          const {
+            productId,
+            scheduledDate,
+            startTime,
+            customerEmail,
+            customerName,
+            userId,
+            notes,
+            amount,
+            currency,
+          } = session.metadata;
+
+          if (userId && productId && scheduledDate && startTime) {
+            console.log("💬 Processing coaching session purchase:", {
+              userId,
+              productId,
+              scheduledDate,
+              startTime,
+              amount: parseInt(amount || "0") / 100,
+              sessionId: session.id,
+            });
+
+            const { fetchMutation: fetchMutationCoaching } = await import("convex/nextjs");
+            const { api: apiCoaching } = await import("@/convex/_generated/api");
+
+            try {
+              // Book the coaching session
+              const result = await fetchMutationCoaching(
+                apiCoaching.coachingProducts.bookCoachingSession,
+                {
+                  productId: productId as any,
+                  studentId: userId,
+                  scheduledDate: parseInt(scheduledDate),
+                  startTime,
+                  notes: notes || undefined,
+                }
+              );
+
+              if (result.success) {
+                console.log("✅ Coaching session booked:", {
+                  sessionId: result.sessionId,
+                  userId,
+                  productId,
+                  scheduledDate: new Date(parseInt(scheduledDate)).toISOString(),
+                });
+
+                // Create a purchase record for the coaching session with correct productType
+                const { fetchQuery: fetchQueryCoaching } = await import("convex/nextjs");
+                const product = await fetchQueryCoaching(
+                  apiCoaching.digitalProducts.getProductById,
+                  { productId: productId as any }
+                );
+
+                if (product) {
+                  // Use internal mutation to create coaching-specific purchase
+                  await fetchMutationCoaching(
+                    apiCoaching.purchases.createCoachingPurchase,
+                    {
+                      userId,
+                      productId: productId as any,
+                      coachingSessionId: result.sessionId!,
+                      amount: parseInt(amount || "0"),
+                      currency: currency || "USD",
+                      paymentMethod: "stripe",
+                      transactionId: session.payment_intent as string,
+                    }
+                  );
+                  console.log("✅ Coaching purchase record created");
+                }
+              } else {
+                console.error("❌ Failed to book coaching session:", result.error);
+              }
+            } catch (error) {
+              console.error("❌ Failed to process coaching purchase:", error);
+            }
+          }
+        }
+
         break;
 
       case "customer.subscription.updated":

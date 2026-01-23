@@ -15630,6 +15630,20 @@ export declare const api: {
     >;
   };
   purchases: {
+    createCoachingPurchase: FunctionReference<
+      "mutation",
+      "public",
+      {
+        amount: number;
+        coachingSessionId: Id<"coachingSessions">;
+        currency?: string;
+        paymentMethod?: string;
+        productId: Id<"digitalProducts">;
+        transactionId?: string;
+        userId: string;
+      },
+      Id<"purchases">
+    >;
     getStorePurchases: FunctionReference<
       "query",
       "public",

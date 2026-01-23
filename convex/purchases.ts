@@ -1,5 +1,6 @@
-import { query } from "./_generated/server";
+import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { Id } from "./_generated/dataModel";
 
 export const getStorePurchases = query({
   args: {
@@ -205,5 +206,105 @@ export const getUserPurchases = query({
     );
 
     return enrichedPurchases;
+  },
+});
+
+// Create coaching session purchase - used by Stripe webhook
+export const createCoachingPurchase = mutation({
+  args: {
+    userId: v.string(),
+    productId: v.id("digitalProducts"),
+    coachingSessionId: v.id("coachingSessions"),
+    amount: v.number(),
+    currency: v.optional(v.string()),
+    paymentMethod: v.optional(v.string()),
+    transactionId: v.optional(v.string()),
+  },
+  returns: v.id("purchases"),
+  handler: async (ctx, args) => {
+    const product = await ctx.db.get(args.productId);
+    if (!product) {
+      throw new Error("Coaching product not found");
+    }
+
+    // Check if purchase already exists for this transaction
+    if (args.transactionId) {
+      const existingPurchase = await ctx.db
+        .query("purchases")
+        .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+        .filter((q) =>
+          q.and(
+            q.eq(q.field("transactionId"), args.transactionId),
+            q.eq(q.field("productType"), "coaching")
+          )
+        )
+        .first();
+
+      if (existingPurchase) {
+        return existingPurchase._id;
+      }
+    }
+
+    // Create purchase record with coaching productType
+    const purchaseId = await ctx.db.insert("purchases", {
+      userId: args.userId,
+      productId: args.productId,
+      storeId: product.storeId,
+      adminUserId: product.userId,
+      amount: args.amount,
+      currency: args.currency || "USD",
+      status: "completed",
+      paymentMethod: args.paymentMethod,
+      transactionId: args.transactionId,
+      productType: "coaching",
+      accessGranted: true,
+      downloadCount: 0,
+      lastAccessedAt: Date.now(),
+    });
+
+    // Create customer record if needed
+    try {
+      const user = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", args.userId))
+        .unique();
+
+      if (user && product.storeId) {
+        const existingCustomer = await ctx.db
+          .query("customers")
+          .withIndex("by_email_and_store", (q) =>
+            q.eq("email", user.email || "").eq("storeId", product.storeId)
+          )
+          .unique();
+
+        if (existingCustomer) {
+          await ctx.db.patch(existingCustomer._id, {
+            lastActivity: Date.now(),
+            status: "active",
+            type: "paying",
+            totalSpent: (existingCustomer.totalSpent || 0) + args.amount,
+          });
+        } else {
+          await ctx.db.insert("customers", {
+            name:
+              `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
+              user.email ||
+              "Unknown",
+            email: user.email || args.userId,
+            storeId: product.storeId,
+            adminUserId: product.userId,
+            type: "paying",
+            status: "active",
+            totalSpent: args.amount,
+            lastActivity: Date.now(),
+            source: product.title || "Coaching Session",
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Failed to create/update customer record:", error);
+    }
+
+    return purchaseId;
   },
 });
