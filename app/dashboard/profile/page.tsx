@@ -19,6 +19,13 @@ import {
   Link as LinkIcon,
   Music,
   Check,
+  DollarSign,
+  TrendingUp,
+  CreditCard,
+  ArrowRight,
+  CheckCircle,
+  AlertTriangle,
+  Banknote,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -46,6 +53,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 // Social platform configuration
 const socialPlatforms = [
@@ -155,6 +163,68 @@ export default function ProfilePage() {
     user?.id ? { userId: user.id } : "skip"
   );
   const updateStoreProfile = useMutation(api.stores.updateStoreProfile);
+
+  // Get user data from Convex for Stripe Connect info
+  const convexUser = useQuery(
+    api.users.getUserFromClerk,
+    user?.id ? { clerkId: user.id } : "skip"
+  );
+
+  // Get pending earnings
+  const pendingEarnings = useQuery(
+    api.monetizationUtils.getCreatorPendingEarnings,
+    user?.id ? { creatorId: user.id } : "skip"
+  );
+
+  // Get payout history
+  const payoutHistory = useQuery(
+    api.monetizationUtils.getCreatorPayouts,
+    user?.id ? { creatorId: user.id } : "skip"
+  );
+
+  // Calculate totals from payout history
+  const totalPaidOut = payoutHistory
+    ?.filter((p: { status: string }) => p.status === "completed")
+    .reduce((sum: number, p: { netPayout: number }) => sum + p.netPayout, 0) || 0;
+
+  const totalSalesCount = payoutHistory
+    ?.filter((p: { status: string }) => p.status === "completed")
+    .reduce((sum: number, p: { totalSales: number }) => sum + p.totalSales, 0) || 0;
+
+  // Stripe account status state
+  const [stripeAccountStatus, setStripeAccountStatus] = useState<any>(null);
+  const [isLoadingStripeStatus, setIsLoadingStripeStatus] = useState(false);
+
+  // Check Stripe account status if user has an account
+  useEffect(() => {
+    const checkAccountStatus = async () => {
+      if (convexUser?.stripeConnectAccountId) {
+        setIsLoadingStripeStatus(true);
+        try {
+          const response = await fetch("/api/stripe/connect/account-status", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ accountId: convexUser.stripeConnectAccountId }),
+          });
+
+          const data = await response.json();
+          if (data.success) {
+            setStripeAccountStatus(data.account);
+          }
+        } catch (error) {
+          console.error("Failed to check account status:", error);
+        } finally {
+          setIsLoadingStripeStatus(false);
+        }
+      }
+    };
+
+    checkAccountStatus();
+  }, [convexUser?.stripeConnectAccountId]);
+
+  const formatCurrency = (cents: number) => {
+    return `$${(cents / 100).toFixed(2)}`;
+  };
 
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
@@ -300,7 +370,7 @@ export default function ProfilePage() {
       </div>
 
       <Tabs defaultValue="basic" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 md:w-auto md:inline-flex">
+        <TabsList className="grid w-full grid-cols-3 md:w-auto md:inline-flex">
           <TabsTrigger value="basic" className="gap-2">
             <User className="h-4 w-4" />
             <span>Basic Info</span>
@@ -313,6 +383,10 @@ export default function ProfilePage() {
                 {socialLinks.length}
               </span>
             )}
+          </TabsTrigger>
+          <TabsTrigger value="revenue" className="gap-2">
+            <DollarSign className="h-4 w-4" />
+            <span>Revenue</span>
           </TabsTrigger>
         </TabsList>
 
@@ -514,6 +588,263 @@ export default function ProfilePage() {
                   </div>
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="revenue" className="space-y-6">
+          {/* Stripe Connect Status Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5" />
+                Stripe Connect
+              </CardTitle>
+              <CardDescription>
+                Connect your Stripe account to receive payments
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingStripeStatus ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : !convexUser?.stripeConnectAccountId ? (
+                <div className="text-center py-8">
+                  <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
+                    <CreditCard className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-lg font-medium mb-2">Connect Stripe to Get Paid</h3>
+                  <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
+                    Set up Stripe Connect to receive payments from your course sales, products, and other offerings.
+                  </p>
+                  <Link href="/dashboard/settings/payouts">
+                    <Button>
+                      <CreditCard className="mr-2 h-4 w-4" />
+                      Set Up Payouts
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Account Status */}
+                  <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg border">
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        "w-10 h-10 rounded-full flex items-center justify-center",
+                        stripeAccountStatus?.isComplete
+                          ? "bg-green-500/10 dark:bg-green-500/20"
+                          : "bg-yellow-500/10 dark:bg-yellow-500/20"
+                      )}>
+                        {stripeAccountStatus?.isComplete ? (
+                          <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                        ) : (
+                          <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                        )}
+                      </div>
+                      <div>
+                        <h4 className="font-medium">
+                          {stripeAccountStatus?.isComplete ? "Account Active" : "Setup Required"}
+                        </h4>
+                        <p className="text-sm text-muted-foreground">
+                          {stripeAccountStatus?.isComplete
+                            ? "Your Stripe account is ready to receive payments"
+                            : "Complete your Stripe setup to start receiving payments"}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge className={cn(
+                      stripeAccountStatus?.isComplete
+                        ? "bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20"
+                        : "bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 border-yellow-500/20"
+                    )}>
+                      {stripeAccountStatus?.isComplete ? "Active" : "Pending"}
+                    </Badge>
+                  </div>
+
+                  {/* Verification Status */}
+                  {stripeAccountStatus && (
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="flex items-center gap-2 p-3 rounded-lg border bg-background">
+                        <CheckCircle className={cn(
+                          "h-4 w-4",
+                          stripeAccountStatus.detailsSubmitted
+                            ? "text-green-600 dark:text-green-400"
+                            : "text-muted-foreground"
+                        )} />
+                        <span className="text-sm">Details</span>
+                      </div>
+                      <div className="flex items-center gap-2 p-3 rounded-lg border bg-background">
+                        <CheckCircle className={cn(
+                          "h-4 w-4",
+                          stripeAccountStatus.chargesEnabled
+                            ? "text-green-600 dark:text-green-400"
+                            : "text-muted-foreground"
+                        )} />
+                        <span className="text-sm">Charges</span>
+                      </div>
+                      <div className="flex items-center gap-2 p-3 rounded-lg border bg-background">
+                        <CheckCircle className={cn(
+                          "h-4 w-4",
+                          stripeAccountStatus.payoutsEnabled
+                            ? "text-green-600 dark:text-green-400"
+                            : "text-muted-foreground"
+                        )} />
+                        <span className="text-sm">Payouts</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Quick Actions */}
+                  <div className="flex gap-3 pt-2">
+                    <Link href="/dashboard/settings/payouts" className="flex-1">
+                      <Button variant="outline" className="w-full">
+                        <Banknote className="mr-2 h-4 w-4" />
+                        Manage Payouts
+                      </Button>
+                    </Link>
+                    <Button variant="outline" asChild>
+                      <a
+                        href="https://dashboard.stripe.com/connect/accounts/overview"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        Stripe Dashboard
+                      </a>
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Earnings Overview Card */}
+          {convexUser?.stripeConnectAccountId && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5" />
+                      Earnings Overview
+                    </CardTitle>
+                    <CardDescription>
+                      Your revenue at a glance
+                    </CardDescription>
+                  </div>
+                  <Link href="/dashboard/settings/payouts">
+                    <Button variant="ghost" size="sm" className="gap-1">
+                      View Details
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="text-center p-4 bg-green-500/10 dark:bg-green-500/20 rounded-lg border border-green-500/20">
+                    <div className="text-2xl font-bold text-green-700 dark:text-green-400">
+                      {formatCurrency(totalPaidOut + (pendingEarnings?.netEarnings || 0))}
+                    </div>
+                    <p className="text-sm text-green-600 dark:text-green-500">Total Earnings</p>
+                  </div>
+                  <div className="text-center p-4 bg-blue-500/10 dark:bg-blue-500/20 rounded-lg border border-blue-500/20">
+                    <div className="text-2xl font-bold text-blue-700 dark:text-blue-400">
+                      {totalSalesCount + (pendingEarnings?.totalSales || 0)}
+                    </div>
+                    <p className="text-sm text-blue-600 dark:text-blue-500">Total Sales</p>
+                  </div>
+                  <div className="text-center p-4 bg-purple-500/10 dark:bg-purple-500/20 rounded-lg border border-purple-500/20">
+                    <div className="text-2xl font-bold text-purple-700 dark:text-purple-400">
+                      {formatCurrency(totalPaidOut)}
+                    </div>
+                    <p className="text-sm text-purple-600 dark:text-purple-500">Paid Out</p>
+                  </div>
+                  <div className="text-center p-4 bg-orange-500/10 dark:bg-orange-500/20 rounded-lg border border-orange-500/20">
+                    <div className="text-2xl font-bold text-orange-700 dark:text-orange-400">
+                      {formatCurrency(pendingEarnings?.netEarnings || 0)}
+                    </div>
+                    <p className="text-sm text-orange-600 dark:text-orange-500">Available</p>
+                  </div>
+                </div>
+
+                {/* Pending Payout Alert */}
+                {pendingEarnings && pendingEarnings.netEarnings >= 2500 && (
+                  <div className="mt-4 p-4 bg-green-500/10 dark:bg-green-500/20 rounded-lg border border-green-500/20">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Banknote className="h-5 w-5 text-green-600 dark:text-green-400" />
+                        <div>
+                          <p className="font-medium text-green-700 dark:text-green-400">
+                            {formatCurrency(pendingEarnings.netEarnings)} ready to cash out
+                          </p>
+                          <p className="text-sm text-green-600 dark:text-green-500">
+                            From {pendingEarnings.totalSales} sale{pendingEarnings.totalSales !== 1 ? "s" : ""}
+                          </p>
+                        </div>
+                      </div>
+                      <Link href="/dashboard/settings/payouts">
+                        <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white">
+                          Request Payout
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                )}
+
+                {pendingEarnings && pendingEarnings.netEarnings > 0 && pendingEarnings.netEarnings < 2500 && (
+                  <p className="mt-4 text-sm text-muted-foreground text-center">
+                    Minimum payout is $25. You need {formatCurrency(2500 - pendingEarnings.netEarnings)} more to request a payout.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Quick Links Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick Links</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-3">
+                <Link
+                  href="/dashboard/settings/payouts"
+                  className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Banknote className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Payout Settings</p>
+                      <p className="text-sm text-muted-foreground">
+                        Manage payouts, view history, and request transfers
+                      </p>
+                    </div>
+                  </div>
+                  <ArrowRight className="h-5 w-5 text-muted-foreground" />
+                </Link>
+                <Link
+                  href="/dashboard/analytics"
+                  className="flex items-center justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
+                      <TrendingUp className="h-5 w-5 text-blue-500" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Analytics</p>
+                      <p className="text-sm text-muted-foreground">
+                        View detailed sales analytics and performance metrics
+                      </p>
+                    </div>
+                  </div>
+                  <ArrowRight className="h-5 w-5 text-muted-foreground" />
+                </Link>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
