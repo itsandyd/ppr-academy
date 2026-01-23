@@ -29,6 +29,8 @@ import { AdminCreatorsView } from "@/app/_components/admin-creators-view";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 export default function AdminDashboard() {
   const { user, isLoaded } = useUser();
@@ -228,11 +230,25 @@ export default function AdminDashboard() {
 
   return (
     <div className={cn("space-y-8", mounted ? "duration-500 animate-in fade-in-0" : "opacity-0")}>
+      {/* Quick Navigation */}
+      <div className="flex items-center gap-2">
+        <Button variant="secondary" size="sm" className="gap-2" disabled>
+          <BarChart3 className="h-4 w-4" />
+          Dashboard
+        </Button>
+        <Button variant="ghost" size="sm" className="gap-2" asChild>
+          <Link href="/admin/analytics">
+            <TrendingUp className="h-4 w-4" />
+            Analytics
+          </Link>
+        </Button>
+      </div>
+
       {/* Header */}
       <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <h1 className="text-4xl font-bold tracking-tight">Mission Control</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Overview</h1>
             <Badge variant="outline" className="border-chart-1/30 bg-chart-1/5 text-chart-1">
               <Sparkles className="mr-1 h-3 w-3" />
               Live
