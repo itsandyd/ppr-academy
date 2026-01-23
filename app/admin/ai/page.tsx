@@ -1,7 +1,7 @@
 "use client";
 
 import { AdminCategoryPage } from "../components/AdminCategoryPage";
-import { Sparkles, Wand2, TrendingUp, Lightbulb } from "lucide-react";
+import { Sparkles, Wand2, TrendingUp, Lightbulb, Database } from "lucide-react";
 
 const aiCards = [
   {
@@ -33,6 +33,13 @@ const aiCards = [
     href: "/admin/ai-tools",
     icon: Sparkles,
     color: "bg-blue-500",
+  },
+  {
+    title: "Embeddings",
+    description: "Generate and manage vector embeddings for AI search",
+    href: "/admin/embeddings",
+    icon: Database,
+    color: "bg-cyan-500",
   },
 ];
 
