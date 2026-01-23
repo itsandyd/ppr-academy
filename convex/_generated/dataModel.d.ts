@@ -2624,8 +2624,10 @@ export type DataModel = {
       guaranteeText?: string;
       imageUrl?: string;
       instructorId?: string;
+      isPinned?: boolean;
       isPublished?: boolean;
       paymentDescription?: string;
+      pinnedAt?: number;
       price?: number;
       showGuarantee?: boolean;
       skillLevel?: string;
@@ -2669,8 +2671,10 @@ export type DataModel = {
       | "guaranteeText"
       | "imageUrl"
       | "instructorId"
+      | "isPinned"
       | "isPublished"
       | "paymentDescription"
+      | "pinnedAt"
       | "price"
       | "showGuarantee"
       | "skillLevel"
@@ -3461,6 +3465,7 @@ export type DataModel = {
       genre?: Array<string>;
       imageUrl?: string;
       installationNotes?: string;
+      isPinned?: boolean;
       isPublished?: boolean;
       macroCount?: number;
       macroScreenshotUrls?: Array<string>;
@@ -3473,6 +3478,7 @@ export type DataModel = {
       orderBumpPrice?: number;
       orderBumpProductName?: string;
       packFiles?: string;
+      pinnedAt?: number;
       playlistCurationConfig?: {
         genresAccepted?: Array<string>;
         linkedPlaylistId?: Id<"curatorPlaylists">;
@@ -3654,6 +3660,7 @@ export type DataModel = {
       | "genre"
       | "imageUrl"
       | "installationNotes"
+      | "isPinned"
       | "isPublished"
       | "macroCount"
       | "macroScreenshotUrls"
@@ -3666,6 +3673,7 @@ export type DataModel = {
       | "orderBumpPrice"
       | "orderBumpProductName"
       | "packFiles"
+      | "pinnedAt"
       | "playlistCurationConfig"
       | "playlistCurationConfig.genresAccepted"
       | "playlistCurationConfig.linkedPlaylistId"

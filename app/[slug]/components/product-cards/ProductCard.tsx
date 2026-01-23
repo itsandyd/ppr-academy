@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
-import { Package, Sparkles } from "lucide-react";
+import { Package, Sparkles, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ProductCardProps } from "./types";
 
@@ -50,13 +50,19 @@ export function ProductCard({
 
         {/* Badge row */}
         <div className="absolute left-3 top-3 flex items-center gap-2">
+          {(product as any).isPinned && (
+            <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-medium shadow-lg">
+              <Star className="mr-1 h-3 w-3 fill-current" />
+              Featured
+            </Badge>
+          )}
           {showBadge && badgeText && (
             <Badge className={cn("text-xs font-medium", badgeColor)}>
               <IconComponent className="mr-1 h-3 w-3" />
               {badgeText}
             </Badge>
           )}
-          {isNew && (
+          {isNew && !(product as any).isPinned && (
             <Badge className="bg-amber-500/90 text-white text-xs font-medium">
               <Sparkles className="mr-1 h-3 w-3" />
               New

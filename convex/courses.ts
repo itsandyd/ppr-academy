@@ -622,6 +622,9 @@ export const updateCourse = mutation({
     acceptsStripe: v.optional(v.boolean()),
     stripeProductId: v.optional(v.string()),
     stripePriceId: v.optional(v.string()),
+    // Pinned product - appears first in storefront
+    isPinned: v.optional(v.boolean()),
+    pinnedAt: v.optional(v.number()),
   },
   returns: v.union(
     v.object({
@@ -648,6 +651,9 @@ export const updateCourse = mutation({
       showGuarantee: v.optional(v.boolean()),
       acceptsPayPal: v.optional(v.boolean()),
       acceptsStripe: v.optional(v.boolean()),
+      // Pinned product fields
+      isPinned: v.optional(v.boolean()),
+      pinnedAt: v.optional(v.number()),
     }),
     v.null()
   ),

@@ -6752,8 +6752,10 @@ export declare const api: {
         guaranteeText?: string;
         id: Id<"courses">;
         imageUrl?: string;
+        isPinned?: boolean;
         isPublished?: boolean;
         paymentDescription?: string;
+        pinnedAt?: number;
         price?: number;
         showGuarantee?: boolean;
         skillLevel?: string;
@@ -6776,8 +6778,10 @@ export declare const api: {
         guaranteeText?: string;
         imageUrl?: string;
         instructorId?: string;
+        isPinned?: boolean;
         isPublished?: boolean;
         paymentDescription?: string;
+        pinnedAt?: number;
         price?: number;
         showGuarantee?: boolean;
         skillLevel?: string;
@@ -8436,6 +8440,7 @@ export declare const api: {
         id: Id<"digitalProducts">;
         imageUrl?: string;
         installationNotes?: string;
+        isPinned?: boolean;
         isPublished?: boolean;
         macroCount?: number;
         macroScreenshotUrls?: Array<string>;
@@ -8448,6 +8453,7 @@ export declare const api: {
         orderBumpPrice?: number;
         orderBumpProductName?: string;
         packFiles?: string;
+        pinnedAt?: number;
         price?: number;
         productType?:
           | "digital"
@@ -8545,6 +8551,7 @@ export declare const api: {
         genre?: Array<string>;
         imageUrl?: string;
         installationNotes?: string;
+        isPinned?: boolean;
         isPublished?: boolean;
         macroCount?: number;
         macroScreenshotUrls?: Array<string>;
@@ -8557,6 +8564,7 @@ export declare const api: {
         orderBumpPrice?: number;
         orderBumpProductName?: string;
         packFiles?: string;
+        pinnedAt?: number;
         price: number;
         productCategory?: string;
         productType?:

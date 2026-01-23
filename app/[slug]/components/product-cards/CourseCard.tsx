@@ -53,11 +53,17 @@ export function CourseCard({ product, onClick }: ProductCardProps) {
 
         {/* Badges */}
         <div className="absolute left-3 top-3 flex items-center gap-2">
+          {(product as any).isPinned && (
+            <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-medium shadow-lg">
+              <Star className="mr-1 h-3 w-3 fill-current" />
+              Featured
+            </Badge>
+          )}
           <Badge className="bg-blue-500/90 text-white text-xs font-medium">
             <BookOpen className="mr-1 h-3 w-3" />
             Course
           </Badge>
-          {isNew && (
+          {isNew && !(product as any).isPinned && (
             <Badge className="bg-amber-500/90 text-white text-xs font-medium">
               <Sparkles className="mr-1 h-3 w-3" />
               New

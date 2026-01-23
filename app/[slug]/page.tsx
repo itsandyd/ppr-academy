@@ -213,24 +213,40 @@ export default function StorefrontPage({ params }: StorefrontPageProps) {
       }
     }
 
-    // Sort products
-    switch (sortBy) {
-      case "newest":
-        filtered.sort((a, b) => b._creationTime - a._creationTime);
-        break;
-      case "oldest":
-        filtered.sort((a, b) => a._creationTime - b._creationTime);
-        break;
-      case "price-low":
-        filtered.sort((a, b) => (a.price || 0) - (b.price || 0));
-        break;
-      case "price-high":
-        filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
-        break;
-      case "title":
-        filtered.sort((a, b) => a.title.localeCompare(b.title));
-        break;
-    }
+    // Sort products - pinned products always come first
+    filtered.sort((a, b) => {
+      // First, sort by pinned status (pinned products come first)
+      const aIsPinned = (a as any).isPinned ? 1 : 0;
+      const bIsPinned = (b as any).isPinned ? 1 : 0;
+      if (aIsPinned !== bIsPinned) {
+        return bIsPinned - aIsPinned; // Pinned products first
+      }
+
+      // For pinned products, sort by pinnedAt (most recently pinned first)
+      if (aIsPinned && bIsPinned) {
+        const aPinnedAt = (a as any).pinnedAt || 0;
+        const bPinnedAt = (b as any).pinnedAt || 0;
+        if (aPinnedAt !== bPinnedAt) {
+          return bPinnedAt - aPinnedAt;
+        }
+      }
+
+      // Then apply the selected sort within each group
+      switch (sortBy) {
+        case "newest":
+          return b._creationTime - a._creationTime;
+        case "oldest":
+          return a._creationTime - b._creationTime;
+        case "price-low":
+          return (a.price || 0) - (b.price || 0);
+        case "price-high":
+          return (b.price || 0) - (a.price || 0);
+        case "title":
+          return a.title.localeCompare(b.title);
+        default:
+          return 0;
+      }
+    });
 
     return filtered;
   }, [allProducts, searchTerm, selectedCategory, selectedPriceRange, sortBy]);

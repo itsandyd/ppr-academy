@@ -1170,6 +1170,9 @@ export const updateProduct = mutation({
         genre: v.optional(v.string()),
       })
     ),
+    // Pinned product - appears first in storefront
+    isPinned: v.optional(v.boolean()),
+    pinnedAt: v.optional(v.number()),
   },
   returns: v.union(
     v.object({
@@ -1337,6 +1340,9 @@ export const updateProduct = mutation({
       exclusiveSoldAt: v.optional(v.number()),
       exclusiveSoldTo: v.optional(v.string()),
       exclusivePurchaseId: v.optional(v.id("purchases")),
+      // Pinned product fields
+      isPinned: v.optional(v.boolean()),
+      pinnedAt: v.optional(v.number()),
     }),
     v.null()
   ),

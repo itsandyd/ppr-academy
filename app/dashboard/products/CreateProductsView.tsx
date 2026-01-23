@@ -22,9 +22,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { 
-  Package, 
-  Music, 
+import {
+  Package,
+  Music,
   BookOpen,
   Plus,
   Edit,
@@ -36,7 +36,9 @@ import {
   Music2,
   MoreVertical,
   Trash2,
-  EyeOff
+  EyeOff,
+  Pin,
+  PinOff
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -124,7 +126,34 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
       console.error('Publish toggle error:', error);
     }
   };
-  
+
+  const handleTogglePinProduct = async (productId: string, currentState: boolean) => {
+    try {
+      // Check if it's a course or digital product
+      const product = allProducts.find(p => p._id === productId);
+      const newPinnedState = !currentState;
+
+      if (product?.type === 'course') {
+        await updateCourse({
+          id: productId as any,
+          isPinned: newPinnedState,
+          pinnedAt: newPinnedState ? Date.now() : undefined
+        });
+      } else {
+        await updateProduct({
+          id: productId as any,
+          isPinned: newPinnedState,
+          pinnedAt: newPinnedState ? Date.now() : undefined
+        });
+      }
+
+      toast.success(currentState ? 'Product unpinned' : 'Product pinned to storefront');
+    } catch (error) {
+      toast.error('Failed to update product');
+      console.error('Pin toggle error:', error);
+    }
+  };
+
   // Fetch user's stores
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const getStoresByUserQuery: any = api.stores.getStoresByUser as any;
@@ -369,12 +398,13 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {allProducts.map((product: any) => (
-                <ProductCard 
-                  key={product._id} 
+                <ProductCard
+                  key={product._id}
                   product={product}
                   onEdit={handleEditProduct}
                   onDelete={handleDeleteProduct}
                   onTogglePublish={handleTogglePublishProduct}
+                  onTogglePin={handleTogglePinProduct}
                 />
               ))}
             </div>
@@ -393,7 +423,14 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {publishedProducts.map((product: any) => (
-                <ProductCard key={product._id} product={product} />
+                <ProductCard
+                  key={product._id}
+                  product={product}
+                  onEdit={handleEditProduct}
+                  onDelete={handleDeleteProduct}
+                  onTogglePublish={handleTogglePublishProduct}
+                  onTogglePin={handleTogglePinProduct}
+                />
               ))}
             </div>
           )}
@@ -411,7 +448,14 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {draftProducts.map((product: any) => (
-                <ProductCard key={product._id} product={product} />
+                <ProductCard
+                  key={product._id}
+                  product={product}
+                  onEdit={handleEditProduct}
+                  onDelete={handleDeleteProduct}
+                  onTogglePublish={handleTogglePublishProduct}
+                  onTogglePin={handleTogglePinProduct}
+                />
               ))}
             </div>
           )}
@@ -432,7 +476,14 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {courses.map((product: any) => (
-                <ProductCard key={product._id} product={product} />
+                <ProductCard
+                  key={product._id}
+                  product={product}
+                  onEdit={handleEditProduct}
+                  onDelete={handleDeleteProduct}
+                  onTogglePublish={handleTogglePublishProduct}
+                  onTogglePin={handleTogglePinProduct}
+                />
               ))}
             </div>
           )}
@@ -453,7 +504,14 @@ export function CreateProductsView({ convexUser }: CreateProductsViewProps) {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {packs.map((product: any) => (
-                <ProductCard key={product._id} product={product} />
+                <ProductCard
+                  key={product._id}
+                  product={product}
+                  onEdit={handleEditProduct}
+                  onDelete={handleDeleteProduct}
+                  onTogglePublish={handleTogglePublishProduct}
+                  onTogglePin={handleTogglePinProduct}
+                />
               ))}
             </div>
           )}
@@ -827,11 +885,12 @@ function EffectChainCard({ product }: { product: any }) {
   );
 }
 
-function ProductCard({ product, onEdit, onDelete, onTogglePublish }: { 
+function ProductCard({ product, onEdit, onDelete, onTogglePublish, onTogglePin }: {
   product: any;
   onEdit?: (productId: string) => void;
   onDelete?: (productId: string) => void;
   onTogglePublish?: (productId: string, currentState: boolean) => void;
+  onTogglePin?: (productId: string, currentState: boolean) => void;
 }) {
   const Icon = product.type === 'course' ? BookOpen : 
                product.productCategory === 'sample-pack' ? Music :
@@ -895,6 +954,19 @@ function ProductCard({ product, onEdit, onDelete, onTogglePublish }: {
                 </>
               )}
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onTogglePin?.(product._id, product.isPinned)}>
+              {product.isPinned ? (
+                <>
+                  <PinOff className="w-4 h-4 mr-2" />
+                  Unpin from Storefront
+                </>
+              ) : (
+                <>
+                  <Pin className="w-4 h-4 mr-2" />
+                  Pin to Storefront
+                </>
+              )}
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => onDelete?.(product._id)} className="text-destructive">
               <Trash2 className="w-4 h-4 mr-2" />
@@ -903,15 +975,23 @@ function ProductCard({ product, onEdit, onDelete, onTogglePublish }: {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      
+
       <CardContent className="p-6">
         <div className="flex items-start justify-between mb-2">
           <h3 className="font-semibold text-lg line-clamp-2 flex-1">
             {product.title}
           </h3>
-          <Badge variant={product.isPublished ? 'default' : 'secondary'}>
-            {product.isPublished ? 'Live' : 'Draft'}
-          </Badge>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {product.isPinned && (
+              <Badge variant="outline" className="text-amber-600 border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700 dark:text-amber-400">
+                <Pin className="w-3 h-3 mr-1" />
+                Pinned
+              </Badge>
+            )}
+            <Badge variant={product.isPublished ? 'default' : 'secondary'}>
+              {product.isPublished ? 'Live' : 'Draft'}
+            </Badge>
+          </div>
         </div>
         <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
           {product.description || 'No description'}

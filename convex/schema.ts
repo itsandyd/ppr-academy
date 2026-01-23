@@ -228,6 +228,10 @@ export default defineSchema({
       })
     ),
     followGateMessage: v.optional(v.string()),
+
+    // Pinned product - appears first in storefront
+    isPinned: v.optional(v.boolean()),
+    pinnedAt: v.optional(v.number()), // Timestamp for ordering multiple pinned products
   })
     .index("by_instructorId", ["instructorId"])
     .index("by_slug", ["slug"])
@@ -1217,6 +1221,10 @@ export default defineSchema({
         targetPlaylistCurators: v.optional(v.array(v.string())), // Curator IDs to pitch to
       })
     ),
+
+    // Pinned product - appears first in storefront
+    isPinned: v.optional(v.boolean()),
+    pinnedAt: v.optional(v.number()), // Timestamp for ordering multiple pinned products
   })
     .index("by_storeId", ["storeId"])
     .index("by_userId", ["userId"])
