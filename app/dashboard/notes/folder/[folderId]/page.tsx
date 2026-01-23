@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -9,8 +9,7 @@ import { Id } from "@/convex/_generated/dataModel";
 import { AINoteGenerator } from "@/components/notes/ai-note-generator";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import {
@@ -19,6 +18,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import {
   FileText,
@@ -31,15 +37,13 @@ import {
   Clock,
   Archive,
   Search,
-  AlertCircle,
+  Sparkles,
+  Calendar,
+  Star,
+  ArrowLeft,
   Youtube,
   Globe,
   Upload,
-  Sparkles,
-  Brain,
-  Calendar,
-  Star,
-  FolderPlus,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import Link from "next/link";
@@ -69,22 +73,23 @@ const STATUS_CONFIG = {
   },
 };
 
-export default function DashboardNotesPage() {
-  const searchParams = useSearchParams();
+export default function FolderNotesPage() {
+  const params = useParams();
   const router = useRouter();
   const { user, isLoaded } = useUser();
-
-  const mode = searchParams.get("mode");
+  const folderId = params.folderId as string;
 
   // State
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
 
   // Get user's stores
   const stores = useQuery(api.stores.getStoresByUser, user?.id ? { userId: user.id } : "skip");
   const storeId = stores?.[0]?._id;
 
-  // Convex queries
+  // Get folder details
   const folders = useQuery(
     api.notes.getFoldersByUser,
     user?.id && storeId
@@ -95,12 +100,16 @@ export default function DashboardNotesPage() {
       : "skip"
   ) ?? [];
 
+  const folder = folders.find((f: any) => f._id === folderId);
+
+  // Get notes in this folder
   const notesQuery = useQuery(
     (api.notes as any).getNotesByUser,
-    user?.id && storeId
+    user?.id && storeId && folderId
       ? {
           userId: user.id,
           storeId,
+          folderId: folderId as Id<"noteFolders">,
           paginationOpts: { numItems: 100, cursor: null },
         }
       : "skip"
@@ -111,24 +120,21 @@ export default function DashboardNotesPage() {
   // Mutations
   const createNote = useMutation(api.notes.createNote);
   const deleteNote = useMutation(api.notes.deleteNote);
-  const createFolder = useMutation(api.notes.createFolder);
+  const updateFolder = useMutation(api.notes.updateFolder);
   const deleteFolder = useMutation(api.notes.deleteFolder);
 
   // Calculate stats
   const stats = {
     total: notes.length,
     draft: notes.filter((n: any) => n.status === "draft").length,
-    inProgress: notes.filter((n: any) => n.status === "in_progress").length,
     completed: notes.filter((n: any) => n.status === "completed").length,
-    folders: folders.length,
   };
 
-  // Filter notes based on tab and search
+  // Filter notes
   const now = Date.now();
   const oneWeekAgo = now - 7 * 24 * 60 * 60 * 1000;
 
   const filteredNotes = notes.filter((note: any) => {
-    // Search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       if (!note.title.toLowerCase().includes(query)) {
@@ -136,7 +142,6 @@ export default function DashboardNotesPage() {
       }
     }
 
-    // Tab filter
     switch (activeTab) {
       case "recent":
         return note._creationTime > oneWeekAgo;
@@ -161,6 +166,7 @@ export default function DashboardNotesPage() {
         content: "<p>Start writing your thoughts...</p>",
         userId: user.id,
         storeId,
+        folderId: folderId as Id<"noteFolders">,
         tags: [],
         priority: "medium",
       });
@@ -173,28 +179,6 @@ export default function DashboardNotesPage() {
       toast({
         title: "Error",
         description: "Failed to create note.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleCreateFolder = async () => {
-    if (!user?.id || !storeId) return;
-
-    try {
-      await createFolder({
-        name: "New Folder",
-        userId: user.id,
-        storeId,
-      });
-      toast({
-        title: "Folder Created",
-        description: "Your new folder has been created.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to create folder.",
         variant: "destructive",
       });
     }
@@ -219,6 +203,55 @@ export default function DashboardNotesPage() {
     }
   };
 
+  const handleRenameFolder = async () => {
+    if (!newFolderName.trim()) return;
+    try {
+      await updateFolder({
+        folderId: folderId as Id<"noteFolders">,
+        name: newFolderName.trim(),
+      });
+      toast({
+        title: "Folder Renamed",
+        description: "Your folder has been renamed.",
+      });
+      setIsRenameDialogOpen(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to rename folder.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteFolder = async () => {
+    if (notes.length > 0) {
+      toast({
+        title: "Cannot Delete",
+        description: "Please delete or move all notes in this folder first.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!confirm("Are you sure you want to delete this folder?")) {
+      return;
+    }
+    try {
+      await deleteFolder({ folderId: folderId as Id<"noteFolders"> });
+      toast({
+        title: "Folder Deleted",
+        description: "Your folder has been deleted.",
+      });
+      router.push("/dashboard/notes?mode=create");
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete folder.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleNoteCreated = (noteId: Id<"notes">) => {
     router.push(`/dashboard/notes/${noteId}/edit?mode=create`);
   };
@@ -232,36 +265,22 @@ export default function DashboardNotesPage() {
     );
   }
 
-  // Show error if no stores
-  if (!storeId) {
+  // Folder not found
+  if (!folder) {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">AI Notes</h1>
+          <h1 className="text-3xl font-bold">Folder Not Found</h1>
           <p className="mt-1 text-muted-foreground">
-            Generate notes from YouTube, websites, PDFs, and more using AI
+            The folder you&apos;re looking for doesn&apos;t exist or has been deleted.
           </p>
         </div>
-
-        <Card className="border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950/20">
-          <CardContent className="p-6">
-            <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900">
-                <AlertCircle className="h-6 w-6 text-orange-600" />
-              </div>
-              <div className="flex-1">
-                <h3 className="mb-2 text-lg font-semibold">Store Required</h3>
-                <p className="mb-4 text-muted-foreground">
-                  AI Notes requires a creator store. Set up your store to start generating notes
-                  from any content.
-                </p>
-                <Button asChild>
-                  <Link href="/dashboard?mode=create">Set Up Your Store</Link>
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <Button asChild>
+          <Link href="/dashboard/notes?mode=create">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Notes
+          </Link>
+        </Button>
       </div>
     );
   }
@@ -270,64 +289,64 @@ export default function DashboardNotesPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">AI Notes</h1>
-          <p className="mt-1 text-muted-foreground">
-            Create and manage your notes, generate from any content
-          </p>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/dashboard/notes?mode=create">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Link>
+          </Button>
+          <div>
+            <div className="flex items-center gap-2">
+              <FolderOpen className="h-6 w-6 text-muted-foreground" />
+              <h1 className="text-3xl font-bold">{folder.name}</h1>
+            </div>
+            <p className="mt-1 text-muted-foreground">
+              {stats.total} notes in this folder
+            </p>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <AINoteGenerator
             userId={user.id}
-            storeId={storeId}
+            storeId={storeId!}
+            folderId={folderId}
             onNoteCreated={handleNoteCreated}
           />
           <Button onClick={handleCreateNote} className="gap-2">
             <PlusCircle className="h-4 w-4" />
             New Note
           </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-white dark:bg-black">
+              <DropdownMenuItem
+                onClick={() => {
+                  setNewFolderName(folder.name);
+                  setIsRenameDialogOpen(true);
+                }}
+              >
+                <Pencil className="mr-2 h-4 w-4" />
+                Rename Folder
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={handleDeleteFolder}
+                className="text-red-600 focus:text-red-600"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete Folder
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
-      {/* Quick Import Cards */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <Card className="cursor-pointer transition-colors hover:bg-muted/50">
-          <CardContent className="flex items-center gap-4 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-red-100 dark:bg-red-900/20">
-              <Youtube className="h-5 w-5 text-red-500" />
-            </div>
-            <div>
-              <p className="font-medium">YouTube</p>
-              <p className="text-sm text-muted-foreground">Import from videos</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="cursor-pointer transition-colors hover:bg-muted/50">
-          <CardContent className="flex items-center gap-4 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/20">
-              <Globe className="h-5 w-5 text-blue-500" />
-            </div>
-            <div>
-              <p className="font-medium">Websites</p>
-              <p className="text-sm text-muted-foreground">Import from articles</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="cursor-pointer transition-colors hover:bg-muted/50">
-          <CardContent className="flex items-center gap-4 p-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-900/20">
-              <Upload className="h-5 w-5 text-orange-500" />
-            </div>
-            <div>
-              <p className="font-medium">PDFs</p>
-              <p className="text-sm text-muted-foreground">Import from documents</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="text-2xl font-bold">{stats.total}</div>
@@ -342,66 +361,17 @@ export default function DashboardNotesPage() {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <div className="text-2xl font-bold text-yellow-600">{stats.inProgress}</div>
-            <div className="text-sm text-muted-foreground">In Progress</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
             <div className="text-2xl font-bold text-green-600">{stats.completed}</div>
             <div className="text-sm text-muted-foreground">Completed</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-purple-600">{stats.folders}</div>
-            <div className="text-sm text-muted-foreground">Folders</div>
-          </CardContent>
-        </Card>
       </div>
-
-      {/* Folders Section */}
-      {folders.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <FolderOpen className="h-5 w-5" />
-                Folders
-              </CardTitle>
-              <Button variant="outline" size="sm" onClick={handleCreateFolder} className="gap-2">
-                <FolderPlus className="h-4 w-4" />
-                New Folder
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-              {folders.map((folder: any) => (
-                <Link
-                  key={folder._id}
-                  href={`/dashboard/notes/folder/${folder._id}?mode=create`}
-                  className="flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
-                >
-                  <FolderOpen className="h-5 w-5 text-muted-foreground" />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{folder.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {folder.noteCount || 0} notes
-                    </p>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Search */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Search notes..."
+          placeholder="Search notes in this folder..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-10"
@@ -415,7 +385,6 @@ export default function DashboardNotesPage() {
           <TabsTrigger value="recent">Recent</TabsTrigger>
           <TabsTrigger value="draft">Drafts ({stats.draft})</TabsTrigger>
           <TabsTrigger value="completed">Completed ({stats.completed})</TabsTrigger>
-          <TabsTrigger value="archived">Archived</TabsTrigger>
         </TabsList>
 
         <TabsContent value={activeTab} className="mt-4 space-y-4">
@@ -426,11 +395,9 @@ export default function DashboardNotesPage() {
                 <p className="text-muted-foreground">
                   {searchQuery
                     ? "No notes match your search"
-                    : activeTab === "all"
-                      ? "No notes yet. Create your first note!"
-                      : `No ${activeTab} notes`}
+                    : "No notes in this folder yet"}
                 </p>
-                {!searchQuery && activeTab === "all" && (
+                {!searchQuery && (
                   <Button onClick={handleCreateNote} className="mt-4 gap-2">
                     <PlusCircle className="h-4 w-4" />
                     Create Note
@@ -449,6 +416,26 @@ export default function DashboardNotesPage() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Rename Dialog */}
+      <Dialog open={isRenameDialogOpen} onOpenChange={setIsRenameDialogOpen}>
+        <DialogContent className="bg-white dark:bg-black">
+          <DialogHeader>
+            <DialogTitle>Rename Folder</DialogTitle>
+          </DialogHeader>
+          <Input
+            value={newFolderName}
+            onChange={(e) => setNewFolderName(e.target.value)}
+            placeholder="Folder name"
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRenameDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleRenameFolder}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
