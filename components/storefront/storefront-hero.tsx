@@ -199,7 +199,7 @@ export function StorefrontHero({
 
           {/* Right: Stats cards - horizontal on mobile, stacked on desktop */}
           <motion.div
-            className="flex flex-row lg:flex-col gap-3 sm:gap-4 lg:gap-6 justify-center lg:justify-start overflow-x-auto pb-2 lg:pb-0 -mx-4 px-4 sm:mx-0 sm:px-0"
+            className="flex flex-row lg:flex-col gap-3 sm:gap-4 lg:gap-6 justify-center lg:justify-start overflow-x-auto lg:overflow-visible pb-2 lg:pb-0 -mx-4 px-4 sm:mx-0 sm:px-0"
             initial={{ opacity: 0, x: 40 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.4, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
