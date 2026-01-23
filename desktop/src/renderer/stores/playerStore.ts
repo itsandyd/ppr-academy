@@ -13,7 +13,34 @@ export interface Sample {
   creditPrice?: number
 }
 
+export interface RecentlyPlayedItem {
+  sample: Sample
+  playedAt: number // timestamp
+}
+
 type LoopMode = 'none' | 'one' | 'all'
+
+const RECENTLY_PLAYED_KEY = 'recentlyPlayed'
+const MAX_RECENTLY_PLAYED = 50
+
+// Helper to load recently played from localStorage
+const loadRecentlyPlayed = (): RecentlyPlayedItem[] => {
+  try {
+    const stored = localStorage.getItem(RECENTLY_PLAYED_KEY)
+    return stored ? JSON.parse(stored) : []
+  } catch {
+    return []
+  }
+}
+
+// Helper to save recently played to localStorage
+const saveRecentlyPlayed = (items: RecentlyPlayedItem[]) => {
+  try {
+    localStorage.setItem(RECENTLY_PLAYED_KEY, JSON.stringify(items))
+  } catch (e) {
+    console.error('Failed to save recently played:', e)
+  }
+}
 
 interface PlayerState {
   // Current playback
@@ -28,6 +55,9 @@ interface PlayerState {
   queue: Sample[]
   queueIndex: number
 
+  // Recently played history
+  recentlyPlayed: RecentlyPlayedItem[]
+
   // Actions
   playSample: (sample: Sample) => void
   setIsPlaying: (playing: boolean) => void
@@ -41,6 +71,8 @@ interface PlayerState {
   addToQueue: (sample: Sample) => void
   clearQueue: () => void
   setQueue: (samples: Sample[], startIndex?: number) => void
+  clearRecentlyPlayed: () => void
+  removeFromHistory: (sampleId: string) => void
 }
 
 export const usePlayerStore = create<PlayerState>((set, get) => ({
@@ -53,14 +85,33 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   loopMode: 'none',
   queue: [],
   queueIndex: -1,
+  recentlyPlayed: loadRecentlyPlayed(),
 
   // Actions
   playSample: (sample) => {
+    const { recentlyPlayed } = get()
+
+    // Add to recently played history
+    const newItem: RecentlyPlayedItem = {
+      sample,
+      playedAt: Date.now()
+    }
+
+    // Remove existing entry for same sample if present
+    const filtered = recentlyPlayed.filter(item => item.sample.id !== sample.id)
+
+    // Add new entry at the beginning, limit to max size
+    const updated = [newItem, ...filtered].slice(0, MAX_RECENTLY_PLAYED)
+
+    // Save to localStorage
+    saveRecentlyPlayed(updated)
+
     set({
       currentSample: sample,
       isPlaying: true,
       currentTime: 0,
-      duration: 0
+      duration: 0,
+      recentlyPlayed: updated
     })
   },
 
@@ -148,13 +199,48 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   setQueue: (samples, startIndex = 0) => {
-    set({
-      queue: samples,
-      queueIndex: startIndex,
-      currentSample: samples[startIndex] || null,
-      isPlaying: true,
-      currentTime: 0
-    })
+    const { recentlyPlayed } = get()
+    const sampleToPlay = samples[startIndex]
+
+    if (sampleToPlay) {
+      // Add to recently played history
+      const newItem: RecentlyPlayedItem = {
+        sample: sampleToPlay,
+        playedAt: Date.now()
+      }
+      const filtered = recentlyPlayed.filter(item => item.sample.id !== sampleToPlay.id)
+      const updated = [newItem, ...filtered].slice(0, MAX_RECENTLY_PLAYED)
+      saveRecentlyPlayed(updated)
+
+      set({
+        queue: samples,
+        queueIndex: startIndex,
+        currentSample: sampleToPlay,
+        isPlaying: true,
+        currentTime: 0,
+        recentlyPlayed: updated
+      })
+    } else {
+      set({
+        queue: samples,
+        queueIndex: startIndex,
+        currentSample: null,
+        isPlaying: false,
+        currentTime: 0
+      })
+    }
+  },
+
+  clearRecentlyPlayed: () => {
+    saveRecentlyPlayed([])
+    set({ recentlyPlayed: [] })
+  },
+
+  removeFromHistory: (sampleId: string) => {
+    const { recentlyPlayed } = get()
+    const updated = recentlyPlayed.filter(item => item.sample.id !== sampleId)
+    saveRecentlyPlayed(updated)
+    set({ recentlyPlayed: updated })
   }
 }))
 

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from 'convex/react'
 import { api } from '@convex/_generated/api'
-import { Search, Grid, List, Music, Package, Loader2 } from 'lucide-react'
+import { Search, Grid, List, Music, Package, Loader2, X, SlidersHorizontal } from 'lucide-react'
 import { SampleCard } from '../components/SampleCard'
 import { SampleList } from '../components/SampleList'
 
@@ -17,6 +17,26 @@ interface Sample {
   duration?: number
   creditPrice?: number
 }
+
+// Filter options
+const BPM_RANGES = [
+  { label: '60-90 BPM', min: 60, max: 90 },
+  { label: '90-120 BPM', min: 90, max: 120 },
+  { label: '120-140 BPM', min: 120, max: 140 },
+  { label: '140-160 BPM', min: 140, max: 160 },
+  { label: '160+ BPM', min: 160, max: 999 },
+]
+
+const MUSICAL_KEYS = [
+  'C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B',
+  'Cm', 'C#m', 'Dm', 'D#m', 'Em', 'Fm', 'F#m', 'Gm', 'G#m', 'Am', 'A#m', 'Bm'
+]
+
+const DURATION_RANGES = [
+  { label: 'Short (<10s)', min: 0, max: 10 },
+  { label: 'Medium (10-30s)', min: 10, max: 30 },
+  { label: 'Long (30s+)', min: 30, max: 9999 },
+]
 
 interface Pack {
   _id: string
@@ -38,14 +58,52 @@ export function ExplorePage() {
   const [activeTab, setActiveTab] = useState<ExploreTab>('samples')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedGenre, setSelectedGenre] = useState<string | undefined>()
+  const [selectedBpmRange, setSelectedBpmRange] = useState<{ min: number; max: number } | undefined>()
+  const [selectedKey, setSelectedKey] = useState<string | undefined>()
+  const [selectedDuration, setSelectedDuration] = useState<{ min: number; max: number } | undefined>()
+  const [showFilters, setShowFilters] = useState(false)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
 
   // Fetch published samples
-  const samples = useQuery(api.samples.getPublishedSamples, {
+  const allSamples = useQuery(api.samples.getPublishedSamples, {
     genre: selectedGenre,
     searchQuery: searchQuery || undefined,
     limit: 50
   }) as Sample[] | undefined
+
+  // Apply client-side filters for BPM, key, and duration
+  const samples = allSamples?.filter((sample) => {
+    // BPM filter
+    if (selectedBpmRange && sample.bpm) {
+      if (sample.bpm < selectedBpmRange.min || sample.bpm > selectedBpmRange.max) {
+        return false
+      }
+    }
+    // Key filter
+    if (selectedKey && sample.key) {
+      if (!sample.key.toLowerCase().startsWith(selectedKey.toLowerCase())) {
+        return false
+      }
+    }
+    // Duration filter
+    if (selectedDuration && sample.duration) {
+      if (sample.duration < selectedDuration.min || sample.duration > selectedDuration.max) {
+        return false
+      }
+    }
+    return true
+  })
+
+  // Count active filters
+  const activeFilterCount = [selectedGenre, selectedBpmRange, selectedKey, selectedDuration].filter(Boolean).length
+
+  // Clear all filters
+  const clearAllFilters = () => {
+    setSelectedGenre(undefined)
+    setSelectedBpmRange(undefined)
+    setSelectedKey(undefined)
+    setSelectedDuration(undefined)
+  }
 
   // Fetch published packs
   const packs = useQuery(api.samplePacks.getAllPublishedSamplePacks) as Pack[] | undefined
@@ -131,6 +189,26 @@ export function ExplorePage() {
             ))}
           </select>
 
+          {/* Advanced filters toggle (samples only) */}
+          {activeTab === 'samples' && (
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${
+                showFilters || activeFilterCount > 0
+                  ? 'border-primary bg-primary/10 text-primary'
+                  : 'border-input text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              Filters
+              {activeFilterCount > 0 && (
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+          )}
+
           {/* View toggle (samples only) */}
           {activeTab === 'samples' && (
             <div className="flex rounded-lg border border-input">
@@ -149,6 +227,114 @@ export function ExplorePage() {
             </div>
           )}
         </div>
+
+        {/* Advanced filter chips */}
+        {activeTab === 'samples' && showFilters && (
+          <div className="mt-4 space-y-3">
+            {/* BPM Range */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium text-muted-foreground w-16">BPM:</span>
+              {BPM_RANGES.map((range) => (
+                <button
+                  key={range.label}
+                  onClick={() => setSelectedBpmRange(
+                    selectedBpmRange?.min === range.min ? undefined : range
+                  )}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                    selectedBpmRange?.min === range.min
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                  }`}
+                >
+                  {range.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Musical Key */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium text-muted-foreground w-16">Key:</span>
+              <select
+                value={selectedKey || ''}
+                onChange={(e) => setSelectedKey(e.target.value || undefined)}
+                className="rounded-lg border border-input bg-background px-3 py-1.5 text-xs focus:border-primary focus:outline-none"
+              >
+                <option value="">Any Key</option>
+                <optgroup label="Major">
+                  {MUSICAL_KEYS.slice(0, 12).map((key) => (
+                    <option key={key} value={key}>{key} Major</option>
+                  ))}
+                </optgroup>
+                <optgroup label="Minor">
+                  {MUSICAL_KEYS.slice(12).map((key) => (
+                    <option key={key} value={key}>{key.replace('m', '')} Minor</option>
+                  ))}
+                </optgroup>
+              </select>
+            </div>
+
+            {/* Duration */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium text-muted-foreground w-16">Length:</span>
+              {DURATION_RANGES.map((range) => (
+                <button
+                  key={range.label}
+                  onClick={() => setSelectedDuration(
+                    selectedDuration?.min === range.min ? undefined : range
+                  )}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                    selectedDuration?.min === range.min
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                  }`}
+                >
+                  {range.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Clear all filters */}
+            {activeFilterCount > 0 && (
+              <button
+                onClick={clearAllFilters}
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-3 w-3" />
+                Clear all filters
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Active filter chips display (when panel is closed) */}
+        {activeTab === 'samples' && !showFilters && activeFilterCount > 0 && (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {selectedBpmRange && (
+              <span className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-xs text-primary">
+                {BPM_RANGES.find(r => r.min === selectedBpmRange.min)?.label}
+                <button onClick={() => setSelectedBpmRange(undefined)} className="hover:text-primary/70">
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            )}
+            {selectedKey && (
+              <span className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-xs text-primary">
+                Key: {selectedKey}
+                <button onClick={() => setSelectedKey(undefined)} className="hover:text-primary/70">
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            )}
+            {selectedDuration && (
+              <span className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-xs text-primary">
+                {DURATION_RANGES.find(r => r.min === selectedDuration.min)?.label}
+                <button onClick={() => setSelectedDuration(undefined)} className="hover:text-primary/70">
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Content */}

@@ -9,6 +9,7 @@ import { ExplorePage } from './pages/ExplorePage'
 import { LibraryPage } from './pages/LibraryPage'
 import { DownloadsPage } from './pages/DownloadsPage'
 import { FavoritesPage } from './pages/FavoritesPage'
+import { HistoryPage } from './pages/HistoryPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { LoginPage } from './pages/LoginPage'
 import { UploadPage } from './pages/UploadPage'
@@ -63,6 +64,7 @@ function SignedInContent() {
           <Route path="/library" element={<LibraryPage />} />
           <Route path="/downloads" element={<DownloadsPage />} />
           <Route path="/favorites" element={<FavoritesPage />} />
+          <Route path="/history" element={<HistoryPage />} />
           <Route path="/upload" element={<UploadPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>

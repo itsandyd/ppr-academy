@@ -3,6 +3,7 @@ import { Sidebar } from './Sidebar'
 import { TitleBar } from './TitleBar'
 import { AudioPlayer } from './AudioPlayer'
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
+import { KeyboardShortcutsModal, useKeyboardShortcutsModal } from './KeyboardShortcuts'
 
 interface LayoutProps {
   children: ReactNode
@@ -12,6 +13,9 @@ export function Layout({ children }: LayoutProps) {
   // Initialize keyboard shortcuts
   useKeyboardShortcuts()
 
+  // Keyboard shortcuts help modal
+  const shortcutsModal = useKeyboardShortcutsModal()
+
   return (
     <div className="flex h-screen flex-col">
       {/* Custom title bar for frameless window */}
@@ -19,7 +23,7 @@ export function Layout({ children }: LayoutProps) {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar navigation */}
-        <Sidebar />
+        <Sidebar onShowShortcuts={shortcutsModal.open} />
 
         {/* Main content area */}
         <main className="flex-1 overflow-auto bg-background">
@@ -29,6 +33,12 @@ export function Layout({ children }: LayoutProps) {
 
       {/* Persistent audio player */}
       <AudioPlayer />
+
+      {/* Keyboard shortcuts help modal */}
+      <KeyboardShortcutsModal
+        isOpen={shortcutsModal.isOpen}
+        onClose={shortcutsModal.close}
+      />
     </div>
   )
 }

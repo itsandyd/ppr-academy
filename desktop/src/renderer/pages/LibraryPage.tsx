@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useQuery } from 'convex/react'
 import { api } from '@convex/_generated/api'
-import { Search, Grid, List } from 'lucide-react'
+import { Search, Grid, List, Play, Shuffle } from 'lucide-react'
 import { SampleCard } from '../components/SampleCard'
 import { SampleList } from '../components/SampleList'
+import { usePlayerStore } from '../stores/playerStore'
 
 interface Sample {
   _id: string
@@ -21,6 +22,7 @@ interface Sample {
 export function LibraryPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list')
+  const { setQueue } = usePlayerStore()
 
   // Fetch user's library (purchased samples)
   const library = useQuery(api.samples.getUserLibrary) as Sample[] | undefined
@@ -30,14 +32,77 @@ export function LibraryPage() {
     sample.title.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
+  // Play all samples in order
+  const handlePlayAll = () => {
+    if (!filteredSamples?.length) return
+    const queueSamples = filteredSamples.map(sample => ({
+      id: sample._id,
+      title: sample.title,
+      fileUrl: sample.fileUrl || '',
+      previewUrl: sample.previewUrl,
+      coverUrl: sample.coverImageUrl,
+      bpm: sample.bpm,
+      key: sample.key,
+      genre: sample.genre,
+      duration: sample.duration,
+      creditPrice: sample.creditPrice
+    }))
+    setQueue(queueSamples, 0)
+  }
+
+  // Shuffle and play all samples
+  const handleShufflePlay = () => {
+    if (!filteredSamples?.length) return
+    const shuffled = [...filteredSamples].sort(() => Math.random() - 0.5)
+    const queueSamples = shuffled.map(sample => ({
+      id: sample._id,
+      title: sample.title,
+      fileUrl: sample.fileUrl || '',
+      previewUrl: sample.previewUrl,
+      coverUrl: sample.coverImageUrl,
+      bpm: sample.bpm,
+      key: sample.key,
+      genre: sample.genre,
+      duration: sample.duration,
+      creditPrice: sample.creditPrice
+    }))
+    setQueue(queueSamples, 0)
+  }
+
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
       <div className="border-b border-border p-4">
-        <h1 className="text-2xl font-bold">My Library</h1>
-        <p className="text-sm text-muted-foreground">
-          Your purchased samples ready to drag into your DAW
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">My Library</h1>
+            <p className="text-sm text-muted-foreground">
+              Your purchased samples ready to drag into your DAW
+            </p>
+          </div>
+
+          {/* Play controls */}
+          {filteredSamples && filteredSamples.length > 0 && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handlePlayAll}
+                className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                title="Play all samples (Ctrl+Shift+P)"
+              >
+                <Play className="h-4 w-4" />
+                Play All
+              </button>
+              <button
+                onClick={handleShufflePlay}
+                className="flex items-center gap-2 rounded-lg border border-input px-4 py-2 text-sm font-medium transition-colors hover:bg-secondary"
+                title="Shuffle and play (Ctrl+Shift+S)"
+              >
+                <Shuffle className="h-4 w-4" />
+                Shuffle
+              </button>
+            </div>
+          )}
+        </div>
 
         <div className="mt-4 flex items-center gap-4">
           {/* Search */}
