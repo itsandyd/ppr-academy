@@ -51,13 +51,15 @@ export async function generateMetadata({
     // Fetch creator data
     const creator = await fetchQuery(api.users.getUserFromClerk, { clerkId: store.userId });
 
+    const creatorName = creator?.name || store.name;
     const duration = coachingProduct.duration || 60;
-    const title = `${coachingProduct.title} - ${duration} min Coaching | ${store.name}`;
-    const description =
-      coachingProduct.description ||
-      `Book a ${duration}-minute coaching session with ${creator?.name || store.name}. Get personalized guidance and mentorship.`;
     const coachingUrl = `${baseUrl}/${slug}/coaching/${productSlugOrId}`;
     const price = coachingProduct.price || 0;
+    const priceText = price === 0 ? "Free" : `$${price}`;
+    const title = `${coachingProduct.title} with ${creatorName} | ${duration}-min Coaching | PPR Academy`;
+    const description =
+      coachingProduct.description ||
+      `Book a ${duration}-minute coaching session with ${creatorName} (${priceText}). Get personalized 1-on-1 guidance and mentorship.`;
 
     return {
       title,

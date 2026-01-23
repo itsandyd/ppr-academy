@@ -40,13 +40,15 @@ export async function generateMetadata({
 
     const productType = product.productType || "Digital Product";
     const category = product.category || product.productCategory || "Digital Product";
-    const title = `${product.title} | ${store.name}`;
-    const description =
-      product.description ||
-      `Get "${product.title}" from ${creator?.name || store.name} on PPR Academy`;
+    const creatorName = creator?.name || store.name;
     const productUrl = `${baseUrl}/${slug}/products/${productSlug}`;
     const price = product.price || 0;
     const isFree = price === 0;
+    const priceText = isFree ? "Free" : `$${(price / 100).toFixed(0)}`;
+    const title = `${product.title} by ${creatorName} | ${category} | PPR Academy`;
+    const description =
+      product.description ||
+      `Get "${product.title}" (${priceText}) by ${creatorName}. ${category} for music production on PPR Academy.`;
 
     return {
       title,

@@ -35,12 +35,16 @@ export async function generateMetadata({
     // Fetch creator data
     const creator = await fetchQuery(api.users.getUserFromClerk, { clerkId: store.userId });
 
-    const title = `${course.title} | ${store.name}`;
-    const description =
-      course.description ||
-      `Learn ${course.title} from ${creator?.name || store.name} on PPR Academy`;
+    const creatorName = creator?.name || store.name;
     const courseUrl = `${baseUrl}/${slug}/courses/${courseSlug}`;
     const price = course.price || 0;
+    const priceText = price === 0 ? "Free" : `$${price}`;
+    const categoryText = course.category || "Music Production";
+    const skillLevel = course.skillLevel || "All Levels";
+    const title = `${course.title} by ${creatorName} | ${categoryText} Course | PPR Academy`;
+    const description =
+      course.description ||
+      `Learn ${course.title} from ${creatorName} (${priceText}). ${categoryText} course for ${skillLevel.toLowerCase()} on PPR Academy.`;
 
     return {
       title,

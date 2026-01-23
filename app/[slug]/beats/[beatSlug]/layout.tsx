@@ -38,12 +38,16 @@ export async function generateMetadata({
     // Fetch creator data
     const creator = await fetchQuery(api.users.getUserFromClerk, { clerkId: store.userId });
 
-    const title = `${beat.title} | ${store.name} - Beat Lease`;
-    const description =
-      beat.description ||
-      `License "${beat.title}" beat from ${creator?.name || store.name}${beat.bpm ? ` - ${beat.bpm} BPM` : ""}${beat.genre ? ` - ${beat.genre}` : ""}`;
+    const creatorName = creator?.name || store.name;
     const beatUrl = `${baseUrl}/${slug}/beats/${beatSlug}`;
     const price = beat.price || 0;
+    const bpmInfo = beat.bpm ? `${beat.bpm} BPM` : "";
+    const genreInfo = beat.genre || "Hip Hop";
+    const priceText = price === 0 ? "Free" : `$${(price / 100).toFixed(0)}`;
+    const title = `${beat.title} by ${creatorName} | ${bpmInfo} ${genreInfo} Beat | PPR Academy`;
+    const description =
+      beat.description ||
+      `License "${beat.title}" ${genreInfo} beat by ${creatorName}${bpmInfo ? ` - ${bpmInfo}` : ""}. ${priceText}. Professional instrumental for your next hit.`;
 
     return {
       title,

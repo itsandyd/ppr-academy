@@ -38,13 +38,15 @@ export async function generateMetadata({
     // Fetch creator data
     const creator = await fetchQuery(api.users.getUserFromClerk, { clerkId: store.userId });
 
+    const creatorName = creator?.name || store.name;
     const tierName = (membership as any).tierName || "Membership";
-    const title = `${membership.title} | ${store.name} - ${tierName}`;
-    const description =
-      membership.description ||
-      `Join ${creator?.name || store.name}'s ${tierName} membership for exclusive content and benefits`;
     const membershipUrl = `${baseUrl}/${slug}/memberships/${membershipSlug}`;
     const price = (membership as any).priceMonthly || membership.price || 0;
+    const priceText = price === 0 ? "Free" : `$${price}/mo`;
+    const title = `${membership.title} by ${creatorName} | ${tierName} Membership | PPR Academy`;
+    const description =
+      membership.description ||
+      `Join ${creatorName}'s ${tierName} membership (${priceText}). Get exclusive content, early access, and direct community access.`;
 
     return {
       title,
