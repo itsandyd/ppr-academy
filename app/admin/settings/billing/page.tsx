@@ -26,8 +26,6 @@ import {
   Percent,
   RefreshCw,
   Key,
-  Eye,
-  EyeOff,
   CheckCircle,
   AlertCircle,
   ExternalLink,
@@ -37,16 +35,17 @@ import {
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
+// Check if Stripe keys are configured via environment variables
+const stripeConfig = {
+  hasPublishableKey: !!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
+  hasSecretKey: true, // We can't check server-side env vars from client, assume configured
+  hasWebhookSecret: true, // We can't check server-side env vars from client, assume configured
+  isTestMode: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.startsWith("pk_test_") ?? true,
+};
+
 export default function BillingSettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
-  const [showSecretKey, setShowSecretKey] = useState(false);
-  const [showWebhookSecret, setShowWebhookSecret] = useState(false);
   const [settings, setSettings] = useState({
-    // Stripe Configuration
-    stripeMode: "test",
-    stripePublishableKey: "pk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-    stripeSecretKey: "sk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-    stripeWebhookSecret: "whsec_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
     // Platform Fees
     platformFeePercent: "10",
     platformFeeFixed: "0.30",
@@ -78,12 +77,6 @@ export default function BillingSettingsPage() {
     } finally {
       setIsSaving(false);
     }
-  };
-
-  const handleTestWebhook = async () => {
-    toast.info("Sending test webhook...");
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    toast.success("Test webhook received successfully!");
   };
 
   return (
@@ -120,12 +113,12 @@ export default function BillingSettingsPage() {
       </div>
 
       {/* Mode Alert */}
-      {settings.stripeMode === "test" ? (
+      {stripeConfig.isTestMode ? (
         <Alert className="border-amber-500/50 bg-amber-50 text-amber-900 dark:bg-amber-950/50 dark:text-amber-100">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Test Mode Active</AlertTitle>
           <AlertDescription>
-            Stripe is currently in test mode. No real charges will be made. Switch to live mode for production.
+            Stripe is currently in test mode. No real charges will be made.
           </AlertDescription>
         </Alert>
       ) : (
@@ -133,110 +126,74 @@ export default function BillingSettingsPage() {
           <CheckCircle className="h-4 w-4" />
           <AlertTitle>Live Mode Active</AlertTitle>
           <AlertDescription>
-            Stripe is in live mode. Real charges will be made. Be careful with changes.
+            Stripe is in live mode. Real charges will be made.
           </AlertDescription>
         </Alert>
       )}
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Stripe API Keys */}
+        {/* Stripe API Keys Status */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Key className="h-5 w-5" />
-              Stripe API Keys
+              Stripe Configuration
             </CardTitle>
-            <CardDescription>Configure your Stripe integration</CardDescription>
+            <CardDescription>API keys are configured via environment variables</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex gap-2">
-              <Button
-                variant={settings.stripeMode === "test" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSettings({ ...settings, stripeMode: "test" })}
-              >
-                Test Mode
-              </Button>
-              <Button
-                variant={settings.stripeMode === "live" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSettings({ ...settings, stripeMode: "live" })}
-              >
-                Live Mode
-              </Button>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-medium">Publishable Key</span>
+                  <code className="text-xs text-muted-foreground">NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code>
+                </div>
+                {stripeConfig.hasPublishableKey ? (
+                  <Badge variant="default" className="bg-green-500">
+                    <CheckCircle className="mr-1 h-3 w-3" />
+                    Configured
+                  </Badge>
+                ) : (
+                  <Badge variant="destructive">
+                    <AlertCircle className="mr-1 h-3 w-3" />
+                    Missing
+                  </Badge>
+                )}
+              </div>
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-medium">Secret Key</span>
+                  <code className="text-xs text-muted-foreground">STRIPE_SECRET_KEY</code>
+                </div>
+                <Badge variant="secondary">
+                  <Key className="mr-1 h-3 w-3" />
+                  Server-side only
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-medium">Webhook Secret</span>
+                  <code className="text-xs text-muted-foreground">STRIPE_WEBHOOK_SECRET</code>
+                </div>
+                <Badge variant="secondary">
+                  <Key className="mr-1 h-3 w-3" />
+                  Server-side only
+                </Badge>
+              </div>
             </div>
             <Separator />
-            <div className="space-y-2">
-              <Label htmlFor="stripePublishableKey">Publishable Key</Label>
-              <Input
-                id="stripePublishableKey"
-                value={settings.stripePublishableKey}
-                onChange={(e) =>
-                  setSettings({ ...settings, stripePublishableKey: e.target.value })
-                }
-                placeholder="pk_test_..."
-                className="font-mono text-sm"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="stripeSecretKey">Secret Key</Label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Input
-                    id="stripeSecretKey"
-                    type={showSecretKey ? "text" : "password"}
-                    value={settings.stripeSecretKey}
-                    onChange={(e) =>
-                      setSettings({ ...settings, stripeSecretKey: e.target.value })
-                    }
-                    placeholder="sk_test_..."
-                    className="pr-10 font-mono text-sm"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-0 top-0 h-full"
-                    onClick={() => setShowSecretKey(!showSecretKey)}
-                  >
-                    {showSecretKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                </div>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="stripeWebhookSecret">Webhook Secret</Label>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Input
-                    id="stripeWebhookSecret"
-                    type={showWebhookSecret ? "text" : "password"}
-                    value={settings.stripeWebhookSecret}
-                    onChange={(e) =>
-                      setSettings({ ...settings, stripeWebhookSecret: e.target.value })
-                    }
-                    placeholder="whsec_..."
-                    className="pr-10 font-mono text-sm"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-0 top-0 h-full"
-                    onClick={() => setShowWebhookSecret(!showWebhookSecret)}
-                  >
-                    {showWebhookSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                </div>
-                <Button variant="outline" onClick={handleTestWebhook}>
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
-              </div>
+            <div className="rounded-lg border bg-muted/50 p-4">
+              <p className="text-sm font-medium">Mode: {stripeConfig.isTestMode ? "Test" : "Live"}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {stripeConfig.isTestMode
+                  ? "Using test API keys. No real charges will be made."
+                  : "Using live API keys. Real charges will be processed."}
+              </p>
             </div>
             <Button variant="outline" className="w-full" asChild>
-              <a href="https://dashboard.stripe.com" target="_blank" rel="noopener noreferrer">
+              <a href="https://dashboard.stripe.com/apikeys" target="_blank" rel="noopener noreferrer">
                 <ExternalLink className="mr-2 h-4 w-4" />
-                Open Stripe Dashboard
+                Manage Keys in Stripe Dashboard
               </a>
             </Button>
           </CardContent>
