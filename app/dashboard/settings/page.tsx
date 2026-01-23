@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { User, Bell, Shield, CreditCard, Palette, Save, Loader2, Globe, ArrowRight, Mail, Link as LinkIcon } from "lucide-react";
+import { User, Bell, Shield, CreditCard, Palette, Save, Loader2, Globe, ArrowRight, Mail, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -14,7 +14,6 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { BioLinkEditor } from "@/components/settings/bio-link-editor";
 
 export default function SettingsPage() {
   const { user } = useUser();
@@ -32,11 +31,6 @@ export default function SettingsPage() {
   const [formData, setFormData] = useState({
     name: "",
     bio: "",
-    instagram: "",
-    tiktok: "",
-    twitter: "",
-    youtube: "",
-    website: "",
   });
 
   useEffect(() => {
@@ -44,11 +38,6 @@ export default function SettingsPage() {
       setFormData({
         name: profile.name || "",
         bio: profile.bio || "",
-        instagram: profile.instagram || "",
-        tiktok: profile.tiktok || "",
-        twitter: profile.twitter || "",
-        youtube: profile.youtube || "",
-        website: profile.website || "",
       });
     }
   }, [profile]);
@@ -63,11 +52,6 @@ export default function SettingsPage() {
       await updateProfile({
         name: formData.name || undefined,
         bio: formData.bio || undefined,
-        instagram: formData.instagram || undefined,
-        tiktok: formData.tiktok || undefined,
-        twitter: formData.twitter || undefined,
-        youtube: formData.youtube || undefined,
-        website: formData.website || undefined,
       });
       toast.success("Profile updated successfully!");
     } catch (error) {
@@ -80,19 +64,15 @@ export default function SettingsPage() {
   return (
     <div className="container mx-auto max-w-4xl space-y-6 p-4 md:p-6">
       <div>
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-white md:text-3xl">Settings</h1>
-        <p className="mt-1 text-zinc-500 dark:text-zinc-400">Manage your account preferences</p>
+        <h1 className="text-2xl font-bold text-foreground md:text-3xl">Settings</h1>
+        <p className="mt-1 text-muted-foreground">Manage your account preferences</p>
       </div>
 
-      <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 md:w-auto md:grid-cols-6">
-          <TabsTrigger value="profile" className="gap-2">
+      <Tabs defaultValue="account" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2 md:w-auto md:grid-cols-5">
+          <TabsTrigger value="account" className="gap-2">
             <User className="h-4 w-4" />
-            <span className="hidden sm:inline">Profile</span>
-          </TabsTrigger>
-          <TabsTrigger value="links" className="gap-2">
-            <LinkIcon className="h-4 w-4" />
-            <span className="hidden sm:inline">Links</span>
+            <span className="hidden sm:inline">Account</span>
           </TabsTrigger>
           <TabsTrigger value="domains" className="gap-2">
             <Globe className="h-4 w-4" />
@@ -112,140 +92,108 @@ export default function SettingsPage() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="profile">
-          <Card>
-            <CardHeader>
-              <CardTitle>Profile Information</CardTitle>
-              <CardDescription>Update your account details</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center gap-4">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800">
-                  {user?.imageUrl ? (
-                    <img
-                      src={user.imageUrl}
-                      alt="Profile"
-                      className="h-16 w-16 rounded-full object-cover"
-                    />
-                  ) : (
-                    <User className="h-8 w-8 text-zinc-400" />
-                  )}
-                </div>
-                <div>
-                  <p className="font-medium">{user?.fullName || formData.name || "User"}</p>
-                  <p className="text-sm text-zinc-500">{user?.primaryEmailAddress?.emailAddress}</p>
-                </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Display Name</Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => handleInputChange("name", e.target.value)}
-                    placeholder="Your display name"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="website">Website</Label>
-                  <Input
-                    id="website"
-                    value={formData.website}
-                    onChange={(e) => handleInputChange("website", e.target.value)}
-                    placeholder="https://yoursite.com"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="bio">Bio</Label>
-                <Textarea
-                  id="bio"
-                  value={formData.bio}
-                  onChange={(e) => handleInputChange("bio", e.target.value)}
-                  placeholder="Tell us about yourself..."
-                  rows={3}
-                />
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  Social Links
-                </h3>
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="instagram">Instagram</Label>
-                    <Input
-                      id="instagram"
-                      value={formData.instagram}
-                      onChange={(e) => handleInputChange("instagram", e.target.value)}
-                      placeholder="@username"
-                    />
+        <TabsContent value="account">
+          <div className="space-y-6">
+            {/* Public Profile Card - Link to /store/profile */}
+            {store && (
+              <Card className="border-primary/20 bg-primary/5">
+                <CardContent className="flex items-center justify-between p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <User className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold">Public Profile</h4>
+                      <p className="text-sm text-muted-foreground">
+                        Edit your storefront appearance, bio, and social links
+                      </p>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="twitter">Twitter / X</Label>
-                    <Input
-                      id="twitter"
-                      value={formData.twitter}
-                      onChange={(e) => handleInputChange("twitter", e.target.value)}
-                      placeholder="@username"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="tiktok">TikTok</Label>
-                    <Input
-                      id="tiktok"
-                      value={formData.tiktok}
-                      onChange={(e) => handleInputChange("tiktok", e.target.value)}
-                      placeholder="@username"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="youtube">YouTube</Label>
-                    <Input
-                      id="youtube"
-                      value={formData.youtube}
-                      onChange={(e) => handleInputChange("youtube", e.target.value)}
-                      placeholder="Channel URL or @handle"
-                    />
-                  </div>
-                </div>
-              </div>
+                  <Button asChild>
+                    <Link href="/store/profile">
+                      Edit Profile
+                      <ExternalLink className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
 
-              <div className="flex justify-end pt-4">
-                <Button onClick={handleSaveProfile} disabled={isSaving}>
-                  {isSaving ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Save className="mr-2 h-4 w-4" />
-                  )}
-                  Save Changes
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="links">
-          {store && user?.id ? (
-            <BioLinkEditor storeId={store._id} userId={user.id} />
-          ) : (
+            {/* Account Settings */}
             <Card>
               <CardHeader>
-                <CardTitle>Bio Links</CardTitle>
-                <CardDescription>Manage your link-in-bio page</CardDescription>
+                <CardTitle>Account Information</CardTitle>
+                <CardDescription>Your private account details (not shown publicly)</CardDescription>
               </CardHeader>
-              <CardContent className="flex min-h-[200px] items-center justify-center">
-                <div className="text-center">
-                  <LinkIcon className="mx-auto h-12 w-12 text-zinc-300 dark:text-zinc-700" />
-                  <p className="mt-4 text-zinc-500 dark:text-zinc-400">
-                    {!store ? "Create a store to manage your bio links" : "Loading..."}
+              <CardContent className="space-y-6">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                    {user?.imageUrl ? (
+                      <img
+                        src={user.imageUrl}
+                        alt="Profile"
+                        className="h-16 w-16 rounded-full object-cover"
+                      />
+                    ) : (
+                      <User className="h-8 w-8 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-medium">{user?.fullName || formData.name || "User"}</p>
+                    <p className="text-sm text-muted-foreground">{user?.primaryEmailAddress?.emailAddress}</p>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Display Name</Label>
+                    <Input
+                      id="name"
+                      value={formData.name}
+                      onChange={(e) => handleInputChange("name", e.target.value)}
+                      placeholder="Your display name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Email</Label>
+                    <Input
+                      value={user?.primaryEmailAddress?.emailAddress || ""}
+                      disabled
+                      className="bg-muted"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Managed by your authentication provider
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="bio">Internal Notes</Label>
+                  <Textarea
+                    id="bio"
+                    value={formData.bio}
+                    onChange={(e) => handleInputChange("bio", e.target.value)}
+                    placeholder="Private notes about yourself..."
+                    rows={3}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    This is for your records only and not displayed publicly
                   </p>
+                </div>
+
+                <div className="flex justify-end pt-4">
+                  <Button onClick={handleSaveProfile} disabled={isSaving}>
+                    {isSaving ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="mr-2 h-4 w-4" />
+                    )}
+                    Save Changes
+                  </Button>
                 </div>
               </CardContent>
             </Card>
-          )}
+          </div>
         </TabsContent>
 
         <TabsContent value="domains">
@@ -328,14 +276,14 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label>Email Notifications</Label>
-                  <p className="text-sm text-zinc-500">Receive updates about your courses</p>
+                  <p className="text-sm text-muted-foreground">Receive updates about your courses</p>
                 </div>
                 <Switch checked={emailNotifications} onCheckedChange={setEmailNotifications} />
               </div>
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label>Marketing Emails</Label>
-                  <p className="text-sm text-zinc-500">Receive tips and product updates</p>
+                  <p className="text-sm text-muted-foreground">Receive tips and product updates</p>
                 </div>
                 <Switch checked={marketingEmails} onCheckedChange={setMarketingEmails} />
               </div>
@@ -351,8 +299,8 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent className="flex min-h-[200px] items-center justify-center">
               <div className="text-center">
-                <CreditCard className="mx-auto h-12 w-12 text-zinc-300 dark:text-zinc-700" />
-                <p className="mt-4 text-zinc-500 dark:text-zinc-400">
+                <CreditCard className="mx-auto h-12 w-12 text-muted-foreground/30" />
+                <p className="mt-4 text-muted-foreground">
                   Billing management coming soon
                 </p>
               </div>
@@ -367,7 +315,7 @@ export default function SettingsPage() {
               <CardDescription>Customize how the app looks</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-zinc-500">
+              <p className="text-sm text-muted-foreground">
                 Use the theme toggle in the sidebar to switch between light and dark mode.
               </p>
             </CardContent>

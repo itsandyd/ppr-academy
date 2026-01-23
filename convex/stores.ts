@@ -24,6 +24,13 @@ const storeValidator = v.object({
     youtube: v.optional(v.string()),
     tiktok: v.optional(v.string()),
     spotify: v.optional(v.string()),
+    soundcloud: v.optional(v.string()),
+    appleMusic: v.optional(v.string()),
+    bandcamp: v.optional(v.string()),
+    threads: v.optional(v.string()),
+    discord: v.optional(v.string()),
+    twitch: v.optional(v.string()),
+    beatport: v.optional(v.string()),
   })),
   emailConfig: v.optional(v.object({
     fromEmail: v.string(),
@@ -289,6 +296,85 @@ export const deleteStore = mutation({
   handler: async (ctx, args) => {
     await ctx.db.delete(args.id);
     return null;
+  },
+});
+
+// Update store profile (for public-facing profile page)
+export const updateStoreProfile = mutation({
+  args: {
+    storeId: v.id("stores"),
+    userId: v.string(),
+    // Basic info
+    name: v.optional(v.string()),
+    description: v.optional(v.string()),
+    bio: v.optional(v.string()),
+    avatar: v.optional(v.string()),
+    logoUrl: v.optional(v.string()),
+    bannerImage: v.optional(v.string()),
+    // Social links
+    socialLinks: v.optional(
+      v.object({
+        website: v.optional(v.string()),
+        twitter: v.optional(v.string()),
+        instagram: v.optional(v.string()),
+        linkedin: v.optional(v.string()),
+        youtube: v.optional(v.string()),
+        tiktok: v.optional(v.string()),
+        spotify: v.optional(v.string()),
+        soundcloud: v.optional(v.string()),
+        appleMusic: v.optional(v.string()),
+        bandcamp: v.optional(v.string()),
+        threads: v.optional(v.string()),
+        discord: v.optional(v.string()),
+        twitch: v.optional(v.string()),
+        beatport: v.optional(v.string()),
+      })
+    ),
+    // Visibility
+    isPublic: v.optional(v.boolean()),
+    isPublishedProfile: v.optional(v.boolean()),
+  },
+  returns: v.union(storeValidator, v.null()),
+  handler: async (ctx, args) => {
+    const { storeId, userId, ...updates } = args;
+
+    // Get current store
+    const store = await ctx.db.get(storeId);
+    if (!store) {
+      throw new Error("Store not found");
+    }
+
+    // Check authorization
+    if (store.userId !== userId) {
+      throw new Error("Unauthorized: You can only update your own store");
+    }
+
+    // If name is being updated, also update slug
+    if (updates.name !== undefined && updates.name !== store.name) {
+      let slug = generateSlug(updates.name);
+
+      // Ensure slug is unique
+      let counter = 1;
+      let originalSlug = slug;
+
+      while (true) {
+        const existingStore = await ctx.db
+          .query("stores")
+          .withIndex("by_slug", (q) => q.eq("slug", slug))
+          .unique();
+
+        if (!existingStore || existingStore._id === storeId) break;
+
+        slug = `${originalSlug}-${counter}`;
+        counter++;
+      }
+
+      await ctx.db.patch(storeId, { ...updates, slug });
+    } else {
+      await ctx.db.patch(storeId, updates);
+    }
+
+    return await ctx.db.get(storeId);
   },
 }); 
 

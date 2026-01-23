@@ -17621,10 +17621,17 @@ export declare const api: {
         planStartedAt?: number;
         slug: string;
         socialLinks?: {
+          appleMusic?: string;
+          bandcamp?: string;
+          beatport?: string;
+          discord?: string;
           instagram?: string;
           linkedin?: string;
+          soundcloud?: string;
           spotify?: string;
+          threads?: string;
           tiktok?: string;
+          twitch?: string;
           twitter?: string;
           website?: string;
           youtube?: string;
@@ -17684,10 +17691,17 @@ export declare const api: {
         planStartedAt?: number;
         slug: string;
         socialLinks?: {
+          appleMusic?: string;
+          bandcamp?: string;
+          beatport?: string;
+          discord?: string;
           instagram?: string;
           linkedin?: string;
+          soundcloud?: string;
           spotify?: string;
+          threads?: string;
           tiktok?: string;
+          twitch?: string;
           twitter?: string;
           website?: string;
           youtube?: string;
@@ -17734,10 +17748,17 @@ export declare const api: {
         planStartedAt?: number;
         slug: string;
         socialLinks?: {
+          appleMusic?: string;
+          bandcamp?: string;
+          beatport?: string;
+          discord?: string;
           instagram?: string;
           linkedin?: string;
+          soundcloud?: string;
           spotify?: string;
+          threads?: string;
           tiktok?: string;
+          twitch?: string;
           twitter?: string;
           website?: string;
           youtube?: string;
@@ -17797,10 +17818,17 @@ export declare const api: {
         planStartedAt?: number;
         slug: string;
         socialLinks?: {
+          appleMusic?: string;
+          bandcamp?: string;
+          beatport?: string;
+          discord?: string;
           instagram?: string;
           linkedin?: string;
+          soundcloud?: string;
           spotify?: string;
+          threads?: string;
           tiktok?: string;
+          twitch?: string;
           twitter?: string;
           website?: string;
           youtube?: string;
@@ -17847,10 +17875,17 @@ export declare const api: {
         planStartedAt?: number;
         slug: string;
         socialLinks?: {
+          appleMusic?: string;
+          bandcamp?: string;
+          beatport?: string;
+          discord?: string;
           instagram?: string;
           linkedin?: string;
+          soundcloud?: string;
           spotify?: string;
+          threads?: string;
           tiktok?: string;
+          twitch?: string;
           twitter?: string;
           website?: string;
           youtube?: string;
@@ -17897,10 +17932,17 @@ export declare const api: {
         planStartedAt?: number;
         slug: string;
         socialLinks?: {
+          appleMusic?: string;
+          bandcamp?: string;
+          beatport?: string;
+          discord?: string;
           instagram?: string;
           linkedin?: string;
+          soundcloud?: string;
           spotify?: string;
+          threads?: string;
           tiktok?: string;
+          twitch?: string;
           twitter?: string;
           website?: string;
           youtube?: string;
@@ -17992,10 +18034,101 @@ export declare const api: {
         planStartedAt?: number;
         slug: string;
         socialLinks?: {
+          appleMusic?: string;
+          bandcamp?: string;
+          beatport?: string;
+          discord?: string;
           instagram?: string;
           linkedin?: string;
+          soundcloud?: string;
           spotify?: string;
+          threads?: string;
           tiktok?: string;
+          twitch?: string;
+          twitter?: string;
+          website?: string;
+          youtube?: string;
+        };
+        stripeCustomerId?: string;
+        stripeSubscriptionId?: string;
+        subscriptionStatus?:
+          | "active"
+          | "trialing"
+          | "past_due"
+          | "canceled"
+          | "incomplete";
+        trialEndsAt?: number;
+        userId: string;
+      } | null
+    >;
+    updateStoreProfile: FunctionReference<
+      "mutation",
+      "public",
+      {
+        avatar?: string;
+        bannerImage?: string;
+        bio?: string;
+        description?: string;
+        isPublic?: boolean;
+        isPublishedProfile?: boolean;
+        logoUrl?: string;
+        name?: string;
+        socialLinks?: {
+          appleMusic?: string;
+          bandcamp?: string;
+          beatport?: string;
+          discord?: string;
+          instagram?: string;
+          linkedin?: string;
+          soundcloud?: string;
+          spotify?: string;
+          threads?: string;
+          tiktok?: string;
+          twitch?: string;
+          twitter?: string;
+          website?: string;
+          youtube?: string;
+        };
+        storeId: Id<"stores">;
+        userId: string;
+      },
+      {
+        _creationTime: number;
+        _id: Id<"stores">;
+        avatar?: string;
+        bannerImage?: string;
+        bio?: string;
+        customDomain?: string;
+        description?: string;
+        domainStatus?: string;
+        earlyAccessExpiresAt?: number;
+        emailConfig?: {
+          emailsSentThisMonth?: number;
+          fromEmail: string;
+          fromName?: string;
+          isConfigured?: boolean;
+          lastTestedAt?: number;
+          replyToEmail?: string;
+        };
+        isPublic?: boolean;
+        isPublishedProfile?: boolean;
+        logoUrl?: string;
+        name: string;
+        plan?: "free" | "creator" | "creator_pro" | "early_access";
+        planStartedAt?: number;
+        slug: string;
+        socialLinks?: {
+          appleMusic?: string;
+          bandcamp?: string;
+          beatport?: string;
+          discord?: string;
+          instagram?: string;
+          linkedin?: string;
+          soundcloud?: string;
+          spotify?: string;
+          threads?: string;
+          tiktok?: string;
+          twitch?: string;
           twitter?: string;
           website?: string;
           youtube?: string;

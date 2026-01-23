@@ -211,7 +211,7 @@ function LinkAnalyticsModal({ link, isOpen, onClose }: LinkAnalyticsModalProps) 
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg" sidebarOffset>
         <DialogHeader>
           <DialogTitle>Analytics for "{link.title}"</DialogTitle>
           <DialogDescription>Last 30 days performance</DialogDescription>
@@ -547,7 +547,7 @@ export function BioLinkEditor({ storeId, userId }: BioLinkEditorProps) {
 
       {/* Add Link Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent>
+        <DialogContent sidebarOffset>
           <DialogHeader>
             <DialogTitle>Add New Link</DialogTitle>
             <DialogDescription>
@@ -615,7 +615,7 @@ export function BioLinkEditor({ storeId, userId }: BioLinkEditorProps) {
         open={!!editingLink}
         onOpenChange={(open) => !open && setEditingLink(null)}
       >
-        <DialogContent>
+        <DialogContent sidebarOffset>
           <DialogHeader>
             <DialogTitle>Edit Link</DialogTitle>
             <DialogDescription>Update your link details.</DialogDescription>
