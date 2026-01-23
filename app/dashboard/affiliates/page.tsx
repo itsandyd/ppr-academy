@@ -156,10 +156,8 @@ export default function AffiliatesPage() {
   // Loading state
   if (!isLoaded || store === undefined) {
     return (
-      <div className="container mx-auto max-w-6xl p-4 md:p-6">
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-zinc-400" />
-        </div>
+      <div className="flex min-h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -167,12 +165,12 @@ export default function AffiliatesPage() {
   // No store yet
   if (!store) {
     return (
-      <div className="container mx-auto max-w-6xl space-y-6 p-4 md:p-6">
+      <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white md:text-3xl">
+          <h1 className="text-3xl font-bold">
             Affiliate Program
           </h1>
-          <p className="mt-1 text-zinc-500 dark:text-zinc-400">
+          <p className="mt-1 text-muted-foreground">
             Manage your affiliate partners
           </p>
         </div>
@@ -180,7 +178,7 @@ export default function AffiliatesPage() {
           <CardContent className="flex min-h-[300px] items-center justify-center">
             <div className="text-center">
               <Package className="mx-auto h-12 w-12 text-zinc-300 dark:text-zinc-700" />
-              <p className="mt-4 text-zinc-500 dark:text-zinc-400">
+              <p className="mt-4 text-muted-foreground">
                 Set up your store to start an affiliate program
               </p>
             </div>
@@ -206,14 +204,14 @@ export default function AffiliatesPage() {
   };
 
   return (
-    <div className="container mx-auto max-w-6xl space-y-6 p-4 md:p-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white md:text-3xl">
+          <h1 className="text-3xl font-bold">
             Affiliate Program
           </h1>
-          <p className="mt-1 text-zinc-500 dark:text-zinc-400">
+          <p className="mt-1 text-muted-foreground">
             Manage your affiliate partners and track their performance
           </p>
         </div>
